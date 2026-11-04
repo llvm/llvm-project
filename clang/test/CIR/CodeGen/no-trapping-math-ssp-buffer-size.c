@@ -14,17 +14,17 @@
 
 // Both the definition and the declaration get "no-trapping-math" (unless FP
 // exceptions are not ignored) and "stack-protector-buffer-size". Their values
-// are TU-wide and live in #cir.lowering_lang_options, and LowerToLLVM adds them
+// are TU-wide and live in #cir.lowering_options, and LowerToLLVM adds them
 // to every function that is not marked runtime_func.
 
 int decl(int);
 
 int def(int x) { return decl(x); }
 
-// CIR: cir.lowering_lang_options = #cir.lowering_lang_options<{{.*}}no_trapping_math = true, ssp_buffer_size = 8>
+// CIR: cir.lowering_options = #cir.lowering_options<{{.*}}no_trapping_math = true, ssp_buffer_size = 8>
 // CIR-NOT: runtime_func
 
-// CIR-STRICT: cir.lowering_lang_options = #cir.lowering_lang_options<{{.*}}no_trapping_math = false, ssp_buffer_size = 16>
+// CIR-STRICT: cir.lowering_options = #cir.lowering_options<{{.*}}no_trapping_math = false, ssp_buffer_size = 16>
 
 // LLVM: define{{.*}} i32 @def(i32 {{.*}}) #[[DEF_ATTR:[0-9]+]]
 // LLVM: declare{{.*}} i32 @decl(i32 {{.*}}) #[[DECL_ATTR:[0-9]+]]

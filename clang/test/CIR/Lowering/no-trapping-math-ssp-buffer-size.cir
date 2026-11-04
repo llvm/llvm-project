@@ -2,15 +2,19 @@
 // RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
 
 // A `cir.func` gets the `no_trapping_math` and `ssp_buffer_size` values of the
-// module's #cir.lowering_lang_options as `llvm.func` `passthrough` entries,
+// module's #cir.lowering_options as `llvm.func` `passthrough` entries,
 // translated to the "no-trapping-math" and "stack-protector-buffer-size" LLVM
 // IR string attributes. A function marked `runtime_func` gets neither.
 
-module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.lowering_options = #cir.lowering_options<
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
     openmp = false, openmp_is_target_device = false, clang_abi_compat = 0,
-    long_double_size = 0, no_trapping_math = true, ssp_buffer_size = 16>} {
+    long_double_size = 0, enable_noundef_attrs = true, no_trapping_math = true,
+    ssp_buffer_size = 16>
+} {
   cir.func @def_fn() {
     cir.return
   }

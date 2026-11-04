@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s %}
 
 #pragma GCC diagnostic ignored "-Wincompatible-ms-struct"
 #define ATTR __attribute__((__ms_struct__))

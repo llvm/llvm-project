@@ -1,10 +1,9 @@
 // RUN: not cir-opt %s -cir-call-conv-lowering=target=amdgpu 2>&1 | FileCheck %s
 
-// AMDGPU classifications whose indirect pointer is not in the default address
+// AMDGPU Indirect classifications whose pointer is not in the default address
 // space are not lowered yet, so they are reported rather than misclassified.
 
 !s32i = !cir.int<s, 32>
-!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
 !rec_Big = !cir.struct<"Big" {data !cir.array<!s32i x 17>}>
 
 module attributes {
@@ -12,20 +11,6 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-
-  // A multi-field kernel argument is passed byref in addrspace(4).
-  cir.func @kern_pair(%arg0: !rec_Pair) cc(amdgpu_kernel) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"Pair"
-
-  // An argument past the 16-register budget is passed byref in addrspace(5).
-  cir.func @take_big(%arg0: !rec_Big) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"Big"
 
   // A return past the register budget goes through an sret in addrspace(5).
   cir.func @ret_big(%arg0: !cir.ptr<!rec_Big>) -> !rec_Big {
