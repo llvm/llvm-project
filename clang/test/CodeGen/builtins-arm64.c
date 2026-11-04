@@ -9,6 +9,12 @@ void f0(void *a, void *b) {
 // CHECK: call {{.*}} @llvm.clear_cache.p0
 }
 
+void f0_as1(__attribute__((address_space(1))) char *a,
+            __attribute__((address_space(1))) char *b) {
+  // CHECK: call void @llvm.clear_cache.p1(ptr addrspace(1) %a, ptr addrspace(1) %b)
+  __clear_cache(a, b);
+}
+
 void *tp (void) {
   return __builtin_thread_pointer ();
 // CHECK-LINUX: call {{.*}} @llvm.thread.pointer.p0()
