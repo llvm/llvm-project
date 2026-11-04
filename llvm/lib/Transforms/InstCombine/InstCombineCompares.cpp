@@ -4500,8 +4500,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   switch (LHSI->getOpcode()) {
   case Instruction::Select: {
     // umax(X, Y) == null -> (X == null) && (Y == null).
-    if (I.getPredicate() != ICmpInst::ICMP_EQ ||
-        !match(RHSC, m_Isa<ConstantPointerNull>()))
+    if (I.getPredicate() != ICmpInst::ICMP_EQ)
       break;
 
     Constant *RHSIndexBits = ConstantFoldCastOperand(
