@@ -557,16 +557,3 @@ namespace GH189146 {
   int s = S{}(0); // expected-error {{attempt to use a deleted function}}
 }
 #endif
-
-#if __cplusplus >= 201402L
-namespace GH226984 {
-  struct A {
-	int& ref;
-
-	template<int dependent = 0>
-	operator decltype(dependent, ref)();
-};
-  int x = 0;
-  int& y = A(x);
-}
-#endif

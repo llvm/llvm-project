@@ -177,6 +177,7 @@ static int sectionOrder(OutputSection *osec) {
       return std::numeric_limits<int>::max();
     default:
       return StringSwitch<int>(osec->name)
+          .Case(section_names::authGot, -4)
           .Case(section_names::got, -3)
           .Case(section_names::lazySymbolPtr, -2)
           .Case(section_names::const_, -1)
@@ -620,9 +621,10 @@ BranchExtensionPlanner::BranchExtensionPlanner(
       });
       for (auto *reloc : branches) {
         Symbol *sym = cast<Symbol *>(reloc->referent);
-        auto &[callee, count] = calleesByKey[makeCalleeKey(sym, reloc->addend)];
+        auto &[callee, count] =
+            calleesByKey[makeCalleeKey(sym, reloc->getAddend())];
         if (!callee) {
-          callees.push_back(std::make_unique<Callee>(sym, reloc->addend));
+          callees.push_back(std::make_unique<Callee>(sym, reloc->getAddend()));
           callee = callees.back().get();
         }
         pendingCalls.push_back({callee, isec, reloc, count++});
@@ -1019,7 +1021,7 @@ void BranchExtensionPlanner::finalize() {
       if (callsite.extension) {
         callsite.reloc.referent =
             static_cast<Symbol *>(callsite.extension->sym);
-        callsite.reloc.addend = 0;
+        callsite.reloc.setAddend(0);
       }
   });
 }
@@ -1176,7 +1178,7 @@ void OutputSegment::computeOsecAttrs(OutputSectionAttributesMap &osecAttrs) {
 
         bucket.attrs.containsBranchSource = true;
         Symbol *sym = cast<Symbol *>(reloc.referent);
-        if (sym->isInStubs() && reloc.addend == 0) {
+        if (sym->isInStubs() && reloc.getAddend() == 0) {
           bucket.branchTargets.insert(in.stubs);
         } else if (auto *defined = dyn_cast<Defined>(sym)) {
           if (auto *targetIsec = defined->isec())

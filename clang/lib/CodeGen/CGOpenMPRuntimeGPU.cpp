@@ -1838,12 +1838,16 @@ void CGOpenMPRuntimeGPU::emitReduction(
       auto *CurFn = CGF.CurFn;
       CGF.CurFn = NewFunc;
 
-      // The helper has no DISubprogram of its own, so a debug location here
-      // would name the enclosing function's scope, which is invalid IR.
-      // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
-      llvm::DebugLoc SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
-      CGF.Builder.SetCurrentDebugLocation(llvm::DebugLoc());
-      CGF.disableDebugInfo();
+      const bool DisableDebugInfo = !NewFunc->getSubprogram();
+      llvm::DebugLoc SavedDebugLoc;
+      if (DisableDebugInfo) {
+        // The helper has no DISubprogram of its own, so a debug location here
+        // would name the enclosing function's scope, which is invalid IR.
+        // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
+        SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
+        CGF.Builder.SetCurrentDebugLocation({});
+        CGF.disableDebugInfo();
+      }
 
       *LHSPtr = CGF.GetAddrOfLocalVar(
                        cast<VarDecl>(cast<DeclRefExpr>(LHSExprs[I])->getDecl()))
@@ -1856,10 +1860,12 @@ void CGOpenMPRuntimeGPU::emitReduction(
                                   cast<DeclRefExpr>(LHSExprs[I]),
                                   cast<DeclRefExpr>(RHSExprs[I]));
 
-      CGF.enableDebugInfo();
-      CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
-      CGF.CurFn = CurFn;
+      if (DisableDebugInfo) {
+        CGF.enableDebugInfo();
+        CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
+      }
 
+      CGF.CurFn = CurFn;
       return CGF.Builder.GetInsertPoint();
     };
 

@@ -739,6 +739,7 @@ bool MIParser::parseBasicBlockDefinition(
   auto Name = Token.stringValue();
   lex();
   bool MachineBlockAddressTaken = false;
+  bool LabelMustBeEmitted = false;
   BasicBlock *AddressTakenIRBlock = nullptr;
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
@@ -758,6 +759,10 @@ bool MIParser::parseBasicBlockDefinition(
       switch (Token.kind()) {
       case MIToken::kw_machine_block_address_taken:
         MachineBlockAddressTaken = true;
+        lex();
+        break;
+      case MIToken::kw_label_must_be_emitted:
+        LabelMustBeEmitted = true;
         lex();
         break;
       case MIToken::kw_ir_block_address_taken:
@@ -846,6 +851,8 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setMaxBytesForAlignment(MaxBytesForAlignment);
   if (MachineBlockAddressTaken)
     MBB->setMachineBlockAddressTaken();
+  if (LabelMustBeEmitted)
+    MBB->setLabelMustBeEmitted();
   if (AddressTakenIRBlock)
     MBB->setAddressTakenIRBlock(AddressTakenIRBlock);
   MBB->setIsEHPad(IsLandingPad);
@@ -1912,6 +1919,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
               .Case("ZR", InlineAsm::ConstraintCode::ZR)
               .Case("ZS", InlineAsm::ConstraintCode::ZS)
               .Case("ZT", InlineAsm::ConstraintCode::ZT)
+              .Case("RF", InlineAsm::ConstraintCode::RF)
               .Default(InlineAsm::ConstraintCode::Unknown);
       if (CC == InlineAsm::ConstraintCode::Unknown)
         return error("unknown memory constraint '" + ConstraintStr + "'");
