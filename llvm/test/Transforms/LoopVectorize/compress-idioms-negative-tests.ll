@@ -470,7 +470,7 @@ exit:
 ; CHECK: loop not vectorized: Unsupported user of conditional induction found
 
 ; Regression test (check we don't crash) with a scalable load/store using the conditional induction.
-define void @conditional_induction_with_scalable_compressed_memop(ptr %dst, ptr %c, i64 %n) {
+define void @conditional_induction_with_scalable_compressed_memop(ptr noalias %dst, ptr noalias %c, i64 %n) {
 entry:
   br label %loop
 

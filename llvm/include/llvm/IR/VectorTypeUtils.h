@@ -9,6 +9,7 @@
 #ifndef LLVM_IR_VECTORTYPEUTILS_H
 #define LLVM_IR_VECTORTYPEUTILS_H
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Compiler.h"
 
