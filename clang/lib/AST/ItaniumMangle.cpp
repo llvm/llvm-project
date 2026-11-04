@@ -2004,7 +2004,12 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
     // Mangle the name relative to the closest enclosing function.
     // equality ok because RD derived from ND above
     if (D == RD) {
-      mangleUnqualifiedName(RD, DC, AdditionalAbiTags);
+      const NamedDecl *PrefixND = getClosurePrefix(RD);
+      if (PrefixND && !isCompatibleWith(LangOptions::ClangABI::Ver18))
+        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags,
+                                          /*NoFunction=*/true);
+      else
+        mangleUnqualifiedName(RD, DC, AdditionalAbiTags);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
       if (const NamedDecl *PrefixND = getClosurePrefix(BD))
         mangleClosurePrefix(PrefixND, true /*NoFunction*/);
