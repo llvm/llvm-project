@@ -664,3 +664,41 @@ define i1 @f32_normal_to_f16_can_be_normal(float nofpclass(nan inf sub zero) %x)
   %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
   ret i1 %normal
 }
+
+;-------------------------------------------------------------------------------
+; Round up to normal from subnormal.
+;-------------------------------------------------------------------------------
+
+@ret__pinf_nnorm__select__fptrunc_f32_bf16__nsub__pinf_nnorm
+@ret__ninf_pnorm__select__fptrunc_f32_bf16__psub__ninf_pnorm
+
+@ret__pinf_nnorm__select__fptrunc_f128_f80__nsub__pinf_nnorm
+@ret__ninf_pnorm__select__fptrunc_f128_f80__psub__ninf_pnorm
+
+@ret__pinf_nnorm__select__fptrunc_f32_f16__nsub__pinf_nnorm
+@ret__ninf_pnorm__select__fptrunc_f32_f16__psub__ninf_pnorm
+
+;-------------------------------------------------------------------------------
+; Test class rounding boundaries.
+;-------------------------------------------------------------------------------
+
+@ret__ninf_nzero__select__fptrunc_f32_bf16__nnorm__ninf_nzero
+@ret__pinf_nsub__select__fptrunc_f32_bf16__nnorm__pinf_nsub
+@ret__pinf_nzero__select__fptrunc_f32_bf16__nsub__pinf_nzero
+
+@ret__ninf_nzero__select__fptrunc_f128_f80__nnorm__ninf_nzero
+@ret__pinf_nsub__select__fptrunc_f128_f80__nnorm__pinf_nsub
+@ret__pinf_nzero__select__fptrunc_f128_f80__nsub__pinf_nzero
+
+@ret__ninf_nzero__select__fptrunc_f32_f16__nnorm__ninf_nzero
+@ret__pinf_nsub__select__fptrunc_f32_f16__nnorm__pinf_nsub
+@ret__pinf_nzero__select__fptrunc_f32_f16__nsub__pinf_nzero
+
+;-------------------------------------------------------------------------------
+; Test underflow.
+;-------------------------------------------------------------------------------
+
+@ret__inf_pzero__select__fptrunc_f32_f16__psub__unknown
+@ret__inf_psub__select__fptrunc_f32_f16__psub__unknown
+@ret__inf_nzero__select__fptrunc_f32_f16__nsub__unknown
+@ret__inf_nsub__select__fptrunc_f32_f16__nsub__unknown
