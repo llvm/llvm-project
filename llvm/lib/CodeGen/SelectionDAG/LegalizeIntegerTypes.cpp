@@ -6016,7 +6016,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
                                                         /*isSigned=*/true);
   if (MinIntBits < NBits) {
     SDLoc dl(N);
-    unsigned OpBits = OpVT.getSizeInBits();
+    unsigned OpBits = OpVT.getScalarSizeInBits();
     SDValue Max =
         DAG.getConstant(APInt::getSignedMaxValue(NBits).sext(OpBits), dl, OpVT);
     SDValue Clamped;
