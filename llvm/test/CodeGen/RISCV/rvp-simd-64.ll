@@ -9593,3 +9593,132 @@ define i64 @test_pm4addasu_v4i16_i64(i64 %rd, <4 x i16> %a,
   %r = add i64 %rd, %mul
   ret i64 %r
 }
+
+define <4 x i16> @test_build_vector_v4i16_undef_lo(i16 %a, i16 %b) {
+; RV32-LABEL: test_build_vector_v4i16_undef_lo:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pack a1, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v4i16_undef_lo:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pack a0, a0, a0
+; RV64-NEXT:    ret
+  %v0 = insertelement <4 x i16> poison, i16 %a, i32 2
+  %v1 = insertelement <4 x i16> %v0, i16 %b, i32 3
+  ret <4 x i16> %v1
+}
+
+define <4 x i16> @test_build_vector_v4i16_undef_hi(i16 %a, i16 %b) {
+; RV32-LABEL: test_build_vector_v4i16_undef_hi:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v4i16_undef_hi:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    ret
+  %v0 = insertelement <4 x i16> poison, i16 %a, i32 0
+  %v1 = insertelement <4 x i16> %v0, i16 %b, i32 1
+  ret <4 x i16> %v1
+}
+
+define <4 x i16> @test_build_vector_v4i16_undef_odd(i16 %a, i16 %b) {
+; RV32-LABEL: test_build_vector_v4i16_undef_odd:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v4i16_undef_odd:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %v0 = insertelement <4 x i16> poison, i16 %a, i32 0
+  %v1 = insertelement <4 x i16> %v0, i16 %b, i32 2
+  ret <4 x i16> %v1
+}
+
+define <8 x i8> @test_build_vector_v8i8_undef_lo(i8 %a, i8 %b, i8 %c, i8 %d) {
+; RV32-LABEL: test_build_vector_v8i8_undef_lo:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaire.b a2, a2, a3
+; RV32-NEXT:    ppaire.b a0, a0, a1
+; RV32-NEXT:    pack a1, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v8i8_undef_lo:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.b a2, a2, a3
+; RV64-NEXT:    ppaire.b a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a2
+; RV64-NEXT:    pack a0, a0, a0
+; RV64-NEXT:    ret
+  %v0 = insertelement <8 x i8> poison, i8 %a, i32 4
+  %v1 = insertelement <8 x i8> %v0, i8 %b, i32 5
+  %v2 = insertelement <8 x i8> %v1, i8 %c, i32 6
+  %v3 = insertelement <8 x i8> %v2, i8 %d, i32 7
+  ret <8 x i8> %v3
+}
+
+define <8 x i8> @test_build_vector_v8i8_undef_hi(i8 %a, i8 %b, i8 %c, i8 %d) {
+; RV32-LABEL: test_build_vector_v8i8_undef_hi:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaire.b a2, a2, a3
+; RV32-NEXT:    ppaire.b a0, a0, a1
+; RV32-NEXT:    pack a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v8i8_undef_hi:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.b a2, a2, a3
+; RV64-NEXT:    ppaire.b a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a2
+; RV64-NEXT:    ret
+  %v0 = insertelement <8 x i8> poison, i8 %a, i32 0
+  %v1 = insertelement <8 x i8> %v0, i8 %b, i32 1
+  %v2 = insertelement <8 x i8> %v1, i8 %c, i32 2
+  %v3 = insertelement <8 x i8> %v2, i8 %d, i32 3
+  ret <8 x i8> %v3
+}
+
+define <8 x i8> @test_build_vector_v8i8_undef_pairs(i8 %a, i8 %b, i8 %c) {
+; RV32-LABEL: test_build_vector_v8i8_undef_pairs:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaire.b a0, a0, a1
+; RV32-NEXT:    pack a0, a0, a0
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v8i8_undef_pairs:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.b a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a0
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %v0 = insertelement <8 x i8> poison, i8 %a, i32 2
+  %v1 = insertelement <8 x i8> %v0, i8 %b, i32 3
+  %v2 = insertelement <8 x i8> %v1, i8 %c, i32 4
+  ret <8 x i8> %v2
+}
+
+define <8 x i8> @test_build_vector_v8i8_undef_odd(i8 %a, i8 %b, i8 %c, i8 %d) {
+; RV32-LABEL: test_build_vector_v8i8_undef_odd:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pack a2, a2, a3
+; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_build_vector_v8i8_undef_odd:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.h a2, a2, a3
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %v0 = insertelement <8 x i8> poison, i8 %a, i32 0
+  %v1 = insertelement <8 x i8> %v0, i8 %b, i32 2
+  %v2 = insertelement <8 x i8> %v1, i8 %c, i32 4
+  %v3 = insertelement <8 x i8> %v2, i8 %d, i32 6
+  ret <8 x i8> %v3
+}
