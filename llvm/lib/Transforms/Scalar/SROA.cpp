@@ -6460,11 +6460,15 @@ static std::optional<TwoSlotGEP> analyzeTwoSlotGEP(GetElementPtrInst &GEP,
   // stores.
   uint64_t LoadStoreSize = 0;
   for (User *U : GEP.users()) {
-    auto *LI = dyn_cast<LoadInst>(U);
-    auto *SI = dyn_cast<StoreInst>(U);
-    if (LI ? !LI->isSimple()
-           : !SI || !SI->isSimple() || SI->getValueOperand() == &GEP)
+    if (auto *LI = dyn_cast<LoadInst>(U)) {
+      if (!LI->isSimple())
+        return std::nullopt;
+    } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+      if (!SI->isSimple() || SI->getValueOperand() == &GEP)
+        return std::nullopt;
+    } else {
       return std::nullopt;
+    }
 
     TypeSize AccessSize = DL.getTypeStoreSize(getLoadStoreType(U));
 
