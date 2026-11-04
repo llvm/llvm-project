@@ -163,20 +163,17 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6",
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8"},
        {3, 19, 2, 2, 1}},
-      // The table holds VALU until 2 (16x16) or 4 (32x32); MI350X issues it
-      // at 3. It also holds DS and VMEM until 4 (32x32), not 3.
       {{"V_SMFMAC_F32_16X16X64_BF16", "V_SMFMAC_F32_16X16X64_F16",
         "V_SMFMAC_I32_16X16X128_I8", "V_SMFMAC_F32_16X16X128_BF8_BF8",
         "V_SMFMAC_F32_16X16X128_BF8_FP8", "V_SMFMAC_F32_16X16X128_FP8_BF8",
         "V_SMFMAC_F32_16X16X128_FP8_FP8"},
-       {2, 7, 2, 2, 1}},
+       {3, 7, 2, 2, 1}},
       {{"V_SMFMAC_F32_32X32X32_BF16", "V_SMFMAC_F32_32X32X32_F16",
         "V_SMFMAC_I32_32X32X64_I8", "V_SMFMAC_F32_32X32X64_BF8_BF8",
         "V_SMFMAC_F32_32X32X64_BF8_FP8", "V_SMFMAC_F32_32X32X64_FP8_BF8",
         "V_SMFMAC_F32_32X32X64_FP8_FP8"},
-       {4, 11, 4, 4, 1}},
-      // The table allows DS, VMEM and SALU at 0, not from 1.
-      {{"V_MFMA_F64_16X16X4F64"}, {18, 18, 0, 0, 0}},
+       {3, 11, 3, 3, 1}},
+      {{"V_MFMA_F64_16X16X4F64"}, {18, 18, 1, 1, 1}},
   };
   for (const auto &G : Groups) {
     for (StringRef Base : G.MFMAs) {
