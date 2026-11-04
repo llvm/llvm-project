@@ -671,9 +671,9 @@ bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
-  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
-  // This logic exists for libcalls, a frontend should explicitly use sret
-  // rather than rely on the sret demotion here.
+  // Mingw64 GCC returns f128 and i128 via sret, and LLVM matches it for
+  // compatibility. This logic exists for libcalls, a frontend should
+  // explicitly use sret rather than rely on the sret demotion here.
   //
   // Using sret is a reasonable implementation of the Windows x64 calling
   // convention:
@@ -692,7 +692,7 @@ bool X86TargetLowering::CanLowerReturn(
   // published, this can be revisited.
   //
   // Return false, which will perform sret demotion.
-  auto IsWin64F128StackCC = [this](CallingConv::ID CC) -> bool {
+  auto IsWin64StackCC = [this](CallingConv::ID CC) -> bool {
     switch (CC) {
     case CallingConv::Win64:
       return true;
@@ -703,9 +703,11 @@ bool X86TargetLowering::CanLowerReturn(
     }
   };
 
-  if (IsWin64F128StackCC(CallConv) &&
-      llvm::any_of(
-          Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
+  // i128 is legalized into i64 parts, so inspect ArgVT rather than VT.
+  if (IsWin64StackCC(CallConv) &&
+      llvm::any_of(Outs, [](const ISD::OutputArg &Out) {
+        return Out.VT == MVT::f128 || Out.ArgVT == MVT::i128;
+      }))
     return false;
 
   SmallVector<CCValAssign, 16> RVLocs;

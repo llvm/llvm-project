@@ -125,6 +125,13 @@ features cannot lower the translation-unit ABI level;
   always passed the parts separately. `-fclang-abi-compat=23` restores the previous
   behavior. (#GH212109)
 
+- On x86_64 Windows targets, Clang now returns `__int128` and `unsigned
+  __int128` indirectly through a hidden return pointer. This matches how Clang
+  already returns 16-byte structs on the same targets. This is ABI-incompatible
+  with objects and runtime libraries using Clang's previous direct XMM return
+  convention. `-fclang-abi-compat=23` restores the previous convention for
+  source-level function calls.
+
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 

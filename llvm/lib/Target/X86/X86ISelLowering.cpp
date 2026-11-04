@@ -2741,7 +2741,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
-  // The Win64 C ABI passes i128 by reference and returns it in XMM0. The
+  // The Win64 C ABI passes i128 by reference and returns it via sret. The
   // libcalls for i128 division, remainder and floating point conversions are
   // compiled with that ABI wherever it is the default C convention (Windows and
   // UEFI), so lower them accordingly there.
@@ -22478,12 +22478,14 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   // fp128 needs to use a libcall.
   if (SrcVT == MVT::f128) {
+    if (Subtarget.isCallingConvWin64(CallingConv::C) && VT == MVT::i128)
+      return LowerWin64_FP_TO_INT128(Op, DAG, Chain);
+
     RTLIB::Libcall LC;
     if (IsSigned)
       LC = RTLIB::getFPTOSINT(SrcVT, VT);
     else
       LC = RTLIB::getFPTOUINT(SrcVT, VT);
-
     MakeLibCallOptions CallOptions;
     std::pair<SDValue, SDValue> Tmp =
         makeLibCall(DAG, LC, VT, Src, CallOptions, dl, Chain);
@@ -30977,7 +30979,8 @@ static SDValue LowerMULO(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getMergeValues({Low, Ovf}, dl);
 }
 
-SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op,
+                                             SelectionDAG &DAG) const {
   assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && VT.getSizeInBits() == 128 &&
@@ -30990,15 +30993,14 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   }
 
   RTLIB::Libcall LC;
-  bool isSigned;
   switch (Op->getOpcode()) {
   // clang-format off
   default: llvm_unreachable("Unexpected request for libcall!");
-  case ISD::SDIV:      isSigned = true;  LC = RTLIB::SDIV_I128;    break;
-  case ISD::UDIV:      isSigned = false; LC = RTLIB::UDIV_I128;    break;
-  case ISD::SREM:      isSigned = true;  LC = RTLIB::SREM_I128;    break;
-  case ISD::UREM:      isSigned = false; LC = RTLIB::UREM_I128;    break;
-  // clang-format on
+  case ISD::SDIV:      LC = RTLIB::SDIV_I128; break;
+  case ISD::UDIV:      LC = RTLIB::UDIV_I128; break;
+  case ISD::SREM:      LC = RTLIB::SREM_I128; break;
+  case ISD::UREM:      LC = RTLIB::UREM_I128; break;
+    // clang-format on
   }
 
   SDLoc dl(Op);
@@ -31015,7 +31017,9 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
     InChain =
         DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr, MPI, Align(16));
-    Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
+    Args.emplace_back(
+        StackPtr, PointerType::get(*DAG.getContext(),
+                                   DAG.getDataLayout().getAllocaAddrSpace()));
   }
 
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
@@ -31026,17 +31030,12 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(InChain)
-      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
-                    EVT(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
-                    std::move(Args))
-      .setInRegister()
-      .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+  CLI.setDebugLoc(dl).setChain(InChain).setLibCallee(
+      DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+      VT.getTypeForEVT(*DAG.getContext()), Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
-  return DAG.getBitcast(VT, CallInfo.first);
+  return CallInfo.first;
 }
 
 SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
@@ -31065,11 +31064,8 @@ SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
   Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
   SDValue Result;
-  // Expect the i128 argument returned as a v2i64 in xmm0, cast back to the
-  // expected VT (i128).
   std::tie(Result, Chain) =
-      makeLibCall(DAG, LC, MVT::v2i64, Arg, CallOptions, dl, Chain);
-  Result = DAG.getBitcast(VT, Result);
+      makeLibCall(DAG, LC, VT, Arg, CallOptions, dl, Chain);
   return Result;
 }
 

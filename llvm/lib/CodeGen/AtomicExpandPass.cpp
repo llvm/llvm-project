@@ -2255,16 +2255,9 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
-
-  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
-      Size == 16) {
-    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
-    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
-    // rules handles this correctly if we pass it as a v2i64 rather than
-    // i128. This is what Clang does in the frontend for such types as well
-    // (see WinX86_64ABIInfo::classify in Clang).
-    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
-  }
+  bool PassI128Indirectly = UseSizedLibcall && Size == 16 &&
+                            M->getTargetTriple().isX86_64() &&
+                            M->getTargetTriple().isOSWindowsOrUEFI();
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
@@ -2377,7 +2370,18 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     if (UseSizedLibcall) {
       Value *IntValue =
           Builder.CreateBitPreservingCastChain(DL, ValueOperand, SizedIntTy);
-      Args.push_back(IntValue);
+      if (PassI128Indirectly) {
+        // Win64 passes i128 arguments indirectly. Materialize that ABI here
+        // because SelectionDAG cannot recover the original i128 after it has
+        // been split for calling convention analysis.
+        AllocaValue = AllocaBuilder.CreateAlloca(SizedIntTy);
+        AllocaValue->setAlignment(AllocaAlignment);
+        Builder.CreateLifetimeStart(AllocaValue);
+        Builder.CreateAlignedStore(IntValue, AllocaValue, AllocaAlignment);
+        Args.push_back(AllocaValue);
+      } else {
+        Args.push_back(IntValue);
+      }
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
@@ -2433,7 +2437,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   Value *Result = Call;
 
   // And then, extract the results...
-  if (ValueOperand && !UseSizedLibcall)
+  if (AllocaValue)
     Builder.CreateLifetimeEnd(AllocaValue);
 
   if (CASExpected) {

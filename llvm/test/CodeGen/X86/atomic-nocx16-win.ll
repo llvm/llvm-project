@@ -5,13 +5,14 @@ define void @call_load(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: call_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rsi
-; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    subq $48, %rsp
 ; CHECK-NEXT:    movq %rcx, %rsi
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movl $5, %edx
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movl $5, %r8d
 ; CHECK-NEXT:    callq __atomic_load_16
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsi)
-; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    addq $48, %rsp
 ; CHECK-NEXT:    popq %rsi
 ; CHECK-NEXT:    retq
 entry:
