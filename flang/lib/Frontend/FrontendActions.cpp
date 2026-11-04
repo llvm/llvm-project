@@ -872,6 +872,15 @@ void CodeGenAction::generateLLVMIR() {
                                 opts.CodeObjectVersion);
     }
   }
+
+  // Add NonLazyBind attribute to function declarations when -fno-plt is used.
+  // Also set the RtLibUseGOT module flag so compiler-rt calls use the GOT.
+  if (opts.NoPLT) {
+    llvmModule->setRtLibUseGOT();
+    for (llvm::Function &func : *llvmModule)
+      if (func.isDeclaration() && !func.isIntrinsic())
+        func.addFnAttr(llvm::Attribute::NonLazyBind);
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -966,7 +975,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   const llvm::cl::LibraryOptionsContext &libraryOptions =
       llvmModule->getContext().getLibraryOptions();
-  llvm::PipelineTuningOptions pto(&libraryOptions);
+  llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {

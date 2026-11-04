@@ -346,6 +346,7 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
                         SrcAgent, Size, NumDepSignals, DepSignals,
                         CompletionSignal);
 
+  ODBG(OLDT_Tool) << "Running Async Copy on SDMA Engine: " << *SdmaEngine;
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);

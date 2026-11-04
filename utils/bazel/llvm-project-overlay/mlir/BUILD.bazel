@@ -439,7 +439,6 @@ cc_library(
         "lib/IR/*.h",
         "lib/IR/PDL/*.cpp",
         "lib/Bytecode/Writer/*.h",
-        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/IR/OpAsmDialectInterface.h.inc",
         "include/mlir/IR/OpAsmOpInterface.h.inc",
@@ -449,6 +448,7 @@ cc_library(
     ],
     hdrs = glob([
         "include/mlir/IR/*.h",
+        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
@@ -9787,19 +9787,6 @@ cc_library(
 )
 
 cc_library(
-    name = "OpenMPCommon",
-    srcs = ["lib/Target/LLVMIR/Dialect/OpenMPCommon.cpp"],
-    hdrs = ["include/mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"],
-    includes = ["include"],
-    deps = [
-        ":IR",
-        ":Support",
-        "//llvm:Core",
-        "//llvm:FrontendOpenMP",
-    ],
-)
-
-cc_library(
     name = "LLVMIRToLLVMTranslation",
     srcs = ["lib/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.cpp"],
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"],
@@ -9835,14 +9822,15 @@ cc_library(
 cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]) + [
+        "include/mlir/Target/LLVMIR/Dialect/OpenMPCommon.h",
+    ],
     includes = ["include"],
     deps = [
         ":Analysis",
         ":ArithDialect",
         ":IR",
         ":LLVMDialect",
-        ":OpenMPCommon",
         ":OpenMPDialect",
         ":OpenMPUtils",
         ":SideEffectInterfaces",
@@ -9856,6 +9844,11 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
     ],
+)
+
+alias(
+    name = "OpenMPCommon",
+    actual = ":OpenMPToLLVMIRTranslation",
 )
 
 cc_library(
@@ -10299,6 +10292,7 @@ cc_library(
     deps = [
         ":AffineTransformOps",
         ":AllExtensions",
+        ":ArithExtensions",
         ":ArithToEmitC",
         ":ArithToLLVM",
         ":ArmNeonTransformOps",
@@ -10319,6 +10313,7 @@ cc_library(
         ":GPUTransformOps",
         ":IndexToLLVM",
         ":LLVMToLLVMIRTranslation",
+        ":LinalgExtensions",
         ":LinalgTransformOps",
         ":MPIToLLVM",
         ":MathToEmitC",
@@ -10338,6 +10333,7 @@ cc_library(
         ":SparseTensorTransformOps",
         ":TensorExtensions",
         ":TensorTransformOps",
+        ":TosaExtensions",
         ":TransformDebugExtension",
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
@@ -12289,6 +12285,29 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "LinalgExtensions",
+    srcs = glob(["lib/Dialect/Linalg/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Linalg/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":Analysis",
+        ":ArithDialect",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":LinalgStructuredOpsIncGen",
+        ":SCFDialect",
+        ":ShardDialect",
+        ":ShardTransforms",
+        ":ShardingInterface",
+        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "ValueBoundsOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/ValueBoundsOpInterface.td"],
@@ -12825,6 +12844,21 @@ cc_library(
         ":TosaPassIncGen",
         ":TransformUtils",
         ":VectorInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TosaExtensions",
+    srcs = glob(["lib/Dialect/Tosa/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Tosa/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":ShardDialect",
+        ":ShardingInterface",
+        ":Support",
+        ":TosaDialect",
         "//llvm:Support",
     ],
 )
@@ -13815,6 +13849,20 @@ cc_library(
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ArithExtensions",
+    srcs = glob(["lib/Dialect/Arith/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Arith/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+        ":ShardDialect",
+        ":ShardingInterface",
         "//llvm:Support",
     ],
 )

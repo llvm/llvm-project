@@ -2056,7 +2056,7 @@ void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
     Callee = Call.getCalleeIdentifier()->getName().str();
   reportTaintBug(
       Callee + " is called with a tainted (potentially attacker controlled) "
-               "value. Make sure the value is bound checked.",
+               "value; make sure the value is bound checked",
       State, C, TaintedSyms, Family);
 }
 
@@ -3828,7 +3828,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   // but it will not if closefn is not specified.
   // Currently, we do not inspect the 'closefn' function (PR12101).
   if (FName == "funopen")
-    if (Call->getNumArgs() >= 4 && Call->getArgSVal(4).isConstant(0))
+    if (Call->getNumArgs() >= 5 && Call->getArgSVal(4).isConstant(0))
       return false;
 
   // Do not warn on pointers passed to 'setbuf' when used with std streams,
