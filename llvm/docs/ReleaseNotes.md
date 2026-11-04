@@ -481,6 +481,9 @@ Makes programs 10x faster by doing Special New Thing.
   module) must be set using a `LLVMPositionBuilder*()` API before building any
   instructions, otherwise an error will be generated.
 
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
+
 ### Changes to the CodeGen infrastructure
 
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
