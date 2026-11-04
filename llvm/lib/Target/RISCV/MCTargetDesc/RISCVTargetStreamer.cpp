@@ -53,7 +53,7 @@ void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                StringRef StringValue) {}
 
 void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
+  assert(ABI != RISCVABI::ABI::Unknown && "Improperly initialized target ABI");
   TargetABI = ABI;
 }
 
