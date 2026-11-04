@@ -30,6 +30,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -489,6 +490,35 @@ constexpr bool test() {
       std::array<Data, 2> out;
       std::ranges::set_intersection(r1, r2, out.data(), comp);
       assert(std::ranges::equal(out, std::array{3, 4}, {}, &Data::data));
+    }
+  }
+
+  // Check that proj1 is only applied to elements of the first range and proj2 only to elements of the second range.
+  {
+    std::array r1{0, 1, 2, 3, 4};
+    std::array r2{0, 0, 0, 1, 1};
+    auto proj1 = [](int x) { return x * 2; };
+
+    {
+      std::array<int, r1.size() + r2.size()> out{};
+      auto result = std::ranges::set_intersection(r1, r2, out.data(), {}, proj1, std::identity{});
+      assert(std::ranges::equal(std::ranges::subrange(out.data(), result.out), std::array{0}));
+    }
+
+    // input iterators take a different code path than forward iterators
+    {
+      using In = cpp20_input_iterator<int*>;
+      std::array<int, r1.size() + r2.size()> out{};
+      auto result = std::ranges::set_intersection(
+          In(r1.data()),
+          sentinel_wrapper<In>(In(r1.data() + r1.size())),
+          In(r2.data()),
+          sentinel_wrapper<In>(In(r2.data() + r2.size())),
+          out.data(),
+          {},
+          proj1,
+          std::identity{});
+      assert(std::ranges::equal(std::ranges::subrange(out.data(), result.out), std::array{0}));
     }
   }
 

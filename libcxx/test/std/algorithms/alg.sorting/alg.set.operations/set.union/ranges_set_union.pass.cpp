@@ -490,6 +490,17 @@ constexpr bool test() {
     }
   }
 
+  // Check that proj1 is only applied to elements of the first range and proj2 only to elements of the second range.
+  {
+    std::array r1{0, 1, 2, 3, 4};
+    std::array r2{0, 0, 0, 1, 1};
+    auto proj1 = [](int x) { return x * 2; };
+
+    std::array<int, r1.size() + r2.size()> out{};
+    auto result = std::ranges::set_union(r1, r2, out.data(), {}, proj1, std::identity{});
+    assert(std::ranges::equal(std::ranges::subrange(out.data(), result.out), std::array{0, 0, 0, 1, 1, 1, 2, 3, 4}));
+  }
+
   return true;
 }
 
