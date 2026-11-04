@@ -134,9 +134,14 @@ define void @test6(i32 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[N:%.*]], 255
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[DIV1_LHS_TRUNC:%.*]] = trunc i32 [[N]] to i8
-; CHECK-NEXT:    [[DIV12:%.*]] = urem i8 [[DIV1_LHS_TRUNC]], 100
-; CHECK-NEXT:    [[DIV1_ZEXT:%.*]] = zext i8 [[DIV12]] to i32
+; CHECK-NEXT:    [[N_FROZEN:%.*]] = freeze i32 [[N]]
+; CHECK-NEXT:    [[DIV1_HALFX:%.*]] = lshr i32 [[N_FROZEN]], 1
+; CHECK-NEXT:    [[DIV1_CMP1:%.*]] = icmp uge i32 [[N_FROZEN]], 100
+; CHECK-NEXT:    [[DIV1_CMP2:%.*]] = icmp uge i32 [[DIV1_HALFX]], 100
+; CHECK-NEXT:    [[DIV1_SUB1:%.*]] = sub i32 [[N_FROZEN]], 100
+; CHECK-NEXT:    [[DIV1_SUB2:%.*]] = sub i32 [[DIV1_SUB1]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[DIV1_CMP1]], i32 [[DIV1_SUB1]], i32 [[N_FROZEN]]
+; CHECK-NEXT:    [[DIV1:%.*]] = select i1 [[DIV1_CMP2]], i32 [[DIV1_SUB2]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
