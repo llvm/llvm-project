@@ -376,7 +376,7 @@ static ValueObjectSP GetReferenceCountPointer(ValueObject &parent,
   // Extract and align the raw value
   bool is_success = false;
   uint64_t raw_val = val_sp->GetValueAsUnsigned(0, &is_success);
-  if (!is_success || raw_val == 0)
+  if (!is_success)
     return nullptr;
   // Clear the least significant bit. See
   // https://github.com/gcc-mirror/gcc/blob/releases/gcc-15.2.0/libstdc%2B%2B-v3/include/bits/shared_ptr_atomic.h#L465

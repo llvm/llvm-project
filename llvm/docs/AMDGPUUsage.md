@@ -1999,6 +1999,14 @@ supported for the `amdgcn` target.
   to make incorrect transformations (such as promotion to `s_buffer_load`,
   which requires such componentwise alignment).
 
+  The buffer intrinsics that take their resource as a `<4 x i32>` instead of
+  a `ptr addrspace(8)` are deprecated and will be removed in a future LLVM
+  release. Add `ptr` after the
+  `raw`/`struct` component of the intrinsic name for the new version.
+  However, `llvm.amdgcn.s.buffer.load` becomes
+  `llvm.amdgcn.ptr.s.buffer.load` and needs to be annotated with `!invariant.load`
+  to preserve the old merging behavior. This migration was already done in clang.
+
 **Buffer Strided Pointer**
 
 : The buffer index pointer is an experimental address space. It represents
@@ -2757,6 +2765,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     This intrinsic has 1 operand:
 
     - Local pointer to the LDS barrier data.
+* - llvm.amdgcn.s.buffer.load
+  - Deprecated. Takes its buffer resource as a `<4 x i32>`. Use
+    `llvm.amdgcn.ptr.s.buffer.load`, which takes a `ptr addrspace(8)`
+    produced by `llvm.amdgcn.make.buffer.rsrc`.
+    The implicit assumptions encoded by the fact that this intrinsic was
+    tagged as not reading memory are replaced by needing to tag
+    `llvm.amdgcn.ptr.s.buffer.load` with `!invariant.load` metadata.
+* - llvm.amdgcn.{raw|struct}.\*buffer.\*
+  - Deprecated. The `buffer`, `tbuffer` and `atomic.buffer.load`
+    intrinsics that take their buffer resource as a `<4 x i32>` are
+    replaced by the variants with `ptr` inserted after the `raw` or
+    `struct` component of the name, which take a `ptr addrspace(8)`
+    produced by `llvm.amdgcn.make.buffer.rsrc`.
 :::
 
 :::{todo}
@@ -2772,10 +2793,45 @@ The '`llvm.amdgcn.av`' intrinsics perform
 {ref}`load-visible<amdgpu-load-visible>` operations on flat or global memory
 with *scope* supplied as a metadata argument.
 
-The pointer argument can be a global pointer (`addrspace(1)`) or a flat
-pointer (`addrspace(0)`). Global pointers select `global_load`/
+The pointer argument must be a naturally-aligned global (`addrspace(1)`)
+or flat (`addrspace(0)`) pointer. Global pointers select `global_load`/
 `global_store` instructions; flat pointers select `flat_load`/
 `flat_store` instructions. The cache policy bits are the same in both cases.
+
+These intrinsics exist for the following data types:
+
+:::{list-table} AMDGPU Available/Visible Intrinsics
+:class: longtable
+:header-rows: 1
+:name: amdgpu-av-intrinsics-table
+
+* - Width
+  - Data Type
+  - Load
+  - Store
+* - 8 bits
+  - `i8`
+  - `llvm.amdgcn.av.load.b8`
+  - `llvm.amdgcn.av.store.b8`
+* - 16 bits
+  - `i16`
+  - `llvm.amdgcn.av.load.b16`
+  - `llvm.amdgcn.av.store.b16`
+* - 32 bits
+  - `i32`
+  - `llvm.amdgcn.av.load.b32`
+  - `llvm.amdgcn.av.store.b32`
+* - 64 bits
+  - `<2 x i32>`
+  - `llvm.amdgcn.av.load.b64`
+  - `llvm.amdgcn.av.store.b64`
+* - 128 bits
+  - `<4 x i32>`
+  - `llvm.amdgcn.av.load.b128`
+  - `llvm.amdgcn.av.store.b128`
+:::
+
+Example for 128 bits loads and stores:
 
 ```llvm
 <4 x i32> @llvm.amdgcn.av.load.b128.p1(
@@ -2803,9 +2859,11 @@ This section is informational and for **internal reference only**. Users should
 not rely on the expansions described below. The only reliable user-level
 guarantees are those provided by the {ref}`AMDGPU memory model<amdgpu-memmodel>`.
 
-The tables below show the cache policy bits for global pointer variants.
-Flat pointer variants use the corresponding `flat_load`/`flat_store`
-instructions with the same cache policy bits.
+The tables below show the cache policy bits for the 128 bits global pointer
+variants. Other widths use the `global_load`/`global_store` instruction of
+the corresponding width with the same cache policy bits. Flat pointer variants
+use the corresponding `flat_load`/`flat_store` instructions with the same
+cache policy bits.
 
 **TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
 `"workgroup"` scope currently maps to CU scope (no bits). When WGP mode is
@@ -3024,10 +3082,14 @@ registers. See {ref}`amdgpu-dma-operations` for full documentation.
 ```
 llvm.amdgcn.load[.async].to.lds
 llvm.amdgcn.global.load[.async].lds
-llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+llvm.amdgcn.{raw|struct}.ptr.buffer.load[.async].lds
 llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
 llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
 ```
+
+The `llvm.amdgcn.{raw|struct}.buffer.load[.async].lds` spellings, which take
+their buffer resource as a `<4 x i32>` rather than a `ptr addrspace(8)`,
+are deprecated.
 
 #### Tensor Intrinsics
 
