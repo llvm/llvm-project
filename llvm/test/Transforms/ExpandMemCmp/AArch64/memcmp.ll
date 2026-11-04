@@ -833,23 +833,10 @@ define i32 @cmp_eq15(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 define i32 @cmp_eq16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq16(
 ; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
-; CHECK-NEXT:    br label [[LOADBB:%.*]]
-; CHECK:       res_block:
-; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
-; CHECK:       loadbb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
-; CHECK:       loadbb1:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[RES_BLOCK]], label [[ENDBLOCK]]
-; CHECK:       endblock:
-; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[Y]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[PHI_RES:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
