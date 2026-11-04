@@ -249,7 +249,7 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
   return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
     return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
            ac.kind == ArgKind::Indirect ||
-           ac.kind == ArgKind::IndirectAliased ||ac.kind == ArgKind::Expand ||
+           ac.kind == ArgKind::IndirectAliased || ac.kind == ArgKind::Expand ||
            (ac.kind == ArgKind::Direct && (ac.coercedType || ac.directAlign));
   });
 }
