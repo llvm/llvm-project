@@ -4170,6 +4170,8 @@ add_header_library(
   HDRS
     frexpf80.h
   DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config

@@ -10488,6 +10488,8 @@ libc_support_library(
     hdrs = ["src/__support/math/frexpf80.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_float128",
         ":__support_fputil_float80",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
