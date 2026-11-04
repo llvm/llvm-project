@@ -621,7 +621,7 @@ private:
   /// Returns the size of \p MI, excluding the LFI deferred LR guard that may
   /// be flushed before a control-flow instruction (added by
   /// getInstSizeInBytes).
-  unsigned getInstSizeInBytesImpl(const MachineInstr &MI) const;
+  unsigned getInstSizeInBytesNoGuard(const MachineInstr &MI) const;
 
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.

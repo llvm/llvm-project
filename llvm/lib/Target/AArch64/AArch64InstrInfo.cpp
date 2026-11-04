@@ -217,7 +217,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 4;
   }
 
-  unsigned NumBytes = getInstSizeInBytesImpl(MI);
+  unsigned NumBytes = getInstSizeInBytesNoGuard(MI);
 
   // The LFI rewriter may flush a deferred LR guard (1 instruction) before any
   // control-flow instruction. Bundles are skipped because their size is the
@@ -230,7 +230,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 }
 
 unsigned
-AArch64InstrInfo::getInstSizeInBytesImpl(const MachineInstr &MI) const {
+AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
