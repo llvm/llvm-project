@@ -9,13 +9,11 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%core_cnt.078> = phi (add) vp<[[VP5:%[0-9]+]]>, ir<%spec.select>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>
-; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%arrayidx> = getelementptr inbounds nuw ir<%ub>, vp<[[VP8:%[0-9]+]]>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx>
-; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK:  Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
+; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%sub> = add nsw ir<%conv>, ir<-128>
-; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%arrayidx1> = getelementptr inbounds nuw ir<%vb>, vp<[[VP8]]>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1>
-; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK:  Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%arrayidx1>
+; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%sub3> = add nsw ir<%conv2>, ir<-128>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%sub8> = sub nsw ir<%conv>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%sub>, ir<%sub>
@@ -41,7 +39,7 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%or.cond48> = select ir<%or.cond>, ir<%cmp39>, ir<false>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%inc42> = zext ir<%or.cond48> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%neutral_cnt.1> = add ir<%neutral_cnt.076>, ir<%inc42>
-; CHECK:  Cost for VF 2: 46 (Estimated cost per lane: 23)
+; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%core_cnt.078> = phi (add) vp<[[VP5]]>, ir<%spec.select>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>
@@ -82,13 +80,11 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%core_cnt.078> = phi (add) vp<[[VP5:%[0-9]+]]>, ir<%spec.select>
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>
-; MAX:  Cost of 0 for VF 2: REPLICATE ir<%arrayidx> = getelementptr inbounds nuw ir<%ub>, vp<[[VP8:%[0-9]+]]>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx>
-; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
+; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%sub> = add nsw ir<%conv>, ir<-128>
-; MAX:  Cost of 0 for VF 2: REPLICATE ir<%arrayidx1> = getelementptr inbounds nuw ir<%vb>, vp<[[VP8]]>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1>
-; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%arrayidx1>
+; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%sub3> = add nsw ir<%conv2>, ir<-128>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%sub8> = sub nsw ir<%conv>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%sub>, ir<%sub>
@@ -114,7 +110,7 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%or.cond48> = select ir<%or.cond>, ir<%cmp39>, ir<false>
 ; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%inc42> = zext ir<%or.cond48> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%neutral_cnt.1> = add ir<%neutral_cnt.076>, ir<%inc42>
-; MAX:  Cost for VF 2: 46 (Estimated cost per lane: 23)
+; MAX:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%core_cnt.078> = phi (add) vp<[[VP5]]>, ir<%spec.select>
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>

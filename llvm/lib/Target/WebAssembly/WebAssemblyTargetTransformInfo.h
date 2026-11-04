@@ -94,6 +94,7 @@ public:
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override;
 
+  using BaseT::getScalarizationOverhead;
   InstructionCost
   getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
                            bool Insert, bool Extract,

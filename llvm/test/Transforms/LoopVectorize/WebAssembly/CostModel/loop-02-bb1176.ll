@@ -9,55 +9,55 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5:%[0-9]+]]>, ir<%65>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6:%[0-9]+]]>, ir<%54>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7:%[0-9]+]]>, ir<%67>
-; CHECK:  Cost of 2 for VF 2: WIDEN ir<%28> = load vp<[[VP12:%[0-9]+]]>
+; CHECK:  Cost of 2 for VF 2: WIDEN ir<%28> = load vp<[[VP12:%[0-9]+]]>, align 4
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%31> = load ir<%29>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%31> = load ir<%29>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%32> = sext ir<%31> to i32
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%33> = load vp<%next.gep>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%33> = load vp<%next.gep>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%34> = sext ir<%33> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%35> = mul nsw ir<%34>, ir<%32>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%36> = add ir<%35>, ir<%21>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%37> = getelementptr inbounds vp<%next.gep>, ir<1>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%38> = load ir<%37>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%39> = sext ir<%38> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%40> = mul nsw ir<%39>, ir<%32>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%41> = add ir<%40>, ir<%23>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%43> = load ir<%42>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%43> = load ir<%42>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%44> = sext ir<%43> to i32
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%45> = getelementptr inbounds vp<%next.gep>, ir<2>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%46> = load ir<%45>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%46> = load ir<%45>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%47> = sext ir<%46> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%48> = mul nsw ir<%47>, ir<%44>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%49> = add ir<%36>, ir<%48>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%50> = getelementptr inbounds vp<%next.gep>, ir<3>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%51> = load ir<%50>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%51> = load ir<%50>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%52> = sext ir<%51> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%53> = mul nsw ir<%52>, ir<%44>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%54> = add ir<%41>, ir<%53>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%55> = load ir<%30>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%55> = load ir<%30>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%56> = sext ir<%55> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%57> = mul nsw ir<%56>, ir<%34>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%58> = add ir<%57>, ir<%22>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%59> = mul nsw ir<%56>, ir<%39>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%60> = add ir<%59>, ir<%24>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%62> = load ir<%61>
+; CHECK:  Cost of 7 for VF 2: REPLICATE ir<%62> = load ir<%61>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%63> = sext ir<%62> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%64> = mul nsw ir<%63>, ir<%47>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%65> = add ir<%58>, ir<%64>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%66> = mul nsw ir<%63>, ir<%52>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%67> = add ir<%60>, ir<%66>
-; CHECK:  Cost for VF 2: 75 (Estimated cost per lane: 37.5)
+; CHECK:  Cost for VF 2: 83 (Estimated cost per lane: 41.5)
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%21> = phi (add) vp<[[VP4]]>, ir<%49>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5]]>, ir<%65>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6]]>, ir<%54>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7]]>, ir<%67>
-; CHECK:  Cost of 2 for VF 4: WIDEN ir<%28> = load vp<[[VP12]]>
+; CHECK:  Cost of 2 for VF 4: WIDEN ir<%28> = load vp<[[VP12]]>, align 4
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%31> = load ir<%29>
+; CHECK:  Cost of 14 for VF 4: REPLICATE ir<%31> = load ir<%29>
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%32> = sext ir<%31> to i32
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%33> = load from index 0
@@ -71,7 +71,7 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%40> = mul nsw ir<%39>, ir<%32>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%41> = add ir<%40>, ir<%23>
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%43> = load ir<%42>
+; CHECK:  Cost of 14 for VF 4: REPLICATE ir<%43> = load ir<%42>
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%44> = sext ir<%43> to i32
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%47> = sext ir<%46> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%48> = mul nsw ir<%47>, ir<%44>
@@ -79,20 +79,20 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%52> = sext ir<%51> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%53> = mul nsw ir<%52>, ir<%44>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%54> = add ir<%41>, ir<%53>
-; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%55> = load ir<%30>
+; CHECK:  Cost of 14 for VF 4: REPLICATE ir<%55> = load ir<%30>
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%56> = sext ir<%55> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%57> = mul nsw ir<%56>, ir<%34>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%58> = add ir<%57>, ir<%22>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%59> = mul nsw ir<%56>, ir<%39>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%60> = add ir<%59>, ir<%24>
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%62> = load ir<%61>
+; CHECK:  Cost of 14 for VF 4: REPLICATE ir<%62> = load ir<%61>
 ; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%63> = sext ir<%62> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%64> = mul nsw ir<%63>, ir<%47>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%65> = add ir<%58>, ir<%64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%66> = mul nsw ir<%63>, ir<%52>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%67> = add ir<%60>, ir<%66>
-; CHECK:  Cost for VF 4: 108 (Estimated cost per lane: 27)
+; CHECK:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; CHECK:  LV: Selecting VF: 4.
 ;
 ; MAX-LABEL: 'aim_for_vf8'
@@ -100,55 +100,55 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5:%[0-9]+]]>, ir<%65>
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6:%[0-9]+]]>, ir<%54>
 ; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7:%[0-9]+]]>, ir<%67>
-; MAX:  Cost of 2 for VF 2: WIDEN ir<%28> = load vp<[[VP12:%[0-9]+]]>
+; MAX:  Cost of 2 for VF 2: WIDEN ir<%28> = load vp<[[VP12:%[0-9]+]]>, align 4
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%31> = load ir<%29>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%31> = load ir<%29>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%32> = sext ir<%31> to i32
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%33> = load vp<%next.gep>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%33> = load vp<%next.gep>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%34> = sext ir<%33> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%35> = mul nsw ir<%34>, ir<%32>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%36> = add ir<%35>, ir<%21>
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%37> = getelementptr inbounds vp<%next.gep>, ir<1>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%38> = load ir<%37>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%39> = sext ir<%38> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%40> = mul nsw ir<%39>, ir<%32>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%41> = add ir<%40>, ir<%23>
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%43> = load ir<%42>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%43> = load ir<%42>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%44> = sext ir<%43> to i32
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%45> = getelementptr inbounds vp<%next.gep>, ir<2>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%46> = load ir<%45>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%46> = load ir<%45>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%47> = sext ir<%46> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%48> = mul nsw ir<%47>, ir<%44>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%49> = add ir<%36>, ir<%48>
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%50> = getelementptr inbounds vp<%next.gep>, ir<3>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%51> = load ir<%50>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%51> = load ir<%50>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%52> = sext ir<%51> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%53> = mul nsw ir<%52>, ir<%44>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%54> = add ir<%41>, ir<%53>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%55> = load ir<%30>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%55> = load ir<%30>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%56> = sext ir<%55> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%57> = mul nsw ir<%56>, ir<%34>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%58> = add ir<%57>, ir<%22>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%59> = mul nsw ir<%56>, ir<%39>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%60> = add ir<%59>, ir<%24>
 ; MAX:  Cost of 0 for VF 2: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; MAX:  Cost of 6 for VF 2: REPLICATE ir<%62> = load ir<%61>
+; MAX:  Cost of 7 for VF 2: REPLICATE ir<%62> = load ir<%61>
 ; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%63> = sext ir<%62> to i32
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%64> = mul nsw ir<%63>, ir<%47>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%65> = add ir<%58>, ir<%64>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%66> = mul nsw ir<%63>, ir<%52>
 ; MAX:  Cost of 1 for VF 2: WIDEN ir<%67> = add ir<%60>, ir<%66>
-; MAX:  Cost for VF 2: 75 (Estimated cost per lane: 37.5)
+; MAX:  Cost for VF 2: 83 (Estimated cost per lane: 41.5)
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%21> = phi (add) vp<[[VP4]]>, ir<%49>
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5]]>, ir<%65>
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6]]>, ir<%54>
 ; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7]]>, ir<%67>
-; MAX:  Cost of 2 for VF 4: WIDEN ir<%28> = load vp<[[VP12]]>
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%28> = load vp<[[VP12]]>, align 4
 ; MAX:  Cost of 0 for VF 4: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; MAX:  Cost of 0 for VF 4: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; MAX:  Cost of 12 for VF 4: REPLICATE ir<%31> = load ir<%29>
+; MAX:  Cost of 14 for VF 4: REPLICATE ir<%31> = load ir<%29>
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%32> = sext ir<%31> to i32
 ; MAX:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; MAX:    ir<%33> = load from index 0
@@ -162,7 +162,7 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%40> = mul nsw ir<%39>, ir<%32>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%41> = add ir<%40>, ir<%23>
 ; MAX:  Cost of 0 for VF 4: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; MAX:  Cost of 12 for VF 4: REPLICATE ir<%43> = load ir<%42>
+; MAX:  Cost of 14 for VF 4: REPLICATE ir<%43> = load ir<%42>
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%44> = sext ir<%43> to i32
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%47> = sext ir<%46> to i32
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%48> = mul nsw ir<%47>, ir<%44>
@@ -170,28 +170,28 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%52> = sext ir<%51> to i32
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%53> = mul nsw ir<%52>, ir<%44>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%54> = add ir<%41>, ir<%53>
-; MAX:  Cost of 12 for VF 4: REPLICATE ir<%55> = load ir<%30>
+; MAX:  Cost of 14 for VF 4: REPLICATE ir<%55> = load ir<%30>
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%56> = sext ir<%55> to i32
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%57> = mul nsw ir<%56>, ir<%34>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%58> = add ir<%57>, ir<%22>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%59> = mul nsw ir<%56>, ir<%39>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%60> = add ir<%59>, ir<%24>
 ; MAX:  Cost of 0 for VF 4: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; MAX:  Cost of 12 for VF 4: REPLICATE ir<%62> = load ir<%61>
+; MAX:  Cost of 14 for VF 4: REPLICATE ir<%62> = load ir<%61>
 ; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%63> = sext ir<%62> to i32
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%64> = mul nsw ir<%63>, ir<%47>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%65> = add ir<%58>, ir<%64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%66> = mul nsw ir<%63>, ir<%52>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%67> = add ir<%60>, ir<%66>
-; MAX:  Cost for VF 4: 108 (Estimated cost per lane: 27)
+; MAX:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%21> = phi (add) vp<[[VP4]]>, ir<%49>
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5]]>, ir<%65>
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6]]>, ir<%54>
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7]]>, ir<%67>
-; MAX:  Cost of 2 for VF 8: WIDEN ir<%28> = load vp<[[VP12]]>
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%28> = load vp<[[VP12]]>, align 4
 ; MAX:  Cost of 0 for VF 8: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; MAX:  Cost of 0 for VF 8: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; MAX:  Cost of 24 for VF 8: REPLICATE ir<%31> = load ir<%29>
+; MAX:  Cost of 28 for VF 8: REPLICATE ir<%31> = load ir<%29>
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%32> = sext ir<%31> to i32
 ; MAX:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; MAX:    ir<%33> = load from index 0
@@ -205,7 +205,7 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%40> = mul nsw ir<%39>, ir<%32>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%41> = add ir<%40>, ir<%23>
 ; MAX:  Cost of 0 for VF 8: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; MAX:  Cost of 24 for VF 8: REPLICATE ir<%43> = load ir<%42>
+; MAX:  Cost of 28 for VF 8: REPLICATE ir<%43> = load ir<%42>
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%44> = sext ir<%43> to i32
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%47> = sext ir<%46> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%48> = mul nsw ir<%47>, ir<%44>
@@ -213,28 +213,28 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%52> = sext ir<%51> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%53> = mul nsw ir<%52>, ir<%44>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%54> = add ir<%41>, ir<%53>
-; MAX:  Cost of 24 for VF 8: REPLICATE ir<%55> = load ir<%30>
+; MAX:  Cost of 28 for VF 8: REPLICATE ir<%55> = load ir<%30>
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%56> = sext ir<%55> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%57> = mul nsw ir<%56>, ir<%34>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%58> = add ir<%57>, ir<%22>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%59> = mul nsw ir<%56>, ir<%39>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%60> = add ir<%59>, ir<%24>
 ; MAX:  Cost of 0 for VF 8: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; MAX:  Cost of 24 for VF 8: REPLICATE ir<%62> = load ir<%61>
+; MAX:  Cost of 28 for VF 8: REPLICATE ir<%62> = load ir<%61>
 ; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%63> = sext ir<%62> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%64> = mul nsw ir<%63>, ir<%47>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%65> = add ir<%58>, ir<%64>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%66> = mul nsw ir<%63>, ir<%52>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%67> = add ir<%60>, ir<%66>
-; MAX:  Cost for VF 8: 210 (Estimated cost per lane: 26.3)
+; MAX:  Cost for VF 8: 226 (Estimated cost per lane: 28.3)
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%21> = phi (add) vp<[[VP4]]>, vp<[[VP15:%[0-9]+]]> (VF scaled by 1/4)
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%22> = phi (add) vp<[[VP5]]>, vp<[[VP19:%[0-9]+]]> (VF scaled by 1/4)
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%23> = phi (add) vp<[[VP6]]>, vp<[[VP16:%[0-9]+]]> (VF scaled by 1/4)
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%24> = phi (add) vp<[[VP7]]>, vp<[[VP20:%[0-9]+]]> (VF scaled by 1/4)
-; MAX:  Cost of 4 for VF 16: WIDEN ir<%28> = load vp<[[VP12]]>
+; MAX:  Cost of 4 for VF 16: WIDEN ir<%28> = load vp<[[VP12]]>, align 4
 ; MAX:  Cost of 0 for VF 16: REPLICATE ir<%29> = getelementptr inbounds ir<%18>, ir<%28>
 ; MAX:  Cost of 0 for VF 16: REPLICATE ir<%30> = getelementptr inbounds ir<%19>, ir<%28>
-; MAX:  Cost of 48 for VF 16: REPLICATE ir<%31> = load ir<%29>
+; MAX:  Cost of 56 for VF 16: REPLICATE ir<%31> = load ir<%29>
 ; MAX:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; MAX:    ir<%33> = load from index 0
 ; MAX:    ir<%38> = load from index 1
@@ -243,17 +243,17 @@ define dso_local void @aim_for_vf8(ptr %0, i32 %1, ptr %2, ptr %3, i1 %4, ptr %5
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP13:%[0-9]+]]> = ir<%21> + partial.reduce.add (mul nsw (ir<%33> sext to i32), (ir<%31> sext to i32))
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP14:%[0-9]+]]> = ir<%23> + partial.reduce.add (mul nsw (ir<%38> sext to i32), (ir<%31> sext to i32))
 ; MAX:  Cost of 0 for VF 16: REPLICATE ir<%42> = getelementptr inbounds ir<%29>, ir<%6>
-; MAX:  Cost of 48 for VF 16: REPLICATE ir<%43> = load ir<%42>
+; MAX:  Cost of 56 for VF 16: REPLICATE ir<%43> = load ir<%42>
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP15]]> = vp<[[VP13]]> + partial.reduce.add (mul nsw (ir<%46> sext to i32), (ir<%43> sext to i32))
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP16]]> = vp<[[VP14]]> + partial.reduce.add (mul nsw (ir<%51> sext to i32), (ir<%43> sext to i32))
-; MAX:  Cost of 48 for VF 16: REPLICATE ir<%55> = load ir<%30>
+; MAX:  Cost of 56 for VF 16: REPLICATE ir<%55> = load ir<%30>
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP17:%[0-9]+]]> = ir<%22> + partial.reduce.add (mul nsw (ir<%55> sext to i32), (ir<%33> sext to i32))
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP18:%[0-9]+]]> = ir<%24> + partial.reduce.add (mul nsw (ir<%55> sext to i32), (ir<%38> sext to i32))
 ; MAX:  Cost of 0 for VF 16: REPLICATE ir<%61> = getelementptr inbounds ir<%30>, ir<%6>
-; MAX:  Cost of 48 for VF 16: REPLICATE ir<%62> = load ir<%61>
+; MAX:  Cost of 56 for VF 16: REPLICATE ir<%62> = load ir<%61>
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP19]]> = vp<[[VP17]]> + partial.reduce.add (mul nsw (ir<%62> sext to i32), (ir<%46> sext to i32))
 ; MAX:  Cost of 2 for VF 16: EXPRESSION vp<[[VP20]]> = vp<[[VP18]]> + partial.reduce.add (mul nsw (ir<%62> sext to i32), (ir<%51> sext to i32))
-; MAX:  Cost for VF 16: 352 (Estimated cost per lane: 22)
+; MAX:  Cost for VF 16: 384 (Estimated cost per lane: 24)
 ; MAX:  LV: Selecting VF: 16.
 ;
 newFuncRoot:

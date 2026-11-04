@@ -421,10 +421,10 @@ InstructionCost WebAssemblyTTIImpl::getScalarizationOverhead(
   // Building a vector is more costly than the sum of the individual lane
   // operations as we will group these together which can induce stalls, even
   // if the runtime supports instruction scheduling.
-  if ((Insert && VIC == TTI::VectorInstrContext::Load) ||
-      (Extract && VIC == TTI::VectorInstrContext::Store)) {
-    auto *Ty = cast<FixedVectorType>(InTy);
-    Cost += Ty->getNumElements() / 2;
+  if (CostKind != TTI::TCK_CodeSize &&
+      ((Insert && VIC == TTI::VectorInstrContext::Load) ||
+       (Extract && VIC == TTI::VectorInstrContext::Store))) {
+    Cost += DemandedElts.popcount() / 2;
   }
   return Cost;
 }
@@ -440,11 +440,12 @@ InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
   // store_lane, but keep a basic cost for throughput.
   if ((Opcode == Instruction::InsertElement && VIC == VectorInstrContext::Load))
     return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
-  else if (Opcode == Instruction::ExtractElement &&
-           VIC == VectorInstrContext::Store)
+
+  if (Opcode == Instruction::ExtractElement &&
+      VIC == VectorInstrContext::Store)
     return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
-  else
-    Cost += BasicTTIImplBase::getVectorInstrCost(Opcode, Val, CostKind, Index,
+
+  Cost += BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index,
                                                  Op0, Op1, VIC);
 
   return Cost;
