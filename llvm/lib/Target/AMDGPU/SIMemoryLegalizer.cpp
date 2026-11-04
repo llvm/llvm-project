@@ -172,7 +172,7 @@ private:
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
       assert(Scope == SIAtomicScope::NONE &&
-             OrderingAddrSpace == SIAtomicAddrSpace::NONE &&
+             !any(OrderingAddrSpace) &&
              !IsCrossAddressSpaceOrdering &&
              FailureOrdering == AtomicOrdering::NotAtomic);
       return;
@@ -742,7 +742,7 @@ getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
       diagnoseUnknownMMRAASName(MI, Suffix);
   }
 
-  if (Result == SIAtomicAddrSpace::NONE)
+  if (!any(Result))
     return std::nullopt;
 
   return Result;
