@@ -128,6 +128,12 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On 64-bit PowerPC ELFv1, a union argument that wraps a single floating-point
+  or vector value, or a struct that wraps such a union, is now passed in
+  general-purpose registers rather than in a floating-point or vector register,
+  matching GCC. ELFv2 is unchanged. `-fclang-abi-compat=23` restores the
+  previous behavior.
+
 - Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
   now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
   matching GCC. Aggregates where this changes the classification may be passed
@@ -158,6 +164,10 @@ features cannot lower the translation-unit ABI level;
   enclosing record still reduces the alignment. (#GH208256)
 
 ### AST Dumping Potentially Breaking Changes
+
+- The AST printer (`-ast-print`) now prints a floating-point literal as the
+  shortest decimal form that round-trips to the same value. For example,
+  `3.14` printed as `3.1400000000000001` before and prints as `3.14` now.
 
 ### Clang Frontend Potentially Breaking Changes
 
@@ -769,6 +779,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- `-Wno-unsafe-buffer-usage-in-libc-call` no longer turns off
+  `-Wunsafe-buffer-usage-in-format-attr-call`, and
+  `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
+  Safe Buffers warning enabled.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -820,6 +835,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed a crash when comparing vectors of `_BitInt` wider than 128 bits. (#GH200665)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
@@ -917,6 +933,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
+- Clang now recovers from invalid single pointer declarators in structured
+  bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
+  This allows type deduction to proceed and avoids redundant follow-up
+  diagnostics. (#GH222605)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
@@ -1158,6 +1179,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a bug where Clang could ignore lambda constraints in return-type
   requirements.
+
+- Fixed a crash when the operand of `__builtin_addressof` is an overload set.
+  A function template specialization such as `f<int>` is now resolved like the
+  argument of `std::addressof`, and an unresolvable overload set is diagnosed.
+  (#GH77928)
 
 #### Bug Fixes to AST Handling
 
@@ -1449,6 +1475,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
+  declarations such as `fopen` when targeting MSVC to avoid false negatives in
+  C99 and later C standards.
+
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
@@ -1459,6 +1489,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
+- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777) and the diagnostics that contained multiple sentences got turned into single sentences using `;` (#GH236804, #GH237410).
+  The RFC for these changes can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
 
 (release-notes-sanitizers)=
 
@@ -1518,6 +1550,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `_BitInt` type wider than any standard integer type. (#GH140074)
 - Fixed a crash when a non-static data member appears in a `lastprivate` clause
   inside a member function template of a non-template class. (#GH144302)
+- Fixed a crash when a `linear` clause with the `uval` modifier names a
+  reference without an initializer, such as a reference parameter. (#GH108166)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.
@@ -1548,10 +1582,21 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+
 - Added support for the combined `#pragma omp target loop` construct, which
   previously crashed the compiler. It is lowered like `#pragma omp target simd`.
 
+- Fixed variables shared by an enclosing region (e.g. `parallel`) being
+  captured by copy when a nested construct has `default(firstprivate)` or
+  `default(private)`, which could silently lose writes such as the result of
+  a reduction on the nested construct.
+
 ### SYCL Support
+
+- On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,
+  `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU, an
+  IGCA target or `generic`. Any other value, e.g. a misspelled `xe-pcv`, is an
+  error rather than a device job for a device that does not exist.
 
 #### Improvements
 

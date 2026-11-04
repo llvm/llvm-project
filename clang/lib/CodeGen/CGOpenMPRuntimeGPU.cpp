@@ -355,6 +355,9 @@ public:
               isOpenMPDistributeDirective(D->getDirectiveKind()));
     }
   }
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(const OMPMetaDirective *D) { VisitStmt(D); }
   void VisitCapturedStmt(const CapturedStmt *S) {
     if (!S)
       return;

@@ -1124,7 +1124,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.
