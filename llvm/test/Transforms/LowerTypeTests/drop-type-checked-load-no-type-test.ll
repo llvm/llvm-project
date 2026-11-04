@@ -13,7 +13,7 @@ declare {ptr, i1} @llvm.type.checked.load(ptr, i32, metadata)
 declare void @use(ptr)
 
 ; CHECK-LABEL: define void @f(
-; CHECK-NEXT: %[[SLOT:.*]] = getelementptr i8, ptr %vtable, i32 0
+; CHECK-NEXT: %[[SLOT:.*]] = getelementptr i8, ptr %vtable, i64 0
 ; CHECK-NEXT: %[[FP:.*]] = load ptr, ptr %[[SLOT]], align 8
 ; CHECK-NEXT: %[[S0:.*]] = insertvalue { ptr, i1 } { ptr poison, i1 true }, ptr %[[FP]], 0
 ; CHECK-NOT: call {{.*}}@llvm.type.checked.load(

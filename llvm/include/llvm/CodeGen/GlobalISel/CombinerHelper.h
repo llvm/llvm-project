@@ -292,8 +292,10 @@ public:
   LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
                                           SmallVector<Register> &Ops) const;
 
-  /// Replace \p MI with a build_vector.
+  /// Replace shuffle \p MI with a build_vector.
   LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  /// Replace shuffle of build_vector with a build_vector.
+  LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
@@ -771,6 +773,14 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   LLVM_ABI void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine unsigned division by a shifted power of two into a right shift.
+  LLVM_ABI bool matchUDivByShiftedPow2(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
+
+  /// Convert signed division or remainder of nonnegative operands to unsigned.
+  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI,
+                                            unsigned UnsignedOpcode) const;
 
   /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
   LLVM_ABI void applySimplifySRemByPow2(MachineInstr &MI) const;

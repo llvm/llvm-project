@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/Extensions/AllExtensions.h"
-#include "mlir/Dialect/Tensor/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Tensor/Extensions/ShardingInterfaceImpl.h"
 
 using namespace mlir;
 
