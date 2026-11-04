@@ -1757,23 +1757,18 @@ public:
 
     Location loc = loopOp.getLoc();
 
+    SmallVector<Type> resultTypes;
+    if (failed(getTypeConverter()->convertTypes(loopOp.getResultTypes(),
+                                                resultTypes)))
+      return rewriter.notifyMatchFailure(loopOp, "failed to convert type");
+
     // Split the current block after `spirv.mlir.loop`. The remaining ops will
     // be used in `endBlock`.
     Block *currentBlock = rewriter.getBlock();
     auto position = Block::iterator(loopOp);
     Block *endBlock = rewriter.splitBlock(currentBlock, position);
-
-    // Remove entry block and create a branch in the current block going to the
-    // header block.
-    Block *entryBlock = loopOp.getEntryBlock();
-    assert(entryBlock->getOperations().size() == 1);
-    auto brOp = dyn_cast<spirv::BranchOp>(entryBlock->getOperations().front());
-    if (!brOp)
-      return failure();
-    Block *headerBlock = loopOp.getHeaderBlock();
-    rewriter.setInsertionPointToEnd(currentBlock);
-    LLVM::BrOp::create(rewriter, loc, brOp.getBlockArguments(), headerBlock);
-    rewriter.eraseBlock(entryBlock);
+    for (Type ty : resultTypes)
+      endBlock->addArgument(ty, loc);
 
     // Branch from merge block to end block.
     Block *mergeBlock = loopOp.getMergeBlock();
@@ -1782,7 +1777,11 @@ public:
     rewriter.setInsertionPointToEnd(mergeBlock);
     LLVM::BrOp::create(rewriter, loc, terminatorOperands, endBlock);
 
+    // The entry block `spirv.Branch` to the header is converted by its own
+    // pattern.
+    Block *entryBlock = loopOp.getEntryBlock();
     rewriter.inlineRegionBefore(loopOp.getBody(), endBlock);
+    rewriter.mergeBlocks(entryBlock, currentBlock);
     rewriter.replaceOp(loopOp, endBlock->getArguments());
     return success();
   }
