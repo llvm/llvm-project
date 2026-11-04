@@ -1187,11 +1187,11 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
     mlir::Type resultType = convertType(E->getType());
 
     mlir::Value argZero = builder.getNullValue(argType, loc);
-    mlir::Value notZero =
-        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, argValue, argZero);
-
+    mlir::Value isZero =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, argValue, argZero);
     cir::IfOp::create(
-        builder, loc, notZero, /*no else branch*/ false,
+        builder, loc, isZero, /*withElseRegion=*/true,
+        [&](mlir::OpBuilder &b, mlir::Location) { builder.createYield(loc); },
         [&](mlir::OpBuilder &b, mlir::Location) {
           if (builtinID == MSVCIntrin::_BitScanForward) {
             mlir::Value zeroCount =
@@ -1214,6 +1214,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
           }
           builder.createYield(loc);
         });
+    mlir::Value notZero = builder.createNot(loc, isZero);
     return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
                               resultType);
   }
@@ -1274,7 +1275,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   // evaluation.
 
   if (std::optional<MSVCIntrin> MsvcIntId =
-      CodeGenUtils::translateX86ToMsvcIntrin(builtinID))
+          CodeGenUtils::translateX86ToMsvcIntrin(builtinID))
     return emitX86MSVCIntrin(*MsvcIntId, expr);
 
   // Find out if any arguments are required to be integer constant expressions.
