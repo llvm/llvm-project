@@ -12,10 +12,10 @@ define i32 @minimal(i64 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v
@@ -26,11 +26,11 @@ define i32 @three_slots(i64 %idx, i32 %a, i32 %b, i32 %c) {
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
-; CHECK-NEXT:    [[ALLOCA_2:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 8
+; CHECK-NEXT:    [[ALLOCA_2:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 8
 ; CHECK-NEXT:    store i32 [[C]], ptr [[ALLOCA_2]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [3 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [3 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -38,24 +38,28 @@ define i32 @three_slots(i64 %idx, i32 %a, i32 %b, i32 %c) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %alloca.2 = getelementptr inbounds nuw i8, ptr %alloca, i64 8
+  %alloca.2 = getelementptr nusw i8, ptr %alloca, i64 8
   store i32 %c, ptr %alloca.2
 
-  %gep = getelementptr inbounds nuw [3 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [3 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v
 }
 
-define i32 @no_nuw(i64 %idx, i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @no_nuw(
+define i32 @no_nusw(i64 %idx, i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @no_nusw(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
-; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %alloca = alloca [2 x i32]
 
@@ -64,7 +68,7 @@ define i32 @no_nuw(i64 %idx, i32 %a, i32 %b) {
   %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr [2 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v
@@ -75,9 +79,9 @@ define i32 @volatile_load(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -85,10 +89,10 @@ define i32 @volatile_load(i64 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load volatile i32, ptr %gep
 
   ret i32 %v
@@ -99,9 +103,9 @@ define i32 @escaping_alloca(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -110,10 +114,10 @@ define i32 @escaping_alloca(i64 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   call void @use(ptr %gep)
@@ -126,11 +130,11 @@ define i32 @alloca_extra_uses(i1 %c, i64 %idx, i32 %a, i32 %b) {
 ; CHECK-SAME: i1 [[C:%.*]], i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr [[ALLOCA]], ptr [[ALLOCA_1]]
 ; CHECK-NEXT:    [[W:%.*]] = load i32, ptr [[SEL]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[V]], [[W]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -139,13 +143,13 @@ define i32 @alloca_extra_uses(i1 %c, i64 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
   %sel = select i1 %c, ptr %alloca, ptr %alloca.1
   %w = load i32, ptr %sel
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   %r = add i32 %v, %w
@@ -191,10 +195,10 @@ define i32 @different_access_sizes(i64 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
   store i16 0, ptr %gep
   %v = load i32, ptr %gep
 
@@ -206,23 +210,23 @@ define i32 @non_zero_offset_base(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @non_zero_offset_base(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA_1]], align 4
-; CHECK-NEXT:    [[ALLOCA_2:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 8
+; CHECK-NEXT:    [[ALLOCA_2:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 8
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_2]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA_1]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA_1]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %alloca = alloca [3 x i32]
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %a, ptr %alloca.1
 
-  %alloca.2 = getelementptr inbounds nuw i8, ptr %alloca, i64 8
+  %alloca.2 = getelementptr nusw i8, ptr %alloca, i64 8
   store i32 %b, ptr %alloca.2
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca.1, i64 0, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca.1, i64 0, i64 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v
@@ -235,9 +239,9 @@ define i32 @i1_index(i1 %idx, i32 %a, i32 %b) {
 ; CHECK-SAME: i1 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i64 0, i1 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA]], i64 0, i1 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -245,10 +249,10 @@ define i32 @i1_index(i1 %idx, i32 %a, i32 %b) {
 
   store i32 %a, ptr %alloca
 
-  %alloca.1 = getelementptr inbounds nuw i8, ptr %alloca, i64 4
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
   store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i1 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %alloca, i64 0, i1 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v

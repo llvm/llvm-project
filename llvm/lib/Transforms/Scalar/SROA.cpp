@@ -6413,7 +6413,7 @@ namespace {
 /// Running example:
 ///
 ///     %alloca = alloca [2 x i32], align 4
-///     %gep = gep inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+///     %gep = gep nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
 ///     %load = load i32, ptr %gep
 ///     store i32 123, ptr %gep
 struct TwoSlotGEP {
@@ -6599,11 +6599,11 @@ private:
 
 } // end anonymous namespace
 
-/// %gep = gep inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+/// %gep = gep nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
 /// ==>
 /// %gep.sroa.idx = icmp eq i64 %idx, <Idx1>
-/// %gep.sroa.slot0 = gep inbounds nuw i8, ptr %alloca, i64 <Offset0>
-/// %gep.sroa.slot1 = gep inbounds nuw i8, ptr %alloca, i64 <Offset1>
+/// %gep.sroa.slot0 = gep nusw i8, ptr %alloca, i64 <Offset0>
+/// %gep.sroa.slot1 = gep nusw i8, ptr %alloca, i64 <Offset1>
 /// %gep.sroa.sel = select i1 %gep.sroa.idx,
 ///                   ptr %gep.sroa.slot1, ptr %gep.sroa.slot0
 static SelectInst *unfoldTwoSlotGEP(const TwoSlotGEP &TS, IRBuilderTy &IRB) {
@@ -6631,7 +6631,7 @@ static SelectInst *unfoldTwoSlotGEP(const TwoSlotGEP &TS, IRBuilderTy &IRB) {
 ///
 ///     %alloca = alloca [2 x i32], align 4
 ///     ...
-///     %gep = gep inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
+///     %gep = gep nusw [2 x i32], ptr %alloca, i64 0, i64 %idx
 ///     %c = load i32, ptr %gep, align 4
 ///     ...
 ///     store i32 123, ptr %gep
@@ -6640,8 +6640,8 @@ static SelectInst *unfoldTwoSlotGEP(const TwoSlotGEP &TS, IRBuilderTy &IRB) {
 /// `%alloca`, we unfold the GEP as shown in `unfoldTwoSlotGEP` to:
 ///
 ///     %gep.sroa.idx = icmp eq i64 %idx, 1
-///     %gep.sroa.slot0 = gep inbounds nuw i8, ptr %alloca, i64 0
-///     %gep.sroa.slot1 = gep inbounds nuw i8, ptr %alloca, i64 4
+///     %gep.sroa.slot0 = gep nusw i8, ptr %alloca, i64 0
+///     %gep.sroa.slot1 = gep nusw i8, ptr %alloca, i64 4
 ///     %gep.sroa.sel = select i1 %gep.sroa.idx,
 ///                       ptr %gep.sroa.slot1, ptr %gep.sroa.slot0
 ///
