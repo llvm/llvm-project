@@ -84,16 +84,8 @@ entry:
 define i32 @test2_addrspacecast() {
 ; CHECK-LABEL: @test2_addrspacecast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, ptr [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_0_V0]], [[A_SROA_3_0_A_SROA_3_4_V1]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ptr [[A_SROA_3]], ptr [[A_SROA_0]]
-; CHECK-NEXT:    [[SELECT_ASC:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(1)
-; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr addrspace(1) [[SELECT_ASC]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 0, 1
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i32 1, i32 0
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:

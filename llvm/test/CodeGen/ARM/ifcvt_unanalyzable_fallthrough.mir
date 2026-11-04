@@ -26,6 +26,7 @@
 #
 ---
 name:            avoidMergeBlockDiamond
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: avoidMergeBlockDiamond
   ; CHECK: bb.0:
@@ -73,6 +74,7 @@ body:             |
 # Similar to the above, but with a triangle.
 ---
 name:            avoidMergeBlockTriangle
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: avoidMergeBlockTriangle
   ; CHECK: bb.0:

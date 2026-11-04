@@ -67,6 +67,7 @@
 ; CHECK-NEXT:       Lazy Branch Probability Analysis 
 ; CHECK-NEXT:       Lazy Block Frequency Analysis 
 ; CHECK-NEXT:       Expand indirectbr instructions 
+; CHECK-NEXT:       X86 Fence Non-Temporal Stores
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
@@ -200,7 +201,7 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Reaching Definitions Analysis
-; CHECK-NEXT:       X86 Execution Dependency Fix
+; CHECK-NEXT:       Execution Domain Fix
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter

@@ -80,6 +80,13 @@ template <size_t NumberOfBits> struct bitset {
     return true;
   }
 
+  LIBC_INLINE constexpr bitset<NumberOfBits> &
+  operator|=(const bitset<NumberOfBits> &other) {
+    for (size_t i = 0; i < NUMBER_OF_UNITS; ++i)
+      Data[i] |= other.Data[i];
+    return *this;
+  }
+
 private:
   static constexpr size_t BITS_PER_BYTE = 8;
   static constexpr size_t BITS_PER_UNIT = BITS_PER_BYTE * sizeof(size_t);
