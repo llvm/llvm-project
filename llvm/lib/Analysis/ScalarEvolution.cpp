@@ -9424,9 +9424,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       bool IsSigned = ICmpInst::isSigned(Pred);
       APInt Max = IsSigned ? APInt::getSignedMaxValue(OldType->getBitWidth())
                            : APInt::getMaxValue(OldType->getBitWidth());
-      if (isLoopInvariant(RHS, L) &&
-          isLoopEntryGuardedByCond(L, ICmpInst::getStrictPredicate(Pred), RHS,
-                                   getConstant(Max))) {
+      auto IsLessThanMax = [&] {
+        const SCEV *GuardedRHS = applyLoopGuards(RHS, L);
+        return IsSigned ? getSignedRangeMax(GuardedRHS).slt(Max)
+                        : getUnsignedRangeMax(GuardedRHS).ult(Max);
+      };
+      if (isLoopInvariant(RHS, L) && IsLessThanMax()) {
         // The guard only holds at loop entry, so record the no-wrap fact on
         // this use of the add instead of the shared expression.
         SCEVUse Next = getAddExpr(
