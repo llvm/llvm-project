@@ -7,11 +7,10 @@
 define i64 @load_two_fields(ptr %p, i64 %i) nounwind {
 ; CHECK-LABEL: load_two_fields:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a1, $a0, 4
-; CHECK-NEXT:    slli.d $a1, $a1, 4
-; CHECK-NEXT:    ldx.d $a0, $a0, $a1
-; CHECK-NEXT:    ld.d $a1, $a2, 8
-; CHECK-NEXT:    add.d $a0, $a0, $a1
+; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 4
+; CHECK-NEXT:    ld.d $a1, $a0, 0
+; CHECK-NEXT:    ld.d $a0, $a0, 8
+; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds { i64, i64 }, ptr %p, i64 %i, i32 0
   %b = getelementptr inbounds { i64, i64 }, ptr %p, i64 %i, i32 1
@@ -24,10 +23,9 @@ define i64 @load_two_fields(ptr %p, i64 %i) nounwind {
 define void @store_two_fields(ptr %p, i64 %i, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: store_two_fields:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a4, $a1, $a0, 4
-; CHECK-NEXT:    slli.d $a1, $a1, 4
-; CHECK-NEXT:    stx.d $a2, $a0, $a1
-; CHECK-NEXT:    st.d $a3, $a4, 8
+; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 4
+; CHECK-NEXT:    st.d $a2, $a0, 0
+; CHECK-NEXT:    st.d $a3, $a0, 8
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds { i64, i64 }, ptr %p, i64 %i, i32 0
   %b = getelementptr inbounds { i64, i64 }, ptr %p, i64 %i, i32 1
@@ -39,11 +37,10 @@ define void @store_two_fields(ptr %p, i64 %i, i64 %x, i64 %y) nounwind {
 define i32 @load_two_fields_i32(ptr %p, i64 %i) nounwind {
 ; CHECK-LABEL: load_two_fields_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a1, $a0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    ldx.w $a0, $a0, $a1
-; CHECK-NEXT:    ld.w $a1, $a2, 4
-; CHECK-NEXT:    add.w $a0, $a0, $a1
+; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 3
+; CHECK-NEXT:    ld.w $a1, $a0, 0
+; CHECK-NEXT:    ld.w $a0, $a0, 4
+; CHECK-NEXT:    add.w $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds { i32, i32 }, ptr %p, i64 %i, i32 0
   %b = getelementptr inbounds { i32, i32 }, ptr %p, i64 %i, i32 1
@@ -56,10 +53,9 @@ define i32 @load_two_fields_i32(ptr %p, i64 %i) nounwind {
 define double @load_two_fields_f64(ptr %p, i64 %i) nounwind {
 ; CHECK-LABEL: load_two_fields_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a1, $a0, 4
-; CHECK-NEXT:    slli.d $a1, $a1, 4
-; CHECK-NEXT:    fldx.d $fa0, $a0, $a1
-; CHECK-NEXT:    fld.d $fa1, $a2, 8
+; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 4
+; CHECK-NEXT:    fld.d $fa0, $a0, 0
+; CHECK-NEXT:    fld.d $fa1, $a0, 8
 ; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds { double, double }, ptr %p, i64 %i, i32 0
@@ -73,10 +69,9 @@ define double @load_two_fields_f64(ptr %p, i64 %i) nounwind {
 define <4 x i32> @load_two_elts_v4i32(ptr %p, i64 %i) nounwind {
 ; CHECK-LABEL: load_two_elts_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a1, $a0, 4
-; CHECK-NEXT:    slli.d $a1, $a1, 4
-; CHECK-NEXT:    vldx $vr0, $a0, $a1
-; CHECK-NEXT:    vld $vr1, $a2, 16
+; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 4
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vld $vr1, $a0, 16
 ; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds <4 x i32>, ptr %p, i64 %i
@@ -91,10 +86,9 @@ define <4 x i32> @load_two_elts_v4i32(ptr %p, i64 %i) nounwind {
 define ptr @load_and_return_addr(ptr %p, i64 %i, ptr %q) nounwind {
 ; CHECK-LABEL: load_and_return_addr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli.d $a3, $a1, 3
-; CHECK-NEXT:    ldx.d $a3, $a0, $a3
 ; CHECK-NEXT:    alsl.d $a0, $a1, $a0, 3
-; CHECK-NEXT:    st.d $a3, $a2, 0
+; CHECK-NEXT:    ld.d $a1, $a0, 0
+; CHECK-NEXT:    st.d $a1, $a2, 0
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds i64, ptr %p, i64 %i
   %x = load i64, ptr %a

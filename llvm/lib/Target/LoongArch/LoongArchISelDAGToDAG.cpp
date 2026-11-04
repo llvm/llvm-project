@@ -250,6 +250,41 @@ bool LoongArchDAGToDAGISel::SelectAddrConstant(SDValue Addr, SDValue &Base,
   return true;
 }
 
+// Return true if the address (add Base, Index) should be selected as a
+// register-register addressed access. If Index is a shift that ALSL can fold
+// and the address is materialized anyway, e.g. because it is also the base of
+// another access with an offset, accessing it with offset 0 avoids the extra
+// shift instruction for the index of LDX/STX:
+//
+//   alsl.d $a2, $a1, $a0, 4      alsl.d $a2, $a1, $a0, 4
+//   slli.d $a1, $a1, 4      =>   ld.d   $a0, $a2, 0
+//   ldx.d  $a0, $a0, $a1         ld.d   $a1, $a2, 8
+//   ld.d   $a1, $a2, 8
+bool LoongArchDAGToDAGISel::isRegRegAddrProfitable(SDNode *Add) const {
+  auto IsAlslShift = [](SDValue V) {
+    // The shift is needed anyway if it has other users.
+    if (V.getOpcode() != ISD::SHL || !V.hasOneUse())
+      return false;
+    auto *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
+    return C && C->getZExtValue() >= 1 && C->getZExtValue() <= 4;
+  };
+  if (!IsAlslShift(Add->getOperand(0)) && !IsAlslShift(Add->getOperand(1)))
+    return true;
+
+  for (SDNode *User : Add->users()) {
+    if (auto *LD = dyn_cast<LoadSDNode>(User))
+      if (LD->getBasePtr().getNode() == Add && LD->isUnindexed())
+        continue;
+    if (auto *ST = dyn_cast<StoreSDNode>(User))
+      if (ST->getBasePtr().getNode() == Add &&
+          ST->getValue().getNode() != Add && ST->isUnindexed())
+        continue;
+    // The address is materialized for this user.
+    return false;
+  }
+  return true;
+}
+
 bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
   // If this is FrameIndex, don't select it.
   if (isa<FrameIndexSDNode>(Addr))
