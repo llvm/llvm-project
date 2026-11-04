@@ -157,12 +157,6 @@ public:
   bool isSymbolInImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                        StringRef SymName);
 
-  /// Look up the symbol \p Name in the ELF object \p Obj. Returns std::nullopt
-  /// if the symbol is not present. Otherwise returns the address of the
-  /// symbol's contents inside the ELF file and its size.
-  virtual Expected<std::optional<std::pair<const void *, uint64_t>>>
-  getELFSymbolMetadata(const object::ObjectFile &Obj, StringRef Name);
-
   /// Get the address and size of a global in the image. If the global exists
   /// but has no contents in the image (e.g. `.bss`), succeeds with a null
   /// address and size 0; fails only if it is not in the image or the image
