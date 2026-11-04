@@ -297,6 +297,10 @@ static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__alpha__)
   return 1824;  // from glibc 2.43
 #    endif
+
+#    if defined(__hppa__)
+  return 1216;  // from glibc 2.43
+#    endif
 }
 #  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
