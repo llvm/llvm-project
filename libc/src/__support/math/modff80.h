@@ -10,12 +10,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_MODFF80_H
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "src/__support/FPUtil/float80.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIBC_INLINE constexpr Float80 modff80(Float80 x, Float80 *iptr) {
   return fputil::modf(x, *iptr);

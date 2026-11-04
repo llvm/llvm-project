@@ -2720,6 +2720,7 @@ add_fp_unittest(
     ModfTest.h
   DEPENDS
     libc.src.math.modff80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(
