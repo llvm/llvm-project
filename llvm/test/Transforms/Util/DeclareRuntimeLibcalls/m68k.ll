@@ -4,7 +4,9 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=m68k-unknown-linux < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=M68K %s
 
-; M68K: declare void @_Unwind_Resume(ptr)
+; M68K: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; M68K-NEXT: @__stack_chk_guard = external global ptr
+; M68K-NEXT: declare void @_Unwind_Resume(ptr)
 ; M68K-NEXT: declare double @__adddf3(double, double)
 ; M68K-NEXT: declare float @__addsf3(float, float)
 ; M68K-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -211,9 +213,7 @@
 ; M68K-NEXT: declare double @__powidf2(double, i32)
 ; M68K-NEXT: declare float @__powisf2(float, i32)
 ; M68K-NEXT: declare fp128 @__powitf2(fp128, i32)
-; M68K-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; M68K-NEXT: declare void @__stack_chk_fail()
-; M68K-NEXT: declare void @__stack_chk_guard(...)
 ; M68K-NEXT: declare double @__subdf3(double, double)
 ; M68K-NEXT: declare float @__subsf3(float, float)
 ; M68K-NEXT: declare fp128 @__subtf3(fp128, fp128)

@@ -5,7 +5,8 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=sparc-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SPARC32 %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=sparcv9-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SPARC64 %s
 
-; SPARC32: declare i32 @.div(i32, i32)
+; SPARC32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SPARC32-NEXT: declare i32 @.div(i32, i32)
 ; SPARC32-NEXT: declare i32 @.rem(i32, i32)
 ; SPARC32-NEXT: declare i32 @.udiv(i32, i32)
 ; SPARC32-NEXT: declare i32 @.umul(i32, i32)
@@ -224,7 +225,6 @@
 ; SPARC32-NEXT: declare float @__powisf2(float, i32)
 ; SPARC32-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; SPARC32-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC32-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; SPARC32-NEXT: declare void @__stack_chk_fail()
 ; SPARC32-NEXT: declare double @__subdf3(double, double)
 ; SPARC32-NEXT: declare float @__subsf3(float, float)
@@ -480,7 +480,8 @@
 ; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; SPARC64: declare signext i32 @.div(i32 signext, i32 signext)
+; SPARC64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SPARC64-NEXT: declare signext i32 @.div(i32 signext, i32 signext)
 ; SPARC64-NEXT: declare signext i32 @.rem(i32 signext, i32 signext)
 ; SPARC64-NEXT: declare zeroext i32 @.udiv(i32 zeroext, i32 zeroext)
 ; SPARC64-NEXT: declare signext i32 @.umul(i32 signext, i32 signext)
@@ -702,7 +703,6 @@
 ; SPARC64-NEXT: declare float @__powisf2(float, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC64-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; SPARC64-NEXT: declare void @__stack_chk_fail()
 ; SPARC64-NEXT: declare double @__subdf3(double, double)
 ; SPARC64-NEXT: declare float @__subsf3(float, float)

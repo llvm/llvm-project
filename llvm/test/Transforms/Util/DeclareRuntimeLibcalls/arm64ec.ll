@@ -4,7 +4,8 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm64ec-pc-windows-msvc < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare void @"#_Unwind_Resume"(ptr)
+; CHECK: @__security_cookie = external global ptr
+; CHECK-NEXT: declare void @"#_Unwind_Resume"(ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq"(i128, i128, ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq_rel"(i128, i128, ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_rel"(i128, i128, ptr)
@@ -510,4 +511,3 @@
 ; CHECK-NEXT: declare float @"#tgammaf"(float)
 ; CHECK-NEXT: declare double @"#trunc"(double)
 ; CHECK-NEXT: declare float @"#truncf"(float)
-; CHECK-NEXT: declare void @__security_cookie(...)
