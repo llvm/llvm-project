@@ -4959,7 +4959,7 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
-  ISD::CondCode CCOpcode = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  ISD::CondCode CCOpcode = Cond.getOperandCondCode(2);
   SDValue CmpLHS = Cond.getOperand(0);
 
   // select (setcc x, 0, eq), -1, (ctlz_zero_poison x) -> ffbh_u32 x
