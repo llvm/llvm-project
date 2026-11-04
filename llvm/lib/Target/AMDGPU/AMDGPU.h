@@ -21,6 +21,7 @@ namespace llvm {
 
 class AMDGPUTargetMachine;
 class LazyCallGraph;
+class GCNSubtarget;
 class GCNTargetMachine;
 class TargetMachine;
 
@@ -207,6 +208,14 @@ struct AMDGPULowerBufferFatPointersPass
 private:
   const TargetMachine &TM;
 };
+
+namespace AMDGPU {
+/// Return the width in bits of the widest buffer intrinsic that buffer fat
+/// pointer lowering uses to access \p Ty with alignment \p A.
+uint64_t getMaxBufferIntrinsicWidth(const GCNSubtarget &ST,
+                                    const DataLayout &DL, Type *Ty, Align A,
+                                    bool NoWrapFromMax, bool NoPartialOOB);
+} // namespace AMDGPU
 
 void initializeAMDGPULowerIntrinsicsLegacyPass(PassRegistry &);
 
