@@ -2261,8 +2261,12 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
-  const Align AllocaAlignment =
-      DL.getPrefTypeAlign(Type::getIntNTy(Ctx, Size * 8));
+  Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+  bool PassI128Indirectly = UseSizedLibcall && Size == 16 &&
+                            M->getTargetTriple().isX86_64() &&
+                            M->getTargetTriple().isOSWindowsOrUEFI();
+
+  const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
   assert((!CASExpected || Ordering2 != AtomicOrdering::NotAtomic) &&
@@ -2305,6 +2309,18 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   auto [FnType, Attr] = LibcallLowering->getRuntimeLibcallsInfo().getFunctionTy(
       Ctx, M->getTargetTriple(), DL, LibcallImpl);
   assert(FnType && "missing signature for atomic libcall");
+
+  if (PassI128Indirectly) {
+    // RuntimeLibcallsInfo still represents Win64 i128 values as v2i64.
+    // Pass value operands indirectly and let the backend demote i128 returns
+    // to sret, while retaining the remaining signature and attributes.
+    SmallVector<Type *, 6> ArgTypes(FnType->params());
+    if (ValueOperand)
+      ArgTypes[CASExpected ? 2 : 1] = DL.getAllocaPtrType(Ctx);
+    Type *ReturnTy =
+        !CASExpected && HasResult ? SizedIntTy : FnType->getReturnType();
+    FnType = FunctionType::get(ReturnTy, ArgTypes, FnType->isVarArg());
+  }
 
   // Build up the function call. There's two kinds. First, the sized
   // variants.  These calls are going to be one of the following (with
@@ -2364,8 +2380,20 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (ValueOperand) {
     if (UseSizedLibcall) {
       Value *IntValue = Builder.CreateBitPreservingCastChain(
-          DL, ValueOperand, FnType->getParamType(Args.size()));
-      Args.push_back(IntValue);
+          DL, ValueOperand,
+          PassI128Indirectly ? SizedIntTy : FnType->getParamType(Args.size()));
+      if (PassI128Indirectly) {
+        // Win64 passes i128 arguments indirectly. Materialize that ABI here
+        // because SelectionDAG cannot recover the original i128 after it has
+        // been split for calling convention analysis.
+        AllocaValue = AllocaBuilder.CreateAlloca(SizedIntTy);
+        AllocaValue->setAlignment(AllocaAlignment);
+        Builder.CreateLifetimeStart(AllocaValue);
+        Builder.CreateAlignedStore(IntValue, AllocaValue, AllocaAlignment);
+        Args.push_back(AllocaValue);
+      } else {
+        Args.push_back(IntValue);
+      }
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
@@ -2404,7 +2432,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   Value *Result = Call;
 
   // And then, extract the results...
-  if (ValueOperand && !UseSizedLibcall)
+  if (AllocaValue)
     Builder.CreateLifetimeEnd(AllocaValue);
 
   if (CASExpected) {

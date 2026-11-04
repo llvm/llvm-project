@@ -34,19 +34,29 @@ define i128 @fptosi_f16_to_i128(half %x) nounwind {
 ;
 ; WIN-SSE2-LABEL: fptosi_f16_to_i128:
 ; WIN-SSE2:       # %bb.0:
-; WIN-SSE2-NEXT:    subq $40, %rsp
+; WIN-SSE2-NEXT:    pushq %rsi
+; WIN-SSE2-NEXT:    subq $32, %rsp
+; WIN-SSE2-NEXT:    movaps %xmm1, %xmm0
+; WIN-SSE2-NEXT:    movq %rcx, %rsi
 ; WIN-SSE2-NEXT:    callq __extendhfsf2
 ; WIN-SSE2-NEXT:    cvttss2si %xmm0, %rax
-; WIN-SSE2-NEXT:    movq %rax, %rdx
-; WIN-SSE2-NEXT:    sarq $63, %rdx
-; WIN-SSE2-NEXT:    addq $40, %rsp
+; WIN-SSE2-NEXT:    movq %rax, %rcx
+; WIN-SSE2-NEXT:    sarq $63, %rcx
+; WIN-SSE2-NEXT:    movq %rcx, 8(%rsi)
+; WIN-SSE2-NEXT:    movq %rax, (%rsi)
+; WIN-SSE2-NEXT:    movq %rsi, %rax
+; WIN-SSE2-NEXT:    addq $32, %rsp
+; WIN-SSE2-NEXT:    popq %rsi
 ; WIN-SSE2-NEXT:    retq
 ;
 ; WIN-FP16-LABEL: fptosi_f16_to_i128:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    vcvttsh2si %xmm0, %rax
-; WIN-FP16-NEXT:    movq %rax, %rdx
+; WIN-FP16-NEXT:    movq %rcx, %rax
+; WIN-FP16-NEXT:    vcvttsh2si %xmm1, %rcx
+; WIN-FP16-NEXT:    movq %rcx, %rdx
 ; WIN-FP16-NEXT:    sarq $63, %rdx
+; WIN-FP16-NEXT:    movq %rdx, 8(%rax)
+; WIN-FP16-NEXT:    movq %rcx, (%rax)
 ; WIN-FP16-NEXT:    retq
   %r = fptosi half %x to i128
   ret i128 %r
@@ -83,19 +93,29 @@ define i128 @fptosi_f16_to_i128_strict(half %x) nounwind strictfp {
 ;
 ; WIN-SSE2-LABEL: fptosi_f16_to_i128_strict:
 ; WIN-SSE2:       # %bb.0:
-; WIN-SSE2-NEXT:    subq $40, %rsp
+; WIN-SSE2-NEXT:    pushq %rsi
+; WIN-SSE2-NEXT:    subq $32, %rsp
+; WIN-SSE2-NEXT:    movaps %xmm1, %xmm0
+; WIN-SSE2-NEXT:    movq %rcx, %rsi
 ; WIN-SSE2-NEXT:    callq __extendhfsf2
 ; WIN-SSE2-NEXT:    cvttss2si %xmm0, %rax
-; WIN-SSE2-NEXT:    movq %rax, %rdx
-; WIN-SSE2-NEXT:    sarq $63, %rdx
-; WIN-SSE2-NEXT:    addq $40, %rsp
+; WIN-SSE2-NEXT:    movq %rax, %rcx
+; WIN-SSE2-NEXT:    sarq $63, %rcx
+; WIN-SSE2-NEXT:    movq %rcx, 8(%rsi)
+; WIN-SSE2-NEXT:    movq %rax, (%rsi)
+; WIN-SSE2-NEXT:    movq %rsi, %rax
+; WIN-SSE2-NEXT:    addq $32, %rsp
+; WIN-SSE2-NEXT:    popq %rsi
 ; WIN-SSE2-NEXT:    retq
 ;
 ; WIN-FP16-LABEL: fptosi_f16_to_i128_strict:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    vcvttsh2si %xmm0, %rax
-; WIN-FP16-NEXT:    movq %rax, %rdx
+; WIN-FP16-NEXT:    movq %rcx, %rax
+; WIN-FP16-NEXT:    vcvttsh2si %xmm1, %rcx
+; WIN-FP16-NEXT:    movq %rcx, %rdx
 ; WIN-FP16-NEXT:    sarq $63, %rdx
+; WIN-FP16-NEXT:    movq %rdx, 8(%rax)
+; WIN-FP16-NEXT:    movq %rcx, (%rax)
 ; WIN-FP16-NEXT:    retq
   %r = call i128 @llvm.experimental.constrained.fptosi.i128.f16(half %x, metadata !"fpexcept.strict") strictfp
   ret i128 %r
