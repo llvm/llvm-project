@@ -80,6 +80,26 @@ void SampleProfileReader::dump(raw_ostream &OS) {
   sortFuncProfiles(Profiles, V);
   for (const auto &I : V)
     dumpFunctionProfile(*I.second, OS);
+
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return;
+
+  OS << "DataAccessProfiles:\n"
+     << "  SampledRecords:\n";
+
+  for (const auto &[SymHandleRef, RecordRef] :
+       DataAccessProfileData->getRecords()) {
+    OS << "    - Symbol: " << std::get<StringRef>(SymHandleRef) << "\n"
+       << "      AccessCount: " << RecordRef.AccessCount << "\n";
+
+    if (RecordRef.Locations.empty())
+      continue;
+
+    OS << "      Locations:\n";
+    for (const auto &Loc : RecordRef.Locations)
+      OS << "        - FileName: " << Loc.FileName << "\n"
+         << "          Line: " << Loc.Line << "\n";
+  }
 }
 
 static void dumpFunctionProfileJson(const FunctionSamples &S,
@@ -396,6 +416,12 @@ std::error_code SampleProfileReaderText::readImpl() {
     // The only requirement we place on the identifier, then, is that it
     // should not begin with a number.
     if ((*LineIt)[0] != ' ') {
+      if (*LineIt == "[DataAccessProfiles]") {
+        if (std::error_code EC = readDataAccessProfiles(LineIt))
+          return EC;
+        break;
+      }
+
       uint64_t NumSamples, NumHeadSamples;
       StringRef FName;
       if (!ParseHead(*LineIt, FName, NumSamples, NumHeadSamples)) {
@@ -536,6 +562,42 @@ std::error_code SampleProfileReaderText::readImpl() {
   return Result;
 }
 
+std::error_code
+SampleProfileReaderText::readDataAccessProfiles(line_iterator &LI) {
+  if ((++LI).is_at_eof())
+    return sampleprof_error::success;
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  while (!LI.is_at_eof()) {
+    auto [SymName, AccessCountStr] = LI->rsplit(':');
+    uint64_t AccessCount = 0;
+    if (SymName.empty() || SymName.starts_with(' ') || AccessCountStr.empty() ||
+        AccessCountStr.getAsInteger(10, AccessCount)) {
+      reportError(LI.line_number(), "Expected 'symbol:count', found " + *LI);
+      return sampleprof_error::malformed;
+    }
+
+    SmallVector<memprof::SourceLocation> Locations;
+    while (!(++LI).is_at_eof() && (*LI)[0] == ' ') {
+      auto [FileName, LineNumStr] = LI->trim().rsplit(':');
+      uint32_t LineNum = 0;
+      if (FileName.empty() || LineNumStr.empty() ||
+          LineNumStr.getAsInteger(10, LineNum)) {
+        reportError(LI.line_number(), "Expected 'filename:line', found " + *LI);
+        return sampleprof_error::malformed;
+      }
+
+      Locations.emplace_back(FileName, LineNum);
+    }
+
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymName, AccessCount, Locations))
+      consumeError(std::move(E));
+  }
+
+  return sampleprof_error::success;
+}
+
 bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   bool result = false;
 
@@ -543,6 +605,11 @@ bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   line_iterator LineIt(Buffer, /*SkipBlanks=*/true, '#');
   if (!LineIt.is_at_eof()) {
     if ((*LineIt)[0] != ' ') {
+      // Check for a standalone data access profile, which does not have
+      // function headers.
+      if (*LineIt == "[DataAccessProfiles]")
+        return true;
+
       uint64_t NumSamples, NumHeadSamples;
       StringRef FName;
       result = ParseHead(*LineIt, FName, NumSamples, NumHeadSamples);
@@ -1062,11 +1129,32 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
             hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5)))
       return EC;
     break;
+  case SecDataAccessProfile:
+    if (std::error_code EC = readDataAccessProfiles())
+      return EC;
+    break;
   default:
     if (std::error_code EC = readCustomSection(Entry))
       return EC;
     break;
   }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readDataAccessProfiles() {
+  if (Data >= End)
+    return sampleprof_error::success;
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  const unsigned char *Ptr = Data;
+  if (Error E = DataAccessProfileData->deserialize(Ptr)) {
+    consumeError(std::move(E));
+    return sampleprof_error::malformed;
+  }
+  if (Ptr != End)
+    return sampleprof_error::malformed;
+
+  Data = Ptr;
   return sampleprof_error::success;
 }
 
