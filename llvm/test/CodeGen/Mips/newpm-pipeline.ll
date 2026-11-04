@@ -87,6 +87,7 @@
 ; MIPS-NEXT:     xray-instrumentation
 ; MIPS-NEXT:     patchable-function
 ; MIPS-NEXT:     mips-expand-pseudo
+; MIPS-NEXT:     mips-micromips-size-reduce
 ; MIPS-NEXT:     funclet-layout
 ; MIPS-NEXT:     remove-loads-into-fake-uses
 ; MIPS-NEXT:     StackMapLivenessPass
@@ -179,6 +180,7 @@
 ; MIPS-OS16-NEXT:     xray-instrumentation
 ; MIPS-OS16-NEXT:     patchable-function
 ; MIPS-OS16-NEXT:     mips-expand-pseudo
+; MIPS-OS16-NEXT:     mips-micromips-size-reduce
 ; MIPS-OS16-NEXT:     funclet-layout
 ; MIPS-OS16-NEXT:     remove-loads-into-fake-uses
 ; MIPS-OS16-NEXT:     StackMapLivenessPass
@@ -270,6 +272,7 @@
 ; MIPS-MFIX4300-NEXT:     xray-instrumentation
 ; MIPS-MFIX4300-NEXT:     patchable-function
 ; MIPS-MFIX4300-NEXT:     mips-expand-pseudo
+; MIPS-MFIX4300-NEXT:     mips-micromips-size-reduce
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass
