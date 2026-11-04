@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,DIRECT
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,DIRECT
 
 typedef _Bool b3 __attribute__((ext_vector_type(3)));
 typedef _Bool b4 __attribute__((ext_vector_type(4)));

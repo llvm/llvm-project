@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DEFAULT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DIRECT
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DIRECT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DEFAULT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DIRECT
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DIRECT
 
 typedef long double ld1 __attribute__((vector_size(16)));
 typedef long double ld2 __attribute__((vector_size(32)));

@@ -341,8 +341,8 @@ v1i vector32(v1i v) { return v; }
 // CIR: cir.func {{.*}}@vector32(%arg0: !u32i {{.*}}) -> !u32i
 // LLVM: define dso_local i32 @vector32(i32 noundef %{{[^,)]+}})
 
-// An eightbyte holding a 16-bit float vector coerces to double, the same as
-// any other all-float eightbyte, but at 128 bits the format is preserved.
+// Legacy x86 CodeGen carries 64-bit vectors of 16-bit floats as double,
+// whereas Clang 24 correctly preserves the vector type.
 typedef _Float16 v4h __attribute__((ext_vector_type(4)));
 typedef _Float16 v8h __attribute__((ext_vector_type(8)));
 void take_v4h(v4h v) { (void)v; }
@@ -350,7 +350,8 @@ void take_v8h(v8h v) { (void)v; }
 
 // CIR: cir.func {{.*}}@take_v4h(%arg0: !cir.double{{.*}})
 // CIR: cir.func {{.*}}@take_v8h(%arg0: !cir.vector<8 x !cir.f16>{{.*}})
-// LLVM: define dso_local void @take_v4h(double noundef %{{[^,)]+}})
+// LLVM-CIR: define dso_local void @take_v4h(double noundef %{{[^,)]+}})
+// LLVM-OGCG: define dso_local void @take_v4h(<4 x half> noundef %{{[^,)]+}})
 // LLVM: define dso_local void @take_v8h(<8 x half> noundef %{{[^,)]+}})
 
 typedef __bf16 v4bf __attribute__((ext_vector_type(4)));
@@ -360,7 +361,8 @@ void take_v8bf(v8bf v) { (void)v; }
 
 // CIR: cir.func {{.*}}@take_v4bf(%arg0: !cir.double{{.*}})
 // CIR: cir.func {{.*}}@take_v8bf(%arg0: !cir.vector<8 x !cir.bf16>{{.*}})
-// LLVM: define dso_local void @take_v4bf(double noundef %{{[^,)]+}})
+// LLVM-CIR: define dso_local void @take_v4bf(double noundef %{{[^,)]+}})
+// LLVM-OGCG: define dso_local void @take_v4bf(<4 x bfloat> noundef %{{[^,)]+}})
 // LLVM: define dso_local void @take_v8bf(<8 x bfloat> noundef %{{[^,)]+}})
 
 // An integer element narrower than an eightbyte does not change the rule: the
