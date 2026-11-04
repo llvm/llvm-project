@@ -9643,7 +9643,6 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       if (Lossy) {
         // X can't possibly equal the higher-precision constant, so reduce any
         // equality comparison.
-        // TODO: Other predicates can be handled via getFCmpCode().
         switch (Pred) {
         case FCmpInst::FCMP_OEQ:
           // X is ordered and equal to an impossible constant --> false
@@ -9661,6 +9660,23 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
         default:
           break;
+        }
+
+        if (Op0->hasOneUse() && TruncC.isNormal() &&
+            APFloat::isIEEELikeFP(FPSem)) {
+          // Equality with the rounded constant has the same result as being
+          // below or above C, depending on the rounding direction.
+          APFloat ExtC = TruncC;
+          bool Ignored;
+          ExtC.convert(C->getSemantics(), APFloat::rmNearestTiesToEven,
+                       &Ignored);
+          unsigned EqualResult =
+              ExtC < *C ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_OGT;
+          auto NewPred = getFCmpCode(Pred) & EqualResult
+                             ? FCmpInst::getNonStrictPredicate(Pred)
+                             : FCmpInst::getStrictPredicate(Pred);
+          return new FCmpInst(NewPred, X, ConstantFP::get(X->getType(), TruncC),
+                              "", &I);
         }
       }
 

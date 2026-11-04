@@ -43,8 +43,7 @@ define <2 x i1> @fpext_constant_vec_splat(<2 x half> %a) {
 
 define i1 @fpext_constant_lossy(float %a) {
 ; CHECK-LABEL: @fpext_constant_lossy(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[A:%.*]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[EXT]], f0x3FF0000000000001
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = fpext float %a to double
@@ -780,8 +779,7 @@ define i1 @lossy_une(half %x) {
 
 define <2 x i1> @lossy_ogt(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_ogt(
-; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt <2 x double> [[E]], splat (double 1.000000e-01)
+; CHECK-NEXT:    [[R:%.*]] = fcmp oge <2 x float> [[X:%.*]], splat (float 1.000000e-01)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
@@ -802,6 +800,26 @@ define i1 @lossy_oge(float %x, ptr %p) {
   ret i1 %r
 }
 
+define i1 @lossy_oge_round_down(float %x) {
+; CHECK-LABEL: @lossy_oge_round_down(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fpext float %x to double
+  %r = fcmp oge double %e, 0x3FF0000000000001
+  ret i1 %r
+}
+
+define i1 @lossy_olt_negative(half %x) {
+; CHECK-LABEL: @lossy_olt_negative(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ole half [[X:%.*]], -2.052000e+03
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fpext half %x to float
+  %r = fcmp olt float %e, -2051.0
+  ret i1 %r
+}
+
 define i1 @lossy_olt(half %x) {
 ; CHECK-LABEL: @lossy_olt(
 ; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to double
@@ -815,8 +833,7 @@ define i1 @lossy_olt(half %x) {
 
 define i1 @lossy_ole(half %x) {
 ; CHECK-LABEL: @lossy_ole(
-; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fcmp ole float [[E]], 2.049000e+03
+; CHECK-NEXT:    [[R:%.*]] = fcmp ole half [[X:%.*]], 2.048000e+03
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext half %x to float
@@ -826,8 +843,7 @@ define i1 @lossy_ole(half %x) {
 
 define <2 x i1> @lossy_ugt(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_ugt(
-; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fcmp ugt <2 x double> [[E]], splat (double 1.000000e-01)
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge <2 x float> [[X:%.*]], splat (float 1.000000e-01)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
@@ -848,6 +864,26 @@ define i1 @lossy_uge(float %x, ptr %p) {
   ret i1 %r
 }
 
+define i1 @lossy_uge_round_down(float %x) {
+; CHECK-LABEL: @lossy_uge_round_down(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ugt float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fpext float %x to double
+  %r = fcmp uge double %e, 0x3FF0000000000001
+  ret i1 %r
+}
+
+define i1 @lossy_ult_negative(half %x) {
+; CHECK-LABEL: @lossy_ult_negative(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ule half [[X:%.*]], -2.052000e+03
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fpext half %x to float
+  %r = fcmp ult float %e, -2051.0
+  ret i1 %r
+}
+
 define i1 @lossy_ult(half %x) {
 ; CHECK-LABEL: @lossy_ult(
 ; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to double
@@ -861,8 +897,7 @@ define i1 @lossy_ult(half %x) {
 
 define i1 @lossy_ule(half %x) {
 ; CHECK-LABEL: @lossy_ule(
-; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fcmp ule float [[E]], 2.049000e+03
+; CHECK-NEXT:    [[R:%.*]] = fcmp ule half [[X:%.*]], 2.048000e+03
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext half %x to float
