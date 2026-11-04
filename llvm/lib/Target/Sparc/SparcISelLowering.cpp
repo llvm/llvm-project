@@ -2678,7 +2678,7 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
                           const SparcTargetLowering &TLI, bool hasHardQuad,
                           bool isV9, bool is64Bit) {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -2730,7 +2730,7 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
                               bool isV9, bool is64Bit) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   SDLoc dl(Op);
