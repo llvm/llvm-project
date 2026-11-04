@@ -84,8 +84,14 @@ TEST_F(LlvmLibcSigwaitinfoTest, NullInfo) {
   ASSERT_THAT(LIBC_NAMESPACE::sigwaitinfo(&set, nullptr), Succeeds(SIGUSR1));
 }
 
+#ifdef __aarch64__
+constexpr int signal = SIGTRAP;
+#else
+constexpr int signal = SIGILL;
+#endif
+
 // This tests that a null set pointer returns EFAULT.
 TEST_F(LlvmLibcSigwaitinfoTest, NullSet) {
   siginfo_t info{};
-  EXPECT_DEATH([&] { LIBC_NAMESPACE::sigwaitinfo(nullptr, &info); }, SIGILL);
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::sigwaitinfo(nullptr, &info); }, signal);
 }
