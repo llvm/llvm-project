@@ -2188,11 +2188,43 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
                                   bool HasDwordx3) {
   unsigned NumInsts = Bytes / MaxBytes;
   unsigned Rem = Bytes % MaxBytes;
-  if (HasDwordx3 && Rem >= 12) {
+  if (HasDwordx3 && Rem % 16 >= 12) {
     ++NumInsts;
     Rem -= 12;
   }
   return NumInsts + llvm::popcount(Rem);
+}
+
+static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
+                                       unsigned EltBytes, unsigned MaxPiece,
+                                       bool HasDwordx3) {
+  unsigned WideBytes = PowerOf2Ceil(Bytes);
+  unsigned NumX16 = 0, SmallBytes = 0;
+  for (unsigned Off = 0; Off < Bytes;) {
+    unsigned Rem = Bytes - Off;
+    unsigned Span = Rem;
+    if (Rem <= Alignment)
+      Span = std::min<uint64_t>(Alignment, WideBytes - Off);
+    unsigned Piece = std::min(llvm::bit_floor(Span), MaxPiece);
+    if (Rem <= EltBytes)
+      Piece = 4;
+    if (Piece >= 64)
+      NumX16 += divideCeil(std::min(Piece, Rem), 64);
+    else
+      SmallBytes += std::max(Piece, 4u);
+    Off += Piece;
+  }
+  return NumX16 + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
+}
+
+static bool hasUniformPointerOperand(const Instruction *I) {
+  const auto *LI = dyn_cast_or_null<LoadInst>(I);
+  if (!LI)
+    return false;
+  const Value *Ptr = LI->getPointerOperand()->stripInBoundsConstantOffsets();
+  if (const auto *Arg = dyn_cast<Argument>(Ptr))
+    return AMDGPU::isArgPassedInSGPR(Arg);
+  return isa<Constant>(Ptr);
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2210,9 +2242,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
 
-  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+  if (AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
     if (Src->isVectorTy() && EltTy->isIntegerTy(8))
       return divideCeil(DL.getTypeSizeInBits(Src) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
@@ -2230,6 +2260,28 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 
   unsigned Bytes = DL.getTypeStoreSize(Src);
+  if (Opcode == Instruction::Load &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+       AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+      Alignment >= std::min(Bytes, 4u) &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+       hasUniformPointerOperand(I))) {
+    unsigned Dwords = divideCeil(Bytes, 4);
+    bool HasDwordx3 = ST->hasScalarDwordx3Loads();
+    // The last byte of a 7-byte remainder is not widened into the scalar load.
+    if (!VecTy && Bytes % 4)
+      return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
+    if (Bytes % 4 || !TLI->isTypeLegal(EVT::getVectorVT(Src->getContext(),
+                                                        MVT::i32, Dwords))) {
+      unsigned EltBytes = Bytes % 4 ? EltBits / 8 : 4;
+      return getNumWidenedSMEMLoads(Bytes, Alignment.value(), EltBytes,
+                                    EltBytes == 1 ? 8 : 128, HasDwordx3);
+    }
+    if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
+      ++Dwords;
+    return getNumMemoryInsts(Dwords * 4, 64, HasDwordx3);
+  }
+
   unsigned MaxBytes =
       std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
   if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
