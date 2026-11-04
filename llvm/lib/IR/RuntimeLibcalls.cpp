@@ -272,6 +272,10 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
   case SizeT:
   case SSizeT:
     return getSizeTType(Ctx, DL);
+  case Half:
+    return Type::getHalfTy(Ctx);
+  case BFloat:
+    return Type::getBFloatTy(Ctx);
   case Flt:
   case Floating:
     return Type::getFloatTy(Ctx);
