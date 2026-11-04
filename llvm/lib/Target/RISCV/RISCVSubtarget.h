@@ -188,6 +188,9 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
+  bool hasYInstructions() const {
+    return HasStdExtYCapMode || HasStdExtZyhybrid;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -293,6 +296,7 @@ public:
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
+           TargetABI == RISCVABI::ABI_LP64E ||
            TargetABI == RISCVABI::ABI_ILP32 ||
            TargetABI == RISCVABI::ABI_ILP32E;
   }

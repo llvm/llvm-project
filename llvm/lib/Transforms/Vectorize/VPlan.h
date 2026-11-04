@@ -1528,30 +1528,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool hasResult() const {
-    // CallInst may or may not have a result, depending on the called function.
-    // Conservatively return calls have results for now.
-    switch (getOpcode()) {
-    case Instruction::Ret:
-    case Instruction::UncondBr:
-    case Instruction::CondBr:
-    case Instruction::Store:
-    case Instruction::Switch:
-    case Instruction::IndirectBr:
-    case Instruction::Resume:
-    case Instruction::CatchRet:
-    case Instruction::Unreachable:
-    case Instruction::Fence:
-    case Instruction::AtomicRMW:
-    case VPInstruction::BranchOnCond:
-    case VPInstruction::BranchOnTwoConds:
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::WideVectorStore:
-      return false;
-    default:
-      return true;
-    }
-  }
+  bool hasResult() const { return !getScalarType()->isVoidTy(); }
 
   /// Returns true if the VPInstruction has a mask operand.
   bool isMasked() const {
