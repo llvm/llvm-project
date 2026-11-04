@@ -111,6 +111,15 @@ public:
     return PRAttributes;
   }
 
+  // Set the binding scope of a SD or PR section.
+  void setBindingScope(GOFF::ESDBindingScope Scope) {
+    assert((isSD() || isPR()) && "Expect SD or PR section");
+    if (isSD())
+      SDAttributes.BindingScope = Scope;
+    else
+      PRAttributes.BindingScope = Scope;
+  }
+
   // Returns the text style for a section. Only defined for ED and PR sections.
   GOFF::ESDTextStyle getTextStyle() const {
     assert((isED() || isPR() || isBssSection()) && "Expect ED or PR section");
