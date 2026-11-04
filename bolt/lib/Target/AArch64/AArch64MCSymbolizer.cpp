@@ -34,6 +34,22 @@ bool AArch64MCSymbolizer::tryAddingSymbolicOperand(
   const uint64_t InstOffset = InstAddress - Function.getAddress();
   const Relocation *Relocation = Function.getRelocationAt(InstOffset);
 
+  // Symbolize an ADR into another function's constant island from its
+  // PC-relative value, like an LDR literal whose R_AARCH64_LD_PREL_LO19
+  // is skipped. handleAddressRef() then decides whether to use a copy of
+  // the island. Do this only when disassembling the function (implied by
+  // `CreateNewSymbols` being true), which is when that decision is made.
+  // For other purposes, keep using the relocation.
+  if (Relocation && CreateNewSymbols && BC.MIB->isADR(Inst) &&
+      Relocation->Type == ELF::R_AARCH64_ADR_PREL_LO21) {
+    const uint64_t Target = InstAddress + Value;
+    const BinaryFunction *TargetBF = BC.getBinaryFunctionContainingAddress(
+        Target, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+    if (TargetBF && TargetBF != &Function &&
+        TargetBF->isInConstantIsland(Target))
+      Relocation = nullptr;
+  }
+
   /// Add symbolic operand to the instruction with an optional addend.
   auto addOperand = [&](const MCSymbol *Symbol, uint64_t Addend,
                         uint64_t RelType) {
