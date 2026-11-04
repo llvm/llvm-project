@@ -5040,7 +5040,7 @@ TEST(MemorySanitizer, getservbyport_r_smallbuf) {
 #if defined(__linux__) && !defined(__ANDROID__)
 // We set -fno-sanitize-memory-param-retval in CMake and compile, so
 // EXPECT_NOT_POISONED on parameters works.
-static int FtwCallback(const char *fpath, const struct stat *sb, int typeflag) {
+static int FtwCallback(const char* fpath, const struct stat* sb, int typeflag) {
   EXPECT_NOT_POISONED(fpath);
   EXPECT_NOT_POISONED(sb);
   EXPECT_NOT_POISONED(typeflag);
@@ -5051,8 +5051,8 @@ static int FtwCallback(const char *fpath, const struct stat *sb, int typeflag) {
 
 // We set -fno-sanitize-memory-param-retval in CMake and compile, so
 // EXPECT_NOT_POISONED on parameters works.
-static int NftwCallback(const char *fpath, const struct stat *sb, int typeflag,
-                        struct FTW *ftwbuf) {
+static int NftwCallback(const char* fpath, const struct stat* sb, int typeflag,
+                        struct FTW* ftwbuf) {
   EXPECT_NOT_POISONED(fpath);
   EXPECT_NOT_POISONED(sb);
   EXPECT_NOT_POISONED(typeflag);
@@ -5067,7 +5067,6 @@ TEST(MemorySanitizer, ftw) {
   EXPECT_EQ(1, ftw(DIR_TO_READ, FtwCallback, 1));
   EXPECT_EQ(1, nftw(DIR_TO_READ, NftwCallback, 1, FTW_PHYS));
 }
-#endif // defined(__linux__) && !defined(__ANDROID__)
+#endif  // defined(__linux__) && !defined(__ANDROID__)
 
 } // namespace
-

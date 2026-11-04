@@ -10472,15 +10472,15 @@ INTERCEPTOR(int, getservbyport_r, int port, const char *proto,
 #endif
 
 #if SANITIZER_INTERCEPT_FTW
-typedef int (*ftw_func_f)(const char *fpath, const void *sb, int typeflag);
-typedef int (*nftw_func_f)(const char *fpath, const void *sb, int typeflag,
-                           struct __sanitizer_FTW *ftwbuf);
+typedef int (*ftw_func_f)(const char* fpath, const void* sb, int typeflag);
+typedef int (*nftw_func_f)(const char* fpath, const void* sb, int typeflag,
+                           struct __sanitizer_FTW* ftwbuf);
 
 static THREADLOCAL ftw_func_f ftw_fn;
 static THREADLOCAL nftw_func_f nftw_fn;
 
-template <const unsigned &StatSz>
-static int wrapped_ftw_cb(const char *fpath, const void *sb, int typeflag) {
+template <const unsigned& StatSz>
+static int wrapped_ftw_cb(const char* fpath, const void* sb, int typeflag) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
   if (fpath)
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(fpath, internal_strlen(fpath) + 1);
@@ -10489,9 +10489,9 @@ static int wrapped_ftw_cb(const char *fpath, const void *sb, int typeflag) {
   return ftw_fn(fpath, sb, typeflag);
 }
 
-template <const unsigned &StatSz>
-static int wrapped_nftw_cb(const char *fpath, const void *sb, int typeflag,
-                           struct __sanitizer_FTW *ftwbuf) {
+template <const unsigned& StatSz>
+static int wrapped_nftw_cb(const char* fpath, const void* sb, int typeflag,
+                           struct __sanitizer_FTW* ftwbuf) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(4);
   if (fpath)
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(fpath, internal_strlen(fpath) + 1);
@@ -10502,8 +10502,8 @@ static int wrapped_nftw_cb(const char *fpath, const void *sb, int typeflag,
   return nftw_fn(fpath, sb, typeflag, ftwbuf);
 }
 
-template <const unsigned &StatSz, typename RealF>
-static int ftw_impl(void *ctx, RealF real_ftw, const char *dirpath,
+template <const unsigned& StatSz, typename RealF>
+static int ftw_impl(void* ctx, RealF real_ftw, const char* dirpath,
                     ftw_func_f fn, int nopenfd) {
   if (dirpath)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, dirpath, internal_strlen(dirpath) + 1);
@@ -10515,8 +10515,8 @@ static int ftw_impl(void *ctx, RealF real_ftw, const char *dirpath,
   return res;
 }
 
-template <const unsigned &StatSz, typename RealF>
-static int nftw_impl(void *ctx, RealF real_nftw, const char *dirpath,
+template <const unsigned& StatSz, typename RealF>
+static int nftw_impl(void* ctx, RealF real_nftw, const char* dirpath,
                      nftw_func_f fn, int nopenfd, int flags) {
   if (dirpath)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, dirpath, internal_strlen(dirpath) + 1);
@@ -10529,47 +10529,47 @@ static int nftw_impl(void *ctx, RealF real_nftw, const char *dirpath,
   return res;
 }
 
-INTERCEPTOR(int, ftw, const char *dirpath, ftw_func_f fn, int nopenfd) {
-  void *ctx;
+INTERCEPTOR(int, ftw, const char* dirpath, ftw_func_f fn, int nopenfd) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, ftw, dirpath, fn, nopenfd);
   return ftw_impl<__sanitizer::struct_stat_sz>(ctx, REAL(ftw), dirpath, fn,
                                                nopenfd);
 }
 
-INTERCEPTOR(int, nftw, const char *dirpath, nftw_func_f fn, int nopenfd,
+INTERCEPTOR(int, nftw, const char* dirpath, nftw_func_f fn, int nopenfd,
             int flags) {
-  void *ctx;
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, nftw, dirpath, fn, nopenfd, flags);
   return nftw_impl<__sanitizer::struct_stat_sz>(ctx, REAL(nftw), dirpath, fn,
                                                 nopenfd, flags);
 }
-#define INIT_FTW                                                               \
-  COMMON_INTERCEPT_FUNCTION(ftw);                                              \
-  COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(nftw, "GLIBC_2.3.3")
+#  define INIT_FTW                  \
+    COMMON_INTERCEPT_FUNCTION(ftw); \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(nftw, "GLIBC_2.3.3")
 #else
-#define INIT_FTW
+#  define INIT_FTW
 #endif
 
 #if SANITIZER_INTERCEPT_FTW64
-INTERCEPTOR(int, ftw64, const char *dirpath, ftw_func_f fn, int nopenfd) {
-  void *ctx;
+INTERCEPTOR(int, ftw64, const char* dirpath, ftw_func_f fn, int nopenfd) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, ftw64, dirpath, fn, nopenfd);
   return ftw_impl<__sanitizer::struct_stat64_sz>(ctx, REAL(ftw64), dirpath, fn,
                                                  nopenfd);
 }
 
-INTERCEPTOR(int, nftw64, const char *dirpath, nftw_func_f fn, int nopenfd,
+INTERCEPTOR(int, nftw64, const char* dirpath, nftw_func_f fn, int nopenfd,
             int flags) {
-  void *ctx;
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, nftw64, dirpath, fn, nopenfd, flags);
   return nftw_impl<__sanitizer::struct_stat64_sz>(ctx, REAL(nftw64), dirpath,
                                                   fn, nopenfd, flags);
 }
-#define INIT_FTW64                                                             \
-  COMMON_INTERCEPT_FUNCTION(ftw64);                                            \
-  COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(nftw64, "GLIBC_2.3.3")
+#  define INIT_FTW64                  \
+    COMMON_INTERCEPT_FUNCTION(ftw64); \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(nftw64, "GLIBC_2.3.3")
 #else
-#define INIT_FTW64
+#  define INIT_FTW64
 #endif
 
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
