@@ -19,14 +19,14 @@ namespace orc {
 
 Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
-    ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
+    DylibManager &DylibMgr, const char *LibraryPath,
     SymbolPredicate Allow, AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   auto Handle = DylibMgr.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      ES, DylibMgr, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
+      DylibMgr, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
 }
 
 Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
