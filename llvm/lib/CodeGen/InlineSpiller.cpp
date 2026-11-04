@@ -672,7 +672,6 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
 
 void InlineSpiller::eliminateRedundantRestores() {
   for (MachineBasicBlock &MBB : MF) {
-    // The last instruction in this block referencing each stack slot.
     DenseMap<int, MachineInstr *> PreviousSlotAccess;
     for (MachineInstr &MI : make_early_inc_range(MBB.instrs())) {
       if (MI.isDebugInstr())
