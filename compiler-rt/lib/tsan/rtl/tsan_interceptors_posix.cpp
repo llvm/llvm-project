@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdarg.h>
+#if defined(__APPLE__)
+#  include <dlfcn.h>
+#endif
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
@@ -31,11 +34,6 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
-#if SANITIZER_APPLE && !SANITIZER_GO
-#  include <dlfcn.h>
-
-#  include "tsan_flags.h"
-#endif
 #include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -457,10 +455,10 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // Darwin's libc runs an atexit callback when the image containing it is
   // dlclose'd. Pass that image as the DSO so the wrapper runs then too.
   Dl_info info;
-  if (dladdr((void*)f, &info))
+  if (dladdr((const void*)f, &info))
     dso = info.dli_fbase;
 #  endif
-  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, dso);
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), f, 0, dso);
 }
 #endif
 
