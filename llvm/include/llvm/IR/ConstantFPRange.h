@@ -34,6 +34,7 @@ class raw_ostream;
 class KnownFPClass;
 
 /// This class represents a range of floating-point values.
+/// Note: There is no support for PPCDoubleDouble.
 class [[nodiscard]] ConstantFPRange {
   APFloat Lower, Upper;
   bool MayBeQNaN : 1;

@@ -442,7 +442,10 @@ define i1 @isNotKnownNeverInfinity_fptrunc_round(double %x) {
 define i1 @isKnownNeverPosInfinity_floor_ppcf128(ppc_fp128 %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_floor_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], +inf
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
@@ -481,7 +484,10 @@ define i1 @isKnownNeverPosInfinity_ceil_ppcf128(ppc_fp128 %x) {
 define i1 @isKnownNeverNegInfinity_ceil_ppcf128(ppc_fp128 %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_ceil_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
@@ -604,7 +610,10 @@ define i1 @isKnownNeverNegInfinity_roundeven_ppcf128(ppc_fp128 %x) {
 define i1 @isKnownNeverPosInfinity_trunc_ppcf128(ppc_fp128 %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_trunc_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], +inf
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
@@ -615,7 +624,10 @@ define i1 @isKnownNeverPosInfinity_trunc_ppcf128(ppc_fp128 %x) {
 define i1 @isKnownNeverNegInfinity_trunc_ppcf128(ppc_fp128 %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_trunc_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)

@@ -2578,33 +2578,29 @@ TEST_F(ComputeKnownFPClassTest, MultiUnitFPTypeConstants) {
   {
     KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(PPCF128),
                                               M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcNone, Poison.getKnownFPClasses());
-    ASSERT_TRUE(Poison.getSignBit());
-    EXPECT_FALSE(*Poison.getSignBit());
+    EXPECT_EQ(fcAllFlags, Poison.getKnownFPClasses());
+    EXPECT_FALSE(Poison.getSignBit());
   }
 
   {
     KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(V2PPCF128),
                                               M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcNone, Poison.getKnownFPClasses());
-    ASSERT_TRUE(Poison.getSignBit());
-    EXPECT_FALSE(*Poison.getSignBit());
+    EXPECT_EQ(fcAllFlags, Poison.getKnownFPClasses());
+    EXPECT_FALSE(Poison.getSignBit());
   }
 
   {
     KnownFPClass Zero = computeKnownFPClass(ConstantFP::getZero(PPCF128),
                                             M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcPosZero, Zero.getKnownFPClasses());
-    ASSERT_TRUE(Zero.getSignBit());
-    EXPECT_FALSE(*Zero.getSignBit());
+    EXPECT_EQ(fcAllFlags, Zero.getKnownFPClasses());
+    EXPECT_FALSE(Zero.getSignBit());
   }
 
   {
     KnownFPClass ConstAggZero = computeKnownFPClass(
         ConstantAggregateZero::get(V2PPCF128), M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcPosZero, ConstAggZero.getKnownFPClasses());
-    ASSERT_TRUE(ConstAggZero.getSignBit());
-    EXPECT_FALSE(*ConstAggZero.getSignBit());
+    EXPECT_EQ(fcAllFlags, ConstAggZero.getKnownFPClasses());
+    EXPECT_FALSE(ConstAggZero.getSignBit());
   }
 }
 
