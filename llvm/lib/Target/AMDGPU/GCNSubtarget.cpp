@@ -88,6 +88,8 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
     return AMDGPUSubtarget::GFX12;
   case Triple::AMDGPUSubArch13:
     return AMDGPUSubtarget::GFX13;
+  case Triple::AMDGPUSubArch9900:
+    return AMDGPUSubtarget::GFX99;
   default:
     reportFatalUsageError("invalid subarch for amdgpu");
   }

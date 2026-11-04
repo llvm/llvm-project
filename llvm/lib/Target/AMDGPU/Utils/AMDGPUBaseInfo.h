@@ -1527,6 +1527,8 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+bool isGFX99(const MCSubtargetInfo &STI);
+bool isGFX99Plus(const MCSubtargetInfo &STI);
 
 /// \returns true if a work-group's waves run on all four SIMD32s (one
 /// contiguous LDS) and not just on two.

@@ -2500,7 +2500,7 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13Plus(STI);
 }
 
 bool isFullSIMDMode(const MCSubtargetInfo &STI) {
@@ -2515,7 +2515,15 @@ bool isGFX13(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX13];
 }
 
-bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
+bool isGFX13Plus(const MCSubtargetInfo &STI) {
+  return isGFX13(STI) || isGFX99(STI);
+}
+
+bool isGFX99(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX99];
+}
+
+bool isGFX99Plus(const MCSubtargetInfo &STI) { return isGFX99(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250(STI))

@@ -276,8 +276,9 @@ public:
 
     AMDGPUSubArch13,
     AMDGPUSubArch1310,
+    AMDGPUSubArch9900,
     FirstAMDGPUSubArch = AMDGPUSubArch6,
-    LastAMDGPUSubArch = AMDGPUSubArch1310
+    LastAMDGPUSubArch = AMDGPUSubArch9900
   };
   enum VendorType {
     UnknownVendor,

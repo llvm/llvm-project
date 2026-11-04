@@ -178,6 +178,10 @@ public:
 
   bool isGFX11Plus() const { return getGeneration() >= GFX11; }
 
+  bool isGFX99() const { return getGeneration() == GFX99; }
+
+  bool isGFX99Plus() const { return getGeneration() >= GFX99; }
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const override { return ATTRIBUTE; }
 #include "AMDGPUGenSubtargetInfo.inc"

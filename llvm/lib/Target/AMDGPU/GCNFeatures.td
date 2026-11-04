@@ -1943,6 +1943,9 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
 >;
 //===----------------------------------------------------------------------===//
 
+def FeatureGFX99 : GCNSubtargetFeatureGeneration<"GFX99",
+  "gfx99", FeatureGFX13.Implies>;
+
 class FeatureSet<list<SubtargetFeature> Features_> {
   list<SubtargetFeature> Features = Features_;
 }
@@ -2804,6 +2807,10 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSAddPCI64Inst,
    FeatureUnusableSAddPCI64,
 ]>;
+
+def FeatureISAVersion99_0_0 : FeatureSet<
+  !listconcat([FeatureGFX99],
+              !listremove(FeatureISAVersion13.Features, [FeatureGFX13]))>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
   !listconcat(FeatureISAVersion13.Features,

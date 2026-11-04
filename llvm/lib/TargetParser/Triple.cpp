@@ -848,6 +848,7 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
         .Case("12.51", Triple::AMDGPUSubArch1251)
         .Case("13", Triple::AMDGPUSubArch13)
         .Case("13.10", Triple::AMDGPUSubArch1310)
+        .Case("99.00", Triple::AMDGPUSubArch9900)
         .Default(Triple::NoSubArch);
   }
 

@@ -333,6 +333,10 @@ def GFX1310 : AMDGPUProcessorModel<"gfx1310", GFX12SpeedModel,
   FeatureISAVersion13.Features, [13, 1, 0]
 >;
 
+def GFX9900 : AMDGPUProcessorModel<"gfx9900", GFX12SpeedModel,
+  FeatureISAVersion99_0_0.Features, [99, 0, 0]
+>;
+
 def GFX13_GENERIC : AMDGPUProcessorModel<"gfx13-generic", GFX12SpeedModel,
   FeatureISAVersion13_Generic.Features, [13, 1, 0]> {
   let CoveredGPUs = [GFX1310];

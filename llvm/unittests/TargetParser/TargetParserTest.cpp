@@ -2597,6 +2597,7 @@ TEST(TargetParserTest, testAMDGPUArch) {
   {
     EXPECT_EQ(Triple("amdgpu13--").getSubArch(), Triple::AMDGPUSubArch13);
     EXPECT_EQ(Triple("amdgpu13.10--").getSubArch(), Triple::AMDGPUSubArch1310);
+    EXPECT_EQ(Triple("amdgpu99.00--").getSubArch(), Triple::AMDGPUSubArch9900);
     EXPECT_EQ(Triple("amdgpu13.1").getSubArch(), Triple::NoSubArch); // Unknown
     EXPECT_EQ(Triple("amdgpu131").getSubArch(), Triple::NoSubArch);  // Unknown
   }
@@ -3158,6 +3159,7 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
       // GFX13 family
       {Triple::AMDGPUSubArch13, AMDGPU::GK_GFX13_GENERIC},
       {Triple::AMDGPUSubArch1310, AMDGPU::GK_GFX1310},
+      {Triple::AMDGPUSubArch9900, AMDGPU::GK_GFX9900},
   };
 
   for (const auto &Mapping : Mappings)
@@ -3205,6 +3207,8 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
             (AMDGPU::IsaVersion{12, 5, 1}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1310),
             (AMDGPU::IsaVersion{13, 1, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch9900),
+            (AMDGPU::IsaVersion{99, 0, 0}));
 
   // Generic subarches map to the generic target's version.
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch9),

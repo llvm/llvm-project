@@ -651,6 +651,7 @@ enum {
   X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
   X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
   X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")                \
+  X(0x71, EF_AMDGPU_MACH_AMDGCN_GFX9900, "gfx9900")                            \
   X(0xeb, EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT, "gfx1250-strict")
 
 enum : unsigned {
