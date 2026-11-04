@@ -424,6 +424,8 @@ mulifx(IntType n, FXType m) {
   using CalcType =
       cpp::conditional_t<(2 * F <= cpp::numeric_limits<LargerType>::digits),
                          LargerType, uint64_t>;
+  static_assert(sizeof(CalcType) >= sizeof(LargerType) &&
+                2 * F <= cpp::numeric_limits<CalcType>::digits);
 
   CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
   bool is_negative = (n < 0) != (m_comp < 0);
