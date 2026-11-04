@@ -59,8 +59,15 @@ private:
 // corresponding to an element in array element order.
 class DesignatorFolder {
 public:
-  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false)
-      : context_{c}, getLastComponent_{getLastComponent} {}
+  // A named constant has no storage assignment, but its designators can
+  // still be folded to (offset, size) within the constant's own storage
+  // sequence, which storage sequence association checks need; opt in with
+  // foldNamedConstants.  Clients that map real memory (e.g. DATA statement
+  // initialization) must keep the default.
+  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false,
+      bool foldNamedConstants = false)
+      : context_{c}, getLastComponent_{getLastComponent},
+        foldNamedConstants_{foldNamedConstants} {}
 
   bool isEmpty() const { return isEmpty_; }
   bool isOutOfRange() const { return isOutOfRange_; }
@@ -113,13 +120,13 @@ private:
     return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
-  template <int KIND>
   std::optional<OffsetSymbol> FoldDesignator(
-      const Designator<Type<TypeCategory::Character, KIND>> &designator,
+      const Designator<Type<TypeCategory::Character>> &designator,
       ConstantSubscript which) {
+    const int kind{designator.kind()};
     return common::visit(
         common::visitors{
-            [&](const Substring &ss) {
+            [&, kind](const Substring &ss) {
               if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
                 if (auto result{FoldDesignator(*dataRef, which)}) {
                   if (auto start{ToInt64(ss.lower())}) {
@@ -134,9 +141,9 @@ private:
                       if (*start < 1) {
                         isOutOfRange_ = true;
                       }
-                      result->Augment(KIND * (*start - 1));
+                      result->Augment(kind * (*start - 1));
                       result->set_size(
-                          *end >= *start ? KIND * (*end - *start + 1) : 0);
+                          *end >= *start ? kind * (*end - *start + 1) : 0);
                       if (len) {
                         if (auto lenVal{ToInt64(*len)}) {
                           if (*end > *lenVal) {
@@ -158,6 +165,7 @@ private:
 
   FoldingContext &context_;
   bool getLastComponent_{false};
+  bool foldNamedConstants_{false};
   ConstantSubscript elementNumber_{0}; // zero-based
   bool isEmpty_{false};
   bool isOutOfRange_{false};

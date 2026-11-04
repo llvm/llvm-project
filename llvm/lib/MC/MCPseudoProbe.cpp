@@ -305,10 +305,10 @@ std::string MCDecodedPseudoProbe::getInlineContextStr(
   std::ostringstream OContextStr;
   SmallVector<MCPseudoProbeFrameLocation, 16> ContextStack;
   getInlineContext(ContextStack, GUID2FuncMAP);
-  for (auto &Cxt : ContextStack) {
+  for (auto &Ctx : ContextStack) {
     if (OContextStr.str().size())
       OContextStr << " @ ";
-    OContextStr << Cxt.first.str() << ":" << Cxt.second;
+    OContextStr << Ctx.first.str() << ":" << Ctx.second;
   }
   return OContextStr.str();
 }

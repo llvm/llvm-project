@@ -159,23 +159,23 @@ define void @test_unsigned_i32_f32(ptr %d, float %f) nounwind {
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    .pad #4
 ; SOFT-NEXT:    sub sp, #4
-; SOFT-NEXT:    mov r6, r1
+; SOFT-NEXT:    mov r7, r1
 ; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    movs r5, #0
 ; SOFT-NEXT:    mov r0, r1
 ; SOFT-NEXT:    mov r1, r5
 ; SOFT-NEXT:    bl __aeabi_fcmpge
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    mov r0, r6
+; SOFT-NEXT:    mov r6, r0
+; SOFT-NEXT:    mov r0, r7
 ; SOFT-NEXT:    bl __aeabi_f2uiz
 ; SOFT-NEXT:    mov r4, r0
-; SOFT-NEXT:    cmp r7, #0
+; SOFT-NEXT:    cmp r6, #0
 ; SOFT-NEXT:    bne .LBB2_2
 ; SOFT-NEXT:  @ %bb.1:
-; SOFT-NEXT:    mov r4, r7
+; SOFT-NEXT:    mov r4, r6
 ; SOFT-NEXT:  .LBB2_2:
 ; SOFT-NEXT:    ldr r1, .LCPI2_0
-; SOFT-NEXT:    mov r0, r6
+; SOFT-NEXT:    mov r0, r7
 ; SOFT-NEXT:    bl __aeabi_fcmpgt
 ; SOFT-NEXT:    cmp r0, #0
 ; SOFT-NEXT:    beq .LBB2_4

@@ -5,20 +5,19 @@ target triple = "aarch64-linux"
 define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_fixed_extract:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    dup v0.2d, x0
-; CHECK-NEXT:    adrp x9, .LCPI0_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI0_0]
-; CHECK-NEXT:    uqadd v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uqadd v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    dup v2.2d, x1
-; CHECK-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    cmhi v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    // fake_use: $d1
+; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-NEXT:    csel x9, xzr, x9, lo
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    dup v0.4h, w8
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    cmhi v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // fake_use: $d0
+; CHECK-NEXT:    // fake_use: $d1
 ; CHECK-NEXT:    ret
   %r = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %i, i64 %n)
   %v0 = call <2 x i1> @llvm.vector.extract.v2i1.v4i1.i64(<4 x i1> %r, i64 0)

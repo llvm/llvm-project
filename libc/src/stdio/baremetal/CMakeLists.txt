@@ -7,6 +7,7 @@ add_object_library(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.CPP.string_view
+    libc.src.__support.File.file_io_result
     libc.src.__support.OSUtil.osutil
 )
 
@@ -100,7 +101,6 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.string_view
-    libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
     libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
@@ -150,14 +150,15 @@ add_entrypoint_object(
     libc.src.stdio.baremetal.fgetc
 )
 
-add_entrypoint_object(
-  fflush
+add_object_library(
+  fflush_internal
   SRCS
-    fflush.cpp
+    fflush_internal.cpp
   HDRS
-    ../fflush.h
+    ../fflush_internal.h
   DEPENDS
-    .file_internal
+    libc.hdr.types.FILE
+    libc.src.__support.error_or
 )
 
 add_entrypoint_object(

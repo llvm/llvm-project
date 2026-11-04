@@ -22,13 +22,35 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 
+/// Allocator index to record in the descriptor of an entity whose storage is
+/// allocated with the given CUDA Fortran data attribute. The runtime frees the
+/// storage with the allocator recorded in the descriptor, so it must describe
+/// the memory space the storage was allocated in.
+static unsigned getCUFAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+  if (!dataAttr)
+    return kDefaultAllocator;
+  switch (dataAttr.getValue()) {
+  case cuf::DataAttribute::Pinned:
+    return kPinnedAllocatorPos;
+  case cuf::DataAttribute::Device:
+    return kDeviceAllocatorPos;
+  case cuf::DataAttribute::Managed:
+    return kManagedAllocatorPos;
+  case cuf::DataAttribute::Unified:
+    return kUnifiedAllocatorPos;
+  default:
+    return kDefaultAllocator;
+  }
+}
+
 /// Create a fir.box describing the new address, bounds, and length parameters
 /// for a MutableBox \p box.
 static mlir::Value
 createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
                 const fir::MutableBoxValue &box, mlir::Value addr,
                 mlir::ValueRange lbounds, mlir::ValueRange extents,
-                mlir::ValueRange lengths, mlir::Value tdesc = {}) {
+                mlir::ValueRange lengths, mlir::Value tdesc = {},
+                unsigned allocator = kDefaultAllocator) {
   if (mlir::isa<fir::BaseBoxType>(addr.getType()))
     // The entity is already boxed.
     return builder.createConvert(loc, box.getBoxTy(), addr);
@@ -79,8 +101,11 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value emptySlice;
   auto boxType = fir::updateTypeWithVolatility(
       box.getBoxTy(), fir::isa_volatile_type(cleanedAddr.getType()));
-  return fir::EmboxOp::create(builder, loc, boxType, cleanedAddr, shape,
-                              emptySlice, cleanedLengths, tdesc);
+  auto embox = fir::EmboxOp::create(builder, loc, boxType, cleanedAddr, shape,
+                                    emptySlice, cleanedLengths, tdesc);
+  if (allocator != kDefaultAllocator)
+    embox.setAllocatorIdx(allocator);
+  return embox;
 }
 
 //===----------------------------------------------------------------------===//
@@ -281,10 +306,9 @@ private:
   /// Update the IR box (fir.ref<fir.box<T>>) of the MutableBoxValue.
   void updateIRBox(mlir::Value addr, mlir::ValueRange lbounds,
                    mlir::ValueRange extents, mlir::ValueRange lengths,
-                   mlir::Value tdesc = {},
-                   unsigned allocator = kDefaultAllocator) {
+                   mlir::Value tdesc = {}) {
     mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
-                                        extents, lengths, tdesc);
+                                        extents, lengths, tdesc, allocator);
     const bool valueTypeIsVolatile =
         fir::isa_volatile_type(fir::unwrapRefType(box.getAddr().getType()));
     irBox = builder.createVolatileCast(loc, valueTypeIsVolatile, irBox);
@@ -982,8 +1006,9 @@ void fir::factory::finalizeRealloc(fir::FirOpBuilder &builder,
               }
             })
             .end();
-        MutablePropertyWriter{builder, loc, box}.updateMutableBox(
-            heap, lbs, extents, lengths);
+        MutablePropertyWriter{builder, loc, box, /*typeSourceBox=*/{},
+                              getCUFAllocatorIdx(dataAttr)}
+            .updateMutableBox(heap, lbs, extents, lengths);
       })
       .end();
 }

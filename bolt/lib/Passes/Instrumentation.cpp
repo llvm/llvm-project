@@ -31,30 +31,30 @@ cl::opt<std::string> InstrumentationFilename(
     "instrumentation-file",
     cl::desc("file name where instrumented profile will be saved (default: "
              "/tmp/prof.fdata)"),
-    cl::init("/tmp/prof.fdata"), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init("/tmp/prof.fdata"), cl::cat(BoltInstrCategory));
 
 cl::opt<std::string> InstrumentationBinpath(
     "instrumentation-binpath",
     cl::desc("path to instrumented binary in case if /proc/self/map_files "
              "is not accessible due to access restriction issues"),
-    cl::Optional, cl::cat(BoltInstrCategory));
+    cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationFileAppendPID(
     "instrumentation-file-append-pid",
     cl::desc("append PID to saved profile file name (default: false)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> ConservativeInstrumentation(
     "conservative-instrumentation",
     cl::desc("disable instrumentation optimizations that sacrifice profile "
              "accuracy (for debugging, default: false)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<uint32_t> InstrumentationMaxSize(
     "instrumentation-max-size",
     cl::desc("Set max memory size of the instrumentation bump allocator "
              "default: 0x6400000)"),
-    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(0x6400000), cl::cat(BoltInstrCategory));
 
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
@@ -62,32 +62,30 @@ cl::opt<uint32_t> InstrumentationSleepTime(
              "program end).  This is useful for service workloads when you "
              "want to dump profile every X minutes or if you are killing the "
              "program and the profile is not being dumped at the end."),
-    cl::init(0), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(0), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationNoCountersClear(
     "instrumentation-no-counters-clear",
     cl::desc("Don't clear counters across dumps "
              "(use with instrumentation-sleep-time option)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationWaitForks(
     "instrumentation-wait-forks",
     cl::desc("Wait until all forks of instrumented process will finish "
              "(use with instrumentation-sleep-time option)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool>
     InstrumentHotOnly("instrument-hot-only",
                       cl::desc("only insert instrumentation on hot functions "
                                "(needs profile, default: false)"),
-                      cl::init(false), cl::Optional,
-                      cl::cat(BoltInstrCategory));
+                      cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentCalls("instrument-calls",
                               cl::desc("record profile for inter-function "
                                        "control flow activity (default: true)"),
-                              cl::init(true), cl::Optional,
-                              cl::cat(BoltInstrCategory));
+                              cl::init(true), cl::cat(BoltInstrCategory));
 } // namespace opts
 
 namespace llvm {
@@ -272,17 +270,6 @@ Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
                                       BC.AsmInfo->getCodePointerSize());
 }
 
-// Helper instruction sequence insertion function
-static BinaryBasicBlock::iterator
-insertInstructions(InstructionListType &Instrs, BinaryBasicBlock &BB,
-                   BinaryBasicBlock::iterator Iter) {
-  for (MCInst &NewInst : Instrs) {
-    Iter = BB.insertInstruction(Iter, NewInst);
-    ++Iter;
-  }
-  return Iter;
-}
-
 void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
                                          BinaryBasicBlock::iterator Iter,
                                          bool IsLeaf,
@@ -291,7 +278,7 @@ void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
   createLeafNodeDescription(FuncDesc, Node);
   InstructionListType CounterInstrs = createInstrumentationSnippet(
       BB.getFunction()->getBinaryContext(), IsLeaf);
-  insertInstructions(CounterInstrs, BB, Iter);
+  BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
 }
 
 void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
@@ -311,7 +298,8 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
       IndCallSiteID, &*BC.Ctx);
 
   Iter = BB.eraseInstruction(Iter);
-  Iter = insertInstructions(CounterInstrs, BB, Iter);
+  Iter =
+      BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
   --Iter;
 }
 
@@ -343,7 +331,8 @@ bool Instrumentation::instrumentOneTarget(
     // This code handles both
     // - (regular) inter-function calls (cross-function control transfer),
     // - (rare) intra-function calls (function-local control transfer)
-    Iter = insertInstructions(CounterInstrs, FromBB, Iter);
+    Iter = FromBB.insertInstructions(Iter, CounterInstrs.begin(),
+                                     CounterInstrs.end());
     return true;
   }
 
@@ -358,11 +347,13 @@ bool Instrumentation::instrumentOneTarget(
   // paths that reach it at this point will be taken and going to the target.
   if (TargetBB->pred_size() == 1 && &FromBB != TargetBB &&
       !TargetBB->isEntryPoint()) {
-    insertInstructions(CounterInstrs, *TargetBB, TargetBB->begin());
+    TargetBB->insertInstructions(TargetBB->begin(), CounterInstrs.begin(),
+                                 CounterInstrs.end());
     return true;
   }
   if (FromBB.succ_size() == 1 && &FromBB != TargetBB) {
-    Iter = insertInstructions(CounterInstrs, FromBB, Iter);
+    Iter = FromBB.insertInstructions(Iter, CounterInstrs.begin(),
+                                     CounterInstrs.end());
     return true;
   }
   // Critical edge, create BB and put counter there

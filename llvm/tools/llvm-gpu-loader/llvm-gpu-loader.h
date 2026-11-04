@@ -153,13 +153,15 @@ ol_result_t (*olDestroyQueue)(ol_queue_handle_t Queue);
 
 ol_result_t (*olSyncQueue)(ol_queue_handle_t Queue);
 
-ol_result_t (*olMemAlloc)(ol_device_handle_t Device, ol_alloc_type_t Type,
+ol_result_t (*olMemAlloc)(ol_context_handle_t Context,
+                          ol_device_handle_t Device, ol_alloc_type_t Type,
                           size_t Size, void **AllocationOut);
 
-ol_result_t (*olMemAllocHost)(ol_device_handle_t Device, size_t Size,
+ol_result_t (*olMemAllocHost)(ol_context_handle_t Context,
+                              ol_device_handle_t Device, size_t Size,
                               void **AllocationOut);
 
-ol_result_t (*olMemFree)(void *Address);
+ol_result_t (*olMemFree)(ol_context_handle_t Context, void *Address);
 
 ol_result_t (*olMemcpy)(ol_queue_handle_t Queue, void *DstPtr,
                         ol_device_handle_t DstDevice, const void *SrcPtr,

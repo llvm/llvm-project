@@ -1512,6 +1512,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPUnrollDirectiveClass:
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPFlattenDirectiveClass:
   case Stmt::OMPSplitDirectiveClass:
   case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPSingleDirectiveClass:

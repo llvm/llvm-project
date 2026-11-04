@@ -26,7 +26,7 @@ namespace llvm::orc::rt::sps_ci {
 /// dso handle.
 struct DlfcnOpen {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("__orc_rt_jit_dlopen_wrapper");
+      SymbolNameSpec::c("__orc_rt_jit_dlopen_wrapper");
   using SPSSig = shared::SPSExecutorAddr(shared::SPSString, int32_t);
 };
 
@@ -34,7 +34,7 @@ struct DlfcnOpen {
 /// failure.
 struct DlfcnUpdate {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("__orc_rt_jit_dlupdate_wrapper");
+      SymbolNameSpec::c("__orc_rt_jit_dlupdate_wrapper");
   using SPSSig = int32_t(shared::SPSExecutorAddr);
 };
 
@@ -42,7 +42,7 @@ struct DlfcnUpdate {
 /// failure.
 struct DlfcnClose {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("__orc_rt_jit_dlclose_wrapper");
+      SymbolNameSpec::c("__orc_rt_jit_dlclose_wrapper");
   using SPSSig = int32_t(shared::SPSExecutorAddr);
 };
 

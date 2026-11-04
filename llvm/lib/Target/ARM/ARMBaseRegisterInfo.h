@@ -101,7 +101,7 @@ public:
                                MachineFunction &MF) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
@@ -158,6 +158,13 @@ public:
                       LiveIntervals &LIS) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
+
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &ARM::DPRRegClass;
+  }
 };
 
 } // end namespace llvm

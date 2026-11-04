@@ -5,11 +5,11 @@
 ; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=%t/a.profdata -module-summary %t/lib.ll -o %t/lib.bc
 ; RUN: llvm-lto -thinlto -o %t/summary %t/main.bc %t/lib.bc
 
-; Test that callee with local linkage has `PGOFuncName` metadata while callee with external doesn't have it.
+; Test that internal callee has !guid metadata.
 ; RUN: llvm-dis %t/lib.bc -o - | FileCheck %s --check-prefix=PGONAME
 ; PGONAME-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]]
-; PGONAME-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !guid ![[#]] !PGOFuncName ![[#MD:]]
-; PGONAME: ![[#MD]] = !{!"lib.cc;_ZL7callee0v"}
+; PGONAME-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !guid ![[#]]
+; PGONAME-NOT: !PGOFuncName
 
 ; Tests that both external and internal callees are correctly imported.
 ; RUN: opt -passes=function-import -summary-file %t/summary.thinlto.bc %t/main.bc -o %t/main.import.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS

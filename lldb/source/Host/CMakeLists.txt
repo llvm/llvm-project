@@ -30,7 +30,6 @@ add_host_subdirectory(common
   common/HostProcess.cpp
   common/HostThread.cpp
   common/JSONTransport.cpp
-  common/LZMA.cpp
   common/LockFileBase.cpp
   common/MainLoopBase.cpp
   common/MemoryMonitor.cpp
@@ -120,6 +119,13 @@ else()
       )
   endif()
 
+  # Darwin has its own framework-aware implementation.
+  if (LLDB_ENABLE_PYTHON AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    add_host_subdirectory(posix
+      posix/PythonRuntimeLoaderPosix.cpp
+      )
+  endif()
+
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
     set(LLDBObjCLibs lldbHostMacOSXObjCXX)
@@ -153,11 +159,6 @@ else()
       linux/LibcGlue.cpp
       linux/Support.cpp
       )
-    if (LLDB_ENABLE_PYTHON)
-      add_host_subdirectory(linux
-        linux/PythonRuntimeLoaderLinux.cpp
-        )
-    endif()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
@@ -202,9 +203,6 @@ if (HAVE_LIBDL)
 endif()
 if (LLDB_ENABLE_LIBEDIT)
   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
-endif()
-if (LLDB_ENABLE_LZMA)
-  list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
 endif()
 if (WIN32)
   list(APPEND LLDB_SYSTEM_LIBS psapi)

@@ -52,6 +52,20 @@ ErrorOr<bool> find_by_name(cpp::string_view name, struct group *grp,
 ErrorOr<bool> find_by_gid(gid_t gid, struct group *grp, cpp::span<char> buffer,
                           const char *path = nullptr);
 
+ErrorOr<struct group *> find_by_name(cpp::string_view name);
+ErrorOr<struct group *> find_by_gid(gid_t gid);
+
+// Fills up to ngroups into the groups array and returns the total number of
+// groups found for user, or an Error if reading the database failed.
+ErrorOr<size_t> get_group_list(cpp::string_view user, gid_t group,
+                               gid_t *groups, size_t ngroups,
+                               const char *path = nullptr);
+
+// Sets the supplementary group access list for user, including the specified
+// group ID, by reading the group database.
+ErrorOr<int> init_groups(cpp::string_view user, gid_t group,
+                         const char *path = nullptr);
+
 } // namespace grp
 } // namespace LIBC_NAMESPACE_DECL
 

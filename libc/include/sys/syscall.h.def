@@ -209,6 +209,10 @@
 #define SYS_close __NR_close
 #endif
 
+#ifdef __NR_close_range
+#define SYS_close_range __NR_close_range
+#endif
+
 #ifdef __NR_cmpxchg_badaddr
 #define SYS_cmpxchg_badaddr __NR_cmpxchg_badaddr
 #endif

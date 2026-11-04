@@ -1,0 +1,44 @@
+# IR level Instrumentation Flag
+:ir
+external_callee
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+10
+# Num Bitmap Bytes:
+$0
+
+guid-roundtrip.c;local_callee
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+100
+# Num Bitmap Bytes:
+$0
+
+main
+# Func Hash:
+783881052960888712
+# Num Counters:
+3
+# Counter Values:
+100
+10
+1
+# Num Bitmap Bytes:
+$0
+# Num Value Kinds:
+1
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+2
+1
+guid-roundtrip.c;local_callee:100
+1
+external_callee:10
+
