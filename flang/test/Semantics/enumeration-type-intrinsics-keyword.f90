@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fenumeration-type %s
+! RUN: %flang_fc1 -fsyntax-only %s
 ! Verify keyword-order argument binding for enumeration-type intrinsics.
 ! INT(KIND=..., A=...) must recognize the enumeration argument even when it is
 ! not the first positional actual.  This is a regression test: previously the

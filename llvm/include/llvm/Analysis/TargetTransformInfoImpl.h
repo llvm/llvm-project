@@ -317,6 +317,11 @@ public:
 
   virtual bool isLegalICmpImmediate(int64_t Imm) const { return false; }
 
+  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &,
+                                                    const APInt &) const {
+    return false;
+  }
+
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
@@ -1218,6 +1223,12 @@ public:
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {
     return false;
+  }
+
+  virtual bool isProfitableToSinkOperands(Instruction *I,
+                                          SmallVectorImpl<Use *> &Ops,
+                                          const LoopInfo *) const {
+    return isProfitableToSinkOperands(I, Ops);
   }
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
