@@ -30,7 +30,6 @@ void **later = &arr[7];
 // LLVM: @solo = {{.*}}global <{ ptr, ptr, [98 x ptr] }> <{ ptr getelementptr {{.*}} i64 40), ptr getelementptr {{.*}} i64 56),
 // LLVM: @follower = {{.*}}global ptr getelementptr {{.*}} @solo, i64 56)
 
-// The self-referential global is the first symbol: in the old code the
-// table was still cold here and the lowering failed.
+// Cold table: the self-referential global is the first symbol in the TU.
 void *solo[100] = {&solo[5], &solo[7], 0};
 void **follower = &solo[7];

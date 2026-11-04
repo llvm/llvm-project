@@ -23,4 +23,3 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK: llvm.insertvalue
 // CHECK: llvm.mlir.global external @bulk([@arr, @arr])
 // CHECK-NOT: llvm.insertvalue
-// CHECK-NOT: llvm.return

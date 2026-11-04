@@ -3480,8 +3480,8 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     return mlir::failure();
   }
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
-  // Attach comdat only after the visit succeeds: creating it earlier would
-  // leave module-level ops behind on a failing compile.
+  // Attach comdat only after the visit succeeds, so the failure path
+  // above only has the new global itself to drop.
   if (mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter))
     newGlobalOp.setComdatAttr(comdatAttr);
   symbolTable.remove(op);
