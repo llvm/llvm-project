@@ -355,6 +355,7 @@ constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
 constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
+constexpr const char objcClassStubs[] = "__objc_clsstubs";
 constexpr const char objcMethList[] = "__objc_methlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";

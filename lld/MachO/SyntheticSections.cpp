@@ -1025,8 +1025,8 @@ ConcatInputSection *ObjCSelRefsHelper::getSelRef(StringRef methname) {
   return it->second;
 }
 
-ObjCStubsSection::ObjCStubsSection()
-    : SyntheticSection(segment_names::text, section_names::objcStubs) {
+ObjCStubsSection::ObjCStubsSection(const char *name)
+    : SyntheticSection(segment_names::text, name) {
   flags = S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   align = config->objcStubsMode == ObjCStubsMode::fast
               ? target->objcStubsFastAlignment
@@ -1161,8 +1161,10 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
 }
 
 void ObjCStubsSection::setUp() {
-  objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
-                                     /*isWeakRef=*/false);
+  Symbol *objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
+                                             /*isWeakRef=*/false);
+  in.objcClassStubs->objcMsgSend = objcMsgSend;
+  in.objcStubs->objcMsgSend = objcMsgSend;
   if (auto *undefined = dyn_cast<Undefined>(objcMsgSend)) {
     treatUndefinedSymbol(*undefined,
                          "lazy binding (normally in libobjc.dylib)");
@@ -1219,12 +1221,11 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     if (isObjCClassStubSymbol(sym)) {
       Symbol *classSym = classSymbols.lookup(sym);
       assert(classSym != nullptr && "no class symbol for objc class stub");
-      target->writeObjCMsgSendClassStub(buf + stubOffset, sym,
-                                        in.objcStubs->addr, stubOffset,
+      target->writeObjCMsgSendClassStub(buf + stubOffset, sym, addr, stubOffset,
                                         selrefAddr, classSym, objcMsgSend);
     } else {
-      target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                   stubOffset, selrefAddr, objcMsgSend);
+      target->writeObjCMsgSendStub(buf + stubOffset, sym, addr, stubOffset,
+                                   selrefAddr, objcMsgSend);
     }
   }
 }

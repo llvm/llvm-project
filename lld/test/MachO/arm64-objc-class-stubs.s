@@ -13,13 +13,30 @@
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libexternal.dylib \
 # RUN:   -o %t/libexternal.dylib %t/external.o
 # RUN: %lld -arch arm64 -lSystem -o %t/fast.out %t/main.o \
-# RUN:   %t/libexternal.dylib -objc_stubs_fast
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
-# RUN:   --macho %t/fast.out | FileCheck %s --check-prefix=FAST
+# RUN:   %t/libexternal.dylib -objc_stubs_fast -map %t/fast.map
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
+# RUN:   --section=__TEXT,__objc_stubs --syms --macho %t/fast.out \
+# RUN:   | FileCheck %s --check-prefix=FAST
+# RUN: FileCheck %s --check-prefix=MAP < %t/fast.map
 # RUN: %lld -arch arm64 -lSystem -o %t/small.out %t/main.o \
 # RUN:   %t/libexternal.dylib -objc_stubs_small
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
-# RUN:   --macho %t/small.out | FileCheck %s --check-prefix=SMALL
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
+# RUN:   --section=__TEXT,__objc_stubs --syms --macho %t/small.out \
+# RUN:   | FileCheck %s --check-prefix=SMALL
+
+# Class stubs have their own section, after the stubs and before the selector
+# stubs, as in ld64.
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/order.s -o %t/order.o
+# RUN: %lld -arch arm64 -lSystem -fixup_chains -U _extern_func -U _objc_msgSend \
+# RUN:   -o %t/order.out %t/order.o
+# RUN: llvm-objdump --section-headers %t/order.out \
+# RUN:   | FileCheck %s --check-prefix=ORDER -DSTUBS=__stubs
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/order.s \
+# RUN:   -o %t/order-arm64e.o
+# RUN: %lld -arch arm64e -lSystem -U _extern_func -U _objc_msgSend \
+# RUN:   -o %t/order-arm64e.out %t/order-arm64e.o
+# RUN: llvm-objdump --section-headers %t/order-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=ORDER -DSTUBS=__auth_stubs
 
 # Check arm64e. Fast stubs reach _objc_msgSend through __auth_got and braa;
 # small stubs branch to it or to its stub, as on arm64.
@@ -29,18 +46,20 @@
 # RUN:   -o %t/libexternal-arm64e.dylib %t/external-arm64e.o
 # RUN: %lld -arch arm64e -lSystem -o %t/fast-arm64e.out %t/main-arm64e.o \
 # RUN:   %t/libexternal-arm64e.dylib -objc_stubs_fast
-# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs --syms \
-# RUN:   --section=__auth_got --section-headers --macho %t/fast-arm64e.out \
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_clsstubs \
+# RUN:   --section=__objc_stubs --syms --section=__auth_got --section-headers \
+# RUN:   --macho %t/fast-arm64e.out \
 # RUN:   | FileCheck %s --check-prefix=FAST-ARM64E
 # RUN: llvm-objdump --macho --dyld-info %t/fast-arm64e.out \
 # RUN:   | FileCheck %s --check-prefix=FAST-ARM64E-GOT
 # RUN: %lld -arch arm64e -lSystem -o %t/small-arm64e.out %t/main-arm64e.o \
 # RUN:   %t/libexternal-arm64e.dylib -objc_stubs_small
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
-# RUN:   --macho %t/small-arm64e.out | FileCheck %s --check-prefix=SMALL-ARM64E
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
+# RUN:   --section=__TEXT,__objc_stubs --syms --macho %t/small-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=SMALL-ARM64E
 # RUN: %lld -arch arm64e -lSystem -interposable -o %t/interposable-arm64e.out \
 # RUN:   %t/main-arm64e.o %t/libexternal-arm64e.dylib -objc_stubs_fast
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/interposable-arm64e.out \
 # RUN:   | FileCheck %s --check-prefixes=INTERPOSABLE,INTERPOSABLE-ARM64E
 
@@ -49,8 +68,9 @@
 # RUN:   -o %t/got-load-arm64e.o
 # RUN: %lld -arch arm64e -lSystem -o %t/got-load-arm64e.out %t/got-load-arm64e.o \
 # RUN:   %t/libexternal-arm64e.dylib -objc_stubs_fast -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs \
-# RUN:   --section=__auth_got --section-headers --macho %t/got-load-arm64e.out \
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_clsstubs \
+# RUN:   --section=__objc_stubs --section=__auth_got --section-headers \
+# RUN:   --macho %t/got-load-arm64e.out \
 # RUN:   | FileCheck %s --check-prefix=GOT-LOAD-ARM64E
 # RUN: llvm-objdump --macho --dyld-info %t/got-load-arm64e.out \
 # RUN:   | FileCheck %s --check-prefix=GOT-LOAD-ARM64E-GOT
@@ -61,7 +81,7 @@
 # RUN: %lld -arch arm64e -lSystem -o %t/dynamic-small-arm64e.out \
 # RUN:   %t/dynamic-arm64e.o -objc_stubs_small \
 # RUN:   -U '_OBJC_CLASS_$_DynamicClass' -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_clsstubs \
 # RUN:   --section=__auth_stubs --section-headers --macho \
 # RUN:   %t/dynamic-small-arm64e.out | FileCheck %s --check-prefix=DYNAMIC-SMALL-ARM64E
 
@@ -75,13 +95,13 @@
 # RUN: llvm-ar rcs %t/libarchive.a %t/archive-class.o %t/archive-nested.o
 # RUN: %lld -arch arm64 -lSystem -o %t/archive.out %t/archive-main.o \
 # RUN:   %t/libarchive.a -objc_stubs_fast -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/archive.out | FileCheck %s --check-prefix=ARCHIVE
 # RUN: llvm-nm %t/archive.out | FileCheck %s --check-prefix=ARCHIVE-SYMS
 # RUN: %lld -arch arm64 -lSystem -o %t/start-lib.out %t/archive-main.o \
 # RUN:   --start-lib %t/archive-class.o %t/archive-nested.o --end-lib \
 # RUN:   -objc_stubs_fast -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/start-lib.out | FileCheck %s --check-prefix=ARCHIVE
 # RUN: llvm-nm %t/start-lib.out | FileCheck %s --check-prefix=ARCHIVE-SYMS
 
@@ -93,7 +113,7 @@
 # RUN: llvm-ar rcs %t/libautolinka.a %t/autolink-dep-a.o
 # RUN: %lld -arch arm64 -lSystem -o %t/autolink-a.out \
 # RUN:   %t/autolink-main-a.o -L%t -objc_stubs_fast -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/autolink-a.out | FileCheck %s --check-prefix=AUTOLINK-A
 
 # Check autolink extraction when the class is already known.
@@ -104,7 +124,7 @@
 # RUN: llvm-ar rcs %t/libautolinkb.a %t/autolink-dep-b.o
 # RUN: %lld -arch arm64 -lSystem -dead_strip -o %t/autolink-b.out \
 # RUN:   %t/autolink-main-b.o -L%t -objc_stubs_fast -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/autolink-b.out | FileCheck %s --check-prefix=AUTOLINK-B
 # RUN: llvm-nm %t/autolink-b.out | FileCheck %s --check-prefix=AUTOLINK-B-SYMS
 
@@ -113,17 +133,17 @@
 # RUN:   -o %t/dynamic.o
 # RUN: %lld -arch arm64 -lSystem -o %t/dynamic.out %t/dynamic.o \
 # RUN:   -objc_stubs_fast -U '_OBJC_CLASS_$_DynamicClass' -U _objc_msgSend
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/dynamic.out | FileCheck %s --check-prefix=DYNAMIC
 # RUN: %lld -arch arm64 -lSystem -o %t/dynamic-lookup.out %t/dynamic.o \
 # RUN:   -objc_stubs_fast -undefined dynamic_lookup
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/dynamic-lookup.out | FileCheck %s --check-prefix=DYNAMIC
 
 # Check that a locally defined class that needs binding is loaded through the GOT.
 # RUN: %lld -arch arm64 -lSystem -interposable -o %t/interposable.out \
 # RUN:   %t/main.o %t/libexternal.dylib -objc_stubs_fast
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t/interposable.out | FileCheck %s --check-prefix=INTERPOSABLE
 
 # Check diagnostics for missing class symbols.
@@ -138,17 +158,8 @@
 # RUN: not %lld -arch arm64 -lSystem -o /dev/null %t/malformed.o \
 # RUN:   -objc_stubs_fast 2>&1 | FileCheck %s --check-prefix=MALFORMED
 
-# FAST:      Contents of (__TEXT,__objc_stubs) section
-# FAST:      _objc_msgSend$instance:
-# FAST-NEXT: adrp    x1,
-# FAST-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
-# FAST-NEXT: adrp    x16,
-# FAST-NEXT: ldr     x16,
-# FAST-NEXT: br      x16
-# FAST-NEXT: brk     #0x1
-# FAST-NEXT: brk     #0x1
-# FAST-NEXT: brk     #0x1
-# FAST-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# FAST:      Contents of (__TEXT,__objc_clsstubs) section
+# FAST:      _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
 # FAST-NEXT: adrp    x0,
 # FAST-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # FAST-NEXT: adrp    x1,
@@ -166,15 +177,34 @@
 # FAST-NEXT: ldr     x16,
 # FAST-NEXT: br      x16
 # FAST-NEXT: brk     #0x1
+# FAST:      Contents of (__TEXT,__objc_stubs) section
+# FAST:      _objc_msgSend$instance:
+# FAST-NEXT: adrp    x1,
+# FAST-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
+# FAST-NEXT: adrp    x16,
+# FAST-NEXT: ldr     x16,
+# FAST-NEXT: br      x16
+# FAST-NEXT: brk     #0x1
+# FAST-NEXT: brk     #0x1
+# FAST-NEXT: brk     #0x1
 # FAST-LABEL: SYMBOL TABLE:
 # FAST-DAG: {{0*}}[[#%x,FAST_LOCAL_CLASS_PAGE+FAST_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
 
-# SMALL:      Contents of (__TEXT,__objc_stubs) section
-# SMALL:      _objc_msgSend$instance:
-# SMALL-NEXT: adrp    x1,
-# SMALL-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
-# SMALL-NEXT: b       _objc_msgSend
-# SMALL-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# MAP-LABEL: # Sections:
+# MAP:       __TEXT __objc_clsstubs
+# MAP-NEXT:  __TEXT __objc_stubs
+# MAP-LABEL: # Symbols:
+# MAP:       0x{{[0-9A-F]+}} 0x00000020 [  0] _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass
+# MAP-NEXT:  0x{{[0-9A-F]+}} 0x00000020 [  0] _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass
+# MAP-NEXT:  0x{{[0-9A-F]+}} 0x00000020 [  0] _objc_msgSend$instance
+
+# ORDER:      __text
+# ORDER-NEXT: [[STUBS]]
+# ORDER-NEXT: __objc_clsstubs
+# ORDER-NEXT: __objc_stubs
+
+# SMALL:      Contents of (__TEXT,__objc_clsstubs) section
+# SMALL:      _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
 # SMALL-NEXT: adrp    x0,
 # SMALL-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # SMALL-NEXT: adrp    x1,
@@ -186,23 +216,19 @@
 # SMALL-NEXT: adrp    x1,
 # SMALL-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
 # SMALL-NEXT: b       _objc_msgSend
+# SMALL:      Contents of (__TEXT,__objc_stubs) section
+# SMALL:      _objc_msgSend$instance:
+# SMALL-NEXT: adrp    x1,
+# SMALL-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
+# SMALL-NEXT: b       _objc_msgSend
 # SMALL-LABEL: SYMBOL TABLE:
 # SMALL-DAG: {{0*}}[[#%x,SMALL_LOCAL_CLASS_PAGE+SMALL_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
 
 # Each arm64e tail is pinned to the address of __auth_got: __auth_got and __got
 # can share a page, so a stub that read the raw __got would otherwise match.
 # FAST-ARM64E:      __auth_got {{[0-9a-f]+}} {{0*}}[[#%x,FAST_E_AUTH_GOT:]] DATA
-# FAST-ARM64E:      Contents of (__TEXT,__objc_stubs) section
-# FAST-ARM64E:      _objc_msgSend$instance:
-# FAST-ARM64E-NEXT: adrp    x1,
-# FAST-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
-# FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_INSTANCE_PAGE:]]
-# FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_INSTANCE_PAGE]]
-# FAST-ARM64E-NEXT: ldr     x16, [x17]
-# FAST-ARM64E-NEXT: braa    x16, x17
-# FAST-ARM64E-NEXT: brk     #0x1
-# FAST-ARM64E-NEXT: brk     #0x1
-# FAST-ARM64E-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# FAST-ARM64E:      Contents of (__TEXT,__objc_clsstubs) section
+# FAST-ARM64E:      _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
 # FAST-ARM64E-NEXT: adrp    x0,
 # FAST-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # FAST-ARM64E-NEXT: adrp    x1,
@@ -220,6 +246,16 @@
 # FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_LOCAL_PAGE]]
 # FAST-ARM64E-NEXT: ldr     x16, [x17]
 # FAST-ARM64E-NEXT: braa    x16, x17
+# FAST-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# FAST-ARM64E:      _objc_msgSend$instance:
+# FAST-ARM64E-NEXT: adrp    x1,
+# FAST-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
+# FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_INSTANCE_PAGE:]]
+# FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_INSTANCE_PAGE]]
+# FAST-ARM64E-NEXT: ldr     x16, [x17]
+# FAST-ARM64E-NEXT: braa    x16, x17
+# FAST-ARM64E-NEXT: brk     #0x1
+# FAST-ARM64E-NEXT: brk     #0x1
 # FAST-ARM64E-LABEL: SYMBOL TABLE:
 # FAST-ARM64E-DAG: {{0*}}[[#%x,FAST_E_LOCAL_CLASS_PAGE+FAST_E_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
 
@@ -227,12 +263,8 @@
 # FAST-ARM64E-GOT: __DATA_CONST __auth_got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} rebase 0x0000 true IA
 # FAST-ARM64E-GOT: __DATA_CONST __got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} bind 0x0 libexternal _OBJC_CLASS_$_ExternalClass
 
-# SMALL-ARM64E:      Contents of (__TEXT,__objc_stubs) section
-# SMALL-ARM64E:      _objc_msgSend$instance:
-# SMALL-ARM64E-NEXT: adrp    x1,
-# SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
-# SMALL-ARM64E-NEXT: b       _objc_msgSend
-# SMALL-ARM64E-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# SMALL-ARM64E:      Contents of (__TEXT,__objc_clsstubs) section
+# SMALL-ARM64E:      _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
 # SMALL-ARM64E-NEXT: adrp    x0,
 # SMALL-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # SMALL-ARM64E-NEXT: adrp    x1,
@@ -244,21 +276,17 @@
 # SMALL-ARM64E-NEXT: adrp    x1,
 # SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
 # SMALL-ARM64E-NEXT: b       _objc_msgSend
+# SMALL-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# SMALL-ARM64E:      _objc_msgSend$instance:
+# SMALL-ARM64E-NEXT: adrp    x1,
+# SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
+# SMALL-ARM64E-NEXT: b       _objc_msgSend
 # SMALL-ARM64E-LABEL: SYMBOL TABLE:
 # SMALL-ARM64E-DAG: {{0*}}[[#%x,SMALL_E_LOCAL_CLASS_PAGE+SMALL_E_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
 
 # GOT-LOAD-ARM64E:      __auth_got {{[0-9a-f]+}} {{0*}}[[#%x,GOT_LOAD_AUTH_GOT:]] DATA
-# GOT-LOAD-ARM64E:      Contents of (__TEXT,__objc_stubs) section
-# GOT-LOAD-ARM64E-NEXT: _objc_msgSend$got:
-# GOT-LOAD-ARM64E-NEXT: adrp    x1,
-# GOT-LOAD-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: got
-# GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_SEL_PAGE:]]
-# GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_SEL_PAGE]]
-# GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
-# GOT-LOAD-ARM64E-NEXT: braa    x16, x17
-# GOT-LOAD-ARM64E-NEXT: brk     #0x1
-# GOT-LOAD-ARM64E-NEXT: brk     #0x1
-# GOT-LOAD-ARM64E-NEXT: _objc_msgSendClass$got$_OBJC_CLASS_$_ExternalClass:
+# GOT-LOAD-ARM64E:      Contents of (__TEXT,__objc_clsstubs) section
+# GOT-LOAD-ARM64E:      _objc_msgSendClass$got$_OBJC_CLASS_$_ExternalClass:
 # GOT-LOAD-ARM64E-NEXT: adrp    x0,
 # GOT-LOAD-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # GOT-LOAD-ARM64E-NEXT: adrp    x1,
@@ -267,6 +295,16 @@
 # GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_CLASS_PAGE]]
 # GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
 # GOT-LOAD-ARM64E-NEXT: braa    x16, x17
+# GOT-LOAD-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# GOT-LOAD-ARM64E:      _objc_msgSend$got:
+# GOT-LOAD-ARM64E-NEXT: adrp    x1,
+# GOT-LOAD-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: got
+# GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_SEL_PAGE:]]
+# GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_SEL_PAGE]]
+# GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
+# GOT-LOAD-ARM64E-NEXT: braa    x16, x17
+# GOT-LOAD-ARM64E-NEXT: brk     #0x1
+# GOT-LOAD-ARM64E-NEXT: brk     #0x1
 
 # _objc_msgSend has an authenticated bind in __auth_got for the stubs and a
 # plain one in __got for the GOT load.
@@ -281,7 +319,7 @@
 # DYNAMIC-SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: dynamic
 # DYNAMIC-SMALL-ARM64E-NEXT: b       0x[[#%x,DYN_E_AUTH_STUBS]]
 
-# DYNAMIC:      Contents of (__TEXT,__objc_stubs) section
+# DYNAMIC:      Contents of (__TEXT,__objc_clsstubs) section
 # DYNAMIC-NEXT: _objc_msgSendClass$dynamic$_OBJC_CLASS_$_DynamicClass:
 # DYNAMIC-NEXT: adrp    x0,
 # DYNAMIC-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_DynamicClass
@@ -304,7 +342,7 @@
 # INTERPOSABLE-ARM64E-NEXT: ldr     x16, [x17]
 # INTERPOSABLE-ARM64E-NEXT: braa    x16, x17
 
-# ARCHIVE:      Contents of (__TEXT,__objc_stubs) section
+# ARCHIVE:      Contents of (__TEXT,__objc_clsstubs) section
 # ARCHIVE-NEXT: _objc_msgSendClass$archive$_OBJC_CLASS_$_ArchiveClass:
 # ARCHIVE-NEXT: adrp    x0,
 # ARCHIVE-NEXT: add     x0, x0,
@@ -321,7 +359,7 @@
 # ARCHIVE-SYMS: _OBJC_CLASS_$_ArchiveClass
 # ARCHIVE-SYMS: _OBJC_CLASS_$_NestedClass
 
-# AUTOLINK-A:      Contents of (__TEXT,__objc_stubs) section
+# AUTOLINK-A:      Contents of (__TEXT,__objc_clsstubs) section
 # AUTOLINK-A-NEXT: _objc_msgSendClass$auto$_OBJC_CLASS_$_AutoClass:
 # AUTOLINK-A-NEXT: adrp    x0,
 # AUTOLINK-A-NEXT: add     x0, x0,
@@ -332,7 +370,7 @@
 # AUTOLINK-A-NEXT: br      x16
 # AUTOLINK-A-NEXT: brk     #0x1
 #
-# AUTOLINK-B:      Contents of (__TEXT,__objc_stubs) section
+# AUTOLINK-B:      Contents of (__TEXT,__objc_clsstubs) section
 # AUTOLINK-B-NEXT: _objc_msgSendClass$late$_OBJC_CLASS_$_LateClass:
 # AUTOLINK-B-NEXT: adrp    x0,
 # AUTOLINK-B-NEXT: add     x0, x0,
@@ -351,6 +389,21 @@
 # MALFORMED: error: malformed objc class stub symbol _objc_msgSendClass$malformed; expected _objc_msgSendClass$<selector>$_OBJC_CLASS_$_<class>
 # MALFORMED-NOT: Objc selector ref:
 # MALFORMED-NOT: undefined symbol: _objc_msgSendClass$malformed
+
+#--- order.s
+# One call through each kind of stub.
+.globl _main
+.p2align 2
+_main:
+  bl _extern_func
+  bl _objc_msgSend$order
+  bl _objc_msgSendClass$order$_OBJC_CLASS_$_OrderClass
+  ret
+
+.data
+.globl _OBJC_CLASS_$_OrderClass
+_OBJC_CLASS_$_OrderClass:
+  .quad 0
 
 #--- main.s
 # Main fast/small case: one regular selector stub plus local and dylib class

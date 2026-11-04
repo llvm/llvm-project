@@ -141,7 +141,7 @@ static void printStubsEntries(
                  sym->getName().str().data());
 }
 
-// For printing the contents of the __objc_stubs section.
+// For printing the contents of the __objc_stubs and __objc_clsstubs sections.
 static void printObjCStubsEntries(raw_fd_ostream &os,
                                   const ObjCStubsSection *osec) {
   for (const Defined *sym : osec->getSymbols())
@@ -264,6 +264,8 @@ void macho::writeMapFile() {
                      osec->addr, osec->getSize());
       } else if (osec == in.stubs) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.objcClassStubs) {
+        printObjCStubsEntries(os, in.objcClassStubs);
       } else if (osec == in.objcStubs) {
         printObjCStubsEntries(os, in.objcStubs);
       } else if (osec == in.lazyPointers) {
