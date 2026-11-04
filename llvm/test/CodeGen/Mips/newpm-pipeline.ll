@@ -30,7 +30,7 @@
 ; MIPS-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-NEXT:   expand-reductions
 ; MIPS-NEXT:   atomic-expand
-; MIPS-NEXT: mips-16-hard-float
+; MIPS-NEXT: mips-mips16-hard-float
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   codegenprepare
 ; MIPS-NEXT:   sjlj-eh-prepare
@@ -42,8 +42,8 @@
 ; MIPS-NEXT: mips-asm-printer-begin
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   machine-function
-; MIPS-NEXT:     mips-16-isel
-; MIPS-NEXT:     mips-se-isel
+; MIPS-NEXT:     mips-mips16-isel
+; MIPS-NEXT:     mips-mipsse-isel
 ; MIPS-NEXT:     finalize-isel
 ; MIPS-NEXT:     early-tailduplication
 ; MIPS-NEXT:     opt-phis
@@ -88,7 +88,7 @@
 ; MIPS-NEXT:     xray-instrumentation
 ; MIPS-NEXT:     patchable-function
 ; MIPS-NEXT:     mips-expand-pseudo
-; MIPS-NEXT:     mips-micro-size-reduce
+; MIPS-NEXT:     mips-micromips-size-reduce
 ; MIPS-NEXT:     mips-delay-slot-filler
 ; MIPS-NEXT:     mips-branch-expansion
 ; MIPS-NEXT:     mips-constant-islands
@@ -129,7 +129,7 @@
 ; MIPS-OS16-NEXT:   expand-reductions
 ; MIPS-OS16-NEXT:   atomic-expand
 ; MIPS-OS16-NEXT: mips-os16
-; MIPS-OS16-NEXT: mips-16-hard-float
+; MIPS-OS16-NEXT: mips-mips16-hard-float
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   codegenprepare
 ; MIPS-OS16-NEXT:   sjlj-eh-prepare
@@ -141,8 +141,8 @@
 ; MIPS-OS16-NEXT: mips-asm-printer-begin
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   machine-function
-; MIPS-OS16-NEXT:     mips-16-isel
-; MIPS-OS16-NEXT:     mips-se-isel
+; MIPS-OS16-NEXT:     mips-mips16-isel
+; MIPS-OS16-NEXT:     mips-mipsse-isel
 ; MIPS-OS16-NEXT:     finalize-isel
 ; MIPS-OS16-NEXT:     early-tailduplication
 ; MIPS-OS16-NEXT:     opt-phis
@@ -187,7 +187,7 @@
 ; MIPS-OS16-NEXT:     xray-instrumentation
 ; MIPS-OS16-NEXT:     patchable-function
 ; MIPS-OS16-NEXT:     mips-expand-pseudo
-; MIPS-OS16-NEXT:     mips-micro-size-reduce
+; MIPS-OS16-NEXT:     mips-micromips-size-reduce
 ; MIPS-OS16-NEXT:     mips-delay-slot-filler
 ; MIPS-OS16-NEXT:     mips-branch-expansion
 ; MIPS-OS16-NEXT:     mips-constant-islands
@@ -227,7 +227,7 @@
 ; MIPS-MFIX4300-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-MFIX4300-NEXT:   expand-reductions
 ; MIPS-MFIX4300-NEXT:   atomic-expand
-; MIPS-MFIX4300-NEXT: mips-16-hard-float
+; MIPS-MFIX4300-NEXT: mips-mips16-hard-float
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   codegenprepare
 ; MIPS-MFIX4300-NEXT:   sjlj-eh-prepare
@@ -239,8 +239,8 @@
 ; MIPS-MFIX4300-NEXT: mips-asm-printer-begin
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   machine-function
-; MIPS-MFIX4300-NEXT:     mips-16-isel
-; MIPS-MFIX4300-NEXT:     mips-se-isel
+; MIPS-MFIX4300-NEXT:     mips-mips16-isel
+; MIPS-MFIX4300-NEXT:     mips-mipsse-isel
 ; MIPS-MFIX4300-NEXT:     finalize-isel
 ; MIPS-MFIX4300-NEXT:     early-tailduplication
 ; MIPS-MFIX4300-NEXT:     opt-phis
@@ -285,7 +285,7 @@
 ; MIPS-MFIX4300-NEXT:     xray-instrumentation
 ; MIPS-MFIX4300-NEXT:     patchable-function
 ; MIPS-MFIX4300-NEXT:     mips-expand-pseudo
-; MIPS-MFIX4300-NEXT:     mips-micro-size-reduce
+; MIPS-MFIX4300-NEXT:     mips-micromips-size-reduce
 ; MIPS-MFIX4300-NEXT:     mips-mul-mul-bug-fix
 ; MIPS-MFIX4300-NEXT:     mips-delay-slot-filler
 ; MIPS-MFIX4300-NEXT:     mips-branch-expansion

@@ -11,6 +11,7 @@ add_integration_test(
   SRCS
     getenv_test.cpp
   DEPENDS
+    libc.src.stdlib.environ_internal
     libc.src.stdlib.getenv
   ENV
     FRANCE=Paris
