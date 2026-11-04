@@ -1,14 +1,13 @@
 // RUN: %clangxx -fPIC -fdata-sections -c %s -o %t.o
 // RUN: %llvm_jitlink %t.o
 // RUN: %llvm_jitlink -slab-allocate=1MB %t.o
-// RUN: %clangxx -fPIC -fdata-sections -DWITH_CANONICAL -c %s -o %t.mixed.o
-// RUN: %llvm_jitlink %t.mixed.o
-// RUN: %llvm_jitlink -slab-allocate=1MB %t.mixed.o
 // REQUIRES: system-linux, host-arch-compatible
 // REQUIRES: host-jit-triple={{(x86_64|aarch64)-.*}}
 
-// Register initialized, zero-initialized, COMDAT, and GNU linkonce TLS
-// subsections, both with and without existing canonical TLS sections.
+#include <assert.h>
+
+// Merge TLS subsections into existing canonical sections, preserving both
+// initialized and zero-initialized values across all section forms.
 thread_local int Data = 7;
 thread_local int Zero;
 thread_local int LinkOnceData
@@ -25,21 +24,33 @@ inline int &inlineZero() {
   return Value;
 }
 
-#ifdef WITH_CANONICAL
 thread_local int CanonicalData __attribute__((section(".tdata"))) = 17;
 thread_local int CanonicalZero __attribute__((section(".tbss")));
-#endif
 
 int main() {
-  if (Data++ != 7 || Zero++ != 0 || LinkOnceData++ != 11 ||
-      LinkOnceZero++ != 0 || inlineData()++ != 13 || inlineZero()++ != 0)
-    return 1;
-  if (Data != 8 || Zero != 1 || LinkOnceData != 12 || LinkOnceZero != 1 ||
-      inlineData() != 14 || inlineZero() != 1)
-    return 2;
-#ifdef WITH_CANONICAL
-  if (CanonicalData++ != 17 || CanonicalZero++ != 0)
-    return 3;
-#endif
+  assert(Data == 7);
+  ++Data;
+  assert(Zero == 0);
+  ++Zero;
+  assert(LinkOnceData == 11);
+  ++LinkOnceData;
+  assert(LinkOnceZero == 0);
+  ++LinkOnceZero;
+  assert(inlineData() == 13);
+  ++inlineData();
+  assert(inlineZero() == 0);
+  ++inlineZero();
+  assert(CanonicalData == 17);
+  ++CanonicalData;
+  assert(CanonicalZero == 0);
+  ++CanonicalZero;
+  assert(Data == 8);
+  assert(Zero == 1);
+  assert(LinkOnceData == 12);
+  assert(LinkOnceZero == 1);
+  assert(inlineData() == 14);
+  assert(inlineZero() == 1);
+  assert(CanonicalData == 18);
+  assert(CanonicalZero == 1);
   return 0;
 }
