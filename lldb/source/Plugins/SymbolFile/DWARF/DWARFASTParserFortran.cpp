@@ -182,11 +182,11 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
       switch (attributes.AttributeAtIndex(i)) {
       case DW_AT_name: {
         const char *type_name_cstr = form_value.AsCString();
-        if (type_name_cstr && type_name_cstr[0] != '\0') 
+        if (type_name_cstr && type_name_cstr[0] != '\0')
           type_name.SetString(type_name_cstr);
-        else 
+        else
           type_name.SetCString("UNKNOWN_FORTRAN_FUNCTION");
-        
+
         break;
       }
       case DW_AT_type: {
