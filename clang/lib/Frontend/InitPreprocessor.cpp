@@ -765,6 +765,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
   Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
+  Builder.defineMacro("__cpp_pp_embed", "202502L");
 
   // C++26 reflection.
   if (LangOpts.Reflection)
@@ -1539,6 +1540,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");
+  if (LangOpts.Sanitize.has(SanitizerKind::Concurrency))
+    Builder.defineMacro("__SANITIZE_CONCURRENCY__");
   if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
     Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
 

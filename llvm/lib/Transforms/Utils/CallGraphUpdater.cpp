@@ -74,6 +74,20 @@ void CallGraphUpdater::reanalyzeFunction(Function &Fn) {
   }
 }
 
+void CallGraphUpdater::addReferences(Function &Fn, Constant &C) {
+  if (!LCG)
+    return;
+
+  LazyCallGraph::Node &N = LCG->get(Fn);
+  SmallVector<Constant *, 4> Worklist = {&C};
+  SmallPtrSet<Constant *, 4> Visited = {&C};
+  LazyCallGraph::visitReferences(Worklist, Visited, [&](Function &Referee) {
+    LazyCallGraph::Node &RefereeN = LCG->get(Referee);
+    if (!N->lookup(RefereeN))
+      LCG->lookupRefSCC(N)->insertTrivialRefEdge(N, RefereeN);
+  });
+}
+
 void CallGraphUpdater::registerOutlinedFunction(Function &OriginalFn,
                                                 Function &NewFn) {
   if (LCG)
