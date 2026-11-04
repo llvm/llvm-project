@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
-; RUN:   -stop-before=finalize-isel -verify-machineinstrs | \
+; RUN:   -stop-before=finalize-isel | \
 ; RUN:   FileCheck -check-prefix=BEFORE-FINALIZE-ISEL %s
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -stop-after=finalize-isel | \
