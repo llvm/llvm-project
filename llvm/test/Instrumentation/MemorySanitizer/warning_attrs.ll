@@ -59,7 +59,7 @@ define void @check_branch(i1 %c) nounwind uwtable sanitize_memory {
 ; NORET-NEXT:    call void @llvm.donothing()
 ; NORET-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
 ; NORET:       [[BB2]]:
-; NORET-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
+; NORET-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; NORET-NEXT:    unreachable
 ; NORET:       [[BB3]]:
 ; NORET-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
@@ -74,7 +74,7 @@ define void @check_branch(i1 %c) nounwind uwtable sanitize_memory {
 ; RECOV-NEXT:    call void @llvm.donothing()
 ; RECOV-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
 ; RECOV:       [[BB2]]:
-; RECOV-NEXT:    call void @__msan_warning() #[[ATTR3:[0-9]+]]
+; RECOV-NEXT:    call void @__msan_warning() #[[ATTR4:[0-9]+]]
 ; RECOV-NEXT:    br label %[[BB3]]
 ; RECOV:       [[BB3]]:
 ; RECOV-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
@@ -90,7 +90,7 @@ define void @check_branch(i1 %c) nounwind uwtable sanitize_memory {
 ; ORIGINS-NORET-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NORET-NEXT:    br i1 [[TMP1]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1:![0-9]+]]
 ; ORIGINS-NORET:       [[BB3]]:
-; ORIGINS-NORET-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR3:[0-9]+]]
+; ORIGINS-NORET-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4:[0-9]+]]
 ; ORIGINS-NORET-NEXT:    unreachable
 ; ORIGINS-NORET:       [[BB4]]:
 ; ORIGINS-NORET-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
@@ -106,7 +106,7 @@ define void @check_branch(i1 %c) nounwind uwtable sanitize_memory {
 ; ORIGINS-RECOV-NEXT:    call void @llvm.donothing()
 ; ORIGINS-RECOV-NEXT:    br i1 [[TMP1]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1:![0-9]+]]
 ; ORIGINS-RECOV:       [[BB3]]:
-; ORIGINS-RECOV-NEXT:    call void @__msan_warning_with_origin(i32 [[TMP2]]) #[[ATTR3:[0-9]+]]
+; ORIGINS-RECOV-NEXT:    call void @__msan_warning_with_origin(i32 [[TMP2]]) #[[ATTR4:[0-9]+]]
 ; ORIGINS-RECOV-NEXT:    br label %[[BB4]]
 ; ORIGINS-RECOV:       [[BB4]]:
 ; ORIGINS-RECOV-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
@@ -124,23 +124,27 @@ f:
 ;.
 ; NORET: attributes #[[ATTR0]] = { nounwind sanitize_memory uwtable }
 ; NORET: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; NORET: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; NORET: attributes #[[ATTR3]] = { nomerge }
+; NORET: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind }
+; NORET: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; NORET: attributes #[[ATTR4]] = { nomerge }
 ;.
 ; RECOV: attributes #[[ATTR0]] = { nounwind sanitize_memory uwtable }
 ; RECOV: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; RECOV: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; RECOV: attributes #[[ATTR3]] = { nomerge }
+; RECOV: attributes #[[ATTR2:[0-9]+]] = { cold nounwind }
+; RECOV: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; RECOV: attributes #[[ATTR4]] = { nomerge }
 ;.
 ; ORIGINS-NORET: attributes #[[ATTR0]] = { nounwind sanitize_memory uwtable }
 ; ORIGINS-NORET: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; ORIGINS-NORET: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; ORIGINS-NORET: attributes #[[ATTR3]] = { nomerge }
+; ORIGINS-NORET: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind }
+; ORIGINS-NORET: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; ORIGINS-NORET: attributes #[[ATTR4]] = { nomerge }
 ;.
 ; ORIGINS-RECOV: attributes #[[ATTR0]] = { nounwind sanitize_memory uwtable }
 ; ORIGINS-RECOV: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; ORIGINS-RECOV: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; ORIGINS-RECOV: attributes #[[ATTR3]] = { nomerge }
+; ORIGINS-RECOV: attributes #[[ATTR2:[0-9]+]] = { cold nounwind }
+; ORIGINS-RECOV: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; ORIGINS-RECOV: attributes #[[ATTR4]] = { nomerge }
 ;.
 ; NORET: [[META0:![0-9]+]] = !{i32 4, !"nosanitize_memory", i32 1}
 ; NORET: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
