@@ -31,13 +31,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  sigpending
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.sigpending
-)
-
-add_entrypoint_object(
   sigaltstack
   ALIAS
   DEPENDS
