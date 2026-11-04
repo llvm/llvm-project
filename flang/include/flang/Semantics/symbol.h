@@ -574,7 +574,7 @@ public:
   void set_enumeratorDefaultAccess(Attr a) { enumeratorDefaultAccess_ = a; }
   // Name of the hidden component created for an enumeration type to hold
   // the 1-based enumerator ordinal.
-  static constexpr char ordinalComponentName[]{"__ordinal"};
+  static constexpr char ordinalComponentName[] = "__ordinal";
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
