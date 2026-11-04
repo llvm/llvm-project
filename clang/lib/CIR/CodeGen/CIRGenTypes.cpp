@@ -550,6 +550,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::VariableArray: {
     const VariableArrayType *a = cast<VariableArrayType>(ty);
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(a->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     // VLAs resolve to the innermost element type; this matches
     // the return of alloca, and there isn't any obviously better choice.
     resultType = convertTypeForMem(a->getElementType());
@@ -558,6 +564,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::IncompleteArray: {
     const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(arrTy->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // int X[] -> [0 x int], unless the element type is not sized.  If it is
     // unsized (e.g. an incomplete record) just use [0 x i8].
