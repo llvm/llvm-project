@@ -27,11 +27,12 @@ struct MemorySanitizerOptions {
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
       : MemorySanitizerOptions(TrackOrigins, Recover, Kernel, false) {}
   LLVM_ABI MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
-                                  bool EagerChecks);
+                                  bool EagerChecks, bool MergeChecks = false);
   bool Kernel;
   int TrackOrigins;
   bool Recover;
   bool EagerChecks;
+  bool MergeChecks;
 };
 
 /// A module pass for msan instrumentation.
