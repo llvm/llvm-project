@@ -3550,14 +3550,12 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
     LLT LoadTy = LLT::integer(MemSize);
     if (MemSize < 32 && LdSt.getAlign() >= Align(4))
       LoadTy = I32;
-    Register Loaded =
-        B.buildLoad(LoadTy, PtrReg,
-                    *B.getMF().getMachineMemOperand(&MMO, 0, LoadTy))
-            .getReg(0);
+    Register Loaded = B.buildLoadFromOffset(LoadTy, PtrReg, MMO, 0).getReg(0);
     const bool IsSigned = isa<GSExtLoad>(ExtLoad);
-    if (LoadTy.getSizeInBits() != MemSize)
+    if (LoadTy.getSizeInBits() != MemSize) {
       Loaded = IsSigned ? B.buildSExtInReg(LoadTy, Loaded, MemSize).getReg(0)
                         : B.buildZExtInReg(LoadTy, Loaded, MemSize).getReg(0);
+    }
     if (IsSigned)
       B.buildSExtOrTrunc(ValReg, Loaded);
     else

@@ -412,12 +412,13 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   }
 
   unsigned Opcode;
-  if (UseGPRIdxMode)
+  if (UseGPRIdxMode) {
     Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
                      : AMDGPU::V_MOV_B32_indirect_read;
-  else
+  } else {
     Opcode =
         IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
+  }
 
   // A move touches its base plus the run-time index, which no operand can name,
   // so the base is undef and the liveness of those registers is not expressed.
@@ -650,8 +651,8 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   // moves like any other instruction.
   bool Changed = false;
   if (MF.getInfo<SIMachineFunctionInfo>()->hasVGPRAsMemoryAccess()) {
-    for (auto &MBB : MF) {
-      for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : llvm::make_early_inc_range(MBB.instrs())) {
         if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
           lowerLoadStoreIdx(MI);
           Changed = true;

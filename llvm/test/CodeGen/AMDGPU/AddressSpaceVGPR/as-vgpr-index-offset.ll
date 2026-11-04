@@ -6,9 +6,9 @@
 
 ; SelectionDAG folds a constant dword offset on the index into the access only
 ; if the access stays within the addressable VGPRs and the addition cannot
-; wrap, which the hardware's does not: the add is nuw or the rest of the index
-; is known non-negative. Anything else, including a negative offset, stays in
-; the index. GlobalISel does not fold it yet.
+; wrap, which the hardware's does not: the add is nuw, the rest of the index is
+; known non-negative, or it is a disjoint or. Anything else, including a
+; negative offset, stays in the index. GlobalISel does not fold it yet.
 
 define void @load_plus_3(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX12-SDAG-LABEL: load_plus_3:
@@ -332,6 +332,235 @@ define void @store_plus_3_nonneg_base(i32 inreg %i, i32 %v) {
 ; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %b = and i32 %i, 1023
   %j = add i32 %b, 3
+  %s = shl nuw i32 %j, 2
+  %p = inttoptr i32 %s to ptr addrspace(13)
+  store i32 %v, ptr addrspace(13) %p, align 4
+  ret void
+}
+
+define void @load_or_disjoint_plus_1(ptr addrspace(1) %out, i32 inreg %i) {
+; GFX12-SDAG-LABEL: load_or_disjoint_plus_1:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshl_b32 m0, s0, 1
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v1
+; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: load_or_disjoint_plus_1:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v2, v0
+; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: load_or_disjoint_plus_1:
+; GFX942-SDAG:       ; %bb.0:
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX942-SDAG-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: load_or_disjoint_plus_1:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX942-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX942-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX942-GISEL-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %b = shl i32 %i, 1
+  %j = or disjoint i32 %b, 1
+  %s = shl nuw i32 %j, 2
+  %p = inttoptr i32 %s to ptr addrspace(13)
+  %v = load i32, ptr addrspace(13) %p, align 4
+  store i32 %v, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @store_or_disjoint_plus_1(i32 inreg %i, i32 %v) {
+; GFX12-SDAG-LABEL: store_or_disjoint_plus_1:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshl_b32 m0, s0, 1
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v0
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: store_or_disjoint_plus_1:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: store_or_disjoint_plus_1:
+; GFX942-SDAG:       ; %bb.0:
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: store_or_disjoint_plus_1:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX942-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX942-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %b = shl i32 %i, 1
+  %j = or disjoint i32 %b, 1
+  %s = shl nuw i32 %j, 2
+  %p = inttoptr i32 %s to ptr addrspace(13)
+  store i32 %v, ptr addrspace(13) %p, align 4
+  ret void
+}
+
+; An or that is not disjoint is not an add, so it does not fold.
+define void @load_or_not_disjoint_plus_1(ptr addrspace(1) %out, i32 inreg %i) {
+; GFX12-SDAG-LABEL: load_or_not_disjoint_plus_1:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_or_b32 m0, s0, 1
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v0
+; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: load_or_not_disjoint_plus_1:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v2, v0
+; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: load_or_not_disjoint_plus_1:
+; GFX942-SDAG:       ; %bb.0:
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_or_b32 s0, s0, 1
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX942-SDAG-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: load_or_not_disjoint_plus_1:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX942-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX942-GISEL-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %j = or i32 %i, 1
+  %s = shl nuw i32 %j, 2
+  %p = inttoptr i32 %s to ptr addrspace(13)
+  %v = load i32, ptr addrspace(13) %p, align 4
+  store i32 %v, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @store_or_not_disjoint_plus_1(i32 inreg %i, i32 %v) {
+; GFX12-SDAG-LABEL: store_or_not_disjoint_plus_1:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_or_b32 m0, s0, 1
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: store_or_not_disjoint_plus_1:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: store_or_not_disjoint_plus_1:
+; GFX942-SDAG:       ; %bb.0:
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_or_b32 s0, s0, 1
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, v0
+; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: store_or_not_disjoint_plus_1:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_or_b32 s0, s0, 4
+; GFX942-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %j = or i32 %i, 1
   %s = shl nuw i32 %j, 2
   %p = inttoptr i32 %s to ptr addrspace(13)
   store i32 %v, ptr addrspace(13) %p, align 4

@@ -44,6 +44,23 @@ define i64 @load_i64(ptr addrspace(13) inreg %p) {
   ret i64 %y
 }
 
+; Only dword alignment is required, whatever the access size.
+define i64 @load_i64_align4(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_i64_align4:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %x = load i64, ptr addrspace(13) %p, align 4
+  ret i64 %x
+}
+
 define <2 x float> @load_v2f32(ptr addrspace(13) inreg %p) {
 ; GFX12-LABEL: load_v2f32:
 ; GFX12:       ; %bb.0:
@@ -475,6 +492,290 @@ define i32 @can_fold_to_sextload16(ptr addrspace(13) inreg %ptr) {
   %shl = shl i32 %ld, 16
   %sext_inreg = ashr i32 %shl, 16
   ret i32 %sext_inreg
+}
+
+; GlobalISel narrows an extract from a loaded vector to a load of the element
+; only when the element is a whole dword; a smaller one is extracted from the
+; loaded dwords.
+define i16 @extract_v2i16_lo(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: extract_v2i16_lo:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <2 x i16>, ptr addrspace(13) %p
+  %e = extractelement <2 x i16> %x, i32 0
+  ret i16 %e
+}
+
+define i16 @extract_v2i16_hi(ptr addrspace(13) inreg %p) {
+; GFX12-SDAG-LABEL: extract_v2i16_hi:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: extract_v2i16_hi:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <2 x i16>, ptr addrspace(13) %p
+  %e = extractelement <2 x i16> %x, i32 1
+  ret i16 %e
+}
+
+define half @extract_v2f16_hi(ptr addrspace(13) inreg %p) {
+; GFX12-SDAG-LABEL: extract_v2f16_hi:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: extract_v2f16_hi:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <2 x half>, ptr addrspace(13) %p
+  %e = extractelement <2 x half> %x, i32 1
+  ret half %e
+}
+
+define i16 @extract_v4i16_3(ptr addrspace(13) inreg %p) {
+; GFX12-SDAG-LABEL: extract_v4i16_3:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: extract_v4i16_3:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <4 x i16>, ptr addrspace(13) %p
+  %e = extractelement <4 x i16> %x, i32 3
+  ret i16 %e
+}
+
+define i8 @extract_v4i8_1(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: extract_v4i8_1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <4 x i8>, ptr addrspace(13) %p
+  %e = extractelement <4 x i8> %x, i32 1
+  ret i8 %e
+}
+
+define i16 @extract_v2i16_variable(ptr addrspace(13) inreg %p, i32 %i) {
+; GFX12-SDAG-LABEL: extract_v2i16_variable:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v0, v0, v1
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: extract_v2i16_variable:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, v0, v1
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <2 x i16>, ptr addrspace(13) %p
+  %e = extractelement <2 x i16> %x, i32 %i
+  ret i16 %e
+}
+
+define i32 @extract_v4i32_2(ptr addrspace(13) inreg %p) {
+; GFX12-SDAG-LABEL: extract_v4i32_2:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v3, v3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: extract_v4i32_2:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 8
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = load <4 x i32>, ptr addrspace(13) %p
+  %e = extractelement <4 x i32> %x, i32 2
+  ret i32 %e
+}
+
+; SelectionDAG's store combines would narrow these read-modify-writes of a
+; dword to 8- and 16-bit stores; they must stay whole-dword.
+define void @or_store_back(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: or_store_back:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_or_b32_e32 v0, 0xff00, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(13) %p, align 4
+  %o = or i32 %v, 65280
+  store i32 %o, ptr addrspace(13) %p, align 4
+  ret void
+}
+
+define void @masked_insert_store_back(ptr addrspace(13) inreg %p, i8 %x) {
+; GFX12-LABEL: masked_insert_store_back:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX12-NEXT:    v_and_or_b32 v0, v1, 0xffff00ff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(13) %p, align 4
+  %m = and i32 %v, -65281
+  %z = zext i8 %x to i32
+  %s = shl i32 %z, 8
+  %o = or i32 %m, %s
+  store i32 %o, ptr addrspace(13) %p, align 4
+  ret void
+}
+
+define void @insert_store_back_v2i16(ptr addrspace(13) inreg %p, i16 %x) {
+; GFX12-SDAG-LABEL: insert_store_back_v2i16:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v1
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: insert_store_back_v2i16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-GISEL-NEXT:    v_and_or_b32 v0, v1, 0xffff, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = load <2 x i16>, ptr addrspace(13) %p, align 4
+  %i = insertelement <2 x i16> %v, i16 %x, i32 1
+  store <2 x i16> %i, ptr addrspace(13) %p, align 4
+  ret void
 }
 
 ; Pointers of each width, and vectors of them. GlobalISel moves them through

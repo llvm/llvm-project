@@ -62,15 +62,6 @@ public:
   }
 };
 
-class VLoadIdxInst : public VLoadStoreIdxInst {
-public:
-  static bool classof(const MachineInstr *MI) {
-    const AMDGPU::VLdStIdxOpcodeInfo *Info =
-        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode());
-    return Info && !Info->IsStore;
-  }
-};
-
 } // end namespace AMDGPUMI
 } // end namespace llvm
 

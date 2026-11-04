@@ -254,12 +254,13 @@ body:             |
     SI_RETURN implicit $vgpr0
 ...
 
-# Only the copy precedes the access in its block.
+# The copy is first in its block. The access cannot be: selection copies the
+# index into M0 in the access's own block.
 ---
-name:            first_in_block
+name:            copy_first_in_block
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: first_in_block
+  ; CHECK-LABEL: name: copy_first_in_block
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0

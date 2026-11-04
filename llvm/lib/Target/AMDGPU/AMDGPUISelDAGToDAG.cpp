@@ -986,7 +986,8 @@ bool AMDGPUDAGToDAGISel::isVRegIdxFoldableAdd(const SDNode *N,
       AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*MF);
   if (Offset < 0 || Offset + NumDwords > NumIndexable)
     return false;
-  return N->getFlags().hasNoUnsignedWrap() ||
+  // The pattern matches only a disjoint or, which cannot wrap.
+  return N->getOpcode() == ISD::OR || N->getFlags().hasNoUnsignedWrap() ||
          CurDAG->SignBitIsZero(N->getOperand(0));
 }
 
