@@ -7032,6 +7032,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_canonicalizef80",
+    hdrs = ["src/__support/math/canonicalizef80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_canonicalizef16",
     hdrs = ["src/__support/math/canonicalizef16.h"],
     deps = [
@@ -8127,6 +8137,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_iscanonicalf80",
+    hdrs = ["src/__support/math/iscanonicalf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_iscanonicalf16",
     hdrs = ["src/__support/math/iscanonicalf16.h"],
     deps = [
@@ -8168,6 +8188,16 @@ libc_support_library(
     hdrs = ["src/__support/math/isnanf128.h"],
     deps = [
         ":__support_fputil_float128",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_isnanf80",
+    hdrs = ["src/__support/math/isnanf80.h"],
+    deps = [
+        ":__support_fputil_float80",
         ":__support_fputil_fp_bits",
         ":__support_macros_config",
     ],
@@ -8226,6 +8256,16 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_fputil_float128",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingf80",
+    hdrs = ["src/__support/math/issignalingf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
         ":__support_macros_config",
     ],
 )
@@ -13364,6 +13404,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalizef80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_canonicalizef80",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef16",
     additional_deps = [
         ":__support_math_canonicalizef16",
@@ -13492,6 +13541,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "iscanonicalf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_iscanonicalf80",
+    ],
+)
+
+libc_math_function(
     name = "iscanonicalf16",
     additional_deps = [
         ":__support_math_iscanonicalf16",
@@ -13518,6 +13576,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_isnanf128",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_isnanf80",
     ],
 )
 
@@ -13569,6 +13636,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_issignalingf128",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_issignalingf80",
     ],
 )
 

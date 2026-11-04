@@ -79,6 +79,7 @@ else()
       libc.src.__support.math.canonicalizebf16
       libc.src.__support.math.canonicalizef
       libc.src.__support.math.canonicalizef128
+      libc.src.__support.math.canonicalizef80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel
       libc.src.__support.math.cbrt
@@ -318,17 +319,20 @@ else()
       libc.src.__support.math.iscanonicalbf16
       libc.src.__support.math.iscanonicalf
       libc.src.__support.math.iscanonicalf128
+      libc.src.__support.math.iscanonicalf80
       libc.src.__support.math.iscanonicalf16
       libc.src.__support.math.iscanonicall
       libc.src.__support.math.isnan
       libc.src.__support.math.isnanf
       libc.src.__support.math.isnanf128
+      libc.src.__support.math.isnanf80
       libc.src.__support.math.isnanf16
       libc.src.__support.math.isnanl
       libc.src.__support.math.issignaling
       libc.src.__support.math.issignalingbf16
       libc.src.__support.math.issignalingf
       libc.src.__support.math.issignalingf128
+      libc.src.__support.math.issignalingf80
       libc.src.__support.math.issignalingf16
       libc.src.__support.math.issignalingl
       libc.src.__support.math.ldexp
@@ -562,6 +566,7 @@ else()
       libc.src.__support.math.canonicalizebf16
       libc.src.__support.math.canonicalizef
       libc.src.__support.math.canonicalizef128
+      libc.src.__support.math.canonicalizef80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel
       libc.src.__support.math.ceil
@@ -715,17 +720,20 @@ else()
       libc.src.__support.math.iscanonicalbf16
       libc.src.__support.math.iscanonicalf
       libc.src.__support.math.iscanonicalf128
+      libc.src.__support.math.iscanonicalf80
       libc.src.__support.math.iscanonicalf16
       libc.src.__support.math.iscanonicall
       libc.src.__support.math.isnan
       libc.src.__support.math.isnanf
       libc.src.__support.math.isnanf128
+      libc.src.__support.math.isnanf80
       libc.src.__support.math.isnanf16
       libc.src.__support.math.isnanl
       libc.src.__support.math.issignaling
       libc.src.__support.math.issignalingbf16
       libc.src.__support.math.issignalingf
       libc.src.__support.math.issignalingf128
+      libc.src.__support.math.issignalingf80
       libc.src.__support.math.issignalingf16
       libc.src.__support.math.issignalingl
       libc.src.__support.math.ldexp
