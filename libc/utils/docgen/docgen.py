@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-#
-# ====- Generate documentation for libc functions  ------------*- python -*--==#
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ===----------------------------------------------------------------------===##
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
 import os
 import sys
-import yaml
 
 from header import Header
 
@@ -77,7 +75,9 @@ def check_api(header: Header, api: Dict):
 
     # Validate functions
     if "functions" in api:
-        if not header.fns_dir_exists():
+        if not header.fns_dir_exists() and not any(
+            header.implements_fn(f) for f in api["functions"]
+        ):
             print(
                 f"warning: Function definitions are listed for {header.name}, but no function implementation directory exists at {header.fns_dir}. All functions will be listed as not implemented.",
                 file=sys.stderr,
@@ -91,11 +91,6 @@ def check_api(header: Header, api: Dict):
 
     if errors:
         raise DocgenAPIFormatError("\n".join(errors))
-
-
-def load_api(header: Header) -> Dict:
-    api = header.docgen_yaml.read_text(encoding="utf-8")
-    return yaml.safe_load(api)
 
 
 def print_tbl_dir(name):
@@ -123,7 +118,7 @@ def print_functions_rst(header: Header, functions: Dict):
     for name in sorted(functions.keys()):
         print(f"  * - {name}")
 
-        if header.fns_dir_exists() and header.implements_fn(name):
+        if header.implements_fn(name):
             print("    - |check|")
         else:
             print("    -")
@@ -206,7 +201,7 @@ def get_choices() -> list:
         if path.parent != Path(__file__).parent:
             fname = path.parent.name + os.sep + fname
         choices.append(fname)
-    return choices
+    return sorted(choices)
 
 
 def parse_args() -> Namespace:
@@ -218,7 +213,6 @@ def parse_args() -> Namespace:
 if __name__ == "__main__":
     args = parse_args()
     header = Header(args.header_name)
-    api = load_api(header)
-    check_api(header, api)
+    check_api(header, header.api)
 
-    print_impl_status_rst(header, api)
+    print_impl_status_rst(header, header.api)
