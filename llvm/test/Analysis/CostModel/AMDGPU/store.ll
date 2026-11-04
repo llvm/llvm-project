@@ -802,7 +802,7 @@ define void @stores_addrspace_7(i32 %arg) {
   ret void
 }
 
-define void @stores_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspace(8) %rsrc) {
+define void @stores_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspace(8) %rsrc, i32 %off) {
 ; CHECK-LABEL: 'stores_addrspace_7_known_bounds'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -816,6 +816,16 @@ define void @stores_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspa
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> poison, ptr addrspace(7) %q, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <16 x i8> poison, ptr addrspace(7) %q, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> poison, ptr addrspace(7) %u.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> poison, ptr addrspace(7) %u.var2, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <16 x i8> poison, ptr addrspace(7) %p.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> poison, ptr addrspace(7) %direct, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
@@ -830,6 +840,16 @@ define void @stores_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspa
   %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
   store <4 x i32> poison, ptr addrspace(7) %q, align 4
   store <16 x i8> poison, ptr addrspace(7) %q, align 4
+  %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+  %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+  %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  store <16 x i8> poison, ptr addrspace(7) %u.var, align 4
+  %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  store <4 x i32> poison, ptr addrspace(7) %u.var2, align 4
+  %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+  store <16 x i8> poison, ptr addrspace(7) %p.var, align 4
+  %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+  store <16 x i8> poison, ptr addrspace(7) %direct, align 4
   ret void
 }
 
