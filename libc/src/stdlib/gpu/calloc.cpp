@@ -16,8 +16,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, calloc, (size_t num, size_t size)) {
-  size_t bytes = num * size;
-  if (bytes == 0)
+  size_t bytes;
+  if (__builtin_mul_overflow(num, size, &bytes) || bytes == 0)
     return nullptr;
 
   void *ptr = gpu::allocate(bytes);
