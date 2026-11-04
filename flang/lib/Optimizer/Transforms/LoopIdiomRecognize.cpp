@@ -39,7 +39,7 @@ static mlir::Value getFIREqualityMaskTarget(mlir::Value cond,
       return !rootLoop->isAncestor(def);
     if (auto arg = mlir::dyn_cast<mlir::BlockArgument>(v))
       return !rootLoop->isAncestor(arg.getOwner()->getParentOp());
-    return true;
+    llvm_unreachable("expected op result or block argument");
   };
 
   while (auto conv = cond.getDefiningOp<fir::ConvertOp>())
