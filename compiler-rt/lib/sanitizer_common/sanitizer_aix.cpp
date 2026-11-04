@@ -13,19 +13,22 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_AIX
+// Declare the large-file interfaces, such as mmap64, so that 64-bit file
+// offsets are not truncated in 32-bit mode.
+#  ifndef _LARGE_FILE_API
+#    define _LARGE_FILE_API
+#  endif
 #  include <dlfcn.h>
 #  include <errno.h>
 #  include <fcntl.h>
 #  include <pthread.h>
 #  include <sched.h>
 #  include <signal.h>
-#  include <stdlib.h>
-#  include <string.h>
-#  include <sys/errno.h>
 #  include <sys/mman.h>
 #  include <sys/stat.h>
-#  include <sys/time.h>
 #  include <sys/types.h>
+#  include <sys/wait.h>
+#  include <time.h>
 #  include <unistd.h>
 
 #  include "sanitizer_aix.h"
@@ -49,11 +52,10 @@ static void* GetFuncAddr(const char* name) {
 // REAL(func) may be not assigned at this time, because internal_func may be
 // called before interceptor init functions are called. So we need to call to
 // libc function via function pointer.
-
 //
-// The function pointer has the type declared by the libc headers. The headers
-// may map a function to another symbol (e.g., mmap to mmap64 when _LARGE_FILES
-// is defined), so the symbol is looked up by the name that `func` expands to.
+// The function pointer has the type declared by the libc headers. If the
+// headers map a function to another symbol (as they do when _LARGE_FILES is
+// defined), the symbol is looked up by the name that `func` expands to.
 
 #  define _REAL(func, ...) real_##func(__VA_ARGS__)
 
@@ -67,9 +69,9 @@ static void* GetFuncAddr(const char* name) {
 
 uptr internal_mmap(void* addr, uptr length, int prot, int flags, int fd,
                    u64 offset) {
-  DEFINE__REAL(mmap);
+  DEFINE__REAL(mmap64);
   return reinterpret_cast<uptr>(
-      _REAL(mmap, addr, length, prot, flags, fd, offset));
+      _REAL(mmap64, addr, length, prot, flags, fd, offset));
 }
 
 uptr internal_munmap(void* addr, uptr length) {
@@ -166,8 +168,12 @@ void internal__exit(int exitcode) {
 }
 
 void internal_usleep(u64 useconds) {
-  DEFINE__REAL(usleep);
-  _REAL(usleep, useconds);
+  // usleep may reject values of one second or more, so use nanosleep.
+  struct timespec ts;
+  ts.tv_sec = useconds / 1000000;
+  ts.tv_nsec = (useconds % 1000000) * 1000;
+  DEFINE__REAL(nanosleep);
+  _REAL(nanosleep, &ts, &ts);
 }
 
 uptr internal_getpid() {
