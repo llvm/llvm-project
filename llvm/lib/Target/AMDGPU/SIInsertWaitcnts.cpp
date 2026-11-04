@@ -3508,43 +3508,6 @@ bool SIInsertWaitcnts::run() {
 
   bool Modified = false;
 
-  if (ST.needsAsyncBarrierArriveReplayWorkaround()) {
-    // Collect arrivals before inserting new definitions of ASYNCcnt.
-    SmallVector<MachineInstr *, 4> AsyncBarrierArrivals;
-    for (MachineInstr &MI : MRI.def_instructions(AMDGPU::ASYNCcnt)) {
-      if (MI.getOpcode() == AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64)
-        AsyncBarrierArrivals.push_back(&MI);
-    }
-
-    if (!AsyncBarrierArrivals.empty()) {
-      const Register SavedExec = MFI->getSGPRForEXECCopy();
-      if (!SavedExec) {
-        report_fatal_error(
-            "missing EXEC copy SGPR for async barrier workaround");
-      }
-
-      for (MachineInstr *MI : AsyncBarrierArrivals) {
-        MachineBasicBlock &MBB = *MI->getParent();
-        const DebugLoc &DL = MI->getDebugLoc();
-        // Insert after scheduling so the dummy stays after its arrival.
-        auto InsertPt = std::next(MI->getIterator());
-        BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), SavedExec)
-            .addReg(AMDGPU::EXEC_LO);
-        BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-            .addImm(0);
-        // Leave explicit S_WAIT_ASYNCCNT thresholds unchanged.
-        BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8))
-            .addReg(AMDGPU::VGPR0, RegState::Undef)
-            .addReg(AMDGPU::VGPR0_VGPR1, RegState::Undef)
-            .addImm(0)
-            .addImm(0);
-        BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-            .addReg(SavedExec);
-        Modified = true;
-      }
-    }
-  }
-
   MachineBasicBlock &EntryBB = MF.front();
 
   if (!MFI->isEntryFunction() &&

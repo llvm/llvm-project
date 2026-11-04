@@ -19,8 +19,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-async-barrier-arrive-replay-bug < %s | FileCheck --check-prefix=UNAFFECTED %s
 
+; RUN: llc -O0 -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -O0 -enable-new-pm -global-isel=1 -global-isel-abort=1 -mtriple=amdgpu12.50-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefix=AFFECTED %s
+
 ; Check an LDS barrier arrival followed by a global load.
-@bar = internal addrspace(3) global i64 undef, align 8
+@bar = internal addrspace(3) global i64 poison, align 8
 
 ; AFFECTED-LABEL: replay_window:
 ; AFFECTED: ds_atomic_async_barrier_arrive_b64
