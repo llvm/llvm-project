@@ -13,6 +13,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+#include "Utils/ELF.h"
+
 namespace llvm::omp::target::plugin {
 
 Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
@@ -32,6 +34,36 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   DeviceGlobal.setSize(SymbolSize);
 
   return Plugin::success();
+}
+
+Expected<std::optional<std::pair<const void *, uint64_t>>>
+L0GlobalHandlerTy::getELFSymbolMetadata(const ObjectFile &Obj, StringRef Name) {
+  auto SymOrErr = utils::elf::getSymbol(Obj, Name);
+  if (!SymOrErr)
+    return SymOrErr.takeError();
+  if (!SymOrErr->has_value())
+    return std::nullopt;
+  ELFSymbolRef Sym = **SymOrErr;
+
+  // Level Zero native binaries place zero-initialized globals past the end of
+  // a section that is not marked SHT_NOBITS. Such symbols have no contents in
+  // the file, so report no address.
+  auto SecOrErr = Sym.getSection();
+  if (!SecOrErr)
+    return SecOrErr.takeError();
+  if (*SecOrErr != Obj.section_end()) {
+    SectionRef Sec = **SecOrErr;
+    auto ValueOrErr = Sym.getValue();
+    if (!ValueOrErr)
+      return ValueOrErr.takeError();
+    if (*ValueOrErr - Sec.getAddress() + Sym.getSize() > Sec.getSize())
+      return std::make_pair<const void *, uint64_t>(nullptr, 0);
+  }
+
+  auto AddrOrErr = utils::elf::getSymbolAddress(Sym);
+  if (!AddrOrErr)
+    return AddrOrErr.takeError();
+  return std::make_pair(*AddrOrErr, *AddrOrErr ? Sym.getSize() : 0);
 }
 
 bool L0GlobalHandlerTy::isExportedSymbol(uint32_t Flags) {

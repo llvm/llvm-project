@@ -126,6 +126,23 @@ bool GenericGlobalHandlerTy::isSymbolInImage(GenericDeviceTy &Device,
   return SymOrErr->has_value();
 }
 
+Expected<std::optional<std::pair<const void *, uint64_t>>>
+GenericGlobalHandlerTy::getELFSymbolMetadata(const ObjectFile &Obj,
+                                             StringRef Name) {
+  auto SymOrErr = utils::elf::getSymbol(Obj, Name);
+  if (!SymOrErr)
+    return SymOrErr.takeError();
+  if (!SymOrErr->has_value())
+    return std::nullopt;
+
+  auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
+  if (!AddrOrErr)
+    return AddrOrErr.takeError();
+
+  uint64_t Size = *AddrOrErr ? (*SymOrErr)->getSize() : 0;
+  return std::make_pair(*AddrOrErr, Size);
+}
+
 Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     GenericDeviceTy &Device, DeviceImageTy &Image, GlobalTy &ImageGlobal) {
 
@@ -136,7 +153,7 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     return ELFObj.takeError();
 
   // Search the ELF symbol using the symbol name.
-  auto SymOrErr = utils::elf::getSymbol(**ELFObj, ImageGlobal.getName());
+  auto SymOrErr = getELFSymbolMetadata(**ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error(
         ErrorCode::NOT_FOUND, "failed ELF lookup of global '%s': %s",
@@ -147,17 +164,10 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
                          "failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
-  auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
-  // Get the section to which the symbol belongs.
-  if (!AddrOrErr)
-    return Plugin::error(
-        ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
-        ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
-
   // Setup the global symbol's address and size. A symbol that exists but has
   // no contents in the image (e.g. `.bss`) has a null address and size 0.
-  ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize(*AddrOrErr ? (*SymOrErr)->getSize() : 0);
+  ImageGlobal.setPtr(const_cast<void *>((*SymOrErr)->first));
+  ImageGlobal.setSize((*SymOrErr)->second);
 
   return Plugin::success();
 }

@@ -139,6 +139,9 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
                                     DeviceImageTy &Image,
                                     GlobalTy &DeviceGlobal) override;
 
+  Expected<std::optional<std::pair<const void *, uint64_t>>>
+  getELFSymbolMetadata(const object::ObjectFile &Obj, StringRef Name) override;
+
 protected:
   bool isExportedSymbol(uint32_t Flags) override;
 };
