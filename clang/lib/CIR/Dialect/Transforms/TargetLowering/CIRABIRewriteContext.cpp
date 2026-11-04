@@ -316,7 +316,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                         llvm::DeadOnReturnInfo().toIntValue())));
         attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                   builder.getI64IntegerAttr(
-                      dl.getTypeSize(pointeeTy).getFixedValue()));
+                      dl.getTypeAllocSize(pointeeTy).getFixedValue()));
       }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {

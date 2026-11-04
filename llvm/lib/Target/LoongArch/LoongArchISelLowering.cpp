@@ -1208,7 +1208,7 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   assert(Val->getOpcode() == ISD::SETCC);
   SDValue LHS2 = Val.getOperand(0);
   SDValue RHS2 = Val.getOperand(1);
-  ISD::CondCode CC2 = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+  ISD::CondCode CC2 = Val.getOperandCondCode(2);
 
   if (LHS == LHS2 && RHS == RHS2) {
     if (CC == CC2)
@@ -1274,7 +1274,7 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       FalseV.getOpcode() == ISD::SETCC) {
     SDValue LHS = CondV.getOperand(0);
     SDValue RHS = CondV.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+    ISD::CondCode CC = CondV.getOperandCondCode(2);
 
     // (select x, x, y) -> x | y
     // (select !x, x, y) -> x & y
@@ -1471,7 +1471,7 @@ SDValue LoongArchTargetLowering::lowerSELECT(SDValue Op,
   // -> (loongarchisd::select_cc lhs, rhs, cc, truev, falsev)
   SDValue LHS = CondV.getOperand(0);
   SDValue RHS = CondV.getOperand(1);
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+  ISD::CondCode CCVal = CondV.getOperandCondCode(2);
 
   // Special case for a select of 2 constants that have a difference of 1.
   // Normally this is done by DAGCombine, but if the select is introduced by
@@ -1531,7 +1531,7 @@ SDValue LoongArchTargetLowering::lowerBRCOND(SDValue Op,
     if (CondV.getOperand(0).getValueType() == GRLenVT) {
       SDValue LHS = CondV.getOperand(0);
       SDValue RHS = CondV.getOperand(1);
-      ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+      ISD::CondCode CCVal = CondV.getOperandCondCode(2);
 
       translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
@@ -6815,7 +6815,7 @@ performSETCC_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue SrcN1 = Src.getOperand(1);
-  switch (cast<CondCodeSDNode>(Src.getOperand(2))->get()) {
+  switch (Src.getOperandCondCode(2)) {
   default:
     break;
   case ISD::SETEQ:
@@ -7316,7 +7316,7 @@ static SDValue foldVMskZeroTest(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const LoongArchSubtarget &Subtarget) {
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
 
   if (N->getValueType(0) == Subtarget.getGRLenVT())
     if (SDValue V = foldVMskZeroTest(N->getOperand(0), N->getOperand(1), CC,
@@ -7550,7 +7550,7 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     // If we're looking for eq 0 instead of ne 0, we need to invert the
     // condition.
     bool Invert = CCVal == ISD::SETEQ;
-    CCVal = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    CCVal = LHS.getOperandCondCode(2);
     if (Invert)
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
 
@@ -8906,8 +8906,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (!ISD::isConstantSplatVectorAllZeros(Cond.getOperand(1).getNode()))
     return SDValue();
 
-  auto *CC = cast<CondCodeSDNode>(Cond.getOperand(2));
-  if (CC->get() != ISD::SETEQ)
+  if (Cond.getOperandCondCode(2) != ISD::SETEQ)
     return SDValue();
 
   SDValue Shift = Cond.getOperand(0);
