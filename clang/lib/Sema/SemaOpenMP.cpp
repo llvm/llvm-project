@@ -24609,24 +24609,24 @@ public:
     return RelevantExpr || Visit(UO->getSubExpr()->IgnoreParenImpCasts());
   }
   bool VisitBinaryOperator(BinaryOperator *BO) {
-    if (SemaRef.getLangOpts().OpenMP < 50 || !BO->getType()->isPointerType()) {
+    // Since OpenMP 5.0 only pointer arithmetic (pointer +/- integer offset)
+    // may lead to the base, which is in the pointer operand.
+    Expr *PtrE = nullptr;
+    if (SemaRef.getLangOpts().OpenMP >= 50 && BO->isAdditiveOp() &&
+        BO->getType()->isPointerType()) {
+      Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
+      Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
+      if (LE->getType()->isPointerType())
+        PtrE = LE;
+      else if (BO->getOpcode() == BO_Add && RE->getType()->isPointerType())
+        PtrE = RE;
+    }
+    if (!PtrE) {
       emitErrorMsg();
       return false;
     }
-
-    // Pointer arithmetic is the only thing we expect to happen here so after we
-    // make sure the binary operator is a pointer type, the only thing we need
-    // to do is to visit the subtree that has the same type as root (so that we
-    // know the other subtree is just an offset)
-    Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
-    Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
-    Components.emplace_back(BO, nullptr, false);
-    assert((LE->getType().getTypePtr() == BO->getType().getTypePtr() ||
-            RE->getType().getTypePtr() == BO->getType().getTypePtr()) &&
-           "Either LHS or RHS have base decl inside");
-    if (BO->getType().getTypePtr() == LE->getType().getTypePtr())
-      return RelevantExpr || Visit(LE);
-    return RelevantExpr || Visit(RE);
+    Components.emplace_back(BO, nullptr, /*IsNonContiguous=*/false);
+    return RelevantExpr || Visit(PtrE);
   }
   bool VisitCXXThisExpr(CXXThisExpr *CTE) {
     assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
