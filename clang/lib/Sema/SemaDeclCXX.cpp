@@ -9978,8 +9978,10 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
       return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get());
     }
     ParmVarDecl *Param = FD->getParamDecl(0);
-    return S.BuildDeclarationNameExpr(
-        CXXScopeSpec(), DeclarationNameInfo(Param->getDeclName(), Loc), Param);
+    if (S.DiagnoseUseOfDecl(Param, Loc))
+      return ExprError();
+    return S.BuildDeclRefExpr(Param, Param->getType().getNonReferenceType(),
+                              VK_LValue, Loc);
   };
 
   // C tmp(c);
