@@ -1972,6 +1972,15 @@ TEST_F(FileSystemTest, OpenFileForRead) {
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
     ASSERT_EQ(D1, D2);
+
+    // getRealPathFromHandle on the open descriptor gives the same path.
+    SmallString<64> HandlePath;
+    auto EC = fs::getRealPathFromHandle(
+        fs::convertFDToNativeFile(FileDescriptor2), HandlePath);
+    if (EC != errc::not_supported) {
+      ASSERT_NO_ERROR(EC);
+      ASSERT_EQ(ResultPath, HandlePath);
+    }
   }
   ::close(FileDescriptor);
   ::close(FileDescriptor2);
