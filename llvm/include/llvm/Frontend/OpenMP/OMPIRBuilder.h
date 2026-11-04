@@ -28,6 +28,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -1591,7 +1592,13 @@ public:
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  LLVM_ABI void createFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  createFlush(const LocationDescription &Loc,
+              AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+              AtomicScope Scope = AtomicScope::Device);
 
   /// Generate a call to the runtime to emit the diagnostic of an OpenMP
   /// `error` directive with `at(execution)`.
@@ -2684,10 +2691,16 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
-  /// Generate a flush runtime call.
+  /// Generate a flush: a fence on a GPU, and a runtime call otherwise.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  LLVM_ABI void emitFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  emitFlush(const LocationDescription &Loc,
+            AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+            AtomicScope Scope = AtomicScope::Device);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
