@@ -4060,54 +4060,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_reduce_max:
-  case Builtin::BI__builtin_reduce_min: {
-    if (PrepareBuiltinReduceMathOneArgCall(TheCall))
-      return ExprError();
-
-    const Expr *Arg = TheCall->getArg(0);
-    const auto *TyA = Arg->getType()->getAs<VectorType>();
-
-    QualType ElTy;
-    if (TyA)
-      ElTy = TyA->getElementType();
-    else if (Arg->getType()->isSizelessVectorType())
-      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
-
-    if (ElTy.isNull()) {
-      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* vector ty */ 2 << /* no int */ 0 << /* no fp */ 0
-          << Arg->getType();
-      return ExprError();
-    }
-
-    TheCall->setType(ElTy);
-    break;
-  }
+  case Builtin::BI__builtin_reduce_min:
   case Builtin::BI__builtin_reduce_maximum:
-  case Builtin::BI__builtin_reduce_minimum: {
-    if (PrepareBuiltinReduceMathOneArgCall(TheCall))
-      return ExprError();
-
-    const Expr *Arg = TheCall->getArg(0);
-    const auto *TyA = Arg->getType()->getAs<VectorType>();
-
-    QualType ElTy;
-    if (TyA)
-      ElTy = TyA->getElementType();
-    else if (Arg->getType()->isSizelessVectorType())
-      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
-
-    if (ElTy.isNull() || !ElTy->isFloatingType()) {
-      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* vector of */ 4 << /* no int */ 0 << /* fp */ 1
-          << Arg->getType();
-      return ExprError();
-    }
-
-    TheCall->setType(ElTy);
-    break;
-  }
-
+  case Builtin::BI__builtin_reduce_minimum:
   // These builtins support vectors of integers only.
   // TODO: ADD/MUL should support floating-point types.
   case Builtin::BI__builtin_reduce_add:
@@ -4119,12 +4074,22 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
 
     const Expr *Arg = TheCall->getArg(0);
-
     QualType ElTy = getVectorElementType(Context, Arg->getType());
-    if (ElTy.isNull() || !ElTy->isIntegerType()) {
+
+    bool FloatOnly = BuiltinID == Builtin::BI__builtin_reduce_maximum ||
+                     BuiltinID == Builtin::BI__builtin_reduce_minimum;
+
+    bool IntOnly = BuiltinID == Builtin::BI__builtin_reduce_add ||
+                   BuiltinID == Builtin::BI__builtin_reduce_mul ||
+                   BuiltinID == Builtin::BI__builtin_reduce_xor ||
+                   BuiltinID == Builtin::BI__builtin_reduce_or ||
+                   BuiltinID == Builtin::BI__builtin_reduce_and;
+
+    if (ElTy.isNull() || (FloatOnly && !ElTy->isFloatingType()) ||
+        (IntOnly && !ElTy->isIntegerType())) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* vector of */ 4 << /* int */ 1 << /* no fp */ 0
-          << Arg->getType();
+          << 1 << (FloatOnly || IntOnly ? /* vector of */ 4 : /* vector ty */ 2)
+          << /* int */ IntOnly << /* fp */ FloatOnly << Arg->getType();
       return ExprError();
     }
 
