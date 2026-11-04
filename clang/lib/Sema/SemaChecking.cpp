@@ -6543,20 +6543,14 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   if (FPO.getNoHonorInfs() && (BuiltinID == Builtin::BI__builtin_isfinite ||
                                BuiltinID == Builtin::BI__builtin_isinf ||
                                BuiltinID == Builtin::BI__builtin_isinf_sign)) {
-    if (getLangOpts().HLSL)
-      HLSL().deferFPNaNInfDiagnostic(TheCall, /*IsNaN=*/false);
-    else
-      Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-          << 0 << 0 << TheCall->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << TheCall->getSourceRange();
   }
 
   if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
                                BuiltinID == Builtin::BI__builtin_isunordered)) {
-    if (getLangOpts().HLSL)
-      HLSL().deferFPNaNInfDiagnostic(TheCall, /*IsNaN=*/true);
-    else
-      Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-          << 1 << 0 << TheCall->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 1 << 0 << TheCall->getSourceRange();
   }
 
   bool IsFPClass = NumArgs == 2;

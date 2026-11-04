@@ -5026,6 +5026,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
+
+    FPOptions FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
+    if (FPO.getNoHonorInfs() &&
+        (BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isinf ||
+         BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isfinite))
+      deferFPNaNInfDiagnostic(TheCall, /*IsNan=*/false);
+
+    if (FPO.getNoHonorNaNs() &&
+        BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isnan)
+      deferFPNaNInfDiagnostic(TheCall, /*IsNan=*/true);
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {
