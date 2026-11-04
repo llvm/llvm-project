@@ -2146,7 +2146,7 @@ class RVPBinaryIntrinsic
   def int_riscv_predsum  : RVPReductionIntrinsic;
   def int_riscv_predsumu : RVPReductionIntrinsic;
 
-  // Packed Merge
+  // Packed Merge. Operands are (rs1, rs2, rd).
   class RVPTernaryIntrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>,

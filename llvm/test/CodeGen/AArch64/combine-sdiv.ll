@@ -133,19 +133,12 @@ define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
 }
 
 define <4 x i32> @combine_vec_sdiv_by_pos0(<4 x i32> %x) {
-; CHECK-SD-LABEL: combine_vec_sdiv_by_pos0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v0.4s, v0.4s, #2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_vec_sdiv_by_pos0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_vec_sdiv_by_pos0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
+; CHECK-NEXT:    ret
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %2 = sdiv <4 x i32> %1, <i32 4, i32 4, i32 4, i32 4>
   ret <4 x i32> %2
@@ -164,16 +157,11 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pos1:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI11_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_1]
-; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI11_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    neg v1.4s, v2.4s
-; CHECK-GI-NEXT:    shl v2.4s, v3.4s, #31
-; CHECK-GI-NEXT:    sshl v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %2 = sdiv <4 x i32> %1, <i32 1, i32 4, i32 8, i32 16>

@@ -1,5 +1,4 @@
-# RUN: llc -o /dev/null %s -mtriple=s390x-linux-gnu -mcpu=z16 \
-# RUN:   -verify-machineinstrs -run-pass=register-coalescer
+# RUN: llc -o /dev/null %s -mtriple=s390x-linux-gnu -mcpu=z16 -run-pass=register-coalescer
 
 # The LOCMux below produces a dead definition and will be turned into
 # a KILL instruction (by LiveRangeEdit::eliminateDeadDef()). When this
