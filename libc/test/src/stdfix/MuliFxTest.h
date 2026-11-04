@@ -100,16 +100,15 @@ public:
 
     if constexpr (has_integral) {
       EXPECT_EQ(func(int_max, static_cast<FXType>(1)), int_max);
-
-      if constexpr (is_signed) {
-        EXPECT_EQ(func(int_max, static_cast<FXType>(-1)), -int_max);
-      }
+      EXPECT_EQ(func(int_min / 2, static_cast<FXType>(2)), int_min);
     }
 
     EXPECT_EQ(func(int_max, one_half), int_max / 2);
+    EXPECT_EQ(func(int_min, one_half), int_min / 2);
 
     if constexpr (is_signed) {
-      EXPECT_EQ(func(int_min, one_half), int_min / 2);
+      EXPECT_EQ(func(int_max, static_cast<FXType>(-1)), -int_max);
+      EXPECT_EQ(func(int_min + 1, one_half), (int_min + 1) / 2);
     }
 
     if constexpr (FXRep::FRACTION_LEN < cpp::numeric_limits<IntType>::digits) {
