@@ -156,6 +156,11 @@ def A78Write_5c_1I_1L : SchedWriteRes<[A78UnitI, A78UnitL]> {
   let NumMicroOps = 2;
 }
 
+def A78Write_5c_1I_2L : SchedWriteRes<[A78UnitI, A78UnitL, A78UnitL]> {
+  let Latency     = 5;
+  let NumMicroOps = 3;
+}
+
 def A78Write_6c_1I_1L : SchedWriteRes<[A78UnitI, A78UnitL]> {
   let Latency     = 6;
   let NumMicroOps = 2;
@@ -989,9 +994,9 @@ def : InstRW<[WriteAdr, A78Write_4c_2L, WriteLDHi],
              (instregex "^LDPX(post|pre)$")>;
 
 // Load pair, signed immed offset, signed words
-def : InstRW<[A78Write_5c_1I_1L, WriteLDHi], (instrs LDPSWi)>;
+def : InstRW<[A78Write_5c_1I_2L, WriteLDHi], (instrs LDPSWi)>;
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[WriteAdr, A78Write_5c_1I_1L, WriteLDHi],
+def : InstRW<[WriteAdr, A78Write_5c_2L, WriteLDHi],
              (instregex "^LDPSW(post|pre)$")>;
 
 def A78Write_ScaledLDRH : SchedWriteVariant<[
