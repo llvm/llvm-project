@@ -53,6 +53,8 @@ public:
 
   bool hasSjLjLowering() const override { return true; }
 
+  bool hasBitIntType() const override { return true; }
+
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
