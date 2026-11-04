@@ -715,6 +715,7 @@ struct RISCVOpcode {
 namespace RISCVABI {
 
 enum ABI {
+  ABI_Unknown,
   ABI_ILP32,
   ABI_ILP32F,
   ABI_ILP32D,
@@ -731,14 +732,38 @@ enum ABI {
   ABI_L64PC128F,
   ABI_L64PC128D,
   ABI_CHERIOT,
-  ABI_Unknown
 };
 
 // Returns true for the ABIs that pass floating point values in integer
 // registers.
 inline bool isSoftFP(ABI TargetABI) {
-  return TargetABI == ABI_ILP32 || TargetABI == ABI_ILP32E ||
-         TargetABI == ABI_LP64 || TargetABI == ABI_LP64E;
+  switch (TargetABI) {
+  case ABI_ILP32:
+  case ABI_ILP32E:
+  case ABI_IL32PC64:
+  case ABI_IL32PC64E:
+  case ABI_LP64:
+  case ABI_LP64E:
+  case ABI_L64PC128:
+  case ABI_CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that pass half, bfloat, or single precision
+// floating point values in FP registers.
+inline bool isSingleFP(ABI TargetABI) {
+  return TargetABI == ABI_ILP32F || TargetABI == ABI_IL32PC64F ||
+         TargetABI == ABI_LP64F || TargetABI == ABI_L64PC128F;
+}
+
+// Returns true for the ABIs that pass half, bfloat, single, or double precision
+// floating point values in FP registers.
+inline bool isDoubleFP(ABI TargetABI) {
+  return TargetABI == ABI_ILP32D || TargetABI == ABI_IL32PC64D ||
+         TargetABI == ABI_LP64D || TargetABI == ABI_L64PC128D;
 }
 
 // Returns true for the ABIs that use the reduced 16 register integer file.
@@ -747,7 +772,25 @@ inline bool isRVE(ABI TargetABI) {
          TargetABI == ABI_LP64E || TargetABI == ABI_CHERIOT;
 }
 
+// Returns true for the ABIs in which pointers are capabilities.
+inline bool isPureCap(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI_IL32PC64:
+  case ABI_IL32PC64F:
+  case ABI_IL32PC64D:
+  case ABI_IL32PC64E:
+  case ABI_L64PC128:
+  case ABI_L64PC128F:
+  case ABI_L64PC128D:
+  case ABI_CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Returns the stack alignment required by the ABI.
+// FIXME: Add the pure cap variants of the E ABIs?
 inline Align getStackAlignment(ABI TargetABI) {
   if (TargetABI == ABI_ILP32E)
     return Align(4);
