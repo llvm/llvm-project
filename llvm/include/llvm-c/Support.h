@@ -50,9 +50,13 @@ LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
 LLVM_C_ABI void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                             const char *Overview);
 
-LLVM_C_ABI void LLVMParseCommandLineOptionsWithError(int argc,
-                                                     const char *const *argv,
-                                                     const char *Overview);
+/**
+ * Like LLVMParseCommandLineOptions() but returns non-zero and sets
+ * *ErrorMessage on error. Use LLVMDisposeMessage to free the error message.
+ */
+LLVM_C_ABI LLVMBool
+LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
+                                     const char *Overview, char **ErrorMessage);
 
 /**
  * This function will search through all previously loaded dynamic

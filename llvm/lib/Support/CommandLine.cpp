@@ -2987,16 +2987,18 @@ LibraryOptionsContext &cl::getCAPILibraryOptions() {
   return C;
 }
 
-static void llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
+static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
                                             const char *Overview,
                                             raw_ostream *Errs) {
   LibraryOptionsContext &C = getCAPILibraryOptions();
   size_t Begin = C.args().size();
-  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
+  bool ok = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
 
   // Code without a context, such as a target machine created through the C
   // API, reads the global values.
   replayLibraryArgs(C.args().drop_front(Begin), nullptr);
+
+  return ok;
 }
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
@@ -3004,7 +3006,15 @@ void LLVMParseCommandLineOptions(int argc, const char *const *argv,
   llvmParseCommandLineOptionsImpl(argc, argv, Overview, &nulls());
 }
 
-void LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
-                                          const char *Overview) {
-  llvmParseCommandLineOptionsImpl(argc, argv, Overview, &errs());
+LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
+                                              const char *Overview,
+                                              char **ErrorMessage) {
+  *ErrorMessage = nullptr;
+  SmallString<128> Err;
+  raw_svector_ostream Stream(Err);
+  if (!llvmParseCommandLineOptionsImpl(argc, argv, Overview, &Stream)) {
+    *ErrorMessage = strdup(Err.c_str());
+    return 1;
+  }
+  return 0;
 }
