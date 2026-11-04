@@ -93,23 +93,19 @@ def CvtMode : Operand<i32> {
 def FTZ : PatLeaf<(i1 1)>;
 def NoFTZ : PatLeaf<(i1 0)>;
 
-def getFTZFlag : SDNodeXForm<imm, [{
-  (void)N;
-  return CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, SDLoc(), MVT::i1);
-}]>;
+multiclass FTZFlagOperand<code UseFTZ> {
+  defvar GetFTZFlag = SDNodeXForm<imm, [{
+    (void)N;
+    return CurDAG->getTargetConstant(}] # UseFTZ # [{, SDLoc(), MVT::i1);
+  }]>;
 
-def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
-  let PrintMethod = "printFTZFlag";
+  def NAME : OperandWithDefaultOps<i1, (ops (GetFTZFlag (i1 0)))> {
+    let PrintMethod = "printFTZFlag";
+  }
 }
 
-def getF16FTZFlag : SDNodeXForm<imm, [{
-  (void)N;
-  return CurDAG->getTargetConstant(useF16FTZ(), SDLoc(), MVT::i1);
-}]>;
-
-def F16FTZFlag : OperandWithDefaultOps<i1, (ops (getF16FTZFlag (i1 0)))> {
-  let PrintMethod = "printFTZFlag";
-}
+defm FTZFlag : FTZFlagOperand<[{useF32FTZ()}]>;
+defm F16FTZFlag : FTZFlagOperand<[{useF16FTZ()}]>;
 
 // Flag to indicate predicate negation (@!p) for conditional branches.
 def BranchFlag : OperandWithDefaultOps<i1, (ops (i1 0))> {
