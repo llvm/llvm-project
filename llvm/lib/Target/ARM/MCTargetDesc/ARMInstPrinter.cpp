@@ -190,7 +190,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
   case ARM::STR_PRE_IMM:
     if (MI->getOperand(2).getReg() == ARM::SP &&
-        static_cast<int32_t>(MI->getOperand(3).getImm()) == -4) {
+        MI->getOperand(3).getImm() == -4) {
       O << '\t' << "push";
       printPredicateOperand(MI, 4, STI, O);
       O << "\t{";
