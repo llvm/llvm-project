@@ -3644,7 +3644,7 @@ static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
   if (!C)
     return std::nullopt;
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
 
   // setcc (bitcast mask), 0, ne  -> any_true(mask)
   if (C->isZero() && CC == ISD::SETNE)
@@ -3682,7 +3682,7 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   // We're looking for an oversized integer equality comparison with SIMD
   if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
       !Subtarget->hasSIMD128() || !isIntEqualitySetCC(CC))
