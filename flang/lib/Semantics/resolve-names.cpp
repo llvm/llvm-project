@@ -1190,10 +1190,6 @@ protected:
   // there isn't a type specified it comes from the entity in the containing
   // scope, or implicit rules.
   void DeclareLocalEntity(const parser::Name &, Symbol::Flag);
-  // Make the construct entity for a name in a locality-spec. Its locality is
-  // set by this locality-spec alone, never inherited from the host symbol.
-  Symbol &MakeLocalitySpecSymbol(
-      const parser::Name &, const Symbol &host, Symbol::Flag);
   // Declare a statement entity (i.e., an implied DO loop index for
   // a DATA statement or an array constructor).  If there isn't an explict
   // type specified, implicit rules apply. Return pointer to the new symbol,
@@ -3422,6 +3418,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
@@ -8577,21 +8579,10 @@ void DeclarationVisitor::DeclareLocalEntity(
     const parser::Name &name, Symbol::Flag flag) {
   Symbol &prev{FindOrDeclareEnclosingEntity(name)};
   if (PassesLocalityChecks(name, prev, flag)) {
-    MakeLocalitySpecSymbol(name, prev, flag);
+    if (auto *symbol{&MakeHostAssocSymbol(name, prev)}) {
+      symbol->set(flag);
+    }
   }
-}
-
-Symbol &DeclarationVisitor::MakeLocalitySpecSymbol(
-    const parser::Name &name, const Symbol &host, Symbol::Flag flag) {
-  Symbol &symbol{MakeHostAssocSymbol(name, host)};
-  // MakeHostAssocSymbol copies the host's flags. When the host is itself a
-  // construct entity of an enclosing DO CONCURRENT, they include that
-  // construct's locality, which does not apply here.
-  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
-      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
-      Symbol::Flag::LocalityShared};
-  symbol.set(flag);
-  return symbol;
 }
 
 Symbol *DeclarationVisitor::DeclareStatementEntity(
@@ -8995,7 +8986,7 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
     }
     Symbol &prev{FindOrDeclareEnclosingEntity(name)};
     if (PassesSharedLocalityChecks(name, prev)) {
-      MakeLocalitySpecSymbol(name, prev, Symbol::Flag::LocalityShared);
+      MakeHostAssocSymbol(name, prev).set(Symbol::Flag::LocalityShared);
     }
   }
   return false;

@@ -179,3 +179,34 @@ subroutine s9 (n, x)
   x(k) = tmp+w
  end do
 end subroutine
+
+! A host-associated name of a LOCAL entity, here from a VOLATILE statement in
+! a BLOCK, does not inherit its locality.
+!DEF: /s10 (Subroutine) Subprogram
+!DEF: /s10/n ObjectEntity INTEGER(4)
+!DEF: /s10/x ObjectEntity INTEGER(4)
+subroutine s10 (n, x)
+ !REF: /s10/n
+ !REF: /s10/x
+ !DEF: /s10/k ObjectEntity INTEGER(4)
+ !DEF: /s10/t ObjectEntity INTEGER(4)
+ integer n, x(n), k, t
+ !DEF: /s10/Forall1/k ObjectEntity INTEGER(4)
+ !REF: /s10/n
+ !DEF: /s10/Forall1/t (LocalityLocal) HostAssoc INTEGER(4)
+ do concurrent(k=1:n)local(t)
+  !REF: /s10/Forall1/t
+  !REF: /s10/Forall1/k
+  t = k
+  block
+   !DEF: /s10/Forall1/BlockConstruct1/t VOLATILE HostAssoc INTEGER(4)
+   volatile :: t
+   !REF: /s10/Forall1/BlockConstruct1/t
+   t = t+1
+  end block
+  !REF: /s10/x
+  !REF: /s10/Forall1/k
+  !REF: /s10/Forall1/t
+  x(k) = t
+ end do
+end subroutine
