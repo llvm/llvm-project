@@ -47,7 +47,7 @@ body:             |
   bb.1:
     liveins: $sgpr96_sgpr97, $sgpr98_sgpr99, $sgpr102_sgpr103
 
-    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr96_sgpr97, implicit-def $exec, implicit-def $scc, implicit $exec
+    %0:sreg_64 = bb-prolog S_OR_SAVEEXEC_B64 $sgpr96_sgpr97, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_CBRANCH_EXECZ %bb.3, implicit $exec
     S_BRANCH %bb.2
@@ -55,7 +55,7 @@ body:             |
   bb.2:
     liveins: $sgpr98_sgpr99, $sgpr102_sgpr103
 
-    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr98_sgpr99, implicit-def $exec, implicit-def $scc, implicit $exec
+    %0:sreg_64 = bb-prolog S_OR_SAVEEXEC_B64 $sgpr98_sgpr99, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_CBRANCH_EXECZ %bb.3, implicit $exec
     S_BRANCH %bb.4
@@ -63,7 +63,7 @@ body:             |
   bb.3:
     liveins: $sgpr102_sgpr103
 
-    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr102_sgpr103, implicit-def $exec, implicit-def $scc, implicit $exec
+    %0:sreg_64 = bb-prolog S_OR_SAVEEXEC_B64 $sgpr102_sgpr103, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_BRANCH %bb.4
 

@@ -63,7 +63,7 @@ body:             |
     S_BRANCH %bb.2
   
   bb.2:
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     DS_WRITE_B32_gfx9 %1, %8, 0, 0, implicit $exec :: (store (s32) into %ir.p, addrspace 3)
     S_ENDPGM 0
 ...
@@ -618,7 +618,7 @@ body:             |
 # CHECK-GX-JSON-NEXT:      ],
 # CHECK-GX-JSON-NEXT:      "bb.2": [
 # CHECK-GX-JSON-NEXT:        {
-# CHECK-GX-JSON-NEXT:          "instr": "SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-GX-JSON-NEXT:          "instr": "bb-prolog SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
@@ -1273,7 +1273,7 @@ body:             |
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.2": [
 # CHECK-CP-JSON-NEXT:        {
-# CHECK-CP-JSON-NEXT:          "instr": "SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-CP-JSON-NEXT:          "instr": "bb-prolog SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-CP-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},

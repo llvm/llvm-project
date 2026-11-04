@@ -57,9 +57,9 @@ body:             |
   bb.3:
     successors: %bb.4(0x80000000)
   
-    SI_END_CF killed %17, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %17, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   
   bb.4:
-    SI_END_CF killed %13, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %13, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...

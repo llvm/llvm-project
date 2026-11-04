@@ -34,7 +34,7 @@ body: |
   ; REG_ALLOC-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_sgpr5, $sgpr6_sgpr7, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
   ; REG_ALLOC-NEXT: {{  $}}
-  ; REG_ALLOC-NEXT:   renamable $sgpr2_sgpr3 = S_OR_SAVEEXEC_B64 killed renamable $sgpr6_sgpr7, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; REG_ALLOC-NEXT:   renamable $sgpr2_sgpr3 = bb-prolog S_OR_SAVEEXEC_B64 killed renamable $sgpr6_sgpr7, implicit-def $exec, implicit-def $scc, implicit $exec
   ; REG_ALLOC-NEXT:   $exec = S_XOR_B64_term $exec, renamable $sgpr2_sgpr3, implicit-def $scc
   ; REG_ALLOC-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
   ; REG_ALLOC-NEXT:   S_BRANCH %bb.3
@@ -72,7 +72,7 @@ body: |
   ; REG_ALLOC-NEXT:   successors: %bb.4(0x80000000)
   ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; REG_ALLOC-NEXT: {{  $}}
-  ; REG_ALLOC-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
+  ; REG_ALLOC-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
   ; REG_ALLOC-NEXT:   S_BRANCH %bb.4
   ;
   ; DEAD_INST_DEL-LABEL: name: _amdgpu_cs_main
@@ -103,7 +103,7 @@ body: |
   ; DEAD_INST_DEL-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_sgpr5, $sgpr6_sgpr7, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
   ; DEAD_INST_DEL-NEXT: {{  $}}
-  ; DEAD_INST_DEL-NEXT:   renamable $sgpr2_sgpr3 = S_OR_SAVEEXEC_B64 killed renamable $sgpr6_sgpr7, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; DEAD_INST_DEL-NEXT:   renamable $sgpr2_sgpr3 = bb-prolog S_OR_SAVEEXEC_B64 killed renamable $sgpr6_sgpr7, implicit-def $exec, implicit-def $scc, implicit $exec
   ; DEAD_INST_DEL-NEXT:   $exec = S_XOR_B64_term $exec, renamable $sgpr2_sgpr3, implicit-def $scc
   ; DEAD_INST_DEL-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
   ; DEAD_INST_DEL-NEXT:   S_BRANCH %bb.3
@@ -141,7 +141,7 @@ body: |
   ; DEAD_INST_DEL-NEXT:   successors: %bb.4(0x80000000)
   ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; DEAD_INST_DEL-NEXT: {{  $}}
-  ; DEAD_INST_DEL-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
+  ; DEAD_INST_DEL-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
   ; DEAD_INST_DEL-NEXT:   S_BRANCH %bb.4
   bb.0:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -174,7 +174,7 @@ body: |
   bb.1:
     successors: %bb.3(0x40000000), %bb.5(0x40000000)
 
-    %17:sreg_64 = S_OR_SAVEEXEC_B64 %15, implicit-def $exec, implicit-def $scc, implicit $exec
+    %17:sreg_64 = bb-prolog S_OR_SAVEEXEC_B64 %15, implicit-def $exec, implicit-def $scc, implicit $exec
     %18:sreg_64_xexec = S_AND_B64 $exec, %17, implicit-def $scc
     $exec = S_XOR_B64_term $exec, %18, implicit-def $scc
     S_CBRANCH_EXECZ %bb.5, implicit $exec
@@ -207,6 +207,6 @@ body: |
   bb.5:
     successors: %bb.4(0x80000000)
 
-    $exec = S_OR_B64 $exec, %18, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %18, implicit-def $scc
     S_BRANCH %bb.4
 ...

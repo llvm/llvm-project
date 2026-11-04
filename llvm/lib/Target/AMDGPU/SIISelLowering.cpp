@@ -20567,6 +20567,13 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     }
   }
 
+  // An exec restore at the top of a join block is a block prolog instruction.
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::iterator I = MBB.SkipPHIsLabelsAndDebug(MBB.begin());
+    if (I != MBB.end() && I->getOpcode() == AMDGPU::SI_END_CF)
+      SIInstrInfo::setBBPrologIfAtBlockStart(*I);
+  }
+
   TargetLoweringBase::finalizeLowering(MF);
 }
 

@@ -18,8 +18,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
-    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = bb-prolog S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
 ...
 
 ---
@@ -32,8 +32,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
-    renamable $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
-    $exec = S_XOR_B64 $exec, renamable $sgpr0_sgpr1, implicit-def $scc
+    renamable $sgpr0_sgpr1 = bb-prolog S_OR_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = bb-prolog S_XOR_B64 $exec, renamable $sgpr0_sgpr1, implicit-def $scc
 ...
 
 ---
@@ -46,8 +46,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
-    $exec_lo = S_XOR_B32 renamable $sgpr0, $exec_lo, implicit-def $scc
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = bb-prolog S_XOR_B32 renamable $sgpr0, $exec_lo, implicit-def $scc
 ...
 
 ---
@@ -60,8 +60,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
-    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = bb-prolog S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
 ...
 
 ---
@@ -75,8 +75,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
-    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr1, implicit-def $scc
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = bb-prolog S_XOR_B32 $exec_lo, renamable $sgpr1, implicit-def $scc
 ...
 
 ---
@@ -92,7 +92,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
     $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr1, implicit-def $scc
 ...
@@ -108,7 +108,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
-    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr0 = bb-prolog S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
 ...
 
 ---

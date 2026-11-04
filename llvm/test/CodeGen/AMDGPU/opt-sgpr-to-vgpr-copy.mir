@@ -160,7 +160,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -310,7 +310,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -433,7 +433,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

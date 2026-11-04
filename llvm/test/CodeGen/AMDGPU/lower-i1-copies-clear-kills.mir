@@ -120,7 +120,7 @@ body:             |
 
     %24:vgpr_32 = PHI %17, %bb.1, %21, %bb.2
     %25:vreg_1 = PHI %7, %bb.1, %23, %bb.2
-    SI_END_CF %20, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %20, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %26:sreg_32 = S_MOV_B32 -1
     %27:sreg_32 = IMPLICIT_DEF
     %28:sreg_32 = COPY %25
@@ -143,7 +143,7 @@ body:             |
     %18:vgpr_32 = PHI %29, %bb.3, %24, %bb.4
     %16:sreg_32 = PHI %27, %bb.3, %33, %bb.4
     %36:vreg_1 = PHI %30, %bb.3, %35, %bb.4
-    SI_END_CF %31, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %31, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %37:sreg_32 = COPY %36
     %14:sreg_32 = SI_IF_BREAK %37, %13, implicit-def dead $scc
     SI_LOOP %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -151,7 +151,7 @@ body:             |
 
   bb.6:
     %38:sreg_32 = PHI %14, %bb.5
-    SI_END_CF %38, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %38, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

@@ -105,4 +105,79 @@ TEST(FindDebugLocTest, DifferentIterators) {
   DIB.finalize();
 }
 
+static MachineInstr *createMI(MachineFunction &MF, unsigned Opcode,
+                              bool BBProlog = false) {
+  MCInstrDesc Desc = {Opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *MI = MF.CreateMachineInstr(Desc, DebugLoc());
+  if (BBProlog)
+    MI->setFlag(MachineInstr::BBProlog);
+  return MI;
+}
+
+// An instruction inserted in front of a block prolog instruction is in the
+// prolog.
+TEST(BBPrologTest, IsInBBProlog) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  MBB.push_back(Prolog);
+  MBB.push_back(Body);
+
+  EXPECT_TRUE(MBB.isInBBProlog(Prolog->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(Body->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(MBB.end()));
+}
+
+// Labels in front of a prolog instruction are looked through. A debug
+// instruction is part of the prolog only if it is flagged.
+TEST(BBPrologTest, IsInBBPrologLooksThroughLabels) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *Label = createMI(*MF, TargetOpcode::EH_LABEL);
+  MachineInstr *PrologDbg = createMI(*MF, TargetOpcode::DBG_VALUE, true);
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Dbg = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  for (MachineInstr *MI : {Label, PrologDbg, Prolog, Dbg, Body})
+    MBB.push_back(MI);
+
+  EXPECT_TRUE(MBB.isInBBProlog(Label->getIterator()));
+  EXPECT_TRUE(MBB.isInBBProlog(PrologDbg->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(Dbg->getIterator()));
+}
+
+// The block-entry walks stop after the prolog. SkipPHIsAndLabels steps over a
+// debug instruction only if it is flagged as part of the prolog.
+TEST(BBPrologTest, SkipPHIsSkipsProlog) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *PHI = createMI(*MF, TargetOpcode::PHI);
+  MachineInstr *Label = createMI(*MF, TargetOpcode::EH_LABEL);
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *PrologDbg = createMI(*MF, TargetOpcode::DBG_VALUE, true);
+  MachineInstr *Prolog2 = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Dbg = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  for (MachineInstr *MI : {PHI, Label, Prolog, PrologDbg, Prolog2, Dbg, Body})
+    MBB.push_back(MI);
+
+  EXPECT_EQ(&*MBB.SkipPHIsLabelsAndDebug(MBB.begin()), Body);
+  EXPECT_EQ(&*MBB.SkipPHIsAndLabels(MBB.begin()), Dbg);
+
+  for (MachineInstr *MI : {Prolog, PrologDbg, Prolog2})
+    MI->clearFlag(MachineInstr::BBProlog);
+  EXPECT_EQ(&*MBB.SkipPHIsLabelsAndDebug(MBB.begin()), Prolog);
+  EXPECT_EQ(&*MBB.SkipPHIsAndLabels(MBB.begin()), Prolog);
+}
+
 } // end namespace
