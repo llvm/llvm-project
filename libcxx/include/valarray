@@ -1047,34 +1047,6 @@ struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> > {
   _LIBCPP_HIDE_FROM_ABI size_t size() const { return __a0_.size(); }
 };
 
-// Bounds checks for the subscripts that return a slice_array, gslice_array, mask_array or indirect_array.
-
-// Whether start() + i * stride() is below __n for every i < size(), computed without overflow.
-inline _LIBCPP_HIDE_FROM_ABI bool __slice_in_bounds(const slice& __sl, size_t __n) {
-  if (__sl.size() == 0)
-    return true;
-  if (__sl.start() >= __n)
-    return false;
-  return __sl.stride() == 0 || __sl.size() - 1 <= (__n - 1 - __sl.start()) / __sl.stride();
-}
-
-inline _LIBCPP_HIDE_FROM_ABI bool __indices_in_bounds(const size_t* __first, const size_t* __last, size_t __n) {
-  for (; __first != __last; ++__first)
-    if (*__first >= __n)
-      return false;
-  return true;
-}
-
-// Whether the mask [__first, __last) selects no position at or past __n.
-inline _LIBCPP_HIDE_FROM_ABI bool __mask_in_bounds(const bool* __first, const bool* __last, size_t __n) {
-  if (static_cast<size_t>(__last - __first) <= __n)
-    return true;
-  for (__first += __n; __first != __last; ++__first)
-    if (*__first)
-      return false;
-  return true;
-}
-
 // slice_array
 
 template <class _Tp>
@@ -1137,7 +1109,19 @@ public:
 
 private:
   _LIBCPP_HIDE_FROM_ABI slice_array(const slice& __sl, const valarray<value_type>& __v)
-      : __vp_(const_cast<value_type*>(__v.__begin_ + __sl.start())), __size_(__sl.size()), __stride_(__sl.stride()) {}
+      : __vp_(const_cast<value_type*>(__v.__begin_ + __sl.start())), __size_(__sl.size()), __stride_(__sl.stride()) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__sl.start(), __v.size()), "valarray::operator[](slice) selects elements out of bounds");
+  }
+
+  // Whether __start + i * __stride_ is below __n for every i < __size_, computed without overflow.
+  _LIBCPP_HIDE_FROM_ABI bool __in_bounds(size_t __start, size_t __n) const {
+    if (__size_ == 0)
+      return true;
+    if (__start >= __n)
+      return false;
+    return __stride_ == 0 || __size_ - 1 <= (__n - 1 - __start) / __stride_;
+  }
 
   template <class>
   friend class valarray;
@@ -1364,12 +1348,22 @@ public:
 
 private:
   gslice_array(const gslice& __gs, const valarray<value_type>& __v)
-      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__gs.__1d_) {}
+      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__gs.__1d_) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__v.size()), "valarray::operator[](gslice) selects elements out of bounds");
+  }
 
 #  ifndef _LIBCPP_CXX03_LANG
   gslice_array(gslice&& __gs, const valarray<value_type>& __v)
-      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(std::move(__gs.__1d_)) {}
+      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(std::move(__gs.__1d_)) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__v.size()), "valarray::operator[](gslice) selects elements out of bounds");
+  }
 #  endif // _LIBCPP_CXX03_LANG
+
+  _LIBCPP_HIDE_FROM_ABI bool __in_bounds(size_t __n) const {
+    return __1d_.__begin_ == __1d_.__end_ || *std::max_element(__1d_.__begin_, __1d_.__end_) < __n;
+  }
 
   template <class>
   friend class valarray;
@@ -1555,6 +1549,13 @@ private:
     for (size_t __i = 0; __i < __vb.size(); ++__i)
       if (__vb[__i])
         __1d_[__j++] = __i;
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__v.size()), "valarray::operator[](valarray<bool>) selects elements out of bounds");
+  }
+
+  // The positions in __1d_ are in increasing order.
+  _LIBCPP_HIDE_FROM_ABI bool __in_bounds(size_t __n) const {
+    return __1d_.__begin_ == __1d_.__end_ || __1d_.__end_[-1] < __n;
   }
 
   template <class>
@@ -1754,14 +1755,24 @@ public:
 
 private:
   _LIBCPP_HIDE_FROM_ABI indirect_array(const valarray<size_t>& __ia, const valarray<value_type>& __v)
-      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__ia) {}
+      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__ia) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__v.size()), "valarray::operator[](valarray<size_t>) selects elements out of bounds");
+  }
 
 #  ifndef _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI indirect_array(valarray<size_t>&& __ia, const valarray<value_type>& __v)
-      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(std::move(__ia)) {}
+      : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(std::move(__ia)) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __in_bounds(__v.size()), "valarray::operator[](valarray<size_t>) selects elements out of bounds");
+  }
 
 #  endif // _LIBCPP_CXX03_LANG
+
+  _LIBCPP_HIDE_FROM_ABI bool __in_bounds(size_t __n) const {
+    return __1d_.__begin_ == __1d_.__end_ || *std::max_element(__1d_.__begin_, __1d_.__end_) < __n;
+  }
 
   template <class>
   friend class valarray;
@@ -2252,8 +2263,6 @@ inline __val_expr<__slice_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[]
 
 template <class _Tp>
 inline slice_array<_Tp> valarray<_Tp>::operator[](slice __s) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      std::__slice_in_bounds(__s, size()), "valarray::operator[](slice) selects elements out of bounds");
   return slice_array<value_type>(__s, *this);
 }
 
@@ -2264,8 +2273,6 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline gslice_array<_Tp> valarray<_Tp>::operator[](const gslice& __gs) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__gs.__1d_.__begin_, __gs.__1d_.__end_, size()),
-                                      "valarray::operator[](gslice) selects elements out of bounds");
   return gslice_array<value_type>(__gs, *this);
 }
 
@@ -2278,8 +2285,6 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline gslice_array<_Tp> valarray<_Tp>::operator[](gslice&& __gs) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__gs.__1d_.__begin_, __gs.__1d_.__end_, size()),
-                                      "valarray::operator[](gslice) selects elements out of bounds");
   return gslice_array<value_type>(std::move(__gs), *this);
 }
 
@@ -2292,8 +2297,6 @@ inline __val_expr<__mask_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[](
 
 template <class _Tp>
 inline mask_array<_Tp> valarray<_Tp>::operator[](const valarray<bool>& __vb) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__mask_in_bounds(__vb.__begin_, __vb.__end_, size()),
-                                      "valarray::operator[](valarray<bool>) selects elements out of bounds");
   return mask_array<value_type>(__vb, *this);
 }
 
@@ -2306,8 +2309,6 @@ inline __val_expr<__mask_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[](
 
 template <class _Tp>
 inline mask_array<_Tp> valarray<_Tp>::operator[](valarray<bool>&& __vb) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__mask_in_bounds(__vb.__begin_, __vb.__end_, size()),
-                                      "valarray::operator[](valarray<bool>) selects elements out of bounds");
   return mask_array<value_type>(std::move(__vb), *this);
 }
 
@@ -2321,8 +2322,6 @@ valarray<_Tp>::operator[](const valarray<size_t>& __vs) const {
 
 template <class _Tp>
 inline indirect_array<_Tp> valarray<_Tp>::operator[](const valarray<size_t>& __vs) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__vs.__begin_, __vs.__end_, size()),
-                                      "valarray::operator[](valarray<size_t>) selects elements out of bounds");
   return indirect_array<value_type>(__vs, *this);
 }
 
@@ -2335,8 +2334,6 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline indirect_array<_Tp> valarray<_Tp>::operator[](valarray<size_t>&& __vs) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__vs.__begin_, __vs.__end_, size()),
-                                      "valarray::operator[](valarray<size_t>) selects elements out of bounds");
   return indirect_array<value_type>(std::move(__vs), *this);
 }
 
