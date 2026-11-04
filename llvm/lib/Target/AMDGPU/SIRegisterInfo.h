@@ -83,7 +83,7 @@ public:
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
-  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
+  static unsigned getSubRegFromChannel(uint64_t Channel, uint64_t NumRegs = 1);
 
   /// Same as getSubRegFromChannel, but returns AMDGPU::NoSubRegister instead of
   /// asserting when \p NumRegs registers starting at \p Channel are not
@@ -394,7 +394,7 @@ public:
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
+  getRegClassForSizeOnBank(uint64_t Size, const RegisterBank &Bank) const;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
@@ -450,7 +450,7 @@ public:
   }
 
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
-  // \returns \p Reg otherwise.
+  // \returns NoRegister otherwise.
   MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for
