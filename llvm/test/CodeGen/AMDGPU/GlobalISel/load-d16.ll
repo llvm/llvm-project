@@ -76,6 +76,47 @@ define amdgpu_ps void @sextload_P0_i8_D16_Hi_unmasked(<2 x i16> %vec, ptr %ptra,
   ret void
 }
 
+define amdgpu_ps void @sextload_P0_i8_D16_Hi_f32(float %value, ptr %pointer, ptr %out) {
+; GFX12-LABEL: sextload_P0_i8_D16_Hi_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    flat_load_i8 v1, v[1:2]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX12-NEXT:    flat_store_b32 v[3:4], v0
+; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P0_i8_D16_Hi_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_sbyte v1, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_and_or_b32 v0, v0, v2, v1
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P0_i8_D16_Hi_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_i8 v1, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
+  %load = load i8, ptr %pointer
+  %extended = sext i8 %load to i32
+  %shifted = shl i32 %extended, 16
+  %bits = bitcast float %value to i32
+  %preserved = and i32 %bits, 65535
+  %merged = or i32 %preserved, %shifted
+  %result = bitcast i32 %merged to float
+  store float %result, ptr %out
+  ret void
+}
+
 define amdgpu_ps void @zextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra, ptr addrspace(0) %out) {
 ; GFX12-LABEL: zextload_P0_i8_D16:
 ; GFX12:       ; %bb.0:

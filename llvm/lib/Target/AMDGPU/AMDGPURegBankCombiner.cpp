@@ -432,6 +432,9 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   const int64_t CleanHi16 = 0x000000000000FFFF;
 
   auto TryApplyD16Load = [&](unsigned D16Opc, GAnyLoad *SmallLoad) {
+    if (MRI.getType(Dst) != LLT::fixed_vector(2, 16))
+      return false;
+
     MachineInstr *DstDef = MRI.getVRegDef(Dst);
     MachineInstr *InsertPt = SmallLoad;
     if (SmallLoad->isSimple() && isObviouslySafeToFold(*SmallLoad, MI))
