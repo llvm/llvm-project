@@ -8,6 +8,9 @@
 
 #include "ILogbTest.h"
 
+#include "src/__support/FPUtil/float80.h"
 #include "src/math/ilogbf80.h"
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_INTLOGB_TESTS(Ilogbf80, int, Float80, LIBC_NAMESPACE::ilogbf80);

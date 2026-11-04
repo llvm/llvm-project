@@ -8,6 +8,9 @@
 
 #include "FrexpTest.h"
 
+#include "src/__support/FPUtil/float80.h"
 #include "src/math/frexpf80.h"
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_FREXP_TESTS(Frexpf80, Float80, LIBC_NAMESPACE::frexpf80);

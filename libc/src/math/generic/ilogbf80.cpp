@@ -9,10 +9,11 @@
 #include "src/math/ilogbf80.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math/ilogbf80.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LLVM_LIBC_FUNCTION(int, ilogbf80, (float80 x)) {
   return math::ilogbf80(cpp::bit_cast<Float80>(x));

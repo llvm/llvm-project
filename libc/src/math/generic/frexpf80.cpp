@@ -9,10 +9,11 @@
 #include "src/math/frexpf80.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math/frexpf80.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LLVM_LIBC_FUNCTION(float80, frexpf80, (float80 x, int *exp)) {
   return cpp::bit_cast<float80>(math::frexpf80(cpp::bit_cast<Float80>(x), exp));

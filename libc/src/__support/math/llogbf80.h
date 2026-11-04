@@ -10,20 +10,19 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LLOGBF80_H
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
+#include "src/__support/FPUtil/float80.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIBC_INLINE constexpr long llogbf80(Float80 x) {
   return fputil::intlogb<long>(x);
 }
 
 } // namespace math
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_LLOGBF80_H

@@ -10,20 +10,19 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_FREXPF80_H
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
+#include "src/__support/FPUtil/float80.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIBC_INLINE constexpr Float80 frexpf80(Float80 x, int *exp) {
   return fputil::frexp(x, *exp);
 }
 
 } // namespace math
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_FREXPF80_H
