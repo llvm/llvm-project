@@ -168,7 +168,7 @@ void FakeStack::HandleNoReturn() { needs_gc_ = true; }
 // we are notified about all such events by HandleNoReturn().
 // If we recently had such no-return event we need to collect garbage frames.
 // We do it based on their 'real_stack' values -- everything that is lower
-// than the current real_stack is garbage.
+// than the current real_stack is garbage (higher where the stack grows up).
 NOINLINE void FakeStack::GC(uptr real_stack) {
   AsanThread* curr_thread = GetCurrentThread();
   if (!curr_thread)
@@ -187,7 +187,11 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
       FakeFrame* ff =
           reinterpret_cast<FakeFrame*>(GetFrame(stack_size_log(), class_id, i));
       // GC only on the default stack.
+#if SANITIZER_HPPA
+      if (real_stack < ff->real_stack && ff->real_stack < top) {
+#else
       if (bottom < ff->real_stack && ff->real_stack < real_stack) {
+#endif
         flags[i] = 0;
         // Poison the frame, so the any access will be reported as UAR.
         SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),

@@ -651,10 +651,18 @@ static void UnpoisonDefaultStack() {
   if (AsanThread *curr_thread = GetCurrentThread()) {
     int local_stack;
     const uptr page_size = GetPageSizeCached();
+#if SANITIZER_HPPA
+    // The stack grows up: the abandoned frames are below this one.
+    bottom = curr_thread->stack_bottom();
+    top = RoundUpTo((uptr)&local_stack + 1, page_size);
+    if (AddrIsInMem(top + page_size - 1))
+      top += page_size;
+#else
     top = curr_thread->stack_top();
     bottom = (uptr)&local_stack & ~(page_size - 1);
     if (AddrIsInMem(bottom - page_size))
       bottom -= page_size;
+#endif
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.
