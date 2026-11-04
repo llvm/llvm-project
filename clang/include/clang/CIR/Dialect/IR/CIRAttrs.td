@@ -153,9 +153,33 @@ def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload"> {
     unchanged; the layout above is enforced by the CIR dialect attribute
     verifier, following the `gpu.container_module` precedent.
 
-    The attribute names `cir.offload.container` and `cir.offload.kind` are
-    defined by the `getOffloadContainerAttrName` and `getOffloadKindAttrName`
-    methods in the CIRDialect class.
+    A nested module may also carry `cir.offload.bundle_id`, a string holding
+    the offload bundle ID (`<offload kind>-<target triple>[-<target ID>]`, as
+    used by clang-offload-bundler) of the compilation the module came from,
+    e.g. `"hip-amdgcn-amd-amdhsa--gfx90a:xnack+"`. It identifies a module
+    when splitting the container back into per-target modules; the target
+    triple alone does not, since several device modules may share a triple
+    and only differ in their target ID. Bundle IDs are unique within a
+    container.
+
+    ```mlir
+    module attributes {cir.offload.container} {
+      module @host attributes {
+          cir.offload.kind = #cir.offload<host>,
+          cir.offload.bundle_id = "host-x86_64-unknown-linux-gnu"} {}
+      module @device1 attributes {
+          cir.offload.kind = #cir.offload<device>,
+          cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack+"} {}
+      module @device2 attributes {
+          cir.offload.kind = #cir.offload<device>,
+          cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack-"} {}
+    }
+    ```
+
+    The attribute names `cir.offload.container`, `cir.offload.kind` and
+    `cir.offload.bundle_id` are defined by the `getOffloadContainerAttrName`,
+    `getOffloadKindAttrName` and `getOffloadBundleIDAttrName` methods in the
+    CIRDialect class.
   }];
 }
 
