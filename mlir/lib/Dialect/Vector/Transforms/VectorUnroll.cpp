@@ -1094,7 +1094,7 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
     // `getTargetShape` is only required to divide the trailing dimensions, so
     // it may have a smaller rank than the op. The logic below assumes a 1-1
     // correspondence with the op's mask operands, so pad with leading unit
-    // dims.
+    // `targetShape` may have a smaller rank than the op - pad with leading unit dims.
     SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
     llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
 
