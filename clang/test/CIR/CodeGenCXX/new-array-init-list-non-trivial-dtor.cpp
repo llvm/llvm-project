@@ -111,7 +111,7 @@ void cleanup_const_exact() { new Throws[3]{1, 2, 3}; }
 // OGCG-SAME: , [ %[[ELT:.*]], %[[DTOR_BODY]] ]
 // OGCG:   %[[ELT]] = getelementptr inbounds %struct.Throws, ptr %[[PAST]], i64 -1
 // OGCG:   call void @_ZN6ThrowsD1Ev(ptr {{[^,]*}} %[[ELT]])
-// OGCG:   call void @_ZdaPv(ptr noundef %[[ALLOC]])
+// OGCG:   call void @_ZdaPv(ptr allocptr noundef %[[ALLOC]])
 // OGCG:   resume { ptr, i32 }
 
 // Constant-bound array new where the bound (5) is larger than the number of
@@ -263,5 +263,5 @@ void cleanup_const_partial() { new Throws[5]{1, 2, 3}; }
 // OGCG:   %[[INIT_PAST:.*]] = phi ptr
 // OGCG:   %[[INIT_ELT:.*]] = getelementptr inbounds %struct.Throws, ptr %[[INIT_PAST]], i64 -1
 // OGCG:   call void @_ZN6ThrowsD1Ev(ptr {{[^,]*}} %[[INIT_ELT]])
-// OGCG:   call void @_ZdaPv(ptr noundef %[[ALLOC]])
+// OGCG:   call void @_ZdaPv(ptr allocptr noundef %[[ALLOC]])
 // OGCG:   resume { ptr, i32 }

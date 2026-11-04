@@ -71,7 +71,7 @@ void operator delete(void*);
 // CHECK-NEXT:    [[CALL24:%.*]] = call noundef zeroext i1 @_Z1ev()
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[CALL24]] to i64
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZdlPv(ptr noundef [[TMP4]]) #[[ATTR9:[0-9]+]]
+// CHECK-NEXT:    call void @_ZdlPv(ptr allocptr noundef [[TMP4]]) #[[ATTR9:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void f(int* p, ...)

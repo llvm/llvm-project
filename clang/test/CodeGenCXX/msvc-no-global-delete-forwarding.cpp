@@ -35,14 +35,14 @@ void test() {
 // __global_array_delete wrapper, the scalar path uses __global_delete.
 // CHECK-LABEL: define weak dso_local noundef ptr @"??_EDerived@@UEAAPEAXI@Z"
 // CHECK: dtor.call_glob_delete_after_array_destroy:
-// CHECK: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// CHECK: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %{{.*}}, i64 noundef %{{.*}})
 // CHECK: dtor.call_glob_delete:
-// CHECK-NEXT: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 8)
+// CHECK-NEXT: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %{{.*}}, i64 noundef 8)
 // CHECK: dtor.call_class_delete:
 // CHECK-NEXT: call void @"??3Base@@SAXPEAX@Z"(ptr noundef %{{.*}})
 
 // __empty_global_delete should be emitted with a trap.
-// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @llvm.trap()
 // CHECK-NEXT: unreachable
 
