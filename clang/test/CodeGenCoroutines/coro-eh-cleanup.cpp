@@ -54,14 +54,31 @@ coro_t f() {
 // CHECK:   cleanupret from %{{.+}} unwind label %[[CATCHDISPATCH:.+]]
 
 // CHECK: [[CATCHDISPATCH]]:
-// CHECK:   catchswitch within none [label %[[CATCHPAD:.+]]] unwind label %[[COROENDBB:.+]]
+// CHECK:   catchswitch within none [label %[[CATCHPAD:.+]]] unwind label %[[UNWINDBB:.+]]
 // CHECK: [[CATCHPAD]]:
 // CHECK:   call void @"?unhandled_exception@promise_type@coro_t@@QEAAXXZ"
 
+// CHECK: [[UNWINDBB]]:
+// CHECK-NEXT: %[[CLPAD1:.+]] = cleanuppad within none
+// CHECK-NEXT: call void @llvm.lifetime.end
+// CHECK-NEXT: cleanupret from %[[CLPAD1]] unwind label %[[RAMPBB:.+]]
+
+// CHECK: [[RAMPBB]]:
+// CHECK-NEXT: %[[CLPAD2:.+]] = cleanuppad within none
+// CHECK-NEXT:   %[[InRamp:.+]] = call i1 @llvm.coro.is_in_ramp()
+// CHECK-NEXT:   br i1 %[[InRamp]], label %{{.+}}, label %[[EHSUSPEND:.+]]
+
+// CHECK: [[EHSUSPEND]]:
+// CHECK-NEXT:   call i8 @llvm.coro.suspend(token none, i1 false)
+// CHECK-NEXT:   icmp eq i8 %{{.*}}, 1
+// CHECK-NEXT:   br i1 %{{.*}}, label %{{.*}}, label %[[COROENDBB:.+]]
+
 // CHECK: [[COROENDBB]]:
-// CHECK-NEXT: %[[CLPAD:.+]] = cleanuppad within none
-// CHECK-NEXT: call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %[[CLPAD]]) ]
-// CHECK-NEXT: cleanupret from %[[CLPAD]] unwind label
+// CHECK-NEXT:   call void @llvm.coro.end(ptr null, i1 true, token none)
+// CHECK-NEXT:   br label %[[CORO_EH_CONT:.+]]
+
+// CHECK: [[CORO_EH_CONT]]:
+// CHECK-NEXT:   cleanupret from %[[CLPAD2]] unwind to caller
 
 // CHECK-LPAD: @_Z1fv(
 // CHECK-LPAD:   invoke void @_Z9may_throwv()
@@ -77,7 +94,20 @@ coro_t f() {
 
 // CHECK-LPAD: [[UNWINDBB]]:
 // CHECK-LPAD:   %[[InRamp:.+]] = call i1 @llvm.coro.is_in_ramp()
-// CHECK-LPAD:   br i1  %[[InRamp]], label %{{.+}}, label %[[EHRESUME:.+]]
+// CHECK-LPAD:   br i1 %[[InRamp]], label %{{.+}}, label %[[EHSUSPEND:.+]]
+
+// CHECK-LPAD: [[EHSUSPEND]]:
+// CHECK-LPAD-NEXT:   call i8 @llvm.coro.suspend(token none, i1 false)
+// CHECK-LPAD-NEXT:   icmp eq i8 %{{.*}}, 1
+// CHECK-LPAD-NEXT:   br i1 %{{.*}}, label %{{.*}}, label %[[CORO_UNWIND:.+]]
+
+// CHECK-LPAD: [[CORO_UNWIND]]:
+// CHECK-LPAD-NEXT:   call void @llvm.coro.end(ptr null, i1 true, token none)
+// CHECK-LPAD-NEXT:   br label %[[CORO_EH_CONT:.+]]
+
+// CHECK-LPAD: [[CORO_EH_CONT]]:
+// CHECK-LPAD-NEXT:   br label %[[EHRESUME:.+]]
+
 // CHECK-LPAD: [[EHRESUME]]:
 // CHECK-LPAD-NEXT:  %[[exn:.+]] = load ptr, ptr %exn.slot, align 8
 // CHECK-LPAD-NEXT:  %[[sel:.+]] = load i32, ptr %ehselector.slot, align 4
