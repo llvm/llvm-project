@@ -87,15 +87,16 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill,
   }
 }
 
-/// Creates a loan for the storage path of a given declaration reference.
-/// This function should be called whenever a DeclRefExpr represents a borrow.
-/// \param DRE The declaration reference expression that initiates the borrow.
+/// Creates a loan for the storage path of a given declaration.
+/// This function should be called whenever an expression naming \p VD
+/// represents a borrow.
+/// \param VD The declaration whose storage is borrowed.
+/// \param IssueExpr The expression (DeclRefExpr or MemberExpr) that initiates
+/// the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
-  const ValueDecl *VD = DRE->getDecl();
-  AccessPath Path(VD);
-  // The loan is created at the location of the DeclRefExpr.
-  return FactMgr.getLoanMgr().createLoan(Path, DRE);
+static const Loan *createLoan(FactManager &FactMgr, const ValueDecl &VD,
+                              const Expr *IssueExpr) {
+  return FactMgr.getLoanMgr().createLoan(AccessPath(&VD), IssueExpr);
 }
 
 /// Creates a loan for the storage location of a temporary object.
@@ -190,7 +191,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   //   - `View v; v` issues loan to v's storage (the view object)
   //   - `int& r = x; r` issues no loan (r has no storage, it's an alias to x)
   if (doesDeclHaveStorage(DRE->getDecl())) {
-    const Loan *L = createLoan(FactMgr, DRE);
+    const Loan *L = createLoan(FactMgr, *DRE->getDecl(), DRE);
     assert(L);
     OriginList *List = getOriginsList(*DRE);
     assert(List &&
@@ -258,6 +259,15 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   auto *MD = ME->getMemberDecl();
+  if (const auto *VD = dyn_cast<VarDecl>(MD); VD && doesDeclHaveStorage(VD)) {
+    // A static data member: borrow its storage, as for a DeclRefExpr.
+    const Loan *L = createLoan(FactMgr, *VD, ME);
+    OriginList *List = getOriginsList(*ME);
+    assert(List && "gl-value static member should have an origin list");
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+    return;
+  }
   if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
     assert(ME->isGLValue() && "Field member should be GL value");
     OriginList *Dst = getOriginsList(*ME);
@@ -819,6 +829,21 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  // A cleanup callback or a non-trivial destructor (other than an owner's) run
+  // at scope exit may read the borrows the variable holds.
+  QualType Ty = LifetimeEndsVD->getType();
+  bool HasCleanup = LifetimeEndsVD->hasAttr<CleanupAttr>();
+  bool IsDestructorUse =
+      LSOpts.CheckDestructorUses &&
+      Ty.isDestructedType() == QualType::DK_cxx_destructor &&
+      !isGslOwnerType(AC.getASTContext().getBaseElementType(Ty));
+  if (HasCleanup || IsDestructorUse)
+    if (OriginList *List = getOriginsList(*LifetimeEndsVD))
+      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
+          UseSite::scopeExit(
+              LifetimeEnds.getTriggerStmt()->getEndLoc(), *LifetimeEndsVD,
+              HasCleanup ? UseKind::Cleanup : UseKind::Destructor),
+          List));
   // Expire the origin when its variable's lifetime ends to ensure liveness
   // doesn't persist through loop back-edges.
   std::optional<OriginID> ExpiredOID;
@@ -961,8 +986,10 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
-  // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
+  // positives (e.g. `auto& r = s.v`). Static data members are not fields.
+  const Expr *Obj = Args[0]->IgnoreImpCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(Obj);
+      !isa<DeclRefExpr>(Obj) && !(ME && isa<VarDecl>(ME->getMemberDecl())))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);
@@ -1003,7 +1030,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
     for (const auto *Field : RD->fields())
       if (auto *FieldList = getOriginsList(*Field))
         CurrentBlockFacts.push_back(
-            FactMgr.createFact<UseFact>(Call, FieldList));
+            FactMgr.createFact<UseFact>(*Call, FieldList));
   };
 
   UseFields(ClassDecl);
@@ -1025,23 +1052,31 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   bool HasImplicitObjectArg = Method &&
                               Method->isImplicitObjectMemberFunction() &&
                               !isa<CXXConstructorDecl>(FD);
-  auto getParamDeclAt =
-      [FD, HasImplicitObjectArg](unsigned I) -> const ParmVarDecl * {
+  auto getArgCaptureByAttr =
+      [FD, HasImplicitObjectArg](
+          unsigned I) -> std::pair<const LifetimeCaptureByAttr *, QualType> {
     if (HasImplicitObjectArg) {
-      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
-      if (I > 0 && I - 1 < FD->getNumParams())
-        return FD->getParamDecl(I - 1);
+      if (I == 0) {
+        auto *MethodDecl = cast<CXXMethodDecl>(FD);
+        QualType ParamType = MethodDecl->getFunctionObjectParameterType();
+        return {getCaptureByAttrFromFunctionType(FD), ParamType};
+      }
+      if (I > 0 && I - 1 < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     } else {
-      if (I < FD->getNumParams())
-        return FD->getParamDecl(I);
+      if (I < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     }
-    return nullptr;
+    return {nullptr, QualType()};
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const ParmVarDecl *PVD = getParamDeclAt(I);
-    if (!PVD)
-      continue;
-    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
+    auto [Attr, ParamType] = getArgCaptureByAttr(I);
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
@@ -1049,7 +1084,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       continue;
     // For references to pointer-like types, peel the outer origin (the pointer
     // object itself) so that we capture the underlying data (the inner origin).
-    if (QualType ParamType = PVD->getType();
+    if (!ParamType.isNull() &&
         (ParamType->isReferenceType() &&
          isPointerLikeType(ParamType->getPointeeType())) &&
         CapturedOriginList->getLength() > 1)
@@ -1206,7 +1241,7 @@ void FactsGenerator::handleAccess(const Expr *E) {
   if (!List || namesDeclStorage(List))
     return;
   CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
-      E,
+      *E,
       FactMgr.getOriginMgr().createSingleOriginList(List->getOuterOriginID())));
 }
 
@@ -1215,7 +1250,7 @@ void FactsGenerator::handleUse(const Expr *E) {
   if (List && namesDeclStorage(List))
     List = List->peelOuterOrigin();
   if (List)
-    CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(E, List));
+    CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(*E, List));
 }
 
 // Issues a placeholder loan (this->field) for each origin-carrying field of the
@@ -1224,7 +1259,8 @@ void FactsGenerator::handleUse(const Expr *E) {
 void FactsGenerator::issueFieldPlaceholderLoans(
     const CXXRecordDecl *ClassDef, llvm::SmallVectorImpl<Fact *> &Facts) {
   assert(ClassDef && "class methods have a defined parent");
-  assert(ClassDef->isThisDeclarationADefinition());
+  // Eagerly instantiated methods may see their class still being defined.
+  assert(ClassDef->isCompleteDefinition() || ClassDef->isBeingDefined());
   auto IssueForRecord = [&](const CXXRecordDecl *RD) {
     for (const FieldDecl *Field : RD->fields()) {
       // Skip private fields of bases as they cannot be named in ClassDef.

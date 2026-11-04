@@ -5098,7 +5098,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
   };
 
   if (ST.hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       AMDGPU::isChainCC(CC) || CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     AMDGPU::ClusterDimsAttr ClusterDims = MFI->getClusterDims();
     bool HasFixedDims = ClusterDims.isFixedDims();
 
@@ -6027,7 +6028,6 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   LLT S1 = LLT::scalar(1);
 
   auto Abs = B.buildFAbs(F32, RHS, Flags);
-  const APFloat C0Val(1.0f);
 
   auto C0 = B.buildFConstant(F32, 0x1p+96f);
   auto C1 = B.buildFConstant(F32, 0x1p-32f);
@@ -8889,10 +8889,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
-    if (IntrID == Intrinsic::amdgcn_av_load_b128)
+    if (MI.getNumExplicitDefs())
       B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());
     else
       B.buildStore(MI.getOperand(2), MI.getOperand(1),
