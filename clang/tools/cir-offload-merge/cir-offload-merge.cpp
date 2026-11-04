@@ -9,7 +9,8 @@
 // \file
 // This tool combines a host CIR module and its device CIR modules into a
 // single module marked as an offload container (carrying the
-// `cir.offload.container` unit attribute).
+// `cir.offload.container` unit attribute), and splits such a module back into
+// its per-target modules.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,10 +45,13 @@ llvm::cl::OptionCategory CIROffloadMergeCategory("cir-offload-merge options");
 llvm::cl::opt<bool> Combine("combine", llvm::cl::desc("Combine CIR inputs"),
                             llvm::cl::cat(CIROffloadMergeCategory));
 
+llvm::cl::opt<bool> Split("split", llvm::cl::desc("Split combined CIR input"),
+                          llvm::cl::cat(CIROffloadMergeCategory));
+
 llvm::cl::list<std::string>
     InputFileNames("input",
                    llvm::cl::desc("Input CIR file. Can be specified multiple "
-                                  "times."),
+                                  "times in combine mode."),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
 llvm::cl::list<std::string>
@@ -56,13 +60,21 @@ llvm::cl::list<std::string>
                 llvm::cl::cat(CIROffloadMergeCategory));
 
 llvm::cl::list<std::string>
-    OutputFileNames("output", llvm::cl::desc("Output CIR file."),
+    OutputFileNames("output",
+                    llvm::cl::desc("Output CIR file. Can be specified "
+                                   "multiple times in split mode."),
                     llvm::cl::cat(CIROffloadMergeCategory));
 
 struct InputTarget {
   std::string Input;
   std::string Target;
   bool IsHost = false;
+};
+
+struct TargetOutput {
+  std::string Target;
+  std::string Output;
+  bool Written = false;
 };
 
 int reportError(const llvm::Twine &message) {
@@ -137,6 +149,37 @@ int validateCombineCommandLine(
   return 0;
 }
 
+int validateSplitCommandLine(
+    llvm::SmallVectorImpl<TargetOutput> &targetOutputs) {
+  if (InputFileNames.empty())
+    return reportError("missing required -input");
+  if (InputFileNames.size() != 1)
+    return reportError("split mode expects exactly one input");
+  if (TargetNames.empty())
+    return reportError("missing required -targets");
+  if (OutputFileNames.empty())
+    return reportError("missing required -output");
+  if (OutputFileNames.size() != TargetNames.size())
+    return reportError("number of output files and targets should match in "
+                       "split mode");
+
+  clang::OffloadBundlerConfig bundlerConfig;
+  llvm::StringSet<> seenTargets;
+  llvm::StringSet<> seenOutputs;
+
+  for (auto [target, output] : llvm::zip_equal(TargetNames, OutputFileNames)) {
+    if (!seenTargets.insert(target).second)
+      return reportError("duplicate target '" + target + "'");
+    if (!seenOutputs.insert(output).second)
+      return reportError("duplicate output '" + output + "'");
+    if (!isValidTarget(target, bundlerConfig))
+      return reportError("invalid target '" + target + "'");
+
+    targetOutputs.push_back({target, output, false});
+  }
+  return 0;
+}
+
 void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
                      cir::OffloadKind offloadKind, llvm::StringRef bundleID) {
   module.setSymName(name);
@@ -202,6 +245,52 @@ int writeModuleToOutput(mlir::ModuleOp module, llvm::StringRef outputFileName) {
   return 0;
 }
 
+int splitInput(llvm::StringRef inputFileName,
+               llvm::MutableArrayRef<TargetOutput> targetOutputs,
+               mlir::MLIRContext &context) {
+  mlir::OwningOpRef<mlir::ModuleOp> container =
+      mlir::parseSourceFile<mlir::ModuleOp>(inputFileName,
+                                            mlir::ParserConfig(&context));
+  if (!container)
+    return reportError("failed to parse input file");
+  if (!(*container)->hasAttr(cir::CIRDialect::getOffloadContainerAttrName()))
+    return reportError("expected input to be an offload container");
+
+  clang::OffloadBundlerConfig bundlerConfig;
+
+  // Written modules are detached from the container.
+  for (mlir::ModuleOp module :
+       llvm::make_early_inc_range(container->getOps<mlir::ModuleOp>())) {
+    auto bundleIDAttr = module->getAttrOfType<mlir::StringAttr>(
+        cir::CIRDialect::getOffloadBundleIDAttrName());
+    if (!bundleIDAttr)
+      return reportError("nested module is missing '" +
+                         cir::CIRDialect::getOffloadBundleIDAttrName() + "'");
+
+    llvm::StringRef bundleID = bundleIDAttr.getValue();
+    if (!isValidTarget(bundleID, bundlerConfig))
+      return reportError("invalid module bundle ID '" + bundleID + "'");
+
+    auto *match = llvm::find_if(targetOutputs, [&](const TargetOutput &output) {
+      return output.Target == bundleID;
+    });
+    if (match == targetOutputs.end())
+      continue;
+
+    module->remove();
+    mlir::OwningOpRef<mlir::ModuleOp> detachedModule(module);
+    if (int errorCode = writeModuleToOutput(*detachedModule, match->Output))
+      return errorCode;
+    match->Written = true;
+  }
+
+  for (const TargetOutput &targetOutput : targetOutputs)
+    if (!targetOutput.Written)
+      return reportError("can't find module for target '" +
+                         targetOutput.Target + "'");
+  return 0;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -210,14 +299,21 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "CIR host-device offload merge\n");
 
-  if (!Combine)
-    return reportError("expected -combine");
+  if (Combine == Split)
+    return reportError("expected exactly one of -combine or -split");
 
   mlir::DialectRegistry registry;
   cir::registerAllDialects(registry);
   registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
   mlir::MLIRContext context(registry);
   context.loadDialect<cir::CIRDialect>();
+
+  if (Split) {
+    llvm::SmallVector<TargetOutput> targetOutputs;
+    if (int errorCode = validateSplitCommandLine(targetOutputs))
+      return errorCode;
+    return splitInput(InputFileNames.front(), targetOutputs, context);
+  }
 
   llvm::SmallVector<InputTarget> inputTargets;
   if (int errorCode = validateCombineCommandLine(inputTargets))
