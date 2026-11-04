@@ -229,7 +229,7 @@ bool MipsPassConfig::addInstSelector() {
 }
 
 void MipsPassConfig::addPreRegAlloc() {
-  addPass(createMipsOptimizePICCallPass());
+  addPass(createMipsOptimizePICCallLegacyPass());
 }
 
 TargetTransformInfo

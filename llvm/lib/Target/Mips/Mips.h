@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_MIPS_MIPS_H
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
@@ -88,7 +90,15 @@ public:
 
 FunctionPass *createMipsSEISelDAGLegacyPass(MipsTargetMachine &TM,
                                             CodeGenOptLevel OptLevel);
-FunctionPass *createMipsOptimizePICCallPass();
+
+class MipsOptimizePICCallPass
+    : public RequiredPassInfoMixin<MipsOptimizePICCallPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsOptimizePICCallLegacyPass();
 FunctionPass *createMipsDelaySlotFillerPass();
 FunctionPass *createMipsBranchExpansion();
 FunctionPass *createMipsConstantIslandPass();
