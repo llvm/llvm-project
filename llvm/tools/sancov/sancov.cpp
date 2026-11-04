@@ -128,7 +128,7 @@ using RawAddrSet = DenseSet<uint64_t>;
 // Contents of .sancov file: list of coverage point addresses that were
 // executed.
 struct RawCoverage {
-  explicit RawCoverage(std::unique_ptr<RawAddrSet> Addrs, FileHeader Header)
+  RawCoverage(std::unique_ptr<RawAddrSet> Addrs, const FileHeader &Header)
       : Addrs(std::move(Addrs)), Header(Header) {}
 
   // Read binary .sancov file.
