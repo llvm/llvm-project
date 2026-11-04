@@ -11110,6 +11110,10 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_used_by_destructor
+    : Note<"later used by the destructor of %0 at scope exit">;
+def note_lifetime_safety_used_by_cleanup
+    : Note<"later used by the cleanup function of %0 at scope exit">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
 def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
@@ -11172,6 +11176,14 @@ def warn_lifetime_safety_noescape_escapes
 def warn_lifetime_safety_field_origin_escape
     : Warning<"return value depends on the object referenced by %0, not on '*this'">,
       InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_scope
+    : Warning<"%0 does not live long enough">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_invalidation
+    : Warning<"%0 is later invalidated">,
+      InGroup<LifetimeSafetyDestructorUse>,
       DefaultIgnore;
 
 def note_lifetime_safety_owned_field_suggestion
@@ -12869,8 +12881,6 @@ def err_omp_interchange_permutation_value_range : Error<
 def err_omp_interchange_permutation_value_repeated : Error<
   "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
-def err_omp_instantiation_not_supported
-    : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_adjust_args_invalid_item : Error<
@@ -13612,6 +13622,10 @@ def err_sycl_external_invalid_main : Error<
   "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
   "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_ignored_variadic_function : Warning<
+  "%0 attribute ignored; a variadic function cannot be called from device "
+  "code">,
+  InGroup<IgnoredAttributes>;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;

@@ -142,6 +142,21 @@ class MockAcceleratorActionsTestCase(TestBase):
         self.assertTrue(accelerator_process.IsValid())
         self.assertState(accelerator_process.GetState(), lldb.eStateStopped)
 
+        # LLDB settings are advertised and served only on the accelerator
+        # connection.
+        self.dbg.SetSelectedTarget(accelerator_target)
+        self.expect("process plugin packet send qSupported", substrs=["lldb-settings+"])
+        self.expect(
+            "process plugin packet send jLLDBSettings",
+            substrs=[
+                '"dyld_plugin_name":"accelerator-gdb-remote"',
+                '"accelerator_plugin_name":"mock"',
+                '"send_dyld_packet_to_accelerator":true',
+            ],
+            ordered=False,
+        )
+        self.dbg.SetSelectedTarget(target)
+
         # Validate the registers (each value == 0x1000 + register index).
         accelerator_frame = accelerator_process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         expected_registers = {
