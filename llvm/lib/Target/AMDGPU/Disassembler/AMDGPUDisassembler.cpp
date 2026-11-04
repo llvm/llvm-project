@@ -588,9 +588,12 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
       decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
 
   if (Res != MCDisassembler::Fail) {
-      // In case its a dual issue MADK instruction, add the immX operand position before decoding it
-      if (AMDGPU::hasNamedOperand(TmpInst.getOpcode(), AMDGPU::OpName::immX)) convertFMAanyK(TmpInst);
-      if (!decodeImmOperands(TmpInst, *MCII)) Res = MCDisassembler::Fail;
+    // In case its a dual issue MADK instruction, add the immX operand position
+    // before decoding it
+    if (AMDGPU::hasNamedOperand(TmpInst.getOpcode(), AMDGPU::OpName::immX))
+      convertFMAanyK(TmpInst);
+    if (!decodeImmOperands(TmpInst, *MCII))
+      Res = MCDisassembler::Fail;
   }
 
   CommentStream = nullptr;
