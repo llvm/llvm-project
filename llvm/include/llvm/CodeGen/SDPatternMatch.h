@@ -1150,6 +1150,34 @@ template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op);
 }
 
+/// Match a sign_extend or sign_extend_inreg and bind the type being extended
+/// from.
+template <typename Opnd_P> struct SExtOrSExtInReg_match {
+  EVT &SrcVT;
+  Opnd_P Opnd;
+
+  SExtOrSExtInReg_match(EVT &SrcVT, const Opnd_P &Op)
+      : SrcVT(SrcVT), Opnd(Op) {}
+
+  bool match(SDValue N) {
+    if (N.getOpcode() == ISD::SIGN_EXTEND) {
+      SrcVT = N.getOperand(0).getValueType();
+      return Opnd.match(N.getOperand(0));
+    }
+    if (N.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+      SrcVT = cast<VTSDNode>(N.getOperand(1))->getVT();
+      return Opnd.match(N.getOperand(0));
+    }
+    return false;
+  }
+};
+
+template <typename Opnd>
+inline SExtOrSExtInReg_match<Opnd> m_SExtOrSExtInReg(EVT &SrcVT,
+                                                     const Opnd &Op) {
+  return SExtOrSExtInReg_match<Opnd>(SrcVT, Op);
+}
+
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ANY_EXTEND, Op);
 }
