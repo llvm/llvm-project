@@ -111,8 +111,7 @@ static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
   case dxbc::PSV::SemanticKind::IsFrontFace:
     if (E.Rows != 1 || E.Cols != 1 ||
         (E.CompType != ElementType::I32 && E.CompType != ElementType::U32))
-      return signatureError(
-          "SV_IsFrontFace requires a scalar 32-bit integer");
+      return signatureError("SV_IsFrontFace requires a scalar 32-bit integer");
     break;
   case dxbc::PSV::SemanticKind::Barycentrics:
     if (E.Rows != 1 || E.Cols != 3 ||
