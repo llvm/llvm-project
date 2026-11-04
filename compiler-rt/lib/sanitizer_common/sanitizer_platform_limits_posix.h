@@ -240,7 +240,7 @@ struct __sanitizer_ipc_perm {
   unsigned __seq;
   u64 __unused1;
   u64 __unused2;
-#    elif defined(__sparc__)
+#    elif defined(__sparc__) || defined(__hppa__)
   unsigned mode;
   unsigned short __pad2;
   unsigned short __seq;
@@ -282,7 +282,7 @@ struct __sanitizer_shmid_ds {
   unsigned long __glibc_reserved1;
   unsigned long __glibc_reserved2;
 #    else
-#      ifndef __powerpc__
+#      if !defined(__powerpc__) && !defined(__hppa__)
   uptr shm_segsz;
 #      elif !defined(__powerpc64__)
   uptr __unused0;
@@ -305,7 +305,7 @@ struct __sanitizer_shmid_ds {
   uptr __unused3;
 #        endif
 #      endif
-#      ifdef __powerpc__
+#      if defined(__powerpc__) || defined(__hppa__)
   uptr shm_segsz;
 #      endif
   int shm_cpid;
