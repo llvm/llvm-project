@@ -2238,10 +2238,123 @@ Instruction *InstCombinerImpl::foldBinopWithRecurrence(BinaryOperator &BO) {
   return replaceInstUsesWith(BO, NewBO);
 }
 
+// Mostly copied from the above, but with partial reductions as operands
+// instead of matching binops.
+Instruction *InstCombinerImpl::foldBinopOfPartialReductionsWithRecurrence(
+    BinaryOperator &BO) {
+  unsigned Opcode = BO.getOpcode();
+  if (Opcode != Instruction::Add && Opcode != Instruction::FAdd)
+    return nullptr;
+
+  bool IsFP = BO.getType()->getScalarType()->isFloatingPointTy();
+  IntrinsicInst *PRdx0 = dyn_cast<IntrinsicInst>(BO.getOperand(0));
+  IntrinsicInst *PRdx1 = dyn_cast<IntrinsicInst>(BO.getOperand(1));
+  if (!PRdx0 || !PRdx1 || !PRdx0->hasNUses(2) || !PRdx1->hasNUses(2) ||
+      PRdx0->getParent() != PRdx1->getParent())
+    return nullptr;
+
+  if (IsFP &&
+      (PRdx0->getIntrinsicID() != Intrinsic::vector_partial_reduce_fadd ||
+       PRdx1->getIntrinsicID() != Intrinsic::vector_partial_reduce_fadd))
+    return nullptr;
+
+  if (!IsFP &&
+      (PRdx0->getIntrinsicID() != Intrinsic::vector_partial_reduce_add ||
+       PRdx1->getIntrinsicID() != Intrinsic::vector_partial_reduce_add))
+    return nullptr;
+
+  if (!BO.isAssociative() || PRdx0->getParent() != PRdx1->getParent())
+    return nullptr;
+
+  PHINode *PN0, *PN1;
+  Value *Start0, *Step0, *Start1, *Step1;
+  if (!matchSimpleBinaryIntrinsicRecurrence(PRdx0, PN0, Start0, Step0) ||
+      !PN0->hasOneUse() ||
+      !matchSimpleBinaryIntrinsicRecurrence(PRdx1, PN1, Start1, Step1) ||
+      !PN1->hasOneUse() || PN0->getParent() != PN1->getParent())
+    return nullptr;
+
+  assert(PN0->getNumIncomingValues() == 2 && PN1->getNumIncomingValues() == 2 &&
+         "Expected PHIs with two incoming values!");
+
+  // Convert the start and step values to constants.
+  auto *Init0 = dyn_cast<Constant>(Start0);
+  auto *Init1 = dyn_cast<Constant>(Start1);
+  auto *C0 = dyn_cast<Constant>(Step0);
+  auto *C1 = dyn_cast<Constant>(Step1);
+  if (!Init0 || !Init1 || !C0 || !C1)
+    return nullptr;
+
+  // Fold the recurrence constants.
+  auto *Init = ConstantFoldBinaryInstruction(Opcode, Init0, Init1);
+  auto *C = ConstantFoldBinaryInstruction(Opcode, C0, C1);
+  if (!Init || !C)
+    return nullptr;
+
+  // Create the combined PHI.
+  Builder.SetInsertPoint(PN0);
+  auto *NewPN = Builder.CreatePHI(PN0->getType(), PN0->getNumIncomingValues(),
+                                  "prdx.combined.phi");
+
+  // Create the new partial reduction.
+  Builder.SetInsertPoint(PRdx0);
+  auto *NewPRdx = cast<IntrinsicInst>(
+      Builder.CreateIntrinsic(PRdx0->getType(),
+                              IsFP ? Intrinsic::vector_partial_reduce_fadd
+                                   : Intrinsic::vector_partial_reduce_add,
+                              {NewPN, C}));
+
+  if (IsFP) {
+    FastMathFlags Intersect = PRdx0->getFastMathFlags() &
+                              PRdx1->getFastMathFlags() & BO.getFastMathFlags();
+    NewPRdx->setFastMathFlags(Intersect);
+  }
+  // TODO: Integer flags?
+
+  for (unsigned I = 0, E = PN0->getNumIncomingValues(); I != E; ++I) {
+    auto *V = PN0->getIncomingValue(I);
+    auto *BB = PN0->getIncomingBlock(I);
+    if (V == Init0) {
+      assert(((PN1->getIncomingValue(0) == Init1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == Init1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(Init, BB);
+    } else if (V == PRdx0) {
+      assert(((PN1->getIncomingValue(0) == PRdx1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == PRdx1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(NewPRdx, BB);
+    } else
+      llvm_unreachable("Unexpected incoming value!");
+  }
+
+  LLVM_DEBUG(dbgs() << "  Combined " << *PN0 << "\n           " << *PRdx0
+                    << "\n      with " << *PN1 << "\n           " << *PRdx1
+                    << '\n');
+
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*PRdx0, PoisonValue::get(PRdx0->getType())));
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*PRdx1, PoisonValue::get(PRdx1->getType())));
+  eraseInstFromFunction(*PN0);
+  eraseInstFromFunction(*PN1);
+
+  return replaceInstUsesWith(BO, NewPRdx);
+}
+
 Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   // Attempt to fold binary operators whose operands are simple recurrences.
   if (auto *NewBO = foldBinopWithRecurrence(BO))
     return NewBO;
+
+  // Attempt to fold binary operators whose operands are partial reductions in
+  // simple recurrences.
+  if (auto *FoldPrdx = foldBinopOfPartialReductionsWithRecurrence(BO))
+    return FoldPrdx;
 
   // TODO: This should be similar to the incoming values check in foldOpIntoPhi:
   //       we are guarding against replicating the binop in >1 predecessor.
