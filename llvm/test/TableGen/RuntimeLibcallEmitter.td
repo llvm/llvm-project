@@ -119,12 +119,14 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-EMPTY:
 // CHECK-NEXT:enum FuncArgTypeID : char {
 // CHECK-NEXT:  NoFuncArgType = 0,
+// CHECK-NEXT:  BFloat,
 // CHECK-NEXT:  Bool,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
 // CHECK-NEXT:  FP128,
 // CHECK-NEXT:  Floating,
 // CHECK-NEXT:  Flt,
+// CHECK-NEXT:  Half,
 // CHECK-NEXT:  Int,
 // CHECK-NEXT:  Int8,
 // CHECK-NEXT:  Int16,
