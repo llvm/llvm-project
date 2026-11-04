@@ -22,10 +22,13 @@
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32
 # RUN: yaml2obj %s -DGPU=GFX803 -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32
-# RUN: yaml2obj %s -DGPU=GFX1250 -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000 \
-# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32
 # WF32: ; error decoding test.kd: kernel descriptor reserved bit (458) set{{$}}
 # WF32-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1250 -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32_UNSET
+# WF32_UNSET: ; error decoding test.kd: kernel descriptor reserved bit (458) not set{{$}}
+# WF32_UNSET-NEXT: ; decoding failed region as bytes
 
 # RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300AC60800000000024000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_463

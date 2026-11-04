@@ -7396,8 +7396,11 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 458
   - 1 bit
   - ENABLE_WAVEFRONT_SIZE32
-  - GFX6-GFX9, GFX125*
+  - GFX6-GFX9
     : Reserved, must be 0.
+
+    GFX125*
+    : Reserved, must be 1.
 
     GFX10-GFX11, GFX120*, GFX13
     : - If 0 execute in wavefront size 64 mode.

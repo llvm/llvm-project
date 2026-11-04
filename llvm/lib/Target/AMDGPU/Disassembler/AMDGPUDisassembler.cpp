@@ -3005,12 +3005,22 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
 
-    // Reserved unless both wave sizes are supported.
+    // Reserved unless both wave sizes are supported: must be 1 on wave32-only
+    // targets, 0 on wave64-only targets.
     if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
         STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+    } else if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+               !(TwoByteBuffer &
+                 KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
+      return createStringError(
+          std::errc::invalid_argument, "kernel descriptor reserved %s not set",
+          getBitRangeFromMask(KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+                              amdhsa::KERNEL_CODE_PROPERTIES_OFFSET)
+              .c_str());
+    } else if (!STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+               (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
       return createReservedKDBitsError(
           KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
           amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
