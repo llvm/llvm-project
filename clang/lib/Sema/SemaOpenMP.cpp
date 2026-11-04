@@ -17862,6 +17862,10 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   collectLoopStmts(AStmt, LoopStmts);
 
   // Collect pre-init statements in outer-to-inner order.
+  // Finals below already skip leftover writes when a loop has no trips, so a
+  // leftover value is whatever PreInits last wrote. Gate inner assignment
+  // inits the same way via guardNestedLoopInit: otherwise J = 0 always runs,
+  // Finals skip, and J stays at that wrong PreInit value.
   SmallVector<Stmt *> PreInits;
   for (auto I : llvm::seq<unsigned>(NumLoops)) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
