@@ -1268,7 +1268,7 @@ static bool isRealSpill(const MachineInstr &Def, Register Reg) {
   // Reg is undef only if every def of it in Def is full or read-undef.
   // Otherwise, other lanes may hold live values.
   return any_of(Def.all_defs(), [&](const MachineOperand &MO) {
-    return MO.getReg() == Reg && MO.getSubReg() && !MO.isUndef();
+    return MO.getReg() == Reg && MO.readsReg();
   });
 }
 
