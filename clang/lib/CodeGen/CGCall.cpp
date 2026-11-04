@@ -3178,6 +3178,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
 
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(TargetDecl)) {
+    if (Fn->isReplaceableGlobalAllocationFunction() &&
+        Fn->getDeclName().isAnyOperatorDelete()) {
+      auto IRArgs = IRFunctionArgs.getIRArgs(0);
+      assert(IRArgs.second == 1 && "Expected only a single pointer to delete.");
+      ArgAttrs[IRArgs.first].addAttribute(llvm::Attribute::AllocatedPointer);
+    }
+  }
+
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(), E = FI.arg_end();
        I != E; ++I, ++ArgNo) {

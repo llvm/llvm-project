@@ -20,14 +20,14 @@ struct W {
 void sink(W *p) { ::delete p; }
 
 // The shared trapping fallback is emitted (kept alive via llvm.used).
-// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @llvm.trap()
 // CHECK-NEXT: unreachable
 
 // The scalar wrapper gets a real forwarding body that calls the global
 // ::operator delete (??3@), even though no deleting destructor in this TU
 // references the wrapper.
-// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // No vector deleting destructor for W is emitted in this TU.

@@ -3512,7 +3512,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[ISNULL:%.*]] = icmp eq ptr [[TMP0]], null
 // CHECK:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // CHECK:       [[DELETE_NOTNULL]]:
-// CHECK:    call void @_ZdlPvm(ptr noundef [[TMP0]], i64 noundef 4) #[[ATTR15:[0-9]+]]
+// CHECK:    call void @_ZdlPvm(ptr allocptr noundef [[TMP0]], i64 noundef 4) #[[ATTR15:[0-9]+]]
 // CHECK:    br label %[[DELETE_END]]
 // CHECK:       [[DELETE_END]]:
 // CHECK:    ret void
