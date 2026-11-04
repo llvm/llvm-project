@@ -1051,6 +1051,17 @@ define amdgpu_kernel void @kernel_sanitize_thread() sanitize_thread {
   ret void
 }
 
+define amdgpu_kernel void @kernel_sanitize_concurrency() sanitize_concurrency {
+; CHECK: Function Attrs: sanitize_concurrency
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_concurrency(
+; CHECK-SAME: ) #[[ATTR38:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
 define amdgpu_kernel void @kernel_sanitize_hwaddress() sanitize_hwaddress {
 ; CHECK: Function Attrs: sanitize_hwaddress
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_hwaddress(
@@ -1142,6 +1153,7 @@ attributes #2 = { sanitize_address "amdgpu-agpr-alloc"="0" }
 ; CHECK: attributes #[[ATTR26]] = { sanitize_address "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR27]] = { sanitize_memory "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR28]] = { sanitize_thread "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR38]] = { sanitize_concurrency "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR29]] = { sanitize_hwaddress "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR30]] = { sanitize_address "amdgpu-agpr-alloc"="0" "amdgpu-no-lds-dma" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR31]] = { "amdgpu-no-lds-dma" "amdgpu-no-wwm" }

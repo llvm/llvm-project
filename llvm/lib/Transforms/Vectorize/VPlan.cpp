@@ -541,7 +541,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :
        make_early_inc_range(make_range(SplitAt, this->end())))
-    ToMove.moveBefore(*SplitBlock, SplitBlock->end());
+    ToMove.moveBefore(SplitBlock->end());
 
   return SplitBlock;
 }
@@ -738,6 +738,17 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
   for (VPRecipeBase &R : Recipes)
     Cost += R.cost(VF, Ctx);
+
+  // Charge cost for unconditional branches outside replicate regions that
+  // cannot be folded.
+  const VPBlockBase *Succ = getSingleSuccessor();
+  const VPRegionBlock *Region = getParent();
+  if (Succ && !Succ->getSinglePredecessor() &&
+      (!Region || !Region->isReplicator())) {
+    Cost += Ctx.Opts.force_target_instruction_cost
+                ? InstructionCost(*Ctx.Opts.force_target_instruction_cost)
+                : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
+  }
   return Cost;
 }
 
@@ -789,10 +800,35 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // Compute and return the cost of the conditionally executed recipes.
+  // Compute and return the cost of the branch on the mask in the entry, the
+  // conditionally executed recipes and the unconditional branch from the
+  // conditionally executed block to the exiting block for each lane.
   assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  return Then->cost(VF, Ctx);
+
+  // If the vector loop executes at most once and the region is predicated on
+  // the header mask, the branches fold away.
+  if (VPCostContext::executesAtMostOnce(*getPlan(), VF) &&
+      match(getEntryBranchOnMask()->getOperand(0),
+            m_ICmp(m_Isa<VPWidenCanonicalIVRecipe>(), m_VPValue())))
+    return Then->cost(VF, Ctx);
+
+  InstructionCost Cost = getEntry()->cost(VF, Ctx);
+  Cost += Then->cost(VF, Ctx);
+  InstructionCost ThenBranchCost;
+  if (Ctx.Opts.force_target_instruction_cost) {
+    ThenBranchCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
+  } else {
+    ThenBranchCost =
+        VF.getFixedValue() *
+        Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
+    ThenBranchCost /=
+        Ctx.getCostDivisor(getEntryBranchOnMask()->getExecutionFrequency());
+  }
+  LLVM_DEBUG(dbgs() << "Cost of " << ThenBranchCost << " for VF " << VF
+                    << ": unconditional branches from " << Then->getName()
+                    << "\n");
+  return Cost + ThenBranchCost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -828,7 +864,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
     auto *Zero = Plan.getZero(CanIV->getType());
     DebugLoc DL = CanIV->getDebugLoc();
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
-    VPBuilder HeaderBuilder(Header, Header->begin());
+    VPBuilder HeaderBuilder(Header->begin());
     auto *ScalarR =
         HeaderBuilder.createScalarPhi({Zero, CanIVInc}, DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);

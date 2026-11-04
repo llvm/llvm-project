@@ -117,6 +117,53 @@ TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   EXPECT_STREQ("_DDD", the_demangled.GetCString());
 }
 
+TEST(MangledTest, RegisterManglingScheme) {
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test1_", "$test2_"}, eLanguageTypeAda83);
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test2_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test3_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetLanguageForManglingScheme(scheme), eLanguageTypeAda83);
+  EXPECT_EQ(Mangled("$test1_foo").GetMangledName(), ConstString("$test1_foo"));
+
+  // Registering the scheme again, as a plugin that is initialized again would,
+  // returns the same scheme.
+  EXPECT_EQ(Mangled::RegisterManglingScheme({"$test1_", "$test2_"},
+                                            eLanguageTypeAda83),
+            scheme);
+
+  Mangled::UnregisterManglingScheme(scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled("$test1_foo").GetDemangledName(),
+            ConstString("$test1_foo"));
+
+  // Registering it again after unregistering it, as a plugin that is
+  // terminated and initialized again would, reactivates the same scheme.
+  EXPECT_EQ(Mangled::RegisterManglingScheme({"$test1_", "$test2_"},
+                                            eLanguageTypeAda83),
+            scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"), scheme);
+  Mangled::UnregisterManglingScheme(scheme);
+}
+
+TEST(MangledTest, RegisterManglingSchemeWithMatcher) {
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test4_"}, eLanguageTypeAda83, [](llvm::StringRef name) {
+        return name.consume_front("$test4_") && !name.empty() &&
+               llvm::isDigit(name.front());
+      });
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_1foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_"),
+            Mangled::eManglingSchemeNone);
+  Mangled::UnregisterManglingScheme(scheme);
+}
+
 TEST(MangledTest, RecognizeSwiftMangledNames) {
   llvm::StringRef valid_swift_mangled_names[] = {
       "_TtC4main7MyClass",   // Mangled objc class name
