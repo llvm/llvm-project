@@ -33,7 +33,6 @@ public:
   typedef IntType (*MuliFxFunc)(IntType, FXType);
 
   void testBasicNumbers(MuliFxFunc func) {
-
     EXPECT_EQ(func(0, epsilon), static_cast<IntType>(0));
     EXPECT_EQ(func(0, max), static_cast<IntType>(0));
 
@@ -91,7 +90,6 @@ public:
   }
 
   void testEdgeCases(MuliFxFunc func) {
-
     constexpr IntType int_max = cpp::numeric_limits<IntType>::max();
     constexpr IntType int_min = cpp::numeric_limits<IntType>::min();
 
