@@ -6224,6 +6224,9 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
   if (useNeonVector(DataTy))
     return false;
 
+  if (!isElementTypeLegalForScalableVector(DataTy->getScalarType()))
+    return false;
+
   // Return true only if we are able to lower using the SVE2p2/SME2p2
   // expand instruction.
   return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
@@ -8407,7 +8410,7 @@ bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
     return isElementTypeLegalForScalableVector(DataType);
 
   auto LT = getTypeLegalizationCost(DataType);
-  if (!LT.first.isValid())
+  if (!LT.first.isValid() || !LT.second.isVector())
     return false;
 
   // Use the i32 or i64 compact instructions for f16/bf16 unpacked types.
