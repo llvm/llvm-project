@@ -2240,9 +2240,9 @@ static std::pair<bool, bool> getKnownBufferOobProperties(const GCNSubtarget &ST,
       Ptr->getType()->getPointerAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return {false, false};
   APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  bool KnownOffset = true;
   while (const auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      return {false, false};
+    KnownOffset = KnownOffset && GEP->accumulateConstantOffset(DL, Offset);
     Ptr = GEP->getPointerOperand();
   }
   const auto *Cast = dyn_cast<AddrSpaceCastInst>(Ptr);
@@ -2258,6 +2258,7 @@ static std::pair<bool, bool> getKnownBufferOobProperties(const GCNSubtarget &ST,
     return {false, false};
 
   bool NoWrapFromMax =
+      KnownOffset &&
       Offset.ule(APInt::getAllOnes(Offset.getBitWidth()) - Bytes);
   const auto *NumRecords =
       Rsrc ? dyn_cast<ConstantInt>(Rsrc->getArgOperand(2)) : nullptr;
@@ -2266,9 +2267,12 @@ static std::pair<bool, bool> getKnownBufferOobProperties(const GCNSubtarget &ST,
   if (!NumRecords || !NumRecordsWidth)
     return {NoWrapFromMax, false};
   APInt Bound = NumRecords->getValue().zextOrTrunc(*NumRecordsWidth);
+  if (Bound.isAllOnes())
+    return {NoWrapFromMax, true};
+  if (!KnownOffset)
+    return {false, false};
   APInt BoundsDiff = Bound.zext(64) - Offset.zext(64);
-  return {NoWrapFromMax, Bound.isAllOnes() || BoundsDiff.sge(Bytes) ||
-                             BoundsDiff.isNonPositive()};
+  return {NoWrapFromMax, BoundsDiff.sge(Bytes) || BoundsDiff.isNonPositive()};
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
