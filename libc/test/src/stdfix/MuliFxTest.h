@@ -26,6 +26,7 @@ class MuliFxTest : public LIBC_NAMESPACE::testing::Test {
 
   static constexpr FXType max = FXRep::MAX();
   static constexpr FXType min = FXRep::MIN();
+  static constexpr FXType zero = FXRep::ZERO();
   static constexpr FXType epsilon = FXRep::EPS();
   static constexpr FXType one_half = FXRep::ONE_HALF();
   static constexpr FXType one_fourth = FXRep::ONE_FOURTH();
@@ -38,6 +39,8 @@ public:
   typedef IntType (*MuliFxFunc)(IntType, FXType);
 
   void testBasicNumbers(MuliFxFunc func) {
+    EXPECT_EQ(func(0, zero), static_cast<IntType>(0));
+    EXPECT_EQ(func(1, zero), static_cast<IntType>(0));
     EXPECT_EQ(func(0, epsilon), static_cast<IntType>(0));
     EXPECT_EQ(func(0, max), static_cast<IntType>(0));
 
@@ -103,6 +106,8 @@ public:
       EXPECT_EQ(func(int_min / 2, static_cast<FXType>(2)), int_min);
     }
 
+    EXPECT_EQ(func(int_max, zero), static_cast<IntType>(0));
+    EXPECT_EQ(func(int_min, zero), static_cast<IntType>(0));
     EXPECT_EQ(func(int_max, one_half), int_max / 2);
     EXPECT_EQ(func(int_min, one_half), int_min / 2);
 
