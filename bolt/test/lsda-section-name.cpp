@@ -1,9 +1,11 @@
 // This test check that LSDA section named by .gcc_except_table.main is
 // disassembled by BOLT.
 
-// RUN: %clang++ %cxxflags -O3 -no-pie -c %s -o %t.o
-// RUN: %clang++ %cxxflags -O3 -no-pie -fuse-ld=lld %t.o -o %t
-// RUN: llvm-objcopy --rename-section .gcc_except_table=.gcc_except_table.main %t
+// REQUIRES: system-linux
+// RUN: %clangxx %cxxflags -O3 -no-pie -c %s -o %t.o
+// RUN: %clangxx %cxxflags -O3 -no-pie -fuse-ld=lld %t.o -o %t
+// RUN: llvm-objcopy --rename-section \
+// RUN: .gcc_except_table=.gcc_except_table.main %t
 // RUN: llvm-readelf -SW %t | FileCheck %s
 // RUN: llvm-bolt %t -o %t.bolt
 

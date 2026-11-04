@@ -2,15 +2,13 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
-define float @call_ldexpf(float %a, i32 %b) {
+define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexpf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    extsw r4, r4
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -21,15 +19,13 @@ define float @call_ldexpf(float %a, i32 %b) {
   ret float %result
 }
 
-define double @call_ldexp(double %a, i32 %b) {
+define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    extsw r4, r4
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -40,15 +36,13 @@ define double @call_ldexp(double %a, i32 %b) {
   ret double %result
 }
 
-define ppc_fp128 @call_ldexpl(ppc_fp128 %a, i32 %b) {
+define ppc_fp128 @call_ldexpl(ppc_fp128 %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexpl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    clrldi r5, r5, 32
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    bl ldexpl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

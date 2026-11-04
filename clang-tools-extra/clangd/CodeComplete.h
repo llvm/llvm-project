@@ -59,10 +59,7 @@ struct CodeCompleteOptions {
   bool ForceLoadPreamble = false;
 
   /// Combine overloads into a single completion item where possible.
-  /// If none, the implementation may choose an appropriate behavior.
-  /// (In practice, ClangdLSPServer enables bundling if the client claims
-  /// to supports signature help).
-  std::optional<bool> BundleOverloads;
+  bool BundleOverloads = false;
 
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
@@ -71,10 +68,12 @@ struct CodeCompleteOptions {
   /// Whether to present doc comments as plain-text or markdown.
   MarkupKind DocumentationFormat = MarkupKind::PlainText;
 
-  enum IncludeInsertion {
-    IWYU,
-    NeverInsert,
-  } InsertIncludes = IncludeInsertion::IWYU;
+  /// Whether to present the completion as a single textEdit range or as two
+  /// ranges (insert/replace).
+  bool EnableInsertReplace = false;
+
+  Config::HeaderInsertionPolicy InsertIncludes =
+      Config::HeaderInsertionPolicy::IWYU;
 
   /// Whether include insertions for Objective-C code should use #import instead
   /// of #include.
@@ -112,6 +111,14 @@ struct CodeCompleteOptions {
   /// The way argument list on calls '()' and generics '<>' are handled.
   Config::ArgumentListsPolicy ArgumentLists =
       Config::ArgumentListsPolicy::FullPlaceholders;
+
+  /// Whether to suggest code patterns & snippets or not in completion
+  Config::CodePatternsPolicy CodePatterns = Config::CodePatternsPolicy::All;
+
+  /// Filter macros using an exact prefix, or with a fuzzy match. In both cases,
+  /// macros with leading or trailing underscores are strictly filtered
+  Config::MacroFilterPolicy MacroFilter =
+      Config::MacroFilterPolicy::ExactPrefix;
 
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).
@@ -216,7 +223,9 @@ struct CodeCompletion {
   std::vector<TextEdit> FixIts;
 
   /// Holds the range of the token we are going to replace with this completion.
-  Range CompletionTokenRange;
+  Range CompletionInsertRange;
+  /// If set, the range to use when the client's insert mode is "replace".
+  std::optional<Range> CompletionReplaceRange;
 
   // Scores are used to rank completion items.
   struct Scores {
@@ -255,8 +264,12 @@ struct CodeCompleteResult {
   // The text that is being directly completed.
   // Example: foo.pb^ -> foo.push_back()
   //              ~~
-  // Typically matches the textEdit.range of Completions, but not guaranteed to.
-  std::optional<Range> CompletionRange;
+  // Typically matches the textEdit.range (or textEdit.insert range) of
+  // Completions, but not guaranteed to.
+  std::optional<Range> InsertRange;
+  // If not empty, typically matches the textEdit.replace range of Completions,
+  // but not guaranteed to.
+  std::optional<Range> ReplaceRange;
   // Usually the source will be parsed with a real C++ parser.
   // But heuristics may be used instead if e.g. the preamble is not ready.
   bool RanParser = true;
@@ -274,7 +287,6 @@ struct SpeculativeFuzzyFind {
   /// Set by `codeComplete()`. This can be used by callers to update cache.
   std::optional<FuzzyFindRequest> NewReq;
   /// The result is consumed by `codeComplete()` if speculation succeeded.
-  /// NOTE: the destructor will wait for the async call to finish.
   std::future<std::pair<bool /*Incomplete*/, SymbolSlab>> Result;
 };
 

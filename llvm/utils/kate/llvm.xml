@@ -94,6 +94,7 @@
       <item> inlinehint </item>
       <item> inteldialect </item>
       <item> jumptable </item>
+      <item> likely_module_local </item>
       <item> local_unnamed_addr </item>
       <item> mustprogress </item>
       <item> naked </item>
@@ -104,7 +105,9 @@
       <item> nofree </item>
       <item> noimplicitfloat </item>
       <item> noinline </item>
+      <item> noipa </item>
       <item> nomerge </item>
+      <item> nooutline </item>
       <item> noprofile </item>
       <item> noredzone </item>
       <item> noreturn </item>

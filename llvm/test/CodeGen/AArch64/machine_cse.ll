@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnuabi -O2 -tail-dup-placement=0 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnuabi -O2 -tail-dup-placement=0 -aarch64-br-merging-base-cost=-1 | FileCheck %s
 ; -tail-dup-placement causes tail duplication during layout. This breaks the
 ; assumptions of the test case as written (specifically, it creates an
 ; additional cmp instruction, creating a false positive), so we pass

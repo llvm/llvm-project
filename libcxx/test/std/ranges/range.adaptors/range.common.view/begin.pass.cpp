@@ -51,6 +51,12 @@ constexpr bool test() {
     assert(begin == std::ranges::begin(view));
   }
 
+  {
+    NonSimpleNonCommonView view{buf, buf + 8};
+    std::ranges::common_view<NonSimpleNonCommonView> common(view);
+    static_assert(!std::is_same_v<decltype(common.begin()), decltype(std::as_const(common).begin())>);
+  }
+
   return true;
 }
 

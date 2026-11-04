@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaLoongArch.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace clang {
@@ -22,16 +25,28 @@ SemaLoongArch::SemaLoongArch(Sema &S) : SemaBase(S) {}
 bool SemaLoongArch::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                                       unsigned BuiltinID,
                                                       CallExpr *TheCall) {
+  ASTContext &Context = getASTContext();
+  const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+  llvm::StringMap<bool> FeatureMap;
+  Context.getFunctionFeatureMap(FeatureMap, FD);
+
+  llvm::StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+  // Only check it when the builtin is not used in a function.
+  if (!Features.empty() && !FD) {
+    if (!Builtin::evaluateRequiredTargetFeatures(Features, FeatureMap))
+      return Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+             << "builtin" << Features;
+  }
+
   switch (BuiltinID) {
   default:
     break;
   // Basic intrinsics.
   case LoongArch::BI__builtin_loongarch_cacop_d:
   case LoongArch::BI__builtin_loongarch_cacop_w: {
-    SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5));
-    SemaRef.BuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12),
-                                    llvm::maxIntN(12));
-    break;
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5)) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12),
+                                           llvm::maxIntN(12));
   }
   case LoongArch::BI__builtin_loongarch_break:
   case LoongArch::BI__builtin_loongarch_dbar:

@@ -1,4 +1,4 @@
-//===--- NoAutomaticMoveCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ namespace clang::tidy::performance {
 
 /// Finds local variables that cannot be automatically moved due to constness.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/no-automatic-move.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/no-automatic-move.html
 class NoAutomaticMoveCheck : public ClangTidyCheck {
 public:
   NoAutomaticMoveCheck(StringRef Name, ClangTidyContext *Context);

@@ -1411,8 +1411,8 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    cbz r2, .LBB9_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    and r12, r2, #3
+; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhs .LBB9_4
 ; CHECK-NEXT:  @ %bb.2:
@@ -1566,8 +1566,8 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    cbz r2, .LBB10_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    and r12, r2, #3
+; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhs .LBB10_4
 ; CHECK-NEXT:  @ %bb.2:
@@ -1721,8 +1721,8 @@ define arm_aapcs_vfpcc float @half_short_mac(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    cbz r2, .LBB11_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    and r12, r2, #3
+; CHECK-NEXT:    subs r3, r2, #1
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhs .LBB11_4
 ; CHECK-NEXT:  @ %bb.2:

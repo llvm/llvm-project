@@ -1,4 +1,4 @@
-add_custom_target(libc-support-tests)
+add_libc_testsuite(libc-support-tests)
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
@@ -53,6 +53,16 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freestore
       libc.src.__support.freetrie
   )
+
+  add_libc_test(
+    tlsf_table_test
+    SUITE
+      libc-support-tests
+    SRCS
+      tlsf_table_test.cpp
+    DEPENDS
+      libc.src.__support.tlsf_table
+  )
 endif()
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
@@ -63,13 +73,42 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     SUITE
       libc-support-tests
     SRCS
-      fake_heap.s
       freelist_heap_test.cpp
     DEPENDS
       libc.src.__support.CPP.span
       libc.src.__support.freelist_heap
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+
+  # Same tests, but with the heap rotating between several free stores, so that
+  # both configurations get covered by a single build.
+  add_libc_test(
+    freelist_heap_rotation_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_test.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+      libc.src.string.memcmp
+      libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+
+  add_libc_test(
+    freelist_heap_death_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_death_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
   )
 endif()
 
@@ -81,6 +120,20 @@ add_libc_test(
     blockstore_test.cpp
   DEPENDS
     libc.src.__support.blockstore
+)
+
+add_libc_test(
+  checked_ptr_test
+  SUITE
+    libc-support-tests
+  SRCS
+    checked_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
 )
 
 add_libc_test(
@@ -110,7 +163,7 @@ add_libc_test(
   SUITE
     libc-support-tests
   SRCS
-  high_precision_decimal_test.cpp
+    high_precision_decimal_test.cpp
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
@@ -124,11 +177,13 @@ add_libc_test(
     str_to_float_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
+  HDRS
+    str_to_fp_test.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
-    libc.src.errno.errno
 )
 
 
@@ -141,7 +196,17 @@ add_libc_test(
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
+)
+
+add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.str_to_integer
 )
 
 add_libc_test(
@@ -156,6 +221,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
 
@@ -229,14 +295,11 @@ add_libc_test(
     hash_test.cpp
   DEPENDS
     libc.src.__support.hash
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
-  COMPILE_OPTIONS
-    -O3
-  UNIT_TEST_ONLY
-    # Aligned Allocation is not supported in hermetic builds.
 )
 
 add_libc_test(
@@ -249,40 +312,84 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-# FIXME: We shouldn't have regular executables created because we could be
-#        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_executable(
-    libc_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
+if(LIBC_TARGET_OS_IS_BAREMETAL AND
+  NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+  add_object_library(
+    minimal_external_crt1_for_test
+    SRCS
+      minimal_external_crt1_for_test.cpp
   )
 
-  target_link_libraries(libc_str_to_float_comparison_test
-    PRIVATE
-      "${LIBC_TARGET}"
+  add_libc_test(
+    external_startup_link_test
+    FULL_BUILD_ONLY
+    BUILD_ONLY
+    STARTUP
+      .minimal_external_crt1_for_test
+    SUITE
+      libc-support-tests
+    SRCS
+      external_startup_link_test.cpp
   )
-
-  add_executable(
-    libc_system_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
-  )
-
-  set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
-
-  add_custom_command(TARGET libc_str_to_float_comparison_test
-                     POST_BUILD
-                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
-                     DEPENDS ${float_test_file}
-                     COMMENT "Test the strtof and strtod implementations against precomputed results."
-                     VERBATIM)
 endif()
+
+add_libc_test(
+  str_to_float_comparison_test
+  BUILD_ONLY
+  SUITE
+    libc-support-tests
+  SRCS
+    str_to_float_comparison_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.stdio.printf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fgets
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.getenv
+    libc.src.string.strtok
+    libc.src.string.strdup
+    libc.src.__support.CPP.bit
+)
+
+add_libc_test(
+  weak_avl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    weak_avl_test.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+)
+
+add_libc_test(
+  wctype_utils_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wctype_utils_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.macros.properties.os
+)
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(pwd)
+add_subdirectory(printf_core)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(net)
 add_subdirectory(time)
 add_subdirectory(threads)
+add_subdirectory(wchar)
+add_subdirectory(wctype)
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
+endif()

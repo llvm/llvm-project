@@ -23,6 +23,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -36,8 +37,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lexicalscopes"
 
-/// reset - Reset the instance so that it's prepared for another function.
-void LexicalScopes::reset() {
+static bool skipUnit(const DICompileUnit *CU) {
+  return CU->getEmissionKind() == DICompileUnit::NoDebug;
+}
+
+void LexicalScopes::resetModule() {
+  FunctionMap.clear();
+  resetFunction();
+}
+
+void LexicalScopes::resetFunction() {
   MF = nullptr;
   CurrentFnLexicalScope = nullptr;
   LexicalScopeMap.clear();
@@ -47,28 +56,33 @@ void LexicalScopes::reset() {
   DominatedBlocks.clear();
 }
 
-/// initialize - Scan machine function and constuct lexical scope nest.
-void LexicalScopes::initialize(const MachineFunction &Fn) {
-  reset();
+void LexicalScopes::initialize(const Module &M) {
+  resetModule();
+  for (const Function &F : M) {
+    DISubprogram *SP = F.getSubprogram();
+    if (SP && (!SP->getUnit() || !skipUnit(SP->getUnit())))
+      FunctionMap[SP] = &F;
+  }
+}
+
+void LexicalScopes::scanFunction(const MachineFunction &Fn) {
+  resetFunction();
   // Don't attempt any lexical scope creation for a NoDebug compile unit.
-  if (Fn.getFunction().getSubprogram()->getUnit()->getEmissionKind() ==
-      DICompileUnit::NoDebug)
+  if (skipUnit(Fn.getFunction().getSubprogram()->getUnit()))
     return;
   MF = &Fn;
-  SmallVector<InsnRange, 4> MIRanges;
-  DenseMap<const MachineInstr *, LexicalScope *> MI2ScopeMap;
-  extractLexicalScopes(MIRanges, MI2ScopeMap);
+  SmallVector<std::pair<InsnRange, LexicalScope *>, 4> MIRanges;
+  extractLexicalScopes(MIRanges);
   if (CurrentFnLexicalScope) {
     constructScopeNest(CurrentFnLexicalScope);
-    assignInstructionRanges(MIRanges, MI2ScopeMap);
+    assignInstructionRanges(MIRanges);
   }
 }
 
 /// extractLexicalScopes - Extract instruction ranges for each lexical scopes
 /// for the given machine function.
 void LexicalScopes::extractLexicalScopes(
-    SmallVectorImpl<InsnRange> &MIRanges,
-    DenseMap<const MachineInstr *, LexicalScope *> &MI2ScopeMap) {
+    SmallVectorImpl<std::pair<InsnRange, LexicalScope *>> &MIRanges) {
   // Scan each instruction and create scopes. First build working set of scopes.
   for (const auto &MBB : *MF) {
     const MachineInstr *RangeBeginMI = nullptr;
@@ -97,9 +111,8 @@ void LexicalScopes::extractLexicalScopes(
         // If we have already seen a beginning of an instruction range and
         // current instruction scope does not match scope of first instruction
         // in this range then create a new instruction range.
-        InsnRange R(RangeBeginMI, PrevMI);
-        MI2ScopeMap[RangeBeginMI] = getOrCreateLexicalScope(PrevDL);
-        MIRanges.push_back(R);
+        MIRanges.push_back(
+            {InsnRange(RangeBeginMI, PrevMI), getOrCreateLexicalScope(PrevDL)});
       }
 
       // This is a beginning of a new instruction range.
@@ -111,11 +124,9 @@ void LexicalScopes::extractLexicalScopes(
     }
 
     // Create last instruction range.
-    if (RangeBeginMI && PrevMI && PrevDL) {
-      InsnRange R(RangeBeginMI, PrevMI);
-      MIRanges.push_back(R);
-      MI2ScopeMap[RangeBeginMI] = getOrCreateLexicalScope(PrevDL);
-    }
+    if (RangeBeginMI && PrevMI && PrevDL)
+      MIRanges.push_back(
+          {InsnRange(RangeBeginMI, PrevMI), getOrCreateLexicalScope(PrevDL)});
   }
 }
 
@@ -143,8 +154,7 @@ LexicalScope *LexicalScopes::getOrCreateLexicalScope(const DILocalScope *Scope,
                                                      const DILocation *IA) {
   if (IA) {
     // Skip scopes inlined from a NoDebug compile unit.
-    if (Scope->getSubprogram()->getUnit()->getEmissionKind() ==
-        DICompileUnit::NoDebug)
+    if (skipUnit(Scope->getSubprogram()->getUnit()))
       return getOrCreateLexicalScope(IA);
     // Create an abstract scope for inlined function.
     getOrCreateAbstractScope(Scope);
@@ -257,11 +267,9 @@ void LexicalScopes::constructScopeNest(LexicalScope *Scope) {
 /// assignInstructionRanges - Find ranges of instructions covered by each
 /// lexical scope.
 void LexicalScopes::assignInstructionRanges(
-    SmallVectorImpl<InsnRange> &MIRanges,
-    DenseMap<const MachineInstr *, LexicalScope *> &MI2ScopeMap) {
+    ArrayRef<std::pair<InsnRange, LexicalScope *>> MIRanges) {
   LexicalScope *PrevLexicalScope = nullptr;
-  for (const auto &R : MIRanges) {
-    LexicalScope *S = MI2ScopeMap.lookup(R.first);
+  for (auto [R, S] : MIRanges) {
     assert(S && "Lost LexicalScope for a machine instruction!");
     if (PrevLexicalScope && !PrevLexicalScope->dominates(S))
       PrevLexicalScope->closeInsnRange(S);
@@ -287,8 +295,7 @@ void LexicalScopes::getMachineBasicBlocks(
     return;
 
   if (Scope == CurrentFnLexicalScope) {
-    for (const auto &MBB : *MF)
-      MBBs.insert(&MBB);
+    MBBs.insert_range(llvm::make_pointer_range(*MF));
     return;
   }
 

@@ -25,6 +25,11 @@ class Op<bits<16> Opcode, dag outs, dag ins, string asmstr, list<dag> pattern = 
   let Pattern = pattern;
 }
 
+class UnknownOp<dag outs, dag ins, string asmstr, list<dag> pattern = []>
+    : Op<0, outs, ins, asmstr, pattern> {
+  let isPseudo = 1;
+}
+
 // Pseudo instructions
 class Pseudo<dag outs, dag ins> : Op<0, outs, ins, ""> {
   let isPseudo = 1;

@@ -23,7 +23,7 @@ mlir::Value fir::runtime::genCreateValueStack(mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, funcType.getInput(1));
   auto args = fir::runtime::createArguments(builder, loc, funcType, sourceFile,
                                             sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genPushValue(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -33,7 +33,7 @@ void fir::runtime::genPushValue(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr,
                                             boxValue);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genValueAt(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -44,7 +44,7 @@ void fir::runtime::genValueAt(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr,
                                             i, retValueBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDestroyValueStack(mlir::Location loc,
@@ -54,7 +54,7 @@ void fir::runtime::genDestroyValueStack(mlir::Location loc,
       fir::runtime::getRuntimeFunc<mkRTKey(DestroyValueStack)>(loc, builder);
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 mlir::Value fir::runtime::genCreateDescriptorStack(mlir::Location loc,
@@ -68,7 +68,7 @@ mlir::Value fir::runtime::genCreateDescriptorStack(mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, funcType.getInput(1));
   auto args = fir::runtime::createArguments(builder, loc, funcType, sourceFile,
                                             sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genPushDescriptor(mlir::Location loc,
@@ -80,7 +80,7 @@ void fir::runtime::genPushDescriptor(mlir::Location loc,
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr,
                                             boxDescriptor);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDescriptorAt(mlir::Location loc,
@@ -92,7 +92,7 @@ void fir::runtime::genDescriptorAt(mlir::Location loc,
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr,
                                             i, retDescriptorBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDestroyDescriptorStack(mlir::Location loc,
@@ -103,5 +103,5 @@ void fir::runtime::genDestroyDescriptorStack(mlir::Location loc,
                                                                     builder);
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType, opaquePtr);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

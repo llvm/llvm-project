@@ -92,8 +92,8 @@ bool WatchpointOptions::InvokeCallback(StoppointCallbackContext *context,
     return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, watch_id);
-  } else
-    return true;
+  }
+  return true;
 }
 
 bool WatchpointOptions::HasCallback() {

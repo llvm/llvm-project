@@ -183,7 +183,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   std::lock_guard<sys::Mutex> locked(lock);
 
   // Save information about our target
-  Arch = (Triple::ArchType)Obj.getArch();
+  Arch = Obj.getArch();
   IsTargetLittleEndian = Obj.isLittleEndian();
   setMipsABI(Obj);
 
@@ -864,6 +864,9 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
     if (IsTLS) {
       auto TLSSection = MemMgr.allocateTLSSection(Allocate, Alignment.value(),
                                                   SectionID, Name);
+      if (!TLSSection.InitializationImage)
+        return make_error<RuntimeDyldError>(
+            "Unable to allocate TLS section memory");
       Addr = TLSSection.InitializationImage;
       LoadAddress = TLSSection.Offset;
     } else if (IsCode) {
@@ -891,7 +894,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
       // Align DataSize to stub alignment if we have any stubs (PaddingSize will
       // have been increased above to account for this).
       if (StubBufSize > 0)
-        DataSize &= -(uint64_t)getStubAlignment().value();
+        DataSize &= -getStubAlignment().value();
     }
 
     LLVM_DEBUG(dbgs() << "emitSection SectionID: " << SectionID << " Name: "
@@ -1043,6 +1046,14 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     writeBytesUnaligned(DaddiuT9Instr, Addr + 20, 4);
     writeBytesUnaligned(JrT9Instr, Addr + 24, 4);
     writeBytesUnaligned(NopInstr, Addr + 28, 4);
+    return Addr;
+  } else if (Arch == Triple::ppc) {
+    // Load the target address into r12 and branch to it. r12 is volatile
+    // and is not used to pass arguments.
+    writeInt32BE(Addr, 0x3D800000);      // lis   r12, hi(addr)
+    writeInt32BE(Addr + 4, 0x618C0000);  // ori   r12, r12, lo(addr)
+    writeInt32BE(Addr + 8, 0x7D8903A6);  // mtctr r12
+    writeInt32BE(Addr + 12, 0x4E800420); // bctr
     return Addr;
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     // Depending on which version of the ELF ABI is in use, we need to
@@ -1299,7 +1310,7 @@ RuntimeDyld::MemoryManager::allocateTLSSection(uintptr_t Size,
                                                unsigned Alignment,
                                                unsigned SectionID,
                                                StringRef SectionName) {
-  report_fatal_error("allocation of TLS not implemented");
+  return {};
 }
 
 void RuntimeDyld::MemoryManager::anchor() {}
@@ -1361,18 +1372,17 @@ std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyld::loadObject(const ObjectFile &Obj) {
   if (!Dyld) {
     if (Obj.isELF())
-      Dyld =
-          createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
-                               MemMgr, Resolver, ProcessAllSections,
-                               std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldELF(Obj.getArch(), MemMgr, Resolver,
+                                  ProcessAllSections,
+                                  std::move(NotifyStubEmitted));
     else if (Obj.isMachO())
-      Dyld = createRuntimeDyldMachO(
-               static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
-               ProcessAllSections, std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldMachO(Obj.getArch(), MemMgr, Resolver,
+                                    ProcessAllSections,
+                                    std::move(NotifyStubEmitted));
     else if (Obj.isCOFF())
-      Dyld = createRuntimeDyldCOFF(
-               static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
-               ProcessAllSections, std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldCOFF(Obj.getArch(), MemMgr, Resolver,
+                                   ProcessAllSections,
+                                   std::move(NotifyStubEmitted));
     else
       report_fatal_error("Incompatible object format!");
   }

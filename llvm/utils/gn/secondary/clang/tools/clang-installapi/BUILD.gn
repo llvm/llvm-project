@@ -13,6 +13,7 @@ driver_executable("clang-installapi") {
     "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/InstallAPI",
+    "//clang/lib/Options",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",

@@ -29,7 +29,12 @@ bool CallGraphUpdater::finalize() {
   // no call graph was provided.
   for (Function *DeadFn : DeadFunctions) {
     DeadFn->removeDeadConstantUsers();
-    DeadFn->replaceAllUsesWith(PoisonValue::get(DeadFn->getType()));
+    // If the function is used by metadata, we don't want it to be replaced with
+    // poison in the metadata, so we replace it with nullptr in the metadata
+    // before RAUW'ing the non-metadata uses below.
+    if (DeadFn->isUsedByMetadata())
+      ValueAsMetadata::handleDeletion(DeadFn);
+    DeadFn->replaceNonMetadataUsesWith(PoisonValue::get(DeadFn->getType()));
 
     if (LCG && !ReplacedFunctions.count(DeadFn)) {
       // Taken mostly from the inliner:
@@ -67,6 +72,20 @@ void CallGraphUpdater::reanalyzeFunction(Function &Fn) {
     LazyCallGraph::SCC *C = LCG->lookupSCC(N);
     updateCGAndAnalysisManagerForCGSCCPass(*LCG, *C, N, *AM, *UR, *FAM);
   }
+}
+
+void CallGraphUpdater::addReferences(Function &Fn, Constant &C) {
+  if (!LCG)
+    return;
+
+  LazyCallGraph::Node &N = LCG->get(Fn);
+  SmallVector<Constant *, 4> Worklist = {&C};
+  SmallPtrSet<Constant *, 4> Visited = {&C};
+  LazyCallGraph::visitReferences(Worklist, Visited, [&](Function &Referee) {
+    LazyCallGraph::Node &RefereeN = LCG->get(Referee);
+    if (!N->lookup(RefereeN))
+      LCG->lookupRefSCC(N)->insertTrivialRefEdge(N, RefereeN);
+  });
 }
 
 void CallGraphUpdater::registerOutlinedFunction(Function &OriginalFn,

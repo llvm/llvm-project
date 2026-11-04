@@ -44,6 +44,9 @@
 // Use profile on main and get bitcode.
 // RUN: %clang -fprofile-use=main.profdata -flto=thin -O2 -c main.cpp -o main.bc
 
+// Test that the profile was loaded, and the internal callee has a GUID.
+// RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=PGOName
+
 // Run llvm-lto to get summary file.
 // RUN: llvm-lto -thinlto -o summary main.bc lib.bc
 
@@ -60,9 +63,9 @@
 // IMPORTS-DAG: main.cpp: Import {{.*}}callee0{{.*}}llvm.[[#]]
 // IMPORTS-DAG: main.cpp: Import {{.*}}global_func{{.*}}
 
-// PGOName-DAG: define {{.*}}callee1{{.*}} !prof ![[#]] {
-// PGOName-DAG: define internal {{.*}}callee0{{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
-// PGOName-DAG: ![[#MD]] = !{!"{{.*}}lib.cpp;{{.*}}callee0{{.*}}"}
+// PGOName-DAG: define {{.*}}callee1{{.*}} !prof ![[#]]
+// PGOName-DAG: define internal {{.*}}callee0{{.*}} !prof ![[#]] !guid ![[#]]
+// PGOName-NOT: !PGOFuncName
 
 // ICP-REMARK: Promote indirect call to {{.*}}callee0{{.*}}llvm.[[#]] with count 1 out of 1
 // ICP-REMARK: Promote indirect call to {{.*}}callee1{{.*}} with count 1 out of 1
@@ -80,7 +83,7 @@ static void callee0() {}
 void callee1() {}
 typedef void (*FPT)();
 FPT calleeAddrs[] = {callee0, callee1};
-// `global_func`` might call one of two indirect callees. callee0 has internal
+// `global_func` might call one of two indirect callees. callee0 has internal
 // linkage and callee1 has external linkage.
 void global_func() {
   FPT fp = calleeAddrs[0];

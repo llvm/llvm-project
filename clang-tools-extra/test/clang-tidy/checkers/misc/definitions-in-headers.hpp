@@ -25,7 +25,7 @@ class CA {
 
 void CA::f2() { }
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f2' defined in a header file;
-// CHECK-FIXES: inline void CA::f2() {
+// CHECK-FIXES: inline void CA::f2() { }
 
 template <>
 int CA::f3() {
@@ -203,4 +203,4 @@ constexpr bool f13<void, int> = false;
 
 int main() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' defined in a header file;
-// CHECK-FIXES: {{^}}int main() {
+// CHECK-FIXES: int main() {}

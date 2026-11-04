@@ -292,3 +292,51 @@ taken:
 end:
   ret i32 0
 }
+
+define i1 @gt_sub_nsw_ult(i8 %L0, i8 %L1, i1 %V) {
+; CHECK-LABEL: define i1 @gt_sub_nsw_ult(
+; CHECK-SAME: i8 [[L0:%.*]], i8 [[L1:%.*]], i1 [[V:%.*]]) {
+; CHECK-NEXT:    [[LHS:%.*]] = icmp samesign ugt i8 [[L0]], [[L1]]
+; CHECK-NEXT:    br i1 [[LHS]], label %[[LHS_TRUE:.*]], label %[[LHS_FALSE:.*]]
+; CHECK:       [[LHS_TRUE]]:
+; CHECK-NEXT:    [[R0:%.*]] = sub nsw i8 [[L0]], [[L1]]
+; CHECK-NEXT:    [[RHS:%.*]] = icmp ult i8 [[R0]], -1
+; CHECK-NEXT:    ret i1 [[RHS]]
+; CHECK:       [[LHS_FALSE]]:
+; CHECK-NEXT:    ret i1 [[V]]
+;
+  %LHS = icmp samesign ugt i8 %L0, %L1
+  br i1 %LHS, label %LHS_true, label %LHS_false
+
+LHS_true:
+  %R0 = sub nsw i8 %L0, %L1
+  %RHS = icmp ult i8 %R0, -1
+  ret i1 %RHS
+
+LHS_false:
+  ret i1 %V
+}
+
+define i1 @lt_sub_nsw_ult(i8 %L0, i8 %L1, i1 %V) {
+; CHECK-LABEL: define i1 @lt_sub_nsw_ult(
+; CHECK-SAME: i8 [[L0:%.*]], i8 [[L1:%.*]], i1 [[V:%.*]]) {
+; CHECK-NEXT:    [[LHS:%.*]] = icmp samesign ult i8 [[L0]], [[L1]]
+; CHECK-NEXT:    br i1 [[LHS]], label %[[LHS_TRUE:.*]], label %[[LHS_FALSE:.*]]
+; CHECK:       [[LHS_TRUE]]:
+; CHECK-NEXT:    [[R0:%.*]] = sub nsw i8 [[L0]], [[L1]]
+; CHECK-NEXT:    [[RHS:%.*]] = icmp ult i8 [[R0]], 1
+; CHECK-NEXT:    ret i1 [[RHS]]
+; CHECK:       [[LHS_FALSE]]:
+; CHECK-NEXT:    ret i1 [[V]]
+;
+  %LHS = icmp samesign ult i8 %L0, %L1
+  br i1 %LHS, label %LHS_true, label %LHS_false
+
+LHS_true:
+  %R0 = sub nsw i8 %L0, %L1
+  %RHS = icmp ult i8 %R0, 1
+  ret i1 %RHS
+
+LHS_false:
+  ret i1 %V
+}

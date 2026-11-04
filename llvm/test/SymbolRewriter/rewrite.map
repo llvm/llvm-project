@@ -64,3 +64,17 @@ global variable: {
   transform: target_comdat_variable_\1,
 }
 
+function: {
+  source: ?source_bad_regex_function,
+  target: target_bad_regex_function,
+}
+
+global variable: {
+  source: ?source_bad_regex_variable,
+  target: target_bad_regex_variable,
+}
+
+global alias: {
+  source: ?source_bad_regex_alias,
+  target: target_bad_regex_alias,
+}

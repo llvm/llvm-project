@@ -11,6 +11,8 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 namespace emitc {
@@ -27,6 +29,21 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 
 /// Populates `patterns` with expression-related patterns.
 void populateExpressionPatterns(RewritePatternSet &patterns);
+
+//===----------------------------------------------------------------------===//
+// The WrapFuncInClass pass.
+//===----------------------------------------------------------------------===//
+
+void populateWrapFuncInClass(
+    RewritePatternSet &patterns, StringRef funcName, StringRef classNameFormat,
+    DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
+
+//===----------------------------------------------------------------------===//
+// The AddReflectionMap pass.
+//===----------------------------------------------------------------------===//
+
+void populateMLGOAddReflectionMapPatterns(
+    RewritePatternSet &patterns, ArrayRef<std::string> includedFieldAttrs);
 
 } // namespace emitc
 } // namespace mlir

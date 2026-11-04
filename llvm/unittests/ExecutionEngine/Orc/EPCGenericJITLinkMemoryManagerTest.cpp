@@ -8,10 +8,16 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Memory.h"
@@ -38,8 +44,11 @@ public:
     return ExecutorAddr::fromPtr(MB.base());
   }
 
-  Error finalize(tpctypes::FinalizeRequest FR) {
+  Expected<ExecutorAddr> initialize(tpctypes::FinalizeRequest FR) {
+    assert(!FR.Segments.empty());
+    ExecutorAddr Base = FR.Segments[0].Addr;
     for (auto &Seg : FR.Segments) {
+      Base = std::min(Base, Seg.Addr);
       char *Mem = Seg.Addr.toPtr<char *>();
       memcpy(Mem, Seg.Content.data(), Seg.Content.size());
       memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
@@ -51,10 +60,10 @@ public:
       if ((Seg.RAG.Prot & MemProt::Exec) != MemProt::Exec)
         sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
     }
-    return Error::success();
+    return Base;
   }
 
-  Error deallocate(std::vector<ExecutorAddr> &Bases) {
+  Error release(std::vector<ExecutorAddr> &Bases) {
     Error Err = Error::success();
     for (auto &Base : Bases) {
       auto I = Blocks.find(Base.toPtr<void *>());
@@ -78,45 +87,55 @@ private:
   DenseMap<void *, sys::OwningMemoryBlock> Blocks;
 };
 
-llvm::orc::shared::CWrapperFunctionResult testReserve(const char *ArgData,
-                                                      size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
-      handle(ArgData, ArgSize,
+CWrapperFunctionBuffer testReserve(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::sps_ci::MemMgrReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
-          .release();
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult testFinalize(const char *ArgData,
-                                                       size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
-      handle(ArgData, ArgSize,
-             makeMethodWrapperHandler(&SimpleAllocator::finalize))
-          .release();
+CWrapperFunctionBuffer testInitialize(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::sps_ci::MemMgrInitialize::SPSSig>::handle(
+             ArgData, ArgSize,
+             makeMethodWrapperHandler(&SimpleAllocator::initialize))
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult testDeallocate(const char *ArgData,
-                                                         size_t ArgSize) {
-  return WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
-      handle(ArgData, ArgSize,
-             makeMethodWrapperHandler(&SimpleAllocator::deallocate))
-          .release();
+CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::sps_ci::MemMgrRelease::SPSSig>::handle(
+             ArgData, ArgSize,
+             makeMethodWrapperHandler(&SimpleAllocator::release))
+      .release();
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
-  auto SelfEPC = cantFail(SelfExecutorProcessControl::Create());
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  MangleAndInterner Mangle(ES);
   SimpleAllocator SA;
 
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  SAs.Allocator = ExecutorAddr::fromPtr(&SA);
-  SAs.Reserve = ExecutorAddr::fromPtr(&testReserve);
-  SAs.Finalize = ExecutorAddr::fromPtr(&testFinalize);
-  SAs.Deallocate = ExecutorAddr::fromPtr(&testDeallocate);
+  // Register the test wrappers in the bootstrap JITDylib under the default
+  // SimpleNativeMemoryMap names so that Create resolves its proxies to them.
+  namespace sps_ci = rt::sps_ci;
+  auto Exported = JITSymbolFlags::Exported;
+  cantFail(ES.getBootstrapJITDylib().define(absoluteSymbols({
+      {Mangle(sps_ci::SimpleNativeMemoryMapInstanceName),
+       {ExecutorAddr::fromPtr(&SA), Exported}},
+      {Mangle(sps_ci::MemMgrReserve::Name),
+       {ExecutorAddr::fromPtr(&testReserve), Exported}},
+      {Mangle(sps_ci::MemMgrInitialize::Name),
+       {ExecutorAddr::fromPtr(&testInitialize), Exported}},
+      // Deinitialize is part of the interface but unused here; the release
+      // wrapper (same signature) stands in so the proxy resolves.
+      {Mangle(sps_ci::MemMgrDeinitialize::Name),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+      {Mangle(sps_ci::MemMgrRelease::Name),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+  })));
 
-  auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
+  auto MemMgr = cantFail(sps::createEPCGenericJITLinkMemoryManager(ES));
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, std::make_shared<orc::SymbolStringPool>(),
+      *MemMgr, std::make_shared<SymbolStringPool>(),
       Triple("x86_64-apple-darwin"), nullptr,
       {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA, Succeeded());
@@ -136,7 +155,100 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
-  cantFail(SelfEPC->disconnect());
+  cantFail(ES.endSession());
+}
+
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromJITDylib) {
+  // Verify that Create(JITDylib&) looks up the default SimpleNativeMemoryMap
+  // symbols and constructs the memory manager.
+  namespace sps_ci = rt::sps_ci;
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+  ExecutionSession ES(std::move(EPC));
+  MangleAndInterner Mangle(ES);
+  auto &JD = ES.createBareJITDylib("JD");
+
+  ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
+      ReleaseAddr(5);
+
+  cantFail(JD.define(absoluteSymbols({
+      {Mangle(sps_ci::SimpleNativeMemoryMapInstanceName),
+       {AllocatorAddr, JITSymbolFlags::Exported}},
+      {Mangle(sps_ci::MemMgrReserve::Name),
+       {ReserveAddr, JITSymbolFlags::Exported}},
+      {Mangle(sps_ci::MemMgrInitialize::Name),
+       {InitAddr, JITSymbolFlags::Exported}},
+      {Mangle(sps_ci::MemMgrDeinitialize::Name),
+       {DeinitAddr, JITSymbolFlags::Exported}},
+      {Mangle(sps_ci::MemMgrRelease::Name),
+       {ReleaseAddr, JITSymbolFlags::Exported}},
+  })));
+
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
+  EXPECT_THAT_EXPECTED(Result, Succeeded());
+
+  cantFail(ES.endSession());
+}
+
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
+  // Verify that Create returns an error when a symbol is missing.
+  namespace sps_ci = rt::sps_ci;
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+  ExecutionSession ES(std::move(EPC));
+  MangleAndInterner Mangle(ES);
+  auto &JD = ES.createBareJITDylib("JD");
+
+  // Only define the instance symbol; the wrapper symbols are missing.
+  cantFail(JD.define(absoluteSymbols({
+      {Mangle(sps_ci::SimpleNativeMemoryMapInstanceName),
+       {ExecutorAddr(1), JITSymbolFlags::Exported}},
+  })));
+
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
+  EXPECT_THAT_EXPECTED(Result, Failed());
+
+  cantFail(ES.endSession());
+}
+
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
+  // Verify that Create(ExecutionSession&) looks up symbols in the bootstrap
+  // JITDylib using the default SimpleNativeMemoryMap symbol names.
+  namespace sps_ci = rt::sps_ci;
+  class EPCWithBootstrapSymbols : public UnsupportedExecutorProcessControl {
+  public:
+    EPCWithBootstrapSymbols(std::shared_ptr<SymbolStringPool> SSP,
+                            StringMap<ExecutorAddr> BS)
+        : UnsupportedExecutorProcessControl(std::move(SSP), nullptr,
+                                            sys::getProcessTriple()) {
+      this->BootstrapSymbols = std::move(BS);
+    }
+  };
+
+  ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
+      ReleaseAddr(5);
+
+  StringMap<ExecutorAddr> BootstrapSyms;
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  BootstrapSyms[Mangle.mangledCopy(sps_ci::SimpleNativeMemoryMapInstanceName)] =
+      AllocatorAddr;
+  BootstrapSyms[Mangle.mangledCopy(sps_ci::MemMgrReserve::Name)] = ReserveAddr;
+  BootstrapSyms[Mangle.mangledCopy(sps_ci::MemMgrInitialize::Name)] = InitAddr;
+  BootstrapSyms[Mangle.mangledCopy(sps_ci::MemMgrDeinitialize::Name)] =
+      DeinitAddr;
+  BootstrapSyms[Mangle.mangledCopy(sps_ci::MemMgrRelease::Name)] = ReleaseAddr;
+
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
+  ExecutionSession ES(std::move(EPC));
+
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(ES);
+  EXPECT_THAT_EXPECTED(Result, Succeeded());
+
+  cantFail(ES.endSession());
 }
 
 } // namespace

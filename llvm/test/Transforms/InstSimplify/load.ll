@@ -60,3 +60,106 @@ define i8 @load_i8_multi_gep_const_zero_array(i64 %idx1, i64 %idx2) {
   %load = load i8, ptr %gep
   ret i8 %load
 }
+
+@allones_i32 = constant i32 -1
+
+define b8 @load_b8_from_allones_i32() {
+; CHECK-LABEL: @load_b8_from_allones_i32(
+; CHECK-NEXT:    ret b8 -1
+;
+  %load = load b8, ptr @allones_i32
+  ret b8 %load
+}
+
+define b8 @load_b8_from_i32_constant() {
+; CHECK-LABEL: @load_b8_from_i32_constant(
+; CHECK-NEXT:    ret b8 42
+;
+  %load = load b8, ptr @GV
+  ret b8 %load
+}
+
+define b8 @load_b8_from_fp_constant() {
+; CHECK-LABEL: @load_b8_from_fp_constant(
+; CHECK-NEXT:    ret b8 -30
+;
+  %load = load b8, ptr @constvec
+  ret b8 %load
+}
+
+define <4 x b8> @load_vb8_from_allones_gep(i64 %idx) {
+; CHECK-LABEL: @load_vb8_from_allones_gep(
+; CHECK-NEXT:    ret <4 x b8> splat (b8 -1)
+;
+  %gep = getelementptr i8, ptr @allones_i32, i64 %idx
+  %load = load <4 x b8>, ptr %gep
+  ret <4 x b8> %load
+}
+
+@allones_ptr = constant ptr inttoptr (i64 -1 to ptr)
+@ptr_to_GV = constant ptr @GV
+@struct_inttoptr = constant { ptr, i8 } { ptr inttoptr (i64 -1 to ptr), i8 7 }
+@null_ptr = constant ptr null
+
+define b8 @load_b8_from_inttoptr() {
+; CHECK-LABEL: @load_b8_from_inttoptr(
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @allones_ptr, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
+;
+  %load = load b8, ptr @allones_ptr
+  ret b8 %load
+}
+
+define <4 x b8> @load_vb8_from_inttoptr() {
+; CHECK-LABEL: @load_vb8_from_inttoptr(
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x b8>, ptr @allones_ptr, align 4
+; CHECK-NEXT:    ret <4 x b8> [[LOAD]]
+;
+  %load = load <4 x b8>, ptr @allones_ptr
+  ret <4 x b8> %load
+}
+
+define <4 x b8> @load_vb8_from_allones_ptr_gep(i64 %idx) {
+; CHECK-LABEL: @load_vb8_from_allones_ptr_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @allones_ptr, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x b8>, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret <4 x b8> [[LOAD]]
+;
+  %gep = getelementptr i8, ptr @allones_ptr, i64 %idx
+  %load = load <4 x b8>, ptr %gep
+  ret <4 x b8> %load
+}
+
+define b8 @load_b8_from_struct_inttoptr() {
+; CHECK-LABEL: @load_b8_from_struct_inttoptr(
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @struct_inttoptr, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
+;
+  %load = load b8, ptr @struct_inttoptr
+  ret b8 %load
+}
+
+define b8 @load_b8_from_struct_after_inttoptr() {
+; CHECK-LABEL: @load_b8_from_struct_after_inttoptr(
+; CHECK-NEXT:    ret b8 7
+;
+  %gep = getelementptr inbounds i8, ptr @struct_inttoptr, i64 8
+  %load = load b8, ptr %gep
+  ret b8 %load
+}
+
+define b64 @load_b64_from_ptr() {
+; CHECK-LABEL: @load_b64_from_ptr(
+; CHECK-NEXT:    ret b64 bitcast (ptr @GV to b64)
+;
+  %load = load b64, ptr @ptr_to_GV
+  ret b64 %load
+}
+
+define b8 @load_b8_from_null_ptr() {
+; CHECK-LABEL: @load_b8_from_null_ptr(
+; CHECK-NEXT:    ret b8 0
+;
+  %load = load b8, ptr @null_ptr
+  ret b8 %load
+}

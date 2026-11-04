@@ -19,10 +19,10 @@ class TestFrameVarDepthAndElemCount(TestBase):
         self.expect(
             "frame var --depth 2 --element-count 5 -- c",
             substrs=[
-                "[0] = {\n    b ={...}\n  }",
-                "[1] = {\n    b ={...}\n  }",
-                "[2] = {\n    b ={...}\n  }",
-                "[3] = {\n    b ={...}\n  }",
-                "[4] = {\n    b ={...}\n  }",
+                "[0] = {\n    b = {...}\n  }",
+                "[1] = {\n    b = {...}\n  }",
+                "[2] = {\n    b = {...}\n  }",
+                "[3] = {\n    b = {...}\n  }",
+                "[4] = {\n    b = {...}\n  }",
             ],
         )

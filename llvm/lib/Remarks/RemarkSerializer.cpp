@@ -18,37 +18,32 @@ using namespace llvm;
 using namespace llvm::remarks;
 
 Expected<std::unique_ptr<RemarkSerializer>>
-remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
-                                raw_ostream &OS) {
+remarks::createRemarkSerializer(Format RemarksFormat, raw_ostream &OS) {
   switch (RemarksFormat) {
   case Format::Unknown:
+  case Format::Auto:
     return createStringError(std::errc::invalid_argument,
-                             "Unknown remark serializer format.");
+                             "Invalid remark serializer format.");
   case Format::YAML:
-    return std::make_unique<YAMLRemarkSerializer>(OS, Mode);
-  case Format::YAMLStrTab:
-    return std::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode);
+    return std::make_unique<YAMLRemarkSerializer>(OS);
   case Format::Bitstream:
-    return std::make_unique<BitstreamRemarkSerializer>(OS, Mode);
+    return std::make_unique<BitstreamRemarkSerializer>(OS);
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }
 
 Expected<std::unique_ptr<RemarkSerializer>>
-remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
-                                raw_ostream &OS, remarks::StringTable StrTab) {
+remarks::createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
+                                remarks::StringTable StrTab) {
   switch (RemarksFormat) {
   case Format::Unknown:
+  case Format::Auto:
     return createStringError(std::errc::invalid_argument,
-                             "Unknown remark serializer format.");
+                             "Invalid remark serializer format.");
   case Format::YAML:
-    return std::make_unique<YAMLRemarkSerializer>(OS, Mode, std::move(StrTab));
-  case Format::YAMLStrTab:
-    return std::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode,
-                                                        std::move(StrTab));
+    return std::make_unique<YAMLRemarkSerializer>(OS, std::move(StrTab));
   case Format::Bitstream:
-    return std::make_unique<BitstreamRemarkSerializer>(OS, Mode,
-                                                       std::move(StrTab));
+    return std::make_unique<BitstreamRemarkSerializer>(OS, std::move(StrTab));
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }

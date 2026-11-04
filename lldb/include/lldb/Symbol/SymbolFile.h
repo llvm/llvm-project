@@ -18,6 +18,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -63,16 +64,21 @@ public:
   // Each symbol file can claim to support one or more symbol file abilities.
   // These get returned from SymbolFile::GetAbilities(). These help us to
   // determine which plug-in will be best to load the debug information found
-  // in files.
+  // in files. Symbols is the least-significant bit so a plug-in reporting any
+  // other ability ranks ahead of one reporting only Symbols.
   enum Abilities {
-    CompileUnits = (1u << 0),
-    LineTables = (1u << 1),
-    Functions = (1u << 2),
-    Blocks = (1u << 3),
-    GlobalVariables = (1u << 4),
-    LocalVariables = (1u << 5),
-    VariableTypes = (1u << 6),
-    kAllAbilities = ((1u << 7) - 1u)
+    Symbols = (1u << 0),
+    CompileUnits = (1u << 1),
+    LineTables = (1u << 2),
+    Functions = (1u << 3),
+    Blocks = (1u << 4),
+    GlobalVariables = (1u << 5),
+    LocalVariables = (1u << 6),
+    VariableTypes = (1u << 7),
+    /// All detailed debug-information abilities. Symbols is excluded because
+    /// it describes information from the object file's symbol table.
+    kAllAbilities = CompileUnits | LineTables | Functions | Blocks |
+        GlobalVariables | LocalVariables | VariableTypes
   };
 
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
@@ -144,11 +150,13 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  virtual Symtab *GetSymtab() = 0;
+  virtual Symtab *GetSymtab(bool can_create = true) = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
-  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+  virtual XcodeSDKAndSysroot ParseXcodeSDK(CompileUnit &comp_unit) {
+    return {};
+  }
 
   /// This function exists because SymbolFileDWARFDebugMap may extra compile
   /// units which aren't exposed as "real" compile units. In every other
@@ -212,13 +220,13 @@ public:
   struct ArrayInfo {
     int64_t first_index = 0;
 
-    ///< Each entry belongs to a distinct DW_TAG_subrange_type.
-    ///< For multi-dimensional DW_TAG_array_types we would have
-    ///< an entry for each dimension. An entry represents the
-    ///< optional element count of the subrange.
+    /// Each entry belongs to a distinct DW_TAG_subrange_type.
+    /// For multi-dimensional DW_TAG_array_types we would have
+    /// an entry for each dimension. An entry represents the
+    /// optional element count of the subrange.
     ///
-    ///< The order of entries follows the order of the DW_TAG_subrange_type
-    ///< children of this DW_TAG_array_type.
+    /// The order of entries follows the order of the DW_TAG_subrange_type
+    /// children of this DW_TAG_array_type.
     llvm::SmallVector<std::optional<uint64_t>, 1> element_orders;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;
@@ -296,7 +304,8 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        SymbolContextList &sc_list);
 
-  virtual void DumpClangAST(Stream &s) {}
+  virtual void DumpClangAST(Stream &s, llvm::StringRef filter,
+                            bool show_colors) {}
   virtual void FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t max_matches,
@@ -305,6 +314,9 @@ public:
                                    uint32_t max_matches,
                                    VariableList &variables);
   virtual void FindFunctions(const Module::LookupInfo &lookup_info,
+                             const CompilerDeclContext &parent_decl_ctx,
+                             bool include_inlines, SymbolContextList &sc_list);
+  virtual void FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
                              const CompilerDeclContext &parent_decl_ctx,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
@@ -327,6 +339,18 @@ public:
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
+
+  /// Resolves the function corresponding to the specified LLDB function
+  /// call \c label.
+  ///
+  /// \param[in,out] label The FunctionCallLabel to be resolved.
+  ///
+  /// \returns An llvm::Error if the specified \c label couldn't be resolved.
+  ///          Returns the resolved function (as a SymbolContext) otherwise.
+  virtual llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) {
+    return llvm::createStringError("Not implemented");
+  }
 
   virtual void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                         lldb::TypeClass type_mask,
@@ -380,7 +404,8 @@ public:
 
   /// Return the number of stack bytes taken up by the parameters to this
   /// function.
-  virtual llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) {
+  virtual llvm::Expected<lldb::addr_t>
+  GetParameterStackSize(const Symbol &symbol) {
     return llvm::createStringError(make_error_code(llvm::errc::not_supported),
                                    "Operation not supported.");
   }
@@ -467,10 +492,36 @@ public:
   ///     If true, then only return separate debug info files that encountered
   ///     errors during loading. If false, then return all expected separate
   ///     debug info files, regardless of whether they were successfully loaded.
+  /// \param load_all_debug_info
+  ///     If true, force loading any symbol files if they are not yet loaded.
   virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                    bool errors_only) {
+                                    bool errors_only,
+                                    bool load_all_debug_info = false) {
     return false;
   };
+
+  /// Retrieves statistics about DWO files associated with this symbol file.
+  /// This function returns a DWOStats struct containing:
+  ///   - The number of successfully loaded/parsed DWO files.
+  ///   - The total number of DWO files encountered.
+  ///   - The number of DWO CUs that failed to load due to errors.
+  /// If this symbol file does not support DWO files, all counts will be zero.
+  ///
+  /// \returns
+  ///   A DWOStats struct with loaded, total, and error counts for DWO files.
+  virtual DWOStats GetDwoStats() { return {}; }
+
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique list of all the filespecs, or an empty list.
+  virtual lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() {
+    return {};
+  }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
@@ -489,6 +540,14 @@ public:
     std::unordered_map<lldb::CompUnitSP, Args> args;
     GetCompileOptions(args);
     return args;
+  }
+
+  std::string GetObjectName() const;
+
+  /// Get the semantically innermost non-function type that encloses the
+  /// provided variable
+  virtual lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+    return {};
   }
 
 protected:
@@ -531,7 +590,7 @@ public:
     return m_abilities;
   }
 
-  Symtab *GetSymtab() override;
+  Symtab *GetSymtab(bool can_create = true) override;
 
   ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
   const ObjectFile *GetObjectFile() const override {

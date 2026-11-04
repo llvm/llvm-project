@@ -278,14 +278,14 @@ define <4 x float> @test_int_x86_avx512fp16_maskz_cfcmadd_sh(<4 x float> %x0, <4
   ret <4 x float> %res
 }
 
-define <4 x float> @PR98306() {
+define <4 x float> @PR98306(i8 %m) {
 ; CHECK-LABEL: PR98306:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [7.8125E-3,1.050912E+6,4.203776E+6,1.6815616E+7]
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [3.2E+1,4.03288064E+8,8.0658432E+8,1.61318502E+9]
 ; CHECK-NEXT:    vfmaddcsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfmadd.csh(<4 x float> <float 7.812500e-03, float 0x4130092000000000, float 0x4150094000000000, float 0x4170096000000000>, <4 x float> <float 2.000000e+00, float 0x4188098000000000, float 0x4198099000000000, float 0x41A809A000000000>, <4 x float> <float 3.200000e+01, float 0x41B809B000000000, float 0x41C809C000000000, float 0x41D809D000000000>, i8 0, i32 4)
+  %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfmadd.csh(<4 x float> <float 7.812500e-03, float 0x4130092000000000, float 0x4150094000000000, float 0x4170096000000000>, <4 x float> <float 2.000000e+00, float 0x4188098000000000, float 0x4198099000000000, float 0x41A809A000000000>, <4 x float> <float 3.200000e+01, float 0x41B809B000000000, float 0x41C809C000000000, float 0x41D809D000000000>, i8 %m, i32 4)
   ret <4 x float> %res
 }

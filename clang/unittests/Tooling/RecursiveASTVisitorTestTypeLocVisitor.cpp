@@ -22,13 +22,13 @@ public:
 
 TEST(RecursiveASTVisitor, VisitsBaseClassDeclarations) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("class X", 1, 30);
+  Visitor.ExpectMatch("X", 1, 30);
   EXPECT_TRUE(Visitor.runOver("class X {}; class Y : public X {};"));
 }
 
 TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersOfForwardDeclaredClass) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("class X", 3, 18);
+  Visitor.ExpectMatch("X", 3, 18);
   EXPECT_TRUE(Visitor.runOver(
     "class Y;\n"
     "class X {};\n"
@@ -37,7 +37,7 @@ TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersOfForwardDeclaredClass) {
 
 TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerClass) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("class X", 2, 18);
+  Visitor.ExpectMatch("X", 2, 18);
   EXPECT_TRUE(Visitor.runOver(
     "class X {};\n"
     "class Y : public X { class Z; };"));
@@ -45,7 +45,7 @@ TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerClass) {
 
 TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("X<Y>", 2, 18, 2);
+  Visitor.ExpectMatch("X<Y>", 2, 18);
   EXPECT_TRUE(Visitor.runOver(
     "template<typename T> class X {};\n"
     "class Y : public X<Y> {};"));
@@ -53,7 +53,7 @@ TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType) {
 
 TEST(RecursiveASTVisitor, VisitsClassTemplateTypeParmDefaultArgument) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("class X", 2, 23);
+  Visitor.ExpectMatch("X", 2, 23);
   EXPECT_TRUE(Visitor.runOver(
     "class X;\n"
     "template<typename T = X> class Y;\n"
@@ -62,7 +62,7 @@ TEST(RecursiveASTVisitor, VisitsClassTemplateTypeParmDefaultArgument) {
 
 TEST(RecursiveASTVisitor, VisitsCompoundLiteralType) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("struct S", 1, 26);
+  Visitor.ExpectMatch("struct S", 1, 19);
   EXPECT_TRUE(Visitor.runOver(
       "int f() { return (struct S { int a; }){.a = 0}.a; }",
       TypeLocVisitor::Lang_C));

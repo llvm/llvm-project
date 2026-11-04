@@ -26,11 +26,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Context>
-class _LIBCPP_TEMPLATE_VIS basic_format_args {
+class basic_format_args {
 public:
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI basic_format_args(const __format_arg_store<_Context, _Args...>& __store) noexcept
-      : __size_(sizeof...(_Args)) {
+  basic_format_args(const __format_arg_store<_Context, _Args...>& __store) noexcept : __size_(sizeof...(_Args)) {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args))) {
         __values_ = __store.__storage.__values_;
@@ -40,7 +39,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> get(size_t __id) const noexcept {
+  [[nodiscard]] basic_format_arg<_Context> get(size_t __id) const noexcept {
     if (__id >= __size_)
       return basic_format_arg<_Context>{};
 
@@ -50,7 +49,7 @@ public:
     return __args_[__id];
   }
 
-  _LIBCPP_HIDE_FROM_ABI size_t __size() const noexcept { return __size_; }
+  size_t __size() const noexcept { return __size_; }
 
 private:
   size_t __size_{0};

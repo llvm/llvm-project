@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -D__GLIBCXX__=20100000L
 
 // This is a test for an egregious hack in Clang that works around
 // an issue with GCC's <type_traits> implementation. std::common_type

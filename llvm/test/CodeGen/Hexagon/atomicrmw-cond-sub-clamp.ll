@@ -152,10 +152,8 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:     r5:4 = memd_locked(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7:6 = sub(r5:4,r3:2)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.gtu(r3:2,r5:4)
+; CHECK-NEXT:     r7:6 = sub(r5:4,r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r8 = mux(p0,r4,r6)

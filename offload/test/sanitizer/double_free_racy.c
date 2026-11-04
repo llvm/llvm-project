@@ -6,11 +6,8 @@
 // clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 #include <omp.h>
 
@@ -21,13 +18,13 @@ int main(void) {
 }
 
 // CHECK: OFFLOAD ERROR: double-free of device memory: 0x
-// CHECK   dataDelete
+// CHECK   deleteData
 // CHECK:  omp_target_free
 //
 // CHECK: Last deallocation:
-// CHECK:  dataDelete
+// CHECK:  deleteData
 // CHECK:  omp_target_free
 
 // CHECK: Last allocation of size 8 -> device pointer
-// CHECK:  dataAlloc
+// CHECK:  allocData
 // CHECK:  omp_target_alloc

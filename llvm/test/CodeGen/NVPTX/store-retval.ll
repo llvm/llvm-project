@@ -23,7 +23,7 @@
 
 define %struct.StNoalign @func_StNoalign(ptr nocapture noundef readonly byval(%struct.StNoalign) align 4 %in) {
   ; CHECK-LABEL: .func{{.*}}func_StNoalign
-  ; CHECK:       ld.param.u32    [[R1:%r[0-9]+]],   [func_StNoalign_param_0];
+  ; CHECK:       ld.param.b32    [[R1:%r[0-9]+]],   [func_StNoalign_param_0];
   ; CHECK-NOT:   st.param.b32    [func_retval0+0],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+4],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+8],  %r{{[0-9]+}};
@@ -39,7 +39,7 @@ define %struct.StNoalign @func_StNoalign(ptr nocapture noundef readonly byval(%s
 
 define %struct.StAlign8 @func_StAlign8(ptr nocapture noundef readonly byval(%struct.StAlign8) align 8 %in) {
   ; CHECK-LABEL: .func{{.*}}func_StAlign8
-  ; CHECK:       ld.param.u32    [[R1:%r[0-9]+]],   [func_StAlign8_param_0];
+  ; CHECK:       ld.param.b32    [[R1:%r[0-9]+]],   [func_StAlign8_param_0];
   ; CHECK-NOT:   st.param.b32    [func_retval0+0],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+4],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+8],  %r{{[0-9]+}};
@@ -56,7 +56,7 @@ define %struct.StAlign8 @func_StAlign8(ptr nocapture noundef readonly byval(%str
 
 define %struct.StAlign16 @func_StAlign16(ptr nocapture noundef readonly byval(%struct.StAlign16) align 16 %in) {
   ; CHECK-LABEL: .func{{.*}}func_StAlign16
-  ; CHECK:       ld.param.u32    [[R1:%r[0-9]+]],   [func_StAlign16_param_0];
+  ; CHECK:       ld.param.b32    [[R1:%r[0-9]+]],   [func_StAlign16_param_0];
   ; CHECK-NOT:   st.param.b32    [func_retval0+0],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+4],  %r{{[0-9]+}};
   ; CHECK-NOT:   st.param.b32    [func_retval0+8],  %r{{[0-9]+}};

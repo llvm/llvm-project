@@ -1,0 +1,109 @@
+# REQUIRES: lld, x86
+
+# RUN: split-file %s %t
+
+# RUN: %clang_cl --target=x86_64-windows-msvc -c /Fo%t1.obj -- %p/Inputs/incomplete-tag-type.cpp
+# RUN: %clang_cl --target=x86_64-windows-msvc /O1 /Z7 -c /Fo%t2.obj -- %t/main.cpp
+# RUN: lld-link /debug:full /nodefaultlib /entry:main %t1.obj %t2.obj /out:%t.exe /pdb:%t.pdb
+
+# RUN: %lldb -f %t.exe -s %t/target-var.input 2>&1 | FileCheck %s --check-prefix=TARGET-VAR
+# RUN: %lldb -f %t.exe -s %t/expr.input 2>&1 | FileCheck %s --check-prefix=EXPR
+
+#--- main.cpp
+
+// Complete base class.
+struct A { int x; A(); };
+struct B : A {};
+B b;
+
+// Complete data member.
+struct C {
+  C();
+};
+
+struct D {
+  C c;
+};
+D d;
+
+// Incomplete static data member should return error.
+struct E {
+  E();
+};
+
+struct F {
+  static E static_e;
+};
+
+E F::static_e = E();
+E& static_e_ref = F::static_e;
+
+struct G {
+  int foo = 1;
+};
+struct H {
+  G g[2];
+};
+H h;
+
+struct I {
+  I();
+};
+struct J {
+  I i[2];
+};
+J j;
+
+
+int main(){}
+
+#--- target-var.input
+
+target variable b
+target variable d
+target variable h
+target variable j
+target variable static_e_ref
+exit
+
+#--- expr.input
+
+settings set interpreter.stop-command-source-on-error false
+expression b
+expression d
+expression h
+expression j
+expression static_e_ref
+exit
+
+# TARGET-VAR:      (lldb) target variable b
+# TARGET-VAR-NEXT: (B) b = (A = <incomplete type>)
+# TARGET-VAR-NEXT: (lldb) target variable d
+# TARGET-VAR-NEXT: (D) d = {}
+# TARGET-VAR-NEXT: (lldb) target variable h
+# TARGET-VAR-NEXT: (H) h = {
+# TARGET-VAR-NEXT:   g = {
+# TARGET-VAR-NEXT:     [0] = (foo = 1)
+# TARGET-VAR-NEXT:     [1] = (foo = 1)
+# TARGET-VAR-NEXT:   }
+# TARGET-VAR-NEXT: }
+# TARGET-VAR-NEXT: (lldb) target variable j
+# TARGET-VAR-NEXT: (J) j = {}
+# TARGET-VAR-NEXT: (lldb) target variable static_e_ref
+# TARGET-VAR-NEXT: (E &) static_e_ref = 0x{{.*}} <incomplete type "E">
+
+# EXPR:      (lldb) expression b
+# EXPR-NEXT: (B) $0 = {}
+# EXPR-NEXT: (lldb) expression d
+# EXPR-NEXT: (D) $1 = {}
+# EXPR-NEXT: (lldb) expression h
+# EXPR-NEXT: (H) $2 = {
+# EXPR-NEXT:   g = {
+# EXPR-NEXT:     [0] = (foo = 1)
+# EXPR-NEXT:     [1] = (foo = 1)
+# EXPR-NEXT:   }
+# EXPR-NEXT: }
+# EXPR-NEXT: (lldb) expression j
+# EXPR-NEXT: (J) $3 = {}
+# EXPR-NEXT: (lldb) expression static_e_ref
+# EXPR:      error:{{.*}}incomplete type 'E' where a complete type is required

@@ -157,11 +157,10 @@ void endUsingDeclarationBlock(
   };
   llvm::stable_sort(SortedUsingDeclarations, Comp);
   SortedUsingDeclarations.erase(
-      std::unique(SortedUsingDeclarations.begin(),
-                  SortedUsingDeclarations.end(),
-                  [](const UsingDeclaration &a, const UsingDeclaration &b) {
-                    return a.Label == b.Label;
-                  }),
+      llvm::unique(SortedUsingDeclarations,
+                   [](const UsingDeclaration &a, const UsingDeclaration &b) {
+                     return a.Label == b.Label;
+                   }),
       SortedUsingDeclarations.end());
   for (size_t I = 0, E = UsingDeclarations->size(); I < E; ++I) {
     if (I >= SortedUsingDeclarations.size()) {

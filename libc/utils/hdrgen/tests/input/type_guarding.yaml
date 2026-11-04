@@ -1,0 +1,19 @@
+header: type_guarding.h
+standards:
+  - stdc
+
+macros:
+  - macro_name: LIBC_TYPES_HAS_SIZE_T
+    macro_header: size_t-macro.h
+  - macro_name: LIBC_TYPES_HAS_FLOAT16
+    macro_header: float16-macro.h
+
+types:
+  - type_name: size_t
+    guard: LIBC_TYPES_HAS_SIZE_T
+  - type_name: ssize_t
+    guard: LIBC_TYPES_HAS_SIZE_T
+  - type_name: float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - type_name: uint8_t
+  - type_name: myType

@@ -27,20 +27,23 @@ class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class SymbolTable;
+class SymbolTableCollection;
 
 /// Convert input FunctionOpInterface operation to LLVMFuncOp by using the
 /// provided LLVMTypeConverter. Return failure if failed to so.
 FailureOr<LLVM::LLVMFuncOp>
 convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                           ConversionPatternRewriter &rewriter,
-                          const LLVMTypeConverter &converter);
+                          const LLVMTypeConverter &converter,
+                          SymbolTableCollection *symbolTables = nullptr);
 
 /// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
 /// `emitCWrappers` is set, the pattern will also produce functions
 /// that pass memref descriptors by pointer-to-structure in addition to the
 /// default unpacked form.
 void populateFuncToLLVMFuncOpConversionPattern(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    SymbolTableCollection *symbolTables = nullptr);
 
 /// Collect the patterns to convert from the Func dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter and the LowerToLLVMOptions
@@ -57,7 +60,7 @@ void populateFuncToLLVMFuncOpConversionPattern(
 /// not an error to provide it anyway.
 void populateFuncToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    const SymbolTable *symbolTable = nullptr);
+    SymbolTableCollection *symbolTables = nullptr);
 
 void registerConvertFuncToLLVMInterface(DialectRegistry &registry);
 

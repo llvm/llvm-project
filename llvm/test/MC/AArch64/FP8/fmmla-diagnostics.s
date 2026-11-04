@@ -16,7 +16,7 @@ fmmla v0.4s, v1.4s, v2.4s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 fmmla v0.8h, v1.8h, v2.8h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction requires: f16mm
 // CHECK-NEXT: fmmla v0.8h, v1.8h, v2.8h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

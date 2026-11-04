@@ -37,9 +37,9 @@ static bool translateCodePointToUTF8(unsigned CodePoint,
 
   raw_svector_ostream OS(CLiteral);
   OS << "\"";
-  for (size_t i = 0, e = UTF8.size(); i != e; ++i) {
+  for (char C : UTF8) {
     OS << "\\x";
-    OS.write_hex(static_cast<unsigned char>(UTF8[i]));
+    OS.write_hex(static_cast<unsigned char>(C));
   }
   OS << "\"";
 
@@ -56,8 +56,7 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(
     CLiteral.clear();
     CLiteral.append("return ");
     if (!translateCodePointToUTF8(CodePoint, CLiteral)) {
-      SrcMgr.PrintMessage(Tag->getLoc().front(), SourceMgr::DK_Error,
-                          Twine("invalid code point"));
+      PrintError(Tag->getLoc().front(), "invalid code point");
       continue;
     }
     CLiteral.append(";");

@@ -20,14 +20,15 @@ lui a0, 2
 # CHECK-ASM-AND-OBJ: lui s11, 552960
 # CHECK-ASM: encoding: [0xb7,0x0d,0x00,0x87]
 lui s11, (0x87000000>>12)
-# CHECK-ASM-AND-OBJ: lui a0, 0
-# CHECK-ASM: encoding: [0x37,0x05,0x00,0x00]
+# CHECK-ASM: lui a0, %hi(2)  # encoding: [0x37,0bAAAA0101,A,A]
+# CHECK-OBJ: lui a0, 0
 lui a0, %hi(2)
 # CHECK-ASM-AND-OBJ: lui s11, 552960
 # CHECK-ASM: encoding: [0xb7,0x0d,0x00,0x87]
 lui s11, (0x87000000>>12)
-# CHECK-ASM-AND-OBJ: lui s11, 552960
-# CHECK-ASM: encoding: [0xb7,0x0d,0x00,0x87]
+# CHECK-ASM: lui s11, %hi(2264924160)
+# CHECK-OBJ: lui s11, 552960
+# CHECK-ASM: encoding: [0xb7,0bAAAA1101,A,A]
 lui s11, %hi(0x87000000)
 # CHECK-ASM-AND-OBJ: lui t0, 1048575
 # CHECK-ASM: encoding: [0xb7,0xf2,0xff,0xff]
@@ -35,8 +36,7 @@ lui t0, 1048575
 # CHECK-ASM-AND-OBJ: lui gp, 0
 # CHECK-ASM: encoding: [0xb7,0x01,0x00,0x00]
 lui gp, 0
-# CHECK-ASM: lui a0, %hi(foo)
-# CHECK-ASM: encoding: [0x37,0bAAAA0101,A,A]
+# CHECK-ASM: lui a0, %hi(foo)  # encoding: [0x37,0bAAAA0101,A,A]
 # CHECK-OBJ: lui a0, 0
 # CHECK-OBJ: R_RISCV_HI20 foo
 lui a0, %hi(foo)
@@ -59,8 +59,7 @@ auipc t0, 1048575
 # CHECK-ASM-AND-OBJ: auipc gp, 0
 # CHECK-ASM: encoding: [0x97,0x01,0x00,0x00]
 auipc gp, 0
-# CHECK-ASM: auipc a0, %pcrel_hi(foo)
-# CHECK-ASM: encoding: [0x17,0bAAAA0101,A,A]
+# CHECK-ASM: auipc a0, %pcrel_hi(foo)  # encoding: [0x17,0bAAAA0101,A,A]
 # CHECK-OBJ: auipc a0, 0
 # CHECK-OBJ: R_RISCV_PCREL_HI20 foo
 auipc a0, %pcrel_hi(foo)
@@ -104,8 +103,8 @@ jal zero, .
 # CHECK-ASM-AND-OBJ: jalr a0, -2048(a1)
 # CHECK-ASM: encoding: [0x67,0x85,0x05,0x80]
 jalr a0, -2048(a1)
-# CHECK-ASM-AND-OBJ: jalr a0, -2048(a1)
-# CHECK-ASM: encoding: [0x67,0x85,0x05,0x80]
+# CHECK-ASM: jalr a0, %lo(2048)(a1) # encoding: [0x67,0x85,0bAAAA0101,A]
+# CHECK-OBJ: jalr a0, -2048(a1)
 jalr a0, %lo(2048)(a1)
 # CHECK-ASM-AND-OBJ: jalr t2, 2047(t1)
 # CHECK-ASM: encoding: [0xe7,0x03,0xf3,0x7f]
@@ -162,8 +161,8 @@ lh t1, ~2047(zero)
 # CHECK-ASM-AND-OBJ: lh t1, 0(zero)
 # CHECK-ASM: encoding: [0x03,0x13,0x00,0x00]
 lh t1, !1(zero)
-# CHECK-ASM-AND-OBJ: lh t1, -2048(zero)
-# CHECK-ASM: encoding: [0x03,0x13,0x00,0x80]
+# CHECK-ASM: lh t1, %lo(2048)(zero) # encoding: [0x03,0x13,0bAAAA0000,A]
+# CHECK-OBJ: lh t1, -2048(zero)
 lh t1, %lo(2048)(zero)
 # CHECK-ASM-AND-OBJ: lh sp, 2047(a0)
 # CHECK-ASM: encoding: [0x03,0x11,0xf5,0x7f]
@@ -171,8 +170,7 @@ lh sp, 2047(a0)
 # CHECK-ASM-AND-OBJ: lw a0, 97(a2)
 # CHECK-ASM: encoding: [0x03,0x25,0x16,0x06]
 lw a0, 97(a2)
-# CHECK-ASM: lbu s5, %lo(foo)(s6)
-# CHECK-ASM: encoding: [0x83,0x4a,0bAAAA1011,A]
+# CHECK-ASM: lbu s5, %lo(foo)(s6) # encoding: [0x83,0x4a,0bAAAA1011,A]
 # CHECK-OBJ: lbu s5, 0(s6)
 # CHECK-OBJ: R_RISCV_LO12
 lbu s5, %lo(foo)(s6)
@@ -203,8 +201,9 @@ sh t3, ~2047(t5)
 # CHECK-ASM-AND-OBJ: sh t3, 0(t5)
 # CHECK-ASM: encoding: [0x23,0x10,0xcf,0x01]
 sh t3, !1(t5)
-# CHECK-ASM-AND-OBJ: sh t3, -2048(t5)
-# CHECK-ASM: encoding: [0x23,0x10,0xcf,0x81]
+# CHECK-ASM: sh t3, %lo(2048)(t5)
+# CHECK-ASM: encoding: [0x23'A',0x10'A',0xcf'A',0x01'A']
+# CHECK-OBJ: sh t3, -2048(t5)
 sh t3, %lo(2048)(t5)
 # CHECK-ASM-AND-OBJ: sw ra, 999(zero)
 # CHECK-ASM: encoding: [0xa3,0x23,0x10,0x3e]
@@ -254,8 +253,8 @@ ori a0, a1, ~2047
 # CHECK-ASM-AND-OBJ: ori a0, a1, 0
 # CHECK-ASM: encoding: [0x13,0xe5,0x05,0x00]
 ori a0, a1, !1
-# CHECK-ASM-AND-OBJ: ori a0, a1, -2048
-# CHECK-ASM: encoding: [0x13,0xe5,0x05,0x80]
+# CHECK-ASM: ori a0, a1, %lo(2048)  # encoding: [0x13,0xe5,0bAAAA0101,A]
+# CHECK-OBJ: ori a0, a1, -2048
 ori a0, a1, %lo(2048)
 # CHECK-ASM-AND-OBJ: andi ra, sp, 2047
 # CHECK-ASM: encoding: [0x93,0x70,0xf1,0x7f]

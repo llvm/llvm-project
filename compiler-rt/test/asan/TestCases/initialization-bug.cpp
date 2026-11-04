@@ -8,6 +8,7 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=186
 // XFAIL: target={{.*windows-msvc.*}}
 
+#include "defines.h"
 #include <cstdio>
 
 // The structure of the test is:
@@ -27,7 +28,7 @@ int z = initZ();
 // result is undefined behavior, which should be caught by initialization order
 // checking.
 extern int y;
-int __attribute__((noinline)) initX() {
+int ATTRIBUTE_NOINLINE initX() {
   return y + 1;
   // CHECK: {{AddressSanitizer: initialization-order-fiasco}}
   // CHECK: {{READ of size .* at 0x.* thread T0}}

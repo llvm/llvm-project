@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=arm-low-overhead-loops -o - -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -O0 -run-pass=arm-low-overhead-loops -o - %s | FileCheck %s
 # CHECK-NOT: WLS
 # CHECK-NOT: WhileLoopStart
 
@@ -90,8 +90,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 

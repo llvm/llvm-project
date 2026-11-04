@@ -68,6 +68,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -80,11 +81,9 @@ namespace {
   // branch-to-blr sequences.
   struct PPCTOCRegDeps : public MachineFunctionPass {
     static char ID;
-    PPCTOCRegDeps() : MachineFunctionPass(ID) {
-      initializePPCTOCRegDepsPass(*PassRegistry::getPassRegistry());
-    }
+    PPCTOCRegDeps() : MachineFunctionPass(ID) {}
 
-protected:
+  protected:
     bool hasTOCLoReloc(const MachineInstr &MI) {
       if (MI.getOpcode() == PPC::LDtocL || MI.getOpcode() == PPC::ADDItocL8 ||
           MI.getOpcode() == PPC::LWZtocL)
@@ -130,6 +129,7 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };

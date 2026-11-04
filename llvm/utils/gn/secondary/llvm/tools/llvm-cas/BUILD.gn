@@ -1,0 +1,24 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Options") {
+  visibility = [ ":llvm-cas" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+executable("llvm-cas") {
+  deps = [
+    ":Options",
+    "//llvm/lib/CAS",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llvm-cas.cpp" ]
+
+  # Support plugins.
+  # FIXME: Disable dead stripping once other binaries are dead-stripped.
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
+}

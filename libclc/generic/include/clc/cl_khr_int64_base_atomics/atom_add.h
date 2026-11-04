@@ -1,2 +1,0 @@
-#define __CLC_FUNCTION atom_add
-#include <clc/atom_decl_int64.inc>

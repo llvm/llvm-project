@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/LinkGraphLayer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -28,26 +29,25 @@
 #include <utility>
 #include <vector>
 
+class LinkGraphLinkingLayerTests;
+
 namespace llvm {
-
-namespace jitlink {
-class EHFrameRegistrar;
-} // namespace jitlink
-
 namespace orc {
 
 /// LinkGraphLinkingLayer links LinkGraphs into the Executor using JITLink.
 ///
 /// Clients can use this class to add LinkGraphs to an ExecutionSession, and it
 /// serves as a base for the ObjectLinkingLayer that can link object files.
-class LinkGraphLinkingLayer : public LinkGraphLayer, private ResourceManager {
+class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer,
+                                       private ResourceManager {
+  friend class ::LinkGraphLinkingLayerTests;
   class JITLinkCtx;
 
 public:
   /// Plugin instances can be added to the ObjectLinkingLayer to receive
   /// callbacks when code is loaded or emitted, and when JITLink is being
   /// configured.
-  class Plugin {
+  class LLVM_ABI Plugin {
   public:
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
@@ -61,7 +61,6 @@ public:
                                      jitlink::JITLinkContext &Ctx,
                                      MemoryBufferRef InputObject) {}
 
-    virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
     }
@@ -71,11 +70,7 @@ public:
                                              ResourceKey SrcKey) = 0;
   };
 
-  /// Construct a LinkGraphLinkingLayer using the ExecutorProcessControl
-  /// instance's memory manager.
-  LinkGraphLinkingLayer(ExecutionSession &ES);
-
-  /// Construct a LinkGraphLinkingLayer using a custom memory manager.
+  /// Construct a LinkGraphLinkingLayer.
   LinkGraphLinkingLayer(ExecutionSession &ES,
                         jitlink::JITLinkMemoryManager &MemMgr);
 
@@ -87,7 +82,7 @@ public:
                         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destroy the LinkGraphLinkingLayer.
-  ~LinkGraphLinkingLayer();
+  ~LinkGraphLinkingLayer() override;
 
   /// Add a plugin.
   LinkGraphLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {
@@ -157,9 +152,16 @@ protected:
 private:
   using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
+  struct SymbolDepGroup {
+    SmallVector<jitlink::Symbol *> Defs;
+    DenseSet<jitlink::Symbol *> Deps;
+  };
+
+  // Provides the basis for calculating orc::SymbolDependenceGroups.
+  static SmallVector<SymbolDepGroup> calculateDepGroups(jitlink::LinkGraph &G);
+
   Error recordFinalizedAlloc(MaterializationResponsibility &MR,
                              FinalizedAlloc FA);
-
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
                                ResourceKey SrcKey) override;

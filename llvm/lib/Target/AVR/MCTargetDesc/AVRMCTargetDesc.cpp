@@ -24,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -87,7 +88,11 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new AVRTargetAsmStreamer(S);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new AVRTargetStreamer(S);
+}
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<AVRMCAsmInfo> X(getTheAVRTarget());
 
@@ -119,6 +124,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheAVRTarget(),
                                             createMCAsmTargetStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(getTheAVRTarget(),
+                                             createNullTargetStreamer);
 
   // Register the asm backend (as little endian).
   TargetRegistry::RegisterMCAsmBackend(getTheAVRTarget(), createAVRAsmBackend);

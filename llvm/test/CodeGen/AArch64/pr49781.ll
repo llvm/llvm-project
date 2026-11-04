@@ -6,8 +6,7 @@ define <vscale x 2 x i64> @foo(<vscale x 2 x i64> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    ret
- %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
- %b = sub <vscale x 2 x i64> %a, %idx
- %c = sub <vscale x 2 x i64> %b, %idx
+ %b = sub <vscale x 2 x i64> %a, splat (i64 1)
+ %c = sub <vscale x 2 x i64> %b, splat (i64 1)
  ret <vscale x 2 x i64> %c
 }

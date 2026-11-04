@@ -9,7 +9,7 @@
 //   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[c50:.*]] = arith.constant 50 : index
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
-//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[h1]], %[[dim0]]]
+//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) : memref<?x?xindex>
 //       CHECK:   linalg.fill ins(%[[c50]] : index) outs(%[[alloc]] : memref<?x?xindex>)
@@ -32,7 +32,7 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <emit_dealloc> : !transform.any_op
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
@@ -71,7 +71,7 @@ func.func @tensor_pad_constant_with_custom_copy(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 3, alloc_op = "memref.alloca", memcpy_op = "linalg.copy", emit_dealloc}: !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 3, alloc_op = "memref.alloca", memcpy_op = "linalg.copy", emit_dealloc>: !transform.any_op
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
@@ -101,7 +101,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_pad_constant(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[src:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[src:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc
 //       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]
 //       CHECK:   memref.copy %[[src]], %[[subview]]
@@ -119,7 +119,7 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <emit_dealloc> : !transform.any_op
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
     transform.yield
@@ -130,7 +130,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[m:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
 //       CHECK:   memref.copy %[[m]], %[[alloc]]
 //       CHECK:   memref.store %{{.*}}, %[[alloc]]
@@ -145,7 +145,7 @@ func.func @tensor_insert(%t: tensor<?x10xindex>, %idx: index, %v: index) -> tens
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, emit_dealloc> : !transform.any_op
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
     transform.yield
@@ -170,7 +170,7 @@ func.func @tensor_insert_into_empty(%idx: index, %v: index) -> tensor<10xindex> 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, emit_dealloc> : !transform.any_op
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
     transform.yield
@@ -189,7 +189,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below{{failed to bufferize operation}}
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, emit_dealloc> : !transform.any_op
     transform.yield
   }
 }
@@ -212,7 +212,7 @@ func.func @vector_mask(%t: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["vector.mask"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, emit_dealloc> : !transform.any_op
     transform.yield
   }
 }
@@ -235,7 +235,7 @@ func.func @tensor_insert_destination(%t: tensor<?x10xindex>, %idx: index, %v: in
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, bufferize_destination_only, emit_dealloc> : !transform.any_op
     transform.yield
   }
 }
@@ -261,7 +261,7 @@ func.func @scf_for_destination(%t: tensor<?x10xindex>, %lb: index, %ub: index, %
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only, emit_dealloc} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, bufferize_destination_only, emit_dealloc> : !transform.any_op
     transform.yield
   }
 }
@@ -278,7 +278,7 @@ func.func @tensor_insert_destination_no_dealloc(%t: tensor<?x10xindex>, %idx: in
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only} : !transform.any_op
+    %2, %new = transform.structured.bufferize_to_allocation %0 <memory_space = 4, bufferize_destination_only> : !transform.any_op
     transform.yield
   }
 }

@@ -18,13 +18,13 @@ define void @test(ptr %src, i8 %c, i64 %size) {
   ret void
 }
 
-; Differing sizes, so left as it is.
-define void @negative_test(ptr %src, i8 %c, i64 %size1, i64 %size2) {
-; CHECK-LABEL: @negative_test(
+; Differing sizes, but would be UB if size1 < size2 since the memcpy would reference outside of the first alloca
+define void @dynsize_test(ptr %src, i8 %c, i64 %size1, i64 %size2) {
+; CHECK-LABEL: @dynsize_test(
 ; CHECK-NEXT:    [[DST1:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1
 ; CHECK-NEXT:    [[DST2:%.*]] = alloca i8, i64 [[SIZE2:%.*]], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST1]], i8 [[C:%.*]], i64 [[SIZE1]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[DST1]], i64 [[SIZE2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST2]], i8 [[C]], i64 [[SIZE2]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %dst1 = alloca i8, i64 %size1

@@ -1,5 +1,9 @@
-// RUN: %clang %cflags -Wl,--defsym='__global_pointer$'=0x2800 -o %t %s
+// RUN: %clang %cflags64 -Wl,--defsym='__global_pointer$'=0x2800 -o %t %s
 // RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
+// RUN:    | FileCheck %s
+// RUN: llvm-mc -triple riscv32 -mattr=+c -filetype=obj -o %t.rv32.o %s
+// RUN: ld.lld -q --defsym='__global_pointer$'=0x2800 -o %t.rv32 %t.rv32.o
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.rv32.null %t.rv32 \
 // RUN:    | FileCheck %s
 
   .data
@@ -17,8 +21,8 @@ _start:
   .option push
   .option norelax
 1:
-// CHECK: auipc gp, %pcrel_hi(__global_pointer$) # Label: .Ltmp0
-// CHECK-NEXT: addi gp, gp, %pcrel_lo(.Ltmp0)
+// CHECK: auipc gp, %pcrel_hi(__global_pointer$)
+// CHECK-NEXT: addi gp, gp, %pcrel_lo(
   auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)
   .option pop

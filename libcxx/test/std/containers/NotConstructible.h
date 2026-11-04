@@ -11,17 +11,14 @@
 
 #include <functional>
 
-class NotConstructible
-{
-    NotConstructible(const NotConstructible&);
-    NotConstructible& operator=(const NotConstructible&);
+class NotConstructible {
+  NotConstructible(const NotConstructible&);
+  NotConstructible& operator=(const NotConstructible&);
+
 public:
 };
 
-inline
-bool
-operator==(const NotConstructible&, const NotConstructible&)
-{return true;}
+inline bool operator==(const NotConstructible&, const NotConstructible&) { return true; }
 
 template <>
 struct std::hash<NotConstructible> {

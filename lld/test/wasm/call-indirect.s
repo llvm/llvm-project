@@ -1,5 +1,5 @@
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp -o %t.o %s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp %p/Inputs/call-indirect.s -o %t2.o
 # RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -82,13 +82,13 @@ indirect_func:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1032
+# CHECK-NEXT:           Value:           65544
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            memory
@@ -125,23 +125,23 @@ indirect_func:
 # CHECK-NEXT:         Body:            42010B
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Locals:
-# CHECK-NEXT:         Body:            410028028088808000118080808000001A410028028488808000118180808000001A0B
+# CHECK-NEXT:         Body:            410028028080848000118080808000001A410028028480848000118180808000001A0B
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Locals:
 # CHECK-NEXT:         Body:            41020B
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Locals:
-# CHECK-NEXT:         Body:            410028028888808000118180808000001A0B
+# CHECK-NEXT:         Body:            410028028880848000118180808000001A0B
 # CHECK-NEXT:       - Index:           4
 # CHECK-NEXT:         Locals:
 # CHECK-NEXT:         Body:            42012000118280808000001A0B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:    7
+# CHECK-NEXT:       - SectionOffset:    8
 # CHECK-NEXT:         InitFlags:        0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         '010000000200000002000000'
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name

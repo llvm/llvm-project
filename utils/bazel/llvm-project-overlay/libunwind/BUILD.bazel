@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -18,4 +20,20 @@ cc_library(
         "include/mach-o/compact_unwind_encoding.h",
     ],
     strip_include_prefix = "include",
+)
+
+filegroup(
+    name = "libunwind_hdrs",
+    srcs = glob(["include/**/*.h"]),
+)
+
+filegroup(
+    name = "libunwind_srcs",
+    srcs = glob([
+        "src/*.cpp",
+        "src/*.hpp",
+        "src/*.c",
+        "src/*.h",
+        "src/*.S",
+    ]),
 )

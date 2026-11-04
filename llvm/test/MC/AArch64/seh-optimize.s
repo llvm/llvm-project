@@ -87,7 +87,7 @@ func:
     nop
 
     .seh_startepilogue
-    ldp x27, x28, [sp, #32]
+    ldp x23, x24, [sp, #32]
     .seh_save_regp x23, 32
     ldp x23, x24, [sp, #16]
     .seh_save_regp x23, 16

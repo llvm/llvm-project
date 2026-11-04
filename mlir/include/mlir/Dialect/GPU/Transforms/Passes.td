@@ -11,30 +11,46 @@
 
 include "mlir/Pass/PassBase.td"
 
-def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> {
+def GpuLaunchSinkIndexComputationsPass
+    : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let constructor = "mlir::createGpuLauchSinkIndexComputationsPass()";
-  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
-def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
+def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
-  let constructor = "mlir::createGpuKernelOutliningPass()";
   let dependentDialects = ["mlir::DLTIDialect", "cf::ControlFlowDialect"];
+  let options = [Option<"dataLayoutStr", "data-layout-str", "std::string",
+                        /*default=*/"",
+                        "String description of the data layout">];
 }
 
 def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let summary = "Make GPU ops async";
-  let constructor = "mlir::createGpuAsyncRegionPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
 def GpuMapParallelLoopsPass
     : Pass<"gpu-map-parallel-loops", "mlir::func::FuncOp"> {
   let summary = "Greedily maps loops to GPU hardware dimensions.";
-  let constructor = "mlir::createGpuMapParallelLoopsPass()";
-  let description = "Greedily maps loops to GPU hardware dimensions.";
+  let description = [{
+    Maps the parallel loops found in the given function to workgroups. The first
+    loop encountered will be mapped to the global workgroup and the second loop
+    encountered to the local workgroup. Within each mapping, the first three
+    dimensions are mapped to x/y/z hardware ids and all following dimensions are
+    mapped to sequential loops.
+
+    Ordering of the loop mapping against the different dimensions is controlled
+    by the `mapping-policy` option.
+    Two policies are supported:
+       1. `outermost-first` (default): the outermost loop maps to X, then Y
+          and finally Z.
+       2. `innermost-first`: the innermost loop maps to X, then Y and finally Z.
+  }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [Option<"mappingPolicyStr", "mapping-policy", "std::string",
+                        /*default=*/"\"outermost-first\"",
+                        "Policy outlining how to assign loops to GPU dimensions."
+                        "Supported values are `outermost-first` and `innermost-first`.">];
 }
 
 def GpuEliminateBarriers
@@ -49,7 +65,6 @@ def GpuEliminateBarriers
     PPoPP 2023 and implementation in Polygeist.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect",
     "mlir::memref::MemRefDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -66,9 +81,8 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     and sizes/strides for dynamically-sized memrefs are not available inside
     `gpu.launch`.
   }];
-  let constructor = "mlir::createGpuDecomposeMemrefsPass()";
   let dependentDialects = [
-    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
   ];
 }
@@ -98,155 +112,6 @@ def GpuModuleToBinaryPass
            "The target representation of the compilation process.">,
     Option<"elfSection", "section", "std::string", [{""}],
            "ELF section where binary is to be located.">
-  ];
-}
-
-def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
-  let summary = "Attaches an NVVM target attribute to a GPU Module.";
-  let description = [{
-    This pass searches for all GPU Modules in the immediate regions and attaches
-    an NVVM target if the module matches the name specified by the `module` argument.
-
-    Example:
-    ```
-    // File: in.mlir:
-    gpu.module @nvvm_module_1 {...}
-    gpu.module @nvvm_module_2 {...}
-    gpu.module @rocdl_module_1 {...}
-    // mlir-opt --nvvm-attach-target="module=nvvm.* chip=sm_90" in.mlir
-    gpu.module @nvvm_module_1 [#nvvm.target<chip = "sm_90">] {...}
-    gpu.module @nvvm_module_2 [#nvvm.target<chip = "sm_90">] {...}
-    gpu.module @rocdl_module_1 {...}
-    ```
-  }];
-  let options = [
-    Option<"moduleMatcher", "module", "std::string",
-           /*default=*/ [{""}],
-           "Regex used to identify the modules to attach the target to.">,
-    Option<"triple", "triple", "std::string",
-           /*default=*/ "\"nvptx64-nvidia-cuda\"",
-           "Target triple.">,
-    Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
-           "Target chip.">,
-    Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
-           "Target features.">,
-    Option<"optLevel", "O", "unsigned",
-           /*default=*/"2",
-           "Optimization level.">,
-    Option<"fastFlag", "fast", "bool",
-           /*default=*/"false",
-           "Enable fast math mode.">,
-    Option<"ftzFlag", "ftz", "bool",
-           /*default=*/"false",
-           "Enable flush to zero for denormals.">,
-    ListOption<"linkLibs", "l", "std::string",
-           "Extra bitcode libraries paths to link to.">,
-  ];
-}
-
-def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
-  let summary = "Attaches a ROCDL target attribute to a GPU Module.";
-  let description = [{
-    This pass searches for all GPU Modules in the immediate regions and attaches
-    a ROCDL target if the module matches the name specified by the `module` argument.
-
-    Example:
-    ```
-    // File: in.mlir:
-    gpu.module @nvvm_module_1 {...}
-    gpu.module @nvvm_module_2 {...}
-    gpu.module @rocdl_module_1 {...}
-    // mlir-opt --nvvm-attach-target="module=rocdl.* chip=gfx90a" in.mlir
-    gpu.module @nvvm_module_1 {...}
-    gpu.module @nvvm_module_2 {...}
-    gpu.module @rocdl_module_1 [#rocdl.target<chip = "gfx90a">] {...}
-    ```
-  }];
-  let options = [
-    Option<"moduleMatcher", "module", "std::string",
-           /*default=*/ [{""}],
-           "Regex used to identify the modules to attach the target to.">,
-    Option<"triple", "triple", "std::string",
-           /*default=*/ "\"amdgcn-amd-amdhsa\"",
-           "Target triple.">,
-    Option<"chip", "chip", "std::string",
-           /*default=*/"\"gfx900\"",
-           "Target chip.">,
-    Option<"features", "features", "std::string",
-           /*default=*/"\"\"",
-           "Target features.">,
-    Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"500\"",
-           "ABI version.">,
-    Option<"optLevel", "O", "unsigned",
-           /*default=*/"2",
-           "Optimization level.">,
-    Option<"wave64Flag", "wave64", "bool",
-           /*default=*/"true",
-           "Use Wave64 mode.">,
-    Option<"fastFlag", "fast", "bool",
-           /*default=*/"false",
-           "Enable fast relaxed math opt.">,
-    Option<"dazFlag", "daz", "bool",
-           /*default=*/"false",
-           "Enable denormals are zero opt.">,
-    Option<"finiteOnlyFlag", "finite-only", "bool",
-           /*default=*/"false",
-           "Enable finite only opt.">,
-    Option<"unsafeMathFlag", "unsafe-math", "bool",
-           /*default=*/"false",
-           "Enable unsafe math opt.">,
-    Option<"correctSqrtFlag", "correct-sqrt", "bool",
-           /*default=*/"true",
-           "Enable correct rounded sqrt.">,
-    ListOption<"linkLibs", "l", "std::string",
-           "Extra bitcode libraries paths to link to.">,
-  ];
-}
-
-def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
-  let summary = "Attaches an SPIR-V target attribute to a GPU Module.";
-  let description = [{
-    This pass searches for all GPU Modules in the immediate regions and attaches
-    an SPIR-V target if the module matches the name specified by the `module` argument.
-
-    Example:
-    ```
-    // Given the following file: in1.mlir:
-    gpu.module @nvvm_module_1 {...}
-    gpu.module @spirv_module_1 {...}
-    // With
-    // mlir-opt --spirv-attach-target="module=spirv.* ver=v1.0 caps=Kernel" in1.mlir
-    // it will generate,
-    gpu.module @nvvm_module_1 {...}
-    gpu.module @spirv_module_1 [#spirv.target<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>] {...}
-    ```
-  }];
-  let options = [
-    Option<"moduleMatcher", "module", "std::string",
-           /*default=*/ [{""}],
-           "Regex used to identify the modules to attach the target to.">,
-    Option<"spirvVersion", "ver", "std::string",
-           /*default=*/ "\"v1.0\"",
-           "SPIR-V Version.">,
-    ListOption<"spirvCapabilities", "caps", "std::string",
-           "List of supported SPIR-V Capabilities">,
-    ListOption<"spirvExtensions", "exts", "std::string",
-           "List of supported SPIR-V Extensions">,
-    Option<"clientApi", "client_api", "std::string",
-           /*default=*/ "\"Unknown\"",
-           "Client API">,
-    Option<"deviceVendor", "vendor", "std::string",
-           /*default=*/ "\"Unknown\"",
-           "Device Vendor">,
-    Option<"deviceType", "device_type", "std::string",
-           /*default=*/ "\"Unknown\"",
-           "Device Type">,
-    Option<"deviceId", "device_id", "uint32_t",
-           /*default=*/ "",
-           "Device ID">,
   ];
 }
 

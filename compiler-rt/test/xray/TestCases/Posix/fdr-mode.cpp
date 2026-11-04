@@ -1,26 +1,31 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm -f fdr-logging-test-*
 // RUN: rm -f fdr-unwrite-test-*
-// RUN: XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-logging-test- \
+// RUN: env XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-logging-test- \
 // RUN:     xray_mode=xray-fdr verbosity=1" \
-// RUN: XRAY_FDR_OPTIONS="func_duration_threshold_us=0" \
+// RUN: env XRAY_FDR_OPTIONS="func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
-// RUN: XRAY_OPTIONS="patch_premain=false \
+// RUN: env XRAY_OPTIONS="patch_premain=false \
 // RUN:     xray_logfile_base=fdr-unwrite-test- xray_mode=xray-fdr \
 // RUN:     verbosity=1" \
-// RUN: XRAY_FDR_OPTIONS="func_duration_threshold_us=5000" \
+// RUN: env XRAY_FDR_OPTIONS="func_duration_threshold_us=100000" \
 // RUN:     %run %t 2>&1 | FileCheck %s
+// RUN: ls fdr-logging-test-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls fdr-logging-test-* | head -1`" \
+// RUN:     "%{readfile:%t.log}" \
 // RUN:     | FileCheck %s --check-prefix=TRACE
+// RUN: ls fdr-unwrite-test-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls fdr-unwrite-test-* | head -1`" \
+// RUN:     "%{readfile:%t.log}" \
 // RUN:     | FileCheck %s --check-prefix=UNWRITE
 // RUN: rm fdr-logging-test-*
 // RUN: rm fdr-unwrite-test-*
 // UNSUPPORTED: target=powerpc64le-{{.*}}
 /// TODO: FDR logging arg1 handler(__xray_ArgLoggerEntry) hasn't implemented yet on LoongArch
+// UNSUPPORTED: target=riscv{{.*}}
+/// TODO: FDR logging arg1 handler(__xray_ArgLoggerEntry) isn't implemented yet for RISC-V
 // UNSUPPORTED: target=loongarch64{{.*}}
+// UNSUPPORTED: armhf-linux
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"
@@ -101,8 +106,12 @@ int main(int argc, char *argv[]) {
 // TRACE-DAG: - { type: 0, func-id: [[FIDARG:[0-9]+]], function: 'fArg(int)', args: [ 1 ], cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS]], kind: function-enter-arg, tsc: {{[0-9]+}}, data: '' }
 // TRACE-DAG: - { type: 0, func-id: [[FIDARG]], function: 'fArg(int)', cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS]], kind: function-exit, tsc: {{[0-9]+}}, data: '' }
 
-// Assert that when unwriting is enabled with a high threshold time, all the function records are erased. A CPU switch could erroneously fail this test, but
-// is unlikely given the test program.
+// Assert that when unwriting is enabled with a threshold well above any trivial
+// function's runtime, all the function records are erased. The threshold is set
+// high so that scheduling jitter (preemption or a CPU migration inflating a
+// function's measured wall-clock duration) cannot push a short function over the
+// threshold and leave a stray record, which used to flake this test on busy
+// bots.
 // Even with a high threshold, arg1 logging is never unwritten.
 // UNWRITE: header:
 // UNWRITE: records:

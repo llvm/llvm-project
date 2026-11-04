@@ -19,27 +19,29 @@
 #include <__assert>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_floating_point.h>
+#include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
+#include <__locale_dir/num.h>
+#include <__math/traits.h>
 #include <__memory/allocator.h>
 #include <__system_error/errc.h>
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cmath>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
+#  include <__locale_dir/locale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -56,21 +58,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __formatter {
 
 template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value) {
+char* __to_buffer(char* __first, char* __last, _Tp __value) {
   to_chars_result __r = std::to_chars(__first, __last, __value);
   _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt) {
+char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt) {
   to_chars_result __r = std::to_chars(__first, __last, __value, __fmt);
   _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt, int __precision) {
+char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt, int __precision) {
   to_chars_result __r = std::to_chars(__first, __last, __value, __fmt, __precision);
   _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
@@ -110,7 +112,7 @@ template <class _Tp>
 struct __traits;
 
 template <floating_point _Fp>
-_LIBCPP_HIDE_FROM_ABI constexpr size_t __float_buffer_size(int __precision) {
+constexpr size_t __float_buffer_size(int __precision) {
   using _Traits = __traits<_Fp>;
   return 4 + _Traits::__max_integral + __precision + _Traits::__max_fractional_value;
 }
@@ -140,7 +142,7 @@ struct __traits<double> {
 /// Depending on the maximum size required for a value, the buffer is allocated
 /// on the stack or the heap.
 template <floating_point _Fp>
-class _LIBCPP_TEMPLATE_VIS __float_buffer {
+class __float_buffer {
   using _Traits _LIBCPP_NODEBUG = __traits<_Fp>;
 
 public:
@@ -152,8 +154,7 @@ public:
   // When supporting long doubles the __max_integral part becomes 4932 which
   // may be too much for some platforms. For these cases a better estimate is
   // required.
-  explicit _LIBCPP_HIDE_FROM_ABI __float_buffer(int __precision)
-      : __precision_(__precision != -1 ? __precision : _Traits::__max_fractional) {
+  explicit __float_buffer(int __precision) : __precision_(__precision != -1 ? __precision : _Traits::__max_fractional) {
     // When the precision is larger than _Traits::__max_fractional the digits in
     // the range (_Traits::__max_fractional, precision] will contain the value
     // zero. There's no need to request to_chars to write these zeros:
@@ -176,20 +177,20 @@ public:
       __begin_ = __buffer_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~__float_buffer() {
+  ~__float_buffer() {
     if (__size_ > _Traits::__stack_buffer_size)
       allocator<char>{}.deallocate(__begin_, __size_);
   }
-  _LIBCPP_HIDE_FROM_ABI __float_buffer(const __float_buffer&)            = delete;
-  _LIBCPP_HIDE_FROM_ABI __float_buffer& operator=(const __float_buffer&) = delete;
+  __float_buffer(const __float_buffer&)            = delete;
+  __float_buffer& operator=(const __float_buffer&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI char* begin() const { return __begin_; }
-  _LIBCPP_HIDE_FROM_ABI char* end() const { return __begin_ + __size_; }
+  char* begin() const { return __begin_; }
+  char* end() const { return __begin_ + __size_; }
 
-  _LIBCPP_HIDE_FROM_ABI int __precision() const { return __precision_; }
-  _LIBCPP_HIDE_FROM_ABI int __num_trailing_zeros() const { return __num_trailing_zeros_; }
-  _LIBCPP_HIDE_FROM_ABI void __remove_trailing_zeros() { __num_trailing_zeros_ = 0; }
-  _LIBCPP_HIDE_FROM_ABI void __add_trailing_zeros(int __zeros) { __num_trailing_zeros_ += __zeros; }
+  int __precision() const { return __precision_; }
+  int __num_trailing_zeros() const { return __num_trailing_zeros_; }
+  void __remove_trailing_zeros() { __num_trailing_zeros_ = 0; }
+  void __add_trailing_zeros(int __zeros) { __num_trailing_zeros_ += __zeros; }
 
 private:
   int __precision_;
@@ -221,7 +222,7 @@ struct __float_result {
 /// eSdd and eSdddd (S = sign, d = digit)
 ///
 /// \returns a pointer to the exponent or __last when not found.
-constexpr inline _LIBCPP_HIDE_FROM_ABI char* __find_exponent(char* __first, char* __last) {
+constexpr inline char* __find_exponent(char* __first, char* __last) {
   ptrdiff_t __size = __last - __first;
   if (__size >= 4) {
     __first = __last - std::min(__size, ptrdiff_t(6));
@@ -234,8 +235,7 @@ constexpr inline _LIBCPP_HIDE_FROM_ABI char* __find_exponent(char* __first, char
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result
-__format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* __integral) {
+__float_result __format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
   __result.__last     = __formatter::__to_buffer(__integral, __buffer.end(), __value);
@@ -263,7 +263,7 @@ __format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* 
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(
+__float_result __format_buffer_hexadecimal_lower_case(
     const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
@@ -315,7 +315,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_upper_case(
+__float_result __format_buffer_hexadecimal_upper_case(
     const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result =
       __formatter::__format_buffer_hexadecimal_lower_case(__buffer, __value, __precision, __integral);
@@ -325,7 +325,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_upper_case(
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
+__float_result __format_buffer_scientific_lower_case(
     const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
@@ -352,7 +352,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_upper_case(
+__float_result __format_buffer_scientific_upper_case(
     const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result =
       __formatter::__format_buffer_scientific_lower_case(__buffer, __value, __precision, __integral);
@@ -361,7 +361,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_upper_case(
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result
+__float_result
 __format_buffer_fixed(const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
@@ -384,7 +384,7 @@ __format_buffer_fixed(const __float_buffer<_Fp>& __buffer, _Tp __value, int __pr
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result
+__float_result
 __format_buffer_general_lower_case(__float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __buffer.__remove_trailing_zeros();
 
@@ -421,7 +421,7 @@ __format_buffer_general_lower_case(__float_buffer<_Fp>& __buffer, _Tp __value, i
 }
 
 template <class _Fp, class _Tp>
-_LIBCPP_HIDE_FROM_ABI __float_result
+__float_result
 __format_buffer_general_upper_case(__float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result = __formatter::__format_buffer_general_lower_case(__buffer, __value, __precision, __integral);
   if (__result.__exponent != __result.__last)
@@ -446,7 +446,7 @@ __format_buffer_general_upper_case(__float_buffer<_Fp>& __buffer, _Tp __value, i
 /// - localization needs to do grouping in the integral part.
 template <class _Fp, class _Tp>
 // TODO FMT _Fp should just be _Tp when to_chars has proper long double support.
-_LIBCPP_HIDE_FROM_ABI __float_result __format_buffer(
+__float_result __format_buffer(
     __float_buffer<_Fp>& __buffer,
     _Tp __value,
     bool __negative,
@@ -493,7 +493,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer(
 
 #  if _LIBCPP_HAS_LOCALIZATION
 template <class _OutIt, class _Fp, class _CharT>
-_LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
+_OutIt __format_locale_specific_form(
     _OutIt __out_it,
     const __float_buffer<_Fp>& __buffer,
     const __float_result& __result,
@@ -579,7 +579,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 template <class _OutIt, class _CharT>
-_LIBCPP_HIDE_FROM_ABI _OutIt __format_floating_point_non_finite(
+_OutIt __format_floating_point_non_finite(
     _OutIt __out_it, __format_spec::__parsed_specifications<_CharT> __specs, bool __negative, bool __isnan) {
   char __buffer[4];
   char* __last = __formatter::__insert_sign(__buffer, __negative, __specs.__std_.__sign_);
@@ -613,7 +613,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_floating_point_non_finite(
 /// \param __num_trailing_zeros The number of 0's to write before the exponent
 ///                             character.
 template <class _CharT, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
+auto __write_using_trailing_zeros(
     const _CharT* __first,
     const _CharT* __last,
     output_iterator<const _CharT&> auto __out_it,
@@ -634,12 +634,12 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
 }
 
 template <floating_point _Tp, class _CharT, class _FormatContext>
-_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+typename _FormatContext::iterator
 __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
-  bool __negative = std::signbit(__value);
+  bool __negative = __math::signbit(__value);
 
-  if (!std::isfinite(__value)) [[unlikely]]
-    return __formatter::__format_floating_point_non_finite(__ctx.out(), __specs, __negative, std::isnan(__value));
+  if (!__math::isfinite(__value)) [[unlikely]]
+    return __formatter::__format_floating_point_non_finite(__ctx.out(), __specs, __negative, __math::isnan(__value));
 
   // Depending on the std-format-spec string the sign and the value
   // might not be outputted together:
@@ -728,7 +728,7 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
 
   auto __out_it = __ctx.out();
   char* __first = __buffer.begin();
-  if (__specs.__alignment_ == __format_spec::__alignment ::__zero_padding) {
+  if (__specs.__alignment_ == __format_spec::__alignment::__zero_padding) {
     // When there is a sign output it before the padding. Note the __size
     // doesn't need any adjustment, regardless whether the sign is written
     // here or in __formatter::__write.
@@ -750,17 +750,17 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
 } // namespace __formatter
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_floating_point {
+struct __formatter_floating_point {
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_floating_point);
     __format_spec::__process_parsed_floating_point(__parser_, "a floating-point");
     return __result;
   }
 
   template <floating_point _Tp, class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_Tp __value, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(_Tp __value, _FormatContext& __ctx) const {
     return __formatter::__format_floating_point(__value, __ctx, __parser_.__get_parsed_std_specifications(__ctx));
   }
 
@@ -768,11 +768,11 @@ public:
 };
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<float, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<float, _CharT> : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<double, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<double, _CharT> : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<long double, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<long double, _CharT> : public __formatter_floating_point<_CharT> {};
 
 #  if _LIBCPP_STD_VER >= 23
 template <>

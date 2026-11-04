@@ -12,8 +12,10 @@ auto l = []() -> groupshared void {}; // #l
 auto l2 = []() -> groupshared {}; // #l2
 
 float groupshared [[]] i = 12;
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
 
 float groupshared const i2 = 12;
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
 
 void foo() {
     l();
@@ -24,7 +26,7 @@ const float cf = f;
 // expected-error@#func{{'auto' return without trailing return type; deduced return types are a C++14 extension}}
 // expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
 auto func() { // #func
-  return f;
+  return f; // expected-warning{{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
 }
 
 void other() {

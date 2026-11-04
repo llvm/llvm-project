@@ -461,10 +461,8 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   }
   if (FirstMethod->getImplementationControl() !=
       SecondMethod->getImplementationControl()) {
-    DiagError(ControlLevel)
-        << llvm::to_underlying(FirstMethod->getImplementationControl());
-    DiagNote(ControlLevel) << llvm::to_underlying(
-        SecondMethod->getImplementationControl());
+    DiagError(ControlLevel) << FirstMethod->getImplementationControl();
+    DiagNote(ControlLevel) << SecondMethod->getImplementationControl();
     return true;
   }
   if (FirstMethod->isThisDeclarationADesignatedInitializer() !=
@@ -1855,8 +1853,9 @@ bool ODRDiagsEmitter::diagnoseMismatch(const EnumDecl *FirstEnum,
   }
 
   if (!FirstUnderlyingType.isNull() && !SecondUnderlyingType.isNull()) {
-    if (computeODRHash(FirstUnderlyingType) !=
-        computeODRHash(SecondUnderlyingType)) {
+    // Match AddEnumDecl, which hashes the canonical underlying type.
+    if (!Context.hasSameType(FirstEnum->getIntegerType(),
+                             SecondEnum->getIntegerType())) {
       DiagError(FirstEnum, DifferentSpecifiedTypes) << FirstUnderlyingType;
       DiagNote(SecondEnum, DifferentSpecifiedTypes) << SecondUnderlyingType;
       return true;

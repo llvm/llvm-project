@@ -22,12 +22,12 @@ define void @test1(i32 %n) #0 {
 ;
   br i1 false, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %.lr.ph, %0
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %indvars.iv.next = add i64 %indvars.iv, 1
   br i1 true, label %._crit_edge, label %.lr.ph, !llvm.loop !0
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 

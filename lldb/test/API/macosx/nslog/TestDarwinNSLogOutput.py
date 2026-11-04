@@ -18,6 +18,7 @@ from lldbsuite.test import lldbtest_config
 
 
 class DarwinNSLogOutputTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -118,8 +119,8 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.expect(expect_regexes)
 
     @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
-    @skipUnlessDarwin
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
+    @requireDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_displayed(self):
         """Test that NSLog() output shows up in the command-line debugger."""
@@ -134,8 +135,8 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.assertEqual("This is a message from NSLog", self.child.match.group(1))
 
     @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
-    @skipUnlessDarwin
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
+    @requireDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""

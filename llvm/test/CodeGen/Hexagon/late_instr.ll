@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hsdr -terminal-rule=0 < %s | FileCheck %s
 
 ; Check if instruction vandqrt.acc and its predecessor are scheduled in consecutive packets.
 ; CHECK: or(q{{[0-3]+}},q{{[0-3]+}})

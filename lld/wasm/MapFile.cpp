@@ -23,11 +23,8 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
-#include "lld/Common/Strings.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 

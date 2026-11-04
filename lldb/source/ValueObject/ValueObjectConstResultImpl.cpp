@@ -184,8 +184,9 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
     ExecutionContext exe_ctx(m_impl_backend->GetExecutionContextRef());
     m_address_of_backend = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), compiler_type.GetPointerType(),
-        ConstString(new_name.c_str()), buffer, endian::InlHostByteOrder(),
-        exe_ctx.GetAddressByteSize());
+        ConstString(new_name), buffer, endian::InlHostByteOrder(),
+        exe_ctx.GetAddressByteSize(), LLDB_INVALID_ADDRESS,
+        m_impl_backend->GetManager());
 
     m_address_of_backend->GetValue().SetValueType(Value::ValueType::Scalar);
     m_address_of_backend->GetValue().GetScalar() = m_live_address;
@@ -206,22 +207,16 @@ ValueObjectConstResultImpl::Cast(const CompilerType &compiler_type) {
   return result_cast->GetSP();
 }
 
-lldb::addr_t
-ValueObjectConstResultImpl::GetAddressOf(bool scalar_is_load_address,
-                                         AddressType *address_type) {
+ValueObject::AddrAndType
+ValueObjectConstResultImpl::GetAddressOf(bool scalar_is_load_address) {
 
   if (m_impl_backend == nullptr)
-    return 0;
+    return {0, eAddressTypeInvalid};
 
-  if (m_live_address == LLDB_INVALID_ADDRESS) {
-    return m_impl_backend->ValueObject::GetAddressOf(scalar_is_load_address,
-                                                     address_type);
-  }
+  if (m_live_address == LLDB_INVALID_ADDRESS)
+    return m_impl_backend->ValueObject::GetAddressOf(scalar_is_load_address);
 
-  if (address_type)
-    *address_type = m_live_address_type;
-
-  return m_live_address;
+  return {m_live_address, m_live_address_type};
 }
 
 size_t ValueObjectConstResultImpl::GetPointeeData(DataExtractor &data,

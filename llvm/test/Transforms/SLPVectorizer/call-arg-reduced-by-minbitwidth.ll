@@ -6,9 +6,9 @@ define void @test(ptr %0, i8 %1, i1 %cmp12.i) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[CMP12_I:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> poison, i1 [[CMP12_I]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> poison, i1 [[CMP12_I]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i8> poison, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i8> poison, i8 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[PRE:%.*]]
 ; CHECK:       pre:

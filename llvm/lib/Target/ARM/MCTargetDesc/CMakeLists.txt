@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMARMDesc
   ARMMachORelocationInfo.cpp
   ARMMCAsmInfo.cpp
   ARMMCCodeEmitter.cpp
-  ARMMCExpr.cpp
   ARMMCTargetDesc.cpp
   ARMTargetStreamer.cpp
   ARMUnwindOpAsm.cpp

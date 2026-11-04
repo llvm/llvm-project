@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
 
 define i32 @a() { ret i32 0 }
 @b = internal alias i32 (), ptr @a
@@ -18,6 +18,10 @@ define i32 @z() {
   %val = call i32 @b()
   ret i32 %val
 }
+
+; An unnamed aliasee must be referenced by its mangled symbol name.
+define internal i32 @0() { ret i32 0 }
+@unnamed_aliasee = internal alias i32 (), ptr @0
 
 
 attributes #0 = { noreturn }
@@ -43,7 +47,8 @@ attributes #0 = { noreturn }
 
 ;      CHECK: .visible .func noreturn_alias
 ; CHECK-NEXT: ()
-; CHECK-NEXT: .noreturn;
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a()
 
@@ -56,8 +61,7 @@ attributes #0 = { noreturn }
 ; CHECK-NEXT: .noreturn
 
 ;      CHECK: .visible .func  (.param .b32 func_retval0) z()
-;      CHECK:      call.uni (retval0), 
-; CHECK-NEXT:      b,
+;      CHECK:      call.uni (retval0), b,
 
 
 ; CHECK: .alias b, a;
@@ -65,3 +69,4 @@ attributes #0 = { noreturn }
 ; CHECK: .alias d, a;
 ; CHECK: .alias bar, foo;
 ; CHECK: .alias noreturn_alias, noreturn;
+; CHECK: .alias unnamed_aliasee, __unnamed_1;

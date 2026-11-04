@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu
-# RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa -mcpu=fiji %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=amdgpu8.03--amdhsa %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 # RUN: llvm-nm %t.so | FileCheck %s --check-prefix=NM
@@ -110,10 +110,10 @@ foo:
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var2 0x0
+# CHECK-NEXT: R_AMDGPU_ABS64 temp 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weakref_alias_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weakref_alias_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weakref_alias_var2 0x0
-# CHECK-NEXT: R_AMDGPU_ABS64 temp 0x0
 # CHECK-NEXT: }
 # CHECK-NEXT: ]
 

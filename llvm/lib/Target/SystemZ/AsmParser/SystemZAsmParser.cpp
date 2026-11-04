@@ -9,7 +9,7 @@
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "SystemZTargetStreamer.h"
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,7 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -30,8 +30,10 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -60,9 +62,11 @@ enum RegisterKind {
   GRH32Reg,
   GR64Reg,
   GR128Reg,
+  FP16Reg,
   FP32Reg,
   FP64Reg,
   FP128Reg,
+  VR16Reg,
   VR32Reg,
   VR64Reg,
   VR128Reg,
@@ -290,7 +294,7 @@ public:
   // Override MCParsedAsmOperand.
   SMLoc getStartLoc() const override { return StartLoc; }
   SMLoc getEndLoc() const override { return EndLoc; }
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
@@ -364,9 +368,11 @@ public:
   bool isADDR32() const { return isReg(GR32Reg); }
   bool isADDR64() const { return isReg(GR64Reg); }
   bool isADDR128() const { return false; }
+  bool isFP16() const { return isReg(FP16Reg); }
   bool isFP32() const { return isReg(FP32Reg); }
   bool isFP64() const { return isReg(FP64Reg); }
   bool isFP128() const { return isReg(FP128Reg); }
+  bool isVR16() const { return isReg(VR16Reg); }
   bool isVR32() const { return isReg(VR32Reg); }
   bool isVR64() const { return isReg(VR64Reg); }
   bool isVF128() const { return false; }
@@ -391,11 +397,14 @@ public:
   bool isU4Imm() const { return isImm(0, 15); }
   bool isU8Imm() const { return isImm(0, 255); }
   bool isS8Imm() const { return isImm(-128, 127); }
+  bool isX8Imm() const { return isS8Imm() || isU8Imm(); }
   bool isU12Imm() const { return isImm(0, 4095); }
   bool isU16Imm() const { return isImm(0, 65535); }
   bool isS16Imm() const { return isImm(-32768, 32767); }
+  bool isX16Imm() const { return isS16Imm() || isU16Imm(); }
   bool isU32Imm() const { return isImm(0, (1LL << 32) - 1); }
   bool isS32Imm() const { return isImm(-(1LL << 31), (1LL << 31) - 1); }
+  bool isX32Imm() const { return isS32Imm() || isU32Imm(); }
   bool isU48Imm() const { return isImm(0, (1LL << 48) - 1); }
 };
 
@@ -405,6 +414,12 @@ class SystemZAsmParser : public MCTargetAsmParser {
 
 private:
   MCAsmParser &Parser;
+
+  // A vector to contain the stack of FeatureBitsets created by `.machine push`.
+  // `.machine pop` pops the top of the stack and uses `setAvailableFeatures` to
+  // apply the result.
+  SmallVector<FeatureBitset> MachineStack;
+
   enum RegisterGroup {
     RegGR,
     RegFP,
@@ -439,9 +454,9 @@ private:
                     bool HasLength = false, bool HasVectorIndex = false);
   bool parseAddressRegister(Register &Reg);
 
-  bool ParseDirectiveInsn(SMLoc L);
-  bool ParseDirectiveMachine(SMLoc L);
-  bool ParseGNUAttribute(SMLoc L);
+  bool parseDirectiveInsn(SMLoc L);
+  bool parseDirectiveMachine(SMLoc L);
+  bool parseGNUAttribute(SMLoc L);
 
   ParseStatus parseAddress(OperandVector &Operands, MemoryKind MemKind,
                            RegisterKind RegKind);
@@ -469,7 +484,7 @@ private:
   // here, to get the "correct" assembler dialect, and use it in various
   // functions.
   unsigned getMAIAssemblerDialect() {
-    return Parser.getContext().getAsmInfo()->getAssemblerDialect();
+    return Parser.getContext().getAsmInfo().getAssemblerDialect();
   }
 
   // An alphabetic character in HLASM is a letter from 'A' through 'Z',
@@ -489,9 +504,8 @@ private:
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                   const MCInstrInfo &MII,
-                   const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+                   const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Alias the .word directive to .short.
@@ -543,6 +557,9 @@ public:
   ParseStatus parseADDR128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
   }
+  ParseStatus parseFP16(OperandVector &Operands) {
+    return parseRegister(Operands, FP16Reg);
+  }
   ParseStatus parseFP32(OperandVector &Operands) {
     return parseRegister(Operands, FP32Reg);
   }
@@ -551,6 +568,9 @@ public:
   }
   ParseStatus parseFP128(OperandVector &Operands) {
     return parseRegister(Operands, FP128Reg);
+  }
+  ParseStatus parseVR16(OperandVector &Operands) {
+    return parseRegister(Operands, VR16Reg);
   }
   ParseStatus parseVR32(OperandVector &Operands) {
     return parseRegister(Operands, VR32Reg);
@@ -622,112 +642,15 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "SystemZGenAsmMatcher.inc"
 
-// Used for the .insn directives; contains information needed to parse the
-// operands in the directive.
-struct InsnMatchEntry {
-  StringRef Format;
-  uint64_t Opcode;
-  int32_t NumOperands;
-  MatchClassKind OperandKinds[7];
-};
+namespace {
 
-// For equal_range comparison.
-struct CompareInsn {
-  bool operator() (const InsnMatchEntry &LHS, StringRef RHS) {
-    return LHS.Format < RHS;
-  }
-  bool operator() (StringRef LHS, const InsnMatchEntry &RHS) {
-    return LHS < RHS.Format;
-  }
-  bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
-    return LHS.Format < RHS.Format;
-  }
-};
+// Defines MAX_INSN_OPERANDNUM, InsnMatchEntry, CompareInsn, and
+// InsnMatchTable[].  Generated by SystemZInsnDirectiveEmitter.
+#include "SystemZGenInsnMatchTable.inc"
 
-// Table initializing information for parsing the .insn directive.
-static struct InsnMatchEntry InsnMatchTable[] = {
-  /* Format, Opcode, NumOperands, OperandKinds */
-  { "e", SystemZ::InsnE, 1,
-    { MCK_U16Imm } },
-  { "ri", SystemZ::InsnRI, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
-  { "rie", SystemZ::InsnRIE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "ril", SystemZ::InsnRIL, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_PCRel32 } },
-  { "rilu", SystemZ::InsnRILU, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_U32Imm } },
-  { "ris", SystemZ::InsnRIS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rr", SystemZ::InsnRR, 3,
-    { MCK_U16Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rre", SystemZ::InsnRRE, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rrf", SystemZ::InsnRRF, 5,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm } },
-  { "rrs", SystemZ::InsnRRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rs", SystemZ::InsnRS, 4,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rse", SystemZ::InsnRSE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rsi", SystemZ::InsnRSI, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "rsy", SystemZ::InsnRSY, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20 } },
-  { "rx", SystemZ::InsnRX, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxe", SystemZ::InsnRXE, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxf", SystemZ::InsnRXF, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxy", SystemZ::InsnRXY, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20 } },
-  { "s", SystemZ::InsnS, 2,
-    { MCK_U32Imm, MCK_BDAddr64Disp12 } },
-  { "si", SystemZ::InsnSI, 3,
-    { MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm } },
-  { "sil", SystemZ::InsnSIL, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm } },
-  { "siy", SystemZ::InsnSIY, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm } },
-  { "ss", SystemZ::InsnSS, 4,
-    { MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "sse", SystemZ::InsnSSE, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12 } },
-  { "ssf", SystemZ::InsnSSF, 4,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "vri", SystemZ::InsnVRI, 6,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
-  { "vrr", SystemZ::InsnVRR, 7,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
-      MCK_U4Imm } },
-  { "vrs", SystemZ::InsnVRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm } },
-  { "vrv", SystemZ::InsnVRV, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm } },
-  { "vrx", SystemZ::InsnVRX, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm } },
-  { "vsi", SystemZ::InsnVSI, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
-};
+} // end anonymous namespace
 
-static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
-  if (!E)
-    return;
-  if (auto *CE = dyn_cast<MCConstantExpr>(E))
-    OS << *CE;
-  else if (auto *UE = dyn_cast<MCUnaryExpr>(E))
-    OS << *UE;
-  else if (auto *BE = dyn_cast<MCBinaryExpr>(E))
-    OS << *BE;
-  else if (auto *SRE = dyn_cast<MCSymbolRefExpr>(E))
-    OS << *SRE;
-  else
-    OS << *E;
-}
-
-void SystemZOperand::print(raw_ostream &OS) const {
+void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindToken:
     OS << "Token:" << getToken();
@@ -737,24 +660,26 @@ void SystemZOperand::print(raw_ostream &OS) const {
     break;
   case KindImm:
     OS << "Imm:";
-    printMCExpr(getImm(), OS);
+    MAI.printExpr(OS, *getImm());
     break;
   case KindImmTLS:
     OS << "ImmTLS:";
-    printMCExpr(getImmTLS().Imm, OS);
+    MAI.printExpr(OS, *getImmTLS().Imm);
     if (getImmTLS().Sym) {
       OS << ", ";
-      printMCExpr(getImmTLS().Sym, OS);
+      MAI.printExpr(OS, *getImmTLS().Sym);
     }
     break;
   case KindMem: {
     const MemOp &Op = getMem();
-    OS << "Mem:" << *cast<MCConstantExpr>(Op.Disp);
+    OS << "Mem:";
+    MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Disp));
     if (Op.Base) {
       OS << "(";
-      if (Op.MemKind == BDLMem)
-        OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
-      else if (Op.MemKind == BDRMem)
+      if (Op.MemKind == BDLMem) {
+        MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Length.Imm));
+        OS << ',';
+      } else if (Op.MemKind == BDRMem)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";
@@ -841,11 +766,13 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
   case GR128Reg:
     Group = RegGR;
     break;
+  case FP16Reg:
   case FP32Reg:
   case FP64Reg:
   case FP128Reg:
     Group = RegFP;
     break;
+  case VR16Reg:
   case VR32Reg:
   case VR64Reg:
   case VR128Reg:
@@ -888,21 +815,25 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
 
   // Determine the LLVM register number according to Kind.
+  // clang-format off
   const unsigned *Regs;
   switch (Kind) {
   case GR32Reg:  Regs = SystemZMC::GR32Regs;  break;
   case GRH32Reg: Regs = SystemZMC::GRH32Regs; break;
   case GR64Reg:  Regs = SystemZMC::GR64Regs;  break;
   case GR128Reg: Regs = SystemZMC::GR128Regs; break;
+  case FP16Reg:  Regs = SystemZMC::FP16Regs;  break;
   case FP32Reg:  Regs = SystemZMC::FP32Regs;  break;
   case FP64Reg:  Regs = SystemZMC::FP64Regs;  break;
   case FP128Reg: Regs = SystemZMC::FP128Regs; break;
+  case VR16Reg:  Regs = SystemZMC::VR16Regs;  break;
   case VR32Reg:  Regs = SystemZMC::VR32Regs;  break;
   case VR64Reg:  Regs = SystemZMC::VR64Regs;  break;
   case VR128Reg: Regs = SystemZMC::VR128Regs; break;
   case AR32Reg:  Regs = SystemZMC::AR32Regs;  break;
   case CR64Reg:  Regs = SystemZMC::CR64Regs;  break;
   }
+  // clang-format on
   if (Regs[Reg.Num] == 0)
     return Error(Reg.StartLoc, "invalid register pair");
 
@@ -1236,18 +1167,61 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
 
   if (IDVal == ".insn")
-    return ParseDirectiveInsn(DirectiveID.getLoc());
+    return parseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
-    return ParseDirectiveMachine(DirectiveID.getLoc());
+    return parseDirectiveMachine(DirectiveID.getLoc());
   if (IDVal.starts_with(".gnu_attribute"))
-    return ParseGNUAttribute(DirectiveID.getLoc());
+    return parseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;
 }
 
+// Append the default MCOperand(s) for one omitted optional .insn operand.
+// Zero is used for every field; this matches what "let Rx = 0" did for the
+// old per-variant TD records.  The per-kind arity must match the add*Operands
+// methods in SystemZOperand.
+static void addDefaultOperand(MCInst &Inst, MatchClassKind Kind) {
+  switch (Kind) {
+  // Single register operands.
+  case MCK_AnyReg:
+    Inst.addOperand(MCOperand::createReg(SystemZMC::GR64Regs[0]));
+    break;
+  case MCK_VR128:
+    Inst.addOperand(MCOperand::createReg(SystemZMC::VR128Regs[0]));
+    break;
+  // BD memory: base reg + displacement.
+  case MCK_BDAddr64Disp12:
+  case MCK_BDAddr64Disp20:
+    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createImm(0));
+    break;
+  // BDX / BDV / BDR / LXA memory: base reg + displacement + index/vector/reg.
+  case MCK_BDXAddr64Disp12:
+  case MCK_BDXAddr64Disp20:
+  case MCK_BDRAddr64Disp12:
+  case MCK_BDVAddr64Disp12:
+  case MCK_LXAAddr64Disp20:
+    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createImm(0));
+    Inst.addOperand(MCOperand::createReg(0));
+    break;
+  // BDL memory: base reg + displacement + length immediate.
+  case MCK_BDLAddr64Disp12Len4:
+  case MCK_BDLAddr64Disp12Len8:
+    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createImm(0));
+    Inst.addOperand(MCOperand::createImm(0));
+    break;
+  // Everything else (immediates, PC-relative targets) is a single imm(0).
+  default:
+    Inst.addOperand(MCOperand::createImm(0));
+    break;
+  }
+}
+
 /// ParseDirectiveInsn
 /// ::= .insn [ format, encoding, (operands (, operands)*) ]
-bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
+bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   // Expect instruction format as identifier.
@@ -1256,7 +1230,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   if (Parser.parseIdentifier(Format))
     return Error(ErrorLoc, "expected instruction format");
 
-  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> Operands;
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, MAX_INSN_OPERANDNUM>
+      Operands;
 
   // Find entry for this format in InsnMatchTable.
   auto EntryRange =
@@ -1267,23 +1242,29 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   if (EntryRange.first == EntryRange.second)
     return Error(ErrorLoc, "unrecognized format");
 
-  struct InsnMatchEntry *Entry = EntryRange.first;
+  // Each format has exactly one entry in InsnMatchTable; optional trailing
+  // operands are encoded in NumOptionalOperands rather than via extra entries.
+  const InsnMatchEntry *Entry = EntryRange.first;
 
-  // Format should match from equal_range.
-  assert(Entry->Format == Format);
+  // Determine the minimum allowed operand count for the .insn directive.
+  unsigned NumMandatoryOperands =
+      Entry->NumOperands - Entry->NumOptionalOperands;
 
   // Parse the following operands using the table's information.
-  for (int I = 0; I < Entry->NumOperands; I++) {
-    MatchClassKind Kind = Entry->OperandKinds[I];
-
-    SMLoc StartLoc = Parser.getTok().getLoc();
-
-    // Always expect commas as separators for operands.
-    if (getLexer().isNot(AsmToken::Comma))
-      return Error(StartLoc, "unexpected token in directive");
-    Lex();
+  for (unsigned I = 0; I < Entry->NumOperands; I++) {
+    // Commas separate operands. If the operand list has ended (no comma),
+    // stop if we have already satisfied all mandatory operands; otherwise
+    // we have too few operands.
+    if (getLexer().isNot(AsmToken::Comma)) {
+      if (I >= NumMandatoryOperands)
+        break; // remaining operands are optional; defaults inserted below
+      SMLoc StartLoc = Parser.getTok().getLoc();
+      return Error(StartLoc, "too few operands to .insn directive");
+    }
+    Lex(); // consume comma
 
     // Parse operands.
+    MatchClassKind Kind = Entry->OperandKinds[I];
     ParseStatus ResTy;
     if (Kind == MCK_AnyReg)
       ResTy = parseAnyReg(Operands);
@@ -1291,6 +1272,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ResTy = parseVR128(Operands);
     else if (Kind == MCK_BDXAddr64Disp12 || Kind == MCK_BDXAddr64Disp20)
       ResTy = parseBDXAddr64(Operands);
+    else if (Kind == MCK_BDRAddr64Disp12)
+      ResTy = parseBDRAddr64(Operands);
     else if (Kind == MCK_BDAddr64Disp12 || Kind == MCK_BDAddr64Disp20)
       ResTy = parseBDAddr64(Operands);
     else if (Kind == MCK_BDVAddr64Disp12)
@@ -1301,6 +1284,12 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ResTy = parsePCRel32(Operands);
     else if (Kind == MCK_PCRel16)
       ResTy = parsePCRel16(Operands);
+    else if (Kind == MCK_PCRel12)
+      ResTy = parsePCRel12(Operands);
+    else if (Kind == MCK_PCRel24)
+      ResTy = parsePCRel24(Operands);
+    else if (Kind == MCK_BDLAddr64Disp12Len4 || Kind == MCK_BDLAddr64Disp12Len8)
+      ResTy = parseBDLAddr64(Operands);
     else {
       // Only remaining operand kind is an immediate.
       const MCExpr *Expr;
@@ -1308,7 +1297,7 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
 
       // Expect immediate expression.
       if (Parser.parseExpression(Expr))
-        return Error(StartLoc, "unexpected token in directive");
+        return Error(StartLoc, "unexpected token in .insn directive");
 
       SMLoc EndLoc =
         SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
@@ -1317,19 +1306,29 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ResTy = ParseStatus::Success;
     }
 
+    // Could not parse this operand, parsing failure
     if (!ResTy.isSuccess())
       return true;
   }
 
+  // If there's still a comma at this point, there were too many operands.
+  if (getLexer().is(AsmToken::Comma)) {
+    return Error(Parser.getTok().getLoc(),
+                 "too many operands to .insn directive");
+  }
+
+  // Format should match from equal_range.
+  assert(Entry->Format == Format);
+
   // Build the instruction with the parsed operands.
   MCInst Inst = MCInstBuilder(Entry->Opcode);
 
-  for (size_t I = 0; I < Operands.size(); I++) {
+  for (unsigned I = 0; I < Operands.size(); I++) {
     MCParsedAsmOperand &Operand = *Operands[I];
     MatchClassKind Kind = Entry->OperandKinds[I];
 
     // Verify operand.
-    unsigned Res = validateOperandClass(Operand, Kind);
+    unsigned Res = validateOperandClass(Operand, Kind, *STI);
     if (Res != Match_Success)
       return Error(Operand.getStartLoc(), "unexpected operand type");
 
@@ -1341,8 +1340,12 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ZOperand.addBDAddrOperands(Inst, 2);
     else if (ZOperand.isMem(BDXMem))
       ZOperand.addBDXAddrOperands(Inst, 3);
+    else if (ZOperand.isMem(BDRMem))
+      ZOperand.addBDRAddrOperands(Inst, 3);
     else if (ZOperand.isMem(BDVMem))
       ZOperand.addBDVAddrOperands(Inst, 3);
+    else if (ZOperand.isMem(BDLMem))
+      ZOperand.addBDLAddrOperands(Inst, 3);
     else if (ZOperand.isMem(LXAMem))
       ZOperand.addLXAAddrOperands(Inst, 3);
     else if (ZOperand.isImm())
@@ -1350,6 +1353,10 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
     else
       llvm_unreachable("unexpected operand type");
   }
+
+  // Insert default values for any optional operands the user omitted.
+  for (unsigned I = Operands.size(); I < Entry->NumOperands; ++I)
+    addDefaultOperand(Inst, Entry->OperandKinds[I]);
 
   // Emit as a regular instruction.
   Parser.getStreamer().emitInstruction(Inst, getSTI());
@@ -1359,27 +1366,43 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
 
 /// ParseDirectiveMachine
 /// ::= .machine [ mcpu ]
-bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
+bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
     return TokError("unexpected token in '.machine' directive");
 
-  StringRef CPU = Parser.getTok().getIdentifier();
+  StringRef Id = Parser.getTok().getIdentifier();
+  SMLoc IdLoc = Parser.getTok().getLoc();
+
   Parser.Lex();
   if (parseEOL())
     return true;
 
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
-  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-
-  getTargetStreamer().emitMachine(CPU);
+  // Parse push and pop directives first
+  if (Id == "push") {
+    // Push the Current FeatureBitSet onto the stack.
+    MachineStack.push_back(getAvailableFeatures());
+  } else if (Id == "pop") {
+    // If the stack is not empty pop the topmost FeatureBitset and use it.
+    if (MachineStack.empty())
+      return Error(IdLoc,
+                   "pop without corresponding push in '.machine' directive");
+    setAvailableFeatures(MachineStack.back());
+    MachineStack.pop_back();
+  } else {
+    // Try to interpret the Identifier as a CPU spec and derive the
+    // FeatureBitset from that.
+    MCSubtargetInfo &STI = copySTI();
+    STI.setDefaultFeatures(Id, /*TuneCPU*/ Id, "");
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  }
+  getTargetStreamer().emitMachine(Id);
 
   return false;
 }
 
-bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
+bool SystemZAsmParser::parseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
@@ -1648,8 +1671,7 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                                 Ctx);
+    const MCExpr *Base = MCSymbolRefExpr::create(Sym, Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
 
@@ -1669,12 +1691,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+    auto Kind = SystemZ::S_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = MCSymbolRefExpr::VK_TLSGD;
+      Kind = SystemZ::S_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = MCSymbolRefExpr::VK_TLSLDM;
+      Kind = SystemZ::S_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();
@@ -1747,6 +1769,7 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmParser() {
   RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

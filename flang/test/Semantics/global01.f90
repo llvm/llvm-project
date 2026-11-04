@@ -30,7 +30,7 @@ end function
 
 program test
   interface
-    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4))
+    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4)) [-Wexternal-interface-mismatch]
     subroutine global1(x)
       real, intent(in) :: x
     end subroutine
@@ -43,7 +43,7 @@ program test
     subroutine global4(x) ! not PURE, but that's ok
       integer, intent(in) :: x
     end subroutine
-    !WARNING: The global subprogram 'global5' is not compatible with its local procedure declaration (incompatible procedure attributes: Pure)
+    !WARNING: The global subprogram 'global5' is not compatible with its local procedure declaration (incompatible procedure attributes: Pure) [-Wexternal-interface-mismatch]
     pure subroutine global5(x)
       integer, intent(in) :: x
     end subroutine

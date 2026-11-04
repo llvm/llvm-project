@@ -3,11 +3,12 @@
 
 // clang-format off
 
-// REQUIRES: system-linux
-// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
+// REQUIRES: system-linux, asserts
+
+// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown -mattr=+pauth %s -o %t.o
 // RUN: %clang %cflags --target=aarch64-unknown-linux %t.o -o %t.exe -Wl,-q
-// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict\
-// RUN:  -v=1 2>&1 | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --debug-only=mcplus -v=1 2>&1 \
+// RUN:   | FileCheck %s
 
 // Pattern 1: there is no shift amount after the 'add' instruction.
 //
@@ -39,11 +40,12 @@ _start:
 // svc #0
 
 // Pattern 1
-// CHECK: BOLT-WARNING: Failed to match indirect branch: ShiftVAL != 2
+// CHECK: BOLT-DEBUG: failed to match indirect branch: ShiftVAL != 2
   .globl test1
   .type  test1, %function
 test1:
   mov     x1, #0
+  nop
   adr     x3, datatable
   add     x3, x3, x1, lsl #2
   ldr     w2, [x3]
@@ -55,15 +57,21 @@ test1_1:
    ret
 test1_2:
    ret
+   .size test1, .-test1
+
+// Temporary workaround for PC-relative relocations from datatable leaking into
+// test2 function and creating phantom entry points.
+.skip 0x100
 
 // Pattern 2
-// CHECK: BOLT-WARNING: Failed to match indirect branch: nop/adr instead of adrp/add
+// CHECK: BOLT-DEBUG: failed to match indirect branch: nop/adr instead of adrp/add
   .globl test2
   .type  test2, %function
 test2:
   nop
   adr     x3, jump_table
   ldrh    w3, [x3, x1, lsl #1]
+  nop
   adr     x1, test2_0
   add     x3, x1, w3, sxth #2
   br      x3
@@ -71,6 +79,27 @@ test2_0:
   ret
 test2_1:
   ret
+
+// Make sure BOLT does not crash trying to disassemble BRA* instructions.
+  .globl test_braa
+  .type  test_braa, %function
+test_braa:
+  braa x0, x1
+
+  .globl test_brab
+  .type  test_brab, %function
+test_brab:
+  brab x0, x1
+
+  .globl test_braaz
+  .type  test_braaz, %function
+test_braaz:
+  braaz x0
+
+  .globl test_brabz
+  .type  test_brabz, %function
+test_brabz:
+  brabz x0
 
   .section .rodata,"a",@progbits
 datatable:

@@ -129,8 +129,6 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   if (!CheckOk)
     return false;
 
-  MCInst OrigMCB = MCB;
-
   // Examine the packet and convert pairs of instructions to compound
   // instructions when possible.
   if (!HexagonDisableCompound)
@@ -435,7 +433,7 @@ unsigned HexagonMCInstrInfo::getCVIResources(MCInstrInfo const &MCII,
   int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
   int Size = II[SchedClass].LastStage - II[SchedClass].FirstStage;
 
-  // HVX resources used are currenty located at the second to last stage.
+  // HVX resources used are currently located at the second to last stage.
   // This could also be done with a linear search of the stages looking for:
   // CVI_ALL, CVI_MPY01, CVI_XLSHF, CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE,
   // CVI_ZW

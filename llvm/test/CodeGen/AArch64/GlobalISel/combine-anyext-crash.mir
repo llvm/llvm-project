@@ -30,13 +30,13 @@ body:             |
    ; CHECK-LABEL: bb.1:
     successors: %bb.2
   
-    %0(s16) = G_CONSTANT i16 0
+    %0(i16) = G_CONSTANT i16 0
   
   bb.2:
     successors: %bb.2
   
-    %1(s8) = G_TRUNC %0(s16)
-    %2(s64) = G_UITOFP %1(s8)
+    %1(i8) = G_TRUNC %0(i16)
+    %2(f64) = G_UITOFP %1(i8)
     G_BR %bb.2
 
 ...

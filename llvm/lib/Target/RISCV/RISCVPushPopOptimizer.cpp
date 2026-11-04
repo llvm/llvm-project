@@ -11,19 +11,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
 #define RISCV_PUSH_POP_OPT_NAME "RISC-V Zcmp Push/Pop optimization pass"
 
 namespace {
-struct RISCVPushPopOpt : public MachineFunctionPass {
+class RISCVPushPopOptLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  RISCVPushPopOpt() : MachineFunctionPass(ID) {}
+  RISCVPushPopOptLegacy() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
+  StringRef getPassName() const override { return RISCV_PUSH_POP_OPT_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class RISCVPushPopOptImpl {
   const RISCVInstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
@@ -33,39 +51,53 @@ struct RISCVPushPopOpt : public MachineFunctionPass {
   bool usePopRet(MachineBasicBlock::iterator &MBBI,
                  MachineBasicBlock::iterator &NextI, bool IsReturnZero);
   bool adjustRetVal(MachineBasicBlock::iterator &MBBI);
-  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  StringRef getPassName() const override { return RISCV_PUSH_POP_OPT_NAME; }
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
 };
 
-char RISCVPushPopOpt::ID = 0;
+char RISCVPushPopOptLegacy::ID = 0;
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVPushPopOpt, "riscv-push-pop-opt", RISCV_PUSH_POP_OPT_NAME,
-                false, false)
+INITIALIZE_PASS(RISCVPushPopOptLegacy, "riscv-push-pop-opt",
+                RISCV_PUSH_POP_OPT_NAME, false, false)
 
-// Check if POP instruction was inserted into the MBB and return iterator to it.
-static MachineBasicBlock::iterator containsPop(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBB.end();
-       MBBI = next_nodbg(MBBI, MBB.end()))
-    if (MBBI->getOpcode() == RISCV::CM_POP)
-      return MBBI;
-
-  return MBB.end();
+static bool isPop(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::CM_POP:
+  case RISCV::QC_CM_POP:
+    return true;
+  default:
+    return false;
+  }
 }
 
-bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
-                                MachineBasicBlock::iterator &NextI,
-                                bool IsReturnZero) {
+static unsigned getPopRetOpcode(unsigned PopOpcode, bool IsReturnZero) {
+  assert(isPop(PopOpcode) && "Unexpected Pop Opcode");
+
+  switch (PopOpcode) {
+  case RISCV::CM_POP:
+    return IsReturnZero ? RISCV::CM_POPRETZ : RISCV::CM_POPRET;
+  case RISCV::QC_CM_POP:
+    return IsReturnZero ? RISCV::QC_CM_POPRETZ : RISCV::QC_CM_POPRET;
+  default:
+    llvm_unreachable("Unhandled Pop Opcode");
+  }
+}
+
+bool RISCVPushPopOptImpl::usePopRet(MachineBasicBlock::iterator &MBBI,
+                                    MachineBasicBlock::iterator &NextI,
+                                    bool IsReturnZero) {
   // Since Pseudo instruction lowering happen later in the pipeline,
   // this will detect all ret instruction.
   DebugLoc DL = NextI->getDebugLoc();
-  unsigned Opc = IsReturnZero ? RISCV::CM_POPRETZ : RISCV::CM_POPRET;
+  unsigned Opc = getPopRetOpcode(MBBI->getOpcode(), IsReturnZero);
   MachineInstrBuilder PopRetBuilder =
       BuildMI(*NextI->getParent(), NextI, DL, TII->get(Opc))
           .add(MBBI->getOperand(0))
-          .add(MBBI->getOperand(1));
+          .add(MBBI->getOperand(1))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
   // Copy over the variable implicit uses and defs from the CM_POP. They depend
   // on what register list has been picked during frame lowering.
@@ -83,7 +115,7 @@ bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
 
 // Search for last assignment to a0 and if possible use ret_val slot of POP to
 // store return value.
-bool RISCVPushPopOpt::adjustRetVal(MachineBasicBlock::iterator &MBBI) {
+bool RISCVPushPopOptImpl::adjustRetVal(MachineBasicBlock::iterator &MBBI) {
   MachineBasicBlock::reverse_iterator RE = MBBI->getParent()->rend();
   // Track which register units have been modified and used between the POP
   // insn and the last assignment to register a0.
@@ -114,40 +146,67 @@ bool RISCVPushPopOpt::adjustRetVal(MachineBasicBlock::iterator &MBBI) {
   return false;
 }
 
-bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
+bool RISCVPushPopOptImpl::runOnMachineFunction(MachineFunction &MF) {
   // If Zcmp extension is not supported, abort.
-  const RISCVSubtarget *Subtarget = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget->hasStdExtZcmp())
+  const RISCVSubtarget *Subtarget = &MF.getSubtarget<RISCVSubtarget>();
+  if (!Subtarget->hasStdExtZcmp() && !Subtarget->hasVendorXqccmp())
     return false;
 
-  // If frame pointer elimination has been disabled, abort to avoid breaking the
-  // ABI.
-  if (Fn.getTarget().Options.DisableFramePointerElim(Fn))
+  // We don't want any popret[z] instructions when emitting code with shadow
+  // stack protection. Note that this pass would actually fail to insert any
+  // popret[z] instructions in this case since the cm.pop and ret will not be
+  // adjacent. But there's no point in running a pass that won't do anything.
+  if ((MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
+       Subtarget->hasStdExtZimop()) ||
+      MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
     return false;
 
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
+
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we determine
   // correct return value for the POP.
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
+
   bool Modified = false;
-  for (auto &MBB : Fn) {
-    MachineBasicBlock::iterator MBBI = containsPop(MBB);
-    MachineBasicBlock::iterator NextI = next_nodbg(MBBI, MBB.end());
-    if (MBBI != MBB.end() && NextI != MBB.end() &&
-        NextI->getOpcode() == RISCV::PseudoRET)
-      Modified |= usePopRet(MBBI, NextI, adjustRetVal(MBBI));
+  for (auto &MBB : MF) {
+    // RET should be the only terminator.
+    auto RetMBBI = MBB.getFirstTerminator();
+    if (RetMBBI == MBB.end() || RetMBBI->getOpcode() != RISCV::PseudoRET ||
+        RetMBBI == MBB.begin())
+      continue;
+
+    // The previous instruction should be a POP.
+    auto PopMBBI = prev_nodbg(RetMBBI, MBB.begin());
+    if (isPop(PopMBBI->getOpcode()) &&
+        PopMBBI->getFlag(MachineInstr::FrameDestroy))
+      Modified |= usePopRet(PopMBBI, RetMBBI, adjustRetVal(PopMBBI));
   }
+
   return Modified;
 }
 
 /// createRISCVPushPopOptimizationPass - returns an instance of the
 /// Push/Pop optimization pass.
-FunctionPass *llvm::createRISCVPushPopOptimizationPass() {
-  return new RISCVPushPopOpt();
+FunctionPass *llvm::createRISCVPushPopOptLegacyPass() {
+  return new RISCVPushPopOptLegacy();
+}
+
+bool RISCVPushPopOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  RISCVPushPopOptImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+RISCVPushPopOptPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  RISCVPushPopOptImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

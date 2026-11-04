@@ -65,6 +65,12 @@ inline mlir::Type getFortranElementOrSequenceType(mlir::Type type) {
 /// variableType.
 mlir::Type getExprType(mlir::Type variableType);
 
+/// Get the canonical HLFIR variable type for an hlfir::ExprType. This is
+/// the type a DeclareOp base result would have for a temp holding the
+/// expression value (without lower bounds). This is the inverse of
+/// getExprType.
+mlir::Type getVariableType(hlfir::ExprType exprType);
+
 /// Is this a fir.box or fir.class address type?
 inline bool isBoxAddressType(mlir::Type type) {
   type = fir::dyn_cast_ptrEleTy(type);
@@ -80,6 +86,17 @@ inline bool isPolymorphicType(mlir::Type type) {
   if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
     return exprType.isPolymorphic();
   return fir::isPolymorphicType(type);
+}
+
+/// Is this the FIR type of a Fortran procedure pointer?
+inline bool isFortranProcedurePointerType(mlir::Type type) {
+  return fir::isBoxProcAddressType(type);
+}
+
+inline bool isFortranPointerObjectType(mlir::Type type) {
+  auto boxTy =
+      llvm::dyn_cast_or_null<fir::BaseBoxType>(fir::dyn_cast_ptrEleTy(type));
+  return boxTy && boxTy.isPointer();
 }
 
 /// Is this an SSA value type for the value of a Fortran procedure

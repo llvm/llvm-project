@@ -21,7 +21,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -197,6 +196,18 @@ void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
   }
 }
 
+void CallGraph::addNodesForVarInit(VarDecl *VD) {
+  // Only variables with static or thread storage duration need this: their
+  // initializers run with no function caller and are not reached by any body
+  // walk, so a lambda or block defined in one would be missed. Local variables
+  // are covered by the enclosing body walk, and parameter default arguments by
+  // CGBuilder at call sites. Attach discovered calls to the root.
+  if (!VD->hasGlobalStorage())
+    return;
+  if (Expr *Init = VD->getInit())
+    CGBuilder{this, Root}.Visit(Init);
+}
+
 CallGraphNode *CallGraph::getNode(const Decl *F) const {
   FunctionMapTy::const_iterator I = FunctionMap.find(F);
   if (I == FunctionMap.end()) return nullptr;
@@ -224,10 +235,7 @@ void CallGraph::print(raw_ostream &OS) const {
   // We are going to print the graph in reverse post order, partially, to make
   // sure the output is deterministic.
   llvm::ReversePostOrderTraversal<const CallGraph *> RPOT(this);
-  for (llvm::ReversePostOrderTraversal<const CallGraph *>::rpo_iterator
-         I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
-    const CallGraphNode *N = *I;
-
+  for (const CallGraphNode *N : RPOT) {
     OS << "  Function: ";
     if (N == Root)
       OS << "< root >";

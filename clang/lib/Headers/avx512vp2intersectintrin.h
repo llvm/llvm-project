@@ -22,7 +22,7 @@
  *===-----------------------------------------------------------------------===
  */
 #ifndef __IMMINTRIN_H
-#error "Never use <avx512vp2intersect.h> directly; include <immintrin.h> instead."
+#error "Never use <avx512vp2intersectintrin.h> directly; include <immintrin.h> instead."
 #endif
 
 #ifndef _AVX512VP2INTERSECT_H
@@ -30,8 +30,7 @@
 
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vp2intersect,evex512"),                     \
-                 __min_vector_width__(512)))
+                 __target__("avx512vp2intersect"), __min_vector_width__(512)))
 
 /// Store, in an even/odd pair of mask registers, the indicators of the
 /// locations of value matches between dwords in operands __a and __b.

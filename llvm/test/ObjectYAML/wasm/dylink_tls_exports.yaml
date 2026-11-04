@@ -1,0 +1,38 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+
+Sections:
+  - Type:            CUSTOM
+    Name:            dylink.0
+    MemorySize:      8
+    MemoryAlignment: 2
+    TableSize:       0
+    TableAlignment:  0
+    Needed:          []
+    ExportInfo:
+      - Name:            tls_var
+        Flags:           [ TLS ]
+      - Name:            normal_var
+        Flags:           [  ]
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Mutable:         false
+        Type:            I32
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           42
+  - Type:            EXPORT
+    Exports:
+      - Name:            normal_var
+        Kind:            GLOBAL
+        Index:           0
+
+# CHECK:     ExportInfo:
+# CHECK:       - Name:            tls_var
+# CHECK:         Flags:           [ TLS ]
+# CHECK:       - Name:            normal_var
+# CHECK:         Flags:           [  ]

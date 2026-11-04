@@ -1,4 +1,6 @@
-@ RUN: llvm-mc < %s -triple armv7-none-linux-gnueabi -filetype=obj  | llvm-objdump --triple=armv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=ARM
+@ RUN: llvm-mc %s -triple armv7-none-linux-gnueabi -filetype=obj -o %t
+@ RUN: llvm-objdump --triple=armv7-none-linux-gnueabi -r %t | FileCheck %s --check-prefixes=CHECK,ARM
+@ RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefix=READELF --implicit-check-not=TLS
 @ RUN: llvm-mc < %s -triple thumbv7-none-linux-gnueabi -filetype=obj  | llvm-objdump --triple=thumbv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=THUMB
 
 @ CHECK-LABEL: RELOCATION RECORDS FOR [.text]
@@ -41,12 +43,16 @@ bl f05(plt)
 .word f11(tpoff)
 @CHECK: 28 R_ARM_TLS_LE32 f10
 @CHECK: 2c R_ARM_TLS_LE32 f11
+@READELF: TLS GLOBAL DEFAULT UND f10
+@READELF: TLS GLOBAL DEFAULT UND f11
 
 @ tlsgd
 .word f12(TLSGD)
 .word f13(tlsgd)
 @CHECK: 30 R_ARM_TLS_GD32 f12
 @CHECK: 34 R_ARM_TLS_GD32 f13
+@READELF: TLS GLOBAL DEFAULT UND f12
+@READELF: TLS GLOBAL DEFAULT UND f13
 
 @ target1
 .word f14(TARGET1)
@@ -71,18 +77,24 @@ bl f05(plt)
 .word f21(tlsldo)
 @CHECK: 50 R_ARM_TLS_LDO32 f20
 @CHECK: 54 R_ARM_TLS_LDO32 f21
+@READELF: TLS GLOBAL DEFAULT UND f20
+@READELF: TLS GLOBAL DEFAULT UND f21
 
 @ tlscall
 .word f22(TLSCALL)
 .word f23(tlscall)
 @ CHECK: 58 R_ARM_TLS_CALL f22
 @ CHECK: 5c R_ARM_TLS_CALL f23
+@READELF: TLS GLOBAL DEFAULT UND f22
+@READELF: TLS GLOBAL DEFAULT UND f23
 
 @ tlsdesc
 .word f24(TLSDESC)
 .word f25(tlsdesc)
 @ CHECK: 60 R_ARM_TLS_GOTDESC f24
 @ CHECK: 64 R_ARM_TLS_GOTDESC f25
+@READELF: TLS GLOBAL DEFAULT UND f24
+@READELF: TLS GLOBAL DEFAULT UND f25
 
 @ prel31 (relative)
 .word f26(PREL31)-.
@@ -95,6 +107,8 @@ bl f05(plt)
 .word f29(tlsldm)
 @CHECK: 70 R_ARM_TLS_LDM32 f28
 @CHECK: 74 R_ARM_TLS_LDM32 f29
+@READELF: TLS GLOBAL DEFAULT UND f28
+@READELF: TLS GLOBAL DEFAULT UND f29
 
 @ relative
 .word f30 - (.Lsym+8)

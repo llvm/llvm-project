@@ -1,4 +1,4 @@
-# Test z13 instructions that don't have PC-relative operands.
+# Test z13 instructions that are invalid.
 # RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu -mcpu=z13 2>&1 \
 # RUN:   | FileCheck %s
 

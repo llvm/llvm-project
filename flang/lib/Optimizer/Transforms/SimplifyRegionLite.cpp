@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 namespace fir {
@@ -26,22 +23,15 @@ class SimplifyRegionLitePass
 public:
   void runOnOperation() override;
 };
-
-class DummyRewriter : public mlir::PatternRewriter {
-public:
-  DummyRewriter(mlir::MLIRContext *ctx) : mlir::PatternRewriter(ctx) {}
-};
-
 } // namespace
 
 void SimplifyRegionLitePass::runOnOperation() {
-  auto op = getOperation();
-  auto regions = op->getRegions();
-  mlir::RewritePatternSet patterns(op.getContext());
-  DummyRewriter rewriter(op.getContext());
+  mlir::Operation *op = getOperation();
+  mlir::MutableArrayRef<mlir::Region> regions = op->getRegions();
   if (regions.empty())
     return;
 
+  mlir::PatternRewriter rewriter(op->getContext());
   (void)mlir::eraseUnreachableBlocks(rewriter, regions);
   (void)mlir::runRegionDCE(rewriter, regions);
 }

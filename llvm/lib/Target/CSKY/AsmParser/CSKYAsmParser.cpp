@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/CSKYInstPrinter.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
+#include "MCTargetDesc/CSKYMCOptions.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -21,7 +22,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -31,7 +32,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CSKYAttributes.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/CSKYTargetParser.h"
 
@@ -46,16 +46,11 @@ using namespace llvm;
 STATISTIC(CSKYNumInstrsCompressed,
           "Number of C-SKY Compressed instructions emitted");
 
-static cl::opt<bool>
-    EnableCompressedInst("enable-csky-asm-compressed-inst", cl::Hidden,
-                         cl::init(false),
-                         cl::desc("Enable C-SKY asm compressed instruction"));
-
 namespace {
 struct CSKYOperand;
 
 class CSKYAsmParser : public MCTargetAsmParser {
-
+  const CSKYMCOptions &CLOpts;
   const MCRegisterInfo *MRI;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
@@ -128,8 +123,9 @@ public:
   };
 
   CSKYAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(CSKY_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
 
     MCAsmParserExtension::Initialize(Parser);
 
@@ -137,7 +133,8 @@ public:
     MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-    getTargetStreamer().emitTargetAttributes(STI);
+    if (CLOpts.add_build_attributes)
+      getTargetStreamer().emitTargetAttributes(STI, /*HardFloatABI=*/false);
   }
 };
 
@@ -430,20 +427,21 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
-    auto RegName = [](MCRegister Reg) {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
+    const CSKYMCOptions &CLOpts = CSKY_MC::getCLOpts(MAI.getTargetOptions());
+    auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return CSKYInstPrinter::getRegisterName(Reg);
+        return CSKYInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
 
     switch (Kind) {
     case CPOP:
-      OS << *getConstpoolOp();
+      MAI.printExpr(OS, *getConstpoolOp());
       break;
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -675,11 +673,9 @@ bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     ListSeparator LS;
     std::string Msg = "instruction requires the following: ";
-    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-      if (MissingFeatures[i]) {
-        Msg += LS;
-        Msg += getSubtargetFeatureName(i);
-      }
+    for (unsigned Feature : MissingFeatures) {
+      Msg += LS;
+      Msg += getSubtargetFeatureName(Feature);
     }
     return Error(IDLoc, Msg);
   }
@@ -848,11 +844,11 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     }
   } else {
     const MCExpr *AdjustExpr = nullptr;
-    if (const CSKYMCExpr *CSKYExpr =
-            dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
-      if (CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSGD ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSIE ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSLDM) {
+    if (const auto *CSKYExpr =
+            dyn_cast<MCSpecifierExpr>(Inst.getOperand(1).getExpr())) {
+      if (CSKYExpr->getSpecifier() == CSKY::S_TLSGD ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSIE ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSLDM) {
         MCSymbol *Dot = getContext().createNamedTempSymbol();
         Out.emitLabel(Dot);
         AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());
@@ -1172,25 +1168,25 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier");
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT;
+    Kind = CSKY::S_GOT;
   else if (Identifier.consume_back("@GOTOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTOFF;
+    Kind = CSKY::S_GOTOFF;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT;
+    Kind = CSKY::S_PLT;
   else if (Identifier.consume_back("@GOTPC"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTPC;
+    Kind = CSKY::S_GOTPC;
   else if (Identifier.consume_back("@TLSGD32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSGD;
+    Kind = CSKY::S_TLSGD;
   else if (Identifier.consume_back("@GOTTPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSIE;
+    Kind = CSKY::S_TLSIE;
   else if (Identifier.consume_back("@TPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLE;
+    Kind = CSKY::S_TLSLE;
   else if (Identifier.consume_back("@TLSLDM32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDM;
+    Kind = CSKY::S_TLSLDM;
   else if (Identifier.consume_back("@TLSLDO32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDO;
+    Kind = CSKY::S_TLSLDO;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1198,20 +1194,20 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
   default:
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createImm(Res, S, E));
     return ParseStatus::Success;
@@ -1258,11 +1254,11 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier " + Identifier);
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT_IMM18_BY4;
+    Kind = CSKY::S_GOT_IMM18_BY4;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT_IMM18_BY4;
+    Kind = CSKY::S_PLT_IMM18_BY4;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1270,14 +1266,14 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1288,8 +1284,8 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
 
     getLexer().Lex(); // Eat ']'.
 
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createConstpoolOp(Res, S, E));
     return ParseStatus::Success;
@@ -1345,14 +1341,14 @@ ParseStatus CSKYAsmParser::parseConstpoolSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1622,7 +1618,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   MCRegister Reg = Op.getReg();
 
-  if (CSKYMCRegisterClasses[CSKY::FPR32RegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::FPR32RegClassID).contains(Reg)) {
     // As the parser couldn't differentiate an FPR64 from an FPR32, coerce the
     // register from FPR32 to FPR64 if necessary.
     if (Kind == MCK_FPR64 || Kind == MCK_sFPR64) {
@@ -1637,7 +1633,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     }
   }
 
-  if (CSKYMCRegisterClasses[CSKY::GPRRegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::GPRRegClassID).contains(Reg)) {
     if (Kind == MCK_GPRPair) {
       Op.Reg.RegNum = MRI->getEncodingValue(Reg) + CSKY::R0_R1;
       return Match_Success;
@@ -1650,7 +1646,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 void CSKYAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
-  if (EnableCompressedInst)
+  if (CLOpts.asm_compressed_inst)
     Res = compressInst(CInst, Inst, getSTI());
   if (Res)
     ++CSKYNumInstrsCompressed;

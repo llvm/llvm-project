@@ -14,9 +14,18 @@ include "llvm/Target/Target.td"
 
 // LoongArch is divided into two versions, the 32-bit version (LA32) and the
 // 64-bit version (LA64).
+
+// LoongArch 32-bit is divided into two variants, the reduced 32-bit variant
+// (LA32R) and the standard 32-bit variant (LA32S).
+def Feature32S
+    : SubtargetFeature<"32s", "Has32S", "true",
+                       "LA32 Standard Basic Instruction Extension">;
+def Has32S : Predicate<"Subtarget->has32S()">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
-                       "LA64 Basic Integer and Privilege Instruction Set">;
+                       "LA64 Basic Integer and Privilege Instruction Set",
+                       [Feature32S]>;
 def Feature32Bit
     : SubtargetFeature<"32bit", "HasLA32", "true",
                        "LA32 Basic Integer and Privilege Instruction Set">;
@@ -26,11 +35,11 @@ def IsLA64
                          "LA64 Basic Integer and Privilege Instruction Set">;
 def IsLA32
     : Predicate<"!Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of(not Feature64Bit)),
+      AssemblerPredicate<(none_of Feature64Bit),
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
-def LA64 : HwMode<"+64bit", [IsLA64]>;
+def LA64 : HwMode<[IsLA64]>;
 
 // Single Precision floating point
 def FeatureBasicF
@@ -109,24 +118,24 @@ def FeatureRelax
 // Floating point approximation operation
 def FeatureFrecipe
     : SubtargetFeature<"frecipe", "HasFrecipe", "true",
-                       "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
+                       "Support frecipe.{s/d} and frsqrte.{s/d} instructions">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
 
 // Atomic memory swap and add instructions for byte and half word
 def FeatureLAM_BH
     : SubtargetFeature<"lam-bh", "HasLAM_BH", "true",
-                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
+                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions">;
 def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
 // Atomic memory compare and swap instructions for byte, half word, word and double word
 def FeatureLAMCAS
     : SubtargetFeature<"lamcas", "HasLAMCAS", "true",
-                        "Support amcas[_db].{b/h/w/d}.">;
+                        "Support amcas[_db].{b/h/w/d}">;
 def HasLAMCAS : Predicate<"Subtarget->hasLAMCAS()">;
 
 def FeatureLD_SEQ_SA
     : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
-                        "Don't use load-load barrier (dbar 0x700).">;
+                        "Don't use a same-address load-load barrier (dbar 0x700)">;
 def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
 
 // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
@@ -135,17 +144,39 @@ def FeatureDiv32
                         "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
 def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
 
+// Support SC.Q instruction
+def FeatureSCQ
+    : SubtargetFeature<"scq", "HasSCQ", "true",
+                        "Support sc.q instruction">;
+def HasSCQ : Predicate<"Subtarget->hasSCQ()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
+def TuneSlowMOVCF2GR
+    : SubtargetFeature<"slow-movcf2gr", "HasSlowMOVCF2GR", "true",
+                       "MOVCF2GR instruction is slow (compared to MOVCF2FR+MOVFR2GR.{S/D})">;
+def HasSlowMOVCF2GR
+    : Predicate<"Subtarget->hasSlowMOVCF2GR()">;
+def HasFastMOVCF2GR
+    : Predicate<"!Subtarget->hasSlowMOVCF2GR()">;
+
 //===----------------------------------------------------------------------===//
-// Registers, instruction descriptions ...
+// Schedule, Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//
 
+include "LoongArchSchedule.td"
 include "LoongArchRegisterInfo.td"
 include "LoongArchCallingConv.td"
 include "LoongArchInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// LoongArch Scheduling Models.
+//===----------------------------------------------------------------------===//
+
+include "LoongArchSchedLA464.td"
+include "LoongArchSchedLA664.td"
 
 //===----------------------------------------------------------------------===//
 // LoongArch processors supported.
@@ -156,6 +187,9 @@ def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;
 
+// Generic 32-bit processor.
+def : ProcessorModel<"loongarch32", NoSchedModel, [Feature32Bit]>;
+
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
                                                    FeatureUAL,
@@ -165,13 +199,14 @@ def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
 // to change to the appropriate la32/la64 version.
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
-def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la464", LA464Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
-                                             FeatureExtLBT]>;
+                                             FeatureExtLBT],
+                                          [TuneSlowMOVCF2GR]>;
 
-def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
@@ -180,11 +215,14 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureLAM_BH,
                                              FeatureLAMCAS,
                                              FeatureLD_SEQ_SA,
-                                             FeatureDiv32]>;
+                                             FeatureDiv32,
+                                             FeatureSCQ]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
 //===----------------------------------------------------------------------===//
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 def LoongArchInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;

@@ -12,7 +12,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -40,7 +40,7 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
       MCConstantExpr::create(amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE, Ctx),
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, Ctx);
-  if (Version.Major < 12) {
+  if (STI->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
@@ -55,11 +55,14 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, Ctx);
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32))
+    if (STI->getFeatureBits().test(FeatureWavefrontSize32) &&
+        STI->getFeatureBits().test(FeatureSupportsWave32) &&
+        STI->getFeatureBits().test(FeatureSupportsWave64)) {
       MCKernelDescriptor::bits_set(
           KD.kernel_code_properties, OneMCExpr,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, Ctx);
+    }
     if (!STI->getFeatureBits().test(FeatureCuMode))
       MCKernelDescriptor::bits_set(
           KD.compute_pgm_rsrc1, OneMCExpr,
@@ -70,12 +73,13 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, Ctx);
-  }
-  if (AMDGPU::isGFX90A(*STI) && STI->getFeatureBits().test(FeatureTgSplit))
+
     MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc3, OneMCExpr,
-        amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
-        amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx);
+        KD.compute_pgm_rsrc1, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS, Ctx);
+  }
+
   return KD;
 }
 

@@ -15,8 +15,7 @@ declare float @dummy(float)
 define void @br_fcmp_false(float %a, float %b) nounwind {
 ; RV32IF-LABEL: br_fcmp_false:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    li a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB0_2
+; RV32IF-NEXT:    j .LBB0_2
 ; RV32IF-NEXT:  # %bb.1: # %if.then
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB0_2: # %if.else
@@ -26,8 +25,7 @@ define void @br_fcmp_false(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: br_fcmp_false:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    li a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB0_2
+; RV64IF-NEXT:    j .LBB0_2
 ; RV64IF-NEXT:  # %bb.1: # %if.then
 ; RV64IF-NEXT:    ret
 ; RV64IF-NEXT:  .LBB0_2: # %if.else
@@ -37,8 +35,7 @@ define void @br_fcmp_false(float %a, float %b) nounwind {
 ;
 ; RV32IZFINX-LABEL: br_fcmp_false:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    li a0, 1
-; RV32IZFINX-NEXT:    bnez a0, .LBB0_2
+; RV32IZFINX-NEXT:    j .LBB0_2
 ; RV32IZFINX-NEXT:  # %bb.1: # %if.then
 ; RV32IZFINX-NEXT:    ret
 ; RV32IZFINX-NEXT:  .LBB0_2: # %if.else
@@ -48,8 +45,7 @@ define void @br_fcmp_false(float %a, float %b) nounwind {
 ;
 ; RV64IZFINX-LABEL: br_fcmp_false:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    li a0, 1
-; RV64IZFINX-NEXT:    bnez a0, .LBB0_2
+; RV64IZFINX-NEXT:    j .LBB0_2
 ; RV64IZFINX-NEXT:  # %bb.1: # %if.then
 ; RV64IZFINX-NEXT:    ret
 ; RV64IZFINX-NEXT:  .LBB0_2: # %if.else
@@ -898,8 +894,7 @@ if.then:
 define void @br_fcmp_true(float %a, float %b) nounwind {
 ; RV32IF-LABEL: br_fcmp_true:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    li a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB16_2
+; RV32IF-NEXT:    j .LBB16_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB16_2: # %if.then
@@ -909,8 +904,7 @@ define void @br_fcmp_true(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: br_fcmp_true:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    li a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB16_2
+; RV64IF-NEXT:    j .LBB16_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ret
 ; RV64IF-NEXT:  .LBB16_2: # %if.then
@@ -920,8 +914,7 @@ define void @br_fcmp_true(float %a, float %b) nounwind {
 ;
 ; RV32IZFINX-LABEL: br_fcmp_true:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    li a0, 1
-; RV32IZFINX-NEXT:    bnez a0, .LBB16_2
+; RV32IZFINX-NEXT:    j .LBB16_2
 ; RV32IZFINX-NEXT:  # %bb.1: # %if.else
 ; RV32IZFINX-NEXT:    ret
 ; RV32IZFINX-NEXT:  .LBB16_2: # %if.then
@@ -931,8 +924,7 @@ define void @br_fcmp_true(float %a, float %b) nounwind {
 ;
 ; RV64IZFINX-LABEL: br_fcmp_true:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    li a0, 1
-; RV64IZFINX-NEXT:    bnez a0, .LBB16_2
+; RV64IZFINX-NEXT:    j .LBB16_2
 ; RV64IZFINX-NEXT:  # %bb.1: # %if.else
 ; RV64IZFINX-NEXT:    ret
 ; RV64IZFINX-NEXT:  .LBB16_2: # %if.then

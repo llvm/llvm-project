@@ -1,4 +1,4 @@
-//===--- StaticAccessedThroughInstanceCheck.cpp - clang-tidy---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,31 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "StaticAccessedThroughInstanceCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-} // namespace
-
-static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
-  if (const auto *ElType = QType->getAs<ElaboratedType>()) {
-    if (const NestedNameSpecifier *NestedSpecifiers = ElType->getQualifier()) {
-      unsigned NameSpecifierNestingLevel = 1;
-      do {
-        NameSpecifierNestingLevel++;
-        NestedSpecifiers = NestedSpecifiers->getPrefix();
-      } while (NestedSpecifiers);
-
+static unsigned getNameSpecifierNestingLevel(QualType QType) {
+  unsigned NameSpecifierNestingLevel = 1;
+  for (NestedNameSpecifier Qualifier = QType->getPrefix(); /**/;
+       ++NameSpecifierNestingLevel) {
+    switch (Qualifier.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
       return NameSpecifierNestingLevel;
+    case NestedNameSpecifier::Kind::Global:
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      return NameSpecifierNestingLevel + 1;
+    case NestedNameSpecifier::Kind::Namespace:
+      Qualifier = Qualifier.getAsNamespaceAndPrefix().Prefix;
+      continue;
+    case NestedNameSpecifier::Kind::Type:
+      Qualifier = Qualifier.getAsType()->getPrefix();
+      continue;
     }
+    llvm_unreachable("unhandled nested name specifier kind");
   }
-  return 0;
 }
 
 void StaticAccessedThroughInstanceCheck::storeOptions(
@@ -69,7 +73,7 @@ void StaticAccessedThroughInstanceCheck::check(
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
-  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes =
+  PrintingPolicyWithSuppressedTag.PrintAsCanonical =
       !BaseExpr->getType()->isTypedefNameType();
 
   std::string BaseTypeName =
@@ -85,7 +89,7 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   SourceLocation MemberExprStartLoc = MemberExpression->getBeginLoc();
-  auto CreateFix = [&] {
+  const auto CreateFix = [&] {
     return FixItHint::CreateReplacement(
         CharSourceRange::getCharRange(MemberExprStartLoc,
                                       MemberExpression->getMemberLoc()),
@@ -93,7 +97,7 @@ void StaticAccessedThroughInstanceCheck::check(
   };
 
   {
-    auto Diag =
+    const auto Diag =
         diag(MemberExprStartLoc, "static member accessed through instance");
 
     if (getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)

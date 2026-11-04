@@ -1,0 +1,64 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -h %t | FileCheck %s --check-prefix=HEADERS
+# RUN: llvm-objdump -s %t | FileCheck %s --check-prefix=CONTENTS
+
+#HEADERS:     Idx Name          Size     VMA      Type
+#HEADERS-NEXT:  0 FKE0          00000008 0000003c
+#HEADERS-NEXT:  1 FKE1          00000008 0000004c
+#HEADERS-NEXT:  2 FKE2          00000008 0000005c
+#HEADERS-NEXT:  3 FKE3          00000078 0000006c
+#HEADERS-NEXT:  4 FKE4          00000698 000000ec
+#HEADERS-NEXT:  5 FKE5          00000014 0000078c
+#HEADERS-NEXT:  6 DXIL          0000001c 000007a8
+
+#CONTENTS: Contents of section FKE0:
+#CONTENTS: 003c 00000000 00000000                    ........
+#CONTENTS: Contents of section FKE1:
+#CONTENTS: 004c 00000000 00000000                    ........
+#CONTENTS: Contents of section FKE2:
+#CONTENTS: 005c 00000000 00000000                    ........
+#CONTENTS: Contents of section FKE3:
+#CONTENTS: 006c 00000000 00000000 00000000 00000000  ................
+#CONTENTS: Contents of section FKE4:
+#CONTENTS: 00ec 00000000 00000000 00000000 00000000  ................
+#CONTENTS: Contents of section FKE5:
+#CONTENTS: 078c 00000000 00000000 00000000 00000000  ................
+#CONTENTS: Contents of section DXIL:
+#CONTENTS-NEXT: 07a8 65000500 08000000 4458494c 05010000  e.......DXIL....
+#CONTENTS-NEXT: 07b8 10000000 04000000 4243c0de           ........BC..
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        3548
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+Parts:
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            DXIL
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            8
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...

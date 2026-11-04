@@ -15,7 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_DEC]] = add nsw i128 [[IV]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i128 [[IV]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i128 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

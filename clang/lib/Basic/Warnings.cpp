@@ -21,14 +21,18 @@
 //
 // Remark options are also handled here, analogously, except that they are much
 // simpler because a remark can't be promoted to an error.
+
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstring>
+
 using namespace clang;
 
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning
@@ -53,7 +57,8 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
 
   Diags.setElideType(Opts.ElideType);
   Diags.setPrintTemplateTree(Opts.ShowTemplateTree);
-  Diags.setShowColors(Opts.ShowColors);
+  Diags.setShowColors(
+      Opts.showColors(llvm::sys::Process::StandardErrHasColors()));
 
   // Handle -ferror-limit
   if (Opts.ErrorLimit)
@@ -72,16 +77,6 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
     Diags.setExtensionHandlingBehavior(diag::Severity::Warning);
   else
     Diags.setExtensionHandlingBehavior(diag::Severity::Ignored);
-
-  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
-    if (auto FileContents =
-            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
-      Diags.setDiagSuppressionMapping(**FileContents);
-    } else if (ReportDiags) {
-      Diags.Report(diag::err_drv_no_such_file)
-          << Opts.DiagnosticSuppressionMappingsFile;
-    }
-  }
 
   SmallVector<diag::kind, 10> _Diags;
   const IntrusiveRefCntPtr< DiagnosticIDs > DiagIDs =
@@ -235,6 +230,19 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   IsPositive ? diag::Severity::Remark
                                              : diag::Severity::Ignored);
       }
+    }
+  }
+
+  // Process suppression mappings file after processing other warning flags
+  // (like -Wno-unknown-warning-option) as we can emit extra warnings during
+  // processing.
+  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
+    if (auto FileContents =
+            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
+      Diags.setDiagSuppressionMapping(**FileContents);
+    } else if (ReportDiags) {
+      Diags.Report(diag::err_drv_no_such_file)
+          << Opts.DiagnosticSuppressionMappingsFile;
     }
   }
 }

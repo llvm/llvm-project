@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm::jitlink::ppc64 {
@@ -73,11 +74,11 @@ enum PLTCallStubKind {
   LongBranchNoTOC,
 };
 
-extern const char NullPointerContent[8];
-extern const char PointerJumpStubContent_big[20];
-extern const char PointerJumpStubContent_little[20];
-extern const char PointerJumpStubNoTOCContent_big[32];
-extern const char PointerJumpStubNoTOCContent_little[32];
+LLVM_ABI extern const char NullPointerContent[8];
+LLVM_ABI extern const char PointerJumpStubContent_big[20];
+LLVM_ABI extern const char PointerJumpStubContent_little[20];
+LLVM_ABI extern const char PointerJumpStubNoTOCContent_big[32];
+LLVM_ABI extern const char PointerJumpStubNoTOCContent_little[32];
 
 struct PLTCallStubReloc {
   Edge::Kind K;
@@ -152,6 +153,19 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
   for (auto const &Reloc : StubInfo.Relocs)
     B.addEdge(Reloc.K, Reloc.Offset, PointerSymbol, Reloc.A);
   return G.addAnonymousSymbol(B, 0, StubInfo.Content.size(), true, false);
+}
+
+// LongBranchSaveR2 is the default for external calls: saves the TOC
+// pointer (r2) before branching, as required when the callee sets its
+// own TOC. Callers needing a different stub kind (e.g. LongBranchNoTOC)
+// should call createAnonymousPointerJumpStub directly with the desired
+// PLTCallStubKind.
+template <llvm::endianness Endianness>
+inline Symbol &createDefaultAnonymousPointerJumpStub(LinkGraph &G,
+                                                     Section &StubSection,
+                                                     Symbol &PointerSymbol) {
+  return createAnonymousPointerJumpStub<Endianness>(
+      G, StubSection, PointerSymbol, LongBranchSaveR2);
 }
 
 template <llvm::endianness Endianness>
@@ -259,7 +273,7 @@ private:
 
 /// Returns a string name for the given ppc64 edge. For debugging purposes
 /// only.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 inline static uint16_t ha(uint64_t x) { return (x + 0x8000) >> 16; }
 inline static uint64_t lo(uint64_t x) { return x & 0xffff; }

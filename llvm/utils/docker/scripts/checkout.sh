@@ -18,7 +18,7 @@ Checkout git sources into /tmp/clang-build/src. Used inside a docker container.
 Available options:
   -h|--help           show this help message
   -b|--branch         git branch to checkout, i.e. 'main',
-                      'release/10.x'
+                      'release/19.x'
                       (default: 'main')
   -r|--revision       git revision to checkout
   -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
@@ -83,7 +83,7 @@ function apply_cherrypicks() {
   # This function is always called on a sorted list of cherrypicks.
   for CHERRY_REV in $CHERRYPICKS; do
     echo "Cherry-picking $CHERRY_REV into $CHECKOUT_DIR"
-    EMAIL="someone@somewhere.net" git cherry-pick $CHERRY_REV
+    EMAIL="someone@somewhere.net" git cherry-pick "$CHERRY_REV"
   done
 
   popd
@@ -97,7 +97,7 @@ mkdir -p "$CLANG_BUILD_DIR/src"
 CHECKOUT_DIR="$CLANG_BUILD_DIR/src"
 
 echo "Checking out https://github.com/llvm/llvm-project.git to $CHECKOUT_DIR"
-git clone -b $LLVM_BRANCH --single-branch \
+git clone -b "$LLVM_BRANCH" --single-branch \
   "https://github.com/llvm/llvm-project.git" \
   "$CHECKOUT_DIR"
 
@@ -114,7 +114,7 @@ CHECKSUMS_FILE="/tmp/checksums/checksums.txt"
 
 if [ -f "$CHECKSUMS_FILE" ]; then
   echo "Validating checksums for LLVM checkout..."
-  python "$(dirname $0)/llvm_checksum/llvm_checksum.py" -c "$CHECKSUMS_FILE" \
+  python "$(dirname "$0")/llvm_checksum/llvm_checksum.py" -c "$CHECKSUMS_FILE" \
     --partial --multi_dir "$CLANG_BUILD_DIR/src"
 else
   echo "Skipping checksumming checks..."

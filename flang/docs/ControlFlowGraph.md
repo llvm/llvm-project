@@ -1,18 +1,13 @@
-<!--===- docs/ControlFlowGraph.md 
-  
+<!--===- docs/ControlFlowGraph.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Control Flow Graph
 
-```{contents}
----
-local:
----
-```
 
 ## Concept
 After a Fortran subprogram has been parsed, its names resolved, and all its

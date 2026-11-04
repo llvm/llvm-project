@@ -55,7 +55,7 @@ int align3_x0 = __alignof(((struct s3*) 0)->x[0]);
 // CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 // CHECK-LABEL: define{{.*}} i32 @f0_b
-// CHECK:   load i32, ptr %{{.*}}, align 4
+// CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 int f0_a(struct s0 *a) {
   return a->x[1];
@@ -100,7 +100,7 @@ int f1_d(struct s1 *a) {
 // CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 // CHECK-LABEL: define{{.*}} i32 @f2_b
-// CHECK:   load i32, ptr %{{.*}}, align 4
+// CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 // CHECK-LABEL: define{{.*}} i32 @f2_c
 // CHECK:   load i32, ptr %{{.*}}, align 1
@@ -125,7 +125,7 @@ int f2_d(struct s2 *a) {
 // CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 // CHECK-LABEL: define{{.*}} i32 @f3_b
-// CHECK:   load i32, ptr %{{.*}}, align 4
+// CHECK:   load i32, ptr %{{.*}}, align 1
 // CHECK: }
 // CHECK-LABEL: define{{.*}} i32 @f3_c
 // CHECK:   load i32, ptr %{{.*}}, align 1

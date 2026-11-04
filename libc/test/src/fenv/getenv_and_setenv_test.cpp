@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "hdr/types/fenv_t.h"
 #include "src/fenv/fegetenv.h"
 #include "src/fenv/fegetround.h"
@@ -21,8 +23,10 @@
 
 using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
 TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
+  // Unsupported: no fenv
+#else
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
@@ -41,9 +45,13 @@ TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
     ASSERT_EQ(LIBC_NAMESPACE::fesetenv(&env), 0);
     ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
   }
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }
 
 TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
+  // Unsupported: no fenv
+#else
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
@@ -72,18 +80,5 @@ TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
   // Setting the default env should set rounding mode to FE_TONEAREST.
   int rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TONEAREST);
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }
-#endif
-
-#ifdef LIBC_TARGET_OS_IS_WINDOWS
-TEST_F(LlvmLibcFEnvTest, Windows_Set_Get_Test) {
-  // If a valid fenv_t is written, then reading it back out should be identical.
-  fenv_t setEnv = {0x7e00053e, 0x0f00000f};
-  fenv_t getEnv;
-  ASSERT_EQ(LIBC_NAMESPACE::fesetenv(&setEnv), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::fegetenv(&getEnv), 0);
-
-  ASSERT_EQ(setEnv._Fe_ctl, getEnv._Fe_ctl);
-  ASSERT_EQ(setEnv._Fe_stat, getEnv._Fe_stat);
-}
-#endif

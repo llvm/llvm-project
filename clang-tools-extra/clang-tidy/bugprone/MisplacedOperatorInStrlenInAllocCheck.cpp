@@ -1,4 +1,4 @@
-//===--- MisplacedOperatorInStrlenInAllocCheck.cpp - clang-tidy------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -74,7 +74,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
   if (!Alloc)
     Alloc = Result.Nodes.getNodeAs<CXXNewExpr>("Alloc");
   assert(Alloc && "Matched node bound by 'Alloc' should be either 'CallExpr'"
-         " or 'CXXNewExpr'");
+                  " or 'CXXNewExpr'");
 
   const auto *StrLen = Result.Nodes.getNodeAs<CallExpr>("StrLen");
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("BinOp");
@@ -96,7 +96,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
       CharSourceRange::getTokenRange(BinOp->getRHS()->getSourceRange()),
       *Result.SourceManager, getLangOpts());
 
-  auto Hint = FixItHint::CreateReplacement(
+  const auto Hint = FixItHint::CreateReplacement(
       StrLen->getSourceRange(),
       (StrLenBegin + LHSText + StrLenEnd + " + " + RHSText).str());
 

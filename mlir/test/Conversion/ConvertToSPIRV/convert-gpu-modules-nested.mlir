@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv="convert-gpu-modules=true nest-in-gpu-module=true run-signature-conversion=false run-vector-unrolling=false" %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv="convert-gpu-modules=true nest-in-gpu-module=true run-signature-conversion=false run-vector-unrolling=false" %s | FileCheck %s
 
 module attributes {
   gpu.container_module,

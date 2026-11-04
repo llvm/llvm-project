@@ -12,7 +12,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -101,7 +103,33 @@ struct SubtargetFeatureInfo {
   static void emitComputeAssemblerAvailableFeatures(
       StringRef TargetName, StringRef ClassName, StringRef FuncName,
       SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
+
+  static void emitPredicateCheck(raw_ostream &OS,
+                                 ArrayRef<const Record *> Predicates);
+
+  static void emitMCPredicateCheck(raw_ostream &OS, StringRef TargetName,
+                                   ArrayRef<const Record *> Predicates);
 };
+
+struct SubtargetFeatureLiteral {
+  StringRef Feature;
+  bool IsNot;
+
+  bool operator<(const SubtargetFeatureLiteral &Other) const {
+    return std::tie(Feature, IsNot) < std::tie(Other.Feature, Other.IsNot);
+  }
+  bool operator==(const SubtargetFeatureLiteral &Other) const {
+    return Feature == Other.Feature && IsNot == Other.IsNot;
+  }
+};
+
+/// Populates \p FeaturesSet and \p AnyOfFeatureSets from \p ReqPredicates.
+/// Returns true if all predicates were assembler predicates with a valid
+/// AssemblerCondDag, or false if any non-assembler predicates were skipped.
+bool getRequiredFeatures(
+    std::set<SubtargetFeatureLiteral> &FeaturesSet,
+    std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,
+    ArrayRef<const Record *> ReqPredicates);
 } // end namespace llvm
 
 #endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

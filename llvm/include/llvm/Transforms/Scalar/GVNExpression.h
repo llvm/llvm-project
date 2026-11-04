@@ -57,7 +57,7 @@ enum ExpressionType {
   ET_BasicEnd
 };
 
-class Expression {
+class LLVM_ABI Expression {
 private:
   ExpressionType EType;
   unsigned Opcode;
@@ -70,15 +70,10 @@ public:
   Expression &operator=(const Expression &) = delete;
   virtual ~Expression();
 
-  static unsigned getEmptyKey() { return ~0U; }
-  static unsigned getTombstoneKey() { return ~1U; }
-
   bool operator!=(const Expression &Other) const { return !(*this == Other); }
   bool operator==(const Expression &Other) const {
     if (getOpcode() != Other.getOpcode())
       return false;
-    if (getOpcode() == getEmptyKey() || getOpcode() == getTombstoneKey())
-      return true;
     // Compare the expression type for anything but load and store.
     // For load and store we set the opcode to zero to make them equal.
     if (getExpressionType() != ET_Load && getExpressionType() != ET_Store &&
@@ -133,7 +128,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Expression &E) {
   return OS;
 }
 
-class BasicExpression : public Expression {
+class LLVM_ABI BasicExpression : public Expression {
 private:
   using RecyclerType = ArrayRecycler<Value *>;
   using RecyclerCapacity = RecyclerType::Capacity;
@@ -221,7 +216,7 @@ public:
 
   hash_code getHashValue() const override {
     return hash_combine(this->Expression::getHashValue(), ValueType,
-                        hash_combine_range(op_begin(), op_end()));
+                        hash_combine_range(operands()));
   }
 
   // Debugging support
@@ -298,7 +293,7 @@ public:
   void setMemoryLeader(const MemoryAccess *ML) { MemoryLeader = ML; }
 };
 
-class CallExpression final : public MemoryExpression {
+class LLVM_ABI CallExpression final : public MemoryExpression {
 private:
   CallInst *Call;
 
@@ -331,7 +326,7 @@ public:
   }
 };
 
-class LoadExpression final : public MemoryExpression {
+class LLVM_ABI LoadExpression final : public MemoryExpression {
 private:
   LoadInst *Load;
 
@@ -373,7 +368,7 @@ public:
   }
 };
 
-class StoreExpression final : public MemoryExpression {
+class LLVM_ABI StoreExpression final : public MemoryExpression {
 private:
   StoreInst *Store;
   Value *StoredValue;
@@ -414,7 +409,7 @@ public:
   }
 };
 
-class AggregateValueExpression final : public BasicExpression {
+class LLVM_ABI AggregateValueExpression final : public BasicExpression {
 private:
   unsigned MaxIntOperands;
   unsigned NumIntOperands = 0;
@@ -452,7 +447,7 @@ public:
     IntOperands[NumIntOperands++] = IntOperand;
   }
 
-  virtual void allocateIntOperands(BumpPtrAllocator &Allocator) {
+  void allocateIntOperands(BumpPtrAllocator &Allocator) {
     assert(!IntOperands && "Operands already allocated");
     IntOperands = Allocator.Allocate<unsigned>(MaxIntOperands);
   }
@@ -508,7 +503,7 @@ public:
   int_op_inserter &operator++(int) { return *this; }
 };
 
-class PHIExpression final : public BasicExpression {
+class LLVM_ABI PHIExpression final : public BasicExpression {
 private:
   BasicBlock *BB;
 

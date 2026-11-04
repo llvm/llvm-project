@@ -1,4 +1,4 @@
-//===--- NoexceptFunctionCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,16 +26,19 @@ void NoexceptFunctionBaseCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't complain about nothrow(false), but complain on nothrow(expr)
   // where expr evaluates to false.
-  const auto *ProtoType = FuncDecl->getType()->castAs<FunctionProtoType>();
-  const Expr *NoexceptExpr = ProtoType->getNoexceptExpr();
-  if (NoexceptExpr) {
-    NoexceptExpr = NoexceptExpr->IgnoreImplicit();
-    if (!isa<CXXBoolLiteralExpr>(NoexceptExpr))
-      reportNoexceptEvaluatedToFalse(FuncDecl, NoexceptExpr);
-    return;
+  const auto ExceptionSpecSourceRange = FuncDecl->getExceptionSpecSourceRange();
+  if (ExceptionSpecSourceRange.isValid()) {
+    const auto *ProtoType = FuncDecl->getType()->castAs<FunctionProtoType>();
+    const Expr *NoexceptExpr = ProtoType->getNoexceptExpr();
+    if (NoexceptExpr) {
+      NoexceptExpr = NoexceptExpr->IgnoreImplicit();
+      if (!isa<CXXBoolLiteralExpr>(NoexceptExpr))
+        reportNoexceptEvaluatedToFalse(FuncDecl, NoexceptExpr);
+      return;
+    }
   }
 
-  auto Diag = reportMissingNoexcept(FuncDecl);
+  const auto Diag = reportMissingNoexcept(FuncDecl);
 
   // Add FixIt hints.
   const SourceManager &SM = *Result.SourceManager;

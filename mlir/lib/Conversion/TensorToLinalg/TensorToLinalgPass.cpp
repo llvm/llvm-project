@@ -14,11 +14,11 @@
 
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTTENSORTOLINALG
+#define GEN_PASS_DEF_CONVERTTENSORTOLINALGPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -27,7 +27,7 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Tensor operations into the Linalg dialect.
 class ConvertTensorToLinalgPass
-    : public impl::ConvertTensorToLinalgBase<ConvertTensorToLinalgPass> {
+    : public impl::ConvertTensorToLinalgPassBase<ConvertTensorToLinalgPass> {
   void runOnOperation() override {
     auto &context = getContext();
     ConversionTarget target(context);
@@ -45,8 +45,3 @@ class ConvertTensorToLinalgPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertTensorToLinalgPass() {
-  return std::make_unique<ConvertTensorToLinalgPass>();
-}

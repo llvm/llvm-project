@@ -10,7 +10,6 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICOPTIONS_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -23,6 +22,16 @@ class ArgList;
 
 namespace clang {
 class DiagnosticsEngine;
+
+/// Controls whether to show colors in diagnostic output.
+enum class ShowColorsKind : unsigned {
+  /// Emit colors only if the output stream is detected to support them.
+  Auto,
+  /// Always emit colors regardless of the output stream.
+  On,
+  /// Never emit colors regardless of the output stream.
+  Off,
+};
 
 /// Specifies which overload candidates to display when overload
 /// resolution fails.
@@ -67,7 +76,7 @@ inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
 raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
 
 /// Options for controlling the compiler diagnostics engine.
-class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
+class DiagnosticOptions {
   friend bool ParseDiagnosticArgs(DiagnosticOptions &, llvm::opt::ArgList &,
                                   clang::DiagnosticsEngine *, bool);
 
@@ -143,6 +152,19 @@ public:
 #define DIAGOPT(Name, Bits, Default) Name = Default;
 #define ENUM_DIAGOPT(Name, Type, Bits, Default) set##Name(Default);
 #include "clang/Basic/DiagnosticOptions.def"
+  }
+
+  /// Resolve the color mode against a stream's capability.
+  bool showColors(bool StreamHasColors) const {
+    switch (getShowColors()) {
+    case ShowColorsKind::On:
+      return true;
+    case ShowColorsKind::Off:
+      return false;
+    case ShowColorsKind::Auto:
+      return StreamHasColors;
+    }
+    return false;
   }
 };
 

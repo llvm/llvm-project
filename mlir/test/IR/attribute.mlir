@@ -81,6 +81,10 @@ func.func @float_attrs_pass() {
     float_attr = 2. : f8E8M0FNU
   } : () -> ()
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E5M3FNU
+    float_attr = 2. : f8E5M3FNU
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f16
     float_attr = 2. : f16
   } : () -> ()
@@ -416,10 +420,29 @@ func.func @non_type_in_type_array_attr_fail() {
 // Test StringAttr with custom type
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: func @string_attr_custom_type
-func.func @string_attr_custom_type() {
-  // CHECK: "string_data" : !foo.string
-  test.string_attr_with_type "string_data" : !foo.string
+// CHECK-LABEL: func @string_attr_custom_type_valid
+func.func @string_attr_custom_type_valid() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_type "string_data" : i64
+  return
+}
+
+// -----
+
+func.func @string_attr_custom_type_invalid() {
+  // expected-error @+1 {{'attr' failed to satisfy constraint: string attribute of integer}}
+  test.string_attr_with_type "string_data" : f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @string_attr_custom_mixed_type
+func.func @string_attr_custom_mixed_type() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_mixed_type "string_data" : i64
+  // CHECK: 42 : i64
+  test.string_attr_with_mixed_type 42 : i64
   return
 }
 
@@ -435,6 +458,10 @@ func.func @allowed_cases_pass() {
   %0 = "test.i32_enum_attr"() {attr = 5: i32} : () -> i32
   // CHECK: test.i32_enum_attr
   %1 = "test.i32_enum_attr"() {attr = 10: i32} : () -> i32
+  // CHECK: test.i32_enum_attr
+  %2 = "test.i32_enum_attr"() {attr = 2147483648: i32} : () -> i32
+  // CHECK: test.i32_enum_attr
+  %3 = "test.i32_enum_attr"() {attr = 4294967295: i32} : () -> i32
   return
 }
 
@@ -516,7 +543,7 @@ func.func @allowed_cases_pass() {
 // -----
 
 func.func @disallowed_case_sticky_fail() {
-  // expected-error@+2 {{expected test::TestBitEnum to be one of: read, write, execute}}
+  // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
 }
@@ -919,7 +946,7 @@ func.func @default_value_printing(%arg0 : i32) {
   // CHECK: test.default_value_print %arg0
   "test.default_value_print"(%arg0) {"value_with_default" = 0 : i32} : (i32) -> ()
   // The attribute SHOULD be printed because it is not equal to the default
-  // CHECK: test.default_value_print {value_with_default = 1 : i32} %arg0
+  // CHECK: test.default_value_print <value_with_default = 1> %arg0
   "test.default_value_print"(%arg0) {"value_with_default" = 1 : i32} : (i32) -> ()
   return
 }

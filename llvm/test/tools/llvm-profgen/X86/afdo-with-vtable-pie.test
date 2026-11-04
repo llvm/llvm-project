@@ -1,0 +1,30 @@
+RUN: llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
+RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
+RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
+
+RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s --dump-input=always
+
+RUN: not llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
+RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
+RUN: -ignore-stack-samples -use-dwarf-correlation=false -o - 2>&1 | FileCheck %s --dump-input=always --check-prefix=PSEUDOERR
+
+RUN: not llvm-profgen --perfscript=%p/Inputs/css-pgo-perf.script \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
+RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=21450 \
+RUN: -ignore-stack-samples=false -use-dwarf-correlation=true -o - 2>&1 | FileCheck %s --dump-input=always --check-prefix=PSEUDOERR
+
+CHECK:      Function: _Z9loop_funciii: 746, 14, 5 sampled lines
+CHECK-NEXT: Samples collected in the function's body {
+CHECK-NEXT:   0: 14
+CHECK-NEXT:   1: 18, calls: _Z10createTypei:18
+CHECK-NEXT:   3: 11, calls: _ZN12_GLOBAL__N_18Derived24funcEii:8 _ZN8Derived14funcEii:3
+CHECK-NEXT:   3: vtables: _ZTV8Derived1:16 _ZTVN12_GLOBAL__N_18Derived2E:47 
+CHECK-NEXT:   5.1: 11, calls: _ZN12_GLOBAL__N_18Derived2D0Ev:8 _ZN8Derived1D0Ev:3
+CHECK-NEXT:   5.1: vtables: _ZTV8Derived1:3 _ZTVN12_GLOBAL__N_18Derived2E:9 
+CHECK-NEXT:   7: 13
+CHECK-NEXT: }
+CHECK-NEXT: No inlined callsites in this function
+
+PSEUDOERR: Symbolizing vtables from data access profiles is not yet supported for context-sensitive perf traces or when pseudo-probe based mapping is enabled.

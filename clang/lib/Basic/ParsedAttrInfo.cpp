@@ -12,21 +12,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/ParsedAttrInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/ManagedStatic.h"
 #include <list>
 #include <memory>
 
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, ParsedAttrInfoRegistry)
+
+static std::list<std::unique_ptr<ParsedAttrInfo>> instantiateEntries() {
+  std::list<std::unique_ptr<ParsedAttrInfo>> Instances;
+  for (const auto &It : ParsedAttrInfoRegistry::entries())
+    Instances.emplace_back(It.instantiate());
+  return Instances;
+}
 
 const std::list<std::unique_ptr<ParsedAttrInfo>> &
 clang::getAttributePluginInstances() {
-  static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
-      PluginAttrInstances;
-  if (PluginAttrInstances->empty())
-    for (const auto &It : ParsedAttrInfoRegistry::entries())
-      PluginAttrInstances->emplace_back(It.instantiate());
-
-  return *PluginAttrInstances;
+  static std::list<std::unique_ptr<ParsedAttrInfo>> Instances =
+      instantiateEntries();
+  return Instances;
 }

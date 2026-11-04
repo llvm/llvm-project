@@ -1,4 +1,4 @@
-//===--- StaticallyConstructedObjectsCheck.cpp - clang-tidy----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,8 +35,8 @@ void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
                    hasDescendant(cxxConstructExpr(unless(allOf(
                        // ... unless it is constexpr ...
                        hasDeclaration(cxxConstructorDecl(isConstexpr())),
-                       // ... and is statically initialized.
-                       isConstantInitializer())))))
+                       // ... and is statically initialized or value-dependent.
+                       anyOf(isValueDependent(), isConstantInitializer()))))))
                    .bind("decl")),
       this);
 }

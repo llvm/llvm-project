@@ -1,0 +1,42 @@
+REQUIRES: x86-registered-target,ld.lld,llvm-ar
+
+# Test that a DTLTO link succeeds with a multi-module (via -fsplit-lto-unit)
+# bitcode file. We use an archive, as archive member inputs exercise more of
+# the DTLTO specific code than other input file types.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c usebar.cc \
+RUN:   -fno-rtti -fno-exceptions -fsplit-lto-unit 
+
+# Sanity check that multi-module bitcode was produced.
+RUN: not llvm-modextract -n 2 usebar.o -o - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=TWO
+TWO: bitcode file contains 2 module(s)
+
+# Create an archive.
+RUN: llvm-ar rcs usebar.a usebar.o
+
+# Build with DTLTO.
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -fuse-ld=lld \
+RUN:   -nostdlib -shared -Wl,--whole-archive,--allow-shlib-undefined usebar.a \
+RUN:   -fthinlto-distributor=%python \
+RUN:   -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--save-temps
+
+RUN: ls | sort | FileCheck %s
+
+# DTLTO JSON file - confirms DTLTO occurred.
+CHECK: .dist-file.json
+
+# .native.o exists - confirms archive member usebar.o participated in DTLTO.
+CHECK: {{^}}usebar.a(usebar.o
+CHECK-SAME: .native.o
+
+#--- usebar.cc
+// Minimal C++ input to exercise multi-module emission with -fsplit-lto-unit.
+struct A { virtual int foo(); };
+int bar(A *a);
+
+struct B : A { int foo() { return 2; } };
+int use() { static B b; return bar(&b); }

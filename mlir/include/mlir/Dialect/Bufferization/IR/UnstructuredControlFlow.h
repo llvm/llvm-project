@@ -32,41 +32,40 @@ template <typename ConcreteModel, typename ConcreteOp>
 struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
     : public BufferizableOpInterface::ExternalModel<ConcreteModel, ConcreteOp> {
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     // Note: The user may want to override this function for OpResults in
     // case the bufferized result type is different from the bufferized type of
     // the aliasing OpOperand (if any).
     if (isa<OpResult>(value))
-      return bufferization::detail::defaultGetBufferType(value, options,
+      return bufferization::detail::defaultGetBufferType(value, options, state,
                                                          invocationStack);
 
     // Compute the buffer type of the block argument by computing the bufferized
     // operand types of all forwarded values. If these are all the same type,
     // take that type. Otherwise, take only the memory space and fall back to a
     // buffer type with a fully dynamic layout map.
-    BaseMemRefType bufferType;
-    auto tensorType = cast<TensorType>(value.getType());
+    BufferLikeType bufferType;
     for (OpOperand *opOperand :
          detail::getCallerOpOperands(cast<BlockArgument>(value))) {
 
       // If the forwarded operand is already on the invocation stack, we ran
       // into a loop and this operand cannot be used to compute the bufferized
       // type.
-      if (llvm::find(invocationStack, opOperand->get()) !=
-          invocationStack.end())
+      if (llvm::is_contained(invocationStack, opOperand->get()))
         continue;
 
       // Compute the bufferized type of the forwarded operand.
-      BaseMemRefType callerType;
-      if (auto memrefType =
-              dyn_cast<BaseMemRefType>(opOperand->get().getType())) {
+      BufferLikeType callerType;
+      if (auto bufferType =
+              dyn_cast<BufferLikeType>(opOperand->get().getType())) {
         // The operand was already bufferized. Take its type directly.
-        callerType = memrefType;
+        callerType = bufferType;
       } else {
-        FailureOr<BaseMemRefType> maybeCallerType =
-            bufferization::getBufferType(opOperand->get(), options,
+        FailureOr<BufferLikeType> maybeCallerType =
+            bufferization::getBufferType(opOperand->get(), options, state,
                                          invocationStack);
         if (failed(maybeCallerType))
           return failure();
@@ -82,28 +81,28 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
       if (bufferType == callerType)
         continue;
 
-        // If the computed buffer type does not match the computed buffer type
-        // of the earlier forwarded operands, fall back to a buffer type with a
-        // fully dynamic layout map.
+      // If the computed buffer type does not match the computed buffer type of
+      // the earlier forwarded operands, fall back to a reconciled buffer type.
 #ifndef NDEBUG
-      if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType)) {
-        assert(bufferType.hasRank() && callerType.hasRank() &&
-               "expected ranked memrefs");
-        assert(llvm::all_equal({bufferType.getShape(), callerType.getShape(),
-                                rankedTensorType.getShape()}) &&
-               "expected same shape");
-      } else {
-        assert(!bufferType.hasRank() && !callerType.hasRank() &&
-               "expected unranked memrefs");
+      if (auto tensorType = dyn_cast<TensorLikeType>(value.getType())) {
+        const auto emitOpError = [&]() { return op->emitOpError(); };
+        assert(succeeded(tensorType.verifyCompatibleBufferType(bufferType,
+                                                               emitOpError)) &&
+               "incompatible buffer type");
+        assert(succeeded(tensorType.verifyCompatibleBufferType(callerType,
+                                                               emitOpError)) &&
+               "incompatible caller type");
       }
 #endif // NDEBUG
 
-      if (bufferType.getMemorySpace() != callerType.getMemorySpace())
-        return op->emitOpError("incoming operands of block argument have "
-                               "inconsistent memory spaces");
+      auto reconciled = options.reconcileBufferTypeMismatchFn(
+          bufferType, callerType, options);
+      if (failed(reconciled)) {
+        return op->emitError("incoming operands of block argument have "
+                             "incompatible buffer types");
+      }
 
-      bufferType = getMemRefTypeWithFullyDynamicLayout(
-          tensorType, bufferType.getMemorySpace());
+      bufferType = *reconciled;
     }
 
     if (!bufferType)

@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -128,7 +129,50 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
+
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                         raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                         raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  if (!Info.CPU.empty()) {
+    assert(Info.Features.empty() && "cannot have both a CPU and a feature");
+    Out << ".cpu_" << Info.CPU;
+    return;
+  }
+
+  // Handle feature strings
+  if (Info.Features.size() == 1) {
+    StringRef Feature = Info.Features[0];
+    assert(Feature.starts_with("+") || Feature.starts_with("-"));
+
+    // replace hyphens with underscores
+    std::string MangledName(Feature.drop_front(1));
+    std::replace(MangledName.begin(), MangledName.end(), '-', '_');
+
+    Out << "." << (Feature.starts_with("-") ? "no_" : "") << MangledName;
+    return;
+  }
+
+  llvm_unreachable("Invalid target_clones parameter");
+}
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
   const bool Is64Bit;
@@ -153,8 +197,8 @@ public:
 // extended to 32/64 bits.
 bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (getContext().isPromotableIntegerType(Ty))
@@ -189,7 +233,7 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   return (isPromotableTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                         : ABIArgInfo::getDirect());
@@ -208,13 +252,16 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     CharUnits CCAlign = getParamTypeAlignment(Ty);
     CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
 
-    return ABIArgInfo::getIndirect(CCAlign, /*ByVal*/ true,
-                                   /*Realign*/ TyAlign > CCAlign);
+    return ABIArgInfo::getIndirect(
+        CCAlign, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true,
+        /*Realign=*/TyAlign > CCAlign);
   }
 
   return (isPromotableTypeForABI(Ty)
@@ -291,8 +338,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     ASTContext &Context = D->getASTContext();
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
-    const RecordDecl *RDecl =
-        Ty->isRecordType() ? Ty->getAs<RecordType>()->getDecl() : nullptr;
+    const RecordDecl *RDecl = Ty->getAsRecordDecl();
 
     bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
     auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {
@@ -382,7 +428,7 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
   const Type *AlignTy = nullptr;
-  if (const Type *EltType = isSingleElementStruct(Ty, getContext())) {
+  if (const Type *EltType = isSingleElementRecord(Ty, getContext())) {
     const BuiltinType *BT = EltType->getAs<BuiltinType>();
     if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
         (BT && BT->isFloatingPoint()))
@@ -488,7 +534,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
   llvm::Type *DirectTy = CGF.ConvertType(Ty), *ElementTy = DirectTy;
   if (isIndirect)
-    DirectTy = CGF.UnqualPtrTy;
+    DirectTy = CGF.DefaultPtrTy;
 
   // Case 1: consume registers.
   Address RegAddr = Address::invalid();
@@ -621,6 +667,7 @@ public:
 
   bool isPromotableTypeForABI(QualType Ty) const;
   CharUnits getParamTypeAlignment(QualType Ty) const;
+  const Type *getSingleElementFPOrVectorType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
@@ -642,15 +689,9 @@ public:
       // We rely on the default argument classification for the most part.
       // One exception:  An aggregate containing a single floating-point
       // or vector item must be passed in a register if one is available.
-      const Type *T = isSingleElementStruct(I.type, getContext());
-      if (T) {
-        const BuiltinType *BT = T->getAs<BuiltinType>();
-        if ((T->isVectorType() && getContext().getTypeSize(T) == 128) ||
-            (BT && BT->isFloatingPoint())) {
-          QualType QT(T, 0);
-          I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QT));
-          continue;
-        }
+      if (const Type *T = getSingleElementFPOrVectorType(I.type)) {
+        I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QualType(T, 0)));
+        continue;
       }
       I.info = classifyArgumentType(I.type);
     }
@@ -678,9 +719,6 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
-  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
-                          const llvm::MapVector<GlobalDecl, StringRef>
-                              &MangledDeclNames) const override;
 };
 
 class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -703,8 +741,8 @@ public:
 bool
 PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (isPromotableIntegerTypeForABI(Ty))
@@ -753,14 +791,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
-  const Type *AlignAsType = nullptr;
-  const Type *EltType = isSingleElementStruct(Ty, getContext());
-  if (EltType) {
-    const BuiltinType *BT = EltType->getAs<BuiltinType>();
-    if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
-        (BT && BT->isFloatingPoint()))
-      AlignAsType = EltType;
-  }
+  const Type *AlignAsType = getSingleElementFPOrVectorType(Ty);
 
   // Likewise for ELFv2 homogeneous aggregates.
   const Type *Base = nullptr;
@@ -783,6 +814,25 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   }
 
   return CharUnits::fromQuantity(8);
+}
+
+/// If Ty is a one-member aggregate wrapping a floating-point or 128-bit vector
+/// type, return that type. ELFv1 only unwraps structs and arrays; GCC passes
+/// unions in GPRs.
+const Type *
+PPC64_SVR4_ABIInfo::getSingleElementFPOrVectorType(QualType Ty) const {
+  bool AllowUnions =
+      Kind != PPC64_SVR4_ABIKind::ELFv1 ||
+      getContext().getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver23);
+  const Type *EltType = AllowUnions ? isSingleElementRecord(Ty, getContext())
+                                    : isSingleElementStruct(Ty, getContext());
+  if (!EltType)
+    return nullptr;
+  const BuiltinType *BT = EltType->getAs<BuiltinType>();
+  if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
+      (BT && BT->isFloatingPoint()))
+    return EltType;
+  return nullptr;
 }
 
 bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -833,7 +883,8 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   if (Ty->isVectorType()) {
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size > 128)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
     else if (Size < 128) {
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), Size);
       return ABIArgInfo::getDirect(CoerceTy);
@@ -842,11 +893,13 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/true);
 
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     uint64_t ABIAlign = getParamTypeAlignment(Ty).getQuantity();
     uint64_t TyAlign = getContext().getTypeAlignInChars(Ty).getQuantity();
@@ -887,9 +940,10 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
     }
 
     // All other aggregates are passed ByVal.
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
-                                   /*ByVal=*/true,
-                                   /*Realign=*/TyAlign > ABIAlign);
+    return ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(ABIAlign),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 
   return (isPromotableTypeForABI(Ty)
@@ -910,7 +964,8 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVectorType()) {
     uint64_t Size = getContext().getTypeSize(RetTy);
     if (Size > 128)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     else if (Size < 128) {
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), Size);
       return ABIArgInfo::getDirect(CoerceTy);
@@ -919,7 +974,8 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 
   if (const auto *EIT = RetTy->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
-      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+      return getNaturalAlignIndirect(
+          RetTy, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
 
   if (isAggregateTypeForABI(RetTy)) {
     // ELFv2 homogeneous aggregates are returned as array types.
@@ -949,7 +1005,7 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
     }
 
     // All other aggregates are returned indirectly.
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   }
 
   return (isPromotableTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
@@ -1000,24 +1056,6 @@ PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
-}
-
-void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
-    CodeGen::CodeGenModule &CGM,
-    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
-  if (CGM.getTypes().isLongDoubleReferenced()) {
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    const auto *flt = &CGM.getTarget().getLongDoubleFormat();
-    if (flt == &llvm::APFloat::PPCDoubleDouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "doubledouble"));
-    else if (flt == &llvm::APFloat::IEEEquad())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeequad"));
-    else if (flt == &llvm::APFloat::IEEEdouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeedouble"));
-  }
 }
 
 bool

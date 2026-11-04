@@ -1,4 +1,4 @@
-//===-- Mangled.h -----------------------------------------------*- C++ -*-===//
+//===-- Mangled.h ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,14 +9,15 @@
 #ifndef LLDB_CORE_MANGLED_H
 #define LLDB_CORE_MANGLED_H
 
+#include "lldb/Core/DemangledNameInfo.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
-#include <memory>
+#include <optional>
 
 namespace lldb_private {
 
@@ -45,6 +46,30 @@ public:
     eManglingSchemeRustV0,
     eManglingSchemeD,
     eManglingSchemeSwift,
+  };
+
+  /// The number of mangling schemes.
+  static constexpr size_t kNumManglingSchemes = eManglingSchemeSwift + 1;
+
+  /// What a mangled function name says about the function's declaration.
+  enum class FunctionNameKind {
+    TopLevel,
+    InNamespace,
+    Method,
+    ConstructorOrDestructor,
+    Unknown,
+  };
+
+  /// The parts of a mangled function name used in the symbol table's indices.
+  struct FunctionNameParts {
+    /// If empty, the symbol is only indexed by its mangled name.
+    ConstString basename;
+    /// The enclosing context. The symbol table only uses it to work
+    /// out which contexts are classes: a ConstructorOrDestructor
+    /// shows that its context is one, and an Unknown function in such
+    /// a context is a method.
+    ConstString decl_context;
+    FunctionNameKind kind = FunctionNameKind::Unknown;
   };
 
   /// Default constructor.
@@ -141,13 +166,7 @@ public:
   /// Mangled name get accessor.
   ///
   /// \return
-  ///     A reference to the mangled name string object.
-  ConstString &GetMangledName() { return m_mangled; }
-
-  /// Mangled name get accessor.
-  ///
-  /// \return
-  ///     A const reference to the mangled name string object.
+  ///     The mangled name string object.
   ConstString GetMangledName() const { return m_mangled; }
 
   /// Best name get accessor.
@@ -175,16 +194,6 @@ public:
   }
   bool NameMatches(const RegularExpression &regex) const;
 
-  /// Get the memory cost of this object.
-  ///
-  /// Return the size in bytes that this object takes in memory. This returns
-  /// the size in bytes of this object, not any shared string values it may
-  /// refer to.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const;
-
   /// Set the string value in this object.
   ///
   /// This version auto detects if the string is mangled by inspecting the
@@ -210,33 +219,6 @@ public:
   ///     if there is no mangled or demangled counterpart.
   lldb::LanguageType GuessLanguage() const;
 
-  /// Function signature for filtering mangled names.
-  using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
-
-  /// Get rich mangling information. This is optimized for batch processing
-  /// while populating a name index. To get the pure demangled name string for
-  /// a single entity, use GetDemangledName() instead.
-  ///
-  /// For names that match the Itanium mangling scheme, this uses LLVM's
-  /// ItaniumPartialDemangler. All other names fall back to LLDB's builtin
-  /// parser currently.
-  ///
-  /// This function is thread-safe when used with different \a context
-  /// instances in different threads.
-  ///
-  /// \param[in] context
-  ///     The context for this function. A single instance can be stack-
-  ///     allocated in the caller's frame and used for multiple calls.
-  ///
-  /// \param[in] skip_mangled_name
-  ///     A filtering function for skipping entities based on name and mangling
-  ///     scheme. This can be null if unused.
-  ///
-  /// \return
-  ///     True on success, false otherwise.
-  bool GetRichManglingInfo(RichManglingContext &context,
-                           SkipMangledNameFn *skip_mangled_name);
-
   /// Try to identify the mangling scheme used.
   /// \param[in] name
   ///     The name we are attempting to identify the mangling scheme for.
@@ -244,7 +226,9 @@ public:
   /// \return
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
-  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
+
+  static bool IsMangledName(llvm::StringRef name);
 
   /// Decode a serialized version of this object from data.
   ///
@@ -275,12 +259,37 @@ public:
   ///   table offsets in the cache data.
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
+  /// Compute the \c DemangledNameInfo of the demangled name.
+  ///
+  /// Note that this always re-runs the demangler. \see DemangledNameInfoCache
+  /// for caching the result.
+  ///
+  /// \return
+  ///     std::nullopt if no info could be computed (for example because the
+  ///     name is mangled with a scheme that doesn't provide any info).
+  std::optional<DemangledNameInfo> ComputeDemangledInfo() const;
+
+  /// Compute the base name (without namespace/class qualifiers) from the
+  /// demangled name.
+  ///
+  /// For a demangled name like "ns::MyClass<int>::templateFunc", this returns
+  /// just "templateFunc".
+  ///
+  /// \return
+  ///     A ConstString containing the basename, or nullptr if computation
+  ///     fails.
+  ConstString GetBaseName() const;
+
 private:
-  /// Mangled member variables.
-  ConstString m_mangled;           ///< The mangled version of the name
-  mutable ConstString m_demangled; ///< Mutable so we can get it on demand with
-                                   ///a const version of this object
+  /// The mangled version of the name.
+  ConstString m_mangled;
+
+  /// Mutable so we can get it on demand with
+  /// a const version of this object.
+  mutable ConstString m_demangled;
 };
+static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString),
+              "High-volume object, size of object must be increased with care");
 
 Stream &operator<<(Stream &s, const Mangled &obj);
 

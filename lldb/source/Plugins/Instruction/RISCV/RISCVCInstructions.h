@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTION_H
-#define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTION_H
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTIONS_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTIONS_H
 
 #include <cstdint>
 #include <variant>
 
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
 
 namespace lldb_private {
@@ -354,4 +354,4 @@ RISCVInst DecodeC_FSD(uint32_t inst) {
 }
 
 } // namespace lldb_private
-#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTION_H
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTIONS_H

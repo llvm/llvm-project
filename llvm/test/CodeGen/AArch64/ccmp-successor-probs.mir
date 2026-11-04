@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64--linux-gnu -mcpu=falkor -run-pass=aarch64-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64--linux-gnu -mcpu=falkor -passes=aarch64-ccmp | FileCheck %s
 ---
 # This test checks that successor probabilties are properly updated after a
 # ccmp-conversion.
@@ -9,6 +10,7 @@
 # CHECK:         CCMPXr %5, %4, 0, 10, implicit-def $nzcv, implicit $nzcv
 #
 name: aarch64-ccmp-successor-probs
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }

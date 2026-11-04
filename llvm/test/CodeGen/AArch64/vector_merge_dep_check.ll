@@ -24,13 +24,13 @@ define void @fn(ptr %argA, ptr %argB, ptr %a) #0 align 2 {
 
 ; CHECK: ret
 
-attributes #0 = { noinline norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-features"="+crc,+crypto,+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-features"="+crc,+crypto,+neon" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 
 !0 = !{!"Snapdragon LLVM ARM Compiler 3.8.0 (based on LLVM 3.8.0)"}
 !1 = distinct !{!1, !2, !"polly.alias.scope.rhs"}
-!2 = distinct !{!2, !"polly.alias.scope.domain"}
+!2 = distinct !{!2, i1 false, !"polly.alias.scope.domain"}
 !3 = !{!4, !5, !6, !7, !8}
 !4 = distinct !{!4, !2, !"polly.alias.scope.blockB"}
 !5 = distinct !{!5, !2, !"polly.alias.scope.add28.lcssa.reg2mem"}

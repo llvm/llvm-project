@@ -31,8 +31,9 @@ protected:
 public:
   SortImportsTestJava() {
     FmtStyle = getGoogleStyle(FormatStyle::LK_Java);
+    EXPECT_TRUE(FmtStyle.SortIncludes.Enabled);
     FmtStyle.JavaImportGroups = {"com.test", "org", "com"};
-    FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+    FmtStyle.SortIncludes.IgnoreCase = true;
   }
 };
 
@@ -346,6 +347,37 @@ TEST_F(SortImportsTestJava, NoReplacementsForValidImportsWindows) {
                      "import org.b;\r\n";
   EXPECT_TRUE(
       sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.java").empty());
+}
+
+TEST_F(SortImportsTestJava, DoNotSortImportsInBlockComment) {
+  constexpr StringRef Code("/* import org.d;\n"
+                           "import org.c;\n"
+                           "import org.b; */\n"
+                           "import org.a;");
+  EXPECT_EQ(Code, sort(Code));
+}
+
+TEST_F(SortImportsTestJava, StopAtClassDeclaration) {
+  constexpr StringRef Code("import org.a;\n"
+                           "\n"
+                           "class Foo {\n"
+                           "  String code = \"\"\"\n"
+                           "      import org.c;\n"
+                           "      import org.b;\n"
+                           "  \"\"\";\n"
+                           "}");
+  EXPECT_EQ(Code, sort(Code));
+}
+
+TEST_F(SortImportsTestJava, SortImportsAfterPackageStatement) {
+  EXPECT_EQ("package org.a;\n"
+            "\n"
+            "import org.a;\n"
+            "import org.b;",
+            sort("package org.a;\n"
+                 "\n"
+                 "import org.b;\n"
+                 "import org.a;"));
 }
 
 } // end namespace

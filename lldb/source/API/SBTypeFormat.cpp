@@ -25,8 +25,8 @@ SBTypeFormat::SBTypeFormat(lldb::Format format, uint32_t options)
 }
 
 SBTypeFormat::SBTypeFormat(const char *type, uint32_t options)
-    : m_opaque_sp(TypeFormatImplSP(new TypeFormatImpl_EnumType(
-          ConstString(type ? type : ""), options))) {
+    : m_opaque_sp(TypeFormatImplSP(
+          new TypeFormatImpl_EnumType(type ? type : "", options))) {
   LLDB_INSTRUMENT_VA(this, type, options);
 }
 
@@ -59,8 +59,8 @@ const char *SBTypeFormat::GetTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (IsValid() && m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeEnum)
-    return ((TypeFormatImpl_EnumType *)m_opaque_sp.get())
-        ->GetTypeName()
+    return ConstString(
+               ((TypeFormatImpl_EnumType *)m_opaque_sp.get())->GetTypeName())
         .AsCString("");
   return "";
 }
@@ -85,7 +85,7 @@ void SBTypeFormat::SetTypeName(const char *type) {
 
   if (CopyOnWrite_Impl(Type::eTypeEnum))
     ((TypeFormatImpl_EnumType *)m_opaque_sp.get())
-        ->SetTypeName(ConstString(type ? type : ""));
+        ->SetTypeName(type ? type : "");
 }
 
 void SBTypeFormat::SetOptions(uint32_t value) {
@@ -177,7 +177,7 @@ bool SBTypeFormat::CopyOnWrite_Impl(Type type) {
         TypeFormatImplSP(new TypeFormatImpl_Format(GetFormat(), GetOptions())));
   else
     SetSP(TypeFormatImplSP(
-        new TypeFormatImpl_EnumType(ConstString(GetTypeName()), GetOptions())));
+        new TypeFormatImpl_EnumType(GetTypeName(), GetOptions())));
 
   return true;
 }

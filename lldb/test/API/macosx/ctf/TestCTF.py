@@ -6,6 +6,7 @@ import os
 
 
 class TestCTF(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def no_ctf_convert(self):
@@ -20,14 +21,14 @@ class TestCTF(TestBase):
 
     @skipTestIfFn(no_ctf_convert)
     @skipTestIfFn(no_objcopy)
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         self.do_test()
 
     @skipTestIfFn(no_ctf_convert)
     @skipTestIfFn(no_objcopy)
-    @skipUnlessDarwin
+    @requireDarwin
     def test_compressed(self):
         self.build(dictionary={"COMPRESS_CTF": "YES"})
         self.do_test()

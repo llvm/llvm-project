@@ -34,6 +34,7 @@ auto filter_to_vector(ContainerTy &&C, PredicateFn &&Pred) {
 }
 
 /// Map a range to a SmallVector with element types deduced from the mapping.
+/// \p F can be a function, lambda, or member pointer.
 template <unsigned Size, class ContainerTy, class FuncTy>
 auto map_to_vector(ContainerTy &&C, FuncTy &&F) {
   return to_vector<Size>(
@@ -41,6 +42,7 @@ auto map_to_vector(ContainerTy &&C, FuncTy &&F) {
 }
 
 /// Map a range to a SmallVector with element types deduced from the mapping.
+/// \p F can be a function, lambda, or member pointer.
 template <class ContainerTy, class FuncTy>
 auto map_to_vector(ContainerTy &&C, FuncTy &&F) {
   return to_vector(

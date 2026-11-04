@@ -15,10 +15,15 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def riscv_mulhsu : SDNode<"RISCVISD::MULHSU", SDTIntBinOp>;
-def riscv_divw  : SDNode<"RISCVISD::DIVW",  SDT_RISCVIntBinOpW>;
-def riscv_divuw : SDNode<"RISCVISD::DIVUW", SDT_RISCVIntBinOpW>;
-def riscv_remuw : SDNode<"RISCVISD::REMUW", SDT_RISCVIntBinOpW>;
+// Multiply high for signedxunsigned.
+def riscv_mulhsu : RVSDNode<"MULHSU", SDTIntBinOp>;
+
+// 32-bit operations from RV64M that can't be simply matched with a pattern
+// at instruction selection time. These have undefined behavior for division
+// by 0 or overflow (divw) like their target independent counterparts.
+def riscv_divw  : RVSDNode<"DIVW",  SDT_RISCVIntBinOpW>;
+def riscv_divuw : RVSDNode<"DIVUW", SDT_RISCVIntBinOpW>;
+def riscv_remuw : RVSDNode<"REMUW", SDT_RISCVIntBinOpW>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -106,11 +111,11 @@ def : Pat<(srem (sexti32 (i64 GPR:$rs1)), (sexti32 (i64 GPR:$rs2))),
           (REMW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtM, IsRV64]
 
-let Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba] in {
+let Predicates = [HasStdExtZmmul, IsRV64, NoStdExtZba] in {
 // Special case for calculating the full 64-bit product of a 32x32 unsigned
 // multiply where the inputs aren't known to be zero extended. We can shift the
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
-} // Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba]
+} // Predicates = [HasStdExtZmmul, IsRV64, NoStdExtZba]

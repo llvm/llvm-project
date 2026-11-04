@@ -74,8 +74,14 @@ public:
   /// LLVM-compatible type. In particular, if more than one value is returned,
   /// create an LLVM dialect structure type with elements that correspond to
   /// each of the types converted with `convertCallingConventionType`.
-  Type packFunctionResults(TypeRange types,
-                           bool useBarePointerCallConv = false) const;
+  ///
+  /// Populate the converted (unpacked) types into `groupedTypes`, if provided.
+  /// `groupedType` contains one nested vector per input type. In case of a 1:N
+  /// conversion, a nested vector may contain 0 or more then 1 converted type.
+  Type
+  packFunctionResults(TypeRange types, bool useBarePointerCallConv = false,
+                      SmallVector<SmallVector<Type>> *groupedTypes = nullptr,
+                      int64_t *numConvertedTypes = nullptr) const;
 
   /// Convert a non-empty list of types of values produced by an operation into
   /// an LLVM-compatible type. In particular, if more than one value is
@@ -88,15 +94,9 @@ public:
   /// UnrankedMemRefType, are converted following the specific rules for the
   /// calling convention. Calling convention independent types are converted
   /// following the default LLVM type conversions.
-  Type convertCallingConventionType(Type type,
-                                    bool useBarePointerCallConv = false) const;
-
-  /// Promote the bare pointers in 'values' that resulted from memrefs to
-  /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
-  /// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
-  void promoteBarePtrsToDescriptors(ConversionPatternRewriter &rewriter,
-                                    Location loc, ArrayRef<Type> stdTypes,
-                                    SmallVectorImpl<Value> &values) const;
+  LogicalResult
+  convertCallingConventionType(Type type, SmallVectorImpl<Type> &result,
+                               bool useBarePointerCallConv = false) const;
 
   /// Returns the MLIR context.
   MLIRContext &getContext() const;
@@ -109,9 +109,14 @@ public:
   /// Promote the LLVM representation of all operands including promoting MemRef
   /// descriptors to stack and use pointers to struct to avoid the complexity
   /// of the platform-specific C/C++ ABI lowering related to struct argument
-  /// passing.
+  /// passing. (The ArrayRef variant is for 1:N.)
   SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
-                                        ValueRange operands, OpBuilder &builder,
+                                        ArrayRef<ValueRange> adaptorOperands,
+                                        OpBuilder &builder,
+                                        bool useBarePtrCallConv = false) const;
+  SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
+                                        ValueRange adaptorOperands,
+                                        OpBuilder &builder,
                                         bool useBarePtrCallConv = false) const;
 
   /// Promote the LLVM struct representation of one MemRef descriptor to stack

@@ -10,7 +10,7 @@
 
 #include "NativeRegisterContextWindows_arm.h"
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Register/Common/RegisterInfo_arm.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
@@ -82,7 +82,7 @@ static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 4) &&
          "Register setting path assumes this is a 32-bit host");
-  return new RegisterInfoPOSIX_arm(target_arch);
+  return new RegisterInfo_arm(target_arch);
 }
 
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
@@ -128,8 +128,8 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_arm::NativeRegisterContextWindows_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
 bool NativeRegisterContextWindows_arm::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_arm && reg_index <= k_last_gpr_arm);

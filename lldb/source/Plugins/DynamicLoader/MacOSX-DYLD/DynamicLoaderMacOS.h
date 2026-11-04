@@ -54,10 +54,12 @@ public:
 
   lldb_private::Status CanLoadImage() override;
 
-  bool GetSharedCacheInformation(
-      lldb::addr_t &base_address, lldb_private::UUID &uuid,
-      lldb_private::LazyBool &using_shared_cache,
-      lldb_private::LazyBool &private_shared_cache) override;
+  bool GetSharedCacheInformation(lldb::addr_t &base_address,
+                                 lldb_private::UUID &uuid,
+                                 lldb_private::LazyBool &using_shared_cache,
+                                 lldb_private::LazyBool &private_shared_cache,
+                                 lldb_private::FileSpec &shared_cache_path,
+                                 std::optional<uint64_t> &size) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -75,7 +77,9 @@ protected:
 
   void ClearDYLDHandoverBreakpoint();
 
-  void AddBinaries(const std::vector<lldb::addr_t> &load_addresses);
+  void
+  AddBinaries(const std::vector<lldb::addr_t> &load_addresses,
+              lldb_private::StructuredData::ObjectSP expedited_binary_infos);
 
   void DoClear() override;
 

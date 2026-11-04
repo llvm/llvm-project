@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/CUDA/common.h ------------------*- C++ -*-===//
+//===-- include/flang/Runtime/CUDA/common.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #ifndef FORTRAN_RUNTIME_CUDA_COMMON_H_
 #define FORTRAN_RUNTIME_CUDA_COMMON_H_
 
-#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 /// Type of memory for allocation/deallocation
@@ -33,5 +32,16 @@ static constexpr unsigned kDeviceToDevice = 2;
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__}; \
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
+
+#define CUDA_REPORT_IF_ERROR_LOC(expr, file, line) \
+  [](cudaError_t err, const char *sourceFile, int sourceLine) { \
+    if (err == cudaSuccess) \
+      return; \
+    const char *name = cudaGetErrorName(err); \
+    if (!name) \
+      name = "<unknown>"; \
+    Fortran::runtime::Terminator terminator{sourceFile, sourceLine}; \
+    terminator.Crash("'%s' failed with '%s'", #expr, name); \
+  }(expr, sourceFile, sourceLine)
 
 #endif // FORTRAN_RUNTIME_CUDA_COMMON_H_

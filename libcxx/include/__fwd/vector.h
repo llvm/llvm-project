@@ -19,10 +19,16 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS vector;
+class vector;
 
 template <class _Allocator>
 class vector<bool, _Allocator>;
+
+template <class _Tp>
+inline const bool __is_std_vector_bool_v = false;
+
+template <class _Allocator>
+inline const bool __is_std_vector_bool_v<vector<bool, _Allocator> > = true;
 
 _LIBCPP_END_NAMESPACE_STD
 

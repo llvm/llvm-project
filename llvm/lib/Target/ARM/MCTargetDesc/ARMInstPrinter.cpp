@@ -277,7 +277,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // Combine 2 GPRs from disassember into a GPRPair to match with instr def.
+  // Combine 2 GPRs from disassembler into a GPRPair to match with instr def.
   // ldrexd/strexd require even/odd GPR pair. To enforce this constraint,
   // a single GPRPair reg operand is used in the .td file to replace the two
   // GPRs. However, when decoding them, the two GRPs cannot be automatically
@@ -350,7 +350,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     switch (Expr->getKind()) {
     case MCExpr::Binary:
       O << '#';
-      Expr->print(O, &MAI);
+      MAI.printExpr(O, *Expr);
       break;
     case MCExpr::Constant: {
       // If a symbolic branch target was added as a constant expression then
@@ -360,7 +360,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       int64_t TargetAddress;
       if (!Constant->evaluateAsAbsolute(TargetAddress)) {
         O << '#';
-        Expr->print(O, &MAI);
+        MAI.printExpr(O, *Expr);
       } else {
         O << "0x";
         O.write_hex(static_cast<uint32_t>(TargetAddress));
@@ -370,7 +370,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     default:
       // FIXME: Should we always treat this as if it is a constant literal and
       // prefix it with '#'?
-      Expr->print(O, &MAI);
+      MAI.printExpr(O, *Expr);
       break;
     }
   }
@@ -395,7 +395,7 @@ void ARMInstPrinter::printThumbLdrLabelOperand(const MCInst *MI, unsigned OpNum,
                                                raw_ostream &O) {
   const MCOperand &MO1 = MI->getOperand(OpNum);
   if (MO1.isExpr()) {
-    MO1.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO1.getExpr());
     return;
   }
 
@@ -917,8 +917,8 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
     if (Opcode == ARM::t2MSR_M && FeatureBits[ARM::FeatureDSP]) {
       auto TheReg =ARMSysReg::lookupMClassSysRegBy12bitSYSmValue(SYSm);
       if (TheReg && TheReg->isInRequiredFeatures({ARM::FeatureDSP})) {
-          O << TheReg->Name;
-          return;
+        O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
+        return;
       }
     }
 
@@ -929,14 +929,14 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
       // alias for MSR APSR_nzcvq.
       auto TheReg = ARMSysReg::lookupMClassSysRegAPSRNonDeprecated(SYSm);
       if (TheReg) {
-          O << TheReg->Name;
-          return;
+        O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
+        return;
       }
     }
 
     auto TheReg = ARMSysReg::lookupMClassSysRegBy8bitSYSmValue(SYSm);
     if (TheReg) {
-      O << TheReg->Name;
+      O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
       return;
     }
 
@@ -991,7 +991,7 @@ void ARMInstPrinter::printBankedRegOperand(const MCInst *MI, unsigned OpNum,
   uint32_t Banked = MI->getOperand(OpNum).getImm();
   auto TheReg = ARMBankedReg::lookupBankedRegByEncoding(Banked);
   assert(TheReg && "invalid banked register operand");
-  std::string Name = TheReg->Name;
+  std::string Name = ARMBankedReg::getBankedRegStr(TheReg->Name).str();
 
   uint32_t isSPSR = (Banked & 0x20) >> 5;
   if (isSPSR)
@@ -1081,7 +1081,7 @@ void ARMInstPrinter::printAdrLabelOperand(const MCInst *MI, unsigned OpNum,
   const MCOperand &MO = MI->getOperand(OpNum);
 
   if (MO.isExpr()) {
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
 

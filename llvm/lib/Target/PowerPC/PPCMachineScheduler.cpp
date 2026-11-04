@@ -11,10 +11,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> 
-DisableAddiLoadHeuristic("disable-ppc-sched-addi-load",
-                         cl::desc("Disable scheduling addi instruction before" 
-                                  "load for ppc"), cl::Hidden);
+static cl::opt<bool> EnableAddiLoadHeuristic(
+    "ppc-sched-addi-load",
+    cl::desc("Enable scheduling addi instruction before load for ppc"),
+    cl::init(true), cl::Hidden);
 static cl::opt<bool>
     EnableAddiHeuristic("ppc-postra-bias-addi",
                         cl::desc("Enable scheduling addi instruction as early"
@@ -29,7 +29,7 @@ static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) const {
-  if (DisableAddiLoadHeuristic)
+  if (!EnableAddiLoadHeuristic)
     return false;
 
   SchedCandidate &FirstCand = Zone.isTop() ? TryCand : Cand;
@@ -100,12 +100,15 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   if (SameBoundary) {
@@ -190,8 +193,15 @@ bool PPCPostRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
-                 Cand.SU == DAG->getNextClusterSucc(), TryCand, Cand, Cluster))
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid critical resource consumption and balance the schedule.

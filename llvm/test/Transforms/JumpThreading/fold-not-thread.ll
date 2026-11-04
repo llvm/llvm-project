@@ -11,7 +11,7 @@ declare void @f4(i32)
 ; CHECK-LABEL: define void @test_br_folding_not_threading_update_phi(
 ; CHECK: br label %L1
 ; Make sure we update the phi node properly here, i.e. we only have 2 predecessors, entry and L0
-; CHECK: %res.0 = phi i32 [ 0, %L0 ], [ 1, %entry ]
+; CHECK: %res.0 = phi i32 [ 1, %entry ], [ 0, %L0 ]
 define void @test_br_folding_not_threading_update_phi(i32 %val) nounwind {
 entry:
   %cmp = icmp eq i32 %val, 32

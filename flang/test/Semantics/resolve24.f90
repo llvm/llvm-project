@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine test1
-  !WARNING: Generic interface 'foo' has both a function and a subroutine
+  !WARNING: Generic interface 'foo' has both a function and a subroutine [-Wsubroutine-and-function-specifics]
   interface foo
     subroutine s1(x)
     end subroutine
@@ -12,7 +12,7 @@ subroutine test1
 end subroutine
 
 subroutine test2
-  !WARNING: Generic interface 'foo' has both a function and a subroutine
+  !WARNING: Generic interface 'foo' has both a function and a subroutine [-Wsubroutine-and-function-specifics]
   interface foo
     function t2f1(x)
     end function
@@ -24,7 +24,7 @@ subroutine test2
 end subroutine
 
 module test3
-  !WARNING: Generic interface 'foo' has both a function and a subroutine
+  !WARNING: Generic interface 'foo' has both a function and a subroutine [-Wsubroutine-and-function-specifics]
   interface foo
     module procedure s
     module procedure f
@@ -39,7 +39,7 @@ end module
 subroutine test4
   type foo
   end type
-  !WARNING: Generic interface 'foo' should only contain functions due to derived type with same name
+  !WARNING: Generic interface 'foo' should only contain functions due to derived type with same name [-Wsubroutine-and-function-specifics]
   interface foo
     subroutine s()
     end subroutine

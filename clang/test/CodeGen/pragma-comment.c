@@ -32,3 +32,6 @@
 // ELF: ![[space]] = !{!"with space"}
 // ELF-NOT: bar
 // ELF-NOT: foo
+// This following match prevents the clang version metadata from matching the forbidden 'foo' and 'bar' tokens.
+// This can happen if the clang version string contains a Git repo URL that includes one of those substrings.
+// ELF-LABEL: {{\!\".*clang version}}

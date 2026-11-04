@@ -15,7 +15,9 @@ using namespace llvm;
 
 void MSP430MCAsmInfo::anchor() { }
 
-MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
+MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   // Since MSP430-GCC already generates 32-bit DWARF information, we will
   // also store 16-bit pointers as 32-bit pointers in DWARF, because using
   // 32-bit DWARF pointers is already a working and tested path for LLDB
@@ -30,6 +32,4 @@ MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
   UsesELFSectionDirectiveForBSS = true;
 
   SupportsDebugInformation = true;
-
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

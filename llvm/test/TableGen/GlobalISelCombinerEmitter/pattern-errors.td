@@ -174,6 +174,13 @@ def output_imm_must_be_typed : GICombineRule<
   (match (COPY $x, (i32 0)):$d),
   (apply (G_CONSTANT $x, 0):$d)>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'G_FCONSTANT' immediate must be typed!
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: while emitting pattern 'd' (G_FCONSTANT)
+def output_fpimm_must_be_typed : GICombineRule<
+  (defs root:$x),
+  (match (COPY $x, (f32 0)):$d),
+  (apply (G_FCONSTANT $x, 0):$d)>;
+
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'G_BUILD_VECTOR' expected at least 2 operands, got 1
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$x)'
 def too_few_ops_for_variadic : GICombineRule<
@@ -283,6 +290,33 @@ def matchdata_without_cxx_apply : GICombineRule<
   (match (G_ZEXT $dst, $src):$mi),
   (apply (G_MUL $dst, $src, $src))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def missing_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'combine' action needs at least one pattern to match, and C++ code to apply
+def combineop_missing_cxx : GICombineRule<
+  (defs root:$d),
+  (combine (wip_match_opcode G_TRUNC):$d)>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'combine' action needs at least one pattern to match, and C++ code to apply
+def combineop_missing_mir : GICombineRule<
+  (defs root:$d),
+  (combine "return APPLY;")>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def mixed_combine_match : GICombineRule<
+  (defs root:$d),
+  (combine (G_ZEXT $d, $y), "return APPLY;"),
+  (match (G_ZEXT $d, $y))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def mixed_combine_apply : GICombineRule<
+  (defs root:$d),
+  (combine "return APPLY;"),
+  (apply (G_ZEXT $d, $y))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -312,6 +346,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   bad_imm_not_a_valuetype,
   output_imm_cannot_be_named,
   output_imm_must_be_typed,
+  output_fpimm_must_be_typed,
   too_few_ops_for_variadic,
   expected_op_name,
   bad_mo_type_not_a_valuetype,
@@ -326,5 +361,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   using_flagref_in_match,
   badflagref_in_apply,
   mixed_cxx_apply,
-  matchdata_without_cxx_apply
+  matchdata_without_cxx_apply,
+  missing_apply,
+  combineop_missing_cxx,
+  combineop_missing_mir,
+  mixed_combine_match,
+  mixed_combine_apply
 ]>;

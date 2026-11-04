@@ -25,20 +25,17 @@
 //  * C: The macro bit. We rotate it to the lowest bit so that we can save some
 //  space in case the index of the module file is 0.
 //
-// Specially, if the index of the module file is 0, we allow to encode a
-// sequence of locations we store only differences between successive elements.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
+#define LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/MathExtras.h"
 #include <climits>
 
-#ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
-#define LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
-
 namespace clang {
-class SourceLocationSequence;
 
 /// Serialized encoding of SourceLocations without context.
 /// Optimized to have small unsigned values (=> small after VBR encoding).
@@ -54,119 +51,130 @@ class SourceLocationEncoding {
   static UIntTy decodeRaw(UIntTy Raw) {
     return (Raw >> 1) | (Raw << (UIntBits - 1));
   }
-  friend SourceLocationSequence;
 
 public:
   using RawLocEncoding = uint64_t;
 
   static RawLocEncoding encode(SourceLocation Loc, UIntTy BaseOffset,
-                               unsigned BaseModuleFileIndex,
-                               SourceLocationSequence * = nullptr);
-  static std::pair<SourceLocation, unsigned>
-  decode(RawLocEncoding, SourceLocationSequence * = nullptr);
-};
+                               unsigned BaseModuleFileIndex);
+  static std::pair<SourceLocation, unsigned> decode(RawLocEncoding);
 
-/// Serialized encoding of a sequence of SourceLocations.
-///
-/// Optimized to produce small values when locations with the sequence are
-/// similar. Each element can be delta-encoded against the last nonzero element.
-///
-/// Sequences should be started by creating a SourceLocationSequence::State,
-/// and then passed around as SourceLocationSequence*. Example:
-///
-///   // establishes a sequence
-///   void EmitTopLevelThing() {
-///     SourceLocationSequence::State Seq;
-///     EmitContainedThing(Seq);
-///     EmitRecursiveThing(Seq);
-///   }
-///
-///   // optionally part of a sequence
-///   void EmitContainedThing(SourceLocationSequence *Seq = nullptr) {
-///     Record.push_back(SourceLocationEncoding::encode(SomeLoc, Seq));
-///   }
-///
-///   // establishes a sequence if there isn't one already
-///   void EmitRecursiveThing(SourceLocationSequence *ParentSeq = nullptr) {
-///     SourceLocationSequence::State Seq(ParentSeq);
-///     Record.push_back(SourceLocationEncoding::encode(SomeLoc, Seq));
-///     EmitRecursiveThing(Seq);
-///   }
-///
-class SourceLocationSequence {
-  using UIntTy = SourceLocation::UIntTy;
-  using EncodedTy = uint64_t;
-  constexpr static auto UIntBits = SourceLocationEncoding::UIntBits;
-  static_assert(sizeof(EncodedTy) > sizeof(UIntTy), "Need one extra bit!");
+  /// A delta encoder for a run of source locations.
+  /// The high level strategy of the chain to encode the run is the following.
+  /// Locations:           SL0          SL1          SL2
+  /// map to   : (SL0 - anchor)  (SL1 - SL0)  (SL2 - SL1)
+  ///
+  /// Two wrinkles complicate this strategy's implementation.
+  /// First, since the delta-encoded values are meant for VBR compression, they
+  /// are mapped from int to unsigned int with the zigZag method.
+  ///
+  /// Second, two cases are given their own codes instead of being stored as
+  /// distances.
+  ///
+  /// An invalid SourceLocation encodes to 0 -- encodeRaw is a bijection and
+  /// encodeRaw(0) == 0 -- and 0 is kept for it here. This case is common
+  /// because a macro argument expansion has no end location, so the writer
+  /// stores an invalid one in that field. Expressing it as a distance would be
+  /// wasteful: the distance from Prev back to the origin is a number as large
+  /// as Prev itself, while a dedicated code costs a single VBR chunk.
+  ///
+  /// A distance of zero -- the location repeats the Previous one in the run --
+  /// is stored as 1. That is also common, since an expansion's start and end
+  /// coincide whenever the invocation spans a single token.
+  ///
+  /// Reserving 0 has a consequence. For a given Prev, zigZag(0 - Prev) is the
+  /// distance that would arrive back at 0, and it can never occur, because an
+  /// invalid location took the branch above. So that code is dead, and
+  /// compacting it out is what makes everything fit:
+  ///
+  /// delta = V - Prev
+  /// hole = zigZag(0 - Prev)
+  /// encoded = zigZag(delta) + 1 if zigZag(delta) < hole
+  ///         = zigZag(delta)     if zigZag(delta) > hole
+  ///
+  /// Or pictorially:
+  /// zigZag(delta): 0, 1, ... hole - 1, hole + 1, hole + 2, ...
+  ///       encoded: 1, 2, ...     hole, hole + 1, hole + 2, ...
+  ///
+  //  In other words, if zigZag(delta) < hole, we increment
+  /// the encoded value by 1 to leave 0 to represent V == 0. If zigZag(delta)
+  /// is larger than hole, we do not need to add 1. Therefore, we will
+  /// not accidentally add 1 to values that may overflow beyond 2^32 - 1,
+  /// which may lead to accidental change of the ModuleFileIndex bits.
+  /// This mapping avoids the issue llvm/llvm-project#145529 attempted to fix by
+  /// design.
+  class Chain {
+    UIntTy Prev;
 
-  // Prev stores the rotated last nonzero location.
-  UIntTy &Prev;
+    /// Maps an int to an unsigned int.
+    /// Explicitly, zigZag does the following mapping:
+    /// From: 0, -1, +1, -2, +2, ...
+    ///   To: 0,  1,  2,  3,  4, ...
+    /// In other words, the mapping is the following:
+    /// zigZag(V) = 2 * V if V >= 0
+    ///           = 2 * |V| - 1 if V < 0
+    static UIntTy zigZag(UIntTy V) {
+      return (V << 1) ^ (UIntTy(0) - (V >> (UIntBits - 1)));
+    }
 
-  // Zig-zag encoding turns small signed integers into small unsigned integers.
-  // 0 => 0, -1 => 1, 1 => 2, -2 => 3, ...
-  static UIntTy zigZag(UIntTy V) {
-    UIntTy Sign = (V & (1 << (UIntBits - 1))) ? UIntTy(-1) : UIntTy(0);
-    return Sign ^ (V << 1);
-  }
-  static UIntTy zagZig(UIntTy V) { return (V >> 1) ^ -(V & 1); }
+    /// Reverse mapping of zigZag.
+    static UIntTy zagZig(UIntTy V) { return (V >> 1) ^ (UIntTy(0) - (V & 1)); }
 
-  SourceLocationSequence(UIntTy &Prev) : Prev(Prev) {}
+    /// Computes the hole left by 0 - Prev.
+    UIntTy hole() const { return zigZag(UIntTy(0) - Prev); }
 
-  EncodedTy encodeRaw(UIntTy Raw) {
-    if (Raw == 0)
-      return 0;
-    UIntTy Rotated = SourceLocationEncoding::encodeRaw(Raw);
-    if (Prev == 0)
-      return Prev = Rotated;
-    UIntTy Delta = Rotated - Prev;
-    Prev = Rotated;
-    // Exactly one 33 bit value is possible! (1 << 32).
-    // This is because we have two representations of zero: trivial & relative.
-    return 1 + EncodedTy{zigZag(Delta)};
-  }
-  UIntTy decodeRaw(EncodedTy Encoded) {
-    if (Encoded == 0)
-      return 0;
-    if (Prev == 0)
-      return SourceLocationEncoding::decodeRaw(Prev = Encoded);
-    return SourceLocationEncoding::decodeRaw(Prev += zagZig(Encoded - 1));
-  }
+  public:
+    explicit Chain(UIntTy AnchorOffset) : Prev(encodeRaw(AnchorOffset)) {
+      // Using zero as anchor could make the chain very expensive since
+      // the deltas may be big.
+      // Choose an offset that is closer to the source location being
+      // encoded.
+      assert(AnchorOffset != 0 && "Chain anchor should be non-zero");
+    }
 
-public:
-  SourceLocation decode(EncodedTy Encoded) {
-    return SourceLocation::getFromRawEncoding(decodeRaw(Encoded));
-  }
-  EncodedTy encode(SourceLocation Loc) {
-    return encodeRaw(Loc.getRawEncoding());
-  }
+    RawLocEncoding deltaEncode(RawLocEncoding V) {
+      // If the source location is external, do not encode.
+      if (V >> 32)
+        return V;
 
-  class State;
-};
+      // Use 0 to encode an input of 0.
+      if (V == 0)
+        return 0;
 
-/// This object establishes a SourceLocationSequence.
-class SourceLocationSequence::State {
-  UIntTy Prev = 0;
-  SourceLocationSequence Seq;
+      // Delta encode the rest of the possible input values.
+      UIntTy SL = static_cast<UIntTy>(V);
+      UIntTy E = zigZag(SL - Prev);
+      UIntTy H = hole();
+      assert(E != H && "Non-zero location cannot be mapped to the hole");
+      Prev = SL;
+      return E < H ? static_cast<RawLocEncoding>(E) + 1 : E;
+    }
 
-public:
-  // If Parent is provided and non-null, then this root becomes part of that
-  // enclosing sequence instead of establishing a new one.
-  State(SourceLocationSequence *Parent = nullptr)
-      : Seq(Parent ? Parent->Prev : Prev) {}
+    RawLocEncoding deltaDecode(RawLocEncoding V) {
+      // If the source location is external, it is not delta encoded.
+      if (V >> 32)
+        return V;
 
-  // Implicit conversion for uniform use of roots vs propagated sequences.
-  operator SourceLocationSequence *() { return &Seq; }
+      // If V is 0, it is not delta encoded.
+      if (V == 0)
+        return 0;
+
+      // Delta-decode the value.
+      UIntTy H = hole();
+      UIntTy D = static_cast<UIntTy>(V);
+      Prev += zagZig(D <= H ? D - 1 : D);
+      return Prev;
+    }
+  };
 };
 
 inline SourceLocationEncoding::RawLocEncoding
 SourceLocationEncoding::encode(SourceLocation Loc, UIntTy BaseOffset,
-                               unsigned BaseModuleFileIndex,
-                               SourceLocationSequence *Seq) {
+                               unsigned BaseModuleFileIndex) {
   // If the source location is a local source location, we can try to optimize
   // the similar sequences to only record the differences.
   if (!BaseOffset)
-    return Seq ? Seq->encode(Loc) : encodeRaw(Loc.getRawEncoding());
-
+    return encodeRaw(Loc.getRawEncoding());
   if (Loc.isInvalid())
     return 0;
 
@@ -183,13 +191,11 @@ SourceLocationEncoding::encode(SourceLocation Loc, UIntTy BaseOffset,
   return Encoded;
 }
 inline std::pair<SourceLocation, unsigned>
-SourceLocationEncoding::decode(RawLocEncoding Encoded,
-                               SourceLocationSequence *Seq) {
+SourceLocationEncoding::decode(RawLocEncoding Encoded) {
   unsigned ModuleFileIndex = Encoded >> 32;
 
   if (!ModuleFileIndex)
-    return {Seq ? Seq->decode(Encoded)
-                : SourceLocation::getFromRawEncoding(decodeRaw(Encoded)),
+    return {SourceLocation::getFromRawEncoding(decodeRaw(Encoded)),
             ModuleFileIndex};
 
   Encoded &= llvm::maskTrailingOnes<RawLocEncoding>(32);

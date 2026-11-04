@@ -7,20 +7,20 @@
 // The same problem afflicts a bunch of other class templates. Those
 // affected are array, pair, priority_queue, stack, and queue.
 
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DPR28423
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=pair
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=priority_queue
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=stack
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=queue
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DPR28423
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=pair
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=priority_queue
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=stack
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=queue
 //
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__debug
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__profile
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DNAMESPACE=__debug
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DNAMESPACE=__profile
 
 // MSVC's standard library uses a very similar pattern that relies on delayed
 // parsing of exception specifications.
 //
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DMSVC
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DMSVC
 
 #ifdef BE_THE_HEADER
 
@@ -82,13 +82,14 @@ namespace sad {
   template<typename T> void swap(T &, T &);
 
   template<typename A, typename B> struct CLASS {
-    void swap(CLASS &other) noexcept(noexcept(swap(*this, other))); // expected-error {{too many arguments}} expected-note {{declared here}}
-    // expected-error@-1{{uses itself}} expected-note@-1{{in instantiation of}}
+    void swap(CLASS &other) // expected-note {{declared here}}
+      noexcept(noexcept(swap(*this, other))); // expected-error {{too many arguments}}
+    // expected-error@-1{{uses itself}}
   };
 
   CLASS<int, int> pi;
 
-  static_assert(!noexcept(pi.swap(pi)), ""); // expected-note 2{{in instantiation of exception specification for 'swap'}}
+  static_assert(!noexcept(pi.swap(pi)), ""); // expected-note {{in instantiation of exception specification for 'swap'}}
 }
 
 #endif

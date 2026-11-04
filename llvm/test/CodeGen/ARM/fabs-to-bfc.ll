@@ -4,11 +4,11 @@
 
 define double @test(double %tx) {
 ;CHECK-LABEL: test:
-  %call = tail call double @fabs(double %tx)
+  %call = tail call double @llvm.fabs.f64(double %tx)
   ret double %call
 ;CHECK-VABS: vabs.f64
 ;CHECK-BFC: bfc
 }
 
-declare double @fabs(double) readnone
+declare double @llvm.fabs.f64(double) readnone
 

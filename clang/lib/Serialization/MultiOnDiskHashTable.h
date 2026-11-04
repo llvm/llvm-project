@@ -103,17 +103,16 @@ private:
 
   /// The current set of on-disk tables.
   table_range tables() {
-    auto Begin = Tables.begin(), End = Tables.end();
-    if (getMergedTable())
-      ++Begin;
-    return llvm::make_range(llvm::map_iterator(Begin, AsOnDiskTable()),
-                            llvm::map_iterator(End, AsOnDiskTable()));
+    unsigned DropBegin = getMergedTable() ? 1 : 0;
+    return llvm::map_range(llvm::drop_begin(Tables, DropBegin),
+                           AsOnDiskTable());
   }
 
   MergedTable *getMergedTable() const {
     // If we already have a merged table, it's the first one.
-    return Tables.empty() ? nullptr : Table::getFromOpaqueValue(*Tables.begin())
-                                          .template dyn_cast<MergedTable*>();
+    return Tables.empty() ? nullptr
+                          : llvm::dyn_cast<MergedTable *>(
+                                Table::getFromOpaqueValue(*Tables.begin()));
   }
 
   /// Delete all our current on-disk tables.
@@ -127,7 +126,7 @@ private:
 
   void removeOverriddenTables() {
     llvm::DenseSet<file_type> Files;
-    Files.insert(PendingOverrides.begin(), PendingOverrides.end());
+    Files.insert_range(PendingOverrides);
     // Explicitly capture Files to work around an MSVC 2015 rejects-valid bug.
     auto ShouldRemove = [&Files](void *T) -> bool {
       auto *ODT = llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(T));
@@ -211,8 +210,7 @@ public:
     OverriddenFiles.reserve(NumFiles);
     for (/**/; NumFiles != 0; --NumFiles)
       OverriddenFiles.push_back(InfoObj.ReadFileRef(Ptr));
-    PendingOverrides.insert(PendingOverrides.end(), OverriddenFiles.begin(),
-                            OverriddenFiles.end());
+    llvm::append_range(PendingOverrides, OverriddenFiles);
 
     // Read the OnDiskChainedHashTable header.
     storage_type Buckets = Data + BucketOffset;

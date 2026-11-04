@@ -38,20 +38,19 @@ CXXSelfAssignmentChecker::CXXSelfAssignmentChecker() {}
 void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
   if (!C.inTopFrame())
     return;
-  const auto *LCtx = C.getLocationContext();
-  const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
+  const auto *SF = C.getStackFrame();
+  const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
   if (!MD)
     return;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return;
   auto &State = C.getState();
   auto &SVB = C.getSValBuilder();
-  auto ThisVal =
-      State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
-  auto Param = SVB.makeLoc(State->getRegion(MD->getParamDecl(0), LCtx));
+  auto ThisVal = State->getSVal(SVB.getCXXThis(MD, SF));
+  auto Param = SVB.makeLoc(State->getRegion(MD->getParamDecl(0), SF));
   auto ParamVal = State->getSVal(Param);
 
-  ProgramStateRef SelfAssignState = State->bindLoc(Param, ThisVal, LCtx);
+  ProgramStateRef SelfAssignState = State->bindLoc(Param, ThisVal, SF);
   const NoteTag *SelfAssignTag =
     C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
         SmallString<256> Msg;
@@ -61,7 +60,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
       });
   C.addTransition(SelfAssignState, SelfAssignTag);
 
-  ProgramStateRef NonSelfAssignState = State->bindLoc(Param, ParamVal, LCtx);
+  ProgramStateRef NonSelfAssignState = State->bindLoc(Param, ParamVal, SF);
   const NoteTag *NonSelfAssignTag =
     C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
         SmallString<256> Msg;

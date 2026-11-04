@@ -340,10 +340,7 @@ define i1 @uitofp_add(i32 %arg0) {
 
 define i1 @uitofp_add_big(i1024 %arg0) {
 ; CHECK-LABEL: @uitofp_add_big(
-; CHECK-NEXT:    [[OP:%.*]] = uitofp i1024 [[ARG0:%.*]] to double
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[OP]], [[OP]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ADD]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op = uitofp i1024 %arg0 to double
   %add = fadd double %op, %op
@@ -554,16 +551,36 @@ unwind:
   resume ptr null
 }
 
+; tan(x) is never NaN when x is finite and not NaN (tan(±Inf) = NaN).
+define i1 @isKnownNeverNaN_tan_nonan_noinf(double nofpclass(nan inf) %x) {
+; CHECK-LABEL: @isKnownNeverNaN_tan_nonan_noinf(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.tan.f64(double %x)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
+; atan2 is never NaN when neither operand is NaN.
+define i1 @isKnownNeverNaN_atan2_nonan(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; CHECK-LABEL: @isKnownNeverNaN_atan2_nonan(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.atan2.f64(double %x, double %y)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
 ; This should not fold to false because fmul 0 * inf = nan
 define i1 @issue63316(i64 %arg) {
 ; CHECK-LABEL: @issue63316(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], +inf
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fmul = fmul float %sitofp, +inf
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }
@@ -571,12 +588,12 @@ define i1 @issue63316(i64 %arg) {
 define i1 @issue63316_commute(i64 %arg) {
 ; CHECK-LABEL: @issue63316_commute(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0x7FF0000000000000, [[SITOFP]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float +inf, [[SITOFP]]
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fmul = fmul float +inf, %sitofp
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }

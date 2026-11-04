@@ -44,7 +44,6 @@ using SymbolVector = std::vector<SymbolRef>;
 
 // Forward declarations
 struct DataRef;
-template <typename T> struct Variable;
 
 // Reference a base object in memory.  This can be a Fortran symbol,
 // static data (e.g., CHARACTER literal), or compiler-created temporary.
@@ -99,8 +98,6 @@ private:
 
 // A NamedEntity is either a whole Symbol or a component in an instance
 // of a derived type.  It may be a descriptor.
-// TODO: this is basically a symbol with an optional DataRef base;
-// could be used to replace Component.
 class NamedEntity {
 public:
   CLASS_BOILERPLATE(NamedEntity)
@@ -139,6 +136,11 @@ private:
 class TypeParamInquiry {
 public:
   using Result = SubscriptInteger;
+  static constexpr int ResultKind{SubscriptIntegerKind};
+  static constexpr int kind() { return SubscriptIntegerKind; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};
+  }
   CLASS_BOILERPLATE(TypeParamInquiry)
   TypeParamInquiry(NamedEntity &&x, const Symbol &param)
       : base_{std::move(x)}, parameter_{param} {}
@@ -240,28 +242,16 @@ private:
   std::vector<Subscript> subscript_;
 };
 
-// R914 coindexed-named-object
-// R924 image-selector, R926 image-selector-spec.
-// C825 severely limits the usage of derived types with coarray ultimate
-// components: they can't be pointers, allocatables, arrays, coarrays, or
-// function results.  They can be components of other derived types.
-// Although the F'2018 Standard never prohibits multiple image-selectors
-// per se in the same data-ref or designator, nor the presence of an
-// image-selector after a part-ref with rank, the constraints on the
-// derived types that would have be involved make it impossible to declare
-// an object that could be referenced in these ways (esp. C748 & C825).
-// C930 precludes having both TEAM= and TEAM_NUMBER=.
-// TODO C931 prohibits the use of a coindexed object as a stat-variable.
+// A coindexed data-ref.  The base is represented as a general
+// DataRef, but the base may not contain a CoarrayRef and may
+// have rank > 0 only in an uppermost ArrayRef.
 class CoarrayRef {
 public:
   CLASS_BOILERPLATE(CoarrayRef)
-  CoarrayRef(SymbolVector &&, std::vector<Subscript> &&,
-      std::vector<Expr<SubscriptInteger>> &&);
+  CoarrayRef(DataRef &&, std::vector<Expr<SubscriptInteger>> &&);
 
-  const SymbolVector &base() const { return base_; }
-  SymbolVector &base() { return base_; }
-  const std::vector<Subscript> &subscript() const { return subscript_; }
-  std::vector<Subscript> &subscript() { return subscript_; }
+  const DataRef &base() const { return base_.value(); }
+  DataRef &base() { return base_.value(); }
   const std::vector<Expr<SubscriptInteger>> &cosubscript() const {
     return cosubscript_;
   }
@@ -271,25 +261,28 @@ public:
   // (i.e., Designator or pointer-valued FunctionRef).
   std::optional<Expr<SomeInteger>> stat() const;
   CoarrayRef &set_stat(Expr<SomeInteger> &&);
-  std::optional<Expr<SomeInteger>> team() const;
-  bool teamIsTeamNumber() const { return teamIsTeamNumber_; }
-  CoarrayRef &set_team(Expr<SomeInteger> &&, bool isTeamNumber = false);
+  // When team() is Expr<SomeInteger>, it's TEAM_NUMBER=; otherwise,
+  // it's TEAM=.
+  std::optional<Expr<SomeType>> team() const;
+  CoarrayRef &set_team(Expr<SomeType> &&);
+  // When notify() is Expr<Some>, it's NOTIFY=.
+  std::optional<Expr<SomeType>> notify() const;
+  CoarrayRef &set_notify(Expr<SomeType> &&);
 
   int Rank() const;
   int Corank() const { return 0; }
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
-  NamedEntity GetBase() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const CoarrayRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  SymbolVector base_;
-  std::vector<Subscript> subscript_;
+  common::CopyableIndirection<DataRef> base_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
-  std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_, team_;
-  bool teamIsTeamNumber_{false}; // false: TEAM=, true: TEAM_NUMBER=
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
+  std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
 };
 
 // R911 data-ref is defined syntactically as a series of part-refs, which
@@ -404,10 +397,39 @@ public:
   using Result = T;
   static_assert(
       IsSpecificIntrinsicType<Result> || std::is_same_v<Result, SomeDerived>);
-  EVALUATE_UNION_CLASS_BOILERPLATE(Designator)
-  Designator(const DataRef &that) : u{common::CopyVariant<Variant>(that.u)} {}
-  Designator(DataRef &&that)
-      : u{common::MoveVariant<Variant>(std::move(that.u))} {}
+
+  constexpr int kind() const { return kind_; }
+
+  CLASS_BOILERPLATE(Designator)
+  template <typename A>
+  explicit Designator(int kind, const A &x) : u{x}, kind_{kind} {
+    CHECK_KIND(kind, T);
+  }
+  template <typename A, typename = common::NoLvalue<A>>
+  explicit Designator(int kind, A &&x) : u(std::move(x)), kind_{kind} {
+    CHECK_KIND(kind, T);
+  }
+  template <typename A, typename U = T,
+      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+  explicit Designator(const A &x) : Designator(0, x) {}
+  template <typename A, typename U = T, typename = common::NoLvalue<A>,
+      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+  explicit Designator(A &&x) : Designator(0, std::move(x)) {}
+  bool operator==(const Designator &) const;
+  Designator(int kind, const DataRef &that)
+      : u{common::CopyVariant<Variant>(that.u)}, kind_{kind} {
+    CHECK_KIND(kind, T);
+  }
+  Designator(int kind, DataRef &&that)
+      : u{common::MoveVariant<Variant>(std::move(that.u))}, kind_{kind} {
+    CHECK_KIND(kind, T);
+  }
+  template <typename U = T,
+      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+  Designator(const DataRef &that) : Designator(0, that) {}
+  template <typename U = T,
+      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+  Designator(DataRef &&that) : Designator(0, std::move(that)) {}
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
@@ -418,6 +440,9 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
 
   Variant u;
+
+private:
+  int kind_;
 };
 
 FOR_EACH_CHARACTER_KIND(extern template class Designator, )
@@ -425,6 +450,11 @@ FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 class DescriptorInquiry {
 public:
   using Result = SubscriptInteger;
+  static constexpr int ResultKind{SubscriptIntegerKind};
+  static constexpr int kind() { return SubscriptIntegerKind; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};
+  }
   ENUM_CLASS(Field, LowerBound, Extent, Stride, Rank, Len)
 
   CLASS_BOILERPLATE(DescriptorInquiry)
@@ -445,6 +475,55 @@ private:
   NamedEntity base_;
   Field field_;
   int dimension_{0}; // zero-based
+};
+
+// Represents the extraction of a single scalar element from a rank-1
+// integer array expression used as an explicit-shape array bound (F2023).
+// The inner expression is rank-1; this node is scalar (Rank() == 0).
+// dimension_ is zero-based.
+class RankOneBoundElement {
+public:
+  using Result = SubscriptInteger;
+  static constexpr int ResultKind{SubscriptIntegerKind};
+  CLASS_BOILERPLATE(RankOneBoundElement)
+  RankOneBoundElement(
+      common::CopyableIndirection<Expr<SubscriptInteger>> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+  RankOneBoundElement(Expr<SubscriptInteger> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+
+  const Expr<SubscriptInteger> &base() const { return base_.value(); }
+  Expr<SubscriptInteger> &base() { return base_.value(); }
+  static constexpr int kind() { return ResultKind; }
+  int dimension() const { return dimension_; }
+
+  // Optional provenance.  When this element was produced by folding an
+  // UBOUND()/LBOUND() inquiry of an explicit-shape array whose shape came from
+  // a rank-1 array bound, record the originating array and bound side so the
+  // mod-file writer can serialize it as the real ubound(a,dim)/lbound(a,dim)
+  // intrinsic instead of the synthetic %ROBE spelling.
+  // Declaration-time elements carry no provenance.  Provenance is metadata for
+  // serialization only: it is excluded from operator== and hashing so that the
+  // builtin reuse/deduplication optimizations are unaffected.
+  const std::optional<NamedEntity> &originatingArray() const {
+    return originatingArray_;
+  }
+  bool isUpperBound() const { return isUpperBound_; }
+  void set_provenance(const NamedEntity &array, bool isUpper) {
+    originatingArray_ = array;
+    isUpperBound_ = isUpper;
+  }
+
+  static constexpr int Rank() { return 0; } // always scalar
+  static constexpr int Corank() { return 0; }
+  bool operator==(const RankOneBoundElement &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+private:
+  common::CopyableIndirection<Expr<SubscriptInteger>> base_;
+  int dimension_{0}; // zero-based
+  std::optional<NamedEntity> originatingArray_;
+  bool isUpperBound_{false};
 };
 
 #define INSTANTIATE_VARIABLE_TEMPLATES \

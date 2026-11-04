@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The GEP has scalar and vector parameters and returns vector of pointers.
 
 ; Function Attrs: noreturn readonly uwtable
-define void @_Z3fn1v(i32 %x, <16 x ptr>%y) local_unnamed_addr #0 {
+define void @_Z3fn1v(i32 %x, <16 x ptr>%y) local_unnamed_addr {
 ; CHECK-LABEL: @_Z3fn1v(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV42_LE:%.*]] = sext i32 [[X:%.*]] to i64
@@ -25,6 +25,3 @@ entry:
   %VectorGep208 = getelementptr i32, <16 x ptr> %y, i64 %conv42.le
   unreachable
 }
-
-attributes #0 = { noreturn readonly uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="broadwell" "target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512f,+bmi,+bmi2,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+rdseed,+rtm,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt" "unsafe-fp-math"="false" "use-soft-float"="false" }
-

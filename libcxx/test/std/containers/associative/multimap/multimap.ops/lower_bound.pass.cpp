@@ -10,8 +10,8 @@
 
 // class multimap
 
-//       iterator lower_bound(const key_type& k);
-// const_iterator lower_bound(const key_type& k) const;
+//       iterator lower_bound(const key_type& k); // constexpr since C++26
+// const_iterator lower_bound(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -21,154 +21,99 @@
 #include "private_constructor.h"
 #include "is_transparent.h"
 
-int main(int, char**)
-{
-    typedef std::pair<const int, double> V;
-    {
+TEST_CONSTEXPR_CXX26
+bool test() {
+  typedef std::pair<const int, double> V;
+  {
     typedef std::multimap<int, double> M;
     {
-        typedef M::iterator R;
-        V ar[] =
-        {
-            V(5, 1),
-            V(5, 2),
-            V(5, 3),
-            V(7, 1),
-            V(7, 2),
-            V(7, 3),
-            V(9, 1),
-            V(9, 2),
-            V(9, 3)
-        };
-        M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        R r = m.lower_bound(4);
-        assert(r == m.begin());
-        r = m.lower_bound(5);
-        assert(r == m.begin());
-        r = m.lower_bound(6);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(7);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(8);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(9);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(10);
-        assert(r == m.end());
+      typedef M::iterator R;
+      V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
+      M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+      R r = m.lower_bound(4);
+      assert(r == m.begin());
+      r = m.lower_bound(5);
+      assert(r == m.begin());
+      r = m.lower_bound(6);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(7);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(8);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(9);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(10);
+      assert(r == m.end());
     }
     {
-        typedef M::const_iterator R;
-        V ar[] =
-        {
-            V(5, 1),
-            V(5, 2),
-            V(5, 3),
-            V(7, 1),
-            V(7, 2),
-            V(7, 3),
-            V(9, 1),
-            V(9, 2),
-            V(9, 3)
-        };
-        const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        R r = m.lower_bound(4);
-        assert(r == m.begin());
-        r = m.lower_bound(5);
-        assert(r == m.begin());
-        r = m.lower_bound(6);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(7);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(8);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(9);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(10);
-        assert(r == m.end());
+      typedef M::const_iterator R;
+      V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
+      const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+      R r = m.lower_bound(4);
+      assert(r == m.begin());
+      r = m.lower_bound(5);
+      assert(r == m.begin());
+      r = m.lower_bound(6);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(7);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(8);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(9);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(10);
+      assert(r == m.end());
     }
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
     {
-        typedef M::iterator R;
-        V ar[] =
-        {
-            V(5, 1),
-            V(5, 2),
-            V(5, 3),
-            V(7, 1),
-            V(7, 2),
-            V(7, 3),
-            V(9, 1),
-            V(9, 2),
-            V(9, 3)
-        };
-        M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        R r = m.lower_bound(4);
-        assert(r == m.begin());
-        r = m.lower_bound(5);
-        assert(r == m.begin());
-        r = m.lower_bound(6);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(7);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(8);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(9);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(10);
-        assert(r == m.end());
+      typedef M::iterator R;
+      V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
+      M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+      R r = m.lower_bound(4);
+      assert(r == m.begin());
+      r = m.lower_bound(5);
+      assert(r == m.begin());
+      r = m.lower_bound(6);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(7);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(8);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(9);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(10);
+      assert(r == m.end());
     }
     {
-        typedef M::const_iterator R;
-        V ar[] =
-        {
-            V(5, 1),
-            V(5, 2),
-            V(5, 3),
-            V(7, 1),
-            V(7, 2),
-            V(7, 3),
-            V(9, 1),
-            V(9, 2),
-            V(9, 3)
-        };
-        const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        R r = m.lower_bound(4);
-        assert(r == m.begin());
-        r = m.lower_bound(5);
-        assert(r == m.begin());
-        r = m.lower_bound(6);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(7);
-        assert(r == std::next(m.begin(), 3));
-        r = m.lower_bound(8);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(9);
-        assert(r == std::next(m.begin(), 6));
-        r = m.lower_bound(10);
-        assert(r == m.end());
+      typedef M::const_iterator R;
+      V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
+      const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+      R r = m.lower_bound(4);
+      assert(r == m.begin());
+      r = m.lower_bound(5);
+      assert(r == m.begin());
+      r = m.lower_bound(6);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(7);
+      assert(r == std::next(m.begin(), 3));
+      r = m.lower_bound(8);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(9);
+      assert(r == std::next(m.begin(), 6));
+      r = m.lower_bound(10);
+      assert(r == m.end());
     }
-    }
+  }
 #endif
 #if TEST_STD_VER > 11
-    {
+  {
     typedef std::multimap<int, double, std::less<>> M;
     typedef M::iterator R;
-    V ar[] =
-    {
-        V(5, 1),
-        V(5, 2),
-        V(5, 3),
-        V(7, 1),
-        V(7, 2),
-        V(7, 3),
-        V(9, 1),
-        V(9, 2),
-        V(9, 3)
-    };
-    M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
+    V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
+    M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     R r = m.lower_bound(4);
     assert(r == m.begin());
     r = m.lower_bound(5);
@@ -198,23 +143,23 @@ int main(int, char**)
     assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(C2Int(10));
     assert(r == m.end());
-    }
+  }
 
-    {
+  {
     typedef PrivateConstructor PC;
     typedef std::multimap<PC, double, std::less<>> M;
     typedef M::iterator R;
 
     M m;
-    m.insert ( std::make_pair<PC, double> ( PC::make(5), 1 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(5), 2 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(5), 3 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(7), 1 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(7), 2 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(7), 3 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(9), 1 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(9), 2 ));
-    m.insert ( std::make_pair<PC, double> ( PC::make(9), 3 ));
+    m.insert(std::make_pair<PC, double>(PC::make(5), 1));
+    m.insert(std::make_pair<PC, double>(PC::make(5), 2));
+    m.insert(std::make_pair<PC, double>(PC::make(5), 3));
+    m.insert(std::make_pair<PC, double>(PC::make(7), 1));
+    m.insert(std::make_pair<PC, double>(PC::make(7), 2));
+    m.insert(std::make_pair<PC, double>(PC::make(7), 3));
+    m.insert(std::make_pair<PC, double>(PC::make(9), 1));
+    m.insert(std::make_pair<PC, double>(PC::make(9), 2));
+    m.insert(std::make_pair<PC, double>(PC::make(9), 3));
 
     R r = m.lower_bound(4);
     assert(r == m.begin());
@@ -230,9 +175,18 @@ int main(int, char**)
     assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(10);
     assert(r == m.end());
-    }
+  }
 
 #endif
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

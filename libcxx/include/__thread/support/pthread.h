@@ -72,17 +72,17 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_init(__libcpp_recursiv
   return 0;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_lock(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool
 __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_trylock(__m) == 0;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_unlock(__m);
 }
@@ -91,15 +91,15 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_destroy(__libcpp_recur
   return pthread_mutex_destroy(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
   return pthread_mutex_lock(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
   return pthread_mutex_trylock(__m) == 0;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
   return pthread_mutex_unlock(__m);
 }
 
@@ -117,12 +117,12 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_broadcast(__libcpp_condvar_t* 
   return pthread_cond_broadcast(__cv);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
   return pthread_cond_wait(__cv, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, __libcpp_timespec_t* __ts) {
   return pthread_cond_timedwait(__cv, __m, __ts);
 }
@@ -144,7 +144,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_execute_once(__libcpp_exec_once_flag* 
 //
 // Thread id
 //
-#if defined(__MVS__)
+#if _LIBCPP_LIBC_LLVM_LIBC
+typedef pthread_id_np_t __libcpp_thread_id;
+#elif defined(__MVS__)
 typedef unsigned long long __libcpp_thread_id;
 #else
 typedef pthread_t __libcpp_thread_id;
@@ -163,11 +165,18 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t
 //
 // Thread
 //
-#define _LIBCPP_NULL_THREAD ((__libcpp_thread_t()))
+#if defined(PTHREAD_NULL)
+#  define _LIBCPP_NULL_THREAD PTHREAD_NULL
+#else
+#  define _LIBCPP_NULL_THREAD ((__libcpp_thread_t()))
+#endif
 typedef pthread_t __libcpp_thread_t;
 
 inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t) {
-#if defined(__MVS__)
+#if _LIBCPP_LIBC_LLVM_LIBC
+  __libcpp_thread_id __id;
+  return pthread_getunique_np(__t, &__id) ? 0 : __id;
+#elif defined(__MVS__)
   return __t->__;
 #else
   return *__t;
@@ -183,8 +192,12 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_create(__libcpp_thread_t* __t, 
 }
 
 inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_current_id() {
+#if _LIBCPP_LIBC_LLVM_LIBC
+  return pthread_getthreadid_np();
+#else
   const __libcpp_thread_t __current_thread = pthread_self();
   return __libcpp_thread_get_id(&__current_thread);
+#endif
 }
 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_join(__libcpp_thread_t* __t) { return pthread_join(*__t, nullptr); }

@@ -4,13 +4,11 @@
 define void @PR92569(i64 %arg, <8 x i8> %arg1) {
 ; CHECK-LABEL: PR92569:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bsfq %rdi, %rax
-; CHECK-NEXT:    movl $64, %ecx
-; CHECK-NEXT:    cmovneq %rax, %rcx
-; CHECK-NEXT:    shrb $3, %cl
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    rep bsfq %rdi, %rax
+; CHECK-NEXT:    shrb $3, %al
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    andl $15, %eax
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    retq

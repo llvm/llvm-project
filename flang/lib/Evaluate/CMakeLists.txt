@@ -21,19 +21,21 @@ if (LIBPGMATH_DIR)
   endif()
 endif()
 
-check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
 check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
-if(FOUND_QUADMATH_HEADER AND FOUND_QUADMATH_LIB)
+if (FLANG_INCLUDE_QUADMATH_H AND FOUND_QUADMATH_LIB)
+  configure_file("${FLANG_SOURCE_DIR}/cmake/quadmath_wrapper.h.in" "${CMAKE_CURRENT_BINARY_DIR}/quadmath_wrapper.h")
   add_compile_definitions(HAS_QUADMATHLIB)
   set(QUADMATHLIB quadmath)
-endif()
+endif ()
 
 add_flang_library(FortranEvaluate
   call.cpp
+  character-value.cpp
+  character-value-impl.cpp
   characteristics.cpp
   check-expression.cpp
   common.cpp
-  complex.cpp
+  complex-value.cpp
   constant.cpp
   expression.cpp
   fold.cpp
@@ -48,10 +50,14 @@ add_flang_library(FortranEvaluate
   host.cpp
   initial-image.cpp
   integer.cpp
+  integer-value.cpp
+  integer-value-impl.cpp
   intrinsics.cpp
   intrinsics-library.cpp
-  logical.cpp
+  logical-value.cpp
   real.cpp
+  real-value.cpp
+  real-value-impl.cpp
   shape.cpp
   static-data.cpp
   target.cpp
@@ -60,11 +66,28 @@ add_flang_library(FortranEvaluate
   variable.cpp
 
   LINK_LIBS
-  FortranCommon
+  FortranSupport
   FortranDecimal
   FortranParser
   ${LIBPGMATH}
   ${QUADMATHLIB}
+
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["flang/Evaluate/common.h"]]
+  [["flang/Evaluate/call.h"]]
+  [["flang/Evaluate/traverse.h"]]
+  [["flang/Evaluate/shape.h"]]
+  [["flang/Evaluate/characteristics.h"]]
+  [["flang/Evaluate/variable.h"]]
+  [["flang/Evaluate/character-value.h"]]
+  [["flang/Evaluate/complex-value.h"]]
+  [["flang/Evaluate/integer-value.h"]]
+  [["flang/Evaluate/logical-value.h"]]
+  [["flang/Evaluate/real-value.h"]]
+  [["flang/Evaluate/type.h"]]
+  [["flang/Evaluate/expression.h"]]
+  [["flang/Evaluate/tools.h"]]
 
   LINK_COMPONENTS
   Support

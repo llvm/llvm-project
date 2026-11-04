@@ -18,6 +18,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__ranges/reverse_view.h>
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
 
@@ -40,16 +41,15 @@ using reverse_copy_result = in_out_result<_InIter, _OutIter>;
 struct __reverse_copy {
   template <bidirectional_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_copyable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<_InIter, _OutIter>
-  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  constexpr reverse_copy_result<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     return (*this)(subrange(std::move(__first), std::move(__last)), std::move(__result));
   }
 
   template <bidirectional_range _Range, weakly_incrementable _OutIter>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr reverse_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result) const {
-    auto __ret = ranges::copy(std::__reverse_range(__range), std::move(__result));
+    auto __ret = ranges::copy(__range | views::reverse, std::move(__result));
     return {ranges::next(ranges::begin(__range), ranges::end(__range)), std::move(__ret.out)};
   }
 };

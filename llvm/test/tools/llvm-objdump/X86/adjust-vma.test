@@ -58,7 +58,7 @@
 
 # ADJUST:        0000000000000000 <debug_str_sym>:
 # ADJUST-NEXT:     0: {{.*}}  %al, (%rax)
-# ADJUST-NEXT:        0000000000123001:  R_X86_64_32  .text
+# ADJUST-NEXT:        0000000000000001:  R_X86_64_32  .text
 # ADJUST-NEXT:     2: {{.*}}  addb    %al, (%rax)
 
 # COMMON:        0000000000000000    <.rela.debug_str>:

@@ -21,6 +21,7 @@ executable("clang-linker-wrapper") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

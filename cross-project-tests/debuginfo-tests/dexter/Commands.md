@@ -13,7 +13,8 @@
 * [DexDeclareFile](Commands.md#DexDeclareFile)
 * [DexFinishTest](Commands.md#DexFinishTest)
 * [DexCommandLine](Commands.md#DexCommandLine)
-
+* [DexStepFunction](Commands.md#DexStepFunction)
+* [DexContinue](Commands.md#DexContinue)
 ---
 ## DexExpectProgramState
     DexExpectProgramState(state [,**times])
@@ -377,3 +378,44 @@ line this command is found on.
 
 ### Heuristic
 [Deprecated]
+
+
+---
+## DexStepFunction
+    DexStepFunction(function_name[, **hit_count=0])
+
+    Arg list:
+        function_name (str): function to step through.
+        hit_count (int): If provided, limit the number of times the command
+                         triggers.
+
+### Description
+NOTE: Only supported for DAP-based debuggers.
+
+This command controls stepping behaviour: Tell dexter to set a function
+breakpoint and step through the function after hitting it. Composes well with
+itself (you can may a callstack with multiple targets to step through) and
+`DexContinue`.
+
+---
+## DexContinue
+    DexContinue(*[expr, *values], **from_line[, **to_line, **hit_count])
+
+    Arg list:
+        function_name (str): function to step through.
+        hit_count (int): If provided, limit the number of times the command
+                         triggers.
+
+### Description
+NOTE: Only supported for DAP-based debuggers.
+
+This command controls stepping behaviour: Tell dexter to set a breakpoint on
+`from_line`. When it is hit and optionally '(expr) == (values[n])' is true,
+optionally set a breakpoint on `to_line`. Then 'continue' (tell the debugger to
+run freely until a breakpoint is hit). Composed with `DexStepFunction` this
+lets you avoid stepping over certain regions (many loop iterations, for
+example). Continue-ing off the end of a `DexStepFunction` is well defined;
+stepping will resume in `DexStepFunction` targets deeper in the callstack.
+
+FIXME: hit_count should probably be inverted, like `DexLimitSteps`, to trigger
+AFTER that many hits?

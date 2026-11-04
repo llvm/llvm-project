@@ -22,7 +22,8 @@ static const unsigned CodeModelLargeSize = 256;
     MCSection *DataRelROSectionLarge;
 
   public:
-    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+    void initialize(MCContext &Ctx, const TargetMachine &TM,
+                    const Module &M) override;
 
     MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                         const TargetMachine &TM) const override;
@@ -31,8 +32,8 @@ static const unsigned CodeModelLargeSize = 256;
                                       const TargetMachine &TM) const override;
 
     MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                     const Constant *C,
-                                     Align &Alignment) const override;
+                                     const Constant *C, Align &Alignment,
+                                     const Function *F) const override;
   };
 } // end namespace llvm
 

@@ -14,14 +14,14 @@ import side_effect
 
 class BreakpointCommandTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24528")
     def test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
         self.breakpoint_command_sequence()
 
-    @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
     def test_script_parameters(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
@@ -31,7 +31,6 @@ class BreakpointCommandTestCase(TestBase):
         self.build()
         self.breakpoint_commands_on_creation()
 
-    @skipIf(oslist=["windows"])
     @no_debug_info_test
     def test_breakpoints_with_relative_path_line_tables(self):
         """
@@ -382,7 +381,7 @@ class BreakpointCommandTestCase(TestBase):
         self.expect(
             "breakpoint command list 2",
             error=True,
-            startstr="error: '2' is not a currently valid breakpoint ID.",
+            startstr="error: '2' is not a currently valid breakpoint ID",
         )
 
         # The breakpoint list now only contains breakpoint 1.

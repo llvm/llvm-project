@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   DebugInfoBTF
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler
@@ -16,17 +17,18 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjdumpOpts.td)
-tablegen(LLVM ObjdumpOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(ObjdumpOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ObjdumpOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS OtoolOpts.td)
-tablegen(LLVM OtoolOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(OtoolOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(OtoolOptsTableGen)
 
 add_llvm_tool(llvm-objdump
   llvm-objdump.cpp
   SourcePrinter.cpp
   COFFDump.cpp
+  DXContainerDump.cpp
   ELFDump.cpp
   MachODump.cpp
   OffloadDump.cpp
@@ -39,7 +41,7 @@ add_llvm_tool(llvm-objdump
   )
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
+  target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod LLVMHTTP)
 endif()
 
 add_llvm_tool_symlink(llvm-otool llvm-objdump)

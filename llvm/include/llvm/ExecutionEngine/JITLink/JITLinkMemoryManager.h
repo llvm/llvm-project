@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
@@ -43,7 +44,7 @@ class Section;
 ///
 /// Instances of this class may be accessed concurrently from multiple threads
 /// and their implemetations should include any necessary synchronization.
-class JITLinkMemoryManager {
+class LLVM_ABI JITLinkMemoryManager {
 public:
 
   /// Represents a finalized allocation.
@@ -118,7 +119,7 @@ public:
   ///
   /// If abandon is called then working memory and executor memory should both
   /// be freed.
-  class InFlightAlloc {
+  class LLVM_ABI InFlightAlloc {
   public:
     using OnFinalizedFunction = unique_function<void(Expected<FinalizedAlloc>)>;
     using OnAbandonedFunction = unique_function<void(Error)>;
@@ -201,6 +202,15 @@ public:
     Allocs.push_back(std::move(Alloc));
     return deallocate(std::move(Allocs));
   }
+
+  /// Called when a JITLinkDylib that this manager previously registered
+  /// with (via JITLinkDylib::notifyOnDestruction) is being destroyed.
+  ///
+  /// May be used to free resources held on behalf of the JITLinkDylib (e.g.
+  /// reserved address ranges). The JITLinkDylib is guaranteed not to make
+  /// any further use of those resources after this call returns, so
+  /// clean-up may be deferred and completed asynchronously.
+  virtual void notifyDestroying(JITLinkDylib &JD) {}
 };
 
 /// BasicLayout simplifies the implementation of JITLinkMemoryManagers.
@@ -224,17 +234,15 @@ public:
     friend class BasicLayout;
 
   public:
-    Segment()
-        : ContentSize(0), ZeroFillSize(0), Addr(0), WorkingMem(nullptr),
-          NextWorkingMemOffset(0) {}
+    Segment() = default;
     Align Alignment;
-    size_t ContentSize;
-    uint64_t ZeroFillSize;
+    size_t ContentSize = 0;
+    uint64_t ZeroFillSize = 0;
     orc::ExecutorAddr Addr;
     char *WorkingMem = nullptr;
 
   private:
-    size_t NextWorkingMemOffset;
+    size_t NextWorkingMemOffset = 0;
     std::vector<Block *> ContentBlocks, ZeroFillBlocks;
   };
 
@@ -252,7 +260,7 @@ private:
   using SegmentMap = orc::AllocGroupSmallMap<Segment>;
 
 public:
-  BasicLayout(LinkGraph &G);
+  LLVM_ABI BasicLayout(LinkGraph &G);
 
   /// Return a reference to the graph this allocation was created from.
   LinkGraph &getGraph() { return G; }
@@ -266,7 +274,7 @@ public:
   ///
   /// This function will return an error if any segment has an alignment that
   /// is higher than a page.
-  Expected<ContiguousPageBasedLayoutSizes>
+  LLVM_ABI Expected<ContiguousPageBasedLayoutSizes>
   getContiguousPageBasedLayoutSizes(uint64_t PageSize);
 
   /// Returns an iterator over the segments of the layout.
@@ -275,12 +283,12 @@ public:
   }
 
   /// Apply the layout to the graph.
-  Error apply();
+  LLVM_ABI Error apply();
 
   /// Returns a reference to the AllocActions in the graph.
   /// This convenience function saves callers from having to #include
   /// LinkGraph.h if all they need are allocation actions.
-  orc::shared::AllocActions &graphAllocActions();
+  LLVM_ABI orc::shared::AllocActions &graphAllocActions();
 
 private:
   LinkGraph &G;
@@ -322,22 +330,24 @@ public:
   using OnFinalizedFunction =
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
-  static void Create(JITLinkMemoryManager &MemMgr,
-                     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
-                     const JITLinkDylib *JD, SegmentMap Segments,
-                     OnCreatedFunction OnCreated);
+  using OnAbandonedFunction = unique_function<void(Error)>;
 
-  static Expected<SimpleSegmentAlloc>
+  LLVM_ABI static void Create(JITLinkMemoryManager &MemMgr,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, const JITLinkDylib *JD,
+                              SegmentMap Segments, OnCreatedFunction OnCreated);
+
+  LLVM_ABI static Expected<SimpleSegmentAlloc>
   Create(JITLinkMemoryManager &MemMgr,
          std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
          const JITLinkDylib *JD, SegmentMap Segments);
 
-  SimpleSegmentAlloc(SimpleSegmentAlloc &&);
-  SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);
-  ~SimpleSegmentAlloc();
+  LLVM_ABI SimpleSegmentAlloc(SimpleSegmentAlloc &&);
+  LLVM_ABI SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);
+  LLVM_ABI ~SimpleSegmentAlloc();
 
   /// Returns the SegmentInfo for the given group.
-  SegmentInfo getSegInfo(orc::AllocGroup AG);
+  LLVM_ABI SegmentInfo getSegInfo(orc::AllocGroup AG);
 
   /// Finalize all groups (async version).
   void finalize(OnFinalizedFunction OnFinalized) {
@@ -347,6 +357,11 @@ public:
   /// Finalize all groups.
   Expected<JITLinkMemoryManager::FinalizedAlloc> finalize() {
     return Alloc->finalize();
+  }
+
+  /// Free allocated memory if finalize won't be called.
+  void abandon(OnAbandonedFunction OnAbandoned) {
+    Alloc->abandon(std::move(OnAbandoned));
   }
 
 private:
@@ -361,7 +376,7 @@ private:
 };
 
 /// A JITLinkMemoryManager that allocates in-process memory.
-class InProcessMemoryManager : public JITLinkMemoryManager {
+class LLVM_ABI InProcessMemoryManager : public JITLinkMemoryManager {
 public:
   class IPInFlightAlloc;
 

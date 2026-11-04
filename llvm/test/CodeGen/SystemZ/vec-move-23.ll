@@ -42,20 +42,20 @@ define void @fun2(<2 x i32> %Src, ptr %Dst) {
 define void @fun3(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun3:
 
-; Z14:      vuphh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: cefbr	%f1, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: cefbr	%f0, %r0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:        vuphh   %v0, %v24
+; Z14-NEXT:   vlgvf   %r0, %v0, 3
+; Z14-NEXT:   vlgvf   %r1, %v0, 2
+; Z14-NEXT:   cefbr   %f1, %r1
+; Z14-NEXT:   vlgvf   %r3, %v0, 1
+; Z14-NEXT:   cefbr   %f2, %r3
+; Z14-NEXT:   vlgvf   %r4, %v0, 0
+; Z14-NEXT:   cefbr   %f0, %r0
+; Z14-NEXT:   vmrhf   %v0, %v1, %v0
+; Z14-NEXT:   cefbr   %f3, %r4
+; Z14-NEXT:   vmrhf   %v1, %v3, %v2
+; Z14-NEXT:   vmrhg   %v0, %v1, %v0
+; Z14-NEXT:   vst     %v0, 0(%r2), 3
+; Z14-NEXT:   br      %r14
 
 ; Z15:      vuphh	%v0, %v24
 ; Z15-NEXT: vcefb	%v0, %v0, 0, 0
@@ -106,20 +106,20 @@ define void @fun6(<2 x i32> %Src, ptr %Dst) {
 define void @fun7(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun7:
 
-; Z14:      vuplhh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: celfbr	%f1, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: celfbr	%f0, 0, %r0, 0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:      vuplhh  %v0, %v24
+; Z14-NEXT: vlgvf   %r0, %v0, 3
+; Z14-NEXT: vlgvf   %r1, %v0, 2
+; Z14-NEXT: celfbr  %f1, 0, %r1, 0
+; Z14-NEXT: vlgvf   %r3, %v0, 1
+; Z14-NEXT: celfbr  %f2, 0, %r3, 0
+; Z14-NEXT: vlgvf   %r4, %v0, 0
+; Z14-NEXT: celfbr  %f0, 0, %r0, 0
+; Z14-NEXT: vmrhf   %v0, %v1, %v0
+; Z14-NEXT: celfbr  %f3, 0, %r4, 0
+; Z14-NEXT: vmrhf   %v1, %v3, %v2
+; Z14-NEXT: vmrhg   %v0, %v1, %v0
+; Z14-NEXT: vst     %v0, 0(%r2), 3
+; Z14-NEXT: br      %r14
 
 ; Z15:      vuplhh	%v0, %v24
 ; Z15-NEXT: vcelfb	%v0, %v0, 0, 0
@@ -143,19 +143,17 @@ define void @fun8(<2 x i64> %dwords, ptr %ptr) {
 ; Test that this results in vectorized conversions.
 define void @fun9(ptr %Src, ptr %ptr) {
 ; CHECK-LABEL: fun9
-; Z15: 	    larl	%r1, .LCPI9_0
-; Z15-NEXT: vl	        %v0, 16(%r2), 4
+; Z15:      vl	        %v0, 16(%r2), 4
 ; Z15-NEXT: vl	        %v1, 0(%r2), 4
-; Z15-NEXT: vl	        %v2, 0(%r1), 3
-; Z15-NEXT: vperm	%v2, %v2, %v1, %v2
-; Z15-NEXT: vuplhh	%v1, %v1
+; Z15-NEXT: vuplhh	%v2, %v1
+; Z15-NEXT: vupllh	%v1, %v1
 ; Z15-NEXT: vuplhh	%v0, %v0
 ; Z15-NEXT: vcelfb	%v2, %v2, 0, 0
 ; Z15-NEXT: vcelfb	%v1, %v1, 0, 0
 ; Z15-NEXT: vcelfb	%v0, %v0, 0, 0
 ; Z15-NEXT: vsteg	%v0, 32(%r3), 0
-; Z15-NEXT: vst	%v2, 16(%r3), 4
-; Z15-NEXT: vst	%v1, 0(%r3), 4
+; Z15-NEXT: vst	%v1, 16(%r3), 4
+; Z15-NEXT: vst	%v2, 0(%r3), 4
 ; Z15-NEXT: br	%r14
 
  %Val = load <10 x i16>, ptr %Src

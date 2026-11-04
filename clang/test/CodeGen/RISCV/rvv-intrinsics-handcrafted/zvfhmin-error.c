@@ -17,7 +17,7 @@
 // CHECK-ZVF-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 
-// CHECK-ZVFHMIN-ERR: no matching function for call to '__riscv_vfadd'
+// CHECK-ZVFHMIN-ERR: builtin requires at least one of the following extensions: zvfh
 
 vfloat16m1_t test_vfadd_vv_f16m1(vfloat16m1_t op1, vfloat16m1_t op2, size_t vl) {
   return __riscv_vfadd(op1, op2, vl);

@@ -60,4 +60,4 @@ template <typename T> class klass {
 };
 namespace { struct S; }
 void foo () { klass<S> x; }
-// CHECK: @_ZTV5klassIN12_GLOBAL__N_11SEE = internal unnamed_addr constant
+// CHECK: @_ZTV5klassIN12_GLOBAL__N_11SEE = internal constant

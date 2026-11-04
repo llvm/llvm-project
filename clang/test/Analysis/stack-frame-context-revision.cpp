@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,cplusplus.NewDelete -verify %s
 
 // expected-no-diagnostics:
-// From now the profile of the 'StackFrameContext' also contains the
-// 'NodeBuilderContext::blockCount()'. With this addition we can distinguish
-// between the 'StackArgumentsSpaceRegion' of the 'P' arguments being different
-// on every iteration.
+// From now the profile of the 'StackFrame' also contains the 'BlockCount'
+// ('ExprEngine::getNumVisitedCurrent()') value at the call site. With this
+// addition we can distinguish between the 'StackArgumentsSpaceRegion' of the
+// 'P' arguments being different on every iteration.
 
 typedef __INTPTR_TYPE__ intptr_t;
 
@@ -31,7 +31,7 @@ void test(Node *N) {
     delete N;
 
     N = Next.getPointer();
-    // no-warning: 'Use of memory after it is freed' was here as the same
+    // no-warning: 'Use of memory after it is released' was here as the same
     //             'StackArgumentsSpaceRegion' purged out twice as 'P'.
   }
 }

@@ -1,4 +1,4 @@
-//===--- DefinitionsInHeadersCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONSINHEADERSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONSINHEADERSCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/FileExtensionsUtils.h"
 
 namespace clang::tidy::misc {
 
@@ -22,7 +21,7 @@ namespace clang::tidy::misc {
 ///     header files. True by default.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/definitions-in-headers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/definitions-in-headers.html
 class DefinitionsInHeadersCheck : public ClangTidyCheck {
 public:
   DefinitionsInHeadersCheck(StringRef Name, ClangTidyContext *Context);
@@ -31,11 +30,8 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-private:
-  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONSINHEADERSCHECK_H

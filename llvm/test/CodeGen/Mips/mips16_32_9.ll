@@ -1,4 +1,4 @@
-; RUN: llc  -mtriple=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s -mips-mixed-16-32  | FileCheck %s -check-prefix=32
+; RUN: llc  -mtriple=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s  | FileCheck %s -check-prefix=32
 
 define void @foo() #0 {
 entry:
@@ -44,6 +44,6 @@ entry:
 
 
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "mips16" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false"  "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind "less-precise-fpmad"="false" "mips16" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "mips16" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false"  "use-soft-float"="false" }
+attributes #2 = { nounwind "less-precise-fpmad"="false" "mips16" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }

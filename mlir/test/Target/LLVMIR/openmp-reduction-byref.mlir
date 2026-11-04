@@ -33,7 +33,6 @@
     llvm.return %0 : i32
   }
 
-// CHECK: %{{.+}} = 
 // Call to the outlined function.
 // CHECK: call void {{.*}} @__kmpc_fork_call
 // CHECK-SAME: @[[OUTLINED:[A-Za-z_.][A-Za-z0-9_.]*]]

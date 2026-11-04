@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s -DTARGET=spv
 
@@ -80,6 +80,12 @@ uint4 test_firstbitlow_uint4(uint4 p0) {
   return firstbitlow(p0);
 }
 
+// CHECK-LABEL: test_firstbitlow_uint5
+// CHECK: call <5 x i32> @llvm.[[TARGET]].firstbitlow.v5i32
+vector<uint, 5> test_firstbitlow_uint5(vector<uint, 5> p0) {
+  return firstbitlow(p0);
+}
+
 // CHECK-LABEL: test_firstbitlow_ulong
 // CHECK: call i32 @llvm.[[TARGET]].firstbitlow.i64
 uint test_firstbitlow_ulong(uint64_t p0) {
@@ -149,5 +155,13 @@ uint3 test_firstbitlow_long3(int64_t3 p0) {
 // CHECK-LABEL: test_firstbitlow_long4
 // CHECK: call <4 x i32> @llvm.[[TARGET]].firstbitlow.v4i64
 uint4 test_firstbitlow_long4(int64_t4 p0) {
+  return firstbitlow(p0);
+}
+
+// CHECK-LABEL: test_firstbitlow_upcast
+// CHECK: [[FBL:%.*]] = call <4 x i32> @llvm.[[TARGET]].firstbitlow.v4i32(<4 x i32> %{{.*}})
+// CHECK: [[CONV:%.*]] = zext <4 x i32> [[FBL]] to <4 x i64>
+// CHECK: ret <4 x i64> [[CONV]]
+uint64_t4 test_firstbitlow_upcast(uint4 p0) {
   return firstbitlow(p0);
 }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExternalSymbolizer.h"
-#include "Utils/AArch64BaseInfo.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -19,34 +19,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-disassembler"
 
-static MCSymbolRefExpr::VariantKind
-getVariant(uint64_t LLVMDisassembler_VariantKind) {
+static AArch64::Specifier
+getMachOSpecifier(uint64_t LLVMDisassembler_VariantKind) {
   switch (LLVMDisassembler_VariantKind) {
   case LLVMDisassembler_VariantKind_None:
-    return MCSymbolRefExpr::VK_None;
+    return AArch64::S_None;
   case LLVMDisassembler_VariantKind_ARM64_PAGE:
-    return MCSymbolRefExpr::VK_PAGE;
+    return AArch64::S_MACHO_PAGE;
   case LLVMDisassembler_VariantKind_ARM64_PAGEOFF:
-    return MCSymbolRefExpr::VK_PAGEOFF;
+    return AArch64::S_MACHO_PAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGE:
-    return MCSymbolRefExpr::VK_GOTPAGE;
+    return AArch64::S_MACHO_GOTPAGE;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGEOFF:
-    return MCSymbolRefExpr::VK_GOTPAGEOFF;
+    return AArch64::S_MACHO_GOTPAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_TLVP:
-    return MCSymbolRefExpr::VK_TLVPPAGE;
+    return AArch64::S_MACHO_TLVPPAGE;
   case LLVMDisassembler_VariantKind_ARM64_TLVOFF:
-    return MCSymbolRefExpr::VK_TLVPPAGEOFF;
+    return AArch64::S_MACHO_TLVPPAGEOFF;
   default:
     llvm_unreachable("bad LLVMDisassembler_VariantKind");
   }
 }
 
-/// tryAddingSymbolicOperand - tryAddingSymbolicOperand trys to add a symbolic
+/// tryAddingSymbolicOperand - tryAddingSymbolicOperand tries to add a symbolic
 /// operand in place of the immediate Value in the MCInst.  The immediate
 /// Value has not had any PC adjustment made by the caller. If the instruction
 /// is a branch that adds the PC to the immediate Value then isBranch is
 /// Success, else Fail. If GetOpInfo is non-null, then it is called to get any
-/// symbolic information at the Address for this instrution.  If that returns
+/// symbolic information at the Address for this instruction.  If that returns
 /// non-zero then the symbolic information it returns is used to create an
 /// MCExpr and that is added as an operand to the MCInst.  If GetOpInfo()
 /// returns zero and isBranch is Success then a symbol look up for
@@ -104,14 +104,20 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         CommentStream << format("0x%llx", (0xfffffffffffff000LL & Address) +
                                               Value * 0x1000);
     } else if (MI.getOpcode() == AArch64::ADDXri ||
+               MI.getOpcode() == AArch64::ADDWri ||
                MI.getOpcode() == AArch64::LDRXui ||
+               MI.getOpcode() == AArch64::LDRWui ||
                MI.getOpcode() == AArch64::LDRXl ||
+               MI.getOpcode() == AArch64::LDRWl ||
                MI.getOpcode() == AArch64::ADR) {
-      if (MI.getOpcode() == AArch64::ADDXri)
+      if (MI.getOpcode() == AArch64::ADDXri ||
+          MI.getOpcode() == AArch64::ADDWri)
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_ADDXri;
-      else if (MI.getOpcode() == AArch64::LDRXui)
+      else if (MI.getOpcode() == AArch64::LDRXui ||
+               MI.getOpcode() == AArch64::LDRWui)
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_LDRXui;
-      if (MI.getOpcode() == AArch64::LDRXl) {
+      if (MI.getOpcode() == AArch64::LDRXl ||
+          MI.getOpcode() == AArch64::LDRWl) {
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_LDRXl;
         SymbolLookUp(DisInfo, Address + Value, &ReferenceType, Address,
                      &ReferenceName);
@@ -123,9 +129,22 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         const MCRegisterInfo &MCRI = *Ctx.getRegisterInfo();
         // otool expects the fully encoded ADD/LDR instruction to be passed in
         // as the value here, so reconstruct it:
-        unsigned EncodedInst =
-          MI.getOpcode() == AArch64::ADDXri ? 0x91000000: 0xF9400000;
-        EncodedInst |= Value << 10; // imm12 [+ shift:2 for ADD]
+        unsigned EncodedInst;
+        switch (MI.getOpcode()) {
+        case AArch64::ADDXri:
+          EncodedInst = 0x91000000;
+          break;
+        case AArch64::ADDWri:
+          EncodedInst = 0x11000000;
+          break;
+        case AArch64::LDRXui:
+          EncodedInst = 0xF9400000;
+          break;
+        default: // LDRWui
+          EncodedInst = 0xB9400000;
+          break;
+        }
+        EncodedInst |= Value << 10; // imm12 (ADD: imm+shift, LDR: offset)
         EncodedInst |=
           MCRI.getEncodingValue(MI.getOperand(1).getReg()) << 5; // Rn
         EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // Rd
@@ -170,9 +189,9 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
     if (SymbolicOp.AddSymbol.Name) {
       StringRef Name(SymbolicOp.AddSymbol.Name);
       MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
-      MCSymbolRefExpr::VariantKind Variant = getVariant(SymbolicOp.VariantKind);
-      if (Variant != MCSymbolRefExpr::VK_None)
-        Add = MCSymbolRefExpr::create(Sym, Variant, Ctx);
+      auto Spec = getMachOSpecifier(SymbolicOp.VariantKind);
+      if (Spec != AArch64::S_None)
+        Add = MCSymbolRefExpr::create(Sym, Spec, Ctx);
       else
         Add = MCSymbolRefExpr::create(Sym, Ctx);
     } else {

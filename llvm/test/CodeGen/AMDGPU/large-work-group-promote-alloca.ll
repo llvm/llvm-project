@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
-; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
-; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
-; RUN: opt -S -mcpu=gfx1100 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mtriple=amdgpu-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
+; RUN: opt -S -mtriple=amdgpu8.02-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
+; RUN: opt -S -mtriple=amdgpu10.10-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mtriple=amdgpu11.00-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
 
 ; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
 ; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
@@ -69,6 +69,20 @@ entry:
   ret void
 }
 
+; 1024 work-items * 80 bytes = 81920 bytes exceeds the 64k LDS addressable
+; by one workgroup on GFX10+, so the alloca must not be promoted.
+; ALL-LABEL: @promote_alloca_size_81920(
+; ALL: alloca [20 x i32]
+define amdgpu_kernel void @promote_alloca_size_81920(ptr addrspace(1) nocapture %out, i32 %idx) #8 {
+entry:
+  %stack = alloca [20 x i32], align 4, addrspace(5)
+  %arrayidx = getelementptr inbounds [20 x i32], ptr addrspace(5) %stack, i32 0, i32 %idx
+  store i32 7, ptr addrspace(5) %arrayidx, align 4
+  %0 = load i32, ptr addrspace(5) %arrayidx, align 4
+  store i32 %0, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 ; ALL-LABEL: @occupancy_0(
 ; CI-NOT: alloca [5 x i32]
 ; SI: alloca [5 x i32]
@@ -116,7 +130,7 @@ entry:
 ; SI-LABEL: @occupancy_6(
 ; CI-LABEL: @occupancy_6(
 ; SI: alloca
-; CI-NOT: alloca
+; CI: alloca [42 x i8]
 define amdgpu_kernel void @occupancy_6(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
 entry:
   %stack = alloca [42 x i8], align 4, addrspace(5)
@@ -216,7 +230,7 @@ entry:
 ; SI-LABEL: @occupancy_9(
 ; CI-LABEL: @occupancy_9(
 ; SI: alloca
-; CI-NOT: alloca
+; CI: alloca [28 x i8]
 define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
 entry:
   %stack = alloca [28 x i8], align 4, addrspace(5)
@@ -271,3 +285,4 @@ attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
 attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }
 attributes #6 = { nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" }
 attributes #7 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" }
+attributes #8 = { nounwind "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="1024,1024" }

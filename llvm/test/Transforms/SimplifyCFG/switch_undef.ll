@@ -5,12 +5,11 @@
 define void @f6() #0 {
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
-; CHECK:       for.cond.i:
+; CHECK-NEXT:    br label [[F1_EXIT_I:%.*]]
+; CHECK:       f1.exit.i:
 ; CHECK-NEXT:    [[TOBOOL7_I:%.*]] = icmp ne i16 1, 0
-; CHECK-NEXT:    br label [[FOR_COND_I]]
+; CHECK-NEXT:    br label [[F1_EXIT_I]]
 ;
-
 entry:
   br label %for.cond.i
 

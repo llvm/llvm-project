@@ -3,7 +3,17 @@
 ; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
 ; RUN:   | FileCheck --check-prefix=RANGE %s
 
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-win32-gnu -filetype=obj -o - -minimize-addr-in-v5=Default \
+; RUN:   -split-dwarf-file=test.dwo \
+; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
+; RUN:   | FileCheck --check-prefix=RANGE %s
+
 ; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o - -minimize-addr-in-v5=Disabled \
+; RUN:   -split-dwarf-file=test.dwo \
+; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
+; RUN:   | FileCheck --check-prefix=NORANGE %s
+
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-win32-gnu -filetype=obj -o - -minimize-addr-in-v5=Disabled \
 ; RUN:   -split-dwarf-file=test.dwo \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
 ; RUN:   | FileCheck --check-prefix=NORANGE %s

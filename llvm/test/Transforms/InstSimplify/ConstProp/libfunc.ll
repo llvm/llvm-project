@@ -7,7 +7,7 @@ declare double @sin(x86_fp80)
 
 define double @PR50960(x86_fp80 %0) {
 ; CHECK-LABEL: @PR50960(
-; CHECK-NEXT:    [[CALL:%.*]] = call double @sin(x86_fp80 0xK3FFF8000000000000000)
+; CHECK-NEXT:    [[CALL:%.*]] = call double @sin(x86_fp80 1.000000e+00)
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @sin(x86_fp80 0xK3FFF8000000000000000)

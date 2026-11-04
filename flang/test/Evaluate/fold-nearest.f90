@@ -19,16 +19,16 @@ module m1
   real, parameter :: negZero = sign(0., -1.)
   logical, parameter :: test_12 = nearest(negZero, 1.) == minSubnormal
   logical, parameter :: test_13 = nearest(negZero, -1.) == -minSubnormal
-  !WARN: warning: NEAREST: S argument is zero
+  !WARN: warning: NEAREST: S argument is zero [-Wfolding-value-checks]
   logical, parameter :: test_14 = nearest(0., negZero) == -minSubnormal
-  !WARN: warning: NEAREST: S argument is zero
+  !WARN: warning: NEAREST: S argument is zero [-Wfolding-value-checks]
   logical, parameter :: test_15 = nearest(negZero, 0.) == minSubnormal
   logical, parameter :: test_16 = nearest(tiny(1.),-1.) == 1.1754942E-38
   logical, parameter :: test_17 = nearest(tiny(1.),1.) == 1.1754945E-38
  contains
   subroutine subr(a)
     real, intent(in) :: a
-    !WARN: warning: NEAREST: S argument is zero
+    !WARN: warning: NEAREST: S argument is zero [-Wfolding-value-checks]
     print *, nearest(a, 0.)
   end
 end module
@@ -42,7 +42,7 @@ module m2
   logical, parameter :: test_2 = ieee_next_after(minSubnormal, -1.) == 0
   logical, parameter :: test_3 = ieee_next_after(1., 2.) == 1.0000001
   logical, parameter :: test_4 = ieee_next_after(1.0000001, -1.) == 1
-  !WARN: warning: division by zero
+  !WARN: warning: division by zero [-Wfolding-exception]
   real, parameter :: inf = 1. / 0.
   logical, parameter :: test_5 = ieee_next_after(inf, inf) == inf
   logical, parameter :: test_6 = ieee_next_after(inf, -inf) == h
@@ -54,12 +54,12 @@ module m2
   logical, parameter :: test_11 = ieee_next_after(1.9999999999999999999_10, 3.) == 2._10
 #endif
   logical, parameter :: test_12 = ieee_next_after(1., 1.) == 1.
-  !WARN: warning: invalid argument on division
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real, parameter :: nan = 0. / 0.
-  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered
+  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered [-Wfolding-value-checks]
   real, parameter :: x13 = ieee_next_after(nan, nan)
   logical, parameter :: test_13 = .not. (x13 == x13)
-  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered
+  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered [-Wfolding-value-checks]
   real, parameter :: x14 = ieee_next_after(nan, 0.)
   logical, parameter :: test_14 = .not. (x14 == x14)
 end module
@@ -72,7 +72,7 @@ module m3
   logical, parameter :: test_2 = ieee_next_down(0.d0) == -minSubnormal
   logical, parameter :: test_3 = ieee_next_up(1.d0) == 1.0000000000000002d0
   logical, parameter :: test_4 = ieee_next_down(1.0000000000000002d0) == 1.d0
-  !WARN: warning: division by zero
+  !WARN: warning: division by zero [-Wfolding-exception]
   real(kind(0.d0)), parameter :: inf = 1.d0 / 0.d0
   logical, parameter :: test_5 = ieee_next_up(huge(0.d0)) == inf
   logical, parameter :: test_6 = ieee_next_down(-huge(0.d0)) == -inf
@@ -82,12 +82,12 @@ module m3
   logical, parameter :: test_10 = ieee_next_down(-inf) == -inf
   logical, parameter :: test_11 = ieee_next_up(1.9999999999999997d0) == 2.d0
   logical, parameter :: test_12 = ieee_next_down(2.d0) == 1.9999999999999997d0
-  !WARN: warning: invalid argument on division
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(kind(0.d0)), parameter :: nan = 0.d0 / 0.d0
-  !WARN: warning: IEEE_NEXT_UP intrinsic folding: argument is NaN
+  !WARN: warning: IEEE_NEXT_UP intrinsic folding: argument is NaN [-Wfolding-exception]
   real(kind(0.d0)), parameter :: x13 = ieee_next_up(nan)
   logical, parameter :: test_13 = .not. (x13 == x13)
-  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: argument is NaN
+  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: argument is NaN [-Wfolding-exception]
   real(kind(0.d0)), parameter :: x14 = ieee_next_down(nan)
   logical, parameter :: test_14 = .not. (x14 == x14)
 end module

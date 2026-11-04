@@ -11,37 +11,25 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Enum.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 namespace llvm {
-
-template <typename T> struct EnumEntry {
-  StringRef Name;
-  // While Name suffices in most of the cases, in certain cases
-  // GNU style and LLVM style of ELFDumper do not
-  // display same string for same enum. The AltName if initialized appropriately
-  // will hold the string that GNU style emits.
-  // Example:
-  // "EM_X86_64" string on LLVM style for Elf_Ehdr->e_machine corresponds to
-  // "Advanced Micro Devices X86-64" on GNU style
-  StringRef AltName;
-  T Value;
-  constexpr EnumEntry(StringRef N, StringRef A, T V)
-      : Name(N), AltName(A), Value(V) {}
-  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
-};
 
 struct HexNumber {
   // To avoid sign-extension we have to explicitly cast to the appropriate
   // unsigned type. The overloads are here so that every type that is implicitly
-  // convertible to an integer (including enums and endian helpers) can be used
-  // without requiring type traits or call-site changes.
+  // convertible to an integer (including endian helpers) can be used without
+  // requiring type traits or call-site changes.
   HexNumber(char Value) : Value(static_cast<unsigned char>(Value)) {}
   HexNumber(signed char Value) : Value(static_cast<unsigned char>(Value)) {}
   HexNumber(signed short Value) : Value(static_cast<unsigned short>(Value)) {}
@@ -54,6 +42,9 @@ struct HexNumber {
   HexNumber(unsigned int Value) : Value(Value) {}
   HexNumber(unsigned long Value) : Value(Value) {}
   HexNumber(unsigned long long Value) : Value(Value) {}
+  template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
+  HexNumber(EnumT Value) : HexNumber(llvm::to_underlying(Value)) {}
+
   uint64_t Value;
 };
 
@@ -76,11 +67,15 @@ struct FlagEntry {
   FlagEntry(StringRef Name, unsigned long Value) : Name(Name), Value(Value) {}
   FlagEntry(StringRef Name, unsigned long long Value)
       : Name(Name), Value(Value) {}
+  template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
+  FlagEntry(StringRef Name, EnumT Value)
+      : FlagEntry(Name, llvm::to_underlying(Value)) {}
+
   StringRef Name;
   uint64_t Value;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
@@ -89,15 +84,7 @@ template <class T> std::string to_string(const T &Value) {
   return number;
 }
 
-template <typename T, typename TEnum>
-std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-    if (EnumItem.Value == Value)
-      return std::string(EnumItem.AltName);
-  return utohexstr(Value, true);
-}
-
-class ScopedPrinter {
+class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
     Base,
@@ -138,49 +125,46 @@ public:
 
   template <typename T> HexNumber hex(T Value) { return HexNumber(Value); }
 
-  template <typename T, typename TEnum>
+  template <typename T, typename TEnum, unsigned NumStrs>
   void printEnum(StringRef Label, T Value,
-                 ArrayRef<EnumEntry<TEnum>> EnumValues) {
-    StringRef Name;
-    bool Found = false;
-    for (const auto &EnumItem : EnumValues) {
-      if (EnumItem.Value == Value) {
-        Name = EnumItem.Name;
-        Found = true;
-        break;
-      }
-    }
-
-    if (Found)
+                 EnumStrings<TEnum, NumStrs> EnumValues) {
+    if (StringRef Name = EnumValues.toString(Value); !Name.empty())
       printHex(Label, Name, Value);
     else
       printHex(Label, Value);
   }
 
-  template <typename T, typename TFlag>
-  void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
+  template <typename T, typename TFlag, unsigned NumStrs>
+  void printFlags(StringRef Label, T Value, EnumStrings<TFlag, NumStrs> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
                   TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
     SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
 
     for (const auto &Flag : Flags) {
-      if (Flag.Value == 0)
+      if (Flag.value() == TFlag{})
         continue;
 
       TFlag EnumMask{};
-      if (Flag.Value & EnumMask1)
+      if ((Flag.value() & EnumMask1) != TFlag{})
         EnumMask = EnumMask1;
-      else if (Flag.Value & EnumMask2)
+      else if ((Flag.value() & EnumMask2) != TFlag{})
         EnumMask = EnumMask2;
-      else if (Flag.Value & EnumMask3)
+      else if ((Flag.value() & EnumMask3) != TFlag{})
         EnumMask = EnumMask3;
-      bool IsEnum = (Flag.Value & EnumMask) != 0;
-      if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
-          (IsEnum && (Value & EnumMask) == Flag.Value)) {
-        SetFlags.emplace_back(Flag.Name, Flag.Value);
+      bool IsEnum = (Flag.value() & EnumMask) != TFlag{};
+      if ((!IsEnum && (Value & Flag.value()) == Flag.value()) ||
+          (IsEnum && (Value & EnumMask) == Flag.value())) {
+        SetFlags.emplace_back(Flag.name(), Flag.value());
       }
     }
 
+    llvm::sort(SetFlags, &flagName);
+    printFlagsImpl(Label, hex(Value), SetFlags);
+  }
+
+  template <typename T>
+  void printFlags(StringRef Label, T Value,
+                  SmallVectorImpl<FlagEntry> &SetFlags) {
     llvm::sort(SetFlags, &flagName);
     printFlagsImpl(Label, hex(Value), SetFlags);
   }
@@ -263,9 +247,11 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename... T> void printVersion(StringRef Label, T... Version) {
+  template <typename T, typename... TArgs>
+  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
     startLine() << Label << ": ";
-    printVersionInternal(Version...);
+    getOStream() << MajorVersion;
+    ((getOStream() << '.' << MinorVersions), ...);
     getOStream() << "\n";
   }
 
@@ -433,16 +419,6 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
-  template <typename T> void printVersionInternal(T Value) {
-    getOStream() << Value;
-  }
-
-  template <typename S, typename T, typename... TArgs>
-  void printVersionInternal(S Value, T Value2, TArgs... Args) {
-    getOStream() << Value << ".";
-    printVersionInternal(Value2, Args...);
-  }
-
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
     return LHS.Name < RHS.Name;
   }
@@ -539,7 +515,13 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
-struct DelimitedScope;
+struct DelimitedScope {
+  DelimitedScope(ScopedPrinter &W) : W(&W) {}
+  DelimitedScope() : W(nullptr) {}
+  virtual ~DelimitedScope() = default;
+  virtual void setPrinter(ScopedPrinter &W) = 0;
+  ScopedPrinter *W;
+};
 
 class JSONScopedPrinter : public ScopedPrinter {
 private:
@@ -566,9 +548,9 @@ private:
   std::unique_ptr<DelimitedScope> OuterScope;
 
 public:
-  JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
-                    std::unique_ptr<DelimitedScope> &&OuterScope =
-                        std::unique_ptr<DelimitedScope>{});
+  LLVM_ABI JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
+                             std::unique_ptr<DelimitedScope> &&OuterScope =
+                                 std::unique_ptr<DelimitedScope>{});
 
   static bool classof(const ScopedPrinter *SP) {
     return SP->getKind() == ScopedPrinter::ScopedPrinterKind::JSON;
@@ -838,14 +820,6 @@ private:
   }
 };
 
-struct DelimitedScope {
-  DelimitedScope(ScopedPrinter &W) : W(&W) {}
-  DelimitedScope() : W(nullptr) {}
-  virtual ~DelimitedScope() = default;
-  virtual void setPrinter(ScopedPrinter &W) = 0;
-  ScopedPrinter *W;
-};
-
 struct DictScope : DelimitedScope {
   explicit DictScope() = default;
   explicit DictScope(ScopedPrinter &W) : DelimitedScope(W) { W.objectBegin(); }
@@ -859,7 +833,7 @@ struct DictScope : DelimitedScope {
     W.objectBegin();
   }
 
-  ~DictScope() {
+  ~DictScope() override {
     if (W)
       W->objectEnd();
   }
@@ -878,7 +852,7 @@ struct ListScope : DelimitedScope {
     W.arrayBegin();
   }
 
-  ~ListScope() {
+  ~ListScope() override {
     if (W)
       W->arrayEnd();
   }

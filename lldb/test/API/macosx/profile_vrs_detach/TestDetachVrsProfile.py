@@ -18,8 +18,7 @@ import signal
 class TestDetachVrsProfile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
-    @skipIfOutOfTreeDebugserver
+    @requireDarwin
     @skipIfRemote
     def test_profile_and_detach(self):
         """There can be many tests in a test case - describe this test here."""

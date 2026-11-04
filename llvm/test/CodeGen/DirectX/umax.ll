@@ -26,6 +26,11 @@ entry:
   ret i64 %0
 }
 
+; CHECK-DAG: declare i16 @dx.op.binary.i16(i32, i16, i16) #[[#ATTR0:]]
+; CHECK-DAG: declare i32 @dx.op.binary.i32(i32, i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare i64 @dx.op.binary.i64(i32, i64, i64) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare i16 @llvm.umax.i16(i16, i16)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i64 @llvm.umax.i64(i64, i64)

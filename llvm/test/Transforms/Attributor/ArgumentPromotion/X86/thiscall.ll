@@ -14,7 +14,7 @@ target triple = "i386-pc-windows-msvc19.11.0"
 
 define internal x86_thiscallcc void @internalfun(ptr %this, ptr inalloca(<{ %struct.a }>)) {
 ; CHECK-LABEL: define {{[^@]+}}@internalfun
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[THIS:%.*]], ptr noundef nonnull inalloca(<{ [[STRUCT_A:%.*]] }>) align 4 dereferenceable(1) [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[THIS:%.*]], ptr noundef nonnull inalloca(<{ [[STRUCT_A:%.*]] }>) align 4 dereferenceable(1) [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call x86_thiscallcc ptr @copy_ctor(ptr noundef nonnull align 4 dereferenceable(1) [[ARGMEM]], ptr noundef nonnull align 4 dereferenceable(1) [[TMP0]])
@@ -31,18 +31,18 @@ entry:
 ; This is here to ensure @internalfun is live.
 define void @exportedfun(ptr %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@exportedfun
-; TUNIT-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[A:%.*]]) {
 ; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0() #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone undef, ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nofree readnone captures(none) undef, ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; TUNIT-NEXT:    call void @llvm.stackrestore.p0(ptr nofree [[INALLOCA_SAVE]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@exportedfun
-; CGSCC-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[A:%.*]]) {
 ; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0() #[[ATTR1:[0-9]+]]
 ; CGSCC-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone [[A]], ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nofree readnone captures(none) [[A]], ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; CGSCC-NEXT:    call void @llvm.stackrestore.p0(ptr nofree [[INALLOCA_SAVE]])
 ; CGSCC-NEXT:    ret void
 ;

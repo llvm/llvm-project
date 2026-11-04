@@ -6,49 +6,55 @@
 
 #include <arm_sme.h>
 
-// CHECK-C-LABEL: define dso_local i64 @test_svcntsb(
+// CHECK-C-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @test_svcntsb(
 // CHECK-C-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    ret i64 [[TMP0]]
+// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-C-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+// CHECK-C-NEXT:    ret i64 [[MULSVL]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef i64 @_Z12test_svcntsbv(
+// CHECK-CXX-LABEL: define dso_local noundef range(i64 0, -9223372036854775808) i64 @_Z12test_svcntsbv(
 // CHECK-CXX-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    ret i64 [[TMP0]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-CXX-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+// CHECK-CXX-NEXT:    ret i64 [[MULSVL]]
 //
 uint64_t test_svcntsb() {
   return svcntsb();
 }
 
-// CHECK-C-LABEL: define dso_local i64 @test_svcntsh(
+// CHECK-C-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @test_svcntsh(
 // CHECK-C-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsh()
-// CHECK-C-NEXT:    ret i64 [[TMP0]]
+// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-C-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+// CHECK-C-NEXT:    ret i64 [[MULSVL]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef i64 @_Z12test_svcntshv(
+// CHECK-CXX-LABEL: define dso_local noundef range(i64 0, -9223372036854775808) i64 @_Z12test_svcntshv(
 // CHECK-CXX-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsh()
-// CHECK-CXX-NEXT:    ret i64 [[TMP0]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-CXX-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+// CHECK-CXX-NEXT:    ret i64 [[MULSVL]]
 //
 uint64_t test_svcntsh() {
   return svcntsh();
 }
 
-// CHECK-C-LABEL: define dso_local i64 @test_svcntsw(
+// CHECK-C-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @test_svcntsw(
 // CHECK-C-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsw()
-// CHECK-C-NEXT:    ret i64 [[TMP0]]
+// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-C-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+// CHECK-C-NEXT:    ret i64 [[MULSVL]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef i64 @_Z12test_svcntswv(
+// CHECK-CXX-LABEL: define dso_local noundef range(i64 0, -9223372036854775808) i64 @_Z12test_svcntswv(
 // CHECK-CXX-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsw()
-// CHECK-CXX-NEXT:    ret i64 [[TMP0]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsd()
+// CHECK-CXX-NEXT:    [[MULSVL:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+// CHECK-CXX-NEXT:    ret i64 [[MULSVL]]
 //
 uint64_t test_svcntsw() {
   return svcntsw();

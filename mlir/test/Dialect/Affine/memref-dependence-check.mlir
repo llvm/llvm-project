@@ -1146,3 +1146,23 @@ func.func @affine_parallel_dep_check_2() {
   // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
   return
 }
+
+// -----
+
+// Regression test: affine.parallel with multi-result min/max bound maps
+// (e.g., min(128, 122)) must not crash addAffineParallelOpDomain.
+// https://github.com/llvm/llvm-project/issues/61734
+
+// CHECK-LABEL: func @affine_parallel_min_max_bounds
+func.func @affine_parallel_min_max_bounds(%arg0: memref<4090x2040xf32>, %arg1: f32) {
+  affine.parallel (%arg2, %arg3) = (0, 0) to (min(128, 122), min(64, 2040)) {
+    affine.for %arg4 = 0 to 100 {
+      affine.store %arg1, %arg0[%arg2 + 3968, %arg3] : memref<4090x2040xf32>
+      // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 3 = [0, 0][0, 0][1, 99]}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 4 = false}}
+    }
+  }
+  return
+}

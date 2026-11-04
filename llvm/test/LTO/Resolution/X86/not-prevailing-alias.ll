@@ -7,7 +7,7 @@
 
 ; Check that bar and barAlias were dropped to declarations
 ; RUN: llvm-dis %t2.o.1.1.promote.bc -o - | FileCheck %s --check-prefix=DROP
-; DROP-DAG: declare void @bar()
+; DROP-DAG: declare !guid !{{[0-9]+}} void @bar()
 ; DROP-DAG: declare void @barAlias()
 ; DROP-DAG: @var = external global i32
 ; DROP-DAG: @varAlias = external global i32

@@ -17,10 +17,10 @@
 
 namespace llvm {
 
-struct LowerWidenableConditionPass : PassInfoMixin<LowerWidenableConditionPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct LowerWidenableConditionPass
+    : OptionalPassInfoMixin<LowerWidenableConditionPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-
 }
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERWIDENABLECONDITION_H

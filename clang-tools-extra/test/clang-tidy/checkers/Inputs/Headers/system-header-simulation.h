@@ -59,7 +59,7 @@ struct X {};
 } // namespace std
 
 // Template specializations that are in a system-header file.
-// The purpose is to test cert-dcl58-cpp (no warnings here).
+// The purpose is to test bugprone-std-namespace-modification (no warnings here).
 namespace std {
 template <>
 void swap<short>(short &, short &){};
@@ -74,4 +74,7 @@ bool less<void>::operator()<short &&, short &&>(short &&, short &&) const {
 
 template <>
 struct less<void>::X<short> {};
+
+template <typename T>
+class vector;
 } // namespace std

@@ -6,7 +6,7 @@
 # RUN: FileCheck %s --check-prefix=MAP < %t.map
 
 # CHECK:      Contents of section .itest:
-# CHECK-NEXT:  180001000 0c100080 01000000 00000000 01000000
+# CHECK-NEXT:  180001000 0c100000 0c100000 00000000 01000000
 
 # MAP: 00001000 0000000a     4         {{.*}}:(.itest$2)
 # MAP: 00001000 00000000     0                 .itest$2
@@ -28,7 +28,10 @@ sections:
     Relocations:
       - VirtualAddress:  0
         SymbolName:      '.itest$4'
-        Type:            IMAGE_REL_AMD64_ADDR64
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      '.itest$6'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
   - Name:            '.itest$6'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       2
@@ -42,13 +45,13 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_SECTION
   - Name:            '.itest$6'
-    Value:           0
+    Value:           3221225536
     SectionNumber:   2
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    StorageClass:    IMAGE_SYM_CLASS_SECTION
   - Name:            '.itest$4'
-    Value:           0
+    Value:           3221225536
     SectionNumber:   0
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL

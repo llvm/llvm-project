@@ -9,12 +9,12 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
-#include "Cuda.h"
-#include "LazyDetector.h"
-#include "ROCm.h"
-#include "SYCL.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/XRayArgs.h"
@@ -39,6 +39,8 @@ class LLVM_LIBRARY_VISIBILITY MachOTool : public Tool {
 protected:
   void AddMachOArch(const llvm::opt::ArgList &Args,
                     llvm::opt::ArgStringList &CmdArgs) const;
+  void AddMachOArchOnly(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const;
 
   const toolchains::MachO &getMachOToolChain() const {
     return reinterpret_cast<const toolchains::MachO &>(getToolChain());
@@ -145,6 +147,11 @@ protected:
   Tool *buildStaticLibTool() const override;
   Tool *getTool(Action::ActionClass AC) const override;
 
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+
 private:
   mutable std::unique_ptr<tools::darwin::Lipo> Lipo;
   mutable std::unique_ptr<tools::darwin::Dsymutil> Dsymutil;
@@ -192,6 +199,11 @@ public:
                                       llvm::opt::ArgStringList &CmdArgs) const {
   }
 
+  virtual bool HasPlatformPrefix(const llvm::Triple &T) const { return false; }
+
+  virtual void AppendPlatformPrefix(SmallString<128> &Path,
+                                    const llvm::Triple &T) const {}
+
   /// On some iOS platforms, kernel and kernel modules were built statically. Is
   /// this such a target?
   virtual bool isKernelStatic() const { return false; }
@@ -227,9 +239,9 @@ public:
   // Return the full path of the compiler-rt library on a non-Darwin MachO
   // system. Those are under
   // <resourcedir>/lib/darwin/macho_embedded/<...>(.dylib|.a).
-  std::string
-  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
   /// }
   /// @name ToolChain Implementation
@@ -240,7 +252,7 @@ public:
   bool HasNativeLLVMSupport() const override;
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsBlocksDefault() const override {
@@ -278,7 +290,7 @@ public:
 
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override {
-    return llvm::ExceptionHandling::None;
+    return llvm::ExceptionHandling::Default;
   }
 
   virtual StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const {
@@ -345,6 +357,12 @@ public:
   // the argument translation business.
   mutable bool TargetInitialized;
 
+  /// Whether the target was lazily initialized from the triple by
+  /// ensureTargetInitialized() rather than by AddDeploymentTarget(). Such a
+  /// target is a best-effort guess that setTarget() may overwrite.
+  mutable bool TargetInitializedLazily = false;
+
+  // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
     MacOS,
     IPhoneOS,
@@ -352,7 +370,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = XROS
+    Firmware,
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -377,12 +395,22 @@ public:
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
 
+  void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
+                          const llvm::Triple &Triple) const;
+
+protected:
+  /// Lazily initialize the target platform from the triple when
+  /// AddDeploymentTarget has not run yet (e.g. when Darwin is used as
+  /// a host toolchain for device offloading).
+  void ensureTargetInitialized() const;
+
 public:
   Darwin(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args);
   ~Darwin() override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          BoundArch BA,
                                           types::ID InputType) const override;
 
   /// @name Darwin Specific Toolchain Implementation
@@ -407,9 +435,9 @@ public:
 
   // Return the full path of the compiler-rt library on a Darwin MachO system.
   // Those are under <resourcedir>/lib/darwin/<...>(.dylib|.a).
-  std::string
-  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
 protected:
   /// }
@@ -426,10 +454,17 @@ protected:
     if (TargetInitialized && TargetPlatform == Platform &&
         TargetEnvironment == Environment &&
         (Environment == MacCatalyst ? OSTargetVersion : TargetVersion) ==
-            VersionTuple(Major, Minor, Micro))
+            VersionTuple(Major, Minor, Micro)) {
+      TargetInitializedLazily = false;
       return;
+    }
 
-    assert(!TargetInitialized && "Target already initialized!");
+    // A lazily-initialized target (see ensureTargetInitialized()) is a
+    // best-effort guess from the triple alone; the authoritative
+    // initialization from AddDeploymentTarget() may overwrite it.
+    assert((!TargetInitialized || TargetInitializedLazily) &&
+           "Target already initialized!");
+    TargetInitializedLazily = false;
     TargetInitialized = true;
     TargetPlatform = Platform;
     TargetEnvironment = Environment;
@@ -506,6 +541,8 @@ public:
     return TargetPlatform == DriverKit;
   }
 
+  bool isTargetFirmware() const { return TargetPlatform == Firmware; }
+
   bool isTargetMacCatalyst() const {
     return TargetPlatform == IPhoneOS && TargetEnvironment == MacCatalyst;
   }
@@ -570,15 +607,15 @@ protected:
   /// the c++ standard library of the deployment target we are targeting.
   bool isSizedDeallocationUnavailable() const;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangCC1ASTargetOptions(
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1ASArgs) const override;
 
-  StringRef getPlatformFamily() const;
   StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
 
 public:
@@ -594,7 +631,7 @@ public:
   bool isCrossCompiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
@@ -630,7 +667,9 @@ public:
 
   bool SupportsEmbeddedBitcode() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.
@@ -641,6 +680,10 @@ public:
 
   /// @name Apple ToolChain Implementation
   /// {
+
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
 
   RuntimeLibType GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
 
@@ -653,8 +696,18 @@ public:
 
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs) const override;
+
+  bool HasPlatformPrefix(const llvm::Triple &T) const override;
+
+  void AppendPlatformPrefix(SmallString<128> &Path,
+                            const llvm::Triple &T) const override;
 
   unsigned GetDefaultDwarfVersion() const override;
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
@@ -663,6 +716,8 @@ public:
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::LLDB;
   }
+
+  bool getDefaultDebugSimpleTemplateNames() const override;
 
   /// }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_THREAD_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTED_THREAD_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDTHREAD_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDTHREAD_H
 
 #include <string>
 
@@ -15,11 +15,12 @@
 
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Target//DynamicRegisterInfo.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 class ScriptedProcess;
+class ScriptedFrame;
 }
 
 namespace lldb_private {
@@ -61,20 +62,21 @@ public:
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
 private:
+  friend class ScriptedFrame;
+
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedThreadInterfaceSP GetInterface() const;
 
   ScriptedThread(const ScriptedThread &) = delete;
   const ScriptedThread &operator=(const ScriptedThread &) = delete;
 
-  std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
+  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
 
   const ScriptedProcess &m_scripted_process;
   lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
   lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
-  std::shared_ptr<DynamicRegisterInfo> m_register_info_sp = nullptr;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SCRIPTED_THREAD_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDTHREAD_H

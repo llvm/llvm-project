@@ -62,7 +62,7 @@ if.end:                                           ; preds = %entry
   %1 = load ptr, ptr %argv.addr, align 8, !dbg !30
   %arrayidx = getelementptr inbounds ptr, ptr %1, i64 1, !dbg !30
   %2 = load ptr, ptr %arrayidx, align 8, !dbg !30
-  %call = call i32 @atoi(ptr %2) #4, !dbg !31
+  %call = call i32 @atoi(ptr %2), !dbg !31
   store i32 %call, ptr %limit, align 4, !dbg !29
   %3 = load i32, ptr %limit, align 4, !dbg !32
   %cmp1 = icmp sgt i32 %3, 100, !dbg !34
@@ -75,7 +75,7 @@ if.then.2:                                        ; preds = %if.end
   %4 = load ptr, ptr %argv.addr, align 8, !dbg !39
   %arrayidx3 = getelementptr inbounds ptr, ptr %4, i64 2, !dbg !39
   %5 = load ptr, ptr %arrayidx3, align 8, !dbg !39
-  %call4 = call i32 @atoi(ptr %5) #4, !dbg !40
+  %call4 = call i32 @atoi(ptr %5), !dbg !40
   %conv = sitofp i32 %call4 to double, !dbg !40
   %mul = fmul double 0x40370ABE6A337A81, %conv, !dbg !41
   store double %mul, ptr %s, align 8, !dbg !38
@@ -128,7 +128,7 @@ if.else:                                          ; preds = %if.end
   %16 = load ptr, ptr %argv.addr, align 8, !dbg !72
   %arrayidx10 = getelementptr inbounds ptr, ptr %16, i64 2, !dbg !72
   %17 = load ptr, ptr %arrayidx10, align 8, !dbg !72
-  %call11 = call i32 @atoi(ptr %17) #4, !dbg !74
+  %call11 = call i32 @atoi(ptr %17), !dbg !74
   %conv12 = sitofp i32 %call11 to double, !dbg !74
   store double %conv12, ptr %result, align 8, !dbg !75
   br label %if.end.13
@@ -145,18 +145,14 @@ return:                                           ; preds = %if.end.13, %if.then
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readonly
-declare i32 @atoi(ptr) #2
+declare i32 @atoi(ptr)
 
-declare i32 @printf(ptr, ...) #3
+declare i32 @printf(ptr, ...)
 
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readonly }
+attributes #0 = { uwtable "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}

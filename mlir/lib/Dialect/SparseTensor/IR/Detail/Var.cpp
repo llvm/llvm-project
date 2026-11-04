@@ -38,10 +38,12 @@ void Var::print(llvm::raw_ostream &os) const {
   os << toChar(getKind()) << getNum();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Var::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // `Ranks` implementation.
@@ -143,8 +145,8 @@ void VarInfo::setNum(Var::Num n) {
 
 /// Helper function for `assertUsageConsistency` to better handle SMLoc
 /// mismatches.
-LLVM_ATTRIBUTE_UNUSED static llvm::SMLoc
-minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
+[[maybe_unused]] static llvm::SMLoc minSMLoc(AsmParser &parser, llvm::SMLoc sm1,
+                                             llvm::SMLoc sm2) {
   const auto loc1 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm1));
   assert(loc1 && "Could not get `FileLineColLoc` for first `SMLoc`");
   const auto loc2 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm2));
@@ -156,13 +158,14 @@ minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
   return pair1 <= pair2 ? sm1 : sm2;
 }
 
-bool isInternalConsistent(VarEnv const &env, VarInfo::ID id, StringRef name) {
+static bool isInternalConsistent(VarEnv const &env, VarInfo::ID id,
+                                 StringRef name) {
   const auto &var = env.access(id);
   return (var.getName() == name && var.getID() == id);
 }
 
-bool isUsageConsistent(VarEnv const &env, VarInfo::ID id, llvm::SMLoc loc,
-                       VarKind vk) {
+static bool isUsageConsistent(VarEnv const &env, VarInfo::ID id,
+                              llvm::SMLoc loc, VarKind vk) {
   const auto &var = env.access(id);
   return var.getKind() == vk;
 }

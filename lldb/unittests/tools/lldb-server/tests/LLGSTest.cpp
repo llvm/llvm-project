@@ -9,14 +9,12 @@
 #include "TestBase.h"
 #include "lldb/Host/Host.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gtest/gtest.h"
 
 using namespace llgs_tests;
 using namespace lldb_private;
 using namespace llvm;
 
-// Disable this test on Windows as it appears to have a race condition
-// that causes lldb-server not to exit after the inferior hangs up.
-#if !defined(_WIN32)
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 
@@ -32,7 +30,6 @@ TEST_F(TestBase, LaunchModePreservesEnvironment) {
       HasValue(testing::Property(&StopReply::getKind,
                                  WaitStatus{WaitStatus::Exit, 0})));
 }
-#endif
 
 TEST_F(TestBase, DS_TEST(DebugserverEnv)) {
   // Test that --env takes precedence over inherited environment variables.
@@ -73,4 +70,17 @@ TEST_F(TestBase, LLGS_TEST(vAttachRichError)) {
           &ErrorInfoBase::message,
           testing::StartsWith(
               "cannot attach to process 1 when another process with pid"))));
+}
+
+TEST_F(TestBase, LLGS_TEST(qStructuredDataPlugins)) {
+  auto ClientOr = TestClient::launchCustom(
+      getLogFileName(),
+      /* disable_stdio */ true, {}, {getInferiorPath("environment_check")});
+  ASSERT_THAT_EXPECTED(ClientOr, Succeeded());
+  auto &Client = **ClientOr;
+  std::string response_string;
+  ASSERT_THAT_ERROR(
+      Client.SendMessage("qStructuredDataPlugins", response_string),
+      Succeeded());
+  EXPECT_STREQ("[]", response_string.c_str());
 }

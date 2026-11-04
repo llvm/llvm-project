@@ -37,7 +37,7 @@ void mlir::tosa::populateTosaTypeConversion(TypeConverter &converter) {
     if (inputs.size() != 1)
       return Value();
 
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
   converter.addTargetMaterialization([&](OpBuilder &builder, Type resultType,
@@ -46,7 +46,7 @@ void mlir::tosa::populateTosaTypeConversion(TypeConverter &converter) {
     if (inputs.size() != 1)
       return Value();
 
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
 }

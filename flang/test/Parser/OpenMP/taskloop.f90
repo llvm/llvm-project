@@ -5,8 +5,8 @@ subroutine parallel_work
   integer :: i
 
 !CHECK: !$OMP TASKLOOP  GRAINSIZE(STRICT: 500_4)
-!PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Grainsize -> OmpGrainsizeClause
 !PARSE-TREE-NEXT: Modifier -> OmpPrescriptiveness -> Value = Strict
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = '500_4'
@@ -17,8 +17,8 @@ subroutine parallel_work
   !$omp end taskloop
 
 !CHECK: !$OMP TASKLOOP  GRAINSIZE(500_4)
-!PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Grainsize -> OmpGrainsizeClause
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = '500_4'
   !$omp taskloop grainsize(500)
@@ -28,8 +28,8 @@ subroutine parallel_work
   !$omp end taskloop
 
 !CHECK: !$OMP TASKLOOP  NUM_TASKS(STRICT: 500_4)
-!PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> NumTasks -> OmpNumTasksClause
 !PARSE-TREE-NEXT: Modifier -> OmpPrescriptiveness -> Value = Strict
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = '500_4'

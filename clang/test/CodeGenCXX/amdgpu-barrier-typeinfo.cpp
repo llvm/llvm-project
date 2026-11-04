@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu %s -emit-llvm -o - | FileCheck %s
 
 namespace std { class type_info; };
 

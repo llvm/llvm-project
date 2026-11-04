@@ -9,14 +9,13 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/stdio/scanf_core/converter.h"
 #include "src/stdio/scanf_core/core_structs.h"
-#include "src/stdio/scanf_core/reader.h"
+#include "src/stdio/scanf_core/string_reader.h"
 
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcScanfConverterTest, RawMatchBasic) {
   const char *str = "abcdef";
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   // Reading "abc" should succeed.
   ASSERT_EQ(LIBC_NAMESPACE::scanf_core::raw_match(&reader, "abc"),
@@ -51,8 +50,7 @@ TEST(LlvmLibcScanfConverterTest, RawMatchBasic) {
 
 TEST(LlvmLibcScanfConverterTest, RawMatchSpaces) {
   const char *str = " a \t\n b   cd";
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   // Reading "a" should fail and not advance.
   // Since there's nothing in the format string (the second argument to
@@ -98,8 +96,7 @@ TEST(LlvmLibcScanfConverterTest, RawMatchSpaces) {
 TEST(LlvmLibcScanfConverterTest, StringConvSimple) {
   const char *str = "abcDEF123 654LKJihg";
   char result[20];
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   LIBC_NAMESPACE::scanf_core::FormatSection conv;
   conv.has_conv = true;
@@ -120,8 +117,7 @@ TEST(LlvmLibcScanfConverterTest, StringConvSimple) {
 
 TEST(LlvmLibcScanfConverterTest, StringConvNoWrite) {
   const char *str = "abcDEF123 654LKJihg";
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   LIBC_NAMESPACE::scanf_core::FormatSection conv;
   conv.has_conv = true;
@@ -141,8 +137,7 @@ TEST(LlvmLibcScanfConverterTest, StringConvNoWrite) {
 TEST(LlvmLibcScanfConverterTest, StringConvWidth) {
   const char *str = "abcDEF123 654LKJihg";
   char result[6];
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   LIBC_NAMESPACE::scanf_core::FormatSection conv;
   conv.has_conv = true;
@@ -175,8 +170,7 @@ TEST(LlvmLibcScanfConverterTest, StringConvWidth) {
 TEST(LlvmLibcScanfConverterTest, CharsConv) {
   const char *str = "abcDEF123 654LKJihg MNOpqr&*(";
   char result[20];
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   LIBC_NAMESPACE::scanf_core::FormatSection conv;
   conv.has_conv = true;
@@ -230,8 +224,7 @@ TEST(LlvmLibcScanfConverterTest, CharsConv) {
 TEST(LlvmLibcScanfConverterTest, ScansetConv) {
   const char *str = "abcDEF[123] 654LKJihg";
   char result[20];
-  LIBC_NAMESPACE::scanf_core::ReadBuffer str_reader{str, sizeof(str)};
-  LIBC_NAMESPACE::scanf_core::Reader reader(&str_reader);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
 
   LIBC_NAMESPACE::scanf_core::FormatSection conv;
   conv.has_conv = true;

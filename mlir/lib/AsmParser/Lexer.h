@@ -40,6 +40,9 @@ public:
   /// Returns the start of the buffer.
   const char *getBufferBegin() { return curBuffer.data(); }
 
+  /// Returns the end of the buffer.
+  const char *getBufferEnd() { return curBuffer.end(); }
+
   /// Return the code completion location of the lexer, or nullptr if there is
   /// none.
   const char *getCodeCompleteLoc() const { return codeCompleteLoc; }

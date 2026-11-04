@@ -14,7 +14,7 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
 
     # AArch64 Linux always enables the top byte ignore feature
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_mte_regions(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
@@ -39,7 +39,8 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
 
         # Despite the non address bits we should find a region
         self.expect(
-            "memory region the_page", patterns=["\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"]
+            "memory region the_page",
+            patterns=[r"\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"],
         )
 
         # Check that the usual error message is displayed after repeating
@@ -68,5 +69,6 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
         # This should not error, since the user supplied address overrides
         # the previous end address.
         self.expect(
-            "memory region the_page", patterns=["\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"]
+            "memory region the_page",
+            patterns=[r"\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"],
         )

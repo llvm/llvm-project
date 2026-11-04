@@ -1,0 +1,146 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test boundary cases for loop carried dependence analysis
+
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %10:intregs, 0, %0:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * 3, Len: 4
+#CHECK:   OtherMI:   dead %30:intregs = L2_loadri_io %10:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * 3, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %12:intregs, 0, %1:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * 4, Len: 4
+#CHECK:   OtherMI:   dead %31:intregs = L2_loadri_io %12:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * 4, Len: 4
+#CHECK:   Result: No overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %14:intregs, 0, %2:intregs :: (store (s64))
+#CHECK:     Base + 0 + I * 4, Len: 8
+#CHECK:   OtherMI:   dead %32:intregs = L2_loadri_io %14:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * 4, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %16:intregs, 0, %3:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * 4, Len: 4
+#CHECK:   OtherMI:   dead %33:intregs = L2_loadri_io %16:intregs, -1 :: (load (s32))
+#CHECK:     Base + -1 + I * 4, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %18:intregs, 1, %4:intregs :: (store (s32))
+#CHECK:     Base + 1 + I * 4, Len: 4
+#CHECK:   OtherMI:   dead %34:intregs = L2_loadri_io %18:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * 4, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %20:intregs, 0, %5:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * -3, Len: 4
+#CHECK:   OtherMI:   dead %35:intregs = L2_loadri_io %20:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * -3, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %22:intregs, 0, %6:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * -4, Len: 4
+#CHECK:   OtherMI:   dead %36:intregs = L2_loadri_io %22:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * -4, Len: 4
+#CHECK:   Result: No overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %24:intregs, 0, %7:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * -4, Len: 4
+#CHECK:   OtherMI:   dead %37:intregs = L2_loadri_io %24:intregs, 0 :: (load (s64))
+#CHECK:     Base + 0 + I * -4, Len: 8
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %26:intregs, 0, %8:intregs :: (store (s32))
+#CHECK:     Base + 0 + I * -4, Len: 4
+#CHECK:   OtherMI:   dead %38:intregs = L2_loadri_io %26:intregs, 1 :: (load (s32))
+#CHECK:     Base + 1 + I * -4, Len: 4
+#CHECK:   Result: Overlap
+#CHECK: Overlap check:
+#CHECK:   BaseMI:   S2_storeri_io %28:intregs, -1, %9:intregs :: (store (s32))
+#CHECK:     Base + -1 + I * -4, Len: 4
+#CHECK:   OtherMI:   dead %39:intregs = L2_loadri_io %28:intregs, 0 :: (load (s32))
+#CHECK:     Base + 0 + I * -4, Len: 4
+#CHECK:   Result: Overlap
+
+---
+name:            test
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %100:intregs = IMPLICIT_DEF
+    %200:intregs = IMPLICIT_DEF
+    %300:intregs = IMPLICIT_DEF
+    %400:intregs = IMPLICIT_DEF
+    %500:intregs = IMPLICIT_DEF
+    %600:intregs = IMPLICIT_DEF
+    %700:intregs = IMPLICIT_DEF
+    %800:intregs = IMPLICIT_DEF
+    %900:intregs = IMPLICIT_DEF
+    %1000:intregs = IMPLICIT_DEF
+    J2_loop0i %bb.1, 6, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.1 (machine-block-address-taken):
+    successors: %bb.1, %bb.2
+
+    %0:intregs = PHI %100, %bb.0, %1, %bb.1
+    %2:intregs = PHI %200, %bb.0, %3, %bb.1
+    %4:intregs = PHI %300, %bb.0, %5, %bb.1
+    %6:intregs = PHI %400, %bb.0, %7, %bb.1
+    %8:intregs = PHI %500, %bb.0, %9, %bb.1
+    %10:intregs = PHI %600, %bb.0, %11, %bb.1
+    %12:intregs = PHI %700, %bb.0, %13, %bb.1
+    %14:intregs = PHI %800, %bb.0, %15, %bb.1
+    %16:intregs = PHI %900, %bb.0, %17, %bb.1
+    %18:intregs = PHI %1000, %bb.0, %19, %bb.1
+
+    %1:intregs = A2_addi %0, 3
+    %101:intregs = L2_loadri_io %0, 0 :: (load (s32))
+    S2_storeri_io %0, 0, %100 :: (store (s32))
+
+    %3:intregs = A2_addi %2, 4
+    %201:intregs = L2_loadri_io %2, 0 :: (load (s32))
+    S2_storeri_io %2, 0, %200 :: (store (s32))
+
+    %5:intregs = A2_addi %4, 4
+    %301:intregs = L2_loadri_io %4, 0 :: (load (s32))
+    S2_storeri_io %4, 0, %300 :: (store (s64))
+
+    %7:intregs = A2_addi %6, 4
+    %401:intregs = L2_loadri_io %6, -1 :: (load (s32))
+    S2_storeri_io %6, 0, %400 :: (store (s32))
+
+    %9:intregs = A2_addi %8, 4
+    %501:intregs = L2_loadri_io %8, 0 :: (load (s32))
+    S2_storeri_io %8, 1, %500 :: (store (s32))
+
+    %11:intregs = A2_addi %10, -3
+    %601:intregs = L2_loadri_io %10, 0 :: (load (s32))
+    S2_storeri_io %10, 0, %600 :: (store (s32))
+
+    %13:intregs = A2_addi %12, -4
+    %701:intregs = L2_loadri_io %12, 0 :: (load (s32))
+    S2_storeri_io %12, 0, %700 :: (store (s32))
+
+    %15:intregs = A2_addi %14, -4
+    %801:intregs = L2_loadri_io %14, 0 :: (load (s64))
+    S2_storeri_io %14, 0, %800 :: (store (s32))
+
+    %17:intregs = A2_addi %16, -4
+    %901:intregs = L2_loadri_io %16, 1 :: (load (s32))
+    S2_storeri_io %16, 0, %900 :: (store (s32))
+
+    %19:intregs = A2_addi %18, -4
+    %1001:intregs = L2_loadri_io %18, 0 :: (load (s32))
+    S2_storeri_io %18, -1, %1000 :: (store (s32))
+
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.2:
+
+...

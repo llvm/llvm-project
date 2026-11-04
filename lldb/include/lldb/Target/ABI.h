@@ -13,6 +13,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -96,9 +97,9 @@ protected:
   lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
 public:
-  virtual bool CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) = 0;
+  virtual lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() = 0;
 
-  virtual bool CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) = 0;
+  virtual lldb::UnwindPlanSP CreateDefaultUnwindPlan() = 0;
 
   virtual bool RegisterIsVolatile(const RegisterInfo *reg_info) = 0;
 
@@ -150,6 +151,33 @@ public:
   virtual uint64_t GetStackFrameSize() { return 512 * 1024; }
 
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
+
+  struct MemoryPermissions {
+    // Both of these are sets of lldb::Permissions values.
+    // Overlay are the permissions being applied to the original permissions.
+    uint32_t overlay;
+    // Effective is the result of applying the overlay to the original
+    // permissions. Calculating this is done by the plugin because some
+    // permission overlays are done as positive (add permissions) and some as
+    // negative (remove permissions).
+    uint32_t effective;
+  };
+
+  /// Get the effective memory permissions that result when the permissions
+  /// referred to by a protection key are applied to the original permissions.
+  ///
+  /// This is intended for architectures that have some sort of permission
+  /// overlay system. Where the protection key is used to look up a set of
+  /// permissions that modifies the original permissions.
+  ///
+  /// \returns the overlay permissions (that the protection key refers to) and
+  ///   the effective permissions. If the target does not have an overlay
+  ///   system, or it does and the protection key is invalid, returns nullopt.
+  virtual std::optional<MemoryPermissions>
+  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+                       unsigned protection_key, uint32_t original_permissions) {
+    return std::nullopt;
+  }
 
 protected:
   ABI(lldb::ProcessSP process_sp, std::unique_ptr<llvm::MCRegisterInfo> info_up)

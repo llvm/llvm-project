@@ -1,5 +1,4 @@
 ; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
-; RUN: opt -passes=instcombine -S -o - %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 declare dso_local i32 @bar(ptr)
 

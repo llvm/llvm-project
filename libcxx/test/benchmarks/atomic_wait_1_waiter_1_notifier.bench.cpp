@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// This benchmark is very expensive and we don't want to run it on a regular basis,
+// only to ensure the code doesn't rot.
+// REQUIRES: enable-benchmarks=dry-run
+
 #include "atomic_wait_helper.h"
 
 #include <atomic>
@@ -20,11 +24,12 @@
 
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
+#include "test_macros.h"
 
 using namespace std::chrono_literals;
 
 template <class NotifyPolicy, class NumPrioTasks>
-void BM_1_atomic_1_waiter_1_notifier(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_1_atomic_1_waiter_1_notifier(benchmark::State& state) {
   [[maybe_unused]] std::array<HighPrioTask, NumPrioTasks::value> tasks{};
   std::atomic<std::uint64_t> a;
   auto thread_func = [&](std::stop_token st) { NotifyPolicy::notify(a, st); };

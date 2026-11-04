@@ -1455,10 +1455,8 @@ define i1 @and_trunc_i1(i8 %a1, i8 %a2) {
 define i1 @and_trunc_i1_wrong_const(i8 %a1, i8 %a2) {
 ; CHECK-LABEL: @and_trunc_i1_wrong_const(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A1:%.*]], [[A2:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[XOR]], 4
-; CHECK-NEXT:    [[LOBIT:%.*]] = trunc i8 [[XOR]] to i1
-; CHECK-NEXT:    [[LOBIT_INV:%.*]] = xor i1 [[LOBIT]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[LOBIT_INV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[XOR]], -3
+; CHECK-NEXT:    [[AND:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %xor = xor i8 %a1, %a2

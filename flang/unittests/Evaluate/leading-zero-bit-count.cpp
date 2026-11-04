@@ -1,5 +1,13 @@
+//===-- unittests/Evaluate/leading-zero-bit-count.cpp ---------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "flang/Common/leading-zero-bit-count.h"
-#include "testing.h"
+#include "flang/Testing/testing.h"
 
 using Fortran::common::LeadingZeroBitCount;
 

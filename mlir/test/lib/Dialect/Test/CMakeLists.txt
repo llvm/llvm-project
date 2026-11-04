@@ -68,14 +68,17 @@ add_mlir_library(MLIRTestDialect
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
   MLIRTestOpsShardGen
-
-  LINK_LIBS PUBLIC
+  MLIRConvertToEmitCPatternInterfaceIncGen
+  )
+mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces
+  MLIRControlFlowTransforms
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDestinationStyleOpInterface
   MLIRDialect
   MLIRDLTIDialect
+  MLIREmitCDialect
   MLIRFuncDialect
   MLIRFunctionInterfaces
   MLIRFuncTransforms
@@ -84,14 +87,23 @@ add_mlir_library(MLIRTestDialect
   MLIRInferTypeOpInterface
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRPtrDialect
   MLIRLLVMDialect
+  MLIRNVVMDialect
   MLIRPass
-  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
   MLIRValueBoundsOpInterface
+  MLIRBufferizationDialect
+)
+
+# Users include the test dialect headers by their file name. The generated
+# headers in the binary directory include the source headers in the same way.
+target_include_directories(MLIRTestDialect PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation

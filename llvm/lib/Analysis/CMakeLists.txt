@@ -1,3 +1,20 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS AnalysisOptions.td)
+llvm_tablegen(AnalysisOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(AnalysisOptionsTableGen)
+
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  inliner
+  llvm/Analysis
+  InlinerModels
+  "models/inline-oz-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/inline-oz-test-model-tosa.mlir"
+  MLDeps
+)
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
@@ -23,11 +40,27 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
+# The implementation of ConstantFolding.cpp relies on the use of math functions
+# from the host. In particular, it relies on the detection of floating point
+# exceptions originating from such math functions to prevent invalid cases
+# from being constant folded. Therefore, we must ensure that fp exceptions are
+# handled correctly.
+if (MSVC)
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "/fp:except")
+  # Prevent warning about mismatching compile flags.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
+  # Clang's -ftrapping-math may conflict with precompiled headers too, #183643.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
   AliasSetTracker.cpp
   Analysis.cpp
+  AnalysisOptions.cpp
   AssumeBundleQueries.cpp
   AssumptionCache.cpp
   BasicAliasAnalysis.cpp
@@ -62,11 +95,14 @@ add_llvm_component_library(LLVMAnalysis
   DominanceFrontier.cpp
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
+  EphemeralValuesCache.cpp
+  FloatingPointPredicateUtils.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
+  HashRecognize.cpp
   HeatUtils.cpp
-  IRSimilarityIdentifier.cpp
+  IR2Vec.cpp
   IVDescriptors.cpp
   IVUsers.cpp
   ImportedFunctionsInliningStatistics.cpp
@@ -74,16 +110,17 @@ add_llvm_component_library(LLVMAnalysis
   InlineCost.cpp
   InlineAdvisor.cpp
   InlineOrder.cpp
-  InlineSizeEstimatorAnalysis.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
+  KernelInfo.cpp
   LastRunTrackingAnalysis.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
   LazyValueInfo.cpp
+  LibcallLoweringInfo.cpp
   Lint.cpp
   Loads.cpp
   Local.cpp
@@ -118,17 +155,17 @@ add_llvm_component_library(LLVMAnalysis
   ProfileSummaryInfo.cpp
   PtrUseVisitor.cpp
   RegionInfo.cpp
-  RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
+  RuntimeLibcallInfo.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp
   ScalarEvolutionNormalization.cpp
+  StaticDataProfileInfo.cpp
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
   StructuralHash.cpp
-  SyntheticCountsUtils.cpp
   TFLiteUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
@@ -149,6 +186,8 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  AnalysisOptionsTableGen
+  analysis_gen
   intrinsics_gen
   ${MLDeps}
 
@@ -158,7 +197,9 @@ add_llvm_component_library(LLVMAnalysis
   LINK_COMPONENTS
   BinaryFormat
   Core
+  FrontendHLSL
   Object
+  Option
   ProfileData
   Support
   TargetParser

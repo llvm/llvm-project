@@ -41,7 +41,7 @@ class ClangdLSPServer : private ClangdServer::Callbacks,
 public:
   struct Options : ClangdServer::Options {
     /// Supplies configuration (overrides ClangdServer::ContextProvider).
-    config::Provider *ConfigProvider = nullptr;
+    std::unique_ptr<config::Provider> ConfigProvider;
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
@@ -69,7 +69,7 @@ public:
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                  const ClangdLSPServer::Options &Opts);
+                  ClangdLSPServer::Options &&Opts);
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
@@ -110,6 +110,8 @@ private:
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
                                  Callback<std::vector<TextEdit>>);
+  void onDocumentRangesFormatting(const DocumentRangesFormattingParams &,
+                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
   // The results are serialized 'vector<DocumentSymbol>' if
@@ -241,7 +243,7 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  // FIXME: The caching is a temporary solution to get corresponding clangd 
+  // FIXME: The caching is a temporary solution to get corresponding clangd
   // diagnostic from a LSP diagnostic.
   // Ideally, ClangdServer can generate an identifier for each diagnostic,
   // emit them via the LSP's data field (which was newly added in LSP 3.16).

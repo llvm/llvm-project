@@ -75,16 +75,16 @@ typedef NSObject bad_specifier_location2 __kindof; // expected-error{{expected '
 // ---------------------------------------------------------------------------
 void test_pretty_print(int *ip) {
   __kindof NSObject *kindof_NSObject;
-  ip = kindof_NSObject; // expected-warning{{from '__kindof NSObject *'}}
+  ip = kindof_NSObject; // expected-error{{from '__kindof NSObject *'}}
  
   __kindof NSObject_ptr_typedef kindof_NSObject_ptr;
-  ip = kindof_NSObject_ptr; // expected-warning{{from '__kindof NSObject_ptr_typedef'}}
+  ip = kindof_NSObject_ptr; // expected-error{{from '__kindof NSObject_ptr_typedef'}}
 
   __kindof id <NSCopying> *kindof_NSCopying;
-  ip = kindof_NSCopying; // expected-warning{{from '__kindof id<NSCopying> *'}}
+  ip = kindof_NSCopying; // expected-error{{from '__kindof id<NSCopying> *'}}
 
   __kindof NSObject_ptr_typedef *kindof_NSObject_ptr_typedef;
-  ip = kindof_NSObject_ptr_typedef; // expected-warning{{from '__kindof NSObject_ptr_typedef *'}}
+  ip = kindof_NSObject_ptr_typedef; // expected-error{{from '__kindof NSObject_ptr_typedef *'}}
 }
 
 // ---------------------------------------------------------------------------
@@ -161,9 +161,9 @@ void test_downcast_conversions(void) {
 
   // Implicit downcasting.
   kindof_NSString_obj = kindof_NSObject_obj;
-  kindof_NSString_obj = NSObject_obj; // expected-warning{{assigning to '__kindof NSString *' from 'NSObject *'}}
+  kindof_NSString_obj = NSObject_obj; // expected-error{{assigning to '__kindof NSString *' from 'NSObject *'}}
   NSString_obj = kindof_NSObject_obj;
-  NSString_obj = NSObject_obj; // expected-warning{{assigning to 'NSString *' from 'NSObject *'}}
+  NSString_obj = NSObject_obj; // expected-error{{assigning to 'NSString *' from 'NSObject *'}}
 
   // Implicit downcasting with qualified id.
   __kindof id <NSCopying> kindof_NSCopying_obj;
@@ -184,7 +184,7 @@ void test_crosscast_conversions(void) {
   __kindof NSNumber *kindof_NSNumber_obj;
   NSNumber *NSNumber_obj;
 
-  NSString_obj = kindof_NSNumber_obj; // expected-warning{{from '__kindof NSNumber *'}}
+  NSString_obj = kindof_NSNumber_obj; // expected-error{{from '__kindof NSNumber *'}}
 }
 
 @interface NSCell : NSObject
@@ -350,9 +350,9 @@ void implicit_convert_array(NSArray<__kindof NSString *> *kindofStringsArray,
   stringsArray = kindofStringsArray;
 
   // Other covariant and contravariant conversions still not permitted.
-  kindofStringsArray = mutStringsArray; // expected-warning{{incompatible pointer types}}
-  stringsArray = kindofMutStringsArray; // expected-warning{{incompatible pointer types}}
-  mutStringsArray = kindofStringsArray; // expected-warning{{incompatible pointer types}}
+  kindofStringsArray = mutStringsArray; // expected-error{{incompatible pointer types}}
+  stringsArray = kindofMutStringsArray; // expected-error{{incompatible pointer types}}
+  mutStringsArray = kindofStringsArray; // expected-error{{incompatible pointer types}}
 
   // Adding/removing nested __kindof is okay.
   NSArray<NSArray<__kindof NSString *> *> *kindofStringsArrayArray;
@@ -411,7 +411,7 @@ void testNullability(void) {
 void testGeneric(NSGeneric<NSString*> *generic) {
   NSObject *NSObject_obj;
   // Assign from NSObject_obj to __kindof NSString*.
-  [generic test:NSObject_obj]; // expected-warning{{incompatible pointer types sending 'NSObject *' to parameter of type '__kindof NSString *'}}
+  [generic test:NSObject_obj]; // expected-error{{incompatible pointer types sending 'NSObject *' to parameter of type '__kindof NSString *'}}
   NSString *NSString_str;
   [generic test:NSString_str];
 }
@@ -421,29 +421,29 @@ void testGenericAssignment(void) {
   NSNumber *NSNumber_obj;
 
   NSGeneric<NSString*> *generic;
-  NSMutableString_str = generic.object; // expected-warning{{incompatible pointer types}}
-  NSNumber_obj = generic.object; // expected-warning{{incompatible pointer types}}
+  NSMutableString_str = generic.object; // expected-error{{incompatible pointer types}}
+  NSNumber_obj = generic.object; // expected-error{{incompatible pointer types}}
   NSMutableString_str = generic.kindof_object;
-  NSNumber_obj = generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
+  NSNumber_obj = generic.kindof_object; // expected-error{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
 
   NSGeneric<__kindof NSString*> *kindof_generic;
   NSMutableString_str = kindof_generic.object;
-  NSNumber_obj = kindof_generic.object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
+  NSNumber_obj = kindof_generic.object; // expected-error{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
   NSMutableString_str = kindof_generic.kindof_object;
-  NSNumber_obj = kindof_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
+  NSNumber_obj = kindof_generic.kindof_object; // expected-error{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
 
   NSDefaultGeneric *default_generic;
   NSMutableString_str = default_generic.object;
-  NSNumber_obj = default_generic.object; // expected-warning{{incompatible pointer types}}
+  NSNumber_obj = default_generic.object; // expected-error{{incompatible pointer types}}
   NSMutableString_str = default_generic.kindof_object;
-  NSNumber_obj = default_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
+  NSNumber_obj = default_generic.kindof_object; // expected-error{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
 
   typedef NSString *Typedef_NSString;
   NSGeneric<Typedef_NSString> *typedef_generic;
-  NSMutableString_str = typedef_generic.object; // expected-warning{{incompatible pointer types}}
-  NSNumber_obj = typedef_generic.object; // expected-warning{{incompatible pointer types}}
+  NSMutableString_str = typedef_generic.object; // expected-error{{incompatible pointer types}}
+  NSNumber_obj = typedef_generic.object; // expected-error{{incompatible pointer types}}
   NSMutableString_str = typedef_generic.kindof_object;
-  NSNumber_obj = typedef_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof Typedef_NSString'}}
+  NSNumber_obj = typedef_generic.kindof_object; // expected-error{{incompatible pointer types assigning to 'NSNumber *' from '__kindof Typedef_NSString'}}
 }
 
 void testKindofNonObjectType(void) {

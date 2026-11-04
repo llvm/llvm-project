@@ -146,6 +146,9 @@ public:
   /// output a diagnostic and return failure.
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
 
+  /// Parses a quoted string token if present.
+  ParseResult parseOptionalString(std::string *string);
+
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
 
@@ -171,13 +174,16 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword);
 
+  /// Parse an optional keyword or string and set instance into 'result'.`
+  ParseResult parseOptionalKeywordOrString(std::string *result);
+
   //===--------------------------------------------------------------------===//
   // Resource Parsing
   //===--------------------------------------------------------------------===//
 
   /// Parse a handle to a dialect resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
-  parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+  parseResourceHandle(const OpAsmDialectInterface *dialect, std::string &name);
   FailureOr<AsmDialectResourceHandle> parseResourceHandle(Dialect *dialect);
 
   //===--------------------------------------------------------------------===//
@@ -282,7 +288,7 @@ public:
 
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
-  ShapedType parseElementsLiteralType(Type type);
+  ShapedType parseElementsLiteralType(SMLoc loc, Type type);
 
   /// Parse a dense resource elements attribute.
   Attribute parseDenseResourceElementsAttr(Type attrType);
@@ -326,15 +332,17 @@ public:
   ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
-  ParseResult
-  parseAffineMapOfSSAIds(AffineMap &map,
-                         function_ref<ParseResult(bool)> parseElement,
-                         Delimiter delimiter);
+  ParseResult parseAffineMapOfSSAIds(
+      AffineMap &map,
+      function_ref<FailureOr<OpAsmParser::UnresolvedOperand>()> parseElement,
+      function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand,
+      Delimiter delimiter);
 
   /// Parse an AffineExpr where dim and symbol identifiers are SSA ids.
-  ParseResult
-  parseAffineExprOfSSAIds(AffineExpr &expr,
-                          function_ref<ParseResult(bool)> parseElement);
+  ParseResult parseAffineExprOfSSAIds(
+      AffineExpr &expr,
+      function_ref<FailureOr<OpAsmParser::UnresolvedOperand>()> parseElement,
+      function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand);
 
   //===--------------------------------------------------------------------===//
   // Code Completion

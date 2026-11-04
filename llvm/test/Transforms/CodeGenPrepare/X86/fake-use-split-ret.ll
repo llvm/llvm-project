@@ -2,7 +2,7 @@
 ;
 ; Ensure return instruction splitting ignores fake uses.
 ;
-; IR Generated with clang -O2 -S -emit-llvm -fextend-lifetimes test.cpp
+; IR Generated with clang -O2 -S -emit-llvm -fextend-variable-liveness test.cpp
 ;
 ;// test.cpp
 ;extern int bar(int);

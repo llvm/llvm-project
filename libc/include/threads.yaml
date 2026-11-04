@@ -1,8 +1,13 @@
 header: threads.h
-header_template: threads.h.def
+standards:
+  - stdc
+public_includes:
+  - time.h
 macros:
   - macro_name: ONCE_FLAG_INIT
     macro_value: '{0}'
+  - macro_name: TSS_DTOR_ITERATIONS
+    macro_header: threads-macros.h
 types:
   - type_name: once_flag
   - type_name: __call_once_func_t
@@ -62,6 +67,14 @@ functions:
     return_type: int
     arguments:
       - type: cnd_t *
+  - name: cnd_timedwait
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: cnd_t *__restrict
+      - type: mtx_t *__restrict
+      - type: const struct timespec *__restrict
   - name: cnd_wait
     standards:
       - stdc
@@ -72,9 +85,9 @@ functions:
   - name: mtx_destroy
     standards:
       - stdc
-    return_type: int
+    return_type: void
     arguments:
-      - type: void
+      - type: mtx_t *
   - name: mtx_init
     standards:
       - stdc
@@ -83,6 +96,12 @@ functions:
       - type: mtx_t *
       - type: int
   - name: mtx_lock
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: mtx_t *
+  - name: mtx_trylock
     standards:
       - stdc
     return_type: int
@@ -124,7 +143,7 @@ functions:
   - name: thrd_exit
     standards:
       - stdc
-    return_type: void
+    return_type: _Noreturn void
     arguments:
       - type: int
   - name: thrd_join
@@ -134,6 +153,19 @@ functions:
     arguments:
       - type: thrd_t
       - type: int *
+  - name: thrd_sleep
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const struct timespec *
+      - type: struct timespec *
+  - name: thrd_yield
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: void
   - name: tss_create
     standards:
       - stdc
@@ -144,7 +176,7 @@ functions:
   - name: tss_delete
     standards:
       - stdc
-    return_type: int
+    return_type: void
     arguments:
       - type: tss_t
   - name: tss_get

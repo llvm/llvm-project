@@ -1,20 +1,10 @@
 // RUN: %check_clang_tidy %s bugprone-narrowing-conversions %t \
-// RUN:   -std=c++17 -- -target x86_64-unknown-linux
+// RUN:   -std=c++17-or-later -- -target x86_64-unknown-linux
+
+#include <utility>
 
 #define CHAR_BITS 8
 static_assert(sizeof(unsigned int) == 32 / CHAR_BITS);
-
-template <typename T, typename U>
-struct is_same {
-  static constexpr bool value = false;
-};
-template <typename T>
-struct is_same<T, T> {
-  static constexpr bool value = true;
-};
-
-template <typename T, typename U>
-static constexpr bool is_same_v = is_same<T, U>::value;
 
 struct NoBitfield {
   unsigned int id;
@@ -36,8 +26,8 @@ int example_warning(unsigned x) {
 }
 
 void test_binary_and(SmallBitfield x) {
-  static_assert(is_same_v<decltype(x.id & 1), int>);
-  static_assert(is_same_v<decltype(x.id & 1u), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id & 1), int>);
+  static_assert(std::is_same_v<decltype(x.id & 1u), unsigned>);
 
   x.id & 1;
   x.id & 1u;
@@ -47,8 +37,8 @@ void test_binary_and(SmallBitfield x) {
 }
 
 void test_binary_or(SmallBitfield x) {
-  static_assert(is_same_v<decltype(x.id | 1), int>);
-  static_assert(is_same_v<decltype(x.id | 1u), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id | 1), int>);
+  static_assert(std::is_same_v<decltype(x.id | 1u), unsigned>);
 
   x.id | 1;
   x.id | 1u;
@@ -107,10 +97,10 @@ void test_parameter_passing(CompleteBitfield x) {
 }
 
 void test(NoBitfield x) {
-  static_assert(is_same_v<decltype(x.id << 1), unsigned>);
-  static_assert(is_same_v<decltype(x.id << 1u), unsigned>);
-  static_assert(is_same_v<decltype(x.id + 1), unsigned>);
-  static_assert(is_same_v<decltype(x.id + 1u), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id << 1), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id << 1u), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id + 1), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id + 1u), unsigned>);
 
   x.id << 1;
   x.id << 1u;
@@ -128,8 +118,8 @@ void test(NoBitfield x) {
 }
 
 void test(SmallBitfield x) {
-  static_assert(is_same_v<decltype(x.id << 1), int>);
-  static_assert(is_same_v<decltype(x.id << 1u), int>);
+  static_assert(std::is_same_v<decltype(x.id << 1), int>);
+  static_assert(std::is_same_v<decltype(x.id << 1u), int>);
 
   x.id << 1;
   x.id << 1u;
@@ -149,8 +139,8 @@ void test(SmallBitfield x) {
 }
 
 void test(BigBitfield x) {
-  static_assert(is_same_v<decltype(x.id << 1), int>);
-  static_assert(is_same_v<decltype(x.id << 1u), int>);
+  static_assert(std::is_same_v<decltype(x.id << 1), int>);
+  static_assert(std::is_same_v<decltype(x.id << 1u), int>);
 
   x.id << 1;
   x.id << 1u;
@@ -170,8 +160,8 @@ void test(BigBitfield x) {
 }
 
 void test(CompleteBitfield x) {
-  static_assert(is_same_v<decltype(x.id << 1), unsigned>);
-  static_assert(is_same_v<decltype(x.id << 1u), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id << 1), unsigned>);
+  static_assert(std::is_same_v<decltype(x.id << 1u), unsigned>);
 
   x.id << 1;
   x.id << 1u;
@@ -191,13 +181,13 @@ void test(CompleteBitfield x) {
 }
 
 void test_parens(SmallBitfield x) {
-  static_assert(is_same_v<decltype(x.id << (2)), int>);
-  static_assert(is_same_v<decltype(((x.id)) << (2)), int>);
+  static_assert(std::is_same_v<decltype(x.id << (2)), int>);
+  static_assert(std::is_same_v<decltype(((x.id)) << (2)), int>);
   x.id << (2);
   ((x.id)) << (2);
 
-  static_assert(is_same_v<decltype((2) << x.id), int>);
-  static_assert(is_same_v<decltype((2) << ((x.id))), int>);
+  static_assert(std::is_same_v<decltype((2) << x.id), int>);
+  static_assert(std::is_same_v<decltype((2) << ((x.id))), int>);
   (2) << x.id;
   (2) << ((x.id));
 }

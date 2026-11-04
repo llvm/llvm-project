@@ -44,7 +44,7 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
   bool hasFeature(StringRef Feature) const override;
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
@@ -54,7 +54,7 @@ public:
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {

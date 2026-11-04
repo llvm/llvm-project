@@ -39,26 +39,31 @@
 // CHECK: #define __FLT_MIN_EXP__ (-125)
 // CHECK: #define __FLT_MIN__ 1.17549435e-38F
 // CHECK: #define __FLT_RADIX__ 2
+// CHECK: #define __INT16_C(c) c
 // CHECK: #define __INT16_C_SUFFIX__ {{$}}
 // CHECK: #define __INT16_FMTd__ "hd"
 // CHECK: #define __INT16_FMTi__ "hi"
 // CHECK: #define __INT16_MAX__ 32767
 // CHECK: #define __INT16_TYPE__ short
+// CHECK: #define __INT32_C(c) c
 // CHECK: #define __INT32_C_SUFFIX__ {{$}}
 // CHECK: #define __INT32_FMTd__ "d"
 // CHECK: #define __INT32_FMTi__ "i"
 // CHECK: #define __INT32_MAX__ 2147483647
 // CHECK: #define __INT32_TYPE__ int
+// CHECK: #define __INT64_C(c) c##LL
 // CHECK: #define __INT64_C_SUFFIX__ LL
 // CHECK: #define __INT64_FMTd__ "lld"
 // CHECK: #define __INT64_FMTi__ "lli"
 // CHECK: #define __INT64_MAX__ 9223372036854775807LL
 // CHECK: #define __INT64_TYPE__ long long int
+// CHECK: #define __INT8_C(c) c
 // CHECK: #define __INT8_C_SUFFIX__ {{$}}
 // CHECK: #define __INT8_FMTd__ "hhd"
 // CHECK: #define __INT8_FMTi__ "hhi"
 // CHECK: #define __INT8_MAX__ 127
 // CHECK: #define __INT8_TYPE__ signed char
+// CHECK: #define __INTMAX_C(c) c##LL
 // CHECK: #define __INTMAX_C_SUFFIX__ LL
 // CHECK: #define __INTMAX_FMTd__ "lld"
 // CHECK: #define __INTMAX_FMTi__ "lli"
@@ -140,18 +145,23 @@
 // CHECK: #define __SIZE_MAX__ 4294967295UL
 // CHECK: #define __SIZE_TYPE__ long unsigned int
 // CHECK: #define __SIZE_WIDTH__ 32
+// CHECK: #define __UINT16_C(c) c
 // CHECK: #define __UINT16_C_SUFFIX__ {{$}}
 // CHECK: #define __UINT16_MAX__ 65535
 // CHECK: #define __UINT16_TYPE__ unsigned short
+// CHECK: #define __UINT32_C(c) c##U
 // CHECK: #define __UINT32_C_SUFFIX__ U
 // CHECK: #define __UINT32_MAX__ 4294967295U
 // CHECK: #define __UINT32_TYPE__ unsigned int
+// CHECK: #define __UINT64_C(c) c##ULL
 // CHECK: #define __UINT64_C_SUFFIX__ ULL
 // CHECK: #define __UINT64_MAX__ 18446744073709551615ULL
 // CHECK: #define __UINT64_TYPE__ long long unsigned int
+// CHECK: #define __UINT8_C(c) c
 // CHECK: #define __UINT8_C_SUFFIX__ {{$}}
 // CHECK: #define __UINT8_MAX__ 255
 // CHECK: #define __UINT8_TYPE__ unsigned char
+// CHECK: #define __UINTMAX_C(c) c##ULL
 // CHECK: #define __UINTMAX_C_SUFFIX__ ULL
 // CHECK: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // CHECK: #define __UINTMAX_TYPE__ long long unsigned int

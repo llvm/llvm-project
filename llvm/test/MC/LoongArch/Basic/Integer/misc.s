@@ -7,7 +7,7 @@
 # RUN: llvm-mc %s --triple=loongarch32 --filetype=obj | llvm-objdump -d - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s --triple=loongarch64 --filetype=obj --defsym=LA64=1 | llvm-objdump -d - \
-# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK64-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK64-OBJ,CHECK64-ASM-AND-OBJ %s
 
 #############################################################
 ## Instructions for both loongarch32 and loongarch64
@@ -33,12 +33,24 @@ rdtimeh.w $a7, $a1
 # CHECK-ASM: encoding: [0x03,0x6d,0x00,0x00]
 cpucfg $sp, $a4
 
+# CHECK-ASM-AND-OBJ: ud 0
+# CHECK-ASM: encoding: [0x00,0x04,0x60,0x38]
+ud 0
+
+# CHECK-ASM-AND-OBJ: ud 31
+# CHECK-ASM: encoding: [0xff,0x07,0x60,0x38]
+ud 31
 
 #############################################################
 ## Instructions only for loongarch64
 #############################################################
 
 .ifdef LA64
+
+# CHECK64-OBJ: ud 0
+# CHECK64-ASM: amswap.w $zero, $ra, $zero
+# CHECK64-ASM: encoding: [0x00,0x04,0x60,0x38]
+amswap.w $zero, $ra, $zero
 
 # CHECK64-ASM-AND-OBJ: asrtle.d $t0, $t5
 # CHECK64-ASM: encoding: [0x80,0x45,0x01,0x00]

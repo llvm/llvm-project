@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -113,4 +114,94 @@ TEST(TypeSwitchTest, CasesOptional) {
   EXPECT_EQ(std::nullopt, translate(DerivedB()));
   EXPECT_EQ(std::nullopt, translate(DerivedC()));
   EXPECT_EQ(-1, translate(DerivedD()));
+}
+
+TEST(TypeSwitchTest, DefaultUnreachableWithValue) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, int>(&value)
+        .Case([](DerivedA *) { return 0; })
+        .DefaultUnreachable("Unhandled type");
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
+#endif
+}
+
+TEST(TypeSwitchTest, DefaultUnreachableWithVoid) {
+  auto translate = [](auto value) {
+    int result = -1;
+    TypeSwitch<Base *>(&value)
+        .Case([&result](DerivedA *) { result = 0; })
+        .DefaultUnreachable("Unhandled type");
+    return result;
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
+#endif
+}
+
+TEST(TypeSwitchTest, DefaultNullopt) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, std::optional<int>>(&value)
+        .Case([](DerivedA *) { return 0; })
+        .Default(std::nullopt);
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+  EXPECT_EQ(std::nullopt, translate(DerivedD()));
+}
+
+TEST(TypeSwitchTest, DefaultNullptr) {
+  float foo = 0.0f;
+  auto translate = [&](auto value) {
+    return TypeSwitch<Base *, float *>(&value)
+        .Case([&](DerivedA *) { return &foo; })
+        .Default(nullptr);
+  };
+  EXPECT_EQ(&foo, translate(DerivedA()));
+  EXPECT_EQ(nullptr, translate(DerivedD()));
+}
+
+TEST(TypeSwitchTest, DefaultNullptrForPointerLike) {
+  struct Value {
+    void *ptr;
+    Value(const Value &other) = default;
+    Value(std::nullptr_t) : ptr(nullptr) {}
+    Value() : Value(nullptr) {}
+  };
+
+  float foo = 0.0f;
+  Value fooVal;
+  fooVal.ptr = &foo;
+  auto translate = [&](auto value) {
+    return TypeSwitch<Base *, Value>(&value)
+        .Case([&](DerivedA *) { return fooVal; })
+        .Default(nullptr);
+  };
+  EXPECT_EQ(&foo, translate(DerivedA()).ptr);
+  EXPECT_EQ(nullptr, translate(DerivedD()).ptr);
+}
+
+TEST(TypeSwitchTest, DefaultLogicalResultSuccess) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, LogicalResult>(&value)
+        .Case([](DerivedA *) { return success(); })
+        .Default(failure());
+  };
+  EXPECT_TRUE(succeeded(translate(DerivedA())));
+  EXPECT_TRUE(failed(translate(DerivedD())));
+}
+
+TEST(TypeSwitchTest, DefaultFailureOr) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, FailureOr<int>>(&value)
+        .Case([](DerivedA *) { return 42; })
+        .Default(failure());
+  };
+  EXPECT_TRUE(succeeded(translate(DerivedA())));
+  EXPECT_EQ(42, *translate(DerivedA()));
+  EXPECT_TRUE(failed(translate(DerivedD())));
 }

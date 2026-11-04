@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements a pipeline for use by mlir-vulkan-runner tests.
+// Implements a pipeline for use by Vulkan runner tests.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/SPIRV/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -26,6 +27,12 @@
 
 using namespace mlir;
 
+// Defined in the test directory, no public header.
+namespace mlir::test {
+std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
+                                                   bool nestInGPUModule);
+} // namespace mlir::test
+
 namespace {
 
 struct VulkanRunnerPipelineOptions
@@ -33,9 +40,6 @@ struct VulkanRunnerPipelineOptions
   Option<bool> spirvWebGPUPrepare{
       *this, "spirv-webgpu-prepare",
       llvm::cl::desc("Run MLIR transforms used when targetting WebGPU")};
-  Option<bool> toLlvm{*this, "to-llvm",
-                      llvm::cl::desc("Run MLIR transforms to lower host code "
-                                     "to LLVM, intended for mlir-cpu-runner")};
 };
 
 void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
@@ -50,10 +54,8 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
       "SPV_KHR_storage_buffer_storage_class");
   passManager.addPass(createGpuSPIRVAttachTarget(attachTargetOptions));
 
-  ConvertToSPIRVPassOptions convertToSPIRVOptions{};
-  convertToSPIRVOptions.convertGPUModules = true;
-  convertToSPIRVOptions.nestInGPUModule = true;
-  passManager.addPass(createConvertToSPIRVPass(convertToSPIRVOptions));
+  passManager.addPass(test::createTestConvertToSPIRVPass(
+      /*convertGPUModules=*/true, /*nestInGPUModule=*/true));
 
   OpPassManager &spirvModulePM =
       passManager.nest<gpu::GPUModuleOp>().nest<spirv::ModuleOp>();
@@ -64,17 +66,16 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
 
   passManager.addPass(createGpuModuleToBinaryPass());
 
-  if (options.toLlvm) {
-    passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
-    passManager.nest<func::FuncOp>().addPass(
-        LLVM::createRequestCWrappersPass());
-    // vulkan-runtime-wrappers.cpp requires these calling convention options.
-    GpuToLLVMConversionPassOptions opt;
-    opt.hostBarePtrCallConv = false;
-    opt.kernelBarePtrCallConv = true;
-    opt.kernelIntersperseSizeCallConv = true;
-    passManager.addPass(createGpuToLLVMConversionPass(opt));
-  }
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.nest<func::FuncOp>().addPass(
+      LLVM::createLLVMRequestCWrappersPass());
+  // VulkanRuntimeWrappers.cpp requires these calling convention options.
+  GpuToLLVMConversionPassOptions opt;
+  opt.hostBarePtrCallConv = false;
+  opt.kernelBarePtrCallConv = true;
+  opt.kernelIntersperseSizeCallConv = true;
+  passManager.addPass(createGpuToLLVMConversionPass(opt));
+  passManager.addPass(createReconcileUnrealizedCastsPass());
 }
 
 } // namespace
@@ -83,8 +84,9 @@ namespace mlir::test {
 void registerTestVulkanRunnerPipeline() {
   PassPipelineRegistration<VulkanRunnerPipelineOptions>(
       "test-vulkan-runner-pipeline",
-      "Runs a series of passes for lowering GPU-dialect MLIR to "
-      "SPIR-V-dialect MLIR intended for mlir-vulkan-runner or mlir-cpu-runner.",
+      "Runs a series of passes intended for Vulkan runner tests. Lowers GPU "
+      "dialect to LLVM dialect for the host and to serialized Vulkan SPIR-V "
+      "for the device.",
       buildTestVulkanRunnerPipeline);
 }
 } // namespace mlir::test

@@ -63,19 +63,6 @@ using ::testing::Pointee;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
-  if (arg.PreambleActivity != PreambleActivity) {
-    *result_listener << "preamblestate is "
-                     << static_cast<uint8_t>(arg.PreambleActivity);
-    return false;
-  }
-  if (arg.ASTActivity.K != ASTActivity) {
-    *result_listener << "aststate is " << arg.ASTActivity.K;
-    return false;
-  }
-  return true;
-}
-
 // Simple ContextProvider to verify the provider is invoked & contexts are used.
 static Key<std::string> BoundPath;
 Context bindPath(PathRef F) {
@@ -113,7 +100,7 @@ protected:
   void updateWithCallback(TUScheduler &S, PathRef File, ParseInputs Inputs,
                           WantDiagnostics WD,
                           llvm::unique_function<void()> CB) {
-    WithContextValue Ctx(llvm::make_scope_exit(std::move(CB)));
+    WithContextValue Ctx(llvm::scope_exit(std::move(CB)));
     S.update(File, Inputs, WD);
   }
 

@@ -24,7 +24,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <cstring>
 #include <optional>
 
 using namespace llvm;
@@ -83,7 +82,8 @@ LLVMBool LLVMGetTargetFromTriple(const char* TripleStr, LLVMTargetRef *T,
                                  char **ErrorMessage) {
   std::string Error;
 
-  *T = wrap(TargetRegistry::lookupTarget(TripleStr, Error));
+  Triple TT(TripleStr);
+  *T = wrap(TargetRegistry::lookupTarget(TT, Error));
 
   if (!*T) {
     if (ErrorMessage)
@@ -197,14 +197,14 @@ void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
 }
 
 LLVMTargetMachineRef
-LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *Triple,
+LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
                                    LLVMTargetMachineOptionsRef Options) {
   auto *Opt = unwrap(Options);
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
-  return wrap(unwrap(T)->createTargetMachine(Triple, Opt->CPU, Opt->Features,
-                                             TO, Opt->RM, Opt->CM, Opt->OL,
-                                             Opt->JIT));
+  return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
+                                             Opt->Features, TO, Opt->RM,
+                                             Opt->CM, Opt->OL, Opt->JIT));
 }
 
 LLVMTargetMachineRef
@@ -284,7 +284,9 @@ void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
 }
 
 LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
-  return wrap(new DataLayout(unwrap(T)->createDataLayout()));
+  TargetMachine *TM = unwrap(T);
+  return wrap(new DataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName())));
 }
 
 static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
@@ -298,7 +300,8 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
   std::string error;
 
-  Mod->setDataLayout(TM->createDataLayout());
+  Mod->setDataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName()));
 
   CodeGenFileType ft;
   switch (codegen) {

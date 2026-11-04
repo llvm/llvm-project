@@ -52,20 +52,20 @@ struct X2 {
   template<typename U = typename X1<T>::type> // expected-error{{no type named 'type' in 'X1<int>'}} \
                                               // expected-error{{no type named 'type' in 'X1<char>'}}
   struct Inner1 { }; // expected-note{{template is declared here}}
-  
+
   template<T Value = X1<T>::value> // expected-error{{no member named 'value' in 'X1<int>'}} \
                                    // expected-error{{no member named 'value' in 'X1<char>'}}
   struct NonType1 { }; // expected-note{{template is declared here}}
-  
+
   template<T Value>
   struct Inner2 { };
-  
+
   template<typename U>
   struct Inner3 {
     template<typename X = T, typename V = U>
     struct VeryInner { };
-    
-    template<T Value1 = sizeof(T), T Value2 = sizeof(U), 
+
+    template<T Value1 = sizeof(T), T Value2 = sizeof(U),
              T Value3 = Value1 + Value2>
     struct NonType2 { };
   };
@@ -89,11 +89,11 @@ struct is_same { static const bool value = false; };
 template<typename T>
 struct is_same<T, T> { static const bool value = true; };
 
-int array1[is_same<__typeof__(vi), 
+int array1[is_same<__typeof__(vi),
                X2<int>::Inner3<float>::VeryInner<int, float> >::value? 1 : -1];
 
 int array2[is_same<__typeof(x2_deep_nontype),
-                   X2<char>::Inner3<int>::NonType2<sizeof(char), sizeof(int), 
+                   X2<char>::Inner3<int>::NonType2<sizeof(char), sizeof(int),
                                     sizeof(char)+sizeof(int)> >::value? 1 : -1];
 
 // Template template parameter defaults
@@ -109,18 +109,20 @@ struct add_pointer {
 
 template<typename T, template<typename> class X = T::template apply>
   struct X4;
-int array4[is_same<X4<add_pointer>, 
+int array4[is_same<X4<add_pointer>,
                    X4<add_pointer, add_pointer::apply> >::value? 1 : -1];
 
 template<int> struct X5 {};
-template<long> struct X5b {};
-template<typename T, 
-         template<T> class B = X5>
+template<long long> struct X5b {};
+template<typename T,
+         template<T> class B = X5> // expected-error {{cannot be narrowed from type 'long long' to 'int'}}
+                                   // expected-note@-1 {{has different template parameters}}
+                                   // expected-note@-2 {{previous template template parameter is here}}
   struct X6 {};
 
 X6<int> x6a;
-X6<long> x6b;
-X6<long, X5b> x6c;
+X6<long long> x6b; // expected-note {{while checking a default template argument used here}}
+X6<long long, X5b> x6c;
 
 
 template<template<class> class X = B<int> > struct X7; // expected-error{{must be a class template}}

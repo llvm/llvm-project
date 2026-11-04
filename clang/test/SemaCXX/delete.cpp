@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -x c++-header -std=c++11 -emit-pch -o %t %S/delete-mismatch.h
 // RUN: %clang_cc1 -std=c++11 -include-pch %t -DWITH_PCH -verify %s -ast-dump
 
+// Test with PCH and type aware allocators
+// RUN: %clang_cc1 -x c++-header -std=c++11 -emit-pch -o %t.taa.pch %S/delete-mismatch.h
+// RUN: %clang_cc1 -std=c++11 -include-pch %t.taa.pch -DWITH_PCH -verify %s -ast-dump
+
 void f(int a[10][20]) {
   delete a; // expected-warning {{'delete' applied to a pointer-to-array type}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:9}:"[]"

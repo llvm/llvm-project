@@ -10,14 +10,14 @@
 // RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
 //
 // Create two DLLs and a driver program that uses them.
-// RUN: %clang_pgogen foo.c -mllvm -instrprof-atomic-counter-update-all=1 -mllvm -runtime-counter-relocation=true -fuse-ld=lld -Wl,-dll -o %t.dir/foo.dll
-// RUN: %clang_pgogen bar.c -mllvm -instrprof-atomic-counter-update-all=1 -mllvm -runtime-counter-relocation=true -fuse-ld=lld -Wl,-dll -o %t.dir/bar.dll
-// RUN: %clang_pgogen main.c -o main.exe %t.dir/foo.lib %t.dir/bar.lib -mllvm -instrprof-atomic-counter-update-all=1 -mllvm -runtime-counter-relocation=true -fuse-ld=lld
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic foo.c -fuse-ld=lld -Wl,-dll -o %t.dir/foo.dll
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic bar.c -fuse-ld=lld -Wl,-dll -o %t.dir/bar.dll
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic main.c -o main.exe %t.dir/foo.lib %t.dir/bar.lib -fuse-ld=lld
 //
 // === Round 1 ===
 // Test merging+continuous mode without any file contention.
 //
-// RUN: env LLVM_PROFILE_FILE="%t.dir/profdir/%m%c.profraw" %run %t.dir/main.exe nospawn
+// RUN: %run %t.dir/main.exe nospawn
 // RUN: llvm-profdata merge -o %t.profdata %t.dir/profdir
 // RUN: llvm-profdata show --counts --all-functions %t.profdata | FileCheck %s -check-prefix=ROUND1
 
@@ -37,7 +37,7 @@
 // === Round 2 ===
 // Test merging+continuous mode with some file contention.
 //
-// RUN: env LLVM_PROFILE_FILE="%t.dir/profdir/%m%c.profraw" %run %t.dir/main.exe spawn
+// RUN: %run %t.dir/main.exe spawn
 // RUN: llvm-profdata merge -o %t.profdata %t.dir/profdir
 // RUN: llvm-profdata show --counts --all-functions %t.profdata | FileCheck %s -check-prefix=ROUND2
 

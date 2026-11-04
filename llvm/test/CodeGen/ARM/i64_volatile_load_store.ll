@@ -121,23 +121,22 @@ define void @test_unaligned() {
 ; CHECK-ARMV5TE-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-ARMV5TE-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-ARMV5TE-NEXT:    ldr r6, .LCPI1_1
-; CHECK-ARMV5TE-NEXT:    mov r1, r0
-; CHECK-ARMV5TE-NEXT:    ldrb lr, [r1, #4]!
-; CHECK-ARMV5TE-NEXT:    ldrb r3, [r1, #2]
-; CHECK-ARMV5TE-NEXT:    ldrb r12, [r1, #3]
-; CHECK-ARMV5TE-NEXT:    ldrb r1, [r0]
-; CHECK-ARMV5TE-NEXT:    ldrb r2, [r0, #1]
-; CHECK-ARMV5TE-NEXT:    ldrb r4, [r0, #2]
-; CHECK-ARMV5TE-NEXT:    ldrb r5, [r0, #3]
-; CHECK-ARMV5TE-NEXT:    ldrb r0, [r0, #5]
-; CHECK-ARMV5TE-NEXT:    strb r0, [r6, #5]
-; CHECK-ARMV5TE-NEXT:    strb r4, [r6, #2]
-; CHECK-ARMV5TE-NEXT:    strb r5, [r6, #3]
-; CHECK-ARMV5TE-NEXT:    strb r1, [r6]
-; CHECK-ARMV5TE-NEXT:    strb r2, [r6, #1]
-; CHECK-ARMV5TE-NEXT:    strb lr, [r6, #4]!
+; CHECK-ARMV5TE-NEXT:    ldrb r12, [r0]
+; CHECK-ARMV5TE-NEXT:    ldrb lr, [r0, #1]
+; CHECK-ARMV5TE-NEXT:    ldrb r3, [r0, #2]
+; CHECK-ARMV5TE-NEXT:    ldrb r1, [r0, #3]
+; CHECK-ARMV5TE-NEXT:    ldrb r2, [r0, #5]
+; CHECK-ARMV5TE-NEXT:    ldrb r4, [r0, #4]
+; CHECK-ARMV5TE-NEXT:    ldrb r5, [r0, #7]
+; CHECK-ARMV5TE-NEXT:    ldrb r0, [r0, #6]
+; CHECK-ARMV5TE-NEXT:    strb r0, [r6, #6]
+; CHECK-ARMV5TE-NEXT:    strb r5, [r6, #7]
+; CHECK-ARMV5TE-NEXT:    strb r4, [r6, #4]
+; CHECK-ARMV5TE-NEXT:    strb r2, [r6, #5]
 ; CHECK-ARMV5TE-NEXT:    strb r3, [r6, #2]
-; CHECK-ARMV5TE-NEXT:    strb r12, [r6, #3]
+; CHECK-ARMV5TE-NEXT:    strb r1, [r6, #3]
+; CHECK-ARMV5TE-NEXT:    strb r12, [r6]
+; CHECK-ARMV5TE-NEXT:    strb lr, [r6, #1]
 ; CHECK-ARMV5TE-NEXT:    pop {r4, r5, r6, pc}
 ; CHECK-ARMV5TE-NEXT:    .p2align 2
 ; CHECK-ARMV5TE-NEXT:  @ %bb.1:
@@ -164,23 +163,22 @@ define void @test_unaligned() {
 ; CHECK-ARMV4T-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-ARMV4T-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-ARMV4T-NEXT:    ldr r6, .LCPI1_1
-; CHECK-ARMV4T-NEXT:    mov r1, r0
-; CHECK-ARMV4T-NEXT:    ldrb lr, [r1, #4]!
-; CHECK-ARMV4T-NEXT:    ldrb r3, [r1, #2]
-; CHECK-ARMV4T-NEXT:    ldrb r12, [r1, #3]
-; CHECK-ARMV4T-NEXT:    ldrb r1, [r0]
-; CHECK-ARMV4T-NEXT:    ldrb r2, [r0, #1]
-; CHECK-ARMV4T-NEXT:    ldrb r4, [r0, #2]
-; CHECK-ARMV4T-NEXT:    ldrb r5, [r0, #3]
-; CHECK-ARMV4T-NEXT:    ldrb r0, [r0, #5]
-; CHECK-ARMV4T-NEXT:    strb r0, [r6, #5]
-; CHECK-ARMV4T-NEXT:    strb r4, [r6, #2]
-; CHECK-ARMV4T-NEXT:    strb r5, [r6, #3]
-; CHECK-ARMV4T-NEXT:    strb r1, [r6]
-; CHECK-ARMV4T-NEXT:    strb r2, [r6, #1]
-; CHECK-ARMV4T-NEXT:    strb lr, [r6, #4]!
+; CHECK-ARMV4T-NEXT:    ldrb r12, [r0]
+; CHECK-ARMV4T-NEXT:    ldrb lr, [r0, #1]
+; CHECK-ARMV4T-NEXT:    ldrb r3, [r0, #2]
+; CHECK-ARMV4T-NEXT:    ldrb r1, [r0, #3]
+; CHECK-ARMV4T-NEXT:    ldrb r2, [r0, #5]
+; CHECK-ARMV4T-NEXT:    ldrb r4, [r0, #4]
+; CHECK-ARMV4T-NEXT:    ldrb r5, [r0, #7]
+; CHECK-ARMV4T-NEXT:    ldrb r0, [r0, #6]
+; CHECK-ARMV4T-NEXT:    strb r0, [r6, #6]
+; CHECK-ARMV4T-NEXT:    strb r5, [r6, #7]
+; CHECK-ARMV4T-NEXT:    strb r4, [r6, #4]
+; CHECK-ARMV4T-NEXT:    strb r2, [r6, #5]
 ; CHECK-ARMV4T-NEXT:    strb r3, [r6, #2]
-; CHECK-ARMV4T-NEXT:    strb r12, [r6, #3]
+; CHECK-ARMV4T-NEXT:    strb r1, [r6, #3]
+; CHECK-ARMV4T-NEXT:    strb r12, [r6]
+; CHECK-ARMV4T-NEXT:    strb lr, [r6, #1]
 ; CHECK-ARMV4T-NEXT:    pop {r4, r5, r6, lr}
 ; CHECK-ARMV4T-NEXT:    bx lr
 ; CHECK-ARMV4T-NEXT:    .p2align 2
@@ -210,23 +208,22 @@ define void @test_unaligned() {
 ; CHECK-ARMV7-STRICT-NEXT:    movw r6, :lower16:y_unaligned
 ; CHECK-ARMV7-STRICT-NEXT:    movt r0, :upper16:x_unaligned
 ; CHECK-ARMV7-STRICT-NEXT:    movt r6, :upper16:y_unaligned
-; CHECK-ARMV7-STRICT-NEXT:    mov r1, r0
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r12, [r1, #4]!
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r3, [r0]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r12, [r0]
 ; CHECK-ARMV7-STRICT-NEXT:    ldrb lr, [r0, #1]
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r2, [r0, #2]
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r4, [r0, #3]
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r0, [r0, #5]
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r5, [r1, #2]
-; CHECK-ARMV7-STRICT-NEXT:    ldrb r1, [r1, #3]
-; CHECK-ARMV7-STRICT-NEXT:    strb r0, [r6, #5]
-; CHECK-ARMV7-STRICT-NEXT:    strb r2, [r6, #2]
-; CHECK-ARMV7-STRICT-NEXT:    strb r4, [r6, #3]
-; CHECK-ARMV7-STRICT-NEXT:    strb r3, [r6]
-; CHECK-ARMV7-STRICT-NEXT:    strb lr, [r6, #1]
-; CHECK-ARMV7-STRICT-NEXT:    strb r12, [r6, #4]!
-; CHECK-ARMV7-STRICT-NEXT:    strb r5, [r6, #2]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r3, [r0, #2]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r1, [r0, #3]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r2, [r0, #5]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r4, [r0, #4]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r5, [r0, #7]
+; CHECK-ARMV7-STRICT-NEXT:    ldrb r0, [r0, #6]
+; CHECK-ARMV7-STRICT-NEXT:    strb r0, [r6, #6]
+; CHECK-ARMV7-STRICT-NEXT:    strb r5, [r6, #7]
+; CHECK-ARMV7-STRICT-NEXT:    strb r4, [r6, #4]
+; CHECK-ARMV7-STRICT-NEXT:    strb r2, [r6, #5]
+; CHECK-ARMV7-STRICT-NEXT:    strb r3, [r6, #2]
 ; CHECK-ARMV7-STRICT-NEXT:    strb r1, [r6, #3]
+; CHECK-ARMV7-STRICT-NEXT:    strb r12, [r6]
+; CHECK-ARMV7-STRICT-NEXT:    strb lr, [r6, #1]
 ; CHECK-ARMV7-STRICT-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; CHECK-ARMV6-LABEL: test_unaligned:
@@ -251,23 +248,22 @@ define void @test_unaligned() {
 ; CHECK-ARMV6-STRICT-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-ARMV6-STRICT-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-ARMV6-STRICT-NEXT:    ldr r6, .LCPI1_1
-; CHECK-ARMV6-STRICT-NEXT:    mov r1, r0
-; CHECK-ARMV6-STRICT-NEXT:    ldrb lr, [r1, #4]!
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r3, [r1, #2]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r12, [r1, #3]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r1, [r0]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r2, [r0, #1]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r4, [r0, #2]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r5, [r0, #3]
-; CHECK-ARMV6-STRICT-NEXT:    ldrb r0, [r0, #5]
-; CHECK-ARMV6-STRICT-NEXT:    strb r0, [r6, #5]
-; CHECK-ARMV6-STRICT-NEXT:    strb r4, [r6, #2]
-; CHECK-ARMV6-STRICT-NEXT:    strb r5, [r6, #3]
-; CHECK-ARMV6-STRICT-NEXT:    strb r1, [r6]
-; CHECK-ARMV6-STRICT-NEXT:    strb r2, [r6, #1]
-; CHECK-ARMV6-STRICT-NEXT:    strb lr, [r6, #4]!
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r12, [r0]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb lr, [r0, #1]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r3, [r0, #2]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r1, [r0, #3]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r2, [r0, #5]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r4, [r0, #4]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r5, [r0, #7]
+; CHECK-ARMV6-STRICT-NEXT:    ldrb r0, [r0, #6]
+; CHECK-ARMV6-STRICT-NEXT:    strb r0, [r6, #6]
+; CHECK-ARMV6-STRICT-NEXT:    strb r5, [r6, #7]
+; CHECK-ARMV6-STRICT-NEXT:    strb r4, [r6, #4]
+; CHECK-ARMV6-STRICT-NEXT:    strb r2, [r6, #5]
 ; CHECK-ARMV6-STRICT-NEXT:    strb r3, [r6, #2]
-; CHECK-ARMV6-STRICT-NEXT:    strb r12, [r6, #3]
+; CHECK-ARMV6-STRICT-NEXT:    strb r1, [r6, #3]
+; CHECK-ARMV6-STRICT-NEXT:    strb r12, [r6]
+; CHECK-ARMV6-STRICT-NEXT:    strb lr, [r6, #1]
 ; CHECK-ARMV6-STRICT-NEXT:    pop {r4, r5, r6, pc}
 ; CHECK-ARMV6-STRICT-NEXT:    .p2align 2
 ; CHECK-ARMV6-STRICT-NEXT:  @ %bb.1:

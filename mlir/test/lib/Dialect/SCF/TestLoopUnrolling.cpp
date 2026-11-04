@@ -42,10 +42,12 @@ struct TestLoopUnrollingPass
   TestLoopUnrollingPass(const TestLoopUnrollingPass &) {}
   explicit TestLoopUnrollingPass(uint64_t unrollFactorParam,
                                  unsigned loopDepthParam,
-                                 bool annotateLoopParam) {
+                                 bool annotateLoopParam,
+                                 bool promoteSingleIterationParam) {
     unrollFactor = unrollFactorParam;
     loopDepth = loopDepthParam;
     annotateLoop = annotateLoopParam;
+    promoteSingleIteration = promoteSingleIterationParam;
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -53,6 +55,12 @@ struct TestLoopUnrollingPass
   }
 
   void runOnOperation() override {
+    if (!(unrollFactor.getValue() > 0 || unrollFactor.getValue() == -1)) {
+      emitError(UnknownLoc::get(&getContext()),
+                "Invalid option: 'unroll-factor' should be greater than 0 or "
+                "equal to -1");
+      return signalPassFailure();
+    }
     SmallVector<scf::ForOp, 4> loops;
     getOperation()->walk([&](scf::ForOp forOp) {
       if (getNestingDepth(forOp) == loopDepth)
@@ -60,15 +68,22 @@ struct TestLoopUnrollingPass
     });
     auto annotateFn = [this](unsigned i, Operation *op, OpBuilder b) {
       if (annotateLoop) {
-        op->setAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
+        op->setDiscardableAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
-    for (auto loop : loops)
-      (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
+    for (auto loop : loops) {
+      if (unrollFactor.getValue() == -1)
+        (void)loopUnrollFull(loop);
+      else
+        (void)loopUnrollByFactor(loop, unrollFactor, annotateFn,
+                                 promoteSingleIteration);
+    }
   }
-  Option<uint64_t> unrollFactor{*this, "unroll-factor",
-                                llvm::cl::desc("Loop unroll factor."),
-                                llvm::cl::init(1)};
+  Option<int64_t> unrollFactor{
+      *this, "unroll-factor",
+      llvm::cl::desc(
+          "Loop unroll factor, set it to -1, and it will fully unroll."),
+      llvm::cl::init(1)};
   Option<bool> annotateLoop{*this, "annotate",
                             llvm::cl::desc("Annotate unrolled iterations."),
                             llvm::cl::init(false)};
@@ -77,6 +92,10 @@ struct TestLoopUnrollingPass
                                 llvm::cl::init(false)};
   Option<unsigned> loopDepth{*this, "loop-depth", llvm::cl::desc("Loop depth."),
                              llvm::cl::init(0)};
+  Option<bool> promoteSingleIteration{
+      *this, "promote-single-iteration",
+      llvm::cl::desc("Promote single-iteration loops after unrolling."),
+      llvm::cl::init(true)};
 };
 } // namespace
 

@@ -7,6 +7,11 @@
 ; CHECK-NEXT:  Language: 2, Sublanguage: 4
 ; CHECK-NEXT:  Language: 3, Sublanguage: 5
 ; CHECK-NEXT:  Language: 2, Sublanguage: 0
+; CHECK-NEXT:  Language: 2, Sublanguage: 21
+; CHECK-NEXT:  Language: 4, Sublanguage: 7
+; CHECK-NEXT:  Language: 7, Sublanguage: 9
+; CHECK-NEXT:  Language: 5, Sublanguage: 7
+; CHECK-NEXT:  Language: 2, Sublanguage: 2
 ; CHECK-NEXT:  Language: 4294967295, Sublanguage: 1
 ; CHECK-NEXT:  Language: 1, Sublanguage: 4294967295
 ; CHECK-NEXT:  Language: 4294967294, Sublanguage: 1

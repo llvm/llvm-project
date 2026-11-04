@@ -26,12 +26,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sys/stat.h>
-#include <sys/resource.h>
-#include <signal.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -168,13 +167,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask, bool DetachProcess) {
-  if (!llvm::sys::fs::exists(Program)) {
-    if (ErrMsg)
-      *ErrMsg = std::string("Executable \"") + Program.str() +
-                std::string("\" doesn't exist!");
-    return false;
-  }
-
   assert(!AffinityMask && "Starting a process with an affinity mask is "
                           "currently not supported on Unix!");
 
@@ -523,7 +515,7 @@ std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags) {
 
 std::error_code llvm::sys::ChangeStdinToBinary() {
 #ifdef __MVS__
-  return disablezOSAutoConversion(STDIN_FILENO);
+  return disableAutoConversion(STDIN_FILENO);
 #else
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();
@@ -539,8 +531,21 @@ std::error_code
 llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding /*unused*/) {
   std::error_code EC;
+#if defined(__MVS__)
+  // On Unix-like systems, this function always writes UTF-8 data, but on z/OS
+  // USS, text content is always converted to EBCDIC. Use a special class to
+  // force UTF-8 content.
+  struct Utf8Stream : public llvm::raw_fd_ostream {
+    Utf8Stream(StringRef Filename, std::error_code &EC)
+        : raw_fd_ostream(Filename, EC) {
+      setzOSFileTag(get_fd(), CCSID_UTF_8, true);
+    }
+  };
+  Utf8Stream OS(FileName, EC);
+#else
   llvm::raw_fd_ostream OS(FileName, EC,
                           llvm::sys::fs::OpenFlags::OF_TextWithCRLF);
+#endif
 
   if (EC)
     return EC;

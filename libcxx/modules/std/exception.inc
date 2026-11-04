@@ -18,6 +18,7 @@ export namespace std {
   using std::rethrow_exception;
   using std::rethrow_if_nested;
   using std::set_terminate;
+  using std::swap;
   using std::terminate;
   using std::terminate_handler;
   using std::throw_with_nested;

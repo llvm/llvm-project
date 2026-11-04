@@ -1,4 +1,4 @@
-//===--- StringviewNullptrCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +30,7 @@ namespace clang::tidy::bugprone {
 /// to `nullptr`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/stringview-nullptr.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/stringview-nullptr.html
 class StringviewNullptrCheck : public utils::TransformerClangTidyCheck {
 public:
   StringviewNullptrCheck(StringRef Name, ClangTidyContext *Context);

@@ -14,7 +14,7 @@
 #define MLIR_TARGET_LLVM_NVVM_UTILS_H
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
 namespace mlir {
@@ -55,7 +55,7 @@ public:
   LogicalResult appendStandardLibs();
 
   /// Loads the bitcode files in `librariesToLink`.
-  virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
+  std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
   loadBitcodeFiles(llvm::Module &module) override;
 
 protected:

@@ -13,4 +13,35 @@
 # RUN: dsymutil -f  -oso-prepend-path=%p/../../dsymutil/ %t3 -o %t3.dSYM
 # RUN: llvm-objdump --source --prefix=%p/../../dsymutil  %t3 | FileCheck --check-prefix=SOURCE %s
 
+## Test that --source works with --macho flag.
+
+## --macho w/ explicit .dSYM
+# RUN: llvm-objdump < %p/../../dsymutil/Inputs/basic.macho.x86_64 - --source --macho --dsym=%t1.dSYM --prefix=%p/../../dsymutil | \
+# RUN:   FileCheck --check-prefix=SOURCE %s
+
+## --macho w/ auto-detected .dSYM (dir)
+# RUN: llvm-objdump --source --macho --prefix=%p/../../dsymutil %t2 | FileCheck --check-prefix=SOURCE %s
+
+## --macho w/ auto-detected .dSYM (file)
+# RUN: llvm-objdump --source --macho --prefix=%p/../../dsymutil %t3 | FileCheck --check-prefix=SOURCE %s
+
 # SOURCE: ; int bar(int arg) {
+
+## Test that --line-numbers works with --macho flag.
+
+## --macho -l w/ explicit .dSYM
+# RUN: llvm-objdump -d -l --macho --dsym=%t1.dSYM %p/../../dsymutil/Inputs/basic.macho.x86_64 | FileCheck --check-prefix=LINE %s
+
+## --macho -l w/ object file (embedded debug info)
+# RUN: llvm-objdump -d -l --macho %p/../../dsymutil/Inputs/basic1.macho.x86_64.o | FileCheck --check-prefix=LINE_OBJ %s
+
+# LINE: (__TEXT,__text) section
+# LINE: _bar:
+# LINE: ; bar():
+# LINE: ; {{.*}}basic3.c:
+
+# LINE_OBJ: (__TEXT,__text) section
+# LINE_OBJ: _main:
+# LINE_OBJ: ; main():
+# LINE_OBJ: ; {{.*}}basic1.c:23
+# LINE_OBJ: pushq %rbp ## basic1.c:23:0

@@ -1,58 +1,55 @@
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_library(FortranEvaluateTesting
-  testing.cpp
-  fp-testing.cpp
-)
-set_target_properties(FortranEvaluateTesting PROPERTIES FOLDER "Flang/Tests")
-if (LLVM_LINK_LLVM_DYLIB)
-  set(llvm_libs LLVM)
-else()
-  llvm_map_components_to_libnames(llvm_libs Support)
-endif()
-
-target_link_libraries(FortranEvaluateTesting
-  ${llvm_libs})
 
 add_flang_nongtest_unittest(leading-zero-bit-count
-  FortranEvaluateTesting
+  NonGTestTesting
 )
 
 add_flang_nongtest_unittest(bit-population-count
-  FortranEvaluateTesting
+  NonGTestTesting
 )
 
 add_flang_nongtest_unittest(uint128
-  FortranEvaluateTesting
+  NonGTestTesting
 )
 
 add_flang_nongtest_unittest(expression
-  FortranCommon
-  FortranEvaluateTesting
+  FortranSupport
+  NonGTestTesting
   FortranEvaluate
   FortranSemantics
   FortranParser
 )
 
 add_flang_nongtest_unittest(integer
-  FortranEvaluateTesting
+  NonGTestTesting
   FortranEvaluate
   FortranSemantics
 )
 
 add_flang_nongtest_unittest(intrinsics
-  FortranCommon
-  FortranEvaluateTesting
+  FortranSupport
+  NonGTestTesting
   FortranEvaluate
   FortranDecimal
   FortranSemantics
   FortranParser
-  FortranRuntime
 )
 
-add_flang_nongtest_unittest(logical
-  FortranEvaluateTesting
+add_flang_unittest(FlangEvaluateTests
+  PARTIAL_SOURCES_INTENDED
+  CharacterValueTest.cpp
+  ComplexValueTest.cpp
+  IntegerValueTest.cpp
+  LogicalValueTest.cpp
+  RealValueTest.cpp
+)
+
+target_link_libraries(FlangEvaluateTests
+  PRIVATE
   FortranEvaluate
+  FortranDecimal
   FortranSemantics
+  FortranSupport
 )
 
 # GCC -fno-exceptions breaks the fenv.h interfaces needed to capture
@@ -62,30 +59,16 @@ add_flang_nongtest_unittest(logical
 set(LLVM_REQUIRES_EH ON)
 set(LLVM_REQUIRES_RTTI ON)
 add_flang_nongtest_unittest(real
-  FortranEvaluateTesting
+  NonGTestTesting
   FortranEvaluate
   FortranDecimal
   FortranSemantics
 )
 llvm_update_compile_flags(real.test)
 
-add_flang_nongtest_unittest(reshape
-  FortranEvaluateTesting
-  FortranSemantics
-  FortranEvaluate
-  FortranRuntime
-)
-
-add_flang_nongtest_unittest(ISO-Fortran-binding
-  FortranEvaluateTesting
-  FortranEvaluate
-  FortranSemantics
-  FortranRuntime
-)
-
 add_flang_nongtest_unittest(folding
-  FortranCommon
-  FortranEvaluateTesting
+  FortranSupport
+  NonGTestTesting
   FortranEvaluate
   FortranSemantics
 )

@@ -106,7 +106,11 @@ public:
     assert(ResultIndex >= 0 && "Cannot find DecisionName in inlining model");
   }
 
-  virtual ~ReleaseModeModelRunner() = default;
+  ~ReleaseModeModelRunner() override = default;
+
+  /// Whether every requested TensorSpec matched the shape the compiled model
+  /// was built for. If false, the caller is expected to fall back.
+  bool isValid() const { return Valid; }
 
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Release;
@@ -122,8 +126,21 @@ private:
         CompiledModel->LookupArgIndex((Prefix + Spec.name()).str());
     void *Buffer = nullptr;
     InputIsPresent = Index >= 0;
-    if (InputIsPresent)
-      Buffer = CompiledModel->arg_data(Index);
+    if (InputIsPresent) {
+      const int ModelSize = CompiledModel->arg_size(Index);
+      if (ModelSize >= 0 &&
+          static_cast<size_t>(ModelSize) == Spec.getTotalTensorBufferSize()) {
+        Buffer = CompiledModel->arg_data(Index);
+      } else if (Valid) {
+        // Buffer stays null, so setUpBufferForTensor gives us a scratch one.
+        // One bad shape usually mismatches every tensor, so report only once.
+        Valid = false;
+        Ctx.emitError("The compiled model expects " + Twine(ModelSize) +
+                      " bytes for input '" + Spec.name() + "', but " +
+                      Twine(Spec.getTotalTensorBufferSize()) +
+                      " were requested.");
+      }
+    }
     setUpBufferForTensor(Pos, Spec, Buffer);
   }
 
@@ -133,6 +150,7 @@ private:
   }
 
   int32_t ResultIndex = -1;
+  bool Valid = true;
   std::unique_ptr<TGen> CompiledModel;
 };
 
@@ -151,6 +169,7 @@ public:
   void Run() { llvm_unreachable(NOOP_MODEL_ERRMSG); }
   void *result_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
   void *arg_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  int arg_size(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
 #undef NOOP_MODEL_ERRMSG
 };
 

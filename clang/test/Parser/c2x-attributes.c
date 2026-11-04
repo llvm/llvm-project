@@ -120,6 +120,12 @@ void f11(void) {
 
   [[]] for (;;);
   [[]] while (1);
+
+  while ([[]];) {} // expected-error {{an attribute list cannot appear here}} \
+                   // expected-error {{expected expression}}
+  while (;[[]];;) {} // expected-error {{expected expression}} \
+                     // expected-error {{expected expression}}
+
   [[]] do [[]] { } while(1);
 
   [[]] (void)1;
@@ -133,7 +139,7 @@ void f11(void) {
 }
 
 [[attr]] void f12(void); // expected-warning {{unknown attribute 'attr' ignored}}
-[[vendor::attr]] void f13(void); // expected-warning {{unknown attribute 'attr' ignored}}
+[[vendor::attr]] void f13(void); // expected-warning {{unknown attribute 'vendor::attr' ignored}}
 
 // Ensure that asm statements properly handle double colons.
 void test_asm(void) {

@@ -29,18 +29,13 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override {
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override {
     return m_uuid.GetAsString();
   }
 
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-
-  void Clear() override {
-    m_uuid.Clear();
-    m_value_was_set = false;
-  }
 
   // Subclass specific functions
 
@@ -54,6 +49,11 @@ public:
                     CompletionRequest &request) override;
 
 protected:
+  void ClearImpl() override {
+    m_uuid.Clear();
+    m_value_was_set = false;
+  }
+
   UUID m_uuid;
 };
 

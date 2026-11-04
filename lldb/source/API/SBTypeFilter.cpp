@@ -19,7 +19,7 @@ using namespace lldb_private;
 SBTypeFilter::SBTypeFilter() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeFilter::SBTypeFilter(uint32_t options)
-    : m_opaque_sp(TypeFilterImplSP(new TypeFilterImpl(options))) {
+    : m_opaque_sp(std::make_shared<TypeFilterImpl>(options)) {
   LLDB_INSTRUMENT_VA(this, options);
 }
 
@@ -88,9 +88,9 @@ const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
   if (!IsValid())
     return nullptr;
 
-  const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
-  if (item && *item == '.')
-    item++;
+  llvm::StringRef item = m_opaque_sp->GetExpressionPathAtIndex(i);
+  if (item.starts_with('.'))
+    item = item.drop_front();
   return ConstString(item).GetCString();
 }
 

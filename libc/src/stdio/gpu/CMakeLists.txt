@@ -1,3 +1,7 @@
+if(LIBC_CONF_PRINTF_MODULAR)
+  message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
+endif()
+
 add_entrypoint_object(
   stdin
   SRCS
@@ -59,6 +63,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -70,6 +75,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -94,14 +100,17 @@ add_entrypoint_object(
     .gpu_file
 )
 
-add_entrypoint_object(
-  fflush
+add_object_library(
+  fflush_internal
   SRCS
-    fflush.cpp
+    fflush_internal.cpp
   HDRS
-    ../fflush.h
+    ../fflush_internal.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.FILE
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.error_or
     .gpu_file
 )
 
@@ -114,6 +123,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -124,6 +134,7 @@ add_entrypoint_object(
     ../fopen.h
   DEPENDS
     libc.hdr.types.FILE
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -134,6 +145,8 @@ add_entrypoint_object(
     ../fclose.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -144,6 +157,7 @@ add_entrypoint_object(
     ../fread.h
   DEPENDS
     libc.hdr.types.FILE
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -252,10 +266,9 @@ add_entrypoint_object(
   HDRS
     ../fgets.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.FILE
     .gpu_file
-    .feof
-    .ferror
 )
 
 add_entrypoint_object(

@@ -35,15 +35,10 @@ entry:
 define arm_aapcs_vfpcc void @unscaled_v2i8_i8(ptr %base, ptr %offptr, <2 x i8> %input) {
 ; CHECK-LABEL: unscaled_v2i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    ldrb r2, [r1]
-; CHECK-NEXT:    vmov.i32 q1, #0xff
 ; CHECK-NEXT:    ldrb r1, [r1, #1]
-; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vand q1, q2, q1
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    strb r2, [r0, r1]
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    strb r3, [r0, r2]
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    strb r2, [r0, r1]
 ; CHECK-NEXT:    bx lr

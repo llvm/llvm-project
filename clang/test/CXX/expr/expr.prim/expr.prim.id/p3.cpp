@@ -140,7 +140,8 @@ concept C7 = sizeof(T) == 1 || sizeof(
         ::type) == 1;
 
 static_assert(!C6<short>);
-static_assert(!C6<char>); // expected-note{{while checking the satisfaction of concept 'C6<char>' requested here}}
+static_assert(!C6<char>);
+// expected-note@-1 {{while checking the satisfaction of concept 'C6<char>' requested here}}
 static_assert(C7<char>);
 static_assert(!C7<short>); // expected-note{{while checking the satisfaction of concept 'C7<short>' requested here}}
 

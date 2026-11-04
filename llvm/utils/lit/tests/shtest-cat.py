@@ -1,7 +1,10 @@
 ## Test the cat command.
+
+## This is required for the use of %errc_ENOENT.
+# REQUIRES: llvm-config-available
 #
-# RUN: not %{lit} -a -v %{inputs}/shtest-cat \
-# RUN: | FileCheck -match-full-lines %s
+# RUN: not %{lit} -v %{inputs}/shtest-cat \
+# RUN: | FileCheck -match-full-lines -DERROR_MSG=%errc_ENOENT %s
 # END.
 
 # CHECK: FAIL: shtest-cat :: cat-error-0.txt ({{[^)]*}})
@@ -13,7 +16,7 @@
 # CHECK: FAIL: shtest-cat :: cat-error-1.txt ({{[^)]*}})
 # CHECK: cat temp1.txt
 # CHECK: # .---command stderr{{-*}}
-# CHECK-NEXT: # | [Errno 2] No such file or directory: 'temp1.txt'
+# CHECK-NEXT: # | [Errno {{[0-9]+}}] [[ERROR_MSG]]: 'temp1.txt'
 # CHECK: # error: command failed with exit status: 1
 
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})

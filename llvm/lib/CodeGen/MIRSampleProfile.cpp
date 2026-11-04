@@ -14,9 +14,11 @@
 #include "llvm/CodeGen/MIRSampleProfile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/CodeGen/MIRFSDiscriminatorOptions.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -37,7 +39,6 @@
 using namespace llvm;
 using namespace sampleprof;
 using namespace llvm::sampleprofutil;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "fs-profile-loader"
 
@@ -62,9 +63,6 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
-namespace llvm {
-extern cl::opt<bool> ImprovedFSDiscriminator;
-}
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
@@ -93,10 +91,6 @@ namespace llvm {
 // Defined in CodeGen/MachineBlockFrequencyInfo.cpp:
 // -view-block-layout-with-bfi={none | fraction | integer | count}
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
-
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 std::optional<PseudoProbe> extractProbe(const MachineInstr &MI) {
   if (MI.isPseudoProbe()) {
@@ -250,7 +244,7 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
       assert(BBWeight >= EdgeWeight &&
              "BBweight is larger than EdgeWeight -- should not happen.\n");
 
-      BranchProbability OldProb = BFI->getMBPI()->getEdgeProbability(BB, SI);
+      BranchProbability OldProb = BB->getSuccProbability(SI);
       BranchProbability NewProb(EdgeWeight, BBWeight);
       if (OldProb == NewProb)
         continue;
@@ -372,27 +366,27 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
   MF.RenumberBlocks();
-  MDT->updateBlockNumbers();
-  MPDT->updateBlockNumbers();
 
   MIRSampleLoader->setInitVals(
       MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
 
-  if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
+  StringRef ViewFuncName =
+      getViewBlockFreqFuncName(MF.getFunction().getContext());
+  if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDAGType::None &&
+      (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_Prof_loader_b." + MF.getName(), false);
   }
 
   bool Changed = MIRSampleLoader->runOnFunction(MF);
-  if (Changed)
-    MBFI->calculate(MF, *MBFI->getMBPI(),
-                    *&getAnalysis<MachineLoopInfoWrapperPass>().getLI());
+  if (Changed) {
+    MachineCycleInfo MCI;
+    MCI.compute(MF);
+    MBFI->calculate(MF, *MBFI->getMBPI(), MCI);
+  }
 
-  if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
+  if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDAGType::None &&
+      (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_prof_loader_a." + MF.getName(), false);
   }
 

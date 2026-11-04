@@ -1,6 +1,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -18,7 +19,7 @@ static int finalTarget() { return 53; }
 
 class JITLinkRedirectionManagerTest : public testing::Test {
 public:
-  ~JITLinkRedirectionManagerTest() {
+  ~JITLinkRedirectionManagerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -48,22 +49,31 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize) {
+      consumeError(PageSize.takeError());
+      GTEST_SKIP();
+    }
+
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
-            nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
+            nullptr, nullptr, JTMB->getTargetTriple().getTriple(), *PageSize));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(16384));
+        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
+    MA = std::make_unique<InProcessMemoryAccess>(
+        JTMB->getTargetTriple().isArch64Bit());
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
   }
   JITDylib *JD{nullptr};
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
+  std::unique_ptr<InProcessMemoryAccess> MA;
   std::unique_ptr<DataLayout> DL;
 };
 
 TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
-  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *MA);
   // Bail out if we can not create
   if (!RM) {
     consumeError(RM.takeError());

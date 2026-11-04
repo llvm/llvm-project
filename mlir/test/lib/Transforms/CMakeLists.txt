@@ -1,3 +1,8 @@
+set(LLVM_TARGET_DEFINITIONS TestTransformsOps.td)
+mlir_tablegen(TestTransformsOps.h.inc -gen-op-decls)
+mlir_tablegen(TestTransformsOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRTestTransformsOpsIncGen)
+
 set(LLVM_OPTIONAL_SOURCES 
   TestDialectConversion.cpp)
 set(MLIRTestTransformsPDLDep)
@@ -21,10 +26,12 @@ endif()
 add_mlir_library(MLIRTestTransforms
   TestCommutativityUtils.cpp
   TestCompositePass.cpp
-  TestConstantFold.cpp
   TestControlFlowSink.cpp
   TestInlining.cpp
+  TestInliningCallback.cpp
   TestMakeIsolatedFromAbove.cpp
+  TestSingleFold.cpp
+  TestTransformsOps.cpp
   ${MLIRTestTransformsPDLSrc}
 
   EXCLUDE_FROM_LIBMLIR
@@ -34,17 +41,15 @@ add_mlir_library(MLIRTestTransforms
 
   DEPENDS
   ${MLIRTestTransformsPDLDep}
+  MLIRTestTransformsOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestTransforms PUBLIC
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIRInferIntRangeInterface
-  MLIRTestDialect
   MLIRTransforms
-  )
-
-target_include_directories(MLIRTestTransforms
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
+  MLIRTransformDialect
   )

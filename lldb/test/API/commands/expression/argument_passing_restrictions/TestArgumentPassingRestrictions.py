@@ -15,8 +15,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class TestArgumentPassingRestrictions(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_argument_passing_restrictions(self):
         self.build()
 

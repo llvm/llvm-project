@@ -52,9 +52,9 @@ wctrans_t wctrans(const char* property);
 #include <__cxx03/__config>
 #include <__cxx03/cctype>
 
-#include <__cxx03/wctype.h>
+#include <wctype.h>
 
-#ifndef _LIBCPP___CXX03_WCTYPE_H
+#ifndef _LIBCPP_WCTYPE_H
 #   error <cwctype> tried including <wctype.h> but didn't find libc++'s <wctype.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \

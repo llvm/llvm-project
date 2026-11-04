@@ -17,8 +17,10 @@ add_header_library(
   DEPENDS
     .limits
     .type_traits
+    libc.hdr.stdint_proxy
     libc.src.__support.macros.attributes
     libc.src.__support.macros.sanitizer
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -28,10 +30,19 @@ add_header_library(
 )
 
 add_header_library(
+  nullptr_t
+  HDRS
+    cstddef/nullptr_t.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   cstddef
   HDRS
     cstddef.h
   DEPENDS
+    .nullptr_t
     .type_traits
 )
 
@@ -39,6 +50,12 @@ add_header_library(
   functional
   HDRS
     functional.h
+  DEPENDS
+    .type_traits
+    .utility
+    libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -80,13 +97,18 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
+    .algorithm
     .string_view
     libc.hdr.func.free
     libc.hdr.func.malloc
-    libc.hdr.func.realloc 
+    libc.hdr.func.realloc
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.integer_to_string
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memmove
     libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
 )
@@ -105,6 +127,12 @@ add_header_library(
   optional
   HDRS
     optional.h
+  DEPENDS
+    .type_traits
+    .utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -126,11 +154,13 @@ add_header_library(
     type_traits/invoke.h
     type_traits/is_arithmetic.h
     type_traits/is_array.h
+    type_traits/is_assignable.h
     type_traits/is_base_of.h
     type_traits/is_class.h
     type_traits/is_complex.h
     type_traits/is_const.h
     type_traits/is_constant_evaluated.h
+    type_traits/is_constructible.h
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h
@@ -165,9 +195,11 @@ add_header_library(
     type_traits/type_identity.h
     type_traits/void_t.h
   DEPENDS
+    .nullptr_t
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.complex_types
 )
 
@@ -180,6 +212,9 @@ add_header_library(
     utility/in_place.h
     utility/integer_sequence.h
     utility/move.h
+    utility/swap.h
+  DEPENDS
+    libc.hdr.types.size_t
 )
 
 add_header_library(
@@ -192,6 +227,25 @@ add_header_library(
   expected
   HDRS
     expected.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  unique_ptr
+  HDRS
+    unique_ptr.h
+  DEPENDS
+    .new
+    .nullptr_t
+    .type_traits
+    .utility
+    libc.hdr.types.size_t
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_object_library(
@@ -203,7 +257,35 @@ add_object_library(
   DEPENDS
     libc.hdr.func.free
     libc.hdr.func.malloc
-    libc.hdr.func.aligned_alloc 
+    libc.hdr.func.aligned_alloc
     libc.src.__support.common
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  scope
+  HDRS
+    scope.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
+  tuple
+  HDRS
+    tuple.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
+  simd
+  HDRS
+    simd.h
+  DEPENDS
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+    .utility
+    .tuple
 )

@@ -13,12 +13,17 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 // LIBC_TYPES_HAS_CFLOAT16 && LIBC_TYPES_HAS_CFLOAT128
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/complex_types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // is_complex
+#ifdef LIBC_COMPILER_IS_MSVC
+// TODO: Add support for complex types with MSVC.
+template <typename T> struct is_complex : false_type {};
+#else
 template <typename T> struct is_complex {
 private:
   template <typename Head, typename... Args>
@@ -40,6 +45,8 @@ public:
 #endif
                               >();
 };
+#endif // LIBC_COMPILER_IS_MSVC
+
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_complex_v = is_complex<T>::value;
 template <typename T1, typename T2>

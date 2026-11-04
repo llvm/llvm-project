@@ -24,6 +24,13 @@ define void @mixed2() {
   ret void
 }
 
+; convergence control token can be used on non-convergent calls,
+; but it has no effect.
+define void @mixed3() {
+  %t05_tok1 = call token @llvm.experimental.convergence.anchor()
+  call void @g() [ "convergencectrl"(token %t05_tok1) ]
+  ret void
+}
 
 define void @region_nesting1(i1 %arg) convergent {
 A:

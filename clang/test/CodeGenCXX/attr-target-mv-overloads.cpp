@@ -61,7 +61,8 @@ int bar2() {
 // ITANIUM: ret ptr @_Z12foo_overloadv.sse4.2
 // ITANIUM: ret ptr @_Z12foo_overloadv
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHXZ.resolver"() comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHXZ.resolver"()
+// WINDOWS-SAME comdat
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.arch_sandybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.arch_ivybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.sse4.2"
@@ -74,7 +75,8 @@ int bar2() {
 // ITANIUM: ret ptr @_Z12foo_overloadi.sse4.2
 // ITANIUM: ret ptr @_Z12foo_overloadi
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32 %0)
+// WINDOWS-SAME: comdat
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.sse4.2"

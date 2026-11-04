@@ -17,11 +17,11 @@ _start:  // PC = 0x303a0
 // bar@GOTPCREL-4 = 0x20390 (got entry for `bar`) - 0x303a8 (.) - 4 = 0xe4fffeff
 // CHECK:      Contents of section .data:
 // CHECK-NEXT:  {{.*}} f0fffeff f0fffeff e4fffeff
-  .word bar@GOTPCREL
-  .word bar@GOTPCREL+4
-  .word bar@GOTPCREL-4
+  .word %gotpcrel(bar)
+  .word %gotpcrel(bar+4)
+  .word %gotpcrel(bar-4)
 
 // WARN: relocation R_AARCH64_GOTPCREL32 out of range: {{.*}} is not in [-2147483648, 2147483647]; references 'baz'
 // WARN: relocation R_AARCH64_GOTPCREL32 out of range: {{.*}} is not in [-2147483648, 2147483647]; references 'baz'
-  .word baz@GOTPCREL+0xffffffff
-  .word baz@GOTPCREL-0xffffffff
+  .word %gotpcrel(baz+0xffffffff)
+  .word %gotpcrel(baz-0xffffffff)

@@ -41,14 +41,14 @@ void ASTMergeAction::ExecuteAction() {
   auto SharedState = std::make_shared<ASTImporterSharedState>(
       *CI.getASTContext().getTranslationUnitDecl());
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
-    IntrusiveRefCntPtr<DiagnosticsEngine>
-        Diags(new DiagnosticsEngine(DiagIDs, &CI.getDiagnosticOpts(),
-                                    new ForwardingDiagnosticConsumer(
-                                          *CI.getDiagnostics().getClient()),
-                                    /*ShouldOwnClient=*/true));
+    auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        DiagIDs, CI.getDiagnosticOpts(),
+        new ForwardingDiagnosticConsumer(*CI.getDiagnostics().getClient()),
+        /*ShouldOwnClient=*/true);
     std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
-        ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr());
+        ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts());
 
     if (!Unit)
       continue;

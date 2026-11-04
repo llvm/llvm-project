@@ -286,7 +286,7 @@ define i16 @sltu(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: sltu:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a0, a1

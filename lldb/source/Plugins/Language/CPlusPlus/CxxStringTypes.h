@@ -10,6 +10,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 
+#include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -42,6 +43,34 @@ bool Char32SummaryProvider(ValueObject &valobj, Stream &stream,
 
 bool WCharSummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options); // wchar_t
+
+std::optional<uint64_t> GetWCharByteSize(ValueObject &valobj);
+
+/// Print a summary for a string buffer to \a stream.
+///
+/// \param[in] stream
+///     The output stream to print the summary to.
+///
+/// \param[in] summary_options
+///     Options for printing the string contents. This function respects the
+///     capping.
+///
+/// \param[in] location_sp
+///     ValueObject of a pointer to the string being printed.
+///
+/// \param[in] size
+///     The size of the buffer pointed to by \a location_sp.
+///
+/// \param[in] prefix_token
+///     A prefix before the double quotes (e.g. 'u' results in u"...").
+///
+/// \return
+///     Returns whether the string buffer was successfully printed.
+template <StringPrinter::StringElementType element_type>
+bool StringBufferSummaryProvider(Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 lldb::ValueObjectSP location_sp, uint64_t size,
+                                 std::string prefix_token);
 
 } // namespace formatters
 } // namespace lldb_private

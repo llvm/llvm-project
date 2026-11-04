@@ -14,17 +14,15 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_TOSATOLINALGNAMED
@@ -60,9 +58,18 @@ public:
     target.addIllegalOp<tosa::Conv3DOp>();
     target.addIllegalOp<tosa::DepthwiseConv2DOp>();
     target.addIllegalOp<tosa::MaxPool2dOp>();
+    target.addIllegalOp<tosa::MaxPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
+    target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
-    target.addIllegalOp<tosa::FullyConnectedOp>();
+    // Linalg has a quantized batch matmul, but no quantized transpose-B
+    // variant. Defer nonzero zero points to the generic pass's adjusted
+    // contraction.
+    target.addDynamicallyLegalOp<tosa::MatMulTOp>([](tosa::MatMulTOp op) {
+      FailureOr<int64_t> aZp = op.getAZeroPoint();
+      FailureOr<int64_t> bZp = op.getBZeroPoint();
+      return succeeded(aZp) && succeeded(bZp) && (*aZp != 0 || *bZp != 0);
+    });
     target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
@@ -70,6 +77,7 @@ public:
     FunctionOpInterface func = getOperation();
     TosaToLinalgNamedOptions options;
     options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    options.allowNonFinites = allowNonFinites;
     tosa::populateTosaToLinalgNamedConversionPatterns(converter, &patterns,
                                                       options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))

@@ -8,8 +8,6 @@
 
 // <sstream>
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // How the constructors of basic_stringbuf initialize the buffer pointers is
 // not specified. For some constructors it's implementation defined whether the
 // pointers are set to nullptr. Libc++'s implementation directly uses the SSO

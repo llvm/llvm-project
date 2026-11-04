@@ -9,9 +9,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import random
 
-@skipIfLinux  # llvm.org/pr25924, sometimes generating SIGSEGV
+# See also: https://github.com/llvm/llvm-project/issues/37721
+@skip(bugnumber="https://github.com/llvm/llvm-project/issues/24104")
 class EventAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().
@@ -22,11 +24,6 @@ class EventAPITestCase(TestBase):
         )
         random.seed()
 
-    @expectedFailureAll(
-        oslist=["linux"], bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases"
-    )
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
-    @skipIfNetBSD
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()
@@ -113,9 +110,6 @@ class EventAPITestCase(TestBase):
 
         # Shouldn't we be testing against some kind of expectation here?
 
-    @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
-    @skipIfNetBSD
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
         self.build()
@@ -193,11 +187,6 @@ class EventAPITestCase(TestBase):
 
         self.assertTrue(event, "My listening thread successfully received an event")
 
-    @expectedFailureAll(
-        oslist=["linux"], bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases"
-    )
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
-    @expectedFailureNetBSD
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
         self.build()
@@ -371,9 +360,6 @@ class EventAPITestCase(TestBase):
         )
         return state, restart
 
-    @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
-    @skipIfNetBSD
     def test_shadow_listener(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -411,8 +397,9 @@ class EventAPITestCase(TestBase):
         self.runCmd(f"command script import {stop_hook_path}")
         import stop_hook
 
+        # Add our stop hook here, don't report on the initial attach:
         self.runCmd(
-            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance}"
+            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance} -I false"
         )
         self.stop_counter = 0
 

@@ -17,7 +17,12 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class Instruction;
+class LLVMContext;
+
+/// Return -icp-max-num-vtables.
+LLVM_ABI unsigned getMaxNumVTableAnnotations(const LLVMContext &C);
 
 // Class for identifying profitable indirect call promotion candidates when
 // the indirect-call value profile metadata is available.
@@ -30,12 +35,13 @@ private:
   // TotalCount is the total call count for the indirect-call callsite.
   // RemainingCount is the TotalCount minus promoted-direct-call count.
   // Return true we should promote this indirect-call target.
-  bool isPromotionProfitable(uint64_t Count, uint64_t TotalCount,
-                             uint64_t RemainingCount);
+  bool isPromotionProfitable(const AnalysisOptions &Opts, uint64_t Count,
+                             uint64_t TotalCount, uint64_t RemainingCount);
 
   // Returns the number of profitable candidates to promote for the
   // current ValueDataArray and the given \p Inst.
-  uint32_t getProfitablePromotionCandidates(const Instruction *Inst,
+  uint32_t getProfitablePromotionCandidates(const AnalysisOptions &Opts,
+                                            const Instruction *Inst,
                                             uint64_t TotalCount);
 
   // Noncopyable
@@ -52,11 +58,16 @@ public:
   /// The \p TotalCount and \p NumCandidates are set to the the total profile
   /// count of the indirect call \p I and the number of profitable candidates
   /// in the given array (which is sorted in reverse order of profitability).
+  /// The value of \p MaxNumValueData can be used to override the max set
+  /// from the -icp-max-prom option with a larger value.
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
-  MutableArrayRef<InstrProfValueData> getPromotionCandidatesForInstruction(
-      const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates);
+  LLVM_ABI MutableArrayRef<InstrProfValueData>
+  getPromotionCandidatesForInstruction(const Instruction *I,
+                                       uint64_t &TotalCount,
+                                       uint32_t &NumCandidates,
+                                       unsigned MaxNumValueData = 0);
 };
 
 } // end namespace llvm

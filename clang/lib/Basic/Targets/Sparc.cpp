@@ -19,6 +19,7 @@ using namespace clang;
 using namespace clang::targets;
 
 const char *const SparcTargetInfo::GCCRegNames[] = {
+    // clang-format off
     // Integer registers
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",  "r9",  "r10",
     "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20", "r21",
@@ -30,6 +31,10 @@ const char *const SparcTargetInfo::GCCRegNames[] = {
     "f22", "f23", "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", "f32",
     "f34", "f36", "f38", "f40", "f42", "f44", "f46", "f48", "f50", "f52", "f54",
     "f56", "f58", "f60", "f62",
+
+    // Condition code registers
+    "icc", "fcc0", "fcc1", "fcc2", "fcc3",
+    // clang-format on
 };
 
 ArrayRef<const char *> SparcTargetInfo::getGCCRegNames() const {
@@ -62,6 +67,7 @@ struct SparcCPUInfo {
   llvm::StringLiteral Name;
   SparcTargetInfo::CPUKind Kind;
   SparcTargetInfo::CPUGeneration Generation;
+  SparcTargetInfo::CPUFamily Family = SparcTargetInfo::CF_NONE;
 };
 
 static constexpr SparcCPUInfo CPUInfo[] = {
@@ -93,14 +99,42 @@ static constexpr SparcCPUInfo CPUInfo[] = {
     {{"ma2480"}, SparcTargetInfo::CK_MYRIAD2480, SparcTargetInfo::CG_V8},
     {{"ma2485"}, SparcTargetInfo::CK_MYRIAD2485, SparcTargetInfo::CG_V8},
     {{"ma2x8x"}, SparcTargetInfo::CK_MYRIAD2x8x, SparcTargetInfo::CG_V8},
-    {{"leon2"}, SparcTargetInfo::CK_LEON2, SparcTargetInfo::CG_V8},
-    {{"at697e"}, SparcTargetInfo::CK_LEON2_AT697E, SparcTargetInfo::CG_V8},
-    {{"at697f"}, SparcTargetInfo::CK_LEON2_AT697F, SparcTargetInfo::CG_V8},
-    {{"leon3"}, SparcTargetInfo::CK_LEON3, SparcTargetInfo::CG_V8},
-    {{"ut699"}, SparcTargetInfo::CK_LEON3_UT699, SparcTargetInfo::CG_V8},
-    {{"gr712rc"}, SparcTargetInfo::CK_LEON3_GR712RC, SparcTargetInfo::CG_V8},
-    {{"leon4"}, SparcTargetInfo::CK_LEON4, SparcTargetInfo::CG_V8},
-    {{"gr740"}, SparcTargetInfo::CK_LEON4_GR740, SparcTargetInfo::CG_V8},
+    {{"leon2"},
+     SparcTargetInfo::CK_LEON2,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"at697e"},
+     SparcTargetInfo::CK_LEON2_AT697E,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"at697f"},
+     SparcTargetInfo::CK_LEON2_AT697F,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"leon3"},
+     SparcTargetInfo::CK_LEON3,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"ut699"},
+     SparcTargetInfo::CK_LEON3_UT699,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"gr712rc"},
+     SparcTargetInfo::CK_LEON3_GR712RC,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"leon4"},
+     SparcTargetInfo::CK_LEON4,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"gr740"},
+     SparcTargetInfo::CK_LEON4_GR740,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
+    {{"leon5"},
+     SparcTargetInfo::CK_LEON5,
+     SparcTargetInfo::CG_V8,
+     SparcTargetInfo::CF_LEON},
 };
 
 SparcTargetInfo::CPUGeneration
@@ -112,6 +146,14 @@ SparcTargetInfo::getCPUGeneration(CPUKind Kind) const {
   if (Item == std::end(CPUInfo))
     llvm_unreachable("Unexpected CPU kind");
   return Item->Generation;
+}
+
+SparcTargetInfo::CPUFamily SparcTargetInfo::getCPUFamily(CPUKind Kind) const {
+  const SparcCPUInfo *Item = llvm::find_if(
+      CPUInfo, [Kind](const SparcCPUInfo &Info) { return Info.Kind == Kind; });
+  if (Item == std::end(CPUInfo))
+    return CF_NONE;
+  return Item->Family;
 }
 
 SparcTargetInfo::CPUKind SparcTargetInfo::getCPUKind(StringRef Name) const {
@@ -148,18 +190,23 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
     case CG_V8:
       Builder.defineMacro("__sparcv8");
       Builder.defineMacro("__sparcv8__");
+      Builder.defineMacro("__sparc_v8__");
       break;
     case CG_V9:
       Builder.defineMacro("__sparc_v9__");
       break;
     }
   }
+  if (getCPUFamily(CPU) == CF_LEON)
+    Builder.defineMacro("__leon__");
   if (getCPUGeneration(CPU) == CG_V9) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
+  if (LongDoubleWidth == 128)
+    Builder.defineMacro("__LONG_DOUBLE_128__");
 }
 
 void SparcV9TargetInfo::getTargetDefines(const LangOptions &Opts,

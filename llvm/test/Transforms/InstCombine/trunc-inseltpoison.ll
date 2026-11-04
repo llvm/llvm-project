@@ -200,11 +200,9 @@ define i16 @ashr_mul_sign_bits(i8 %X, i8 %Y) {
 
 define i16 @ashr_mul(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @ashr_mul(
-; CHECK-NEXT:    [[A:%.*]] = sext i8 [[X:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = sext i8 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[C:%.*]] = mul nsw i16 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = ashr i16 [[C]], 8
-; CHECK-NEXT:    ret i16 [[D]]
+; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.smulh.i8(i8 [[X:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    ret i16 [[B]]
 ;
   %A = sext i8 %X to i20
   %B = sext i8 %Y to i20
@@ -959,8 +957,8 @@ define <3 x i31> @wide_splat3(<3 x i33> %x) {
 
 define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
 ; CHECK-LABEL: @wide_lengthening_splat(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[V:%.*]], <4 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TR:%.*]] = trunc <8 x i16> [[SHUF]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i16> [[V:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[TR:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i8> [[TR]]
 ;
   %shuf = shufflevector <4 x i16> %v, <4 x i16> %v, <8 x i32> zeroinitializer

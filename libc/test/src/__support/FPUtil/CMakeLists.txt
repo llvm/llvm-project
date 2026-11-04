@@ -1,4 +1,4 @@
-add_custom_target(libc-fputil-tests)
+add_libc_testsuite(libc-fputil-tests PARENT libc-support-tests)
 
 add_fp_unittest(
   dyadic_float_test
@@ -30,6 +30,19 @@ add_libc_test(
 )
 
 add_fp_unittest(
+  fp_bitwise_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    fp_bitwise_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
   rounding_mode_test
   SUITE
     libc-fputil-tests
@@ -37,4 +50,73 @@ add_fp_unittest(
     rounding_mode_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.rounding_mode
+)
+
+add_fp_unittest(
+  float128_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float128_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
+  float80_test
+  NEED_MPFR_F80
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float80_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float80
+)
+
+# TODO: Temporally disable bfloat16 test until MPCommon target is updated
+# https://github.com/llvm/llvm-project/pull/149678
+if(LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
+add_fp_unittest(
+  bfloat16_test
+  NEED_MPFR
+  SUITE
+    libc-fputil-tests
+  SRCS
+    bfloat16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  comparison_operations_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    comparison_operations_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
+  is_integer_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    is_integer_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.is_integer
+    libc.src.__support.macros.properties.types
 )

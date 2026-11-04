@@ -6,35 +6,51 @@
 
 #define DEBUG_TYPE "vncoerce"
 
-namespace llvm {
-namespace VNCoercion {
+using namespace llvm;
+using namespace VNCoercion;
 
 static bool isFirstClassAggregateOrScalableType(Type *Ty) {
-  return Ty->isStructTy() || Ty->isArrayTy() || isa<ScalableVectorType>(Ty);
+  return Ty->isStructTy() || Ty->isArrayTy() || Ty->isScalableTy();
 }
 
 /// Return true if coerceAvailableValueToLoadType will succeed.
-bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
-                                     const DataLayout &DL) {
+bool VNCoercion::canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
+                                                 Function *F) {
   Type *StoredTy = StoredVal->getType();
-
   if (StoredTy == LoadTy)
     return true;
 
-  // If the loaded/stored value is a first class array/struct, or scalable type,
-  // don't try to transform them. We need to be able to bitcast to integer.
-  if (isFirstClassAggregateOrScalableType(LoadTy) ||
-      isFirstClassAggregateOrScalableType(StoredTy))
-    return false;
+  const DataLayout &DL = F->getDataLayout();
+  TypeSize MinStoreSize = DL.getTypeSizeInBits(StoredTy);
+  TypeSize LoadSize = DL.getTypeSizeInBits(LoadTy);
+  if (isa<ScalableVectorType>(StoredTy) && isa<ScalableVectorType>(LoadTy) &&
+      MinStoreSize == LoadSize)
+    return true;
 
-  uint64_t StoreSize = DL.getTypeSizeInBits(StoredTy).getFixedValue();
+  // If the loaded/stored value is a first class array/struct, don't try to
+  // transform them. We need to be able to bitcast to integer. For scalable
+  // vectors forwarded to fixed-sized vectors @llvm.vector.extract is used.
+  if (isa<ScalableVectorType>(StoredTy) && isa<FixedVectorType>(LoadTy)) {
+    if (StoredTy->getScalarType() != LoadTy->getScalarType())
+      return false;
+
+    // If it is known at compile-time that the VScale is larger than one,
+    // use that information to allow for wider loads.
+    const auto &Attrs = F->getAttributes().getFnAttrs();
+    unsigned MinVScale = Attrs.getVScaleRangeMin();
+    MinStoreSize =
+        TypeSize::getFixed(MinStoreSize.getKnownMinValue() * MinVScale);
+  } else if (isFirstClassAggregateOrScalableType(LoadTy) ||
+             isFirstClassAggregateOrScalableType(StoredTy)) {
+    return false;
+  }
 
   // The store size must be byte-aligned to support future type casts.
-  if (llvm::alignTo(StoreSize, 8) != StoreSize)
+  if (llvm::alignTo(MinStoreSize, 8) != MinStoreSize)
     return false;
 
   // The store has to be at least as big as the load.
-  if (StoreSize < DL.getTypeSizeInBits(LoadTy).getFixedValue())
+  if (!TypeSize::isKnownGE(MinStoreSize, LoadSize))
     return false;
 
   bool StoredNI = DL.isNonIntegralPointerType(StoredTy->getScalarType());
@@ -53,11 +69,10 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
     return false;
   }
 
-
   // The implementation below uses inttoptr for vectors of unequal size; we
   // can't allow this for non integral pointers. We could teach it to extract
   // exact subvectors if desired.
-  if (StoredNI && StoreSize != DL.getTypeSizeInBits(LoadTy).getFixedValue())
+  if (StoredNI && (StoredTy->isScalableTy() || MinStoreSize != LoadSize))
     return false;
 
   if (StoredTy->isTargetExtTy() || LoadTy->isTargetExtTy())
@@ -72,19 +87,29 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
 /// IRB is IRBuilder used to insert new instructions.
 ///
 /// If we can't do it, return null.
-Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilderBase &Helper,
-                                      const DataLayout &DL) {
-  assert(canCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
+Value *VNCoercion::coerceAvailableValueToLoadType(Value *StoredVal,
+                                                  Type *LoadedTy,
+                                                  IRBuilderBase &Helper,
+                                                  Function *F) {
+  assert(canCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, F) &&
          "precondition violation - materialization can't fail");
+  const DataLayout &DL = F->getDataLayout();
   if (auto *C = dyn_cast<Constant>(StoredVal))
     StoredVal = ConstantFoldConstant(C, DL);
 
   // If this is already the right type, just return it.
   Type *StoredValTy = StoredVal->getType();
 
-  uint64_t StoredValSize = DL.getTypeSizeInBits(StoredValTy).getFixedValue();
-  uint64_t LoadedValSize = DL.getTypeSizeInBits(LoadedTy).getFixedValue();
+  // If this is a scalable vector forwarded to a fixed vector load, create
+  // a @llvm.vector.extract instead of bitcasts.
+  if (isa<ScalableVectorType>(StoredVal->getType()) &&
+      isa<FixedVectorType>(LoadedTy)) {
+    return Helper.CreateIntrinsic(LoadedTy, Intrinsic::vector_extract,
+                                  {StoredVal, Helper.getInt64(0)});
+  }
+
+  TypeSize StoredValSize = DL.getTypeSizeInBits(StoredValTy);
+  TypeSize LoadedValSize = DL.getTypeSizeInBits(LoadedTy);
 
   // If the store and reload are the same size, we can always reuse it.
   if (StoredValSize == LoadedValSize) {
@@ -118,7 +143,8 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   // If the loaded value is smaller than the available value, then we can
   // extract out a piece from it.  If the available value is too small, then we
   // can't do anything.
-  assert(StoredValSize >= LoadedValSize &&
+  assert(!StoredValSize.isScalable() &&
+         TypeSize::isKnownGE(StoredValSize, LoadedValSize) &&
          "canCoerceMustAliasedValueToLoad fail");
 
   // Convert source pointers to integers, which can be manipulated.
@@ -207,15 +233,16 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
 
 /// This function is called when we have a
 /// memdep query of a load that ends up being a clobbering store.
-int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
-                                   StoreInst *DepSI, const DataLayout &DL) {
+int VNCoercion::analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
+                                               StoreInst *DepSI,
+                                               const DataLayout &DL) {
   auto *StoredVal = DepSI->getValueOperand();
 
   // Cannot handle reading from store of first-class aggregate or scalable type.
   if (isFirstClassAggregateOrScalableType(StoredVal->getType()))
     return -1;
 
-  if (!canCoerceMustAliasedValueToLoad(StoredVal, LoadTy, DL))
+  if (!canCoerceMustAliasedValueToLoad(StoredVal, LoadTy, DepSI->getFunction()))
     return -1;
 
   Value *StorePtr = DepSI->getPointerOperand();
@@ -228,13 +255,14 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
 /// This function is called when we have a
 /// memdep query of a load that ends up being clobbered by another load.  See if
 /// the other load can feed into the second load.
-int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
-                                  const DataLayout &DL) {
-  // Cannot handle reading from store of first-class aggregate yet.
-  if (DepLI->getType()->isStructTy() || DepLI->getType()->isArrayTy())
+int VNCoercion::analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
+                                              LoadInst *DepLI,
+                                              const DataLayout &DL) {
+  // Cannot handle reading from store of first-class aggregate or scalable type.
+  if (isFirstClassAggregateOrScalableType(DepLI->getType()))
     return -1;
 
-  if (!canCoerceMustAliasedValueToLoad(DepLI, LoadTy, DL))
+  if (!canCoerceMustAliasedValueToLoad(DepLI, LoadTy, DepLI->getFunction()))
     return -1;
 
   Value *DepPtr = DepLI->getPointerOperand();
@@ -242,8 +270,9 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
   return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, DepSize, DL);
 }
 
-int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
-                                     MemIntrinsic *MI, const DataLayout &DL) {
+int VNCoercion::analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
+                                                 MemIntrinsic *MI,
+                                                 const DataLayout &DL) {
   // If the mem operation is a non-constant size, we can't handle it.
   ConstantInt *SizeCst = dyn_cast<ConstantInt>(MI->getLength());
   if (!SizeCst)
@@ -252,9 +281,9 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
 
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
-  if (const auto *memset_inst = dyn_cast<MemSetInst>(MI)) {
+  if (const auto *Memset = dyn_cast<MemSetInst>(MI)) {
     if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
-      auto *CI = dyn_cast<ConstantInt>(memset_inst->getValue());
+      auto *CI = dyn_cast<ConstantInt>(Memset->getValue());
       if (!CI || !CI->isZero())
         return -1;
     }
@@ -293,19 +322,61 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
                                          Type *LoadTy, IRBuilderBase &Builder,
                                          const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
+  Type *SrcTy = SrcVal->getType();
 
-  // If two pointers are in the same address space, they have the same size,
-  // so we don't need to do any truncation, etc. This avoids introducing
-  // ptrtoint instructions for pointers that may be non-integral.
-  if (SrcVal->getType()->isPointerTy() && LoadTy->isPointerTy() &&
-      cast<PointerType>(SrcVal->getType())->getAddressSpace() ==
-          cast<PointerType>(LoadTy)->getAddressSpace()) {
+  // If two pointers or pointer vectors have the same size and address space,
+  // we don't need to do any truncation, etc. This avoids introducing
+  // ptrtoint, which drops provenance and is invalid for non-integral pointers.
+  if (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isPtrOrPtrVectorTy() &&
+      SrcTy->getPointerAddressSpace() == LoadTy->getPointerAddressSpace() &&
+      DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(LoadTy)) {
+    return SrcVal;
+  }
+
+  // Return scalable values directly to avoid needing to bitcast to integer
+  // types, as we do not support non-zero Offsets.
+  if (isa<ScalableVectorType>(LoadTy)) {
+    assert(Offset == 0 && "Expected a zero offset for scalable types");
+    return SrcVal;
+  }
+
+  // For the case of a scalable vector being forwarded to a fixed-sized load,
+  // only equal element types are allowed and a @llvm.vector.extract will be
+  // used instead of bitcasts.
+  if (isa<ScalableVectorType>(SrcVal->getType()) &&
+      isa<FixedVectorType>(LoadTy)) {
+    assert(Offset == 0 &&
+           SrcVal->getType()->getScalarType() == LoadTy->getScalarType());
     return SrcVal;
   }
 
   uint64_t StoreSize =
       (DL.getTypeSizeInBits(SrcVal->getType()).getFixedValue() + 7) / 8;
   uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy).getFixedValue() + 7) / 8;
+
+  // Shift the bits to the least significant depending on endianness.
+  unsigned ShiftAmt;
+  if (DL.isLittleEndian())
+    ShiftAmt = Offset * 8;
+  else
+    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
+
+  // Integers drop provenance, and one poison bit poisons the whole value.
+  if (SrcTy->isByteOrByteVectorTy() ||
+      (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy())) {
+    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
+    unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
+    if (LoadBits == SrcBits)
+      return Builder.CreateBitCast(SrcVal, LoadTy);
+    // bitextract needs a scalar byte source and can't return a vector.
+    SrcVal = Builder.CreateBitCast(SrcVal, Type::getByteNTy(Ctx, SrcBits));
+    Type *ExtractTy =
+        LoadTy->isVectorTy() ? Type::getByteNTy(Ctx, LoadBits) : LoadTy;
+    SrcVal =
+        Builder.CreateBitExtract(ExtractTy, SrcVal, Builder.getInt32(ShiftAmt));
+    return Builder.CreateBitCast(SrcVal, LoadTy);
+  }
+
   // Compute which bits of the stored value are being used by the load.  Convert
   // to an integer type to start with.
   if (SrcVal->getType()->isPtrOrPtrVectorTy())
@@ -315,12 +386,6 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     SrcVal =
         Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
 
-  // Shift the bits to the least significant depending on endianness.
-  unsigned ShiftAmt;
-  if (DL.isLittleEndian())
-    ShiftAmt = Offset * 8;
-  else
-    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
   if (ShiftAmt)
     SrcVal = Builder.CreateLShr(SrcVal,
                                 ConstantInt::get(SrcVal->getType(), ShiftAmt));
@@ -331,21 +396,30 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   return SrcVal;
 }
 
-Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                       Instruction *InsertPt, const DataLayout &DL) {
-
+Value *VNCoercion::getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
+                                   Instruction *InsertPt, Function *F) {
+  const DataLayout &DL = F->getDataLayout();
 #ifndef NDEBUG
-  unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-  assert(Offset + LoadSize <= SrcValSize);
+  TypeSize MinSrcValSize = DL.getTypeStoreSize(SrcVal->getType());
+  TypeSize LoadSize = DL.getTypeStoreSize(LoadTy);
+  if (MinSrcValSize.isScalable() && !LoadSize.isScalable())
+    MinSrcValSize =
+        TypeSize::getFixed(MinSrcValSize.getKnownMinValue() *
+                           F->getAttributes().getFnAttrs().getVScaleRangeMin());
+  assert((MinSrcValSize.isScalable() || Offset + LoadSize <= MinSrcValSize) &&
+         "Expected Offset + LoadSize <= SrcValSize");
+  assert((!MinSrcValSize.isScalable() ||
+          (Offset == 0 && TypeSize::isKnownLE(LoadSize, MinSrcValSize))) &&
+         "Expected offset of zero and LoadSize <= SrcValSize");
 #endif
   IRBuilder<> Builder(InsertPt);
   SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, Builder, DL);
-  return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
+  return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, F);
 }
 
-Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
-                                  Type *LoadTy, const DataLayout &DL) {
+Constant *VNCoercion::getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
+                                              Type *LoadTy,
+                                              const DataLayout &DL) {
 #ifndef NDEBUG
   unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
   unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
@@ -356,9 +430,10 @@ Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
 
 /// This function is called when we have a
 /// memdep query of a load that ends up being a clobbering mem intrinsic.
-Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                              Type *LoadTy, Instruction *InsertPt,
-                              const DataLayout &DL) {
+Value *VNCoercion::getMemInstValueForLoad(MemIntrinsic *SrcInst,
+                                          unsigned Offset, Type *LoadTy,
+                                          Instruction *InsertPt,
+                                          const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedValue() / 8;
   IRBuilder<> Builder(InsertPt);
@@ -392,7 +467,8 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
       ++NumBytesSet;
     }
 
-    return coerceAvailableValueToLoadType(Val, LoadTy, Builder, DL);
+    return coerceAvailableValueToLoadType(Val, LoadTy, Builder,
+                                          InsertPt->getFunction());
   }
 
   // Otherwise, this is a memcpy/memmove from a constant global.
@@ -403,8 +479,10 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                       DL);
 }
 
-Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                                         Type *LoadTy, const DataLayout &DL) {
+Constant *VNCoercion::getConstantMemInstValueForLoad(MemIntrinsic *SrcInst,
+                                                     unsigned Offset,
+                                                     Type *LoadTy,
+                                                     const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedValue() / 8;
 
@@ -426,5 +504,3 @@ Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
   return ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset),
                                       DL);
 }
-} // namespace VNCoercion
-} // namespace llvm

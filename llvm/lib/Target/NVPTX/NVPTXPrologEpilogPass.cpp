@@ -29,27 +29,51 @@ using namespace llvm;
 #define DEBUG_TYPE "nvptx-prolog-epilog"
 
 namespace {
-class NVPTXPrologEpilogPass : public MachineFunctionPass {
+class NVPTXPrologEpilog {
 public:
-  static char ID;
-  NVPTXPrologEpilogPass() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return "NVPTX Prolog Epilog Pass"; }
+  bool run(MachineFunction &MF);
 
 private:
   void calculateFrameObjectOffsets(MachineFunction &Fn);
 };
+} // end anonymous namespace
+
+static bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
+                                        unsigned OpIdx) {
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  if (MI.isDebugValue()) {
+
+    MachineOperand &Op = MI.getOperand(OpIdx);
+    assert(MI.isDebugOperand(&Op) &&
+           "Frame indices can only appear as a debug operand in a DBG_VALUE*"
+           " machine instruction");
+    Register Reg;
+    unsigned FrameIdx = Op.getIndex();
+
+    StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+    Op.ChangeToRegister(Reg, false /*isDef*/);
+
+    const DIExpression *DIExpr = MI.getDebugExpression();
+    if (MI.isNonListDebugValue()) {
+      DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(),
+                                           DIExpression::ApplyOffset, Offset);
+    } else {
+      // The debug operand at DebugOpIndex was a frame index at offset
+      // `Offset`; now the operand has been replaced with the frame
+      // register, we must add Offset with `register x, plus Offset`.
+      unsigned DebugOpIndex = MI.getDebugOperandIndex(&Op);
+      SmallVector<uint64_t, 3> Ops;
+      TRI.getOffsetOpcodes(Offset, Ops);
+      DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, DebugOpIndex);
+    }
+    MI.getDebugExpressionOp().setMetadata(DIExpr);
+    return true;
+  }
+  return false;
 }
 
-MachineFunctionPass *llvm::createNVPTXPrologEpilogPass() {
-  return new NVPTXPrologEpilogPass();
-}
-
-char NVPTXPrologEpilogPass::ID = 0;
-
-bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
+bool NVPTXPrologEpilog::run(MachineFunction &MF) {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetFrameLowering &TFI = *STI.getFrameLowering();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -57,41 +81,27 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
 
   calculateFrameObjectOffsets(MF);
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        if (!MI.getOperand(i).isFI())
+  for (MachineBasicBlock &BB : MF) {
+    for (MachineBasicBlock::iterator I = BB.end(); I != BB.begin();) {
+      MachineInstr &MI = *std::prev(I);
+
+      bool RemovedMI = false;
+      for (const auto &[Idx, Op] : enumerate(MI.operands())) {
+        if (!Op.isFI())
           continue;
 
-        // Frame indices in debug values are encoded in a target independent
-        // way with simply the frame index and offset rather than any
-        // target-specific addressing mode.
-        if (MI.isDebugValue()) {
-          MachineOperand &Op = MI.getOperand(i);
-          assert(
-              MI.isDebugOperand(&Op) &&
-              "Frame indices can only appear as a debug operand in a DBG_VALUE*"
-              " machine instruction");
-          Register Reg;
-          auto Offset =
-              TFI.getFrameIndexReference(MF, Op.getIndex(), Reg);
-          Op.ChangeToRegister(Reg, /*isDef=*/false);
-          const DIExpression *DIExpr = MI.getDebugExpression();
-          if (MI.isNonListDebugValue()) {
-            DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
-          } else {
-	    SmallVector<uint64_t, 3> Ops;
-            TRI.getOffsetOpcodes(Offset, Ops);
-            unsigned OpIdx = MI.getDebugOperandIndex(&Op);
-            DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, OpIdx);
-          }
-          MI.getDebugExpressionOp().setMetadata(DIExpr);
+        if (replaceFrameIndexDebugInstr(MF, MI, Idx))
           continue;
-        }
 
-        TRI.eliminateFrameIndex(MI, 0, i, nullptr);
+        // Eliminate this FrameIndex operand.
+        RemovedMI = TRI.eliminateFrameIndex(MI, 0, Idx, nullptr);
         Modified = true;
+        if (RemovedMI)
+          break;
       }
+
+      if (!RemovedMI)
+        --I;
     }
   }
 
@@ -136,8 +146,7 @@ static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   }
 }
 
-void
-NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
+void NVPTXPrologEpilog::calculateFrameObjectOffsets(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *RegInfo = Fn.getSubtarget().getRegisterInfo();
 
@@ -252,4 +261,40 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // Update frame info to pretend that this is part of the stack...
   int64_t StackSize = Offset - LocalAreaOffset;
   MFI.setStackSize(StackSize);
+}
+
+namespace {
+class NVPTXPrologEpilogLegacyPass : public MachineFunctionPass {
+public:
+  static char ID;
+  NVPTXPrologEpilogLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return NVPTXPrologEpilog().run(MF);
+  }
+
+  StringRef getPassName() const override { return "NVPTX Prolog Epilog Pass"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // end anonymous namespace
+
+char NVPTXPrologEpilogLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXPrologEpilogLegacyPass, DEBUG_TYPE,
+                "NVPTX Prologue/Epilogue Insertion", false, false)
+
+MachineFunctionPass *llvm::createNVPTXPrologEpilogLegacyPass() {
+  return new NVPTXPrologEpilogLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXPrologEpilogPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  if (!NVPTXPrologEpilog().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

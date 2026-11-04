@@ -7,8 +7,8 @@ define void @foo1(i1 zeroext %0) nounwind !section_prefix !0 {
 ;; Check hot section name
 ; ELF:        .section  .text.hot.foo1,"ax",@progbits
 ; ELF-NOUNIQ: .section  .text.hot.,"ax",@progbits,unique,1
-; COFF-MSVC:  .section  .text$hot,"xr",one_only,foo1
-; COFF-GNU:   .section  .text$hot$foo1,"xr",one_only,foo1
+; COFF-MSVC:  .section  .text$hot,"xr",one_only,foo1,unique,0
+; COFF-GNU:   .section  .text$hot$foo1,"xr",one_only,foo1,unique,0
   ret void
 }
 
@@ -16,8 +16,8 @@ define void @foo2(i1 zeroext %0) nounwind !section_prefix !1 {
 ;; Check unlikely section name
 ; ELF:        .section  .text.unlikely.foo2,"ax",@progbits
 ; ELF-NOUNIQ: .section  .text.unlikely.,"ax",@progbits,unique,2
-; COFF-MSVC:  .section  .text$unlikely,"xr",one_only,foo2
-; COFF-GNU:   .section  .text$unlikely$foo2,"xr",one_only,foo2
+; COFF-MSVC:  .section  .text$unlikely,"xr",one_only,foo2,unique,1
+; COFF-GNU:   .section  .text$unlikely$foo2,"xr",one_only,foo2,unique,1
   ret void
 }
 

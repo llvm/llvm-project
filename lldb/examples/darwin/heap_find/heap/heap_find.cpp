@@ -22,7 +22,7 @@
 //
 // This will grep everything in all active allocation blocks and print and
 // malloc blocks that contain the C string "hello" (as a substring, no
-// NULL termination included):
+// null termination included):
 //
 // (lldb) expression find_cstring_in_heap ("hello")
 //

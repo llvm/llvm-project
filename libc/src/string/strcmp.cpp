@@ -15,7 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strcmp, (const char *left, const char *right)) {
-  auto comp = [](char l, char r) -> int { return l - r; };
+  auto comp = [](char l, char r) -> int {
+    return static_cast<unsigned char>(l) - static_cast<unsigned char>(r);
+  };
   return inline_strcmp(left, right, comp);
 }
 

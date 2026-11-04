@@ -265,7 +265,7 @@ return:                                           ; preds = %entry
 
 ; Codegen shouldn't crash on this testcase.
 
-define void @bar(i32 %a, i32 %b) nounwind {
+define void @bar(i32 %a, i32 %b, i1 %arg) nounwind {
 entry:                           ; preds = %bb1, %entry, %for.end204
   br label %outer
 
@@ -283,7 +283,7 @@ inner:                                       ; preds = %bb0, %if.end275
 
 bb0:                                     ; preds = %for.body332
   %indvar.next159 = add i32 %i8, 1     ; <i32> [#uses=1]
-  br i1 undef, label %bb1, label %inner
+  br i1 %arg, label %bb1, label %inner
 
 bb1:                                     ; preds = %bb0, %outer
   %midx.4 = phi i32 [ %t179, %bb0 ] ; <i32> [#uses=0]

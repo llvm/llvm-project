@@ -13,12 +13,12 @@
 #include <sanitizer_common/sanitizer_deadlock_detector_interface.h>
 #include <sanitizer_common/sanitizer_stackdepot.h>
 
-#include "tsan_rtl.h"
 #include "tsan_flags.h"
-#include "tsan_sync.h"
-#include "tsan_report.h"
-#include "tsan_symbolize.h"
 #include "tsan_platform.h"
+#include "tsan_report.h"
+#include "tsan_rtl.h"
+#include "tsan_symbolize.h"
+#include "tsan_sync.h"
 
 namespace __tsan {
 
@@ -55,11 +55,10 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(typ);
-  rep.AddMutex(addr, creation_stack_id);
   VarSizeStackTrace trace;
   ObtainCurrentStack(thr, pc, &trace);
+  ScopedReport rep(typ);
+  rep.AddMutex(addr, creation_stack_id);
   rep.AddStack(trace, true);
   rep.AddLocation(addr, 1);
   OutputReport(thr, rep);
@@ -528,49 +527,55 @@ void AfterSleep(ThreadState *thr, uptr pc) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeDeadlock);
   for (int i = 0; i < r->n; i++) {
     rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
     rep.AddUniqueTid((int)r->loop[i].thr_ctx);
     rep.AddThread((int)r->loop[i].thr_ctx);
   }
-  uptr dummy_pc = 0x42;
-  for (int i = 0; i < r->n; i++) {
-    for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
-      u32 stk = r->loop[i].stk[j];
-      if (stk && stk != kInvalidStackID) {
-        rep.AddStack(StackDepotGet(stk), true);
-      } else {
-        // Sometimes we fail to extract the stack trace (FIXME: investigate),
-        // but we should still produce some stack trace in the report.
-        rep.AddStack(StackTrace(&dummy_pc, 1), true);
+    uptr dummy_pc = 0x42;
+    for (int i = 0; i < r->n; i++) {
+      for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
+        u32 stk = r->loop[i].stk[j];
+        StackTrace stack;
+        if (stk && stk != kInvalidStackID) {
+          stack = StackDepotGet(stk);
+        } else {
+          // Sometimes we fail to extract the stack trace (FIXME: investigate),
+          // but we should still produce some stack trace in the report.
+          stack = StackTrace(&dummy_pc, 1);
+        }
+        rep.AddStack(stack, true);
       }
     }
-  }
-  OutputReport(thr, rep);
+    OutputReport(thr, rep);
 }
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
                          FastState last_lock, StackID creation_stack_id) {
-  // We need to lock the slot during RestoreStack because it protects
-  // the slot journal.
-  Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
-  ThreadRegistryLock l0(&ctx->thread_registry);
-  Lock slots_lock(&ctx->slot_mtx);
-  ScopedReport rep(ReportTypeMutexDestroyLocked);
-  rep.AddMutex(addr, creation_stack_id);
+  VarSizeStackTrace last_lock_stack;
+  {
+    // We need to lock the slot during RestoreStack because it protects
+    // the slot journal.
+    Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
+    ThreadRegistryLock l0(&ctx->thread_registry);
+    Lock slots_lock(&ctx->slot_mtx);
+    Tid tid;
+    DynamicMutexSet mset;
+    uptr tag;
+    if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(),
+                      addr, 0, kAccessWrite, &tid, &last_lock_stack, mset,
+                      &tag))
+      return;
+  }
+
   VarSizeStackTrace trace;
   ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
 
-  Tid tid;
-  DynamicMutexSet mset;
-  uptr tag;
-  if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(), addr,
-                    0, kAccessWrite, &tid, &trace, mset, &tag))
-    return;
+  ScopedReport rep(ReportTypeMutexDestroyLocked);
+  rep.AddMutex(addr, creation_stack_id);
   rep.AddStack(trace, true);
+  rep.AddStack(last_lock_stack, true);
   rep.AddLocation(addr, 1);
   OutputReport(thr, rep);
 }

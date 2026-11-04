@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -29,21 +30,19 @@ class Pass;
 /// be the simplest possible pass to remove always_inline function definitions'
 /// uses by inlining them. The \c GlobalDCE pass can be used to remove these
 /// functions once all users are gone.
-class AlwaysInlinerPass : public PassInfoMixin<AlwaysInlinerPass> {
+class AlwaysInlinerPass : public RequiredPassInfoMixin<AlwaysInlinerPass> {
   bool InsertLifetime;
 
 public:
   AlwaysInlinerPass(bool InsertLifetime = true)
       : InsertLifetime(InsertLifetime) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 /// Create a legacy pass manager instance of a pass to inline and remove
 /// functions marked as "always_inline".
-Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
-
+LLVM_ABI Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
 }
 
 #endif // LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H

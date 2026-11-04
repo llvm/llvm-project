@@ -20,33 +20,106 @@ using namespace lldb_private;
 // if you add any options here, remember to update the counters in
 // OptionGroupVariable::GetNumDefinitions()
 static constexpr OptionDefinition g_variable_options[] = {
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-args", 'a',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "no-args",
+     'a',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Omit function arguments."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-recognized-args", 't',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "no-recognized-args",
+     't',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Omit recognized function arguments."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-locals", 'l',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "no-locals",
+     'l',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Omit local variables."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-globals", 'g',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "show-globals",
+     'g',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Show the current frame source file global and static variables."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-declaration", 'c',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "no-synthetic",
+     'e', // Use 'e' for synthEtic - s and y are both taken.
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
+     "Omit synthetic variables."},
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "show-declaration",
+     'c',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Show variable declaration information (source file and line where the "
      "variable was declared)."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "regex", 'r',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeRegularExpression,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "regex",
+     'r',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeRegularExpression,
      "The <variable-name> argument for name lookups are regular expressions."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "scope", 's',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+     false,
+     "scope",
+     's',
+     OptionParser::eNoArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
      "Show variable scope (argument, local, global, static)."},
-    {LLDB_OPT_SET_1, false, "summary", 'y', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeName,
+    {LLDB_OPT_SET_1,
+     false,
+     "summary",
+     'y',
+     OptionParser::eRequiredArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeName,
      "Specify the summary that the variable output should use."},
-    {LLDB_OPT_SET_2, false, "summary-string", 'z',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,
+    {LLDB_OPT_SET_2,
+     false,
+     "summary-string",
+     'z',
+     OptionParser::eRequiredArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeName,
      "Specify a summary string to use to format the variable output."},
 };
 
@@ -77,8 +150,9 @@ static Status ValidateSummaryString(const char *str, void *) {
 OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
     : include_frame_options(show_frame_options), show_args(false),
       show_recognized_args(false), show_locals(false), show_globals(false),
-      use_regex(false), show_scope(false), show_decl(false),
-      summary(ValidateNamedSummary), summary_string(ValidateSummaryString) {}
+      show_synthetic(true), use_regex(false), show_scope(false),
+      show_decl(false), summary(ValidateNamedSummary),
+      summary_string(ValidateSummaryString) {}
 
 Status
 OptionGroupVariable::SetOptionValue(uint32_t option_idx,
@@ -100,6 +174,9 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
     break;
   case 'g':
     show_globals = true;
+    break;
+  case 'e':
+    show_synthetic = false;
     break;
   case 'c':
     show_decl = true;
@@ -125,10 +202,11 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
 
 void OptionGroupVariable::OptionParsingStarting(
     ExecutionContext *execution_context) {
-  show_args = true;     // Frame option only
+  show_args = true;            // Frame option only
   show_recognized_args = true; // Frame option only
-  show_locals = true;   // Frame option only
-  show_globals = false; // Frame option only
+  show_locals = true;          // Frame option only
+  show_globals = false;        // Frame option only
+  show_synthetic = true;       // Frame option only
   show_decl = false;
   use_regex = false;
   show_scope = false;

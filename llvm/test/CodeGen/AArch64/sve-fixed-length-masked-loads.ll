@@ -21,8 +21,8 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-NEXT:    mov w8, v1.s[1]
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %ap
@@ -39,8 +39,8 @@ define <2 x float> @masked_load_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %ap
@@ -57,8 +57,8 @@ define <4 x float> @masked_load_v4f32(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %ap
@@ -156,6 +156,26 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
   ret void
 }
 
+define <1 x double> @masked_load_v1f64(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
+; CHECK-LABEL: masked_load_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <1 x double>, ptr %ap
+  %b = load <1 x double>, ptr %bp
+  %mask = fcmp oeq <1 x double> %a, %b
+  %load = call <1 x double> @llvm.masked.load.v1f64(ptr %ap, i32 8, <1 x i1> %mask, <1 x double> zeroinitializer)
+  ret <1 x double> %load
+}
+
 define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_v64i8:
 ; VBITS_GE_256:       // %bb.0:
@@ -185,7 +205,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <64 x i8>, ptr %ap
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %a, %b
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   store <64 x i8> %load, ptr %c
   ret void
 }
@@ -219,7 +239,7 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <32 x i16>, ptr %ap
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %a, %b
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   store <32 x i16> %load, ptr %c
   ret void
 }
@@ -253,9 +273,29 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <16 x i32>, ptr %ap
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %a, %b
-  %load = call <16 x i32> @llvm.masked.load.v16i32(ptr %ap, i32 8, <16 x i1> %mask, <16 x i32> undef)
+  %load = call <16 x i32> @llvm.masked.load.v16i32(ptr %ap, i32 8, <16 x i1> %mask, <16 x i32> poison)
   store <16 x i32> %load, ptr %c
   ret void
+}
+
+define <1 x i64> @masked_load_v1i64(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
+; CHECK-LABEL: masked_load_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <1 x i64>, ptr %ap
+  %b = load <1 x i64>, ptr %bp
+  %mask = icmp eq <1 x i64> %a, %b
+  %load = call <1 x i64> @llvm.masked.load.v1i64(ptr %ap, i32 8, <1 x i1> %mask, <1 x i64> zeroinitializer)
+  ret <1 x i64> %load
 }
 
 define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
@@ -287,7 +327,7 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <8 x i64>, ptr %ap
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %a, %b
-  %load = call <8 x i64> @llvm.masked.load.v8i64(ptr %ap, i32 8, <8 x i1> %mask, <8 x i64> undef)
+  %load = call <8 x i64> @llvm.masked.load.v8i64(ptr %ap, i32 8, <8 x i1> %mask, <8 x i64> poison)
   store <8 x i64> %load, ptr %c
   ret void
 }
@@ -372,14 +412,15 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    sunpklo z1.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v32i8i16:
@@ -392,7 +433,7 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -401,14 +442,13 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v16i8i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
+; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    cmeq v0.16b, v0.16b, #0
-; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
@@ -427,7 +467,7 @@ define void @masked_load_sext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i8>, ptr %bp
   %mask = icmp eq <16 x i8> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = sext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -436,15 +476,14 @@ define void @masked_load_sext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr d0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl8
+; VBITS_GE_256-NEXT:    ldr d0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v0.8b, v0.8b, #0
-; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    sshll v0.8h, v0.8b, #0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
@@ -463,7 +502,7 @@ define void @masked_load_sext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i8>, ptr %bp
   %mask = icmp eq <8 x i8> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = sext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -475,14 +514,15 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v16i16i32:
@@ -495,7 +535,7 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, ptr %bp
   %mask = icmp eq <16 x i16> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -504,14 +544,13 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i16i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl8
+; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v0.8h, v0.8h, #0
-; VBITS_GE_256-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
@@ -530,7 +569,7 @@ define void @masked_load_sext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i16>, ptr %bp
   %mask = icmp eq <8 x i16> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -542,14 +581,15 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    sunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i32i64:
@@ -562,7 +602,7 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp eq <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -574,14 +614,15 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    uunpklo z1.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v32i8i16:
@@ -594,7 +635,7 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -603,14 +644,13 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v16i8i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
+; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    cmeq v0.16b, v0.16b, #0
-; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
@@ -629,7 +669,7 @@ define void @masked_load_zext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i8>, ptr %bp
   %mask = icmp eq <16 x i8> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = zext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -638,15 +678,14 @@ define void @masked_load_zext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr d0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl8
+; VBITS_GE_256-NEXT:    ldr d0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v0.8b, v0.8b, #0
-; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    ushll v0.8h, v0.8b, #0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -665,7 +704,7 @@ define void @masked_load_zext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i8>, ptr %bp
   %mask = icmp eq <8 x i8> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = zext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -677,14 +716,15 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    uunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v16i16i32:
@@ -697,7 +737,7 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, ptr %bp
   %mask = icmp eq <16 x i16> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -706,14 +746,13 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i16i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl8
+; VBITS_GE_256-NEXT:    ldr q0, [x1]
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v0.8h, v0.8h, #0
-; VBITS_GE_256-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -732,7 +771,7 @@ define void @masked_load_zext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i16>, ptr %bp
   %mask = icmp eq <8 x i16> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -744,14 +783,15 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i32i64:
@@ -764,7 +804,7 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp eq <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -786,13 +826,14 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    splice z1.b, p1, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl32
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    sunpklo z1.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v32i8i16_m16:
@@ -805,7 +846,7 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -828,9 +869,9 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
@@ -849,7 +890,7 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = sext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -873,10 +914,10 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl8
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
 ; VBITS_GE_256-NEXT:    sshll v0.8h, v0.8b, #0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
@@ -895,7 +936,7 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = sext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -919,13 +960,14 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z1.b
-; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v16i16i32_m32:
@@ -938,7 +980,7 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -961,9 +1003,9 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
@@ -982,7 +1024,7 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1004,13 +1046,14 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
-; VBITS_GE_256-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    sunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.s, p1/z, z1.s, #0
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i32i64_m64:
@@ -1023,7 +1066,7 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1045,13 +1088,14 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    splice z1.b, p1, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl32
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    uunpklo z1.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v32i8i16_m16:
@@ -1064,7 +1108,7 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -1087,9 +1131,9 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
@@ -1108,7 +1152,7 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = zext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -1132,10 +1176,10 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl8
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p2/z, [x0]
 ; VBITS_GE_256-NEXT:    ushll v0.8h, v0.8b, #0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -1154,7 +1198,7 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = zext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1178,13 +1222,14 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z1.b
-; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    uunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v16i16i32_m32:
@@ -1197,7 +1242,7 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -1220,9 +1265,9 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -1241,7 +1286,7 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1263,13 +1308,14 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
-; VBITS_GE_256-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    cmpne p2.s, p1/z, z1.s, #0
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p2/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i32i64_m64:
@@ -1282,7 +1328,7 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1299,7 +1345,7 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <128 x i8>, ptr %bp
   %mask = icmp eq <128 x i8> %b, zeroinitializer
-  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> poison)
   %ext = sext <128 x i8> %load to <128 x i16>
   store <128 x i16> %ext, ptr %c
   ret void
@@ -1316,7 +1362,7 @@ define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %b, zeroinitializer
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   %ext = sext <64 x i8> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1333,7 +1379,7 @@ define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1350,7 +1396,7 @@ define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <64 x i16>, ptr %bp
   %mask = icmp eq <64 x i16> %b, zeroinitializer
-  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> poison)
   %ext = sext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1367,7 +1413,7 @@ define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   %ext = sext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1384,7 +1430,7 @@ define void @masked_load_sext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i32>, ptr %bp
   %mask = icmp eq <32 x i32> %b, zeroinitializer
-  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> poison)
   %ext = sext <32 x i32> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1401,7 +1447,7 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <128 x i8>, ptr %bp
   %mask = icmp eq <128 x i8> %b, zeroinitializer
-  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> poison)
   %ext = zext <128 x i8> %load to <128 x i16>
   store <128 x i16> %ext, ptr %c
   ret void
@@ -1418,7 +1464,7 @@ define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %b, zeroinitializer
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   %ext = zext <64 x i8> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1435,7 +1481,7 @@ define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1452,7 +1498,7 @@ define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <64 x i16>, ptr %bp
   %mask = icmp eq <64 x i16> %b, zeroinitializer
-  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> poison)
   %ext = zext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1469,7 +1515,7 @@ define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   %ext = zext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1486,7 +1532,7 @@ define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i32>, ptr %bp
   %mask = icmp eq <32 x i32> %b, zeroinitializer
-  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> poison)
   %ext = zext <32 x i32> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1498,14 +1544,15 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    sunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_ugt_v8i32i64:
@@ -1518,7 +1565,7 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp ugt <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1530,14 +1577,15 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpgt p0.s, p0/z, z0.s, #0
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    cmpgt p1.s, p0/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_sgt_v8i32i64:
@@ -1550,7 +1598,7 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp sgt <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void

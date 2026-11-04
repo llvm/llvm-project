@@ -34,9 +34,10 @@ using namespace Fortran::frontend;
 
 /// Print supported cpus of the given target.
 static int printSupportedCPUs(llvm::StringRef triple) {
+  llvm::Triple parsedTriple(triple);
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!target) {
     llvm::errs() << error;
     return 1;
@@ -45,12 +46,18 @@ static int printSupportedCPUs(llvm::StringRef triple) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions targetOpts;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(triple, "", "+cpuhelp", targetOpts,
+      target->createTargetMachine(parsedTriple, "", "+cpuhelp", targetOpts,
                                   std::nullopt));
   return 0;
 }
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
+  // Initialize targets first, so that --version shows registered targets and
+  // CompilerInstance's library options include the targets'.
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+
   // Create CompilerInstance
   std::unique_ptr<CompilerInstance> flang(new CompilerInstance());
 
@@ -65,18 +72,11 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
 
   // Create CompilerInvocation - use a dedicated instance of DiagnosticsEngine
   // for parsing the arguments
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                 diagsBuffer);
   bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
                                                     argv, diags, argv0);
-
-  // Initialize targets first, so that --version shows registered targets.
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
 
   // --print-supported-cpus takes priority over the actual compilation.
   if (flang->getFrontendOpts().printSupportedCPUs)

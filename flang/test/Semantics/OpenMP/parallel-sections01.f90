@@ -1,11 +1,8 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.13.3 parallel sections Construct
 ! The restrictions for the parallel construct and the sections construct apply
 program OmpConstructSections01
-   use omp_lib
    integer :: section_count = 0
    integer, parameter :: NT = 4
    integer :: i, array(10)
@@ -17,10 +14,10 @@ program OmpConstructSections01
    do i = 1, 10
       array(i) = i
    end do
-!ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a SHARED clause
+!ERROR: An array element cannot appear in a SHARED clause
 !$omp parallel sections shared(array(i))
 !$omp end parallel sections
-!ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a SHARED clause
+!ERROR: A structure component cannot appear in a SHARED clause
 !$omp parallel sections shared(my_var%array)
 !$omp end parallel sections
 
@@ -30,11 +27,13 @@ program OmpConstructSections01
    if (NT) 20, 30, 40
 !ERROR: invalid branch into an OpenMP structured block
    goto 20
-!ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE clause
+!ERROR: A structure component cannot appear in a PRIVATE clause
 !$omp parallel sections private(my_var%array)
    !$omp section
    print *, "This is a single statement structured block"
    !$omp section
+   !ERROR: invalid branch into an OpenMP structured block
+   !ERROR: invalid branch leaving an OpenMP structured block
    open (10, file="random-file-name.txt", err=30)
    !ERROR: invalid branch into an OpenMP structured block
    !ERROR: invalid branch leaving an OpenMP structured block
@@ -53,7 +52,7 @@ program OmpConstructSections01
 30 print *, "Error in opening file"
 !$omp end parallel sections
 10 print *, 'Jump from section'
-!ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE clause
+!ERROR: An array element cannot appear in a PRIVATE clause
 !$omp parallel sections private(array(i))
    !$omp section
 40 print *, 'Error in opening file'

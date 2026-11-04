@@ -70,50 +70,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
       });
 }
 
-/// Parse a function result list.
-///
-///   function-result-list ::= function-result-list-parens
-///                          | non-function-type
-///   function-result-list-parens ::= `(` `)`
-///                                 | `(` function-result-list-no-parens `)`
-///   function-result-list-no-parens ::= function-result (`,` function-result)*
-///   function-result ::= type attribute-dict?
-///
-static ParseResult
-parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-                        SmallVectorImpl<DictionaryAttr> &resultAttrs) {
-  if (failed(parser.parseOptionalLParen())) {
-    // We already know that there is no `(`, so parse a type.
-    // Because there is no `(`, it cannot be a function type.
-    Type ty;
-    if (parser.parseType(ty))
-      return failure();
-    resultTypes.push_back(ty);
-    resultAttrs.emplace_back();
-    return success();
-  }
-
-  // Special case for an empty set of parens.
-  if (succeeded(parser.parseOptionalRParen()))
-    return success();
-
-  // Parse individual function results.
-  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
-        resultTypes.emplace_back();
-        resultAttrs.emplace_back();
-        NamedAttrList attrs;
-        if (parser.parseType(resultTypes.back()) ||
-            parser.parseOptionalAttrDict(attrs))
-          return failure();
-        resultAttrs.back() = attrs.getDictionary(parser.getContext());
-        return success();
-      }))
-    return failure();
-
-  return parser.parseRParen();
-}
-
-ParseResult function_interface_impl::parseFunctionSignature(
+ParseResult function_interface_impl::parseFunctionSignatureWithArguments(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
@@ -121,44 +78,9 @@ ParseResult function_interface_impl::parseFunctionSignature(
   if (parseFunctionArgumentList(parser, allowVariadic, arguments, isVariadic))
     return failure();
   if (succeeded(parser.parseOptionalArrow()))
-    return parseFunctionResultList(parser, resultTypes, resultAttrs);
+    return call_interface_impl::parseFunctionResultList(parser, resultTypes,
+                                                        resultAttrs);
   return success();
-}
-
-void function_interface_impl::addArgAndResultAttrs(
-    Builder &builder, OperationState &result, ArrayRef<DictionaryAttr> argAttrs,
-    ArrayRef<DictionaryAttr> resultAttrs, StringAttr argAttrsName,
-    StringAttr resAttrsName) {
-  auto nonEmptyAttrsFn = [](DictionaryAttr attrs) {
-    return attrs && !attrs.empty();
-  };
-  // Convert the specified array of dictionary attrs (which may have null
-  // entries) to an ArrayAttr of dictionaries.
-  auto getArrayAttr = [&](ArrayRef<DictionaryAttr> dictAttrs) {
-    SmallVector<Attribute> attrs;
-    for (auto &dict : dictAttrs)
-      attrs.push_back(dict ? dict : builder.getDictionaryAttr({}));
-    return builder.getArrayAttr(attrs);
-  };
-
-  // Add the attributes to the function arguments.
-  if (llvm::any_of(argAttrs, nonEmptyAttrsFn))
-    result.addAttribute(argAttrsName, getArrayAttr(argAttrs));
-
-  // Add the attributes to the function results.
-  if (llvm::any_of(resultAttrs, nonEmptyAttrsFn))
-    result.addAttribute(resAttrsName, getArrayAttr(resultAttrs));
-}
-
-void function_interface_impl::addArgAndResultAttrs(
-    Builder &builder, OperationState &result,
-    ArrayRef<OpAsmParser::Argument> args, ArrayRef<DictionaryAttr> resultAttrs,
-    StringAttr argAttrsName, StringAttr resAttrsName) {
-  SmallVector<DictionaryAttr> argAttrs;
-  for (const auto &arg : args)
-    argAttrs.push_back(arg.attrs);
-  addArgAndResultAttrs(builder, result, argAttrs, resultAttrs, argAttrsName,
-                       resAttrsName);
 }
 
 ParseResult function_interface_impl::parseFunctionOp(
@@ -175,15 +97,14 @@ ParseResult function_interface_impl::parseFunctionOp(
 
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
-                             result.attributes))
+  if (parser.parseSymbolName(nameAttr, "sym_name", result.attributes))
     return failure();
 
   // Parse the function signature.
   SMLoc signatureLocation = parser.getCurrentLocation();
   bool isVariadic = false;
-  if (parseFunctionSignature(parser, allowVariadic, entryArgs, isVariadic,
-                             resultTypes, resultAttrs))
+  if (parseFunctionSignatureWithArguments(parser, allowVariadic, entryArgs,
+                                          isVariadic, resultTypes, resultAttrs))
     return failure();
 
   std::string errorMessage;
@@ -209,8 +130,8 @@ ParseResult function_interface_impl::parseFunctionOp(
   // Disallow attributes that are inferred from elsewhere in the attribute
   // dictionary.
   for (StringRef disallowed :
-       {SymbolTable::getVisibilityAttrName(), SymbolTable::getSymbolAttrName(),
-        typeAttrName.getValue()}) {
+       {SymbolOpInterface::getDefaultVisibilityAttrName(),
+        StringRef("sym_name"), typeAttrName.getValue()}) {
     if (parsedAttributes.get(disallowed))
       return parser.emitError(attributeDictLocation, "'")
              << disallowed
@@ -221,8 +142,8 @@ ParseResult function_interface_impl::parseFunctionOp(
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  addArgAndResultAttrs(builder, result, entryArgs, resultAttrs, argAttrsName,
-                       resAttrsName);
+  call_interface_impl::addArgAndResultAttrs(
+      builder, result, entryArgs, resultAttrs, argAttrsName, resAttrsName);
 
   // Parse the optional function body. The printer will not print the body if
   // its empty, so disallow parsing of empty body in the parser.
@@ -241,89 +162,32 @@ ParseResult function_interface_impl::parseFunctionOp(
   return success();
 }
 
-/// Print a function result list. The provided `attrs` must either be null, or
-/// contain a set of DictionaryAttrs of the same arity as `types`.
-static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
-                                    ArrayAttr attrs) {
-  assert(!types.empty() && "Should not be called for empty result list.");
-  assert((!attrs || attrs.size() == types.size()) &&
-         "Invalid number of attributes.");
-
-  auto &os = p.getStream();
-  bool needsParens = types.size() > 1 || llvm::isa<FunctionType>(types[0]) ||
-                     (attrs && !llvm::cast<DictionaryAttr>(attrs[0]).empty());
-  if (needsParens)
-    os << '(';
-  llvm::interleaveComma(llvm::seq<size_t>(0, types.size()), os, [&](size_t i) {
-    p.printType(types[i]);
-    if (attrs)
-      p.printOptionalAttrDict(llvm::cast<DictionaryAttr>(attrs[i]).getValue());
-  });
-  if (needsParens)
-    os << ')';
-}
-
-void function_interface_impl::printFunctionSignature(
-    OpAsmPrinter &p, FunctionOpInterface op, ArrayRef<Type> argTypes,
-    bool isVariadic, ArrayRef<Type> resultTypes) {
-  Region &body = op->getRegion(0);
-  bool isExternal = body.empty();
-
-  p << '(';
-  ArrayAttr argAttrs = op.getArgAttrsAttr();
-  for (unsigned i = 0, e = argTypes.size(); i < e; ++i) {
-    if (i > 0)
-      p << ", ";
-
-    if (!isExternal) {
-      ArrayRef<NamedAttribute> attrs;
-      if (argAttrs)
-        attrs = llvm::cast<DictionaryAttr>(argAttrs[i]).getValue();
-      p.printRegionArgument(body.getArgument(i), attrs);
-    } else {
-      p.printType(argTypes[i]);
-      if (argAttrs)
-        p.printOptionalAttrDict(
-            llvm::cast<DictionaryAttr>(argAttrs[i]).getValue());
-    }
-  }
-
-  if (isVariadic) {
-    if (!argTypes.empty())
-      p << ", ";
-    p << "...";
-  }
-
-  p << ')';
-
-  if (!resultTypes.empty()) {
-    p.getStream() << " -> ";
-    auto resultAttrs = op.getResAttrsAttr();
-    printFunctionResultList(p, resultTypes, resultAttrs);
-  }
-}
-
 void function_interface_impl::printFunctionAttributes(
     OpAsmPrinter &p, Operation *op, ArrayRef<StringRef> elided) {
   // Print out function attributes, if present.
-  SmallVector<StringRef, 8> ignoredAttrs = {SymbolTable::getSymbolAttrName()};
+  SmallVector<StringRef, 8> ignoredAttrs = {"sym_name"};
   ignoredAttrs.append(elided.begin(), elided.end());
 
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+  p.printOptionalAttrDictWithKeyword(attrs, ignoredAttrs);
 }
 
 void function_interface_impl::printFunctionOp(
     OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
     StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName) {
   // Print the operation and the function name.
-  auto funcName =
-      op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
-          .getValue();
+  auto symbol = cast<SymbolOpInterface>(op.getOperation());
+  StringRef funcName = symbol.getName();
   p << ' ';
 
-  StringRef visibilityAttrName = SymbolTable::getVisibilityAttrName();
-  if (auto visibility = op->getAttrOfType<StringAttr>(visibilityAttrName))
-    p << visibility.getValue() << ' ';
+  StringRef visibilityAttrName =
+      SymbolOpInterface::getDefaultVisibilityAttrName();
+  Attribute visibility =
+      op->getInherentAttr(visibilityAttrName).value_or(Attribute{});
+  if (auto value = dyn_cast_or_null<StringAttr>(visibility))
+    p << value.getValue() << ' ';
   p.printSymbolName(funcName);
 
   ArrayRef<Type> argTypes = op.getArgumentTypes();

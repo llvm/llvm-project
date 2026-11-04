@@ -1,0 +1,11 @@
+functions:
+  fstatvfs:
+    in-latest-posix: ''
+  statvfs:
+    in-latest-posix: ''
+
+macros:
+  ST_RDONLY:
+    in-latest-posix: ''
+  ST_NOSUID:
+    in-latest-posix: ''

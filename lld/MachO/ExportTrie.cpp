@@ -38,7 +38,7 @@
 #include "Symbols.h"
 
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include <optional>
@@ -200,11 +200,13 @@ TrieNode *TrieBuilder::makeNode() {
   return node;
 }
 
+// Like operator[], but returns -1 when pos is past the end of the name. -1
+// sorts below every byte, so "_foo" sorts before "_foobar".
 static int charAt(const Symbol *sym, size_t pos) {
   StringRef str = sym->getName();
   if (pos >= str.size())
     return -1;
-  return str[pos];
+  return static_cast<unsigned char>(str[pos]);
 }
 
 // Build the trie by performing a three-way radix quicksort: We start by sorting
@@ -223,6 +225,19 @@ void TrieBuilder::sortAndBuild(MutableArrayRef<const Symbol *> vec,
 tailcall:
   if (vec.empty())
     return;
+
+  // Create singletons in one go instead of doing a tail call per character.
+  if (vec.size() == 1) {
+    const Symbol *sym = vec.front();
+    StringRef suffix = sym->getName().drop_front(lastPos);
+    if (!suffix.empty()) {
+      TrieNode *newNode = makeNode();
+      node->edges.emplace_back(suffix, newNode);
+      node = newNode;
+    }
+    node->info = ExportInfo(*sym, imageBase);
+    return;
+  }
 
   // Partition items so that items in [0, i) are less than the pivot,
   // [i, j) are the same as the pivot, and [j, vec.size()) are greater than
@@ -262,6 +277,21 @@ tailcall:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);
     vec = vec.slice(i, j - i);
     ++pos;
+    // Skip the rest of a common prefix instead of doing a tail call per
+    // character.
+    if (vec.size() > 1) {
+      StringRef firstName = vec.front()->getName();
+      size_t commonEnd = firstName.size();
+      for (const Symbol *sym : vec.drop_front()) {
+        StringRef name = sym->getName();
+        commonEnd = std::min(commonEnd, name.size());
+        size_t commonPos = pos;
+        while (commonPos < commonEnd && firstName[commonPos] == name[commonPos])
+          ++commonPos;
+        commonEnd = commonPos;
+      }
+      pos = commonEnd;
+    }
     goto tailcall;
   }
 }
@@ -297,13 +327,19 @@ namespace {
 // Parse a serialized trie and invoke a callback for each entry.
 class TrieParser {
 public:
-  TrieParser(const uint8_t *buf, size_t size, const TrieEntryCallback &callback)
-      : start(buf), end(start + size), callback(callback) {}
+  TrieParser(const std::string &fileName, const uint8_t *buf, size_t size,
+             const TrieEntryCallback &callback)
+      : fileName(fileName), start(buf), end(start + size), callback(callback) {}
 
-  void parse(const uint8_t *buf, const Twine &cumulativeString);
+  void parse(const uint8_t *buf, const Twine &cumulativeString,
+             DenseSet<size_t> &visited);
 
-  void parse() { parse(start, ""); }
+  void parse() {
+    DenseSet<size_t> visited;
+    parse(start, "", visited);
+  }
 
+  const std::string fileName;
   const uint8_t *start;
   const uint8_t *end;
   const TrieEntryCallback &callback;
@@ -311,9 +347,13 @@ public:
 
 } // namespace
 
-void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
+void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString,
+                       DenseSet<size_t> &visited) {
   if (buf >= end)
-    fatal("Node offset points outside export section");
+    fatal(fileName + ": export trie node offset points outside export section");
+
+  size_t currentOffset = buf - start;
+  visited.insert(currentOffset);
 
   unsigned ulebSize;
   uint64_t terminalSize = decodeULEB128(buf, &ulebSize);
@@ -332,14 +372,18 @@ void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
     buf += substring.size() + 1;
     offset = decodeULEB128(buf, &ulebSize);
     buf += ulebSize;
-    parse(start + offset, cumulativeString + substring);
+    if (visited.find(offset) != visited.end())
+      fatal(fileName + ": export trie child node infinite loop");
+    parse(start + offset, cumulativeString + substring, visited);
   }
+
+  visited.erase(currentOffset);
 }
 
-void macho::parseTrie(const uint8_t *buf, size_t size,
-                      const TrieEntryCallback &callback) {
+void macho::parseTrie(const std::string &fileName, const uint8_t *buf,
+                      size_t size, const TrieEntryCallback &callback) {
   if (size == 0)
     return;
 
-  TrieParser(buf, size, callback).parse();
+  TrieParser(fileName, buf, size, callback).parse();
 }

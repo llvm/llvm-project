@@ -21,6 +21,8 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -241,7 +243,7 @@ class HeaderSearch {
   friend SearchDirIterator;
 
   /// Header-search options used to initialize this header search.
-  std::shared_ptr<HeaderSearchOptions> HSOpts;
+  const HeaderSearchOptions &HSOpts;
 
   /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
   llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
@@ -276,15 +278,18 @@ class HeaderSearch {
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
-  /// The hash used for module cache paths.
-  std::string ModuleHash;
+  /// The context hash used in SpecificModuleCachePath (unless suppressed).
+  std::string ContextHash;
 
-  /// The path to the module cache.
-  std::string ModuleCachePath;
+  /// The specific module cache path containing ContextHash (unless suppressed).
+  std::string SpecificModuleCachePath;
 
-  /// All of the preprocessor-specific data about files that are
-  /// included, indexed by the FileEntry's UID.
-  mutable std::vector<HeaderFileInfo> FileInfo;
+  /// The length of the normalized module cache path at the start of \c
+  /// SpecificModuleCachePath.
+  size_t NormalizedModuleCachePathLen = 0;
+
+  /// All the preprocessor-specific data about files that are included.
+  mutable llvm::MapVector<FileEntryRef, HeaderFileInfo> FileInfo;
 
   /// Keeps track of each lookup performed by LookupFile.
   struct LookupFileCacheInfo {
@@ -315,6 +320,12 @@ class HeaderSearch {
   };
   llvm::StringMap<LookupFileCacheInfo, llvm::BumpPtrAllocator> LookupFileCache;
 
+  /// The files that were already considered for the \c -Wshadow-header
+  /// diagnostic, keyed by the spelling of the include that resolved to them.
+  /// Since the set of shadowing candidates depends on the spelling, the same
+  /// file has to be considered once per spelling it was found under.
+  llvm::StringMap<llvm::SmallPtrSet<const FileEntry *, 1>> ShadowCheckedHeaders;
+
   /// Collection mapping a framework or subframework
   /// name like "Carbon" to the Carbon.framework directory.
   llvm::StringMap<FrameworkCacheEntry, llvm::BumpPtrAllocator> FrameworkMap;
@@ -332,12 +343,35 @@ class HeaderSearch {
   /// The mapping between modules and headers.
   mutable ModuleMap ModMap;
 
+  struct ModuleMapDirectoryState {
+    OptionalFileEntryRef ModuleMapFile;
+    OptionalFileEntryRef PrivateModuleMapFile;
+    enum {
+      Parsed,
+      Loaded,
+      Invalid,
+    } Status;
+
+    /// Relative header path -> list of module names
+    llvm::StringMap<llvm::SmallVector<StringRef, 1>> HeaderToModules{};
+    /// Relative dir path -> module name
+    llvm::SmallVector<std::pair<std::string, StringRef>, 2>
+        UmbrellaDirModules{};
+    /// List of module names with umbrella header decls
+    llvm::SmallVector<StringRef, 2> UmbrellaHeaderModules{};
+  };
+
   /// Describes whether a given directory has a module map in it.
-  llvm::DenseMap<const DirectoryEntry *, bool> DirectoryHasModuleMap;
+  llvm::DenseMap<const DirectoryEntry *, ModuleMapDirectoryState>
+      DirectoryModuleMap;
 
   /// Set of module map files we've already loaded, and a flag indicating
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
+
+  /// Set of module map files we've already parsed, and a flag indicating
+  /// whether they were valid or not.
+  llvm::DenseMap<const FileEntry *, bool> ParsedModuleMaps;
 
   // A map of discovered headers with their associated include file name.
   llvm::DenseMap<const FileEntry *, llvm::SmallString<64>> IncludeNames;
@@ -358,16 +392,47 @@ class HeaderSearch {
   /// map their keys to the SearchDir index of their header map.
   void indexInitialHeaderMaps();
 
+  /// Build the module map index for a directory's module map.
+  ///
+  /// This fills a ModuleMapDirectoryState with index information from its
+  /// directory's module map.
+  void buildModuleMapIndex(DirectoryEntryRef Dir,
+                           ModuleMapDirectoryState &MMState);
+
+  void processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
+                                DirectoryEntryRef MMDir, StringRef PathPrefix,
+                                ModuleMapDirectoryState &MMState);
+
+  void processExternModuleDeclForIndex(const modulemap::ExternModuleDecl &EMD,
+                                       DirectoryEntryRef MMDir,
+                                       StringRef PathPrefix,
+                                       ModuleMapDirectoryState &MMState);
+
+  void processModuleDeclForIndex(const modulemap::ModuleDecl &MD,
+                                 StringRef ModuleName, DirectoryEntryRef MMDir,
+                                 StringRef PathPrefix,
+                                 ModuleMapDirectoryState &MMState);
+
+  void addToModuleMapIndex(StringRef RelPath, StringRef ModuleName,
+                           StringRef PathPrefix,
+                           ModuleMapDirectoryState &MMState);
+
+  /// Check if a relative path would be covered by the module map index.
+  /// Returns the module names that would cover this path.
+  SmallVector<StringRef, 1>
+  findMatchingModulesInIndex(StringRef RelativePath,
+                             const ModuleMapDirectoryState &MMState) const;
+
 public:
-  HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
-               SourceManager &SourceMgr, DiagnosticsEngine &Diags,
-               const LangOptions &LangOpts, const TargetInfo *Target);
+  HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
+               DiagnosticsEngine &Diags, const LangOptions &LangOpts,
+               const TargetInfo *Target);
   HeaderSearch(const HeaderSearch &) = delete;
   HeaderSearch &operator=(const HeaderSearch &) = delete;
 
   /// Retrieve the header-search options with which this header search
   /// was initialized.
-  HeaderSearchOptions &getHeaderSearchOpts() const { return *HSOpts; }
+  const HeaderSearchOptions &getHeaderSearchOpts() const { return HSOpts; }
 
   FileManager &getFileMgr() const { return FileMgr; }
 
@@ -419,23 +484,23 @@ public:
     return {};
   }
 
-  /// Set the hash to use for module cache paths.
-  void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
+  /// Initialize the module cache path.
+  void initializeModuleCachePath(std::string ContextHash);
 
-  /// Set the path to the module cache.
-  void setModuleCachePath(StringRef CachePath) {
-    ModuleCachePath = std::string(CachePath);
+  /// Retrieve the specific module cache path. This is the normalized module
+  /// cache path plus the context hash (unless suppressed).
+  StringRef getSpecificModuleCachePath() const {
+    return SpecificModuleCachePath;
   }
 
-  /// Retrieve the module hash.
-  StringRef getModuleHash() const { return ModuleHash; }
+  /// Retrieve the context hash.
+  StringRef getContextHash() const { return ContextHash; }
 
-  /// Retrieve the path to the module cache.
-  StringRef getModuleCachePath() const { return ModuleCachePath; }
-
-  /// Consider modules when including files from this directory.
-  void setDirectoryHasModuleMap(const DirectoryEntry* Dir) {
-    DirectoryHasModuleMap[Dir] = true;
+  /// Retrieve the normalized module cache path. This is the path as provided on
+  /// the command line, but absolute, without './' components, and with
+  /// preferred path separators. Note that this does not have the context hash.
+  StringRef getNormalizedModuleCachePath() const {
+    return getSpecificModuleCachePath().substr(0, NormalizedModuleCachePathLen);
   }
 
   /// Forget everything we know about headers so far.
@@ -455,6 +520,12 @@ public:
   void SetExternalSource(ExternalHeaderFileInfoSource *ES) {
     ExternalSource = ES;
   }
+
+  void diagnoseHeaderShadowing(
+      StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+      ConstSearchDirIterator FromDir,
+      ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
+      bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt);
 
   /// Set the target information for the header search, if not
   /// already known.
@@ -606,7 +677,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(Module *Module);
+  ModuleFileName getCachedModuleFileName(Module *Module);
 
   /// Retrieve the name of the prebuilt module file that should be used
   /// to load a module with the given name.
@@ -618,8 +689,8 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltModuleFileName(StringRef ModuleName,
-                                        bool FileMapOnly = false);
+  ModuleFileName getPrebuiltModuleFileName(StringRef ModuleName,
+                                           bool FileMapOnly = false);
 
   /// Retrieve the name of the prebuilt module file that should be used
   /// to load the given module.
@@ -628,7 +699,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltImplicitModuleFileName(Module *Module);
+  ModuleFileName getPrebuiltImplicitModuleFileName(Module *Module);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -640,8 +711,8 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(StringRef ModuleName,
-                                      StringRef ModuleMapPath);
+  ModuleFileName getCachedModuleFileName(StringRef ModuleName,
+                                         StringRef ModuleMapPath);
 
   /// Lookup a module Search for a module with the given name.
   ///
@@ -700,10 +771,12 @@ public:
   ArrayRef<ModuleMap::KnownHeader>
   findResolvedModulesForHeader(FileEntryRef File) const;
 
-  /// Read the contents of the given module map file.
+  /// Read and load the contents of the given module map file.
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
+  /// \param ImplicitlyDiscovered Whether this file was found by module map
+  ///        search.
   /// \param ID If the module map file is already mapped (perhaps as part of
   ///        processing a preprocessed module), the ID of the file.
   /// \param Offset [inout] An offset within ID to start parsing. On exit,
@@ -713,9 +786,22 @@ public:
   ///        used to resolve paths within the module (this is required when
   ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(FileEntryRef File, bool IsSystem, FileID ID = FileID(),
-                         unsigned *Offset = nullptr,
-                         StringRef OriginalModuleMapFile = StringRef());
+  bool parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                                 bool ImplicitlyDiscovered,
+                                 FileID ID = FileID(),
+                                 unsigned *Offset = nullptr,
+                                 StringRef OriginalModuleMapFile = StringRef());
+
+  /// Parse the module map \p File, without loading the modules.
+  /// Requires lazily loaded module maps.
+  ///
+  /// \param File The module map file.
+  /// \param IsSystem Whether this file is in a system header directory.
+  /// \param ImplicitlyDiscovered Whether this file was found by module map
+  ///        search.
+  /// \returns true if an error occurred, false otherwise.
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                          bool ImplicitlyDiscovered);
 
   /// Collect the set of all known, top-level modules.
   ///
@@ -725,7 +811,30 @@ public:
   /// Load all known, top-level system modules.
   void loadTopLevelSystemModules();
 
+  /// Find the module map that defines the top-level module \p ModuleName,
+  /// without loading it.
+  /// Requires lazily loaded module maps.
+  ///
+  /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
+  /// in subdirectories.
+  ///
+  /// \returns The module map file, or std::nullopt if not found.
+  OptionalFileEntryRef
+  lookupModuleMapFileForModule(StringRef ModuleName,
+                               bool AllowExtraModuleMapSearch = false);
+
 private:
+  /// Lookup a module by name, with retry support for private counterparts of
+  /// framework modules.
+  ///
+  /// \param Load Whether to load the module.
+  ///
+  /// \returns Whether the module was found.
+  bool lookupModuleWithPrivateFallbacks(StringRef ModuleName,
+                                        SourceLocation ImportLoc,
+                                        bool AllowExtraModuleMapSearch,
+                                        bool Load);
+
   /// Lookup a module with the given module name and search-name.
   ///
   /// \param ModuleName The name of the module we're looking for.
@@ -740,10 +849,12 @@ private:
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
-  /// \returns The module named ModuleName.
-  Module *lookupModule(StringRef ModuleName, StringRef SearchName,
-                       SourceLocation ImportLoc,
-                       bool AllowExtraModuleMapSearch = false);
+  /// \param Load Whether to load the module.
+  ///
+  /// \returns Whether the module was found.
+  bool lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
+                        SourceLocation ImportLoc,
+                        bool AllowExtraModuleMapSearch, bool Load);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -753,13 +864,13 @@ private:
   /// \param ModuleMapPath A path that when combined with \c ModuleName
   /// uniquely identifies this module. See Module::ModuleMap.
   ///
-  /// \param CachePath A path to the module cache.
+  /// \param NormalizedCachePath The normalized path to the module cache.
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileNameImpl(StringRef ModuleName,
-                                          StringRef ModuleMapPath,
-                                          StringRef CachePath);
+  ModuleFileName getCachedModuleFileNameImpl(StringRef ModuleName,
+                                             StringRef ModuleMapPath,
+                                             StringRef NormalizedCachePath);
 
   /// Retrieve a module with the given name, which may be part of the
   /// given framework.
@@ -771,13 +882,25 @@ private:
   /// \param IsSystem Whether the framework directory is part of the system
   /// frameworks.
   ///
+  /// \param ImplicitlyDiscovered Whether the framework was discovered by module
+  ///        map search.
+  ///
   /// \returns The module, if found; otherwise, null.
   Module *loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
-                              bool IsSystem);
+                              bool IsSystem, bool ImplicitlyDiscovered);
 
-  /// Load all of the module maps within the immediate subdirectories
+  /// Parse the module map of the framework directory \p Dir.
+  void parseFrameworkModuleMap(DirectoryEntryRef Dir, bool IsSystem,
+                               bool ImplicitlyDiscovered, bool Load);
+
+  /// Parse all of the module maps within the immediate subdirectories
   /// of the given search directory.
-  void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
+  void parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir, bool Load);
+
+  /// Diagnose headers that are a symlink and not covered by a module map.
+  void diagnoseUncoveredSymlink(FileEntryRef File,
+                                ModuleMap::KnownHeader &Module,
+                                const DirectoryEntry *Root);
 
   /// Find and suggest a usable module for the given file.
   ///
@@ -823,8 +946,6 @@ public:
   /// Retrieve the module map.
   const ModuleMap &getModuleMap() const { return ModMap; }
 
-  unsigned header_file_size() const { return FileInfo.size(); }
-
   /// Return the HeaderFileInfo structure for the specified FileEntry, in
   /// preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(FileEntryRef FE);
@@ -833,9 +954,10 @@ public:
   /// ever been filled in (either locally or externally).
   const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE) const;
 
-  /// Return the headerFileInfo structure for the specified FileEntry, if it has
-  /// ever been filled in locally.
-  const HeaderFileInfo *getExistingLocalFileInfo(FileEntryRef FE) const;
+  /// Iterate HeaderFileInfo structures and their corresponding FileEntryRef, if
+  /// they have ever been filled in locally.
+  void forEachExistingLocalFileInfo(
+      llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }
@@ -915,26 +1037,41 @@ public:
   size_t getTotalMemory() const;
 
 private:
-  /// Describes what happened when we tried to load a module map file.
-  enum LoadModuleMapResult {
-    /// The module map file had already been loaded.
-    LMM_AlreadyLoaded,
+  /// Describes what happened when we tried to load or parse a module map file.
+  enum ModuleMapResult {
+    /// The module map file had already been processed.
+    MMR_AlreadyProcessed,
 
-    /// The module map file was loaded by this invocation.
-    LMM_NewlyLoaded,
+    /// The module map file was processed by this invocation.
+    MMR_NewlyProcessed,
 
     /// There is was directory with the given name.
-    LMM_NoDirectory,
+    MMR_NoDirectory,
 
     /// There was either no module map file or the module map file was
     /// invalid.
-    LMM_InvalidModuleMap
+    MMR_InvalidModuleMap
   };
 
-  LoadModuleMapResult loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
-                                            DirectoryEntryRef Dir,
-                                            FileID ID = FileID(),
-                                            unsigned *Offset = nullptr);
+  /// Determine if the \p Result of reading a modulemap failed.
+  static bool hasModuleMapError(ModuleMapResult Result);
+
+  /// Parse and load the module map \p File and its private module map.
+  ModuleMapResult parseAndLoadModuleMapFileImpl(
+      FileEntryRef File, bool IsSystem, bool ImplicitlyDiscovered,
+      DirectoryEntryRef Dir, FileID ID = FileID(), unsigned *Offset = nullptr,
+      bool DiagnosePrivMMap = false);
+
+  /// Parse the module map \p File and its private module map, without loading
+  /// the modules they define.
+  ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
+                                         bool ImplicitlyDiscovered,
+                                         DirectoryEntryRef Dir,
+                                         FileID ID = FileID());
+
+  /// Find the directory that resolves the modulemap represented in \p File.
+  OptionalDirectoryEntryRef
+  getModuleMapHomeDir(FileEntryRef File, StringRef OriginalModuleMapFile);
 
   /// Try to load the module map file in the given directory.
   ///
@@ -945,8 +1082,9 @@ private:
   ///
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
-  LoadModuleMapResult loadModuleMapFile(StringRef DirName, bool IsSystem,
-                                        bool IsFramework);
+  ModuleMapResult parseAndLoadModuleMapFile(StringRef DirName, bool IsSystem,
+                                            bool ImplicitlyDiscovered,
+                                            bool IsFramework);
 
   /// Try to load the module map file in the given directory.
   ///
@@ -956,8 +1094,21 @@ private:
   ///
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
-  LoadModuleMapResult loadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
-                                        bool IsFramework);
+  ModuleMapResult parseAndLoadModuleMapFile(DirectoryEntryRef Dir,
+                                            bool IsSystem,
+                                            bool ImplicitlyDiscovered,
+                                            bool IsFramework);
+
+  /// Parse the module map file in the directory \p DirName.
+  /// Also loads the module unless module maps are loaded lazily.
+  ModuleMapResult parseModuleMapFile(StringRef DirName, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
+                                     bool IsFramework);
+
+  /// Same as above, but takes the directory as a DirectoryEntryRef.
+  ModuleMapResult parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
+                                     bool IsFramework);
 };
 
 /// Apply the header search options to get given HeaderSearch object.
@@ -965,6 +1116,14 @@ void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const HeaderSearchOptions &HSOpts,
                               const LangOptions &Lang,
                               const llvm::Triple &triple);
+
+void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                              SmallVectorImpl<char> &NormalizedPath);
+
+std::string createSpecificModuleCachePath(FileManager &FileMgr,
+                                          StringRef ModuleCachePath,
+                                          bool DisableModuleHash,
+                                          std::string ContextHash);
 
 } // namespace clang
 

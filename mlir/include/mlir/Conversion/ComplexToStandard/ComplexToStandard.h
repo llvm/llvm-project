@@ -8,20 +8,22 @@
 #ifndef MLIR_CONVERSION_COMPLEXTOSTANDARD_COMPLEXTOSTANDARD_H_
 #define MLIR_CONVERSION_COMPLEXTOSTANDARD_COMPLEXTOSTANDARD_H_
 
+#include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Pass/Pass.h"
 #include <memory>
 
 namespace mlir {
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTCOMPLEXTOSTANDARD
+#define GEN_PASS_DECL_CONVERTCOMPLEXTOSTANDARDPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate the given list with patterns that convert from Complex to Standard.
-void populateComplexToStandardConversionPatterns(RewritePatternSet &patterns);
-
-/// Create a pass to convert Complex operations to the Standard dialect.
-std::unique_ptr<Pass> createConvertComplexToStandardPass();
+void populateComplexToStandardConversionPatterns(
+    RewritePatternSet &patterns,
+    mlir::complex::ComplexRangeFlags complexRange =
+        mlir::complex::ComplexRangeFlags::improved);
 
 } // namespace mlir
 

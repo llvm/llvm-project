@@ -34,7 +34,8 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
     : CommandObjectRaw(interpreter, "dwim-print",
                        "Print a variable or expression.",
                        "dwim-print [<variable-name> | <expression>]",
-                       eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock |
+                           eCommandAllowsDummyTarget) {
 
   AddSimpleArgumentList(eArgTypeVarName);
 
@@ -75,9 +76,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
-  Target *target_ptr = m_exe_ctx.GetTargetPtr();
-  // Fallback to the dummy target, which can allow for expression evaluation.
-  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+  Target &target = m_exe_ctx.GetTargetRef();
 
   EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
@@ -87,44 +86,46 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideRootName(suppress_result);
+  dump_options.SetHideRootName(suppress_result)
+      .SetExpandPointerTypeFlags(lldb::eTypeIsObjC);
 
-  bool is_po = m_varobj_options.use_objc;
+  bool is_po = m_varobj_options.use_object_desc;
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
   // Either the language was explicitly specified, or we check the frame.
-  lldb::LanguageType language = m_expr_options.language;
-  if (language == lldb::eLanguageTypeUnknown && frame)
-    language = frame->GuessLanguage().AsLanguageType();
+  SourceLanguage language{m_expr_options.language};
+  if (!language && frame)
+    language = frame->GuessLanguage();
 
   // Add a hint if object description was requested, but no description
   // function was implemented.
   auto maybe_add_hint = [&](llvm::StringRef output) {
+    static bool note_shown = false;
+    if (note_shown)
+      return;
+
     // Identify the default output of object description for Swift and
     // Objective-C
     // "<Name: 0x...>. The regex is:
     // - Start with "<".
-    // - Followed by 1 or more non-whitespace characters.
+    // - Capture 1 or more non-whitespace characters (the class name).
     // - Followed by ": 0x".
     // - Followed by 5 or more hex digits.
     // - Followed by ">".
     // - End with zero or more whitespace characters.
-    const std::regex swift_class_regex("^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+    static const std::regex swift_class_regex(
+        "^<(\\S+): 0x[[:xdigit:]]{5,}>\\s*$");
 
-    if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
-        (language == lldb::eLanguageTypeSwift ||
-         language == lldb::eLanguageTypeObjC) &&
-        std::regex_match(output.data(), swift_class_regex)) {
+    std::cmatch match;
+    if (GetDebugger().GetShowDontUsePoHint() && !target.IsDummyTarget() &&
+        (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
+         language.IsObjC()) &&
+        std::regex_match(output.data(), match, swift_class_regex)) {
 
-      static bool note_shown = false;
-      if (note_shown)
-        return;
-
-      result.AppendNote(
-          "object description requested, but type doesn't implement "
-          "a custom object description. Consider using \"p\" instead of "
-          "\"po\" (this note will only be shown once per debug session).\n");
+      result.AppendNoteWithFormatv(
+          "{0} has no custom object description, use \"p\" to see its children",
+          match[1].str());
       note_shown = true;
     }
   };
@@ -148,6 +149,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         return;
       }
     }
+    m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                           m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
   };
 
@@ -160,14 +163,15 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // both operators can be overloaded in C++, and could result in ambiguity in
   // how the expression is handled. Additionally, `*` and `&` are not supported.
   const bool try_variable_path =
-      expr.find_first_of("*&->[]") == StringRef::npos;
+      !expr.contains("->") && expr.find_first_of("*&[]") == StringRef::npos;
   if (frame && try_variable_path) {
     VariableSP var_sp;
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
         expr, eval_options.GetUseDynamic(),
-        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
-        status);
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+            StackFrame::eExpressionPathOptionsDisallowGlobals,
+        var_sp, status, lldb::eDILModeSimple);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
@@ -189,7 +193,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // Second, try `expr` as a persistent variable.
   if (expr.starts_with("$"))
-    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(
+            language.AsLanguageType()))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
           dump_val_object(*valobj_sp);
@@ -204,6 +209,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
+
+    if (valobj_sp)
+      result.GetValueObjectList().Append(valobj_sp);
 
     // Record the position of the expression in the command.
     std::optional<uint16_t> indent;

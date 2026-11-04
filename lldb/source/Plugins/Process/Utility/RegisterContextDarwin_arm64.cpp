@@ -67,7 +67,7 @@ using namespace lldb_private;
 
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
-#include "RegisterInfos_arm64.h"
+#include "Register/Arch/RegisterInfos_arm64.h"
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
 // General purpose registers
@@ -768,8 +768,6 @@ uint32_t RegisterContextDarwin_arm64::ConvertRegisterKindToRegisterNumber(
       return gpr_lr;
     case arm64_dwarf::pc:
       return gpr_pc;
-    case arm64_dwarf::cpsr:
-      return gpr_cpsr;
 
     case arm64_dwarf::v0:
       return fpu_v0;
@@ -907,8 +905,6 @@ uint32_t RegisterContextDarwin_arm64::ConvertRegisterKindToRegisterNumber(
       return gpr_lr;
     case arm64_ehframe::pc:
       return gpr_pc;
-    case arm64_ehframe::cpsr:
-      return gpr_cpsr;
     }
   } else if (kind == eRegisterKindLLDB) {
     return reg;

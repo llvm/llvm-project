@@ -28,27 +28,27 @@ LOOP:                                             ; preds = %LOOP47, %main_body
   br i1 %15, label %IF41, label %ENDIF40
 
 IF41:                                             ; preds = %LOOP
-  %16 = insertelement <4 x float> undef, float %0, i32 0
+  %16 = insertelement <4 x float> poison, float %0, i32 0
   %17 = insertelement <4 x float> %16, float %temp8.0, i32 1
   %18 = insertelement <4 x float> %17, float %temp12.0, i32 2
   %19 = insertelement <4 x float> %18, float 0.000000e+00, i32 3
   call void @llvm.r600.store.stream.output(<4 x float> %19, i32 0, i32 0, i32 1)
-  %20 = insertelement <4 x float> undef, float %0, i32 0
+  %20 = insertelement <4 x float> poison, float %0, i32 0
   %21 = insertelement <4 x float> %20, float %temp8.0, i32 1
   %22 = insertelement <4 x float> %21, float %temp12.0, i32 2
   %23 = insertelement <4 x float> %22, float 0.000000e+00, i32 3
   call void @llvm.r600.store.stream.output(<4 x float> %23, i32 0, i32 0, i32 2)
-  %24 = insertelement <4 x float> undef, float %0, i32 0
+  %24 = insertelement <4 x float> poison, float %0, i32 0
   %25 = insertelement <4 x float> %24, float %temp8.0, i32 1
   %26 = insertelement <4 x float> %25, float %temp12.0, i32 2
   %27 = insertelement <4 x float> %26, float 0.000000e+00, i32 3
   call void @llvm.r600.store.stream.output(<4 x float> %27, i32 0, i32 0, i32 4)
-  %28 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
+  %28 = insertelement <4 x float> poison, float 0.000000e+00, i32 0
   %29 = insertelement <4 x float> %28, float 0.000000e+00, i32 1
   %30 = insertelement <4 x float> %29, float 0.000000e+00, i32 2
   %31 = insertelement <4 x float> %30, float 0.000000e+00, i32 3
   call void @llvm.r600.store.swizzle(<4 x float> %31, i32 60, i32 1)
-  %32 = insertelement <4 x float> undef, float %0, i32 0
+  %32 = insertelement <4 x float> poison, float %0, i32 0
   %33 = insertelement <4 x float> %32, float %temp8.0, i32 1
   %34 = insertelement <4 x float> %33, float %temp12.0, i32 2
   %35 = insertelement <4 x float> %34, float 0.000000e+00, i32 3

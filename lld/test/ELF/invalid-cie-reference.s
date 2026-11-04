@@ -1,5 +1,4 @@
 // REQUIRES: x86
-
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
 
@@ -29,4 +28,5 @@
         .long 0x0
         .long 0x0
 
-// CHECK: invalid CIE reference
+// CHECK:      error: corrupted .eh_frame: invalid CIE reference
+// CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0x18)

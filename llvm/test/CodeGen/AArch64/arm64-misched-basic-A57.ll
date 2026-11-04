@@ -7,7 +7,7 @@
 ; loads consecutively for this case and will cause stalls.
 ;
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: main:%bb.2
 ; CHECK: LDR
 ; CHECK: Latency : 4
@@ -16,7 +16,7 @@
 ; CHECK: LDR
 ; CHECK-NOT: LDR
 ; CHECK: {{.*}}
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 
 @main.x = private unnamed_addr constant [8 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 4
 @main.y = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2], align 4
@@ -108,5 +108,5 @@ for.end:                                          ; preds = %for.cond
 ; Function Attrs: nounwind
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind }

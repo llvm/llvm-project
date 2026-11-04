@@ -24,4 +24,12 @@ def LayoutMapOption : I32EnumAttr<"LayoutMapOption",
   let cppNamespace = "::mlir::bufferization";
 }
 
+def MemoryPlannerAlgorithm : I32EnumAttr<"MemoryPlannerAlgorithm",
+                                          "memory planning algorithm", [
+  I32EnumAttrCase<"Trivial", 0, "trivial">,
+  I32EnumAttrCase<"BestFit", 1, "best-fit">
+]> {
+  let cppNamespace = "::mlir::bufferization";
+}
+
 #endif // BUFFERIZATION_ENUMS

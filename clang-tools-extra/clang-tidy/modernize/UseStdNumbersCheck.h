@@ -1,4 +1,4 @@
-//===--- UseStdNumbersCheck.h - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ namespace clang::tidy::modernize {
 /// offers a replacement at the definition of those variables.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-numbers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-numbers.html
 class UseStdNumbersCheck : public ClangTidyCheck {
 public:
   UseStdNumbersCheck(StringRef Name, ClangTidyContext *Context);

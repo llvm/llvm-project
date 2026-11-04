@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
@@ -28,6 +27,7 @@
 #include <type_traits>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, charset conversions cause allocations in the path class in
 // cases where no allocations are done on other platforms.

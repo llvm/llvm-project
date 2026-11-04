@@ -1,6 +1,6 @@
 OBJC_SOURCES := main.m
 
-CFLAGS_EXTRAS := -w
+CFLAGS_EXTRAS := -w -fobjc-exceptions
 
 USE_SYSTEM_STDLIB := 1
 

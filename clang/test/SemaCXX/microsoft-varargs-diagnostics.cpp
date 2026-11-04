@@ -22,7 +22,7 @@ void test_non_last_argument(int i, int j, ...) {
   va_list ap;
   __va_start(&ap, &i, 4);
   // expected-error@-1{{passing 'int *' to parameter of incompatible type 'const char *': type mismatch at 2nd parameter ('int *' vs 'const char *')}}
-  // expected-error@-2{{passing 'int' to parameter of incompatible type 'unsigned int': type mismatch at 3rd parameter ('int' vs 'unsigned int')}}
+  // expected-error@-2{{passing 'int' to parameter of incompatible type '__size_t' (aka 'unsigned int'): type mismatch at 3rd parameter ('int' vs '__size_t' (aka 'unsigned int'))}}
 }
 
 void test_stack_allocated(int i, ...) {
@@ -30,13 +30,13 @@ void test_stack_allocated(int i, ...) {
   int j;
   __va_start(&ap, &j, 4);
   // expected-error@-1{{passing 'int *' to parameter of incompatible type 'const char *': type mismatch at 2nd parameter ('int *' vs 'const char *')}}
-  // expected-error@-2{{passing 'int' to parameter of incompatible type 'unsigned int': type mismatch at 3rd parameter ('int' vs 'unsigned int')}}
+  // expected-error@-2{{passing 'int' to parameter of incompatible type '__size_t' (aka 'unsigned int'): type mismatch at 3rd parameter ('int' vs '__size_t' (aka 'unsigned int'))}}
 }
 
 void test_non_pointer_addressof(int i, ...) {
   va_list ap;
   __va_start(&ap, 1, 4);
   // expected-error@-1{{passing 'int' to parameter of incompatible type 'const char *': type mismatch at 2nd parameter ('int' vs 'const char *')}}
-  // expected-error@-2{{passing 'int' to parameter of incompatible type 'unsigned int': type mismatch at 3rd parameter ('int' vs 'unsigned int')}}
+  // expected-error@-2{{passing 'int' to parameter of incompatible type '__size_t' (aka 'unsigned int'): type mismatch at 3rd parameter ('int' vs '__size_t' (aka 'unsigned int'))}}
 }
 

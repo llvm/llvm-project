@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -51,30 +51,6 @@ def replaceInFile(fileName: str, sFrom: str, sTo: str) -> None:
         f.write(txt)
 
 
-def generateCommentLineHeader(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy ",
-            "-" * max(0, 42 - len(os.path.basename(filename))),
-            "*- C++ -*-===//",
-        ]
-    )
-
-
-def generateCommentLineSource(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy",
-            "-" * max(0, 52 - len(os.path.basename(filename))),
-            "-===//",
-        ]
-    )
-
-
 def fileRename(fileName: str, sFrom: str, sTo: str) -> str:
     if sFrom not in fileName or sFrom == sTo:
         return fileName
@@ -89,12 +65,12 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
     with io.open(fileName, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    not_matching_lines = [l for l in lines if not re.search(pattern, l)]
+    not_matching_lines = [line for line in lines if not re.search(pattern, line)]
     if len(not_matching_lines) == len(lines):
         return False
 
     print("Removing lines matching '%s' in '%s'..." % (pattern, fileName))
-    print("  " + "  ".join([l for l in lines if re.search(pattern, l)]))
+    print("  " + "  ".join(line for line in lines if re.search(pattern, line)))
     with io.open(fileName, "w", encoding="utf8") as f:
         f.writelines(not_matching_lines)
 
@@ -104,21 +80,18 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
 def getListOfFiles(clang_tidy_path: str) -> List[str]:
     files = glob.glob(os.path.join(clang_tidy_path, "**"), recursive=True)
     files += [
-        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst"))
+        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md"))
     ]
     files += glob.glob(
         os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers", "**"),
         recursive=True,
     )
-    files += glob.glob(
-        os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*.rst")
-    )
-    files += glob.glob(
-        os.path.join(
-            clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*", "*.rst"
-        ),
-        recursive=True,
-    )
+    docs_path = os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks")
+    # TODO: Stop discovering reST files once all clang-tidy check
+    # documentation has been migrated to MyST.
+    for extension in (".md", ".rst"):
+        files += glob.glob(os.path.join(docs_path, f"*{extension}"))
+        files += glob.glob(os.path.join(docs_path, "*", f"*{extension}"))
     return [filename for filename in files if os.path.isfile(filename)]
 
 
@@ -210,13 +183,13 @@ def add_release_notes(
     clang_tidy_path: str, old_check_name: str, new_check_name: str
 ) -> None:
     filename = os.path.normpath(
-        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst")
+        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md")
     )
     with io.open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    lineMatcher = re.compile("Renamed checks")
-    nextSectionMatcher = re.compile("Improvements to include-fixer")
+    lineMatcher = re.compile(r"#### Renamed checks")
+    nextSectionMatcher = re.compile(r"### Improvements to include-fixer")
     checkMatcher = re.compile("- The '(.*)")
 
     print("Updating %s..." % filename)
@@ -238,30 +211,29 @@ def add_release_notes(
                 if match_next:
                     add_note_here = True
 
+                # When inside the Renamed checks section and we reach any
+                # heading, insert before it (handles empty sections).
+                if header_found and line.startswith("#"):
+                    add_note_here = True
+
                 if match:
                     header_found = True
                     f.write(line)
                     continue
 
-                if line.startswith("^^^^"):
-                    f.write(line)
-                    continue
-
                 if header_found and add_note_here:
-                    if not line.startswith("^^^^"):
-                        f.write(
-                            """- The '%s' check was renamed to :doc:`%s
-  <clang-tidy/checks/%s/%s>`
-
-                    """
-                            % (
-                                old_check_name,
-                                new_check_name,
-                                new_check_name.split("-", 1)[0],
-                                "-".join(new_check_name.split("-")[1:]),
-                            )
+                    f.write(
+                        "- The '%s' check was renamed to {doc}`%s\n"
+                        "  <clang-tidy/checks/%s/%s>`\n"
+                        "\n"
+                        % (
+                            old_check_name,
+                            new_check_name,
+                            new_check_name.split("-", 1)[0],
+                            "-".join(new_check_name.split("-")[1:]),
                         )
-                        note_added = True
+                    )
+                    note_added = True
 
             f.write(line)
 
@@ -331,25 +303,16 @@ def main() -> None:
         )
 
     for filename in getListOfFiles(clang_tidy_path):
-        originalName = filename
         filename = fileRename(
             filename, old_module + "/" + old_name, new_module + "/" + new_name
         )
         filename = fileRename(filename, args.old_check_name, args.new_check_name)
         filename = fileRename(filename, check_name_camel, new_check_name_camel)
-        replaceInFile(
-            filename,
-            generateCommentLineHeader(originalName),
-            generateCommentLineHeader(filename),
-        )
-        replaceInFile(
-            filename,
-            generateCommentLineSource(originalName),
-            generateCommentLineSource(filename),
-        )
         for header_guard in header_guard_variants:
             replaceInFile(filename, header_guard, header_guard_new)
 
+        # TODO: Remove the reST heading handling once all clang-tidy check
+        # documentation has been migrated to MyST.
         if new_module + "/" + new_name + ".rst" in filename:
             replaceInFile(
                 filename,

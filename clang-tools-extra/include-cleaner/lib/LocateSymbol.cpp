@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "TypesInternal.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/Casting.h"
-#include <utility>
+#include "llvm/Support/ErrorHandling.h"
 #include <vector>
 
 namespace clang::include_cleaner {
@@ -26,13 +28,19 @@ template <typename T> Hints completeIfDefinition(T *D) {
 }
 
 Hints declHints(const Decl *D) {
-  // Definition is only needed for classes and templates for completeness.
+  // For C++, definition is only needed for classes and templates for
+  // completeness. For Objective-C, definition is needed for classes and
+  // protocols. TagDecl covers enums and structs.
   if (auto *TD = llvm::dyn_cast<TagDecl>(D))
     return completeIfDefinition(TD);
   else if (auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(D))
     return completeIfDefinition(CTD);
   else if (auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(D))
     return completeIfDefinition(FTD);
+  else if (auto *OID = llvm::dyn_cast<ObjCInterfaceDecl>(D))
+    return completeIfDefinition(OID);
+  else if (auto *OPD = llvm::dyn_cast<ObjCProtocolDecl>(D))
+    return completeIfDefinition(OPD);
   // Any other declaration is assumed usable.
   return Hints::CompleteSymbol;
 }
@@ -54,20 +62,24 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   return Result;
 }
 
-std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M) {
+std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M,
+                                                const tooling::stdlib::Lang L) {
   // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName()))
+  if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName(), L))
     return {{*SS, Hints::CompleteSymbol}};
   return {{M.Definition, Hints::CompleteSymbol}};
 }
 } // namespace
 
-std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S) {
+std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S,
+                                                 const LangOptions &LO) {
+  const auto L = !LO.CPlusPlus && LO.C99 ? tooling::stdlib::Lang::C
+                                         : tooling::stdlib::Lang::CXX;
   switch (S.kind()) {
   case Symbol::Declaration:
     return locateDecl(S.declaration());
   case Symbol::Macro:
-    return locateMacro(S.macro());
+    return locateMacro(S.macro(), L);
   }
   llvm_unreachable("Unknown Symbol::Kind enum");
 }

@@ -1,9 +1,4 @@
-; RUN: opt -S < %s -passes=globalopt --experimental-debuginfo-iterators=false | FileCheck %s
-;; FIXME: this test is pinned to not use RemoveDIs non-intrinsic debug-info.
-;; Constant-deletion takes a slightly different path and (correctly) replaces
-;; the operand of the debug-info record with poison instead of a null pointer.
-;; This is a spurious test difference that we'll suppress for turning RemoveDIs
-;; on.
+; RUN: opt -S < %s -passes=globalopt | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -16,7 +11,7 @@ define i32 @main(i32 %argc, ptr %argv) norecurse !dbg !18 {
 ; CHECK: alloca ptr
 ; Make sure the metadata is sane. Currently, we just drop the metadata,
 ; so it points to nothing.
-; CHECK: #dbg_value(!2,
+; CHECK: #dbg_value(ptr poison,
 ; CHECK: !2 = !{}
 entry:
   call void @llvm.dbg.value(metadata i32 %argc, metadata !22, metadata !23), !dbg !24

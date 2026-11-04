@@ -9,8 +9,8 @@
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/Support/Errc.h"
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
 
 Expected<NameOrPattern>
 NameOrPattern::create(StringRef Pattern, MatchStyle MS,
@@ -19,7 +19,6 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   case MatchStyle::Literal:
     return NameOrPattern(Pattern);
   case MatchStyle::Wildcard: {
-    SmallVector<char, 32> Data;
     bool IsPositiveMatch = !Pattern.consume_front("!");
     Expected<GlobPattern> GlobOrErr = GlobPattern::create(Pattern);
 
@@ -48,6 +47,3 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   }
   llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
 }
-
-} // end namespace objcopy
-} // end namespace llvm

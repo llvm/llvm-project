@@ -14,9 +14,11 @@
 #define LLVM_EXECUTIONENGINE_ORC_PERFSUPPORTPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/PerfSharedStructs.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 
 namespace llvm {
 namespace orc {
@@ -24,14 +26,14 @@ namespace orc {
 /// Log perf jitdump events for each object (see
 /// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/tools/perf/Documentation/jitdump-specification.txt).
 /// Currently has support for dumping code load records and unwind info records.
-class PerfSupportPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI PerfSupportPlugin : public ObjectLinkingLayer::Plugin {
 public:
   PerfSupportPlugin(ExecutorProcessControl &EPC,
                     ExecutorAddr RegisterPerfStartAddr,
                     ExecutorAddr RegisterPerfEndAddr,
                     ExecutorAddr RegisterPerfImplAddr, bool EmitDebugInfo,
                     bool EmitUnwindInfo);
-  ~PerfSupportPlugin();
+  ~PerfSupportPlugin() override;
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -54,8 +56,8 @@ public:
 
 private:
   ExecutorProcessControl &EPC;
-  ExecutorAddr RegisterPerfStartAddr;
-  ExecutorAddr RegisterPerfEndAddr;
+  Proxy<void()> RegisterPerfStart;
+  Proxy<void()> RegisterPerfEnd;
   ExecutorAddr RegisterPerfImplAddr;
   std::atomic<uint64_t> CodeIndex;
   bool EmitDebugInfo;

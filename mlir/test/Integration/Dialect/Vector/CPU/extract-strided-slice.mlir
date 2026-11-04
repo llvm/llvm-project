@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
@@ -20,7 +20,7 @@ func.func @entry() {
   %a3 = vector.insert %v3, %a2[2, 1] : vector<8xf32> into vector<4x4x8xf32>
   %a4 = vector.insert %v4, %a3[2, 2] : vector<8xf32> into vector<4x4x8xf32>
 
-  %ss = vector.extract_strided_slice %a4 {offsets = [1, 1], sizes = [2, 2], strides = [1, 1]} : vector<4x4x8xf32> to vector<2x2x8xf32>
+  %ss = vector.extract_strided_slice %a4 offsets = [1, 1], sizes = [2, 2], strides = [1, 1] : vector<4x4x8xf32> to vector<2x2x8xf32>
 
   vector.print %ss : vector<2x2x8xf32>
   //

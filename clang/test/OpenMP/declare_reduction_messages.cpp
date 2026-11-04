@@ -69,7 +69,7 @@ class Class2 : public Class1<T> {
 #pragma omp declare reduction(fun77 : long : omp_out += omp_in) initializer(omp_priv Class2 < int > ()) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare reduction(fun8 : long : omp_out += omp_in) initializer(omp_priv 23)                 // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare reduction(fun88 : long : omp_out += omp_in) initializer(omp_priv 23))               // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
-#pragma omp declare reduction(fun9 : long : omp_out += omp_priv) initializer(omp_in = 23)               // expected-error {{use of undeclared identifier 'omp_priv'; did you mean 'omp_in'?}} expected-note {{'omp_in' declared here}}
+#pragma omp declare reduction(fun9 : long : omp_out += omp_priv) initializer(omp_in = 23)               // expected-error {{use of undeclared identifier 'omp_priv'}}
 #pragma omp declare reduction(fun10 : long : omp_out += omp_in) initializer(omp_priv = 23)
 
 template <typename T>
@@ -167,3 +167,19 @@ struct S
 #pragma omp declare reduction (bar : S<1> : omp_out.foo(omp_in))
 
 #endif
+
+namespace GH223366 {
+struct HasType {
+  typedef int type;
+};
+
+template <typename T>
+void f() {
+#pragma omp declare reduction(red : typename T::type : omp_out += omp_in) // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+}
+
+void g() {
+  f<HasType>();
+  f<int>(); // expected-note {{in instantiation of function template specialization 'GH223366::f<int>' requested here}}
+}
+}

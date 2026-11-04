@@ -17,24 +17,24 @@ struct Base {
 struct Simple : public Base {
   virtual ~Simple();
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  ~Simple() override;
+  // CHECK-FIXES: ~Simple() override;
   virtual void a() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'override' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void a() override;
+  // CHECK-FIXES: void a() override;
   virtual void b() final;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'final' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void b() final;
+  // CHECK-FIXES: void b() final;
   virtual void c() final override;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'final' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void c() final override;
+  // CHECK-FIXES: void c() final override;
   virtual void d() override final;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'final' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void d() override final;
+  // CHECK-FIXES: void d() override final;
   void e() final override;
   void f() override final;
   void g() final;
   void h() override;
   void i();
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this function with 'override' or (rarely) 'final' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void i() override;
+  // CHECK-FIXES: void i() override;
 };

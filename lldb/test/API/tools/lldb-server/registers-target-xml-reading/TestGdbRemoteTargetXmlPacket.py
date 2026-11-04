@@ -24,7 +24,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
                 ),
                 {
                     "direction": "send",
-                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "regex": re.compile(r"^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
                     "capture": {1: "target_xml"},
                 },
             ],
@@ -40,7 +40,15 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         architecture = root.find("architecture")
         self.assertIsNotNone(architecture)
-        self.assertIn(self.getArchitecture(), architecture.text)
+        # Match the expected gdbserver's arch, see GDBRemoteCommunicationServerLLGS::BuildTargetXml.
+        replaced_arch = {
+            "x86_64": "i386:x86-64",
+            "riscv64": "riscv:rv64",
+            "riscv32": "riscv:rv32",
+        }
+        arch: str = self.getArchitecture()
+        expected_arch = replaced_arch.get(arch, arch)
+        self.assertTrue(architecture.text.startswith(expected_arch))
 
         feature = root.find("feature")
         self.assertIsNotNone(feature)
@@ -63,7 +71,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertEqual(q_info_reg["format"], xml_info_reg.get("format"))
             self.assertEqual(q_info_reg["bitsize"], xml_info_reg.get("bitsize"))
 
-            if not self.isAArch64():
+            if not (self.isAArch64() or self.isRISCV()):
                 self.assertEqual(q_info_reg["offset"], xml_info_reg.get("offset"))
 
             self.assertEqual(q_info_reg["encoding"], xml_info_reg.get("encoding"))

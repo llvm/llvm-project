@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | llvm-mc -triple=amdgpu6.00 -filetype=obj -o /dev/null
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | llvm-mc -triple=amdgpu8.02 -filetype=obj -o /dev/null
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -23,11 +25,11 @@ entry:
 
 ; CHECK-LABEL: {{^}}branch_on_asm_vgpr:
 ; Make sure VGPR inline assembly is treated as divergent.
-; CHECK: v_mov_b32 v{{[0-9]+}}, 0
+; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK: v_cmp_eq_u32
 ; CHECK: s_and_saveexec_b64
 define amdgpu_kernel void @branch_on_asm_vgpr(ptr addrspace(1) %out) {
-	%zero = call i32 asm "v_mov_b32 $0, 0", "=v"()
+	%zero = call i32 asm "v_mov_b32_e32 $0, 0", "=v"()
 	%cmp = icmp eq i32 %zero, 0
 	br i1 %cmp, label %if, label %endif
 
@@ -193,7 +195,7 @@ entry:
 define amdgpu_kernel void @code_size_inline_asm_mixed_comments_operands(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
-    v_add_i32_e32 v0, vcc, v1, v2 ; inline comment
+    v_add_f32_e32 v0, v1, v2 ; inline comment
 ; separate comment
     v_bfrev_b32_e32 v0, 1
 
@@ -234,9 +236,9 @@ entry:
 ; CHECK: {{buffer|flat}}_store_byte [[STORE]],
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
-  %val = load i1, ptr addrspace(1) undef
+  %val = load i1, ptr addrspace(1) poison
   %cc = call i1 asm sideeffect "; use $1, def $0 ", "={v1}, {v0}"(i1 %val)
-  store i1 %cc, ptr addrspace(1) undef
+  store i1 %cc, ptr addrspace(1) poison
   ret void
 }
 
@@ -249,8 +251,8 @@ entry:
 ; CHECK-NEXT: ASMSTART
 define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
-  %val0 = load volatile i1, ptr addrspace(1) undef
-  %val1 = load volatile i1, ptr addrspace(1) undef
+  %val0 = load volatile i1, ptr addrspace(1) poison
+  %val1 = load volatile i1, ptr addrspace(1) poison
   call void asm sideeffect "; use $0 $1 ", "{v0}, {v1}"(i1 %val0, i1 %val1)
   ret void
 }
@@ -265,7 +267,7 @@ entry:
   %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %def1 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %add = shl i32 %def0, %def1
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -297,17 +299,17 @@ entry:
 
 ; Check aggregate types are handled properly.
 ; CHECK-LABEL: mad_u64
-; CHECK: v_mad_u64_u32
+; CHECK: ; def v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], use
 define void @mad_u64(i32 %x, i1 %c0) {
 entry:
   br i1 %c0, label %exit, label %false
 
 false:
-  %s0 = tail call { i64, i64 } asm sideeffect "v_mad_u64_u32 $0, $1, $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)
+  %s0 = tail call { i64, i64 } asm sideeffect "; def $0, $1, use $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)
   br label %exit
 
 exit:
-  %s1 = phi { i64, i64} [ undef, %entry ], [ %s0, %false]
+  %s1 = phi { i64, i64} [ poison, %entry ], [ %s0, %false]
   %v0 = extractvalue { i64, i64 } %s1, 0
   %v1 = extractvalue { i64, i64 } %s1, 1
   tail call void asm sideeffect "; use $0", "v"(i64 %v0)

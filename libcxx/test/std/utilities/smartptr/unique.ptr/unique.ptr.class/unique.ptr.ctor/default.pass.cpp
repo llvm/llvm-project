@@ -82,6 +82,10 @@ TEST_CONSTEXPR_CXX23 bool test_basic() {
     p.get_deleter().set_state(5);
     assert(p.get_deleter().state() == 5);
   }
+// TODO: Remove this check once https://llvm.org/PR154567 is fixed
+#if TEST_STD_VER >= 23 && defined(TEST_COMPILER_CLANG)
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
     std::unique_ptr<ElemType, DefaultCtorDeleter<ElemType> > p;
     assert(p.get() == 0);

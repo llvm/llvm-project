@@ -52,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 
@@ -763,6 +762,19 @@ public:
     return Instructions.insert(At, NewInst);
   }
 
+  /// Insert [\p Begin, \p End) before \p At, which may be end(). The source
+  /// iterators must be multipass and the range must not refer to instructions
+  /// in this block. Return the iterator following the inserted range, or \p At
+  /// if the range is empty.
+  template <typename Itr>
+  iterator insertInstructions(iterator At, Itr Begin, Itr End) {
+    if (Begin == End)
+      return At;
+    adjustNumPseudos(Begin, End, 1);
+    auto InsertedAt = Instructions.insert(At, Begin, End);
+    return std::next(InsertedAt, std::distance(Begin, End));
+  }
+
   /// Helper to retrieve any terminators in \p BB before \p Pos. This is used
   /// to skip CFI instructions and to retrieve the first terminator instruction
   /// in basic blocks with two terminators (conditional jump and unconditional
@@ -891,6 +903,8 @@ public:
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
 
+  bool hasParent() const { return getParent() != nullptr; }
+
   /// Return true if the containing function is in CFG state.
   bool hasCFG() const;
 
@@ -979,7 +993,13 @@ template <> struct GraphTraits<bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -990,7 +1010,13 @@ template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<const bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
   using NodeRef = bolt::BinaryBasicBlock *;
@@ -1002,7 +1028,13 @@ template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -1014,7 +1046,13 @@ template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 } // namespace llvm
 

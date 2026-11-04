@@ -19,21 +19,21 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS complex;
+class complex;
 
 #if _LIBCPP_STD_VER >= 26
 
 template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(complex<_Tp>&) noexcept;
+constexpr _Tp& get(complex<_Tp>&) noexcept;
 
 template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(complex<_Tp>&&) noexcept;
+constexpr _Tp&& get(complex<_Tp>&&) noexcept;
 
 template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const complex<_Tp>&) noexcept;
+constexpr const _Tp& get(const complex<_Tp>&) noexcept;
 
 template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const complex<_Tp>&&) noexcept;
+constexpr const _Tp&& get(const complex<_Tp>&&) noexcept;
 
 #endif // _LIBCPP_STD_VER >= 26
 

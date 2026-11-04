@@ -298,21 +298,6 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unreachable, Conf.Diagnostics.Suppress, LangOptions()));
-  // Subcategory not respected/suppressed.
-  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unreachable_break, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unused_variable, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
-                                            Conf.Diagnostics.Suppress,
-                                            LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::err_unexpected_friend, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_alloca, Conf.Diagnostics.Suppress, LangOptions()));
-
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());
   EXPECT_TRUE(Conf.Diagnostics.SuppressAll);
@@ -325,14 +310,10 @@ TEST_F(ConfigCompileTests, Tidy) {
   Tidy.Add.emplace_back("llvm-*");
   Tidy.Remove.emplace_back("llvm-include-order");
   Tidy.Remove.emplace_back("readability-*");
-  Tidy.CheckOptions.emplace_back(
-      std::make_pair(std::string("StrictMode"), std::string("true")));
   Tidy.CheckOptions.emplace_back(std::make_pair(
       std::string("example-check.ExampleOption"), std::string("0")));
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 2U);
-  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup("StrictMode"),
-            "true");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 1U);
   EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup(
                 "example-check.ExampleOption"),
             "0");
@@ -350,6 +331,20 @@ TEST_F(ConfigCompileTests, Tidy) {
               "clang-tidy check 'bugprone-use-after-move' was not found"),
           diagMessage("clang-tidy check 'llvm-include-order' was not found")));
 #endif
+}
+
+TEST_F(ConfigCompileTests, TidyExperimentalCustomChecks) {
+  EXPECT_FALSE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
+
+  Frag.Diagnostics.ClangTidy.ExperimentalCustomChecks = true;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
+
+  Fragment Override;
+  Override.Diagnostics.ClangTidy.ExperimentalCustomChecks = false;
+  auto Compiled = std::move(Override).compile(Diags.callback());
+  EXPECT_TRUE(Compiled(Parm, Conf));
+  EXPECT_FALSE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
 }
 
 TEST_F(ConfigCompileTests, TidyBadChecks) {

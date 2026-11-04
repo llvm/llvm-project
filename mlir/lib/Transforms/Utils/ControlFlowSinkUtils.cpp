@@ -21,7 +21,10 @@
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/Support/DebugLog.h"
 #include <vector>
 
 #define DEBUG_TYPE "cf-sink"
@@ -84,14 +87,16 @@ bool Sinker::allUsersDominatedBy(Operation *op, Region *region) {
 
 void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
                                    std::vector<Operation *> &stack) {
-  LLVM_DEBUG(user->print(llvm::dbgs() << "\nContained op:\n"));
+  LDBG() << "Contained op: "
+         << OpWithFlags(user, OpPrintingFlags().skipRegions());
   for (Value value : user->getOperands()) {
     Operation *op = value.getDefiningOp();
-    // Ignore block arguments and ops that are already inside the region.
-    if (!op || op->getParentRegion() == region)
+    // Ignore block arguments and ops already contained in the target region,
+    // including ops in nested regions.
+    if (!op || region->isAncestor(op->getParentRegion()))
       continue;
-    LLVM_DEBUG(op->print(llvm::dbgs() << "\nTry to sink:\n"));
-
+    LDBG() << "Try to sink:\n"
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     // If the op's users are all in the region and it can be moved, then do so.
     if (allUsersDominatedBy(op, region) && shouldMoveIntoRegion(op, region)) {
       moveIntoRegion(op, region);
@@ -103,10 +108,10 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
 }
 
 void Sinker::sinkRegion(Region *region) {
-  // Initialize the work queue with all the ops in the region.
+  // Initialize the work queue with all the ops in the region, including
+  // nested regions.
   std::vector<Operation *> stack;
-  for (Operation &op : region->getOps())
-    stack.push_back(&op);
+  region->walk([&](Operation *op) { stack.push_back(op); });
 
   // Process all the ops depth-first. This ensures that nodes of subgraphs are
   // sunk in the correct order.

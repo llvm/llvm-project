@@ -81,10 +81,7 @@ class FalkorMarkStridedAccessesLegacy : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
 
-  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {
-    initializeFalkorMarkStridedAccessesLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
@@ -180,9 +177,7 @@ class FalkorHWPFFix : public MachineFunctionPass {
 public:
   static char ID;
 
-  FalkorHWPFFix() : MachineFunctionPass(ID) {
-    initializeFalkorHWPFFixPass(*PassRegistry::getPassRegistry());
-  }
+  FalkorHWPFFix() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -193,8 +188,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -818,7 +812,7 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
 
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();

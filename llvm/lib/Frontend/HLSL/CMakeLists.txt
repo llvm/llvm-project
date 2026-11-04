@@ -1,5 +1,12 @@
 add_llvm_component_library(LLVMFrontendHLSL
+  CBuffer.cpp
+  HLSLBinding.cpp
   HLSLResource.cpp
+  HLSLRootSignature.cpp
+  RootSignatureMetadata.cpp
+  RootSignatureValidations.cpp
+  SemanticSignaturePacking.cpp
+  SemanticSignatures.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend
@@ -9,6 +16,7 @@ add_llvm_component_library(LLVMFrontendHLSL
   intrinsics_gen
 
   LINK_COMPONENTS
+  BinaryFormat
   Core
   Support
   )

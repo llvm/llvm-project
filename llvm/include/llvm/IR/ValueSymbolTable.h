@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -64,7 +65,7 @@ public:
 /// @{
 
   ValueSymbolTable(int MaxNameSize = -1) : vmap(0), MaxNameSize(MaxNameSize) {}
-  ~ValueSymbolTable();
+  LLVM_ABI ~ValueSymbolTable();
 
   /// @}
   /// @name Accessors
@@ -91,11 +92,11 @@ public:
   /// This function can be used from the debugger to display the
   /// content of the symbol table while debugging.
   /// Print out symbol table on stderr
-  void dump() const;
+  LLVM_ABI void dump() const;
 
-/// @}
-/// @name Iteration
-/// @{
+  /// @}
+  /// @name Iteration
+  /// @{
 
   /// Get an iterator that from the beginning of the symbol table.
   inline iterator begin() { return vmap.begin(); }

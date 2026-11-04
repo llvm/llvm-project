@@ -28,19 +28,21 @@
 #include "test_allocator.h"
 
 struct ThrowingCtorComp {
-  ThrowingCtorComp() noexcept(false) {}
-  bool operator()(const auto&, const auto&) const { return false; }
+  constexpr ThrowingCtorComp() noexcept(false) {}
+  constexpr bool operator()(const auto&, const auto&) const { return false; }
 };
 
-int main(int, char**) {
+constexpr bool test() {
 #if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_map<MoveOnly, MoveOnly>;
     static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
   }
   {
     using C = std::flat_map<MoveOnly, MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, test_allocator<MoveOnly>>>;
     static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
   }
 #endif // _LIBCPP_VERSION
   {
@@ -53,5 +55,15 @@ int main(int, char**) {
     static_assert(!std::is_nothrow_default_constructible_v<C>);
     C c;
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

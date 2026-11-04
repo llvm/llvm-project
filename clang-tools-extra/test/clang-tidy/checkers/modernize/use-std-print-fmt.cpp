@@ -5,9 +5,7 @@
 // RUN:               modernize-use-std-print.ReplacementPrintlnFunction: 'fmt::println', \
 // RUN:               modernize-use-std-print.PrintHeader: '<fmt/core.h>' \
 // RUN:             } \
-// RUN:            }" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }"
 #include <cstdio>
 // CHECK-FIXES: #include <fmt/core.h>
 #include <string.h>

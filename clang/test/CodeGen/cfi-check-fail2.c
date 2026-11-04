@@ -19,7 +19,7 @@ void caller(void (*f)(void)) {
 // CHECK: %[[DATA:.*]] = load ptr, ptr %[[ALLOCA0]], align 8
 // CHECK: %[[ADDR:.*]] = load ptr, ptr %[[ALLOCA1]], align 8
 // CHECK: %[[ICMP_NOT_NULL:.*]] = icmp ne ptr %[[DATA]], null
-// CHECK: br i1 %[[ICMP_NOT_NULL]], label %[[CONT0:.*]], label %[[TRAP:.*]],
+// CHECK: br i1 %[[ICMP_NOT_NULL]], label %[[CONT0:.*]], label %[[TRAP:.*]], !prof
 
 // CHECK: [[TRAP]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -41,7 +41,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT1]]:
 // CHECK:   %[[NOT_1:.*]] = icmp ne i8 %[[KIND]], 1
-// CHECK:   br i1 %[[NOT_1]], label %[[CONT2:.*]], label %[[HANDLE1:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_1]], label %[[CONT2:.*]], label %[[HANDLE1:.*]], !prof
 
 // CHECK: [[HANDLE1]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -49,7 +49,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT2]]:
 // CHECK:   %[[NOT_2:.*]] = icmp ne i8 %[[KIND]], 2
-// CHECK:   br i1 %[[NOT_2]], label %[[CONT3:.*]], label %[[HANDLE2:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_2]], label %[[CONT3:.*]], label %[[HANDLE2:.*]], !prof
 
 // CHECK: [[HANDLE2]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -57,7 +57,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT3]]:
 // CHECK:   %[[NOT_3:.*]] = icmp ne i8 %[[KIND]], 3
-// CHECK:   br i1 %[[NOT_3]], label %[[CONT4:.*]], label %[[HANDLE3:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_3]], label %[[CONT4:.*]], label %[[HANDLE3:.*]], !prof
 
 // CHECK: [[HANDLE3]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -65,7 +65,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT4]]:
 // CHECK:   %[[NOT_4:.*]] = icmp ne i8 %[[KIND]], 4
-// CHECK:   br i1 %[[NOT_4]], label %[[CONT5:.*]], label %[[HANDLE4:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_4]], label %[[CONT5:.*]], label %[[HANDLE4:.*]], !prof
 
 // CHECK: [[HANDLE4]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)

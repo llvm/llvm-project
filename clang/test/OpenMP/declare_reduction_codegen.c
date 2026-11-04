@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix=CHECK-LOAD %s
 
 // RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes -fopenmp-version=45
-// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes -fopenmp-version=45 | FileCheck --check-prefixes=CHECK-LOAD,OMP45-LOAD %s
+// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes -fopenmp-version=45 | FileCheck --check-prefix=CHECK-LOAD %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c -emit-llvm %s -triple %itanium_abi_triple -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
@@ -56,7 +56,7 @@
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
 // CHECK: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// CHECK: [[ADD:%.+]] = fadd float 1.5
+// CHECK: [[ADD:%.+]] = fadd float 1.500000e+01
 // CHECK-NEXT: store float [[ADD]], ptr
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
@@ -66,7 +66,7 @@
 // CHECK-LOAD-NEXT: ret void
 // CHECK-LOAD-NEXT: }
 // CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// CHECK-LOAD: [[ADD:%.+]] = fadd float 1.5
+// CHECK-LOAD: [[ADD:%.+]] = fadd float 1.500000e+01
 // CHECK-LOAD-NEXT: store float [[ADD]], ptr
 // CHECK-LOAD-NEXT: ret void
 // CHECK-LOAD-NEXT: }
@@ -151,21 +151,6 @@ int main(void) {
   }
   return 0;
 }
-
-// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// OMP45-LOAD: [[MUL:%.+]] = mul nsw i32
-// OMP45-LOAD-NEXT: store i32 [[MUL]], ptr
-// OMP45-LOAD-NEXT: ret void
-// OMP45-LOAD-NEXT: }
-
-// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// OMP45-LOAD: sext i8
-// OMP45-LOAD: sext i8
-// OMP45-LOAD: [[MUL:%.+]] = mul nsw i32
-// OMP45-LOAD-NEXT: [[TRUNC:%.+]] = trunc i32 [[MUL]] to i8
-// OMP45-LOAD-NEXT: store i8 [[TRUNC]], ptr
-// OMP45-LOAD-NEXT: ret void
-// OMP45-LOAD-NEXT: }
 
 // CHECK-LABEL: bar
 struct SSS ss;

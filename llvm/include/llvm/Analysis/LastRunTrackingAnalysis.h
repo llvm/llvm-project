@@ -32,9 +32,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
+
+struct AnalysisOptions;
 
 /// This class is used to track the last run of a set of module/function passes.
 /// Invalidation are conservatively handled by the pass manager if a pass
@@ -80,9 +83,14 @@ public:
   }
 
 private:
-  bool shouldSkipImpl(PassID ID, OptionPtr Ptr) const;
-  void updateImpl(PassID ID, bool Changed, CompatibilityCheckFn CheckFn);
+  friend class LastRunTrackingAnalysis;
+  explicit LastRunTrackingInfo(const AnalysisOptions &Opts) : Opts(Opts) {}
 
+  LLVM_ABI bool shouldSkipImpl(PassID ID, OptionPtr Ptr) const;
+  LLVM_ABI void updateImpl(PassID ID, bool Changed,
+                           CompatibilityCheckFn CheckFn);
+
+  const AnalysisOptions &Opts;
   DenseMap<PassID, CompatibilityCheckFn> TrackedPasses;
 };
 
@@ -90,16 +98,12 @@ private:
 class LastRunTrackingAnalysis final
     : public AnalysisInfoMixin<LastRunTrackingAnalysis> {
   friend AnalysisInfoMixin<LastRunTrackingAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = LastRunTrackingInfo;
-  LastRunTrackingInfo run(Function &F, FunctionAnalysisManager &) {
-    return LastRunTrackingInfo();
-  }
-  LastRunTrackingInfo run(Module &M, ModuleAnalysisManager &) {
-    return LastRunTrackingInfo();
-  }
+  LLVM_ABI LastRunTrackingInfo run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI LastRunTrackingInfo run(Module &M, ModuleAnalysisManager &);
 };
 
 } // namespace llvm

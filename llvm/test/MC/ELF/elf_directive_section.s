@@ -3,15 +3,6 @@
 	.bss
 # CHECK: .bss
 
-	.data.rel.ro
-# CHECK: .data.rel.ro
-
-	.data.rel
-# CHECK: .data.rel
-
-	.eh_frame
-# CHECK: .eh_frame
-
 	.rodata
 # CHECK: .rodata
 

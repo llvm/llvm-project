@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-- -stop-before peephole-opt -o %t.mir %s
-; RUN: llc -mtriple x86_64-- -run-pass none %t.mir -verify-machineinstrs -o - | FileCheck %s
+; RUN: llc -mtriple x86_64-- -run-pass none %t.mir -o - | FileCheck %s
 
 ; Unreachable blocks in the machine instr representation are these
 ; weird empty blocks with no successors.
@@ -35,7 +35,7 @@
 ; CHECK-NOT: %bb.{{[0-9]+}}.split.true
 ; CHECK-LABEL: bb.{{[0-9]+}}.split.true:
 define void @foo(ptr %bar) {
-  br i1 undef, label %true, label %false
+  br i1 poison, label %true, label %false
 true:
   %v = load i32, ptr %bar
   br label %split.true

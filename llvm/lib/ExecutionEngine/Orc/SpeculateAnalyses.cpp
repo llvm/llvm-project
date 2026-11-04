@@ -26,13 +26,12 @@ SmallVector<const BasicBlock *, 8> findBBwithCalls(const Function &F,
 
   auto findCallInst = [&IndirectCall](const Instruction &I) {
     if (auto Call = dyn_cast<CallBase>(&I))
-      return Call->isIndirectCall() ? IndirectCall : true;
-    else
-      return false;
+      if (!isa<PseudoProbeInst>(Call))
+        return Call->isIndirectCall() ? IndirectCall : true;
+    return false;
   };
   for (auto &BB : F)
-    if (findCallInst(*BB.getTerminator()) ||
-        llvm::any_of(BB.instructionsWithoutDebug(), findCallInst))
+    if (findCallInst(*BB.getTerminator()) || llvm::any_of(BB, findCallInst))
       BBs.emplace_back(&BB);
 
   return BBs;
@@ -55,7 +54,7 @@ void SpeculateQuery::findCalles(const BasicBlock *BB,
     if (auto DirectCall = dyn_cast<Function>(CalledValue))
       CallesNames.insert(DirectCall->getName());
   };
-  for (auto &I : BB->instructionsWithoutDebug())
+  for (auto &I : *BB)
     if (auto CI = dyn_cast<CallInst>(&I))
       getCalledFunction(CI);
 
@@ -87,7 +86,7 @@ BlockFreqQuery::ResultTy BlockFreqQuery::operator()(Function &F) {
   DenseSet<StringRef> Calles;
   SmallVector<std::pair<const BasicBlock *, uint64_t>, 8> BBFreqs;
 
-  PassBuilder PB;
+  PassBuilder PB(F.getContext());
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
 
@@ -234,7 +233,7 @@ SequenceBBQuery::queryCFG(Function &F, const BlockListTy &CallerBlocks) {
   VisitedBlocksInfoTy VisitedBlocks;
   BackEdgesInfoTy BackEdgesInfo;
 
-  PassBuilder PB;
+  PassBuilder PB(F.getContext());
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
 

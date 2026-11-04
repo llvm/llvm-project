@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -36,9 +37,13 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
-struct TPIDR2Object {
-  int FrameIndex = std::numeric_limits<int>::max();
-  unsigned Uses = 0;
+/// Condition of signing the return address in a function.
+///
+/// Corresponds to possible values of "sign-return-address" function attribute.
+enum class SignReturnAddress {
+  None,
+  NonLeaf,
+  All,
 };
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
@@ -73,14 +78,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
-  /// The start and end frame indices for the SVE callee saves.
-  int MinSVECSFrameIndex = 0;
-  int MaxSVECSFrameIndex = 0;
-
   /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize = 0;
-  unsigned SVECalleeSavedStackSize = 0;
+  unsigned ZPRCalleeSavedStackSize = 0;
+  unsigned PPRCalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
+  bool HasSVECalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
@@ -135,9 +138,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
-  uint64_t StackSizeSVE = 0;
+  uint64_t StackSizeZPR = 0;
+  uint64_t StackSizePPR = 0;
 
-  /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
+  /// Are SVE objects (vectors and predicates) split into separate regions on
+  /// the stack.
+  bool SplitSVEObjects = false;
+
+  /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
   /// Has a value when it is known whether or not the function uses a
@@ -166,13 +174,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // CalleeSavedStackSize) to the address of the frame record.
   int CalleeSaveBaseToFrameRecordOffset = 0;
 
-  /// SignReturnAddress is true if PAC-RET is enabled for the function with
-  /// defaults being sign non-leaf functions only, with the B key.
-  bool SignReturnAddress = false;
-
-  /// SignReturnAddressAll modifies the default PAC-RET mode to signing leaf
-  /// functions as well.
-  bool SignReturnAddressAll = false;
+  /// SignCondition controls when PAC-RET protection should be used.
+  SignReturnAddress SignCondition = SignReturnAddress::None;
 
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
@@ -186,6 +189,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// within the prologue, so it can be re-used for authentication in the
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
+
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
 
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
@@ -202,6 +211,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// extended record.
   bool HasSwiftAsyncContext = false;
 
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
+
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
@@ -210,9 +225,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The function has Scalable Vector or Scalable Predicate register argument
   /// or return type
   bool IsSVECC = false;
-
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -227,23 +239,18 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds a register containing pstate.sm. This is set
   // on function entry to record the initial pstate of a function.
-  Register PStateSMReg = MCRegister::NoRegister;
-
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
+  Register PStateSMReg = Register();
 
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
 
-  // The stack slots where VG values are stored to.
-  int64_t VGIdx = std::numeric_limits<int>::max();
-  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+  // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
+  SMEAttrs SMEFnAttrs;
+
+  // Holds the TPIDR2 block if allocated early (for Windows/stack probes
+  // support).
+  Register EarlyAllocSMESaveBuffer = Register();
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -253,6 +260,14 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void setEarlyAllocSMESaveBuffer(Register Ptr) {
+    EarlyAllocSMESaveBuffer = Ptr;
+  }
+
+  Register getEarlyAllocSMESaveBuffer() const {
+    return EarlyAllocSMESaveBuffer;
+  }
+
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
   }
@@ -260,25 +275,11 @@ public:
     return PredicateRegForFillSpill;
   }
 
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
-
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
 
-  int64_t getVGIdx() const { return VGIdx; };
-  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
-
-  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
-  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
-
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
-
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -295,21 +296,34 @@ public:
     TailCallReservedStack = bytes;
   }
 
-  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
-
-  void setStackSizeSVE(uint64_t S) {
+  void setStackSizeSVE(uint64_t ZPR, uint64_t PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE stack sizes to be aligned to 16-bytes");
+    StackSizeZPR = ZPR;
+    StackSizePPR = PPR;
     HasCalculatedStackSizeSVE = true;
-    StackSizeSVE = S;
   }
 
-  uint64_t getStackSizeSVE() const { return StackSizeSVE; }
+  uint64_t getStackSizeZPR() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizeZPR;
+  }
+  uint64_t getStackSizePPR() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizePPR;
+  }
+
+  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
+
+  bool hasSVEStackSize() const {
+    return getStackSizeZPR() > 0 || getStackSizePPR() > 0;
+  }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
-
   bool hasCalleeSaveStackFreeSpace() const {
     return CalleeSaveStackHasFreeSpace;
   }
@@ -394,24 +408,37 @@ public:
   }
 
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
-  void setSVECalleeSavedStackSize(unsigned Size) {
-    SVECalleeSavedStackSize = Size;
+  void setSVECalleeSavedStackSize(unsigned ZPR, unsigned PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE callee-save sizes to be aligned to 16-bytes");
+    ZPRCalleeSavedStackSize = ZPR;
+    PPRCalleeSavedStackSize = PPR;
+    HasSVECalleeSavedStackSize = true;
   }
+  unsigned getZPRCalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "ZPRCalleeSavedStackSize has not been calculated");
+    return ZPRCalleeSavedStackSize;
+  }
+  unsigned getPPRCalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "PPRCalleeSavedStackSize has not been calculated");
+    return PPRCalleeSavedStackSize;
+  }
+
   unsigned getSVECalleeSavedStackSize() const {
-    return SVECalleeSavedStackSize;
+    assert(!hasSplitSVEObjects() &&
+           "ZPRs and PPRs are split. Use get[ZPR|PPR]CalleeSavedStackSize()");
+    return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
-
-  void setMinMaxSVECSFrameIndex(int Min, int Max) {
-    MinSVECSFrameIndex = Min;
-    MaxSVECSFrameIndex = Max;
-  }
-
-  int getMinSVECSFrameIndex() const { return MinSVECSFrameIndex; }
-  int getMaxSVECSFrameIndex() const { return MaxSVECSFrameIndex; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
     return NumLocalDynamicTLSAccesses;
+  }
+
+  bool isStackHazardIncludedInCalleeSaveArea() const {
+    return hasStackHazardSlotIndex() && !hasSplitSVEObjects();
   }
 
   std::optional<bool> hasRedZone() const { return HasRedZone; }
@@ -448,6 +475,17 @@ public:
     assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
     StackHazardCSRSlotIndex = Index;
   }
+
+  bool hasSplitSVEObjects() const { return SplitSVEObjects; }
+  void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
+
+  bool hasSVE_AAPCS(const MachineFunction &MF) const {
+    return hasSplitSVEObjects() || isSVECC() ||
+           MF.getFunction().getCallingConv() ==
+               CallingConv::AArch64_SVE_VectorCall;
+  }
+
+  SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
@@ -495,8 +533,22 @@ public:
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
-    LOHRelated.insert(Args.begin(), Args.end());
+    LOHRelated.insert_range(Args);
   }
+
+  size_t
+  clearLinkerOptimizationHints(const SmallPtrSetImpl<MachineInstr *> &MIs) {
+    size_t InitialSize = LOHContainerSet.size();
+    erase_if(LOHContainerSet, [&](const auto &D) {
+      return any_of(D.getArgs(), [&](auto *Arg) { return MIs.contains(Arg); });
+    });
+    // In theory there could be an LOH with one label in MIs and another label
+    // outside MIs, however we don't know if the label outside MIs is used in
+    // any other LOHs, so we can't remove them from LOHRelated. In that case, we
+    // might produce a few extra labels, but it won't break anything.
+    LOHRelated.remove_if([&](auto *MI) { return MIs.contains(MI); });
+    return InitialSize - LOHContainerSet.size();
+  };
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
@@ -521,8 +573,14 @@ public:
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
 
+  static bool shouldSignReturnAddress(SignReturnAddress Condition,
+                                      bool IsLRSpilled);
+
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
-  bool shouldSignReturnAddress(bool SpillsLR) const;
+
+  SignReturnAddress getSignReturnAddressCondition() const {
+    return SignCondition;
+  }
 
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
@@ -535,6 +593,10 @@ public:
 
   bool isMTETagged() const { return IsMTETagged; }
 
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
+  }
+
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
   bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
@@ -543,6 +605,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;
@@ -572,17 +641,25 @@ private:
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
+  std::optional<uint64_t> StackSizeZPR;
+  std::optional<uint64_t> StackSizePPR;
+  std::optional<bool> HasStackFrame;
+  std::optional<bool> HasStreamingModeChanges;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~AArch64FunctionInfo() = default;
+  ~AArch64FunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
+    YamlIO.mapOptional("stackSizeZPR", MFI.StackSizeZPR);
+    YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
+    YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
+    YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
   }
 };
 

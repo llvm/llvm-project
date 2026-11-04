@@ -31,7 +31,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -71,16 +70,12 @@ enum FoundationClass {
 
 static FoundationClass findKnownClass(const ObjCInterfaceDecl *ID,
                                       bool IncludeSuperclasses = true) {
-  static llvm::StringMap<FoundationClass> Classes;
-  if (Classes.empty()) {
-    Classes["NSArray"] = FC_NSArray;
-    Classes["NSDictionary"] = FC_NSDictionary;
-    Classes["NSEnumerator"] = FC_NSEnumerator;
-    Classes["NSNull"] = FC_NSNull;
-    Classes["NSOrderedSet"] = FC_NSOrderedSet;
-    Classes["NSSet"] = FC_NSSet;
-    Classes["NSString"] = FC_NSString;
-  }
+  static const llvm::StringMap<FoundationClass> Classes{
+      {"NSArray", FC_NSArray},           {"NSDictionary", FC_NSDictionary},
+      {"NSEnumerator", FC_NSEnumerator}, {"NSNull", FC_NSNull},
+      {"NSOrderedSet", FC_NSOrderedSet}, {"NSSet", FC_NSSet},
+      {"NSString", FC_NSString},
+  };
 
   // FIXME: Should we cache this at all?
   FoundationClass result = Classes.lookup(ID->getIdentifier()->getName());
@@ -100,7 +95,7 @@ class NilArgChecker : public Checker<check::PreObjCMessage,
                                      check::PostStmt<ObjCDictionaryLiteral>,
                                      check::PostStmt<ObjCArrayLiteral>,
                                      EventDispatcher<ImplicitNullDerefEvent>> {
-  mutable std::unique_ptr<APIMisuse> BT;
+  const APIMisuse BT{this, "nil argument"};
 
   mutable llvm::SmallDenseMap<Selector, unsigned, 16> StringSelectors;
   mutable Selector ArrayWithObjectSel;
@@ -140,7 +135,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
 
   // If it's known to be null.
   if (!NonNull && Null) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
       return;
     }
@@ -149,7 +144,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
   // If it might be null, assume that it cannot after this operation.
   if (Null) {
     // One needs to make sure the pointer is non-null to be used here.
-    if (ExplodedNode *N = C.generateSink(Null, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(Null)) {
       dispatchEvent({*Location, /*IsLoad=*/false, N, &C.getBugReporter(),
                      /*IsDirectDereference=*/false});
     }
@@ -172,7 +167,7 @@ void NilArgChecker::warnIfNilArg(CheckerContext &C,
   // an unwanted state split if two or more non-fatal errors are thrown
   // within the same checker callback. For now we don't want to, but
   // it'll need to be fixed if we ever want to.
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
 
@@ -219,10 +214,7 @@ void NilArgChecker::generateBugReport(ExplodedNode *N,
                                       SourceRange Range,
                                       const Expr *E,
                                       CheckerContext &C) const {
-  if (!BT)
-    BT.reset(new APIMisuse(this, "nil argument"));
-
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
   R->addRange(Range);
   bugreporter::trackExpressionValue(N, E, *R);
   C.emitReport(std::move(R));
@@ -351,7 +343,7 @@ void NilArgChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 
 namespace {
 class CFNumberChecker : public Checker< check::PreStmt<CallExpr> > {
-  mutable std::unique_ptr<APIMisuse> BT;
+  const APIMisuse BT{this, "Bad use of CFNumber APIs"};
   mutable IdentifierInfo *ICreate = nullptr, *IGetValue = nullptr;
 public:
   CFNumberChecker() = default;
@@ -432,8 +424,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 #endif
 
 void CFNumberChecker::checkPreStmt(const CallExpr *CE,
-                                         CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+                                   CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
     return;
@@ -525,10 +516,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
       << " bits of the integer value will be "
       << (isCreate ? "lost." : "garbage.");
 
-    if (!BT)
-      BT.reset(new APIMisuse(this, "Bad use of CFNumber APIs"));
-
-    auto report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
     report->addRange(CE->getArg(2)->getSourceRange());
     C.emitReport(std::move(report));
   }
@@ -540,7 +528,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
 namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
-  mutable APIMisuse BT{this, "null passed to CF memory management function"};
+  const APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
       {CDM::CLibrary, {"CFRetain"}, 1},
       {CDM::CLibrary, {"CFRelease"}, 1},
@@ -571,7 +559,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
   std::tie(stateNonNull, stateNull) = state->assume(*DefArgVal);
 
   if (!stateNonNull) {
-    ExplodedNode *N = C.generateErrorNode(stateNull);
+    ExplodedNode *N = C.addSink(stateNull);
     if (!N)
       return;
 
@@ -601,7 +589,8 @@ class ClassReleaseChecker : public Checker<check::PreObjCMessage> {
   mutable Selector retainS;
   mutable Selector autoreleaseS;
   mutable Selector drainS;
-  mutable std::unique_ptr<BugType> BT;
+  const APIMisuse BT{
+      this, "message incorrectly sent to class instead of class instance"};
 
 public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
@@ -610,10 +599,7 @@ public:
 
 void ClassReleaseChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
                                               CheckerContext &C) const {
-  if (!BT) {
-    BT.reset(new APIMisuse(
-        this, "message incorrectly sent to class instead of class instance"));
-
+  if (releaseS.isNull()) {
     ASTContext &Ctx = C.getASTContext();
     releaseS = GetNullarySelector("release", Ctx);
     retainS = GetNullarySelector("retain", Ctx);
@@ -640,7 +626,7 @@ void ClassReleaseChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
           "of class '" << Class->getName()
        << "' and not the class directly";
 
-    auto report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
     report->addRange(msg.getSourceRange());
     C.emitReport(std::move(report));
   }
@@ -659,7 +645,8 @@ class VariadicMethodTypeChecker : public Checker<check::PreObjCMessage> {
   mutable Selector orderedSetWithObjectsS;
   mutable Selector initWithObjectsS;
   mutable Selector initWithObjectsAndKeysS;
-  mutable std::unique_ptr<BugType> BT;
+  const APIMisuse BT{this, "Arguments passed to variadic method aren't all "
+                           "Objective-C pointer types"};
 
   bool isVariadicMessage(const ObjCMethodCall &msg) const;
 
@@ -718,11 +705,7 @@ VariadicMethodTypeChecker::isVariadicMessage(const ObjCMethodCall &msg) const {
 
 void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
                                                     CheckerContext &C) const {
-  if (!BT) {
-    BT.reset(new APIMisuse(this,
-                           "Arguments passed to variadic method aren't all "
-                           "Objective-C pointer types"));
-
+  if (arrayWithObjectsS.isNull()) {
     ASTContext &Ctx = C.getASTContext();
     arrayWithObjectsS = GetUnarySelector("arrayWithObjects", Ctx);
     dictionaryWithObjectsAndKeysS =
@@ -793,8 +776,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     ArgTy.print(os, C.getLangOpts());
     os << "'";
 
-    auto R =
-        std::make_unique<PathSensitiveBugReport>(*BT, os.str(), *errorNode);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), *errorNode);
     R->addRange(msg.getArgSourceRange(I));
     C.emitReport(std::move(R));
   }
@@ -893,7 +875,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (!isKnownNonNilCollectionType(FCS->getCollection()->getType()))
     return State;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const Stmt *Element = FCS->getElement();
 
   // FIXME: Copied from ExprEngineObjC.
@@ -901,9 +883,9 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(Element)) {
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
-    ElementLoc = State->getLValue(ElemDecl, LCtx);
-  } else {
-    ElementLoc = State->getSVal(Element, LCtx).getAs<Loc>();
+    ElementLoc = State->getLValue(ElemDecl, SF);
+  } else if (const auto *E = dyn_cast<Expr>(Element)) {
+    ElementLoc = State->getSVal(E, SF).getAs<Loc>();
   }
 
   if (!ElementLoc)
@@ -983,7 +965,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   ProgramStateRef State = C.getState();
 
   // Check if this is the branch for the end of the loop.
-  if (!ExprEngine::hasMoreIteration(State, FCS, C.getLocationContext())) {
+  if (!ExprEngine::hasMoreIteration(State, FCS, C.getStackFrame())) {
     if (!alreadyExecutedAtLeastOneLoopIteration(C.getPredecessor(), FCS))
       State = assumeCollectionNonEmpty(C, State, FCS, /*Assumption*/false);
 
@@ -995,7 +977,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   }
 
   if (!State)
-    C.generateSink(C.getState(), C.getPredecessor());
+    C.addSink();
   else if (State != C.getState())
     C.addTransition(State);
 }

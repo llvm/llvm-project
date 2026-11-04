@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// TODO: Change to XFAIL once https://llvm.org/PR40995 is fixed
 // UNSUPPORTED: availability-pmr-missing
 
 // <list>
@@ -23,7 +23,7 @@
 int main(int, char**) {
   {
     // Check that std::pmr::list is usable without <memory_resource>.
-    std::pmr::list<int> l;
+    [[maybe_unused]] std::pmr::list<int> l;
   }
 
   return 0;

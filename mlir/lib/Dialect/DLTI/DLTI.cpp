@@ -14,13 +14,14 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
+
+#include "mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc"
 
 #include "mlir/Dialect/DLTI/DLTIDialect.cpp.inc"
 
@@ -293,17 +294,39 @@ overwriteDuplicateEntries(SmallVectorImpl<DataLayoutEntryInterface> &oldEntries,
 /// Combines a data layout spec into the given lists of entries organized by
 /// type class and identifier, overwriting them if necessary. Fails to combine
 /// if the two entries with identical keys are not compatible.
-static LogicalResult
-combineOneSpec(DataLayoutSpecInterface spec,
-               DenseMap<TypeID, DataLayoutEntryList> &entriesForType,
-               DenseMap<StringAttr, DataLayoutEntryInterface> &entriesForID) {
+static LogicalResult combineOneSpec(
+    DataLayoutSpecInterface spec,
+    llvm::MapVector<TypeID, DataLayoutEntryList> &entriesForType,
+    llvm::MapVector<StringAttr, DataLayoutEntryInterface> &entriesForID) {
   // A missing spec should be fine.
   if (!spec)
     return success();
 
-  DenseMap<TypeID, DataLayoutEntryList> newEntriesForType;
-  DenseMap<StringAttr, DataLayoutEntryInterface> newEntriesForID;
+  llvm::MapVector<TypeID, DataLayoutEntryList> newEntriesForType;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> newEntriesForID;
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
+
+  // Combine non-Type DL entries first so they are visible to the
+  // `type.areCompatible` method, allowing to query global properties.
+  for (const auto &kvp : newEntriesForID) {
+    StringAttr id = cast<StringAttr>(kvp.second.getKey());
+    Dialect *dialect = id.getReferencedDialect();
+    if (!entriesForID.count(id)) {
+      entriesForID[id] = kvp.second;
+      continue;
+    }
+
+    // Attempt to combine the entries using the dialect interface. If the
+    // dialect is not loaded for some reason, use the default combinator
+    // that conservatively accepts identical entries only.
+    entriesForID[id] =
+        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
+                      entriesForID[id], kvp.second)
+                : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
+                                                             kvp.second);
+    if (!entriesForID[id])
+      return failure();
+  }
 
   // Try overwriting the old entries with the new ones.
   for (auto &kvp : newEntriesForType) {
@@ -318,30 +341,13 @@ combineOneSpec(DataLayoutSpecInterface spec,
            "unexpected data layout entry for built-in type");
 
     auto interface = cast<DataLayoutTypeInterface>(typeSample);
-    if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second))
+    // TODO: Revisit this method and call once
+    // https://github.com/llvm/llvm-project/issues/130321 gets resolved.
+    if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
+                                 spec, entriesForID))
       return failure();
 
     overwriteDuplicateEntries(entriesForType[kvp.first], kvp.second);
-  }
-
-  for (const auto &kvp : newEntriesForID) {
-    StringAttr id = cast<StringAttr>(kvp.second.getKey());
-    Dialect *dialect = id.getReferencedDialect();
-    if (!entriesForID.count(id)) {
-      entriesForID[id] = kvp.second;
-      continue;
-    }
-
-    // Attempt to combine the enties using the dialect interface. If the
-    // dialect is not loaded for some reason, use the default combinator
-    // that conservatively accepts identical entries only.
-    entriesForID[id] =
-        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
-                      entriesForID[id], kvp.second)
-                : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
-                                                             kvp.second);
-    if (!entriesForID[id])
-      return failure();
   }
 
   return success();
@@ -357,8 +363,8 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
     return {};
 
   // Combine all specs in order, with `this` being the last one.
-  DenseMap<TypeID, DataLayoutEntryList> entriesForType;
-  DenseMap<StringAttr, DataLayoutEntryInterface> entriesForID;
+  llvm::MapVector<TypeID, DataLayoutEntryList> entriesForType;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> entriesForID;
   for (DataLayoutSpecInterface spec : specs)
     if (failed(combineOneSpec(spec, entriesForType, entriesForID)))
       return nullptr;
@@ -369,7 +375,7 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   SmallVector<DataLayoutEntryInterface> entries;
   llvm::append_range(entries, llvm::make_second_range(entriesForID));
   for (const auto &kvp : entriesForType)
-    llvm::append_range(entries, kvp.getSecond());
+    llvm::append_range(entries, kvp.second);
 
   return DataLayoutSpecAttr::get(getContext(), entries);
 }
@@ -377,6 +383,12 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
 StringAttr
 DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
+}
+
+StringAttr DataLayoutSpecAttr::getDefaultMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutDefaultMemorySpaceKey);
 }
 
 StringAttr
@@ -398,9 +410,27 @@ DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
 }
 
 StringAttr
+DataLayoutSpecAttr::getManglingModeIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutManglingModeKey);
+}
+
+StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutStackAlignmentKey);
+}
+
+StringAttr DataLayoutSpecAttr::getFunctionPointerAlignmentIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutFunctionPointerAlignmentKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getLegalIntWidthsIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutLegalIntWidthsKey);
 }
 
 /// Parses an attribute with syntax:
@@ -489,25 +519,68 @@ void TargetSystemSpecAttr::print(AsmPrinter &printer) const {
 // DLTIDialect
 //===----------------------------------------------------------------------===//
 
-/// Retrieve the first `DLTIQueryInterface`-implementing attribute that is
-/// attached to `op` or such an attr on as close as possible an ancestor. The
-/// op the attribute is attached to is returned as well.
-static std::pair<DLTIQueryInterface, Operation *>
-getClosestQueryable(Operation *op) {
-  DLTIQueryInterface queryable = {};
+static constexpr llvm::StringLiteral kDltiAttrName = "dlti";
 
-  // Search op and its ancestors for the first attached DLTIQueryInterface attr.
-  do {
-    for (NamedAttribute attr : op->getAttrs())
-      if ((queryable = dyn_cast<DLTIQueryInterface>(attr.getValue())))
-        break;
-  } while (!queryable && (op = op->getParentOp()));
+FailureOr<Attribute> mlir::dlti::detail::queryDlti(Operation *op,
+                                                   DataLayoutEntryKey key) {
+  auto queryable = op->getInherentAttrOfType<DLTIQueryInterface>(kDltiAttrName);
+  if (!queryable)
+    return failure();
+  return queryable.query(key);
+}
 
-  return std::pair(queryable, op);
+LogicalResult mlir::dlti::detail::setDlti(Operation *op, DataLayoutEntryKey key,
+                                          Attribute value) {
+  if (key.isNull())
+    return failure();
+  if (auto stringKey = dyn_cast<StringAttr>(key);
+      stringKey && stringKey.getValue().empty())
+    return failure();
+
+  std::optional<Attribute> inherent = op->getInherentAttr(kDltiAttrName);
+  if (!inherent)
+    return failure();
+  auto current = dyn_cast_or_null<DLTIQueryInterface>(*inherent);
+  if (current && !isa<MapAttr>(current))
+    return failure();
+
+  SmallVector<DataLayoutEntryInterface> entries;
+  if (auto map = dyn_cast_or_null<MapAttr>(current))
+    llvm::append_range(entries, map.getEntries());
+
+  auto makeEntry = [&]() -> DataLayoutEntryInterface {
+    if (auto type = dyn_cast<Type>(key))
+      return DataLayoutEntryAttr::get(type, value);
+    return DataLayoutEntryAttr::get(cast<StringAttr>(key), value);
+  };
+  auto entry = llvm::find_if(entries, [&](DataLayoutEntryInterface entry) {
+    return entry.getKey() == key;
+  });
+  if (entry != entries.end()) {
+    if (value)
+      *entry = makeEntry();
+    else
+      entries.erase(entry);
+  } else if (value) {
+    entries.push_back(makeEntry());
+  } else {
+    return success();
+  }
+
+  StringAttr attrName = StringAttr::get(op->getContext(), kDltiAttrName);
+  if (entries.empty()) {
+    op->setInherentAttr(attrName, {});
+    return success();
+  }
+  op->setInherentAttr(attrName, MapAttr::get(op->getContext(), entries));
+  return success();
 }
 
 FailureOr<Attribute>
 dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
+  if (!op)
+    return failure();
+
   if (keys.empty()) {
     if (emitError) {
       auto diag = op->emitError() << "target op of failed DLTI query";
@@ -516,26 +589,37 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
     return failure();
   }
 
-  auto [queryable, queryOp] = getClosestQueryable(op);
-  Operation *reportOp = (queryOp ? queryOp : op);
+  Attribute currentAttr;
+  Operation *queryOp = op;
+  for (; queryOp; queryOp = queryOp->getParentOp()) {
+    auto queryable = dyn_cast<DLTIQueryOpInterface>(queryOp);
+    if (!queryable)
+      continue;
+    FailureOr<Attribute> result = queryable.queryDlti(keys.front());
+    if (succeeded(result)) {
+      currentAttr = *result;
+      break;
+    }
+  }
 
-  if (!queryable) {
+  if (!currentAttr) {
     if (emitError) {
       auto diag = op->emitError() << "target op of failed DLTI query";
-      diag.attachNote(reportOp->getLoc())
-          << "no DLTI-queryable attrs on target op or any of its ancestors";
+      diag.attachNote(op->getLoc())
+          << "no DLTI-queryable operation on the target or any of its "
+             "ancestors could answer key "
+          << keyToStr(keys.front());
     }
     return failure();
   }
 
-  Attribute currentAttr = queryable;
-  for (auto &&[idx, key] : llvm::enumerate(keys)) {
+  for (auto &&[idx, key] : llvm::enumerate(keys.drop_front())) {
     if (auto map = dyn_cast<DLTIQueryInterface>(currentAttr)) {
       auto maybeAttr = map.query(key);
       if (failed(maybeAttr)) {
         if (emitError) {
           auto diag = op->emitError() << "target op of failed DLTI query";
-          diag.attachNote(reportOp->getLoc())
+          diag.attachNote(queryOp->getLoc())
               << "key " << keyToStr(key)
               << " has no DLTI-mapping per attr: " << map;
         }
@@ -546,12 +630,12 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
       if (emitError) {
         std::string commaSeparatedKeys;
         llvm::interleave(
-            keys.take_front(idx), // All prior keys.
+            keys.take_front(idx + 1), // All prior keys.
             [&](auto key) { commaSeparatedKeys += keyToStr(key); },
             [&]() { commaSeparatedKeys += ","; });
 
         auto diag = op->emitError() << "target op of failed DLTI query";
-        diag.attachNote(reportOp->getLoc())
+        diag.attachNote(queryOp->getLoc())
             << "got non-DLTI-queryable attribute upon looking up keys ["
             << commaSeparatedKeys << "] at op";
       }
@@ -562,12 +646,25 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
   return currentAttr;
 }
 
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessLittle;
+FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
+                                 bool emitError) {
+  if (!op)
+    return failure();
+
+  MLIRContext *ctx = op->getContext();
+  SmallVector<DataLayoutEntryKey> entryKeys;
+  entryKeys.reserve(keys.size());
+  for (StringRef key : keys)
+    entryKeys.push_back(StringAttr::get(ctx, key));
+
+  return dlti::query(op, entryKeys, emitError);
+}
 
 namespace {
+struct ModuleDLTIQueryOpInterface
+    : DLTIQueryOpInterface::ExternalModel<ModuleDLTIQueryOpInterface,
+                                          ModuleOp> {};
+
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {
 public:
   using DataLayoutDialectInterface::DataLayoutDialectInterface;
@@ -586,10 +683,14 @@ public:
                             << DLTIDialect::kDataLayoutEndiannessBig << "' or '"
                             << DLTIDialect::kDataLayoutEndiannessLittle << "'";
     }
-    if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
+    if (entryName == DLTIDialect::kDataLayoutDefaultMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
-        entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
+        entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutFunctionPointerAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutLegalIntWidthsKey ||
+        entryName == DLTIDialect::kDataLayoutManglingModeKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;
   }
@@ -602,6 +703,7 @@ void DLTIDialect::initialize() {
 #include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
       >();
   addInterfaces<TargetDataLayoutInterface>();
+  ModuleOp::attachInterface<ModuleDLTIQueryOpInterface>(*getContext());
 }
 
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,

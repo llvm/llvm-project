@@ -12,12 +12,13 @@ from lldbsuite.test import lldbutil
 
 
 class TestSkinnyCorefile(TestBase):
-    @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(
         debug_info=no_match(["dsym"]),
         bugnumber="This test is looking explicitly for a dSYM",
     )
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote
     def test_lc_note(self):
         self.build()
@@ -43,7 +44,7 @@ class TestSkinnyCorefile(TestBase):
             lambda: os.environ.pop("LLDB_APPLE_DSYMFORUUID_EXECUTABLE", None)
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % self.aout_exe), shell=True
         ).decode("utf-8")

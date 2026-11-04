@@ -62,6 +62,7 @@ subroutine C932(ed1, ed5, ed7, edc9, edc10, okad1, okpd1, okacd5)
   real, pointer, save :: okp3
   real, allocatable, save :: oka3, okac4[:,:]
   real, allocatable :: okacd5(:, :)[:]
+  character(:), allocatable :: chvar
 
   !ERROR: Name in ALLOCATE statement must be a variable name
   allocate(foo)
@@ -102,6 +103,8 @@ subroutine C932(ed1, ed5, ed7, edc9, edc10, okad1, okpd1, okacd5)
   allocate(edc9%nok)
   !ERROR: Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute
   allocate(edc10)
+  !ERROR: Type-spec in ALLOCATE must not have a deferred type parameter
+  allocate(character(:) :: chvar)
 
   ! No errors expected below:
   allocate(a_var)
@@ -117,4 +120,5 @@ subroutine C932(ed1, ed5, ed7, edc9, edc10, okad1, okpd1, okacd5)
   allocate(edc9%ok(4))
   allocate(edc10%ok)
   allocate(rp)
+  allocate(character(123) :: chvar)
 end subroutine

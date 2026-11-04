@@ -246,6 +246,7 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
     IO.mapOptional("Type", Sym.Type);
+    IO.mapOptional("Tags", Sym.Tags);
     IO.mapOptional("IncludeHeaders", NIncludeHeaders->Headers);
   }
 };
@@ -261,38 +262,51 @@ template <> struct ScalarEnumerationTraits<SymbolLanguage> {
 
 template <> struct ScalarEnumerationTraits<SymbolKind> {
   static void enumeration(IO &IO, SymbolKind &Value) {
-#define DEFINE_ENUM(name) IO.enumCase(Value, #name, SymbolKind::name)
+#define DEFINE_ENUM_FINAL(name)                                                \
+  case SymbolKind::name:                                                       \
+    IO.enumCase(Value, #name, SymbolKind::name)
+#define DEFINE_ENUM(name)                                                      \
+  DEFINE_ENUM_FINAL(name);                                                     \
+  [[fallthrough]]
 
-    DEFINE_ENUM(Unknown);
-    DEFINE_ENUM(Function);
-    DEFINE_ENUM(Module);
-    DEFINE_ENUM(Namespace);
-    DEFINE_ENUM(NamespaceAlias);
-    DEFINE_ENUM(Macro);
-    DEFINE_ENUM(Enum);
-    DEFINE_ENUM(Struct);
-    DEFINE_ENUM(Class);
-    DEFINE_ENUM(Protocol);
-    DEFINE_ENUM(Extension);
-    DEFINE_ENUM(Union);
-    DEFINE_ENUM(TypeAlias);
-    DEFINE_ENUM(Function);
-    DEFINE_ENUM(Variable);
-    DEFINE_ENUM(Field);
-    DEFINE_ENUM(EnumConstant);
-    DEFINE_ENUM(InstanceMethod);
-    DEFINE_ENUM(ClassMethod);
-    DEFINE_ENUM(StaticMethod);
-    DEFINE_ENUM(InstanceProperty);
-    DEFINE_ENUM(ClassProperty);
-    DEFINE_ENUM(StaticProperty);
-    DEFINE_ENUM(Constructor);
-    DEFINE_ENUM(Destructor);
-    DEFINE_ENUM(ConversionFunction);
-    DEFINE_ENUM(Parameter);
-    DEFINE_ENUM(Using);
+    SymbolKind Start = SymbolKind::Unknown;
+    switch (Start) {
+      DEFINE_ENUM(Unknown);
+      DEFINE_ENUM(Module);
+      DEFINE_ENUM(Namespace);
+      DEFINE_ENUM(NamespaceAlias);
+      DEFINE_ENUM(Macro);
+      DEFINE_ENUM(IncludeDirective);
+      DEFINE_ENUM(Enum);
+      DEFINE_ENUM(Struct);
+      DEFINE_ENUM(Class);
+      DEFINE_ENUM(Protocol);
+      DEFINE_ENUM(Extension);
+      DEFINE_ENUM(Union);
+      DEFINE_ENUM(TypeAlias);
+      DEFINE_ENUM(Function);
+      DEFINE_ENUM(Variable);
+      DEFINE_ENUM(Field);
+      DEFINE_ENUM(EnumConstant);
+      DEFINE_ENUM(InstanceMethod);
+      DEFINE_ENUM(ClassMethod);
+      DEFINE_ENUM(StaticMethod);
+      DEFINE_ENUM(InstanceProperty);
+      DEFINE_ENUM(ClassProperty);
+      DEFINE_ENUM(StaticProperty);
+      DEFINE_ENUM(Constructor);
+      DEFINE_ENUM(Destructor);
+      DEFINE_ENUM(ConversionFunction);
+      DEFINE_ENUM(Parameter);
+      DEFINE_ENUM(Using);
+      DEFINE_ENUM(TemplateTypeParm);
+      DEFINE_ENUM(TemplateTemplateParm);
+      DEFINE_ENUM(NonTypeTemplateParm);
+      DEFINE_ENUM_FINAL(Concept);
+    }
 
 #undef DEFINE_ENUM
+#undef DEFINE_ENUM_FINAL
   }
 };
 
@@ -319,6 +333,7 @@ template <> struct MappingTraits<Ref> {
     MappingNormalization<NormalizedRefKind, RefKind> NKind(IO, R.Kind);
     IO.mapRequired("Kind", NKind->Kind);
     IO.mapRequired("Location", R.Location);
+    IO.mapOptional("Container", R.Container);
   }
 };
 

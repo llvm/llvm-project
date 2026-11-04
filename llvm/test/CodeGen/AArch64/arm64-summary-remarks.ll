@@ -7,9 +7,11 @@ define void @empty_func() nounwind ssp !dbg !3 {
 }
 
 !llvm.dbg.cu = !{!0}
+!4 = !{null}
+!5 = !DISubroutineType(types: !4)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1)
 !1 = !DIFile(filename: "arm64-summary-remarks.ll", directory: "")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, line: 5, scopeLine: 5, unit: !0)
+!3 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, line: 5, scopeLine: 5, type: !5, unit: !0)

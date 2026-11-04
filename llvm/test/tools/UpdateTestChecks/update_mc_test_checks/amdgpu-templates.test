@@ -1,0 +1,5 @@
+# REQUIRES: amdgpu-registered-target
+## Test expanding instruction templates.
+
+# RUN: cp -f %S/Inputs/amdgpu-templates.s %t.s && %update_mc_test_checks %t.s
+# RUN: diff -u %S/Inputs//amdgpu-templates.s.expected %t.s

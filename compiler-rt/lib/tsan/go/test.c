@@ -34,6 +34,12 @@ void __tsan_acquire(void *thr, void *addr);
 void __tsan_release(void *thr, void *addr);
 void __tsan_release_acquire(void *thr, void *addr);
 void __tsan_release_merge(void *thr, void *addr);
+#if defined(__SIZEOF_INT128__)
+void __tsan_go_atomic128_load(void* thr, void* cpc, void* pc, char* a);
+void __tsan_go_atomic128_store(void* thr, void* cpc, void* pc, char* a);
+void __tsan_go_atomic128_compare_exchange(void* thr, void* cpc, void* pc,
+                                          char* a);
+#endif
 
 void *current_proc;
 
@@ -63,6 +69,13 @@ int main(void) {
   __tsan_init(&thr0, &proc0, symbolize_cb);
   current_proc = proc0;
 
+#if defined(__riscv) && (__riscv_xlen == 64) && defined(__linux__)
+  // Use correct go_heap for riscv64 sv39.
+  if (65 - __builtin_clzl((unsigned long)__builtin_frame_address(0)) == 39) {
+    go_heap = (void *)0x511100000;
+  }
+#endif
+
   // Allocate something resembling a heap in Go.
   buf0 = mmap(go_heap, 16384, PROT_READ | PROT_WRITE,
               MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
@@ -84,6 +97,10 @@ int main(void) {
   __tsan_go_start(thr0, &thr1, (char*)&barfoo + 1);
   void *thr2 = 0;
   __tsan_go_start(thr0, &thr2, (char*)&barfoo + 1);
+  // Goroutine that exits without a single event.
+  void *thr3 = 0;
+  __tsan_go_start(thr0, &thr3, (char*)&barfoo + 1);
+  __tsan_go_end(thr3);
   __tsan_func_exit(thr0);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
@@ -102,6 +119,23 @@ int main(void) {
   __tsan_go_end(thr2);
   __tsan_proc_destroy(proc1);
   current_proc = proc0;
+#if defined(__SIZEOF_INT128__)
+  {
+    // Align `a` to 16 bytes so `a + 8` and `a + 24` are 8-byte aligned
+    // (8 mod 16), matching the 8-byte alignment Go's runtime guarantees.
+    __attribute__((aligned(16))) char a[64];
+    __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 16);
+    *(void**)(a + 0) = buf;
+    __builtin_memset(a + 8, 0x11, 16);
+    __tsan_go_atomic128_store(thr0, (char*)&barfoo + 1, (char*)&barfoo + 1, a);
+    __builtin_memset(a + 8, 0, 16);
+    __tsan_go_atomic128_load(thr0, (char*)&barfoo + 1, (char*)&barfoo + 1, a);
+    __builtin_memset(a + 24, 0x22, 16);
+    __tsan_go_atomic128_compare_exchange(thr0, (char*)&barfoo + 1,
+                                         (char*)&barfoo + 1, a);
+    __tsan_free(buf, 16);
+  }
+#endif
   __tsan_fini();
   return 0;
 }

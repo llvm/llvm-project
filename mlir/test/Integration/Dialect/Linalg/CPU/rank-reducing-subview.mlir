@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops -convert-scf-to-cf  -expand-strided-metadata -lower-affine -convert-arith-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
+// RUN: mlir-runner -O3 -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_runner_utils \
 // RUN: | FileCheck %s
 

@@ -1,7 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=riscv64 -filetype=obj -riscv-asm-relax-branches=0 \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj \
 # RUN:     -o %t/elf_riscv64_branch.o %s
-# RUN: llvm-mc -triple=riscv32 -filetype=obj -riscv-asm-relax-branches=0 \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj \
 # RUN:     -o %t/elf_riscv32_branch.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00ff4 -slab-page-size 4096 \
@@ -12,6 +12,8 @@
 # RUN:     -abs external_func_positive_offset=0xfff00ffc -abs external_func_negative_offset=0xfff00000 \
 # RUN:     -check %s %t/elf_riscv32_branch.o
 #
+
+        .option exact
 
         .text
 # Empty main entry point.

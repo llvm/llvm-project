@@ -63,7 +63,7 @@ def main():
     from clang.cindex import Index
     from pprint import pprint
 
-    from optparse import OptionParser, OptionGroup
+    from optparse import OptionParser
 
     global opts
 

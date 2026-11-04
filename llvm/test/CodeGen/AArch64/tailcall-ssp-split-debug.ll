@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=arm64-apple-ios %s -o - | FileCheck %s
 
-define swifttailcc void @foo(ptr %call) ssp {
+define swifttailcc void @foo(ptr %call, i1 %arg) ssp {
 ; CHECK-LABEL: foo:
   %var = alloca [28 x i8], align 16
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:
   ret void

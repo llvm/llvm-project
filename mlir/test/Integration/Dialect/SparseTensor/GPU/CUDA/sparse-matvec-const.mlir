@@ -3,7 +3,7 @@
 //
 // RUN: mlir-opt %s \
 // RUN:   --sparsifier="enable-runtime-library=false parallelization-strategy=dense-outer-loop gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
@@ -20,7 +20,7 @@ module {
     return %y_out : tensor<1024xf64>
   }
 
-  memref.global "private" constant @__constant_64xf64 : memref<64xf64> = dense<1.000000e+00> {alignment = 64 : i64}
+  memref.global "private" constant @__constant_64xf64 : memref<64xf64> = dense<1.000000e+00> alignment = 64
 
   func.func @main() {
     %f0 = arith.constant 0.0 : f64

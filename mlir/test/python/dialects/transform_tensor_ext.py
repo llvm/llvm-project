@@ -27,7 +27,7 @@ def testMakeLoopIndependentOpCompact(target):
     tensor.MakeLoopIndependentOp(target, 4)
     # CHECK-LABEL: TEST: testMakeLoopIndependentOpCompact
     # CHECK: = transform.tensor.make_loop_independent
-    # CHECK-SAME: num_loops = 4 : i64
+    # CHECK-SAME: num_loops = 4
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op
 
 
@@ -36,5 +36,5 @@ def testMakeLoopIndependentOpTyped(target):
     tensor.MakeLoopIndependentOp(transform.OperationType.get("test.dummy"), target, 4)
     # CHECK-LABEL: TEST: testMakeLoopIndependentOpTyped
     # CHECK: = transform.tensor.make_loop_independent
-    # CHECK-SAME: num_loops = 4 : i64
+    # CHECK-SAME: num_loops = 4
     # CHECK-SAME: (!transform.any_op) -> !transform.op<"test.dummy">

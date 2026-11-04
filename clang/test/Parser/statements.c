@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unreachable-code
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s -Wno-unreachable-code
 
 void test1(void) {
   { ; {  ;;}} ;;
@@ -77,3 +78,32 @@ int test9(void) {
 
   return 4, // expected-error {{expected ';' after return statement}}
 }
+
+#if __STDC_VERSION__ >= 202311L
+void attr_decl_in_selection_statement(int n) {
+  if (1)
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
+
+  if (1) {
+
+  } else
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
+
+
+  switch (n)
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
+}
+
+void attr_decl_in_iteration_statement(int n) {
+  int i;
+  for (i = 0; i < n; ++i)
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
+
+  while (i > 0)
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
+
+  do
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
+  while (i > 0);
+}
+#endif // __STDC_VERSION__ >= 202311L

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cassert>
+#include <limits>
+#include <random>
 #include <string>
 
 #include "Assembler.h"
@@ -21,8 +24,16 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Program.h"
 
+#define DEBUG_TYPE "snippet-generator"
+
 namespace llvm {
 namespace exegesis {
+
+static cl::opt<unsigned>
+    RandomGeneratorSeed("random-generator-seed",
+                        cl::desc("The seed value to use for the random number "
+                                 "generator when generating snippets."),
+                        cl::init(0));
 
 std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
   std::vector<CodeTemplate> Result;
@@ -188,13 +199,20 @@ generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
 
 std::mt19937 &randomGenerator() {
   static std::random_device RandomDevice;
-  static std::mt19937 RandomGenerator(RandomDevice());
+  unsigned RandomSeed = RandomGeneratorSeed.getNumOccurrences()
+                            ? RandomGeneratorSeed
+                            : RandomDevice();
+  LLVM_DEBUG(dbgs() << "Using random seed " << RandomSeed << ".\n");
+  static std::mt19937 RandomGenerator(RandomSeed);
   return RandomGenerator;
 }
 
 size_t randomIndex(size_t Max) {
-  std::uniform_int_distribution<> Distribution(0, Max);
-  return Distribution(randomGenerator());
+  // It would be nice to use `std::uniform_int_distribution`, but that doesn't
+  // guarantee stable results, resulting in differences between standard
+  // libraries. Like `llvm::shuffle`, we manually use `%` here.
+  assert(Max < std::numeric_limits<size_t>::max());
+  return randomGenerator()() % (Max + 1);
 }
 
 template <typename C> static decltype(auto) randomElement(const C &Container) {
@@ -276,6 +294,10 @@ static Error randomizeMCOperand(const LLVMState &State,
     AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
+  /// Omit pc-relative operands to imm value based on the instruction
+  case MCOI::OperandType::OPERAND_PCREL:
+    return State.getExegesisTarget().randomizeTargetMCOperand(
+        Instr, Var, AssignedValue, ForbiddenRegs);
   default:
     break;
   }

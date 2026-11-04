@@ -11,22 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "XCoreAsmPrinter.h"
 #include "MCTargetDesc/XCoreInstPrinter.h"
+#include "MCTargetDesc/XCoreTargetStreamer.h"
 #include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
 #include "XCoreMCInstLower.h"
 #include "XCoreSubtarget.h"
 #include "XCoreTargetMachine.h"
-#include "XCoreTargetStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -34,11 +35,11 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -49,9 +50,11 @@ namespace {
     XCoreTargetStreamer &getTargetStreamer();
 
   public:
+    static char ID;
+
     explicit XCoreAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
+        : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
     StringRef getPassName() const override { return "XCore Assembly Printer"; }
 
@@ -143,7 +146,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("TLS is not supported by this target!");
   }
   unsigned Size = DL.getTypeAllocSize(C->getType());
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }
@@ -211,7 +214,7 @@ void XCoreAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     PrintSymbolOperand(MO, O);
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     break;
   case MachineOperand::MO_BlockAddress:
@@ -288,7 +291,43 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+char XCoreAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XCoreAsmPrinter, "xcore-asm-printer", "XCore Assembly Printer",
+                false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXCoreAsmPrinter() {
   RegisterAsmPrinter<XCoreAsmPrinter> X(getTheXCoreTarget());
+}
+
+PreservedAnalyses XCoreAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  XCoreAsmPrinter &AsmPrinter = static_cast<XCoreAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+XCoreAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  XCoreAsmPrinter &AsmPrinter = static_cast<XCoreAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses XCoreAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  XCoreAsmPrinter &AsmPrinter = static_cast<XCoreAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

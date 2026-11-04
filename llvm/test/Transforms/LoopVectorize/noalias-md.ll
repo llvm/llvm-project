@@ -28,7 +28,7 @@ entry:
 
 ; BOTH: vector.memcheck:
 ; BOTH: vector.body:
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %ind = phi i64 [ 0, %entry ], [ %inc, %for.body ]
 
   %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
@@ -64,13 +64,13 @@ for.body:                                         ; preds = %for.body, %entry
 ; BOTH-NOT: !alias.scope
 ; BOTH-NOT: !noalias
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 ; LV: !0 = !{!1}
 ; LV: !1 = distinct !{!1, !2}
-; LV: !2 = distinct !{!2, !"LVerDomain"}
+; LV: !2 = distinct !{!2, i1 false, !"LVerDomain"}
 ; LV: !3 = !{!4}
 ; LV: !4 = distinct !{!4, !2}
 ; LV: !5 = !{!1, !6}

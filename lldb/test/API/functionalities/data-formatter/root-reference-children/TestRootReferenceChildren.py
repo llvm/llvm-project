@@ -20,8 +20,8 @@ class TestCase(TestBase):
             "v summary_and_children_ref", substrs=["some summary", "child = 30"]
         )
         self.expect(
-            "v summary_only_ref", patterns=["some summary", "(?s)^(?!.*child = )"]
+            "v summary_only_ref", patterns=["some summary", "(?s)(?!.*child = )"]
         )
         self.expect(
-            "v children_only_ref", patterns=["(?s)^(?!.*some summary)", "child = 30"]
+            "v children_only_ref", patterns=["(?s)(?!.*some summary)", "child = 30"]
         )

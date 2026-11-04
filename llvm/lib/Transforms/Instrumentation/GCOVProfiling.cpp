@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,15 +28,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -60,31 +60,25 @@ enum : uint32_t {
   GCOV_TAG_LINES = 0x01450000,
 };
 
-static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("0000"), cl::Hidden,
-                                               cl::ValueRequired);
-
-static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
-                                   cl::desc("Make counter updates atomic"));
-
 // Returns the number of words which will be used to represent this string.
 static unsigned wordsOfString(StringRef s) {
   // Length + NUL-terminated string + 0~3 padding NULs.
   return (s.size() / 4) + 2;
 }
 
-GCOVOptions GCOVOptions::getDefault() {
+static GCOVOptions getDefaultOptions(const InstrumentationOptions &Opts) {
   GCOVOptions Options;
   Options.EmitNotes = true;
+  Options.UseAbsolutePathsInNotes = false;
   Options.EmitData = true;
   Options.NoRedZone = false;
-  Options.Atomic = AtomicCounter;
+  Options.Atomic = Opts.gcov_atomic_counter;
 
-  if (DefaultGCOVVersion.size() != 4) {
-    llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
-                             DefaultGCOVVersion, /*GenCrashDiag=*/false);
+  if (Opts.default_gcov_version.size() != 4) {
+    reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
+                          Opts.default_gcov_version);
   }
-  memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
+  memcpy(Options.Version, Opts.default_gcov_version.data(), 4);
   return Options;
 }
 
@@ -93,8 +87,8 @@ class GCOVFunction;
 
 class GCOVProfiler {
 public:
-  GCOVProfiler() : GCOVProfiler(GCOVOptions::getDefault()) {}
-  GCOVProfiler(const GCOVOptions &Opts) : Options(Opts) {}
+  GCOVProfiler(const GCOVOptions &Opts, vfs::FileSystem &VFS)
+      : Options(Opts), VFS(VFS) {}
   bool
   runOnModule(Module &M, function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
               function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
@@ -111,6 +105,7 @@ public:
     os->write_zeros(4 - s.size() % 4);
   }
   void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
+  SmallString<128> getFilename(const DIScope *SP);
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
@@ -167,6 +162,7 @@ private:
   std::vector<Regex> ExcludeRe;
   DenseSet<const BasicBlock *> ExecBlocks;
   StringMap<bool> InstrumentedFiles;
+  vfs::FileSystem &VFS;
 };
 
 struct BBInfo {
@@ -210,18 +206,24 @@ static StringRef getFunctionName(const DISubprogram *SP) {
   return SP->getName();
 }
 
-/// Extract a filename for a DISubprogram.
+/// Extract a filename for a DIScope.
 ///
-/// Prefer relative paths in the coverage notes. Clang also may split
-/// up absolute paths into a directory and filename component. When
-/// the relative path doesn't exist, reconstruct the absolute path.
-static SmallString<128> getFilename(const DISubprogram *SP) {
+/// Unless -fprofile-abs-path has been passed, prefer relative paths in the
+/// coverage notes. Clang also may split up absolute paths into a directory and
+/// filename component. When the relative path doesn't exist, reconstruct the
+/// absolute path.
+SmallString<128> GCOVProfiler::getFilename(const DIScope *SP) {
   SmallString<128> Path;
   StringRef RelPath = SP->getFilename();
-  if (sys::fs::exists(RelPath))
+  if (VFS.exists(RelPath)) {
     Path = RelPath;
-  else
+    if (Options.UseAbsolutePathsInNotes) {
+      VFS.makeAbsolute(Path);
+      sys::path::remove_dots(Path, true);
+    }
+  } else {
     sys::path::append(Path, SP->getDirectory(), SP->getFilename());
+  }
   return Path;
 }
 
@@ -244,7 +246,9 @@ namespace {
   // list of line numbers and a single filename, representing lines that belong
   // to the block.
   class GCOVLines : public GCOVRecord {
-   public:
+  public:
+    StringRef getFilename() { return Filename; }
+
     void addLine(uint32_t Line) {
       assert(Line != 0 && "Line zero is not a valid real line number.");
       Lines.push_back(Line);
@@ -276,7 +280,9 @@ namespace {
   class GCOVBlock : public GCOVRecord {
    public:
     GCOVLines &getFile(StringRef Filename) {
-      return LinesByFile.try_emplace(Filename, P, Filename).first->second;
+      if (Lines.empty() || Lines.back().getFilename() != Filename)
+        Lines.emplace_back(P, Filename);
+      return Lines.back();
     }
 
     void addEdge(GCOVBlock &Successor, uint32_t Flags) {
@@ -285,22 +291,16 @@ namespace {
 
     void writeOut() {
       uint32_t Len = 3;
-      SmallVector<StringMapEntry<GCOVLines> *, 32> SortedLinesByFile;
-      for (auto &I : LinesByFile) {
-        Len += I.second.length();
-        SortedLinesByFile.push_back(&I);
-      }
+
+      for (auto &L : Lines)
+        Len += L.length();
 
       write(GCOV_TAG_LINES);
       write(Len);
       write(Number);
 
-      llvm::sort(SortedLinesByFile, [](StringMapEntry<GCOVLines> *LHS,
-                                       StringMapEntry<GCOVLines> *RHS) {
-        return LHS->getKey() < RHS->getKey();
-      });
-      for (auto &I : SortedLinesByFile)
-        I->getValue().writeOut();
+      for (auto &L : Lines)
+        L.writeOut();
       write(0);
       write(0);
     }
@@ -309,7 +309,7 @@ namespace {
       // Only allow copy before edges and lines have been added. After that,
       // there are inter-block pointers (eg: edges) that won't take kindly to
       // blocks being copied or moved around.
-      assert(LinesByFile.empty());
+      assert(Lines.empty());
       assert(OutEdges.empty());
     }
 
@@ -322,7 +322,7 @@ namespace {
     GCOVBlock(GCOVProfiler *P, uint32_t Number)
         : GCOVRecord(P), Number(Number) {}
 
-    StringMap<GCOVLines> LinesByFile;
+    SmallVector<GCOVLines> Lines;
   };
 
   // A function has a unique identifier, a checksum (we leave as zero) and a
@@ -360,7 +360,7 @@ namespace {
 
     void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
-      SmallString<128> Filename = getFilename(SP);
+      SmallString<128> Filename = P->getFilename(SP);
       uint32_t BlockLen = 3 + wordsOfString(getFunctionName(SP));
       BlockLen += 1 + wordsOfString(Filename) + 4;
 
@@ -470,7 +470,7 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   // Path can be
   // /usr/lib/gcc/x86_64-linux-gnu/8/../../../../include/c++/8/bits/*.h so for
   // such a case we must get the real_path.
-  if (sys::fs::real_path(Filename, RealPath)) {
+  if (VFS.getRealPath(Filename, RealPath)) {
     // real_path can fail with path like "foo.c".
     RealFilename = Filename;
   } else {
@@ -527,9 +527,10 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   SmallString<128> Filename = CU->getFilename();
   sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
   StringRef FName = sys::path::filename(Filename);
-  SmallString<128> CurPath;
-  if (sys::fs::current_path(CurPath))
+  ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  if (!CWD)
     return std::string(FName);
+  SmallString<128> CurPath{*CWD};
   sys::path::append(CurPath, FName);
   return std::string(CurPath);
 }
@@ -557,7 +558,8 @@ bool GCOVProfiler::runOnModule(
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
                                         ModuleAnalysisManager &AM) {
 
-  GCOVProfiler Profiler(GCOVOpts);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  GCOVProfiler Profiler(GCOVOpts ? *GCOVOpts : getDefaultOptions(Opts), *VFS);
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -583,10 +585,6 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
   EndLine = 0;
   for (const auto &BB : F) {
     for (const auto &I : BB) {
-      // Debug intrinsic locations correspond to the location of the
-      // declaration, not necessarily any statements or expressions.
-      if (isa<DbgInfoIntrinsic>(&I)) continue;
-
       const DebugLoc &Loc = I.getDebugLoc();
       if (!Loc)
         continue;
@@ -617,8 +615,8 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     for (auto &I : instructions(F)) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         if (Function *Callee = CI->getCalledFunction()) {
-          LibFunc LF;
-          if (TLI->getLibFunc(*Callee, LF)) {
+          LibFunc LF = TLI->getLibFunc(*Callee);
+          if (LF != NotLibFunc) {
             if (LF == LibFunc_fork) {
 #if !defined(_WIN32)
               Forks.push_back(CI);
@@ -874,10 +872,6 @@ bool GCOVProfiler::emitProfileNotes(
         }
 
         for (const auto &I : BB) {
-          // Debug intrinsic locations correspond to the location of the
-          // declaration, not necessarily any statements or expressions.
-          if (isa<DbgInfoIntrinsic>(&I)) continue;
-
           const DebugLoc &Loc = I.getDebugLoc();
           if (!Loc)
             continue;
@@ -889,11 +883,10 @@ bool GCOVProfiler::emitProfileNotes(
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();
           MDNode *Scope = Loc.getScope();
-          // TODO: Handle blocks from another file due to #line, #include, etc.
-          if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
+          if (SP != getDISubprogram(Scope))
             continue;
 
-          GCOVLines &Lines = Block.getFile(Filename);
+          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope()));
           Lines.addLine(Loc.getLine());
         }
         Line = 0;
@@ -904,14 +897,14 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
-        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        const llvm::Triple &Triple = M->getTargetTriple();
         if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
           Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
           const Edge &E = *MST.allEdges()[I];
-          IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
+          IRBuilder<> Builder(E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
           // Disable sanitizers to decrease size bloat. We don't expect
@@ -971,7 +964,7 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      const llvm::Triple &Triple = M->getTargetTriple();
       if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
         emitModuleInitFunctionPtrs(CountersBySP);
       else
@@ -1053,7 +1046,7 @@ void GCOVProfiler::emitModuleInitFunctionPtrs(
   CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
   CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
   CovInitGV->setSection(getInstrProfSectionName(
-      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+      IPSK_covinit, M->getTargetTriple().getObjectFormat()));
   CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   CovInitGV->setConstant(true);
 }
@@ -1140,10 +1133,6 @@ Function *GCOVProfiler::insertCounterWriteout(
   StructType *FileInfoTy = StructType::create(
       {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
-  Constant *Zero32 = Builder.getInt32(0);
-  // Build an explicit array of two zeros for use in ConstantExpr GEP building.
-  Constant *TwoZero32s[] = {Zero32, Zero32};
-
   SmallVector<Constant *, 8> FileInfos;
   for (int i : llvm::seq<int>(0, CUNodes->getNumOperands())) {
     auto *CU = cast<DICompileUnit>(CUNodes->getOperand(i));
@@ -1173,9 +1162,7 @@ Function *GCOVProfiler::insertCounterWriteout(
       GlobalVariable *GV = CountersBySP[j].first;
       unsigned Arcs = cast<ArrayType>(GV->getValueType())->getNumElements();
       EmitArcsCallArgsArray.push_back(ConstantStruct::get(
-          EmitArcsCallArgsTy,
-          {Builder.getInt32(Arcs), ConstantExpr::getInBoundsGetElementPtr(
-                                       GV->getValueType(), GV, TwoZero32s)}));
+          EmitArcsCallArgsTy, {Builder.getInt32(Arcs), GV}));
     }
     // Create global arrays for the two emit calls.
     int CountersSize = CountersBySP.size();
@@ -1203,13 +1190,8 @@ Function *GCOVProfiler::insertCounterWriteout(
     EmitArcsCallArgsArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
     FileInfos.push_back(ConstantStruct::get(
-        FileInfoTy,
-        {StartFileCallArgs, Builder.getInt32(CountersSize),
-         ConstantExpr::getInBoundsGetElementPtr(EmitFunctionCallArgsArrayTy,
-                                                EmitFunctionCallArgsArrayGV,
-                                                TwoZero32s),
-         ConstantExpr::getInBoundsGetElementPtr(
-             EmitArcsCallArgsArrayTy, EmitArcsCallArgsArrayGV, TwoZero32s)}));
+        FileInfoTy, {StartFileCallArgs, Builder.getInt32(CountersSize),
+                     EmitFunctionCallArgsArrayGV, EmitArcsCallArgsArrayGV}));
   }
 
   // If we didn't find anything to actually emit, bail on out.

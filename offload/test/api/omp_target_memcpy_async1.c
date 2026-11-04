@@ -1,14 +1,14 @@
 // RUN: %libomptarget-compile-and-run-generic
 
-// Test case for omp_target_memcpy_async, oringally from GCC
+// Test case for omp_target_memcpy_async, originally from GCC
 
 #include "stdio.h"
 #include <omp.h>
 #include <stdlib.h>
 
-int main() {
+int run_test(int hostDev) {
   int d = omp_get_default_device();
-  int id = omp_get_initial_device();
+  int id = hostDev;
   int q[128], i;
   void *p;
 
@@ -45,4 +45,8 @@ int main() {
   omp_target_free(p, d);
 
   return 0;
+}
+
+int main() {
+  return run_test(omp_get_initial_device()) && run_test(omp_initial_device);
 }

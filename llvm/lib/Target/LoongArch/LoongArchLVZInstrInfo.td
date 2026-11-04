@@ -23,7 +23,7 @@ let Constraints = "$rd = $dst" in {
 def GCSRWR : FmtCSR<0x05000020, (outs GPR:$dst),
                     (ins GPR:$rd, uimm14:$csr_num), "$rd, $csr_num">;
 def GCSRXCHG : FmtCSRXCHG<0x05000000, (outs GPR:$dst),
-                          (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
+                          (ins GPR:$rd, GPRNoR0R1:$rj, uimm14:$csr_num),
                           "$rd, $rj, $csr_num">;
 } // Constraints = "$rd = $dst"
 

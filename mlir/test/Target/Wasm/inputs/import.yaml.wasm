@@ -1,0 +1,44 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:
+      - Module:          my_module
+        Field:           foo
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          my_module
+        Field:           bar
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          my_module
+        Field:           table
+        Kind:            TABLE
+        Table:
+          Index:           0
+          ElemType:        FUNCREF
+          Limits:
+            Minimum:         0x2
+      - Module:          my_module
+        Field:           mem
+        Kind:            MEMORY
+        Memory:
+          Minimum:         0x2
+      - Module:          my_module
+        Field:           glob
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   false
+      - Module:          my_other_module
+        Field:           glob_mut
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   true
+...

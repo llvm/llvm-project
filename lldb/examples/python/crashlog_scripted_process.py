@@ -10,8 +10,7 @@ from lldb.macosx.crashlog import CrashLog, CrashLogParser
 
 
 class CrashLogScriptedProcess(ScriptedProcess):
-    def set_crashlog(self, crashlog):
-        self.crashlog = crashlog
+    def parse_crashlog(self):
         if self.crashlog.process_id:
             if type(self.crashlog.process_id) is int:
                 self.pid = self.crashlog.process_id
@@ -28,8 +27,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
             self.metadata["asi"] = self.crashlog.asi
         if hasattr(self.crashlog, "asb"):
             self.extended_thread_info = self.crashlog.asb
-
-        crashlog.load_images(self.options, self.loaded_images)
 
         for thread in self.crashlog.threads:
             if (
@@ -92,10 +89,21 @@ class CrashLogScriptedProcess(ScriptedProcess):
                     no_parallel_image_loading.GetBooleanValue()
                 )
 
+        self.crashlog = None
+        crashlog = args.GetValueForKey("crashlog")
+        if crashlog and crashlog.IsValid():
+            if crashlog.GetType() == lldb.eStructuredDataTypeGeneric:
+                self.crashlog = crashlog.GetGenericValue()
+
+        if not self.crashlog:
+            # Return error
+            return
+
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
         self.exception = None
         self.extended_thread_info = None
+        self.parse_crashlog()
 
     def read_memory_at_address(
         self, addr: int, size: int, error: lldb.SBError
@@ -104,8 +112,8 @@ class CrashLogScriptedProcess(ScriptedProcess):
         return lldb.SBData()
 
     def get_loaded_images(self):
-        # TODO: Iterate over corefile_target modules and build a data structure
-        # from it.
+        if len(self.loaded_images) == 0:
+            self.crashlog.load_images(self.options, self.loaded_images)
         return self.loaded_images
 
     def should_stop(self) -> bool:
@@ -123,11 +131,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
 class CrashLogScriptedThread(ScriptedThread):
     def create_register_ctx(self):
-        if not self.has_crashed:
-            return dict.fromkeys(
-                [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
-            )
-
         if not self.backing_thread or not len(self.backing_thread.registers):
             return dict.fromkeys(
                 [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
@@ -135,8 +138,15 @@ class CrashLogScriptedThread(ScriptedThread):
 
         for reg in self.register_info["registers"]:
             reg_name = reg["name"]
+            reg_alt_name = None
+            if "alt-name" in reg:
+                reg_alt_name = reg["alt-name"]
             if reg_name in self.backing_thread.registers:
                 self.register_ctx[reg_name] = self.backing_thread.registers[reg_name]
+            elif reg_alt_name and reg_alt_name in self.backing_thread.registers:
+                self.register_ctx[reg_name] = self.backing_thread.registers[
+                    reg_alt_name
+                ]
             else:
                 self.register_ctx[reg_name] = 0
 
@@ -144,14 +154,28 @@ class CrashLogScriptedThread(ScriptedThread):
 
     def resolve_stackframes(thread, addr_mask, target):
         frames = []
-        for frame in thread.frames:
+        for i, frame in enumerate(thread.frames):
             frame_pc = frame.pc & addr_mask
-            pc = frame_pc if frame.index == 0 or frame_pc == 0 else frame_pc - 1
+            # Skip inlined frames so LLDB can reconstruct them from
+            # debug info when it processes the concrete frames we provide.
+            # Use the inlined attribute when available (symbolicated reports),
+            # otherwise fall back to comparing PCs (non-symbolicated reports).
+            if frame.inlined:
+                continue
+            next_frame = thread.frames[i + 1] if i + 1 < len(thread.frames) else None
+            if next_frame and frame_pc == (next_frame.pc & addr_mask):
+                continue
+            # Don't subtract 1 from the first concrete frame (it's the actual
+            # PC, not a return address) or from null PCs.
+            if len(frames) == 0 or frame_pc == 0:
+                pc = frame_pc
+            else:
+                pc = frame_pc - 1
             sym_addr = lldb.SBAddress()
             sym_addr.SetLoadAddress(pc, target)
             if not sym_addr.IsValid():
                 continue
-            frames.append({"idx": frame.index, "pc": pc})
+            frames.append({"idx": len(frames), "pc": pc})
         return frames
 
     def create_stackframes(self):

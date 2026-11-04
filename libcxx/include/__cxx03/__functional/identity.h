@@ -26,7 +26,7 @@ struct __is_identity : false_type {};
 
 struct __identity {
   template <class _Tp>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp&& operator()(_Tp&& __t) const _NOEXCEPT {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _Tp&& operator()(_Tp&& __t) const _NOEXCEPT {
     return std::forward<_Tp>(__t);
   }
 
@@ -39,26 +39,6 @@ template <>
 struct __is_identity<reference_wrapper<__identity> > : true_type {};
 template <>
 struct __is_identity<reference_wrapper<const __identity> > : true_type {};
-
-#if _LIBCPP_STD_VER >= 20
-
-struct identity {
-  template <class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator()(_Tp&& __t) const noexcept {
-    return std::forward<_Tp>(__t);
-  }
-
-  using is_transparent = void;
-};
-
-template <>
-struct __is_identity<identity> : true_type {};
-template <>
-struct __is_identity<reference_wrapper<identity> > : true_type {};
-template <>
-struct __is_identity<reference_wrapper<const identity> > : true_type {};
-
-#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

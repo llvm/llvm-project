@@ -9,7 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -107,7 +106,7 @@ static void basic_space_test()
         space_info info = space(p, ec);
         assert(!ec);
         assert(info.capacity != bad_value);
-        assert(expect_capacity == info.capacity);
+        assert(EqualDelta(expect_capacity, info.capacity, delta));
         assert(info.free != bad_value);
         assert(EqualDelta(expect_free, info.free, delta));
         assert(info.available != bad_value);

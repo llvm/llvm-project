@@ -55,8 +55,6 @@ define fp128 @load_fp128(ptr %fptr) {
 ; X64-AVX-LABEL: load_fp128:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-AVX-NEXT:    retq
   %v = load atomic fp128, ptr %fptr unordered, align 16
   ret fp128 %v

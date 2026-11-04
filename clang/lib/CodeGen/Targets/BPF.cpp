@@ -22,37 +22,44 @@ class BPFABIInfo : public DefaultABIInfo {
 public:
   BPFABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
+  // Classify an aggregate (struct/union) used as an argument or a return
+  // value. Aggregates that fit in 1 or 2 registers are passed/returned
+  // directly, coerced to an integer or a pair of 64-bit integers; larger
+  // ones use an indirect reference.
+  ABIArgInfo classifyAggregateType(QualType Ty) const {
+    uint64_t Bits = getContext().getTypeSize(Ty);
+    if (Bits == 0)
+      return ABIArgInfo::getIgnore();
+
+    // Larger aggregates use an indirect reference.
+    if (Bits > 128)
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+    // If the aggregate needs 1 or 2 registers, do not use reference.
+    llvm::Type *CoerceTy;
+    if (Bits <= 64) {
+      CoerceTy = llvm::IntegerType::get(getVMContext(), llvm::alignTo(Bits, 8));
+    } else {
+      llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), 64);
+      CoerceTy = llvm::ArrayType::get(RegTy, 2);
+    }
+    return ABIArgInfo::getDirect(CoerceTy);
+  }
+
   ABIArgInfo classifyArgumentType(QualType Ty) const {
     Ty = useFirstFieldIfTransparentUnion(Ty);
 
-    if (isAggregateTypeForABI(Ty)) {
-      uint64_t Bits = getContext().getTypeSize(Ty);
-      if (Bits == 0)
-        return ABIArgInfo::getIgnore();
+    if (isAggregateTypeForABI(Ty))
+      return classifyAggregateType(Ty);
 
-      // If the aggregate needs 1 or 2 registers, do not use reference.
-      if (Bits <= 128) {
-        llvm::Type *CoerceTy;
-        if (Bits <= 64) {
-          CoerceTy =
-              llvm::IntegerType::get(getVMContext(), llvm::alignTo(Bits, 8));
-        } else {
-          llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), 64);
-          CoerceTy = llvm::ArrayType::get(RegTy, 2);
-        }
-        return ABIArgInfo::getDirect(CoerceTy);
-      } else {
-        return getNaturalAlignIndirect(Ty);
-      }
-    }
-
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     ASTContext &Context = getContext();
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
-        return getNaturalAlignIndirect(Ty);
+        return getNaturalAlignIndirect(Ty,
+                                       getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());
@@ -63,16 +70,17 @@ public:
       return ABIArgInfo::getIgnore();
 
     if (isAggregateTypeForABI(RetTy))
-      return getNaturalAlignIndirect(RetTy);
+      return classifyAggregateType(RetTy);
 
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     ASTContext &Context = getContext();
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
-        return getNaturalAlignIndirect(RetTy);
+        return getNaturalAlignIndirect(RetTy,
+                                       getDataLayout().getAllocaAddrSpace());
 
     // Caller will do necessary sign/zero extension.
     return ABIArgInfo::getDirect();

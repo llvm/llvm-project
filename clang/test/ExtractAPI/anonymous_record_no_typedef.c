@@ -191,4 +191,44 @@ union Vector {
 // VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector"
 // VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector"
 
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix COUNTS
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix COUNTS
+struct MyStruct {
+    struct {
+        int count;
+    } counts[1];
+};
+// MYSTRUCT-NOT: "spelling": ""
+// MYSTRUCT-NOT: "title": ""
+
+// COUNTS-LABEL: "!testLabel": "c:@S@MyStruct@FI@counts"
+// COUNTS:      "declarationFragments": [
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "keyword",
+// COUNTS-NEXT:     "spelling": "struct"
+// COUNTS-NEXT:   },
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "text",
+// COUNTS-NEXT:     "spelling": " { ... } "
+// COUNTS-NEXT:   },
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "identifier",
+// COUNTS-NEXT:     "spelling": "counts"
+// COUNTS-NEXT:   },
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "text",
+// COUNTS-NEXT:     "spelling": "["
+// COUNTS-NEXT:   },
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "number",
+// COUNTS-NEXT:     "spelling": "1"
+// COUNTS-NEXT:   },
+// COUNTS-NEXT:   {
+// COUNTS-NEXT:     "kind": "text",
+// COUNTS-NEXT:     "spelling": "];"
+// COUNTS-NEXT:   }
+// COUNTS-NEXT: ],
+
 // expected-no-diagnostics

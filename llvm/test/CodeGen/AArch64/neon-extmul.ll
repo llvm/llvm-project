@@ -12,10 +12,9 @@ define <8 x i32> @extmuls_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: extmuls_v8i8_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    smull v0.4s, v2.4h, v1.4h
-; CHECK-GI-NEXT:    smull2 v1.4s, v2.8h, v1.8h
+; CHECK-GI-NEXT:    smull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    sshll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i32>
@@ -34,10 +33,9 @@ define <8 x i32> @extmulu_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: extmulu_v8i8_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    umull v0.4s, v2.4h, v1.4h
-; CHECK-GI-NEXT:    umull2 v1.4s, v2.8h, v1.8h
+; CHECK-GI-NEXT:    umull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i32>
@@ -57,14 +55,10 @@ define <8 x i32> @extmulsu_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: extmulsu_v8i8_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll2 v3.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    mul v0.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    mul v1.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    smull v0.4s, v2.4h, v1.4h
+; CHECK-GI-NEXT:    smull2 v1.4s, v2.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i32>
@@ -83,12 +77,9 @@ define <8 x i32> @extmuladds_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1, <8 x i32> %b) 
 ;
 ; CHECK-GI-LABEL: extmuladds_v8i8_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    smlal v2.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    smlal2 v3.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
+; CHECK-GI-NEXT:    smull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    saddw v0.4s, v2.4s, v1.4h
+; CHECK-GI-NEXT:    saddw2 v1.4s, v3.4s, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i32>
@@ -108,12 +99,9 @@ define <8 x i32> @extmuladdu_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1, <8 x i32> %b) 
 ;
 ; CHECK-GI-LABEL: extmuladdu_v8i8_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    umlal v2.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    umlal2 v3.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
+; CHECK-GI-NEXT:    umull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    uaddw v0.4s, v2.4s, v1.4h
+; CHECK-GI-NEXT:    uaddw2 v1.4s, v3.4s, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i32>
@@ -138,12 +126,8 @@ define <8 x i32> @extmuladdsu_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1, <8 x i32> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    sshll v4.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ushll v5.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    mla v2.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    mla v3.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    smlal v2.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    smlal2 v3.4s, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
@@ -171,16 +155,13 @@ define <8 x i64> @extmuls_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: extmuls_v8i8_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll v3.4s, v1.4h, #0
-; CHECK-GI-NEXT:    sshll2 v4.4s, v0.8h, #0
-; CHECK-GI-NEXT:    sshll2 v5.4s, v1.8h, #0
-; CHECK-GI-NEXT:    smull v0.2d, v2.2s, v3.2s
-; CHECK-GI-NEXT:    smull2 v1.2d, v2.4s, v3.4s
-; CHECK-GI-NEXT:    smull v2.2d, v4.2s, v5.2s
-; CHECK-GI-NEXT:    smull2 v3.2d, v4.4s, v5.4s
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshll2 v3.4s, v0.8h, #0
+; CHECK-GI-NEXT:    sshll v0.2d, v1.2s, #0
+; CHECK-GI-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-GI-NEXT:    sshll v2.2d, v3.2s, #0
+; CHECK-GI-NEXT:    sshll2 v3.2d, v3.4s, #0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>
@@ -203,16 +184,13 @@ define <8 x i64> @extmulu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: extmulu_v8i8_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll2 v4.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ushll2 v5.4s, v1.8h, #0
-; CHECK-GI-NEXT:    umull v0.2d, v2.2s, v3.2s
-; CHECK-GI-NEXT:    umull2 v1.2d, v2.4s, v3.4s
-; CHECK-GI-NEXT:    umull v2.2d, v4.2s, v5.2s
-; CHECK-GI-NEXT:    umull2 v3.2d, v4.4s, v5.4s
+; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-GI-NEXT:    ushll v0.2d, v1.2s, #0
+; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-GI-NEXT:    ushll v2.2d, v3.2s, #0
+; CHECK-GI-NEXT:    ushll2 v3.2d, v3.4s, #0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i64>
@@ -242,48 +220,12 @@ define <8 x i64> @extaddsu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-GI-NEXT:    sshll v2.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
-; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    sshll v4.2d, v2.2s, #0
-; CHECK-GI-NEXT:    ushll v5.2d, v3.2s, #0
-; CHECK-GI-NEXT:    sshll2 v2.2d, v2.4s, #0
-; CHECK-GI-NEXT:    ushll2 v3.2d, v3.4s, #0
-; CHECK-GI-NEXT:    sshll v6.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll v7.2d, v1.2s, #0
-; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-GI-NEXT:    fmov x8, d4
-; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    mov x12, v4.d[1]
-; CHECK-GI-NEXT:    fmov x10, d3
-; CHECK-GI-NEXT:    fmov x11, d7
-; CHECK-GI-NEXT:    mov x13, v5.d[1]
-; CHECK-GI-NEXT:    fmov x14, d1
-; CHECK-GI-NEXT:    mov x15, v2.d[1]
-; CHECK-GI-NEXT:    mov x16, v3.d[1]
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    mov x17, v7.d[1]
-; CHECK-GI-NEXT:    mov x18, v1.d[1]
-; CHECK-GI-NEXT:    mul x12, x12, x13
-; CHECK-GI-NEXT:    mov x13, v0.d[1]
-; CHECK-GI-NEXT:    mul x9, x9, x10
-; CHECK-GI-NEXT:    fmov x10, d6
-; CHECK-GI-NEXT:    mul x15, x15, x16
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    fmov x11, d0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    mul x13, x13, x18
-; CHECK-GI-NEXT:    mul x11, x11, x14
-; CHECK-GI-NEXT:    mov x14, v6.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], x12
-; CHECK-GI-NEXT:    mov v2.d[0], x10
-; CHECK-GI-NEXT:    mov v1.d[1], x15
-; CHECK-GI-NEXT:    mul x14, x14, x17
-; CHECK-GI-NEXT:    mov v3.d[0], x11
-; CHECK-GI-NEXT:    mov v2.d[1], x14
-; CHECK-GI-NEXT:    mov v3.d[1], x13
+; CHECK-GI-NEXT:    sshll2 v4.4s, v0.8h, #0
+; CHECK-GI-NEXT:    ushll2 v5.4s, v1.8h, #0
+; CHECK-GI-NEXT:    smull v0.2d, v2.2s, v3.2s
+; CHECK-GI-NEXT:    smull2 v1.2d, v2.4s, v3.4s
+; CHECK-GI-NEXT:    smull v2.2d, v4.2s, v5.2s
+; CHECK-GI-NEXT:    smull2 v3.2d, v4.4s, v5.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>
@@ -307,20 +249,13 @@ define <8 x i64> @extmuladds_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b) 
 ;
 ; CHECK-GI-LABEL: extmuladds_v8i8_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    sshll v6.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll v7.4s, v1.4h, #0
-; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    smlal v2.2d, v6.2s, v7.2s
-; CHECK-GI-NEXT:    smlal2 v3.2d, v6.4s, v7.4s
-; CHECK-GI-NEXT:    smlal v4.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    smlal2 v5.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
-; CHECK-GI-NEXT:    mov v2.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v5.16b
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshll2 v6.4s, v0.8h, #0
+; CHECK-GI-NEXT:    saddw v0.2d, v2.2d, v1.2s
+; CHECK-GI-NEXT:    saddw2 v1.2d, v3.2d, v1.4s
+; CHECK-GI-NEXT:    saddw v2.2d, v4.2d, v6.2s
+; CHECK-GI-NEXT:    saddw2 v3.2d, v5.2d, v6.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>
@@ -345,20 +280,13 @@ define <8 x i64> @extmuladdu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b) 
 ;
 ; CHECK-GI-LABEL: extmuladdu_v8i8_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ushll v6.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll v7.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    umlal v2.2d, v6.2s, v7.2s
-; CHECK-GI-NEXT:    umlal2 v3.2d, v6.4s, v7.4s
-; CHECK-GI-NEXT:    umlal v4.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    umlal2 v5.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
-; CHECK-GI-NEXT:    mov v2.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v5.16b
+; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll2 v6.4s, v0.8h, #0
+; CHECK-GI-NEXT:    uaddw v0.2d, v2.2d, v1.2s
+; CHECK-GI-NEXT:    uaddw2 v1.2d, v3.2d, v1.4s
+; CHECK-GI-NEXT:    uaddw v2.2d, v4.2d, v6.2s
+; CHECK-GI-NEXT:    uaddw2 v3.2d, v5.2d, v6.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i64>
@@ -395,50 +323,14 @@ define <8 x i64> @extmuladdsu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b)
 ; CHECK-GI-NEXT:    ushll v7.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
 ; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    sshll v16.2d, v6.2s, #0
-; CHECK-GI-NEXT:    ushll v17.2d, v7.2s, #0
-; CHECK-GI-NEXT:    sshll2 v6.2d, v6.4s, #0
-; CHECK-GI-NEXT:    ushll2 v7.2d, v7.4s, #0
-; CHECK-GI-NEXT:    sshll v18.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll v19.2d, v1.2s, #0
-; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-GI-NEXT:    fmov x8, d16
-; CHECK-GI-NEXT:    fmov x9, d17
-; CHECK-GI-NEXT:    mov x12, v16.d[1]
-; CHECK-GI-NEXT:    fmov x10, d7
-; CHECK-GI-NEXT:    fmov x11, d19
-; CHECK-GI-NEXT:    mov x13, v17.d[1]
-; CHECK-GI-NEXT:    fmov x14, d1
-; CHECK-GI-NEXT:    mov x15, v6.d[1]
-; CHECK-GI-NEXT:    mov x16, v7.d[1]
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d6
-; CHECK-GI-NEXT:    mov x17, v19.d[1]
-; CHECK-GI-NEXT:    mov x18, v1.d[1]
-; CHECK-GI-NEXT:    mul x12, x12, x13
-; CHECK-GI-NEXT:    mov x13, v0.d[1]
-; CHECK-GI-NEXT:    mul x9, x9, x10
-; CHECK-GI-NEXT:    fmov x10, d18
-; CHECK-GI-NEXT:    mul x15, x15, x16
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    fmov x11, d0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    mul x13, x13, x18
-; CHECK-GI-NEXT:    mul x11, x11, x14
-; CHECK-GI-NEXT:    mov x14, v18.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], x12
-; CHECK-GI-NEXT:    mov v6.d[0], x10
-; CHECK-GI-NEXT:    mov v1.d[1], x15
-; CHECK-GI-NEXT:    mul x14, x14, x17
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    mov v7.d[0], x11
-; CHECK-GI-NEXT:    add v1.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    mov v6.d[1], x14
-; CHECK-GI-NEXT:    mov v7.d[1], x13
-; CHECK-GI-NEXT:    add v2.2d, v6.2d, v4.2d
-; CHECK-GI-NEXT:    add v3.2d, v7.2d, v5.2d
+; CHECK-GI-NEXT:    smlal v2.2d, v6.2s, v7.2s
+; CHECK-GI-NEXT:    smlal2 v3.2d, v6.4s, v7.4s
+; CHECK-GI-NEXT:    smlal v4.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smlal2 v5.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
+; CHECK-GI-NEXT:    mov v2.16b, v4.16b
+; CHECK-GI-NEXT:    mov v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>

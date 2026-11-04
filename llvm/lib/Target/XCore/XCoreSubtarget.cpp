@@ -13,6 +13,7 @@
 #include "XCoreSubtarget.h"
 #include "XCore.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 
 using namespace llvm;
 
@@ -22,9 +23,12 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "XCoreGenSubtargetInfo.inc"
 
+#define OPTIONS_STRUCT_DEFS
+#include "XCoreOptions.inc"
+
 void XCoreSubtarget::anchor() { }
 
 XCoreSubtarget::XCoreSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS, const TargetMachine &TM)
-    : XCoreGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), FrameLowering(*this),
-      TLInfo(TM, *this) {}
+    : XCoreGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), InstrInfo(*this),
+      FrameLowering(*this), TLInfo(TM, *this) {}

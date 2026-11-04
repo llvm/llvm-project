@@ -116,6 +116,12 @@ TEST(AddressSanitizerMac, GCDDispatchAfter) {
   EXPECT_DEATH(TestGCDDispatchAfter(), "Shadow byte legend");
 }
 
+TEST(AddressSanitizerMac, GCDDispatchApply) {
+  // Make sure the whole ASan report is printed, i.e. that we don't die
+  // on a CHECK.
+  EXPECT_DEATH(TestGCDDispatchApply(), "Shadow byte legend");
+}
+
 TEST(AddressSanitizerMac, GCDSourceEvent) {
   // Make sure the whole ASan report is printed, i.e. that we don't die
   // on a CHECK.

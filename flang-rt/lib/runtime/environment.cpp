@@ -1,0 +1,563 @@
+//===-- lib/runtime/environment.cpp -----------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "flang-rt/runtime/environment.h"
+#include "environment-default-list.h"
+#include "flang-rt/runtime/memory.h"
+#include "flang-rt/runtime/tools.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+
+#ifdef _WIN32
+#include <stdlib.h>
+#elif defined(__FreeBSD__)
+// FreeBSD has environ in crt rather than libc. Using "extern char** environ"
+// in the code of a shared library makes it fail to link with -Wl,--no-undefined
+// See https://reviews.freebsd.org/D30842#840642
+#include <dlfcn.h>
+#elif RT_GPU_TARGET
+// GPU targets do not provide environ.
+#else
+extern char **environ;
+#endif
+
+namespace Fortran::runtime {
+
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+RT_OFFLOAD_VAR_GROUP_BEGIN
+RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
+RT_OFFLOAD_VAR_GROUP_END
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+
+// Optional callback routines to be invoked pre and post execution
+// environment setup.
+// RTNAME(RegisterConfigureEnv) will return true if callback function(s)
+// is(are) successfully added to small array of pointers.  False if more
+// than nConfigEnvCallback registrations for either pre or post functions.
+
+static int nPreConfigEnvCallback{0};
+static void (*PreConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+static int nPostConfigEnvCallback{0};
+static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+// No environment support on the GPU.
+#if !RT_GPU_TARGET
+static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
+  if (!envDefaults) {
+    return;
+  }
+
+  for (int itemIndex = 0; itemIndex < envDefaults->numItems; ++itemIndex) {
+    const char *name = envDefaults->item[itemIndex].name;
+    const char *value = envDefaults->item[itemIndex].value;
+#ifdef _WIN32
+    if (std::getenv(name)) {
+      continue;
+    }
+    if (_putenv_s(name, value) != 0) {
+#else
+    if (setenv(name, value, /*overwrite=*/0) == -1) {
+#endif
+      Fortran::runtime::Terminator{__FILE__, __LINE__}.Crash(
+          std::strerror(errno));
+    }
+  }
+}
+
+RT_OFFLOAD_API_GROUP_BEGIN
+common::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
+  static const char *keywords[]{
+      "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
+  switch (IdentifyValue(x, n, keywords)) {
+  case 0:
+    return Convert::Unknown;
+  case 1:
+    return Convert::Native;
+  case 2:
+    return Convert::LittleEndian;
+  case 3:
+    return Convert::BigEndian;
+  case 4:
+    return Convert::Swap;
+  default:
+    return common::nullopt;
+  }
+}
+RT_OFFLOAD_API_GROUP_END
+
+bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
+  bool success{true};
+  char *envStr{strdup(cenvStr)};
+
+  if (nullptr == envStr) {
+    Terminator{__FILE__, __LINE__}.Crash(
+        "FORT_CONVERT_UNIT: could not allocate memory");
+  }
+
+  char *exceptionSvptr{nullptr};
+  // Pass the string only on the first call; some libcs (e.g. AIX) set the
+  // save pointer to nullptr after the last token.
+  char *nextStr{envStr};
+  char *exceptionStr;
+  char *unitListStr;
+  bool firstException{true};
+  Convert gblConversion{conversion};
+
+  // Flang's FORT_CONVERT_UNIT syntax follows NVIDIA's FORT_CONVERT_UNIT and
+  // GNU's gfortran GFORTRAN_CONVERT_UNIT.
+  //
+  // FORT_CONVERT_UNIT: mode | mode ';' exception | exception ;
+  // mode: 'native' | 'swap' | 'big_endian' | 'little_endian' ;
+  // exception: mode ':' unit_list | unit_list ;
+  // unit_list: unit_spec | unit_list ',' unit_spec ;
+  // unit_spec: INTEGER | INTEGER '-' INTEGER ;
+
+  while (success) {
+#if _WIN32
+    exceptionStr = strtok_s(nextStr, ";", &exceptionSvptr);
+#else
+    exceptionStr = strtok_r(nextStr, ";", &exceptionSvptr);
+#endif
+    nextStr = nullptr;
+    if (nullptr == exceptionStr) {
+      break;
+    }
+
+    // unitList is not yet correct, might be nullptr or pointing to ':'.
+    unitListStr = std::strchr(exceptionStr, ':');
+
+    if (firstException && (nullptr == unitListStr) &&
+        !isdigit(exceptionStr[0])) {
+      // if first pass extracting an exception, and exceptionStr does not
+      // contain a ':' this becomes the global setting.
+      // Akin to specifying FORT_CONVERT=<mode>.
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        gblConversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+      firstException = false;
+      continue;
+    }
+
+    // mode ';' exception | exception
+    char *unitListSvptr{nullptr};
+    // For the case where <mode> is unspecified
+    Convert conversion{Convert::BigEndian};
+
+    // If unitListStr != nullptr extract mode from modeStr[:unitListStr-1].
+    if (nullptr != unitListStr) {
+      *unitListStr++ = '\0'; // Advance unitListStr
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        conversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+    } else {
+      unitListStr = exceptionStr;
+    }
+
+    unitListSvptr = nullptr;
+
+    // Loop over unit list extracting individual or ranges of units, separated
+    // by commas.
+
+    while (success) {
+      char *units;
+      int lb, ub;
+      char remStr[2];
+      int nread;
+      int nexpected;
+
+      lb = ub = -1;
+#if _WIN32
+      units = strtok_s(unitListStr, ",", &unitListSvptr);
+#else
+      units = strtok_r(unitListStr, ",", &unitListSvptr);
+#endif
+      unitListStr = nullptr;
+      if (nullptr == units) {
+        break;
+      }
+
+      // single unit or range of units.
+      // If hyphen is detected in units, assume range
+      if (std::strchr(units, '-')) {
+        nexpected = 2;
+        nread = std::sscanf(units, "%u-%u%1s", &lb, &ub, remStr);
+      } else {
+        nexpected = 1;
+        nread = std::sscanf(units, "%u%1s", &lb, remStr);
+        ub = lb;
+      }
+      if (nread != nexpected || (lb < 0) || (ub < 0) || (lb > ub)) {
+        success = false;
+        break;
+      }
+
+      // Resize convertUnits on each iteration.  This is a small array.
+      // Overhead of resizing convertUnits on each call is negligible.
+      ConvertUnit *tmpConvertUnits{(ConvertUnit *)std::realloc(
+          convertUnits, (numConvertUnits + 1) * sizeof(*convertUnits))};
+      if (!tmpConvertUnits) {
+        success = false;
+        break;
+      }
+      convertUnits = tmpConvertUnits;
+      convertUnits[numConvertUnits].conversion = conversion;
+      convertUnits[numConvertUnits].startUnit = lb;
+      convertUnits[numConvertUnits].endUnit = ub;
+      ++numConvertUnits;
+    }
+  }
+
+  std::free(envStr); // from strdup()
+
+  if (success) {
+    conversion = gblConversion;
+  } else {
+    // Failure(s) - backout anything that could be permanent.
+    std::free(convertUnits);
+    convertUnits = nullptr; // avoid a double free in ExternalFileUnit::CloseAll
+    numConvertUnits = 0;
+  }
+  return success;
+}
+
+// ExecutionEnvironment::UnitRtConvert
+// Scan linear array ExecutionEnvironment::convertUnits for unitNumber, and if
+// found, return user specified (runtime) I/O conversion for unformatted
+// files.
+
+Convert ExecutionEnvironment::UnitRtConvert(int unitNumber) {
+  Convert convertReturn{Convert::Unknown};
+  // convertUnits is a small array, but still iterate backwards.
+  for (auto i = numConvertUnits; i != 0;) {
+    --i;
+    if (unitNumber >= convertUnits[i].startUnit &&
+        unitNumber <= convertUnits[i].endUnit) {
+      convertReturn = convertUnits[i].conversion;
+      break;
+    }
+  }
+  return convertReturn;
+}
+
+void ExecutionEnvironment::Configure(int ac, const char *av[],
+    const char *env[], const EnvironmentDefaultList *envDefaults) {
+  argc = ac;
+  argv = av;
+  SetEnvironmentDefaults(envDefaults);
+
+  if (0 != nPreConfigEnvCallback) {
+    // Run an optional callback function after the core of the
+    // ExecutionEnvironment() logic.
+    for (int i{0}; i != nPreConfigEnvCallback; ++i) {
+      PreConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
+
+#ifdef _WIN32
+  envp = _environ;
+#elif defined(__FreeBSD__)
+  auto envpp{reinterpret_cast<char ***>(dlsym(RTLD_DEFAULT, "environ"))};
+  if (envpp) {
+    envp = *envpp;
+  }
+#else
+  envp = environ;
+#endif
+  listDirectedOutputLineLengthLimit = 79; // PGI default
+  defaultOutputRoundingMode =
+      decimal::FortranRounding::RoundNearest; // RP(==RN)
+  conversion = Convert::Unknown;
+
+  if (auto *x{std::getenv("FORT_FMT_RECL")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n > 0 && n < common::numeric_limits<int>::max() && *end == '\0') {
+      listDirectedOutputLineLengthLimit = n;
+    } else {
+      std::fprintf(
+          stderr, "Fortran runtime: FORT_FMT_RECL=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CONVERT")}) {
+    if (auto convert{GetConvertFromString(x, std::strlen(x))}) {
+      conversion = *convert;
+    } else {
+      std::fprintf(
+          stderr, "Fortran runtime: FORT_CONVERT=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CONVERT_UNIT")}) {
+    if (!ParseFortConvertUnit(x)) {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CONVERT_UNIT=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_TRUNCATE_STREAM")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      truncateStream = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_TRUNCATE_STREAM=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noStopMessage = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_TIMEF_IN_MILLISECONDS")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      timefInMillisec = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_TIMEF_IN_MILLISECONDS=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("DEFAULT_UTF8")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      defaultUTF8 = n != 0;
+    } else {
+      std::fprintf(
+          stderr, "Fortran runtime: DEFAULT_UTF8=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CHECK_POINTER_DEALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      checkPointerDeallocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CHECK_POINTER_DEALLOCATION=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_RT_COPYOUT_MODIFIED_ONLY")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      copyOutModifiedOnly = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_RT_COPYOUT_MODIFIED_ONLY=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
+    internalDebugging = std::strtol(x, nullptr, 10);
+  }
+
+  if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
+    char *end;
+    auto n{std::strtoul(x, &end, 10)};
+    if (n > 0 && n != common::numeric_limits<unsigned long>::max() &&
+        *end == '\0') {
+      cudaStackLimit = n;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: ACC_OFFLOAD_STACK_SIZE=%s is invalid; ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("NV_CUDAFOR_DEVICE_IS_MANAGED")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaDeviceIsManaged = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_DEVICE_IS_MANAGED=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("NV_CUDAFOR_CHECK_ERROR")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaCheckError = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_CHECK_ERROR=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_NO_EMPTY_ALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noEmptyAllocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_NO_EMPTY_ALLOCATION=%s is invalid; ignored\n",
+          x);
+    }
+  }
+
+  // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+
+  if (0 != nPostConfigEnvCallback) {
+    // Run an optional callback function in reverse order of registration
+    // after the core of the ExecutionEnvironment() logic.
+    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
+      PostConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
+}
+
+const char *ExecutionEnvironment::GetEnv(
+    const char *name, std::size_t name_length, const Terminator &terminator) {
+  RUNTIME_CHECK(terminator, name && name_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  return std::getenv(cStyleName.get());
+}
+
+std::int32_t ExecutionEnvironment::SetEnv(const char *name,
+    std::size_t name_length, const char *value, std::size_t value_length,
+    const Terminator &terminator) {
+
+  RUNTIME_CHECK(terminator, name && name_length && value && value_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  OwningPtr<char> cStyleValue{
+      SaveDefaultCharacter(value, value_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleValue);
+
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  status = _putenv_s(cStyleName.get(), cStyleValue.get());
+
+#else
+
+  constexpr int overwrite = 1;
+  status = setenv(cStyleName.get(), cStyleValue.get(), overwrite);
+
+#endif
+
+  if (status != 0) {
+    status = errno;
+  }
+
+  return status;
+}
+
+std::int32_t ExecutionEnvironment::UnsetEnv(
+    const char *name, std::size_t name_length, const Terminator &terminator) {
+
+  RUNTIME_CHECK(terminator, name && name_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  // Passing empty string as value will unset the variable
+  status = _putenv_s(cStyleName.get(), "");
+
+#else
+
+  status = unsetenv(cStyleName.get());
+
+#endif
+
+  if (status != 0) {
+    status = errno;
+  }
+
+  return status;
+}
+#endif
+
+extern "C" {
+
+// User supplied callback functions to further customize the configuration
+// of the runtime environment.
+// The pre and post callback functions are called upon entry and exit
+// of ExecutionEnvironment::Configure() respectively.
+
+bool RTNAME(RegisterConfigureEnv)(
+    ExecutionEnvironment::ConfigEnvCallbackPtr pre,
+    ExecutionEnvironment::ConfigEnvCallbackPtr post) {
+  bool ret{true};
+
+  if (nullptr != pre) {
+    if (nPreConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PreConfigEnvCallback[nPreConfigEnvCallback++] = pre;
+    } else {
+      ret = false;
+    }
+  }
+
+  if (ret && nullptr != post) {
+    if (nPostConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PostConfigEnvCallback[nPostConfigEnvCallback++] = post;
+    } else {
+      ret = false;
+    }
+  }
+
+  return ret;
+}
+} // extern "C"
+
+} // namespace Fortran::runtime

@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMAArch64Desc
   AArch64MCAsmInfo.cpp
   AArch64MCCodeEmitter.cpp
   AArch64MCExpr.cpp
+  AArch64MCLFIRewriter.cpp
   AArch64MCTargetDesc.cpp
   AArch64MachObjectWriter.cpp
   AArch64TargetStreamer.cpp
@@ -18,6 +19,7 @@ add_llvm_component_library(LLVMAArch64Desc
   BinaryFormat
   CodeGenTypes
   MC
+  Option
   Support
   TargetParser
 

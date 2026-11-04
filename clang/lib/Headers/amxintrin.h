@@ -230,8 +230,6 @@ static __inline__ void __DEFAULT_FN_ATTRS_TILE _tile_release(void) {
 /// bytes. Since there is no 2D type in llvm IR, we use vector type to
 /// represent 2D tile and the fixed size is maximum amx tile register size.
 typedef int _tile1024i __attribute__((__vector_size__(1024), __aligned__(64)));
-typedef int _tile1024i_1024a
-    __attribute__((__vector_size__(1024), __aligned__(1024)));
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_TILE

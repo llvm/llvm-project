@@ -12,10 +12,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: @_Dmain
 ; CHECK: load i8, ptr %tmp4
 ; CHECK: ret
-define fastcc i32 @_Dmain(%"char[][]" %unnamed) {
+define fastcc i32 @_Dmain(%"char[][]" %unnamed, i1 %arg) {
 entry:
         %tmp = getelementptr [7 x i8], ptr @.str, i32 0, i32 0              ; <ptr> [#uses=1]
-        br i1 undef, label %foreachbody, label %foreachend
+        br i1 %arg, label %foreachbody, label %foreachend
 
 foreachbody:            ; preds = %entry
         %tmp4 = getelementptr i8, ptr %tmp, i32 undef               ; <ptr> [#uses=1]

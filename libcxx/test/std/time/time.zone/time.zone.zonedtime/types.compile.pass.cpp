@@ -58,7 +58,7 @@ static_assert(std::is_copy_assignable_v<std::chrono::zoned_time<std::chrono::day
 static_assert(std::is_move_assignable_v<std::chrono::zoned_time<std::chrono::days, int>>);
 
 // Test with a move only type, since the copy constructor is defined, no move
-// constuctor is generated.
+// constructor is generated.
 static_assert(!std::is_copy_constructible_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);
 static_assert(!std::is_move_constructible_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);
 static_assert(!std::is_copy_assignable_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);

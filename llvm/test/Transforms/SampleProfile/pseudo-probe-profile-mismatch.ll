@@ -1,12 +1,14 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
 ; RUN: llc < %t.ll -filetype=obj -o %t.obj
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-zero-callee.prof --salvage-unused-profile=false -report-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-ZERO-CALLEE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-multiple-sampled-callees.prof --salvage-unused-profile=false -report-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-MULTIPLE-SAMPLED
 
 
 ; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.
@@ -59,6 +61,13 @@
 
 ; CHECK-NESTED: (1/2) of functions' profile are invalid and (211/311) of samples are discarded due to function hash mismatch.
 
+; A zero-sample inline frame at the same probe does not turn the uniquely
+; sampled direct callee into an indirect-call anchor.
+; CHECK-ZERO-CALLEE: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
+
+; Multiple sampled inline callees at one probe remain an indirect-call anchor.
+; CHECK-MULTIPLE-SAMPLED: (3/3) of callsites' profile are invalid and (31/51) of samples are discarded due to callsite location mismatch.
+
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -70,14 +79,14 @@ define dso_local i32 @foo(i32 noundef %x) #0 !dbg !16 {
 entry:
   %y = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %x, metadata !20, metadata !DIExpression()), !dbg !22
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %y), !dbg !23
+  call void @llvm.lifetime.start.p0(ptr nonnull %y), !dbg !23
   call void @llvm.dbg.declare(metadata ptr %y, metadata !21, metadata !DIExpression()), !dbg !24
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg !25
   %add = add nsw i32 %x, 1, !dbg !26
   store volatile i32 %add, ptr %y, align 4, !dbg !24, !tbaa !27
   %y.0. = load volatile i32, ptr %y, align 4, !dbg !31, !tbaa !27
   %add1 = add nsw i32 %y.0., 1, !dbg !32
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %y), !dbg !33
+  call void @llvm.lifetime.end.p0(ptr nonnull %y), !dbg !33
   ret i32 %add1, !dbg !34
 }
 
@@ -85,10 +94,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @bar(i32 noundef %x) #3 !dbg !35 {

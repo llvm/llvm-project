@@ -3,13 +3,21 @@
 // This file contains tests for the specification of the declarative op format.
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def TestDialect : Dialect {
   let name = "test";
 }
+def TestStrictPropertiesDialect : Dialect {
+  let name = "test_strict_properties";
+}
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
+  let assemblyFormat = fmt;
+}
+class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
+    : Op<TestStrictPropertiesDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
 
@@ -18,7 +26,81 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// enum
+//===----------------------------------------------------------------------===//
+
+def DirectiveEnumCase : I32EnumCase<"Case", 0>;
+def DirectiveEnum : I32Enum<"DirectiveEnum", "test enum",
+                            [DirectiveEnumCase]>;
+def DirectiveEnumAttr : EnumAttr<TestDialect, DirectiveEnum, "enum">;
+
+def DirectiveUnbuildableEnumAttr
+    : EnumAttr<TestDialect, DirectiveEnum, "unbuildable_enum"> {
+  let constBuilderCall = "";
+}
+
+def DirectiveBitEnumNone : I32BitEnumCaseNone<"None", "none">;
+def DirectiveBitEnumCase : I32BitEnumCaseBit<"Case", 0, "case">;
+def DirectiveCommaBitEnum
+    : I32BitEnum<"DirectiveCommaBitEnum", "comma bit enum",
+                 [DirectiveBitEnumNone, DirectiveBitEnumCase]> {
+  let cppNamespace = "::test";
+  let separator = ", ";
+}
+def DirectiveCommaBitEnumAttr
+    : EnumAttr<TestDialect, DirectiveCommaBitEnum, "comma_bit_enum">;
+
+def DirectiveNoZeroBitEnum
+    : I32BitEnum<"DirectiveNoZeroBitEnum", "bit enum without zero",
+                 [DirectiveBitEnumCase]> {
+  let cppNamespace = "::test";
+}
+def DirectiveNoZeroBitEnumAttr
+    : EnumAttr<TestDialect, DirectiveNoZeroBitEnum, "no_zero_bit_enum">;
+
+// CHECK: error: 'enum' directive expects an enum attribute
+def DirectiveAEnumInvalidA : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+// CHECK: error: 'enum' directive expects an enum attribute
+def DirectiveAEnumInvalidB : TestFormat_Op<[{
+  enum($operand) attr-dict
+}]>, Arguments<(ins I64:$operand)>;
+
+// CHECK: error: 'enum' and 'qualified' directives cannot be combined
+def DirectiveAEnumInvalidC : TestFormat_Op<[{
+  qualified(enum($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' and 'qualified' directives cannot be combined
+def DirectiveAEnumInvalidD : TestFormat_Op<[{
+  enum(qualified($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive can only be used at the top level
+def DirectiveAEnumInvalidE : TestFormat_Op<[{
+  custom<Foo>(enum($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive requires an enum attribute with an underlying type and a constant builder
+def DirectiveAEnumInvalidF : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins DirectiveUnbuildableEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive requires a bit enum to define a zero-valued case
+def DirectiveAEnumInvalidG : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins DirectiveNoZeroBitEnumAttr:$attr)>;
+
+// CHECK: error: unquoted bit enum cannot be followed by its ',' separator literal
+def DirectiveAEnumInvalidH : TestFormat_Op<[{
+  enum($attr) `,` attr-dict
+}]>, Arguments<(ins DirectiveCommaBitEnumAttr:$attr)>;
+
+//===----------------------------------------------------------------------===//
 // attr-dict
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'attr-dict' directive not found
 def DirectiveAttrDictInvalidA : TestFormat_Op<[{
@@ -36,8 +118,27 @@ def DirectiveAttrDictInvalidD : TestFormat_Op<[{
   type(attr-dict)
 }]>;
 
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing attribute 'attr'
+def DirectiveAttrDictInvalidE : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins I64Attr:$attr);
+}
+
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing property 'prop'
+def DirectiveAttrDictInvalidF : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins IntProp<"int64_t">:$prop);
+}
+
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: expected '<' before custom directive name
 def DirectiveCustomInvalidA : TestFormat_Op<[{
@@ -70,6 +171,7 @@ def DirectiveCustomInvalidH : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // functional-type
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'functional-type' is only valid as a top-level directive
 def DirectiveFunctionalTypeInvalidA : TestFormat_Op<[{
@@ -98,6 +200,7 @@ def DirectiveFunctionalTypeInvalidF : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // operands
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'operands' directive creates overlap in format
 def DirectiveOperandsInvalidA : TestFormat_Op<[{
@@ -110,6 +213,7 @@ def DirectiveOperandsInvalidB : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // ref
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'ref' is only valid within a `custom` directive
 def DirectiveRefInvalidA : TestFormat_Op<[{
@@ -193,6 +297,7 @@ def DirectiveRefInvalidO : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // regions
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'regions' directive creates overlap in format
 def DirectiveRegionsInvalidA : TestFormat_Op<[{
@@ -218,6 +323,7 @@ def DirectiveRegionsInvalidD : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // results
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'results' directive can can only be used as a child to a 'type' directive
 def DirectiveResultsInvalidA : TestFormat_Op<[{
@@ -226,6 +332,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // successors
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'successors' is only valid as a top-level directive
 def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
@@ -234,6 +341,7 @@ def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // type
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: expected '(' before argument list
 def DirectiveTypeInvalidA : TestFormat_Op<[{
@@ -250,6 +358,7 @@ def DirectiveTypeInvalidC : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // functional-type/type operands
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: literals may only be used in the top-level section of the format
 def DirectiveTypeZOperandInvalidA : TestFormat_Op<[{
@@ -297,7 +406,7 @@ def DirectiveTypeZOperandInvalidI : TestFormat_Op<[{
 def LiteralInvalidA : TestFormat_Op<[{
   `a:`
 }]>;
-// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+*'
+// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+-*'
 def LiteralInvalidB : TestFormat_Op<[{
   `1`
 }]>;
@@ -336,14 +445,40 @@ def OIListErrorNoLiteral : TestFormat_Op<[{
 def OIListLiteralAmbiguity : TestFormat_Op<[{
   oilist( `foo` | `bar` ) `foo` attr-dict
 }]>;
+// CHECK: error: format ambiguity because foo is used as both an oilist separator and clause keyword.
+def OIListSeparatorClauseAmbiguity : TestFormat_Op<[{
+  oilist<`foo`>(`foo`) attr-dict
+}]>;
+// CHECK: error: format ambiguity because , is used both in oilist element and the adjacent literal.
+def OIListSeparatorLiteralAmbiguity : TestFormat_Op<[{
+  oilist<`,`>(`foo`) `,` attr-dict
+}]>;
+// CHECK: error: expected literal, but got '>'
+def OIListSeparatorMissing : TestFormat_Op<[{
+  oilist<>(`foo`) attr-dict
+}]>;
 // CHECK: error: expected '(' before oilist argument list
 def OIListStartingToken : TestFormat_Op<[{
   oilist `wrong` attr-dict
+}]>;
+// CHECK: error: expected '>' after oilist separator
+def OIListUnterminatedSeparator : TestFormat_Op<[{
+  oilist<`,` (`foo`) attr-dict
+}]>;
+// CHECK: error: oilist separator must be a non-whitespace literal
+def OIListWhitespaceSeparator : TestFormat_Op<[{
+  oilist<` `>(`foo`) attr-dict
 }]>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//
+
+// CHECK: error: optional attribute 'attr' cannot be used outside of an optional group
+// CHECK: note: to conditionally print the attribute, use '($attr^)?'
+def OptionalAttrOutsideGroup : TestFormat_Op<[{
+  $attr attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
 
 // CHECK: error: optional groups can only be used as top-level elements
 def OptionalInvalidA : TestFormat_Op<[{

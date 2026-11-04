@@ -1,4 +1,5 @@
-# REQUIRES: shell
+# Unsupported on Windows due to maximum path length limitations.
+# UNSUPPORTED: system-windows
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.dir/foo.o %s

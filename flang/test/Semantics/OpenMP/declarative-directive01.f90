@@ -2,13 +2,11 @@
 
 ! Check OpenMP declarative directives
 
-!TODO: all internal errors
-!      enable declare-reduction example after name resolution
-
 ! 2.4 requires
 
 subroutine requires_1(a)
   real(8), intent(inout) :: a
+  !WARNING: REVERSE_OFFLOAD clause is not supported and will be ignored
   !$omp requires reverse_offload, unified_shared_memory, atomic_default_mem_order(relaxed)
   a = a + 0.01
 end subroutine requires_1
@@ -23,6 +21,7 @@ end subroutine requires_2
 
 subroutine declare_simd_1(a, b)
   real(8), intent(inout) :: a, b
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: 'a' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
@@ -40,7 +39,8 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
-  !ERROR: NOTINBRANCH and INBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
+  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive as members of 'branch' clause group
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1
@@ -59,10 +59,11 @@ module m2
 contains
   subroutine foo
     !$omp declare target
-    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
-    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
+    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
+    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !$omp declare target (foo, N, M)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
@@ -71,12 +72,13 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter(Q, S) link(R)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
+    !ERROR: MAP clause is not allowed on DECLARE TARGET directive
     !$omp declare target to(Q) map(from:Q)
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
+    !ERROR: MAP clause is not allowed on DECLARE TARGET directive
     !$omp declare target enter(Q) map(from:Q)
     integer, parameter :: N=10000, M=1024
     integer :: i
@@ -88,15 +90,37 @@ end module m2
 
 ! 2.16 declare-reduction
 
-! subroutine declare_red_1()
-!   use omp_lib
-!   integer :: my_var
-!   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
-!   my_var = 0
-!   !$omp parallel reduction (my_add_red : my_var) num_threads(4)
-!   my_var = omp_get_thread_num() + 1
-!   !$omp end parallel
-!   print *, "sum of thread numbers is ", my_var
-! end subroutine declare_red_1
+subroutine declare_red_1()
+  integer :: my_var
+  !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
+  my_var = 0
+  !$omp parallel reduction (my_add_red : my_var) num_threads(4)
+  my_var = 1
+  !$omp end parallel
+  print *, "sum of thread numbers is ", my_var
+end subroutine declare_red_1
+
+module assumes_no_openmp_module
+  implicit none
+  !$omp assumes no_openmp
+contains
+  subroutine set_value(value)
+    integer :: value
+    value = 7
+  end subroutine set_value
+end module assumes_no_openmp_module
+
+subroutine assumes_no_openmp_procedure(value)
+  use assumes_no_openmp_module, only: set_value
+  implicit none
+  !$omp assumes no_openmp
+  integer :: value
+  call set_value(value)
+end subroutine assumes_no_openmp_procedure
+
+subroutine assumes_no_openmp_duplicate
+  !ERROR: At most one NO_OPENMP clause can appear on ASSUMES directive
+  !$omp assumes no_openmp no_openmp
+end subroutine assumes_no_openmp_duplicate
 
 end

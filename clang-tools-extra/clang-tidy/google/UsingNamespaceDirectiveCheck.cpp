@@ -1,4 +1,4 @@
-//===--- UsingNamespaceDirectiveCheck.cpp - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UsingNamespaceDirectiveCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -17,13 +16,13 @@ namespace clang::tidy::google::build {
 
 void UsingNamespaceDirectiveCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-    Finder->addMatcher(usingDirectiveDecl().bind("usingNamespace"), this);
+  Finder->addMatcher(usingDirectiveDecl().bind("usingNamespace"), this);
 }
 
 void UsingNamespaceDirectiveCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *U = Result.Nodes.getNodeAs<UsingDirectiveDecl>("usingNamespace");
-  SourceLocation Loc = U->getBeginLoc();
+  const SourceLocation Loc = U->getBeginLoc();
   if (U->isImplicit() || !Loc.isValid())
     return;
 

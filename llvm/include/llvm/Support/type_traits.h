@@ -15,10 +15,8 @@
 
 #include "llvm/Support/Compiler.h"
 #include <type_traits>
-#include <utility>
 
 namespace llvm {
-
 
 /// Metafunction that determines whether the given type is either an
 /// integral type or an enumeration type, including enum classes.
@@ -40,58 +38,23 @@ public:
 };
 
 /// If T is a pointer, just return it. If it is not, return T&.
-template<typename T, typename Enable = void>
-struct add_lvalue_reference_if_not_pointer { using type = T &; };
-
-template <typename T>
-struct add_lvalue_reference_if_not_pointer<
-    T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = T;
+template <typename T> struct add_lvalue_reference_if_not_pointer {
+  using type = std::conditional_t<std::is_pointer_v<T>, T, T &>;
 };
 
 /// If T is a pointer to X, return a pointer to const X. If it is not,
 /// return const T.
-template<typename T, typename Enable = void>
-struct add_const_past_pointer { using type = const T; };
-
-template <typename T>
-struct add_const_past_pointer<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = const std::remove_pointer_t<T> *;
+template <typename T> struct add_const_past_pointer {
+  using type = std::conditional_t<std::is_pointer_v<T>,
+                                  const std::remove_pointer_t<T> *, const T>;
 };
 
-template <typename T, typename Enable = void>
-struct const_pointer_or_const_ref {
-  using type = const T &;
-};
-template <typename T>
-struct const_pointer_or_const_ref<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = typename add_const_past_pointer<T>::type;
+template <typename T> struct const_pointer_or_const_ref {
+  using type =
+      std::conditional_t<std::is_pointer_v<T>,
+                         typename add_const_past_pointer<T>::type, const T &>;
 };
 
-namespace detail {
-template<class T>
-union trivial_helper {
-    T t;
-};
-
-} // end namespace detail
-
-template <typename T>
-struct is_copy_assignable {
-  template<class F>
-    static auto get(F*) -> decltype(std::declval<F &>() = std::declval<const F &>(), std::true_type{});
-    static std::false_type get(...);
-    static constexpr bool value = decltype(get((T*)nullptr))::value;
-};
-
-template <typename T>
-struct is_move_assignable {
-  template<class F>
-    static auto get(F*) -> decltype(std::declval<F &>() = std::declval<F &&>(), std::true_type{});
-    static std::false_type get(...);
-    static constexpr bool value = decltype(get((T*)nullptr))::value;
-};
-
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_TYPE_TRAITS_H

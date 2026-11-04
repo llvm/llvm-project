@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//  constexpr span(const span& other) noexcept = default;
+// constexpr span(const span& other) noexcept = default;
 
 #include <span>
 #include <cassert>
@@ -95,7 +95,7 @@ constexpr bool test_all() {
   test<std::string>();
   test<const std::string>();
 
-  // Regression test for https://github.com/llvm/llvm-project/issues/104496
+  // Regression test for https://llvm.org/PR104496
   {
     struct Incomplete;
     std::span<Incomplete> x;

@@ -103,7 +103,7 @@ static LogicalResult isCompatible(PatternRewriter &rewriter,
 class OuterProductFusion2Way
     : public OpRewritePattern<arm_sme::OuterProductOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arm_sme::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
@@ -136,7 +136,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -150,45 +150,45 @@ public:
       rhsMask = packInputs(op1.getRhsMask(), op2.getRhsMask());
     }
 
-    auto extOp = op.getLhs().getDefiningOp();
+    auto *extOp = op.getLhs().getDefiningOp();
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
       TypeSwitch<Operation *>(extOp)
-          .Case<arith::ExtFOp>([&](auto) {
+          .Case([&](arith::ExtFOp) {
             rewriter.replaceOpWithNewOp<arm_sme::FMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtSIOp>([&](auto) {
+          .Case([&](arith::ExtSIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::SMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtUIOp>([&](auto) {
+          .Case([&](arith::ExtUIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::UMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else if (kind == arm_sme::CombiningKind::Sub) {
       TypeSwitch<Operation *>(extOp)
-          .Case<arith::ExtFOp>([&](auto) {
+          .Case([&](arith::ExtFOp) {
             rewriter.replaceOpWithNewOp<arm_sme::FMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtSIOp>([&](auto) {
+          .Case([&](arith::ExtSIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::SMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtUIOp>([&](auto) {
+          .Case([&](arith::ExtUIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::UMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else {
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
@@ -219,25 +219,31 @@ private:
     auto nxv4i16 = VectorType::get({4}, rewriter.getI16Type(), true);
     auto nxv4f16 = VectorType::get({4}, rewriter.getF16Type(), true);
     auto nxv4bf16 = VectorType::get({4}, rewriter.getBF16Type(), true);
-    if ((failed(
-             isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4f16)) ||
-         failed(
-             isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4f16))) &&
-        (failed(
-             isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4bf16)) ||
-         failed(isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32,
-                                            nxv4bf16))) &&
-        (failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) ||
-         failed(isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv4i32,
-                                             nxv4i16))) &&
-        (failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i16))))
-      return failure();
+    const bool isF16Compatible =
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4f16)) &&
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4f16));
+    const bool isBF16Compatible =
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4bf16)) &&
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4bf16));
+    const bool isI16Compatible =
+        succeeded(
+            isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) &&
+        succeeded(
+            isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv4i32, nxv4i16));
+    const bool isUI16Compatible =
+        succeeded(
+            isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) &&
+        succeeded(
+            isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i16));
 
-    return success();
+    return (isF16Compatible || isBF16Compatible || isI16Compatible ||
+            isUI16Compatible)
+               ? success()
+               : failure();
   }
 };
 
@@ -246,7 +252,7 @@ private:
 class OuterProductFusion4Way
     : public OpRewritePattern<arm_sme::OuterProductOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arm_sme::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
@@ -284,7 +290,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs0 = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -311,8 +317,8 @@ public:
       rhsMask = packInputs(rhs0Mask, rhs1Mask);
     }
 
-    auto lhsExtOp = op.getLhs().getDefiningOp();
-    auto rhsExtOp = op.getRhs().getDefiningOp();
+    auto *lhsExtOp = op.getLhs().getDefiningOp();
+    auto *rhsExtOp = op.getRhs().getDefiningOp();
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
@@ -431,7 +437,7 @@ private:
 // pass when the result is the input to an outer product.
 struct SwapVectorExtractOfArithExtend
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -445,7 +451,7 @@ struct SwapVectorExtractOfArithExtend
       return rewriter.notifyMatchFailure(
           extractOp, "extracted type is not a 1-D scalable vector type");
 
-    auto *extendOp = extractOp.getVector().getDefiningOp();
+    auto *extendOp = extractOp.getSource().getDefiningOp();
     if (!isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(
             extendOp))
       return rewriter.notifyMatchFailure(extractOp,
@@ -456,8 +462,8 @@ struct SwapVectorExtractOfArithExtend
     Value extendSource = extendOp->getOperand(0);
 
     // Create new extract from source of extend.
-    Value newExtract = rewriter.create<vector::ExtractOp>(
-        loc, extendSource, extractOp.getMixedPosition());
+    Value newExtract = vector::ExtractOp::create(rewriter, loc, extendSource,
+                                                 extractOp.getMixedPosition());
 
     // Extend new extract to original result type.
     Operation *newExtend =
@@ -482,7 +488,7 @@ struct SwapVectorExtractOfArithExtend
 // pass when the result is the input to an outer product.
 struct SwapVectorScalableExtractOfArithExtend
     : public OpRewritePattern<vector::ScalableExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ScalableExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -503,8 +509,9 @@ struct SwapVectorScalableExtractOfArithExtend
     // Create new extract from source of extend.
     VectorType extractResultVectorType =
         resultType.clone(extendSourceVectorType.getElementType());
-    Value newExtract = rewriter.create<vector::ScalableExtractOp>(
-        loc, extractResultVectorType, extendSource, extractOp.getPos());
+    Value newExtract = vector::ScalableExtractOp::create(
+        rewriter, loc, extractResultVectorType, extendSource,
+        extractOp.getPos());
 
     // Extend new extract to original result type.
     Operation *newExtend =

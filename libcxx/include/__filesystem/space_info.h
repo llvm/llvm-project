@@ -21,13 +21,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-struct _LIBCPP_EXPORTED_FROM_ABI space_info {
+struct space_info {
   uintmax_t capacity;
   uintmax_t free;
   uintmax_t available;
 
 #  if _LIBCPP_STD_VER >= 20
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const space_info&, const space_info&) = default;
+  friend bool operator==(const space_info&, const space_info&) = default;
 #  endif
 };
 

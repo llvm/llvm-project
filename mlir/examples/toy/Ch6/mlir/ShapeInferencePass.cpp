@@ -23,7 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -55,6 +55,7 @@ namespace {
 struct ShapeInferencePass
     : public mlir::PassWrapper<ShapeInferencePass, OperationPass<toy::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ShapeInferencePass)
+  StringRef getArgument() const override { return "toy-shape-inference"; }
 
   void runOnOperation() override {
     auto f = getOperation();
@@ -80,7 +81,7 @@ struct ShapeInferencePass
       opWorklist.erase(op);
 
       // Ask the operation to infer its output shapes.
-      LLVM_DEBUG(llvm::dbgs() << "Inferring shape for: " << *op << "\n");
+      LDBG() << "Inferring shape for: " << *op;
       if (auto shapeOp = dyn_cast<ShapeInference>(op)) {
         shapeOp.inferShapes();
       } else {

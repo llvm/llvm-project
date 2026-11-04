@@ -14,7 +14,6 @@
 .type _start, @function
 
 # RELOC:      Section ({{.*}}) .rela.plt {
-# RELOC-NEXT:   R_HEX_JMP_SLOT - 0x0
 # RELOC-NEXT:   R_HEX_JMP_SLOT __tls_get_addr 0x0
 # RELOC-NEXT: }
 

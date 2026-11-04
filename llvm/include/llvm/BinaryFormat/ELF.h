@@ -20,6 +20,8 @@
 #define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -128,201 +130,9 @@ enum {
 enum { EV_NONE = 0, EV_CURRENT = 1 };
 
 // Machine architectures.
-// At the time of writing, the list of registered machine architectures is
-// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
-// Please refer to https://groups.google.com/g/generic-abi for any further
-// updates.
 enum {
-  EM_NONE = 0,           // No machine
-  EM_M32 = 1,            // AT&T WE 32100
-  EM_SPARC = 2,          // SPARC
-  EM_386 = 3,            // Intel 386
-  EM_68K = 4,            // Motorola 68000
-  EM_88K = 5,            // Motorola 88000
-  EM_IAMCU = 6,          // Intel MCU
-  EM_860 = 7,            // Intel 80860
-  EM_MIPS = 8,           // MIPS R3000
-  EM_S370 = 9,           // IBM System/370
-  EM_MIPS_RS3_LE = 10,   // MIPS RS3000 Little-endian
-  EM_PARISC = 15,        // Hewlett-Packard PA-RISC
-  EM_VPP500 = 17,        // Fujitsu VPP500
-  EM_SPARC32PLUS = 18,   // Enhanced instruction set SPARC
-  EM_960 = 19,           // Intel 80960
-  EM_PPC = 20,           // PowerPC
-  EM_PPC64 = 21,         // PowerPC64
-  EM_S390 = 22,          // IBM System/390
-  EM_SPU = 23,           // IBM SPU/SPC
-  EM_V800 = 36,          // NEC V800
-  EM_FR20 = 37,          // Fujitsu FR20
-  EM_RH32 = 38,          // TRW RH-32
-  EM_RCE = 39,           // Motorola RCE
-  EM_ARM = 40,           // ARM
-  EM_ALPHA = 41,         // DEC Alpha
-  EM_SH = 42,            // Hitachi SH
-  EM_SPARCV9 = 43,       // SPARC V9
-  EM_TRICORE = 44,       // Siemens TriCore
-  EM_ARC = 45,           // Argonaut RISC Core
-  EM_H8_300 = 46,        // Hitachi H8/300
-  EM_H8_300H = 47,       // Hitachi H8/300H
-  EM_H8S = 48,           // Hitachi H8S
-  EM_H8_500 = 49,        // Hitachi H8/500
-  EM_IA_64 = 50,         // Intel IA-64 processor architecture
-  EM_MIPS_X = 51,        // Stanford MIPS-X
-  EM_COLDFIRE = 52,      // Motorola ColdFire
-  EM_68HC12 = 53,        // Motorola M68HC12
-  EM_MMA = 54,           // Fujitsu MMA Multimedia Accelerator
-  EM_PCP = 55,           // Siemens PCP
-  EM_NCPU = 56,          // Sony nCPU embedded RISC processor
-  EM_NDR1 = 57,          // Denso NDR1 microprocessor
-  EM_STARCORE = 58,      // Motorola Star*Core processor
-  EM_ME16 = 59,          // Toyota ME16 processor
-  EM_ST100 = 60,         // STMicroelectronics ST100 processor
-  EM_TINYJ = 61,         // Advanced Logic Corp. TinyJ embedded processor family
-  EM_X86_64 = 62,        // AMD x86-64 architecture
-  EM_PDSP = 63,          // Sony DSP Processor
-  EM_PDP10 = 64,         // Digital Equipment Corp. PDP-10
-  EM_PDP11 = 65,         // Digital Equipment Corp. PDP-11
-  EM_FX66 = 66,          // Siemens FX66 microcontroller
-  EM_ST9PLUS = 67,       // STMicroelectronics ST9+ 8/16 bit microcontroller
-  EM_ST7 = 68,           // STMicroelectronics ST7 8-bit microcontroller
-  EM_68HC16 = 69,        // Motorola MC68HC16 Microcontroller
-  EM_68HC11 = 70,        // Motorola MC68HC11 Microcontroller
-  EM_68HC08 = 71,        // Motorola MC68HC08 Microcontroller
-  EM_68HC05 = 72,        // Motorola MC68HC05 Microcontroller
-  EM_SVX = 73,           // Silicon Graphics SVx
-  EM_ST19 = 74,          // STMicroelectronics ST19 8-bit microcontroller
-  EM_VAX = 75,           // Digital VAX
-  EM_CRIS = 76,          // Axis Communications 32-bit embedded processor
-  EM_JAVELIN = 77,       // Infineon Technologies 32-bit embedded processor
-  EM_FIREPATH = 78,      // Element 14 64-bit DSP Processor
-  EM_ZSP = 79,           // LSI Logic 16-bit DSP Processor
-  EM_MMIX = 80,          // Donald Knuth's educational 64-bit processor
-  EM_HUANY = 81,         // Harvard University machine-independent object files
-  EM_PRISM = 82,         // SiTera Prism
-  EM_AVR = 83,           // Atmel AVR 8-bit microcontroller
-  EM_FR30 = 84,          // Fujitsu FR30
-  EM_D10V = 85,          // Mitsubishi D10V
-  EM_D30V = 86,          // Mitsubishi D30V
-  EM_V850 = 87,          // NEC v850
-  EM_M32R = 88,          // Mitsubishi M32R
-  EM_MN10300 = 89,       // Matsushita MN10300
-  EM_MN10200 = 90,       // Matsushita MN10200
-  EM_PJ = 91,            // picoJava
-  EM_OPENRISC = 92,      // OpenRISC 32-bit embedded processor
-  EM_ARC_COMPACT = 93,   // ARC International ARCompact processor (old
-                         // spelling/synonym: EM_ARC_A5)
-  EM_XTENSA = 94,        // Tensilica Xtensa Architecture
-  EM_VIDEOCORE = 95,     // Alphamosaic VideoCore processor
-  EM_TMM_GPP = 96,       // Thompson Multimedia General Purpose Processor
-  EM_NS32K = 97,         // National Semiconductor 32000 series
-  EM_TPC = 98,           // Tenor Network TPC processor
-  EM_SNP1K = 99,         // Trebia SNP 1000 processor
-  EM_ST200 = 100,        // STMicroelectronics (www.st.com) ST200
-  EM_IP2K = 101,         // Ubicom IP2xxx microcontroller family
-  EM_MAX = 102,          // MAX Processor
-  EM_CR = 103,           // National Semiconductor CompactRISC microprocessor
-  EM_F2MC16 = 104,       // Fujitsu F2MC16
-  EM_MSP430 = 105,       // Texas Instruments embedded microcontroller msp430
-  EM_BLACKFIN = 106,     // Analog Devices Blackfin (DSP) processor
-  EM_SE_C33 = 107,       // S1C33 Family of Seiko Epson processors
-  EM_SEP = 108,          // Sharp embedded microprocessor
-  EM_ARCA = 109,         // Arca RISC Microprocessor
-  EM_UNICORE = 110,      // Microprocessor series from PKU-Unity Ltd. and MPRC
-                         // of Peking University
-  EM_EXCESS = 111,       // eXcess: 16/32/64-bit configurable embedded CPU
-  EM_DXP = 112,          // Icera Semiconductor Inc. Deep Execution Processor
-  EM_ALTERA_NIOS2 = 113, // Altera Nios II soft-core processor
-  EM_CRX = 114,          // National Semiconductor CompactRISC CRX
-  EM_XGATE = 115,        // Motorola XGATE embedded processor
-  EM_C166 = 116,         // Infineon C16x/XC16x processor
-  EM_M16C = 117,         // Renesas M16C series microprocessors
-  EM_DSPIC30F = 118,     // Microchip Technology dsPIC30F Digital Signal
-                         // Controller
-  EM_CE = 119,           // Freescale Communication Engine RISC core
-  EM_M32C = 120,         // Renesas M32C series microprocessors
-  EM_TSK3000 = 131,      // Altium TSK3000 core
-  EM_RS08 = 132,         // Freescale RS08 embedded processor
-  EM_SHARC = 133,        // Analog Devices SHARC family of 32-bit DSP
-                         // processors
-  EM_ECOG2 = 134,        // Cyan Technology eCOG2 microprocessor
-  EM_SCORE7 = 135,       // Sunplus S+core7 RISC processor
-  EM_DSP24 = 136,        // New Japan Radio (NJR) 24-bit DSP Processor
-  EM_VIDEOCORE3 = 137,   // Broadcom VideoCore III processor
-  EM_LATTICEMICO32 = 138, // RISC processor for Lattice FPGA architecture
-  EM_SE_C17 = 139,        // Seiko Epson C17 family
-  EM_TI_C6000 = 140,      // The Texas Instruments TMS320C6000 DSP family
-  EM_TI_C2000 = 141,      // The Texas Instruments TMS320C2000 DSP family
-  EM_TI_C5500 = 142,      // The Texas Instruments TMS320C55x DSP family
-  EM_MMDSP_PLUS = 160,    // STMicroelectronics 64bit VLIW Data Signal Processor
-  EM_CYPRESS_M8C = 161,   // Cypress M8C microprocessor
-  EM_R32C = 162,          // Renesas R32C series microprocessors
-  EM_TRIMEDIA = 163,      // NXP Semiconductors TriMedia architecture family
-  EM_HEXAGON = 164,       // Qualcomm Hexagon processor
-  EM_8051 = 165,          // Intel 8051 and variants
-  EM_STXP7X = 166,        // STMicroelectronics STxP7x family of configurable
-                          // and extensible RISC processors
-  EM_NDS32 = 167,         // Andes Technology compact code size embedded RISC
-                          // processor family
-  EM_ECOG1 = 168,         // Cyan Technology eCOG1X family
-  EM_ECOG1X = 168,        // Cyan Technology eCOG1X family
-  EM_MAXQ30 = 169,        // Dallas Semiconductor MAXQ30 Core Micro-controllers
-  EM_XIMO16 = 170,        // New Japan Radio (NJR) 16-bit DSP Processor
-  EM_MANIK = 171,         // M2000 Reconfigurable RISC Microprocessor
-  EM_CRAYNV2 = 172,       // Cray Inc. NV2 vector architecture
-  EM_RX = 173,            // Renesas RX family
-  EM_METAG = 174,         // Imagination Technologies META processor
-                          // architecture
-  EM_MCST_ELBRUS = 175,   // MCST Elbrus general purpose hardware architecture
-  EM_ECOG16 = 176,        // Cyan Technology eCOG16 family
-  EM_CR16 = 177,          // National Semiconductor CompactRISC CR16 16-bit
-                          // microprocessor
-  EM_ETPU = 178,          // Freescale Extended Time Processing Unit
-  EM_SLE9X = 179,         // Infineon Technologies SLE9X core
-  EM_L10M = 180,          // Intel L10M
-  EM_K10M = 181,          // Intel K10M
-  EM_AARCH64 = 183,       // ARM AArch64
-  EM_AVR32 = 185,         // Atmel Corporation 32-bit microprocessor family
-  EM_STM8 = 186,          // STMicroeletronics STM8 8-bit microcontroller
-  EM_TILE64 = 187,        // Tilera TILE64 multicore architecture family
-  EM_TILEPRO = 188,       // Tilera TILEPro multicore architecture family
-  EM_MICROBLAZE = 189,    // Xilinx MicroBlaze 32-bit RISC soft processor core
-  EM_CUDA = 190,          // NVIDIA CUDA architecture
-  EM_TILEGX = 191,        // Tilera TILE-Gx multicore architecture family
-  EM_CLOUDSHIELD = 192,   // CloudShield architecture family
-  EM_COREA_1ST = 193,     // KIPO-KAIST Core-A 1st generation processor family
-  EM_COREA_2ND = 194,     // KIPO-KAIST Core-A 2nd generation processor family
-  EM_ARC_COMPACT2 = 195,  // Synopsys ARCompact V2
-  EM_OPEN8 = 196,         // Open8 8-bit RISC soft processor core
-  EM_RL78 = 197,          // Renesas RL78 family
-  EM_VIDEOCORE5 = 198,    // Broadcom VideoCore V processor
-  EM_78KOR = 199,         // Renesas 78KOR family
-  EM_56800EX = 200,       // Freescale 56800EX Digital Signal Controller (DSC)
-  EM_BA1 = 201,           // Beyond BA1 CPU architecture
-  EM_BA2 = 202,           // Beyond BA2 CPU architecture
-  EM_XCORE = 203,         // XMOS xCORE processor family
-  EM_MCHP_PIC = 204,      // Microchip 8-bit PIC(r) family
-  EM_INTEL205 = 205,      // Reserved by Intel
-  EM_INTEL206 = 206,      // Reserved by Intel
-  EM_INTEL207 = 207,      // Reserved by Intel
-  EM_INTEL208 = 208,      // Reserved by Intel
-  EM_INTEL209 = 209,      // Reserved by Intel
-  EM_KM32 = 210,          // KM211 KM32 32-bit processor
-  EM_KMX32 = 211,         // KM211 KMX32 32-bit processor
-  EM_KMX16 = 212,         // KM211 KMX16 16-bit processor
-  EM_KMX8 = 213,          // KM211 KMX8 8-bit processor
-  EM_KVARC = 214,         // KM211 KVARC processor
-  EM_CDP = 215,           // Paneve CDP architecture family
-  EM_COGE = 216,          // Cognitive Smart Memory Processor
-  EM_COOL = 217,          // iCelero CoolEngine
-  EM_NORC = 218,          // Nanoradio Optimized RISC
-  EM_CSR_KALIMBA = 219,   // CSR Kalimba architecture family
-  EM_AMDGPU = 224,        // AMD GPU architecture
-  EM_RISCV = 243,         // RISC-V
-  EM_LANAI = 244,         // Lanai 32-bit processor
-  EM_BPF = 247,           // Linux kernel bpf virtual machine
-  EM_VE = 251,            // NEC SX-Aurora VE
-  EM_CSKY = 252,          // C-SKY 32-bit processor
-  EM_LOONGARCH = 258,     // LoongArch
+#define ELF_MACHINE(em, value, arch, gnuname) em = value,
+#include "llvm/BinaryFormat/ELF.def"
 };
 
 // Object file classes.
@@ -360,6 +170,7 @@ enum {
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
   ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
+  ELFOSABI_CUDA_V2 = 41,       // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
@@ -381,6 +192,12 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
   ELFABIVERSION_AMDGPU_HSA_V5 = 3,
   ELFABIVERSION_AMDGPU_HSA_V6 = 4,
+};
+
+// CUDA OS ABI Version identification.
+enum {
+  ELFABIVERSION_CUDA_V1 = 7,
+  ELFABIVERSION_CUDA_V2 = 8,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -612,28 +429,7 @@ enum {
 
 // Hexagon-specific e_flags
 enum {
-  // Object processor version flags, bits[11:0]
-  EF_HEXAGON_MACH_V2 = 0x00000001,   // Hexagon V2
-  EF_HEXAGON_MACH_V3 = 0x00000002,   // Hexagon V3
-  EF_HEXAGON_MACH_V4 = 0x00000003,   // Hexagon V4
-  EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
-  EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
-  EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
-  EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
-  EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
-  EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
-  EF_HEXAGON_MACH_V67 = 0x00000067,  // Hexagon V67
-  EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
-  EF_HEXAGON_MACH_V68 = 0x00000068,  // Hexagon V68
-  EF_HEXAGON_MACH_V69 = 0x00000069,  // Hexagon V69
-  EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
-  EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
-  EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
-  EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
-  EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
-  EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
-
-  // Highest ISA version flags
+  // Hexagon ISA version, bits[11:0]
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
                                     // of e_flags
   EF_HEXAGON_ISA_V2 = 0x00000010,   // Hexagon V2 ISA
@@ -642,6 +438,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V61 = 0x00000061,  // Hexagon V61 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
   EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
@@ -651,8 +448,52 @@ enum {
   EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
   EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
   EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
+  EF_HEXAGON_ISA_V77 = 0x00000077,  // Hexagon V77 ISA
   EF_HEXAGON_ISA_V79 = 0x00000079,  // Hexagon V79 ISA
+  EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
+  EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
+  EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
+  EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
+  EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
+  EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
+  EF_HEXAGON_ISA_V93 = 0x00000093,  // Hexagon V93 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
+
+  // Tiny core flag, bit[15]
+  EF_HEXAGON_TINY_CORE = 0x00008000, // Hexagon Tiny Core
+
+  // Hexagon processor version, bits[15:0]
+  EF_HEXAGON_MACH_V2 = 0x00000001,          // Hexagon V2
+  EF_HEXAGON_MACH_V3 = 0x00000002,          // Hexagon V3
+  EF_HEXAGON_MACH_V4 = 0x00000003,          // Hexagon V4
+  EF_HEXAGON_MACH_V5 = 0x00000004,          // Hexagon V5
+  EF_HEXAGON_MACH_V55 = 0x00000005,         // Hexagon V55
+  EF_HEXAGON_MACH_V60 = EF_HEXAGON_ISA_V60, // Hexagon V60
+  EF_HEXAGON_MACH_V61 = EF_HEXAGON_ISA_V61, // Hexagon V61
+  EF_HEXAGON_MACH_V62 = EF_HEXAGON_ISA_V62, // Hexagon V62
+  EF_HEXAGON_MACH_V65 = EF_HEXAGON_ISA_V65, // Hexagon V65
+  EF_HEXAGON_MACH_V66 = EF_HEXAGON_ISA_V66, // Hexagon V66
+  EF_HEXAGON_MACH_V67 = EF_HEXAGON_ISA_V67, // Hexagon V67
+  EF_HEXAGON_MACH_V67T =
+      EF_HEXAGON_ISA_V67 | EF_HEXAGON_TINY_CORE, // Hexagon V67T
+  EF_HEXAGON_MACH_V68 = EF_HEXAGON_ISA_V68,      // Hexagon V68
+  EF_HEXAGON_MACH_V69 = EF_HEXAGON_ISA_V69,      // Hexagon V69
+  EF_HEXAGON_MACH_V71 = EF_HEXAGON_ISA_V71,      // Hexagon V71
+  EF_HEXAGON_MACH_V71T =
+      EF_HEXAGON_ISA_V71 | EF_HEXAGON_TINY_CORE, // Hexagon V71T
+  EF_HEXAGON_MACH_V73 = EF_HEXAGON_ISA_V73,      // Hexagon V73
+  EF_HEXAGON_MACH_V75 = EF_HEXAGON_ISA_V75,      // Hexagon V75
+  EF_HEXAGON_MACH_V77 = EF_HEXAGON_ISA_V77,      // Hexagon V77
+  EF_HEXAGON_MACH_V79 = EF_HEXAGON_ISA_V79,      // Hexagon V79
+  EF_HEXAGON_MACH_V81 = EF_HEXAGON_ISA_V81,      // Hexagon V81
+  EF_HEXAGON_MACH_V83 = EF_HEXAGON_ISA_V83,      // Hexagon V83
+  EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
+  EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
+  EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+  EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
+  EF_HEXAGON_MACH_V93 = EF_HEXAGON_ISA_V93,      // Hexagon V93
+
+  EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
 
 // Hexagon-specific section indexes for common small data
@@ -732,110 +573,118 @@ enum {
 };
 
 // AMDGPU specific e_flags.
+#define AMDGPU_MACH_LIST(X)                                                    \
+  X(0x01, EF_AMDGPU_MACH_R600_R600, "r600")                                    \
+  X(0x02, EF_AMDGPU_MACH_R600_R630, "r630")                                    \
+  X(0x03, EF_AMDGPU_MACH_R600_RS880, "rs880")                                  \
+  X(0x04, EF_AMDGPU_MACH_R600_RV670, "rv670")                                  \
+  X(0x05, EF_AMDGPU_MACH_R600_RV710, "rv710")                                  \
+  X(0x06, EF_AMDGPU_MACH_R600_RV730, "rv730")                                  \
+  X(0x07, EF_AMDGPU_MACH_R600_RV770, "rv770")                                  \
+  X(0x08, EF_AMDGPU_MACH_R600_CEDAR, "cedar")                                  \
+  X(0x09, EF_AMDGPU_MACH_R600_CYPRESS, "cypress")                              \
+  X(0x0a, EF_AMDGPU_MACH_R600_JUNIPER, "juniper")                              \
+  X(0x0b, EF_AMDGPU_MACH_R600_REDWOOD, "redwood")                              \
+  X(0x0c, EF_AMDGPU_MACH_R600_SUMO, "sumo")                                    \
+  X(0x0d, EF_AMDGPU_MACH_R600_BARTS, "barts")                                  \
+  X(0x0e, EF_AMDGPU_MACH_R600_CAICOS, "caicos")                                \
+  X(0x0f, EF_AMDGPU_MACH_R600_CAYMAN, "cayman")                                \
+  X(0x10, EF_AMDGPU_MACH_R600_TURKS, "turks")                                  \
+  X(0x20, EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600")                              \
+  X(0x21, EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601")                              \
+  X(0x22, EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700")                              \
+  X(0x23, EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701")                              \
+  X(0x24, EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702")                              \
+  X(0x25, EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703")                              \
+  X(0x26, EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704")                              \
+  X(0x28, EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801")                              \
+  X(0x29, EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802")                              \
+  X(0x2a, EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803")                              \
+  X(0x2b, EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810")                              \
+  X(0x2c, EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900")                              \
+  X(0x2d, EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902")                              \
+  X(0x2e, EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904")                              \
+  X(0x2f, EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906")                              \
+  X(0x30, EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908")                              \
+  X(0x31, EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909")                              \
+  X(0x32, EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c")                              \
+  X(0x33, EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010")                            \
+  X(0x34, EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011")                            \
+  X(0x35, EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012")                            \
+  X(0x36, EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030")                            \
+  X(0x37, EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031")                            \
+  X(0x38, EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032")                            \
+  X(0x39, EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033")                            \
+  X(0x3a, EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602")                              \
+  X(0x3b, EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705")                              \
+  X(0x3c, EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805")                              \
+  X(0x3d, EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035")                            \
+  X(0x3e, EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034")                            \
+  X(0x3f, EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a")                              \
+  X(0x41, EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100")                            \
+  X(0x42, EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")                            \
+  X(0x43, EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150")                            \
+  X(0x44, EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103")                            \
+  X(0x45, EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036")                            \
+  X(0x46, EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101")                            \
+  X(0x47, EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102")                            \
+  X(0x48, EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200")                            \
+  X(0x49, EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250")                            \
+  X(0x4a, EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151")                            \
+  X(0x4c, EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942")                              \
+  X(0x4e, EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201")                            \
+  X(0x4f, EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950")                              \
+  X(0x50, EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310")                            \
+  X(0x51, EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic")                  \
+  X(0x52, EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic")            \
+  X(0x53, EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")            \
+  X(0x54, EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")                \
+  X(0x55, EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")                            \
+  X(0x57, EF_AMDGPU_MACH_AMDGCN_GFX1154, "gfx1154")                            \
+  X(0x58, EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153")                            \
+  X(0x59, EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")                \
+  X(0x5a, EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251")                            \
+  X(0x5b, EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, "gfx12-5-generic")            \
+  X(0x5c, EF_AMDGPU_MACH_AMDGCN_GFX1172, "gfx1172")                            \
+  X(0x5d, EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170")                            \
+  X(0x5e, EF_AMDGPU_MACH_AMDGCN_GFX1171, "gfx1171")                            \
+  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
+  X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
+  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")                \
+  X(0xeb, EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT, "gfx1250-strict")
+
 enum : unsigned {
+  // clang-format off
+
   // Processor selection mask for EF_AMDGPU_MACH_* values.
   EF_AMDGPU_MACH = 0x0ff,
 
   // Not specified processor.
   EF_AMDGPU_MACH_NONE = 0x000,
 
-  // R600-based processors.
+#define X(NUM, ENUM, NAME) ENUM = NUM,
+  AMDGPU_MACH_LIST(X)
+#undef X
 
-  // Radeon HD 2000/3000 Series (R600).
-  EF_AMDGPU_MACH_R600_R600 = 0x001,
-  EF_AMDGPU_MACH_R600_R630 = 0x002,
-  EF_AMDGPU_MACH_R600_RS880 = 0x003,
-  EF_AMDGPU_MACH_R600_RV670 = 0x004,
-  // Radeon HD 4000 Series (R700).
-  EF_AMDGPU_MACH_R600_RV710 = 0x005,
-  EF_AMDGPU_MACH_R600_RV730 = 0x006,
-  EF_AMDGPU_MACH_R600_RV770 = 0x007,
-  // Radeon HD 5000 Series (Evergreen).
-  EF_AMDGPU_MACH_R600_CEDAR = 0x008,
-  EF_AMDGPU_MACH_R600_CYPRESS = 0x009,
-  EF_AMDGPU_MACH_R600_JUNIPER = 0x00a,
-  EF_AMDGPU_MACH_R600_REDWOOD = 0x00b,
-  EF_AMDGPU_MACH_R600_SUMO = 0x00c,
-  // Radeon HD 6000 Series (Northern Islands).
-  EF_AMDGPU_MACH_R600_BARTS = 0x00d,
-  EF_AMDGPU_MACH_R600_CAICOS = 0x00e,
-  EF_AMDGPU_MACH_R600_CAYMAN = 0x00f,
-  EF_AMDGPU_MACH_R600_TURKS = 0x010,
+  // clang-format on
 
-  // Reserved for R600-based processors.
   EF_AMDGPU_MACH_R600_RESERVED_FIRST = 0x011,
   EF_AMDGPU_MACH_R600_RESERVED_LAST = 0x01f,
-
-  // First/last R600-based processors.
   EF_AMDGPU_MACH_R600_FIRST = EF_AMDGPU_MACH_R600_R600,
   EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
 
-  // AMDGCN-based processors.
-  // clang-format off
-  EF_AMDGPU_MACH_AMDGCN_GFX600          = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_GFX601          = 0x021,
-  EF_AMDGPU_MACH_AMDGCN_GFX700          = 0x022,
-  EF_AMDGPU_MACH_AMDGCN_GFX701          = 0x023,
-  EF_AMDGPU_MACH_AMDGCN_GFX702          = 0x024,
-  EF_AMDGPU_MACH_AMDGCN_GFX703          = 0x025,
-  EF_AMDGPU_MACH_AMDGCN_GFX704          = 0x026,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27   = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_GFX801          = 0x028,
-  EF_AMDGPU_MACH_AMDGCN_GFX802          = 0x029,
-  EF_AMDGPU_MACH_AMDGCN_GFX803          = 0x02a,
-  EF_AMDGPU_MACH_AMDGCN_GFX810          = 0x02b,
-  EF_AMDGPU_MACH_AMDGCN_GFX900          = 0x02c,
-  EF_AMDGPU_MACH_AMDGCN_GFX902          = 0x02d,
-  EF_AMDGPU_MACH_AMDGCN_GFX904          = 0x02e,
-  EF_AMDGPU_MACH_AMDGCN_GFX906          = 0x02f,
-  EF_AMDGPU_MACH_AMDGCN_GFX908          = 0x030,
-  EF_AMDGPU_MACH_AMDGCN_GFX909          = 0x031,
-  EF_AMDGPU_MACH_AMDGCN_GFX90C          = 0x032,
-  EF_AMDGPU_MACH_AMDGCN_GFX1010         = 0x033,
-  EF_AMDGPU_MACH_AMDGCN_GFX1011         = 0x034,
-  EF_AMDGPU_MACH_AMDGCN_GFX1012         = 0x035,
-  EF_AMDGPU_MACH_AMDGCN_GFX1030         = 0x036,
-  EF_AMDGPU_MACH_AMDGCN_GFX1031         = 0x037,
-  EF_AMDGPU_MACH_AMDGCN_GFX1032         = 0x038,
-  EF_AMDGPU_MACH_AMDGCN_GFX1033         = 0x039,
-  EF_AMDGPU_MACH_AMDGCN_GFX602          = 0x03a,
-  EF_AMDGPU_MACH_AMDGCN_GFX705          = 0x03b,
-  EF_AMDGPU_MACH_AMDGCN_GFX805          = 0x03c,
-  EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
-  EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
-  EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
-  EF_AMDGPU_MACH_AMDGCN_GFX1103         = 0x044,
-  EF_AMDGPU_MACH_AMDGCN_GFX1036         = 0x045,
-  EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
-  EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
-  EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
-  EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
-  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
-  EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
-  EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
-  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
-  // clang-format on
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27 = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40 = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X60 = 0x060,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X61 = 0x061,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -863,7 +712,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_XNACK_V4 = 0x300,
-  // XNACK is not supported.
+  // XNACK mode selection is not supported.
   EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 = 0x000,
   // XNACK is any/default/unspecified.
   EF_AMDGPU_FEATURE_XNACK_ANY_V4 = 0x100,
@@ -876,7 +725,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_SRAMECC_V4 = 0xc00,
-  // SRAMECC is not supported.
+  // SRAMECC mode selection is not supported.
   EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 = 0x000,
   // SRAMECC is any/default/unspecified.
   EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 = 0x400,
@@ -899,8 +748,14 @@ enum {
 
 // NVPTX specific e_flags.
 enum : unsigned {
-  // Processor selection mask for EF_CUDA_SM* values.
+  // Processor selection mask for EF_CUDA_SM* values prior to blackwell.
   EF_CUDA_SM = 0xff,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_MASK = 0xff00,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_OFFSET = 8,
 
   // SM based processor values.
   EF_CUDA_SM20 = 0x14,
@@ -921,9 +776,16 @@ enum : unsigned {
   EF_CUDA_SM80 = 0x50,
   EF_CUDA_SM86 = 0x56,
   EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM88 = 0x58,
   EF_CUDA_SM89 = 0x59,
-  // The sm_90a variant uses the same machine flag.
   EF_CUDA_SM90 = 0x5a,
+  EF_CUDA_SM100 = 0x64,
+  EF_CUDA_SM101 = 0x65,
+  EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
+  EF_CUDA_SM110 = 0x6e,
+  EF_CUDA_SM120 = 0x78,
+  EF_CUDA_SM121 = 0x79,
 
   // Unified texture binding is enabled.
   EF_CUDA_TEXMODE_UNIFIED = 0x100,
@@ -932,12 +794,15 @@ enum : unsigned {
   // The target is using 64-bit addressing.
   EF_CUDA_64BIT_ADDRESS = 0x400,
   // Set when using the sm_90a processor.
-  EF_CUDA_ACCELERATORS = 0x800,
+  EF_CUDA_ACCELERATORS_V1 = 0x800,
   // Undocumented software feature.
   EF_CUDA_SW_FLAG_V2 = 0x1000,
 
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
+
+  // Set when using an accelerator variant like sm_100a in the new ABI.
+  EF_CUDA_ACCELERATORS = 0x8,
 };
 
 // ELF Relocation types for BPF
@@ -1078,6 +943,8 @@ struct Elf64_Shdr {
   Elf64_Xword sh_entsize;
 };
 
+enum { PN_XNUM = 0xffff };
+
 // Special section indices.
 enum {
   SHN_UNDEF = 0,          // Undefined, missing, irrelevant, or meaningless
@@ -1131,17 +998,19 @@ enum : unsigned {
   SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
   SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
   SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
-  SHT_LLVM_BB_ADDR_MAP_V0 =
-      0x6fff4c08, // LLVM Basic Block Address Map (old version kept for
-                  // backward-compatibility).
+  // SHT_LLVM_BB_ADDR_MAP_V0 = 0x6fff4c08,  // Do not use.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
+  SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
+  SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_DYNDBG_ELF = 0x6fff4c10,         // LLVM Dynamic Debugging ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
+  SHT_GNU_SFRAME = 0x6ffffff4,     // GNU SFrame stack trace format.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.
@@ -1158,6 +1027,8 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Support for AArch64 build attributes
+  SHT_AARCH64_ATTRIBUTES = 0x70000003U,
   // Special aarch64-specific section for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
   SHT_AARCH64_AUTH_RELR = 0x70000004U,
@@ -1287,8 +1158,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -1297,6 +1171,12 @@ enum : unsigned {
   GRP_MASKOS = 0x0ff00000,
   GRP_MASKPROC = 0xf0000000
 };
+
+// Combine a symbol's binding and type into st_info (ELF32_ST_INFO,
+// ELF64_ST_INFO).
+constexpr uint8_t getSymbolInfo(uint8_t Binding, uint8_t Type) {
+  return (Binding << 4) | (Type & 0x0f);
+}
 
 // Symbol table entries for ELF32.
 struct Elf32_Sym {
@@ -1314,7 +1194,7 @@ struct Elf32_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = getSymbolInfo(b, t);
   }
 };
 
@@ -1334,7 +1214,7 @@ struct Elf64_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = getSymbolInfo(b, t);
   }
 };
 
@@ -1521,6 +1401,7 @@ enum {
   PT_GNU_STACK = 0x6474e551,    // Indicates stack executability.
   PT_GNU_RELRO = 0x6474e552,    // Read-only after relocation.
   PT_GNU_PROPERTY = 0x6474e553, // .note.gnu.property notes sections.
+  PT_GNU_SFRAME = 0x6474e554,   // GNU SFrame stack trace format.
 
   PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
@@ -1654,8 +1535,8 @@ enum { VER_FLG_BASE = 0x1, VER_FLG_WEAK = 0x2, VER_FLG_INFO = 0x4 };
 
 // Special constants for the version table. (SHT_GNU_versym/.gnu.version)
 enum {
-  VER_NDX_LOCAL = 0,       // Unversioned local symbol
-  VER_NDX_GLOBAL = 1,      // Unversioned global symbol
+  VER_NDX_LOCAL = 0,       // Unversioned undefined or localized defined symbol
+  VER_NDX_GLOBAL = 1,      // Unversioned non-local defined symbol
   VERSYM_VERSION = 0x7fff, // Version Index mask
   VERSYM_HIDDEN = 0x8000   // Hidden bit (non-default version)
 };
@@ -1732,6 +1613,7 @@ enum : unsigned {
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
   NT_ARM_FPMR = 0x40e,
+  NT_ARM_POE = 0x40f,
   NT_ARM_GCS = 0x410,
 
   NT_FILE = 0x46494c45,
@@ -1742,6 +1624,7 @@ enum : unsigned {
 // LLVM-specific notes.
 enum {
   NT_LLVM_HWASAN_GLOBALS = 3,
+  NT_LLVM_DYNAMIC_DEBUGGING = 4,
 };
 
 // GNU note types.
@@ -1786,6 +1669,7 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
   GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+  GNU_PROPERTY_RISCV_FEATURE_1_AND = 0xc0000000,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
   GNU_PROPERTY_X86_FEATURE_2_NEEDED = GNU_PROPERTY_X86_UINT32_OR_LO + 1,
@@ -1850,6 +1734,13 @@ enum : unsigned {
   GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
 };
 
+// RISC-V processor feature bits.
+enum : unsigned {
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED = 1 << 0,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS = 1 << 1,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG = 1 << 2,
+};
+
 // FreeBSD note types.
 enum {
   NT_FREEBSD_ABI_TAG = 1,
@@ -1897,6 +1788,7 @@ enum {
   NT_OPENBSD_FPREGS = 21,
   NT_OPENBSD_XFPREGS = 22,
   NT_OPENBSD_WCOOKIE = 23,
+  NT_OPENBSD_PACMASK = 24,
 };
 
 // AMDGPU-specific section indices.
@@ -1935,7 +1827,6 @@ enum {
   GNU_ABI_TAG_FREEBSD = 3,
   GNU_ABI_TAG_NETBSD = 4,
   GNU_ABI_TAG_SYLLABLE = 5,
-  GNU_ABI_TAG_NACL = 6,
 };
 
 constexpr const char *ELF_NOTE_GNU = "GNU";
@@ -1990,17 +1881,20 @@ enum {
 constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
-uint16_t convertArchNameToEMachine(StringRef Arch);
+LLVM_ABI uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
-StringRef convertEMachineToArchName(uint16_t EMachine);
+LLVM_ABI StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a triple's architecture to ELF's e_machine value.
+LLVM_ABI uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
 
 // Convert a lowercase string identifier into an OSABI value.
-uint8_t convertNameToOSABI(StringRef Name);
+LLVM_ABI uint8_t convertNameToOSABI(StringRef Name);
 
 // Convert an OSABI value into a string that identifies the OS- or ABI-
 // specific ELF extension.
-StringRef convertOSABIToName(uint8_t OSABI);
+LLVM_ABI StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

@@ -6,11 +6,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @add_v64i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: add_v64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    add z0.b, z0.b, z1.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i8>, ptr %a
   %op2 = load <64 x i8>, ptr %b
@@ -22,11 +21,10 @@ define void @add_v64i8(ptr %a, ptr %b) #0 {
 define void @add_v32i16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: add_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i16>, ptr %a
   %op2 = load <32 x i16>, ptr %b
@@ -38,10 +36,10 @@ define void @add_v32i16(ptr %a, ptr %b, ptr %c) #0 {
 define void @abs_v16i32(ptr %a) #0 {
 ; CHECK-LABEL: abs_v16i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %res = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %op1, i1 false)
@@ -52,10 +50,10 @@ define void @abs_v16i32(ptr %a) #0 {
 define void @abs_v8i64(ptr %a) #0 {
 ; CHECK-LABEL: abs_v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    abs z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i64>, ptr %a
   %res = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %op1, i1 false)
@@ -66,11 +64,10 @@ define void @abs_v8i64(ptr %a) #0 {
 define void @fadd_v32f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v32f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x half>, ptr %a
   %op2 = load <32 x half>, ptr %b
@@ -82,11 +79,10 @@ define void @fadd_v32f16(ptr %a, ptr %b) #0 {
 define void @fadd_v16f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x float>, ptr %a
   %op2 = load <16 x float>, ptr %b
@@ -98,11 +94,10 @@ define void @fadd_v16f32(ptr %a, ptr %b) #0 {
 define void @fadd_v8f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
   %op2 = load <8 x double>, ptr %b

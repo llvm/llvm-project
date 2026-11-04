@@ -6,20 +6,12 @@ define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr null, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 0, 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 0, 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 false, i32 0, i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> <i8 0, i8 poison, i8 poison, i8 poison>, i8 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc <4 x i8> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i8> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i8> zeroinitializer, zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i8> [[TMP8]] to <4 x i1>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> zeroinitializer, [[TMP15]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i1> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP15]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i1> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 0, [[TMP14]]
 ; CHECK-NEXT:    store i32 [[OP_RDX]], ptr null, align 4

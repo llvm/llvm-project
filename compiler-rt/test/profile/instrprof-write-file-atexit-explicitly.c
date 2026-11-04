@@ -4,10 +4,13 @@
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: %clang_profuse=%t.profdata -o - -S -emit-llvm %s | FileCheck %s
 
+#include "profile_test.h"
+
 int __llvm_profile_runtime = 0;
 int __llvm_profile_register_write_file_atexit(void);
 void __llvm_profile_set_filename(const char *);
 int main(int argc, const char *argv[]) {
+  __llvm_profile_test_initialize();
   __llvm_profile_register_write_file_atexit();
   // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD1:[0-9]+]]
   if (argc < 2)

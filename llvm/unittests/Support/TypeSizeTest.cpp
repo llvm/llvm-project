@@ -55,9 +55,9 @@ static_assert(CEElementCountFixed3.coefficientNextPowerOf2() ==
               CEElementCountFixed4);
 static_assert(ElementCount::getFixed(8).divideCoefficientBy(2) ==
               ElementCount::getFixed(4));
-static_assert(ElementCount::getFixed(8).multiplyCoefficientBy(3) ==
-              ElementCount::getFixed(24));
+static_assert(ElementCount::getFixed(8) * 3 == ElementCount::getFixed(24));
 static_assert(ElementCount::getFixed(8).isKnownMultipleOf(2));
+static_assert(!ElementCount::getFixed(8).isKnownMultipleOf(0));
 
 constexpr TypeSize TSFixed0 = TypeSize::getFixed(0);
 constexpr TypeSize TSFixed1 = TypeSize::getFixed(1);

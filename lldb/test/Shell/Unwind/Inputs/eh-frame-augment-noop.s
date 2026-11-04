@@ -2,6 +2,7 @@
 # augmentation machinery should detect that no augmentation is needed and use
 # eh_frame directly.
 
+        .att_syntax
         .text
         .globl  foo
 foo:

@@ -293,7 +293,7 @@ shown below:
 // function should not recurse into the child location. Recursion into nested
 // location is performed as necessary by the caller.
 auto shouldShowFn = [](Location loc) -> bool {
-  FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>();
+  FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(loc);
 
   // We don't perform any filtering on non-file locations.
   // Reminder: The caller will recurse into any necessary child locations.
@@ -324,7 +324,9 @@ The provided `message` is a string expected to be contained within the generated
 diagnostic. The `-re` suffix may be used to enable regex matching within the
 `message`. When present, the `message` may define regex match sequences within
 `{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
-expressions (ERE). A few examples are shown below:
+expressions (ERE). `expected-` must not be preceded by an alphanumeric
+character, hyphen, or underscore (so e.g. `unexpected-error` is ignored). A few
+examples are shown below:
 
 ```mlir
 // Expect an error on the same line.

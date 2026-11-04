@@ -7,22 +7,22 @@ define dso_local i32 @test_500_504(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #126
-; CHECK-NEXT:    adr r2, .LCPI0_0
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
-; CHECK-NEXT:    mov.w r2, #500
-; CHECK-NEXT:    vdup.32 q1, r2
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    adr r1, .LCPI0_0
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    mov.w r1, #500
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    vdup.32 q1, r1
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vqadd.u32 q2, q0, r1
-; CHECK-NEXT:    adds r1, #4
+; CHECK-NEXT:    vqadd.u32 q2, q0, r2
+; CHECK-NEXT:    adds r2, #4
 ; CHECK-NEXT:    vptt.u32 hi, q1, q2
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
-; CHECK-NEXT:    vaddvat.u32 r2, q2
+; CHECK-NEXT:    vaddvat.u32 r12, q2
 ; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:

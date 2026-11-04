@@ -13,15 +13,16 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ELFNIXPLATFORM_H
 #define LLVM_EXECUTIONENGINE_ORC_ELFNIXPLATFORM_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -42,30 +43,13 @@ struct RuntimeFunction {
   ExecutorAddr Addr;
 };
 
-struct FunctionPairKeyHash {
-  std::size_t
-  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &key) const {
-    return std::hash<void *>()(key.first->Addr.toPtr<void *>()) ^
-           std::hash<void *>()(key.second->Addr.toPtr<void *>());
-  }
-};
-
-struct FunctionPairKeyEqual {
-  std::size_t
-  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &lhs,
-             const std::pair<RuntimeFunction *, RuntimeFunction *> &rhs) const {
-    return lhs.first == rhs.first && lhs.second == rhs.second;
-  }
-};
-
-using DeferredRuntimeFnMap = std::unordered_map<
+using DeferredRuntimeFnMap = DenseMap<
     std::pair<RuntimeFunction *, RuntimeFunction *>,
     SmallVector<std::pair<shared::WrapperFunctionCall::ArgDataBufferType,
-                          shared::WrapperFunctionCall::ArgDataBufferType>>,
-    FunctionPairKeyHash, FunctionPairKeyEqual>;
+                          shared::WrapperFunctionCall::ArgDataBufferType>>>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
-class ELFNixPlatform : public Platform {
+class LLVM_ABI ELFNixPlatform : public Platform {
 public:
   /// Try to create a ELFNixPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
@@ -165,7 +149,7 @@ private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
-  class ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
+  class LLVM_ABI ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
   public:
     ELFNixPlatformPlugin(ELFNixPlatform &MP) : MP(MP) {}
 
@@ -202,6 +186,9 @@ private:
                                MaterializationResponsibility &MR);
 
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD,
+                               bool IsBootstrapping);
+
+    Error registerFiniSections(jitlink::LinkGraph &G, JITDylib &JD,
                                bool IsBootstrapping);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
@@ -261,6 +248,10 @@ private:
       ES.intern("__orc_rt_elfnix_register_init_sections")};
   RuntimeFunction DeregisterInitSections{
       ES.intern("__orc_rt_elfnix_deregister_init_sections")};
+  RuntimeFunction RegisterFiniSections{
+      ES.intern("__orc_rt_elfnix_register_fini_sections")};
+  RuntimeFunction DeregisterFiniSections{
+      ES.intern("__orc_rt_elfnix_deregister_fini_sections")};
   RuntimeFunction CreatePThreadKey{
       ES.intern("__orc_rt_elfnix_create_pthread_key")};
 

@@ -115,6 +115,11 @@ public:
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
                     CompletionResult &result);
 
+  /// Sets the maximum number of completions that should be returned.
+  void SetMaxReturnElements(size_t max_return_elements) {
+    m_max_return_elements = max_return_elements;
+  }
+
   /// Returns the raw user input used to create this CompletionRequest cut off
   /// at the cursor position. The cursor will be at the end of the raw line.
   llvm::StringRef GetRawLine() const {
@@ -156,6 +161,23 @@ public:
   }
 
   size_t GetCursorIndex() const { return m_cursor_index; }
+
+  size_t GetMaxReturnElements() const { return m_max_return_elements; }
+
+  /// Returns true if the maximum number of completions has not been reached
+  /// yet, hence we should keep adding completions.
+  bool ShouldAddCompletions() const {
+    return GetMaxNumberOfCompletionsToAdd() > 0;
+  }
+
+  /// Returns the maximum number of completions that need to be added
+  /// until reaching the maximum
+  size_t GetMaxNumberOfCompletionsToAdd() const {
+    const size_t number_of_results = m_result.GetNumberOfResults();
+    if (number_of_results >= m_max_return_elements)
+      return 0;
+    return m_max_return_elements - number_of_results;
+  }
 
   /// Adds a possible completion string. If the completion was already
   /// suggested before, it will not be added to the list of results. A copy of
@@ -231,6 +253,8 @@ private:
   size_t m_cursor_index;
   /// The cursor position in the argument indexed by m_cursor_index.
   size_t m_cursor_char_position;
+  /// The maximum number of completions that should be returned.
+  size_t m_max_return_elements = std::numeric_limits<size_t>::max();
 
   /// The result this request is supposed to fill out.
   /// We keep this object private to ensure that no backend can in any way

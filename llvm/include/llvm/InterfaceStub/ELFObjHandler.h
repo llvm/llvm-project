@@ -14,6 +14,7 @@
 #define LLVM_INTERFACESTUB_ELFOBJHANDLER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
@@ -24,7 +25,7 @@ namespace ifs {
 struct IFSStub;
 
 /// Attempt to read a binary ELF file from a MemoryBuffer.
-Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
+LLVM_ABI Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 
 /// Attempt to write a binary ELF stub.
 /// This function determines appropriate ELFType using the passed ELFTarget and
@@ -34,8 +35,8 @@ Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 /// @param Stub Source ELFStub to generate a binary ELF stub from.
 /// @param WriteIfChanged Whether or not to preserve timestamp if
 ///        the output stays the same.
-Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
-                      bool WriteIfChanged = false);
+LLVM_ABI Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
+                               bool WriteIfChanged = false);
 
 } // end namespace ifs
 } // end namespace llvm

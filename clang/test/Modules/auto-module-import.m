@@ -96,6 +96,6 @@ namespace NS { // expected-note {{begins here}}
 }
 extern "C" { // expected-note {{begins here}}
 #include <NoUmbrella/A.h> // expected-remark {{treating #include as an import}} \
-                             expected-error {{import of C++ module 'NoUmbrella.A' appears within extern "C"}}
+                             expected-warning {{import of C++ module 'NoUmbrella.A' appears within extern "C"}}
 }
 #endif

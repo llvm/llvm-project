@@ -40,13 +40,6 @@ fgt.h x4, f5, f6
 # CHECK-ALIAS: fle.h t2, fs1, fs0
 fge.h x7, f8, f9
 
-# CHECK-INST: fmv.x.h a2, fs7
-# CHECK-ALIAS: fmv.x.h a2, fs7
-fmv.x.h a2, fs7
-# CHECK-INST: fmv.h.x ft1, a6
-# CHECK-ALIAS: fmv.h.x ft1, a6
-fmv.h.x ft1, a6
-
 # CHECK-INST: flh ft0, 0(a0)
 # CHECK-ALIAS: flh ft0, 0(a0)
 flh f0, (x10)

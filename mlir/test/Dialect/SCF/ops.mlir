@@ -28,14 +28,14 @@ func.func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @std_for_i32(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 : i32 {
-    scf.for %i1 = %arg0 to %arg1 step %arg2 : i32 {
+    scf.for unsigned %i1 = %arg0 to %arg1 step %arg2 : i32 {
     }
   }
   return
 }
 // CHECK-LABEL: func @std_for_i32(
 //  CHECK-NEXT:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
-//  CHECK-NEXT:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+//  CHECK-NEXT:     scf.for unsigned %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
 
 func.func @scf_for_i64_iter(%arg1: i64, %arg2: i64) {
   %c1_i64 = arith.constant 1 : i64
@@ -383,12 +383,12 @@ func.func @normalized_forall_elide_terminator() -> () {
   %num_threads = arith.constant 100 : index
 
   //      CHECK:    scf.forall
-  // CHECK-NEXT:  } {mapping = [#gpu.thread<x>]}
+  // CHECK-NEXT:  } {mapping = [#gpu.thread<x>], test.marker}
   // CHECK-NEXT:  return
   scf.forall (%thread_idx) in (%num_threads) {
     scf.forall.in_parallel {
     }
-  } {mapping = [#gpu.thread<x>]}
+  } {mapping = [#gpu.thread<x>], test.marker}
   return
 
 }
@@ -441,3 +441,13 @@ func.func @switch(%arg0: index) -> i32 {
 
   return %0 : i32
 }
+
+func.func @std_parallel_loop_unsigned(%arg0 : index, %arg1 : index,
+                                      %arg2 : index) {
+  scf.parallel unsigned (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @std_parallel_loop_unsigned
+//  CHECK-NEXT:   scf.parallel unsigned (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {

@@ -43,7 +43,8 @@ define void @render(double %a0) nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB2_4
 ; CHECK-NEXT:    jnp .LBB2_2
 ; CHECK-NEXT:  .LBB2_4: # %if.then

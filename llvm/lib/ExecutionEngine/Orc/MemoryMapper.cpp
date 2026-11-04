@@ -9,7 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/WindowsError.h"
 
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
@@ -27,7 +27,7 @@
 namespace llvm {
 namespace orc {
 
-MemoryMapper::~MemoryMapper() {}
+MemoryMapper::~MemoryMapper() = default;
 
 InProcessMemoryMapper::InProcessMemoryMapper(size_t PageSize)
     : PageSize(PageSize) {}
@@ -58,7 +58,8 @@ void InProcessMemoryMapper::reserve(size_t NumBytes,
       ExecutorAddrRange(ExecutorAddr::fromPtr(MB.base()), MB.allocatedSize()));
 }
 
-char *InProcessMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
+char *InProcessMemoryMapper::prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                                     size_t ContentSize) {
   return Addr.toPtr<char *>();
 }
 
@@ -98,9 +99,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // This is the maximum range whose permission have been possibly modified
-    Allocations[MinAddr].Size = MaxAddr - MinAddr;
-    Allocations[MinAddr].DeinitializationActions =
-        std::move(*DeinitializeActions);
+    auto &Alloc = Allocations[MinAddr];
+    Alloc.Size = MaxAddr - MinAddr;
+    Alloc.DeinitializationActions = std::move(*DeinitializeActions);
     Reservations[AI.MappingBase.toPtr<void *>()].Allocations.push_back(MinAddr);
   }
 
@@ -193,22 +194,23 @@ InProcessMemoryMapper::~InProcessMemoryMapper() {
 
 // SharedMemoryMapper
 
-SharedMemoryMapper::SharedMemoryMapper(ExecutorProcessControl &EPC,
-                                       SymbolAddrs SAs, size_t PageSize)
-    : EPC(EPC), SAs(SAs), PageSize(PageSize) {
+SharedMemoryMapper::SharedMemoryMapper(ExecutionSession &ES,
+                                       SharedMemoryMapBindings B,
+                                       size_t PageSize)
+    : ES(ES), B(std::move(B)), PageSize(PageSize) {
 #if (!defined(LLVM_ON_UNIX) || defined(__ANDROID__)) && !defined(_WIN32)
   llvm_unreachable("SharedMemoryMapper is not supported on this platform yet");
 #endif
 }
 
 Expected<std::unique_ptr<SharedMemoryMapper>>
-SharedMemoryMapper::Create(ExecutorProcessControl &EPC, SymbolAddrs SAs) {
+SharedMemoryMapper::Create(ExecutionSession &ES, SharedMemoryMapBindings B) {
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
     return PageSize.takeError();
 
-  return std::make_unique<SharedMemoryMapper>(EPC, SAs, *PageSize);
+  return std::make_unique<SharedMemoryMapper>(ES, std::move(B), *PageSize);
 #else
   return make_error<StringError>(
       "SharedMemoryMapper is not supported on this platform yet",
@@ -220,17 +222,10 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
                                  OnReservedFunction OnReserved) {
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceReserveSignature>(
-      SAs.Reserve,
-      [this, NumBytes, OnReserved = std::move(OnReserved)](
-          Error SerializationErr,
+  int SharedMemoryId = -1;
+  B.Reserve(
+      [this, NumBytes, OnReserved = std::move(OnReserved), SharedMemoryId](
           Expected<std::pair<ExecutorAddr, std::string>> Result) mutable {
-        if (SerializationErr) {
-          cantFail(Result.takeError());
-          return OnReserved(std::move(SerializationErr));
-        }
-
         if (!Result)
           return OnReserved(Result.takeError());
 
@@ -248,7 +243,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
             SharedMemoryName.size());
         auto HashedName = BLAKE3::hash<sizeof(key_t)>(Data);
         key_t Key = *reinterpret_cast<key_t *>(HashedName.data());
-        int SharedMemoryId =
+        SharedMemoryId =
             shmget(Key, NumBytes, IPC_CREAT | __IPC_SHAREAS | 0700);
         if (SharedMemoryId < 0) {
           return OnReserved(errorCodeToError(
@@ -298,12 +293,13 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 #endif
         {
           std::lock_guard<std::mutex> Lock(Mutex);
-          Reservations.insert({RemoteAddr, {LocalAddr, NumBytes}});
+          Reservations.insert(
+              {RemoteAddr, {LocalAddr, NumBytes, SharedMemoryId}});
         }
 
         OnReserved(ExecutorAddrRange(RemoteAddr, NumBytes));
       },
-      SAs.Instance, static_cast<uint64_t>(NumBytes));
+      ES, B.Instance, static_cast<uint64_t>(NumBytes));
 
 #else
   OnReserved(make_error<StringError>(
@@ -312,7 +308,8 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 #endif
 }
 
-char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
+char *SharedMemoryMapper::prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                                  size_t ContentSize) {
   auto R = Reservations.upper_bound(Addr);
   assert(R != Reservations.begin() && "Attempt to prepare unreserved range");
   R--;
@@ -350,37 +347,14 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     FR.Segments.push_back(SegReq);
   }
 
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceInitializeSignature>(
-      SAs.Initialize,
-      [OnInitialized = std::move(OnInitialized)](
-          Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
-        if (SerializationErr) {
-          cantFail(Result.takeError());
-          return OnInitialized(std::move(SerializationErr));
-        }
-
-        OnInitialized(std::move(Result));
-      },
-      SAs.Instance, Reservation->first, std::move(FR));
+  B.Initialize(std::move(OnInitialized), ES, B.Instance, Reservation->first,
+               std::move(FR));
 }
 
 void SharedMemoryMapper::deinitialize(
     ArrayRef<ExecutorAddr> Allocations,
     MemoryMapper::OnDeinitializedFunction OnDeinitialized) {
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceDeinitializeSignature>(
-      SAs.Deinitialize,
-      [OnDeinitialized = std::move(OnDeinitialized)](Error SerializationErr,
-                                                     Error Result) mutable {
-        if (SerializationErr) {
-          cantFail(std::move(Result));
-          return OnDeinitialized(std::move(SerializationErr));
-        }
-
-        OnDeinitialized(std::move(Result));
-      },
-      SAs.Instance, Allocations);
+  B.Deinitialize(std::move(OnDeinitialized), ES, B.Instance, Allocations);
 }
 
 void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
@@ -396,7 +370,8 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 #if defined(LLVM_ON_UNIX)
 
 #if defined(__MVS__)
-      if (shmdt(Reservations[Base].LocalAddr) < 0)
+      if (shmdt(Reservations[Base].LocalAddr) < 0 ||
+          shmctl(Reservations[Base].SharedMemoryId, IPC_RMID, NULL) < 0)
         Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
 #else
       if (munmap(Reservations[Base].LocalAddr, Reservations[Base].Size) != 0)
@@ -415,20 +390,12 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
     }
   }
 
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceReleaseSignature>(
-      SAs.Release,
+  B.Release(
       [OnReleased = std::move(OnReleased),
-       Err = std::move(Err)](Error SerializationErr, Error Result) mutable {
-        if (SerializationErr) {
-          cantFail(std::move(Result));
-          return OnReleased(
-              joinErrors(std::move(Err), std::move(SerializationErr)));
-        }
-
+       Err = std::move(Err)](Error Result) mutable {
         return OnReleased(joinErrors(std::move(Err), std::move(Result)));
       },
-      SAs.Instance, Bases);
+      ES, B.Instance, Bases);
 #else
   OnReleased(make_error<StringError>(
       "SharedMemoryMapper is not supported on this platform yet",

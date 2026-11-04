@@ -41,10 +41,30 @@ public:
   void Enter(const parser::CUFKernelDoConstruct &);
   void Leave(const parser::CUFKernelDoConstruct &);
   void Enter(const parser::AssignmentStmt &);
+  void Enter(const parser::OpenACCBlockConstruct &);
+  void Leave(const parser::OpenACCBlockConstruct &);
+  void Enter(const parser::OpenACCCombinedConstruct &);
+  void Leave(const parser::OpenACCCombinedConstruct &);
+  void Enter(const parser::OpenACCLoopConstruct &);
+  void Leave(const parser::OpenACCLoopConstruct &);
+  void Enter(const parser::DoConstruct &);
+  void Leave(const parser::DoConstruct &);
+  void Enter(const parser::PrintStmt &);
+  void Enter(const parser::Scalar<parser::Expr> &);
+  void Leave(const parser::Scalar<parser::Expr> &);
+  void Enter(const parser::ScalarExpr &);
+  void Leave(const parser::ScalarExpr &);
+  void Enter(const parser::ScalarIntExpr &);
+  void Leave(const parser::ScalarIntExpr &);
+  void Enter(const parser::ScalarLogicalExpr &);
+  void Leave(const parser::ScalarLogicalExpr &);
 
 private:
+  template <typename A> void EnterHostScalarExpr(const A &);
+
   SemanticsContext &context_;
-  bool inCUFKernelDoConstruct_ = false;
+  int deviceConstructDepth_{0};
+  int hostScalarExprDepth_{0};
 };
 
 bool CanonicalizeCUDA(parser::Program &);

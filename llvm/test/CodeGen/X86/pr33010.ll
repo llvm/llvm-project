@@ -19,13 +19,10 @@ define ptr addrspace(1) @test(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %whic
 ; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:  .LBB0_3: # %entry
+; CHECK-NEXT:    movq %rsp, %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    movq (%rcx), %rax
 ; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx

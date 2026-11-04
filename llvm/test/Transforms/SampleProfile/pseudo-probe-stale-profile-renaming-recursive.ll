@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming-recursive.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -persist-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s
 
 ; CHECK: Run stale profile matching for main
@@ -17,9 +16,6 @@
 ; CHECK: 'bar_new' inlined into 'main' to match profiling context with (cost=-15, threshold=3000) at callsite foo_new:1:3 @ main:2:7;
 
 
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @x = dso_local global i32 0, align 4, !dbg !0
 
@@ -70,13 +66,13 @@ for.body:                                         ; preds = %for.cond
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #3

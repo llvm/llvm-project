@@ -219,7 +219,7 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
   }
   // CFI for the rest of the registers.
   for (const auto &Entry : CSI) {
-    unsigned Reg = Entry.getReg();
+    MCRegister Reg = Entry.getReg();
     int FI = Entry.getFrameIdx();
     // Skip BLINK and FP.
     if ((hasFP(MF) && Reg == ARC::FP) || (MFI.hasCalls() && Reg == ARC::BLINK))
@@ -489,7 +489,7 @@ MachineBasicBlock::iterator ARCFrameLowering::eliminateCallFramePseudoInstr(
 
 bool ARCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool HasFP = MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  bool HasFP = MF.disableFramePointerElim() ||
                MF.getFrameInfo().hasVarSizedObjects() ||
                MF.getFrameInfo().isFrameAddressTaken() ||
                RegInfo->hasStackRealignment(MF);

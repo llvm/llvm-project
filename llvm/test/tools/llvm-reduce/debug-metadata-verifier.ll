@@ -1,7 +1,7 @@
 ; RUN: llvm-reduce %s -o %t --delta-passes=metadata --test %python --test-arg %p/Inputs/remove-metadata.py --abort-on-invalid-reduction
 ; RUN: FileCheck %s --input-file %t
 
-; CHECK: call void @llvm.dbg.declare{{.*}}, !dbg
+; CHECK: #dbg_declare
 ; CHECK: !llvm.dbg.cu = !{!0}
 ; CHECK-NOT: uninteresting
 

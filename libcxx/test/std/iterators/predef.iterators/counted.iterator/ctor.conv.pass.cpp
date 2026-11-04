@@ -12,7 +12,9 @@
 //   requires convertible_to<const I2&, I>
 //     constexpr counted_iterator(const counted_iterator<I2>& x);
 
+#include <cassert>
 #include <iterator>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"

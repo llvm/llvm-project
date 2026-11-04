@@ -42,6 +42,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -68,16 +69,14 @@ static cl::opt<unsigned>
                 cl::desc("Number of times to shuffle and verify use-lists"),
                 cl::init(1), cl::cat(Cat));
 
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace {
 
 struct TempFile {
   std::string Filename;
   FileRemover Remover;
-  bool init(const std::string &Ext);
+  bool init(const std::string &Ext, bool IsText = false);
   bool writeBitcode(const Module &M) const;
-  bool writeAssembly(const Module &M) const;
+  bool writeAssembly(Module &M) const;
   std::unique_ptr<Module> readBitcode(LLVMContext &Context) const;
   std::unique_ptr<Module> readAssembly(LLVMContext &Context) const;
 };
@@ -108,10 +107,12 @@ struct ValueMapping {
 
 } // end namespace
 
-bool TempFile::init(const std::string &Ext) {
+bool TempFile::init(const std::string &Ext, bool IsText) {
   SmallVector<char, 64> Vector;
   LLVM_DEBUG(dbgs() << " - create-temp-file\n");
-  if (auto EC = sys::fs::createTemporaryFile("uselistorder", Ext, Vector)) {
+  if (auto EC = sys::fs::createTemporaryFile("uselistorder", Ext, Vector,
+                                             IsText ? sys::fs::OF_Text
+                                                    : sys::fs::OF_None)) {
     errs() << "verify-uselistorder: error: " << EC.message() << "\n";
     return true;
   }
@@ -137,7 +138,7 @@ bool TempFile::writeBitcode(const Module &M) const {
   return false;
 }
 
-bool TempFile::writeAssembly(const Module &M) const {
+bool TempFile::writeAssembly(Module &M) const {
   LLVM_DEBUG(dbgs() << " - write assembly\n");
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OF_TextWithCRLF);
@@ -146,6 +147,7 @@ bool TempFile::writeAssembly(const Module &M) const {
     return true;
   }
 
+  M.renumberMetadataForAssembly();
   M.print(OS, nullptr, /* ShouldPreserveUseListOrder */ true);
   return false;
 }
@@ -247,6 +249,9 @@ ValueMapping::ValueMapping(const Module &M) {
 }
 
 void ValueMapping::map(const Value *V) {
+  if (!V->hasUseList())
+    return;
+
   if (IDs.lookup(V))
     return;
 
@@ -366,29 +371,31 @@ static void verifyAfterRoundTrip(const Module &M,
 
 static void verifyBitcodeUseListOrder(const Module &M) {
   TempFile F;
-  if (F.init("bc"))
+  if (F.init("bc", /*IsText=*/false))
     report_fatal_error("failed to initialize bitcode file");
 
   if (F.writeBitcode(M))
     report_fatal_error("failed to write bitcode");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readBitcode(Context));
 }
 
-static void verifyAssemblyUseListOrder(const Module &M) {
+static void verifyAssemblyUseListOrder(Module &M) {
   TempFile F;
-  if (F.init("ll"))
+  if (F.init("ll", /*IsText=*/true))
     report_fatal_error("failed to initialize assembly file");
 
   if (F.writeAssembly(M))
     report_fatal_error("failed to write assembly");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readAssembly(Context));
 }
 
-static void verifyUseListOrder(const Module &M) {
+static void verifyUseListOrder(Module &M) {
   outs() << "verify bitcode\n";
   verifyBitcodeUseListOrder(M);
   outs() << "verify assembly\n";
@@ -397,6 +404,9 @@ static void verifyUseListOrder(const Module &M) {
 
 static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                                  DenseSet<Value *> &Seen) {
+  if (!V->hasUseList())
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
@@ -424,7 +434,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                         << ", U = ";
                  U.getUser()->dump());
     }
-  } while (std::is_sorted(V->use_begin(), V->use_end(), compareUses));
+  } while (llvm::is_sorted(V->uses(), compareUses));
 
   LLVM_DEBUG(dbgs() << " => shuffle\n");
   V->sortUseList(compareUses);
@@ -439,6 +449,9 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
 }
 
 static void reverseValueUseLists(Value *V, DenseSet<Value *> &Seen) {
+  if (!V->hasUseList())
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
@@ -539,17 +552,16 @@ static void reverseUseLists(Module &M) {
 }
 
 int main(int argc, char **argv) {
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   InitLLVM X(argc, argv);
 
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
   cl::HideUnrelatedOptions(Cat);
-  cl::ParseCommandLineOptions(argc, argv,
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
                               "llvm tool to verify use-list order\n");
 
-  LLVMContext Context;
   SMDiagnostic Err;
 
   // Load the input module...

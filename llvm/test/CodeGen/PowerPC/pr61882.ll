@@ -27,7 +27,7 @@ define void @foo(ptr %a, i32 %x) {
 ; CHECK-NEXT:    andc r8, r8, r6
 ; CHECK-NEXT:    or r8, r7, r8
 ; CHECK-NEXT:    stwcx. r8, 0, r3
-; CHECK-NEXT:    bne cr0, .LBB0_1
+; CHECK-NEXT:    bne- cr0, .LBB0_1
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    blr
@@ -43,7 +43,7 @@ define void @foo(ptr %a, i32 %x) {
 ; PWR8-NEXT:    bgt cr0, .LBB0_3
 ; PWR8-NEXT:  # %bb.2:
 ; PWR8-NEXT:    stbcx. r4, 0, r3
-; PWR8-NEXT:    bne cr0, .LBB0_1
+; PWR8-NEXT:    bne- cr0, .LBB0_1
 ; PWR8-NEXT:  .LBB0_3:
 ; PWR8-NEXT:    lwsync
 ; PWR8-NEXT:    blr

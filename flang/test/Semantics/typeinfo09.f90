@@ -17,4 +17,4 @@ interface
 end interface
 end module
 
-!CHECK: .s.sometype, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=1_1,isargdescriptorset=1_1,istypebound=1_1,isargcontiguousset=0_1,proc=copy_impl)]
+!CHECK: .s.sometype, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=1_1,isargdescriptorset=1_1,istypebound=1_1,specialcaseflag=0_1,proc=copy_impl)]

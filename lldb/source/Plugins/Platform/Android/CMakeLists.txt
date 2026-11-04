@@ -6,19 +6,23 @@ lldb_tablegen(PlatformAndroidPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE PlatformAndroidProperties.td
   TARGET LLDBPluginPlatformAndroidPropertiesEnumGen)
 
+lldb_tablegen(PlatformAndroidProperties.json -dump-json
+  SOURCE PlatformAndroidProperties.td
+  TARGET LLDBPluginPlatformAndroidPropertiesJsonGen)
+
 add_lldb_library(lldbPluginPlatformAndroid PLUGIN
   AdbClient.cpp
   PlatformAndroid.cpp
   PlatformAndroidRemoteGDBServer.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
     lldbValueObject
     lldbPluginPlatformLinux
     lldbPluginPlatformGDB
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbPluginPlatformAndroid

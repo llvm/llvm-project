@@ -18,8 +18,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 std::optional<SymbolFile::ArrayInfo>
 DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
@@ -138,4 +138,13 @@ DWARFASTParser::GetAccessTypeFromDWARF(uint32_t dwarf_accessibility) {
     break;
   }
   return eAccessNone;
+}
+
+DWARFDIE DWARFASTParser::GetAnnotation(const DWARFDIE &die,
+                                       llvm::StringRef name) {
+  for (DWARFDIE child : die.children())
+    if (child.Tag() == DW_TAG_LLVM_annotation &&
+        llvm::StringRef(child.GetName()) == name)
+      return child;
+  return {};
 }

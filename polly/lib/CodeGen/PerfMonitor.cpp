@@ -62,9 +62,8 @@ Function *PerfMonitor::getRDTSCP() {
   return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
-PerfMonitor::PerfMonitor(const Scop &S, Module *M)
-    : M(M), Builder(M->getContext()), S(S) {
-  if (Triple(M->getTargetTriple()).getArch() == llvm::Triple::x86_64)
+PerfMonitor::PerfMonitor(const Scop &S, Module *M) : M(M), Builder(*M), S(S) {
+  if (M->getTargetTriple().getArch() == llvm::Triple::x86_64)
     Supported = true;
   else
     Supported = false;
@@ -267,7 +266,7 @@ void PerfMonitor::insertRegionStart(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Value *CurrentCycles =
       Builder.CreateExtractValue(Builder.CreateCall(RDTSCPFn), {0});
@@ -278,7 +277,7 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Type *Int64Ty = Builder.getInt64Ty();
   LoadInst *CyclesStart =

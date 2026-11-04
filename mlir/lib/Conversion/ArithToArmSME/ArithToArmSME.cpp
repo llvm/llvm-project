@@ -44,7 +44,7 @@ namespace {
 
 /// Conversion pattern for dense arith.constant.
 struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
-  using OpRewritePattern<arith::ConstantOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::ConstantOp constantOp,
                                 PatternRewriter &rewriter) const final {
@@ -74,15 +74,15 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     auto denseAttr1D = DenseElementsAttr::get(
         tileSliceType, denseAttr.getSplatValue<Attribute>());
-    auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
+    auto constantOp1D = arith::ConstantOp::create(rewriter, loc, denseAttr1D);
 
-    auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
+    auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
       // Create 'arm_sme.insert_tile_slice' to write vector to tile
       // slice.
-      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
-          loc, tileType, constantOp1D, currentTile, tileSliceIndex);
+      auto nextTile = arm_sme::InsertTileSliceOp::create(
+          b, loc, tileType, constantOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
     auto forOp = mlir::arm_sme::createLoopOverTileSlices(

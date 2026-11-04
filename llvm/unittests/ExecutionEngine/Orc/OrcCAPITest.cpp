@@ -11,6 +11,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/Target.h"
 #include "gtest/gtest.h"
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -220,6 +221,7 @@ protected:
                                                      StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
     return wrap(new ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
 
@@ -227,6 +229,7 @@ protected:
                                               StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
 
     auto JTMB = cantFail(JITTargetMachineBuilder::detectHost());
     M->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
@@ -533,7 +536,7 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
@@ -547,7 +550,6 @@ TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
 }
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
@@ -594,7 +596,9 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
-  auto *SumFn = (SumFunctionType)(TestFnAddr);
+  // FIXME: We use ExecutorAddr::toPtr here to sign arm64e pointers. We should
+  //        develop a C API solution for this.
+  auto *SumFn = ExecutorAddr(TestFnAddr).toPtr<SumFunctionType>();
   int32_t Result = SumFn(1, 1);
   ASSERT_EQ(2, Result);
 }

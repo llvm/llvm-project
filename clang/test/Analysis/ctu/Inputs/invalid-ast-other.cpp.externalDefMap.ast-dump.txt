@@ -1,0 +1,1 @@
+14:c:@F@external# invalid-ast-other.cpp.ast

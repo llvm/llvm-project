@@ -1,9 +1,11 @@
 // clang-format off
-// UNSUPPORTED: system-aix
 //
 // Tests that a global destructor is ran on platforms with gnu exception support.
 //
 // RUN: cat %s | clang-repl | FileCheck %s
+
+// The test is flaky with ASan: https://github.com/llvm/llvm-project/issues/102858
+// UNSUPPORTED: asan
 
 extern "C" int printf(const char *, ...);
 

@@ -1,4 +1,6 @@
 # REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 # RUN: rm -rf %t && mkdir -p %t
 
 ## In this test, we check that able to report objects with
@@ -13,7 +15,7 @@
 
 # RUN: llvm-ar --format=gnu crS %t/invalid-class.a %t/invalid.o
 # RUN: not ld.lld -whole-archive %t/invalid-class.a -o /dev/null 2>&1 | FileCheck %s
-# CHECK: invalid-class.a(invalid.o): corrupted ELF file: invalid file class
+# CHECK: error: {{.*}}invalid-class.a(invalid.o): corrupted ELF file: invalid file class
 
 # RUN: not ld.lld %t/invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJ
-# OBJ: invalid.o: corrupted ELF file: invalid file class
+# OBJ: error: {{.*}}invalid.o: corrupted ELF file: invalid file class

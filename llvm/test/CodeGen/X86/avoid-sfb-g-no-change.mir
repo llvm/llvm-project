@@ -1,5 +1,7 @@
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
+# RUN: llc %s -run-pass x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
+# RUN: llc %s -passes=x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
+# RUN: llc %s -run-pass x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
+# RUN: llc %s -passes=x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
 #
 # This was generated from:
 #
@@ -52,7 +54,7 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #2
 
-  attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }
   attributes #2 = { nounwind }
 
@@ -127,8 +129,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 constants:       []
@@ -147,7 +149,7 @@ body:             |
     MOV8mi %0, 1, $noreg, 0, $noreg, 0, debug-location !27 :: (store (s8) into %ir.0)
     %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !28 :: (load (s128) from %ir.p1)
     DBG_VALUE %2, $noreg, !24, !DIExpression(), debug-location !25
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !29 :: (store (s128) into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, %2, debug-location !29 :: (store (s128) into %ir.p2)
     RET 0, debug-location !30
 
 ...
@@ -185,8 +187,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 constants:       []
@@ -199,7 +201,7 @@ body:             |
     %0:gr64 = COPY $rdi
     MOV8mi %0, 1, $noreg, 0, $noreg, 0 :: (store (s8) into %ir.0)
     %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg :: (load (s128) from %ir.p1)
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2 :: (store (s128) into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, %2 :: (store (s128) into %ir.p2)
     RET 0
 
     ; DEBUG: name: debug

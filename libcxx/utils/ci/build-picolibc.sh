@@ -81,7 +81,7 @@ cat <<EOF > "${picolibc_build_dir}/meson-cross-build.txt"
 c = ['${CC:-cc}', '--target=${target}', '-mfloat-abi=soft', '-nostdlib']
 ar = 'llvm-ar'
 as = 'llvm-as'
-ld = 'lld'
+c_ld = 'lld'
 strip = 'llvm-strip'
 [host_machine]
 system = 'none'
@@ -95,7 +95,7 @@ EOF
 venv_dir="${build_dir}/meson-venv"
 python3 -m venv "${venv_dir}"
 # Install the version of meson that was the latest at the time this script was written.
-"${venv_dir}/bin/pip" install "meson==1.1.1"
+"${venv_dir}/bin/pip" install "meson==1.9.0"
 
 "${venv_dir}/bin/meson" setup \
   -Dincludedir=include -Dlibdir=lib -Dspecsdir=none -Dmultilib=false -Dpicoexit=false \

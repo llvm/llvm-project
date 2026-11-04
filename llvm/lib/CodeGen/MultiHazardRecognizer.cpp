@@ -69,8 +69,8 @@ unsigned MultiHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   return std::accumulate(Recognizers.begin(), Recognizers.end(), 0u, MN);
 }
 
-bool MultiHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
-  auto SPA = [=](std::unique_ptr<ScheduleHazardRecognizer> &R) {
+bool MultiHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
+  auto SPA = [=](const std::unique_ptr<ScheduleHazardRecognizer> &R) {
     return R->ShouldPreferAnother(SU);
   };
   return llvm::any_of(Recognizers, SPA);

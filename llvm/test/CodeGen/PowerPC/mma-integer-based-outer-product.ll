@@ -5,6 +5,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-LE-WACC
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE-WACC
 
 ; Function Attrs: nofree nounwind writeonly
 define dso_local void @test1(ptr nocapture readnone %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
@@ -27,6 +33,26 @@ define dso_local void @test1(ptr nocapture readnone %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test1:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    xvi16ger2 wacc0, v2, v2
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test1:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    xvi16ger2 wacc0, v2, v2
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2(<16 x i8> %vc, <16 x i8> %vc)
   store <512 x i1> %0, ptr %resp, align 64
@@ -57,6 +83,26 @@ define dso_local void @test2(ptr nocapture readnone %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test2:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    pmxvi16ger2 wacc0, v2, v2, 0, 0, 0
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test2:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    pmxvi16ger2 wacc0, v2, v2, 0, 0, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
   store <512 x i1> %0, ptr %resp, align 64
@@ -70,10 +116,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8>, <16 x i8>, i32, i32, i32
 define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi8ger4spp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -85,10 +131,10 @@ define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test3:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi8ger4spp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -97,6 +143,36 @@ define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test3:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    lxv v5, 0(r3)
+; CHECK-LE-WACC-NEXT:    lxv v1, 32(r3)
+; CHECK-LE-WACC-NEXT:    lxv v4, 16(r3)
+; CHECK-LE-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-LE-WACC-NEXT:    xvi8ger4spp wacc0, v2, v2
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test3:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    lxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
+; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-BE-WACC-NEXT:    xvi8ger4spp wacc0, v2, v2
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <512 x i1>, ptr %vqp, align 64
   %1 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
@@ -111,10 +187,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi16ger2pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -126,10 +202,10 @@ define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi16ger2pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -138,6 +214,36 @@ define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test4:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    lxv v5, 0(r3)
+; CHECK-LE-WACC-NEXT:    lxv v1, 32(r3)
+; CHECK-LE-WACC-NEXT:    lxv v4, 16(r3)
+; CHECK-LE-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-LE-WACC-NEXT:    xvi16ger2pp wacc0, v2, v2
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test4:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    lxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
+; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-BE-WACC-NEXT:    xvi16ger2pp wacc0, v2, v2
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <512 x i1>, ptr %vqp, align 64
   %1 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
@@ -152,10 +258,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi8ger4spp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -167,10 +273,10 @@ define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test5:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi8ger4spp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -179,6 +285,36 @@ define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test5:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    lxv v5, 0(r3)
+; CHECK-LE-WACC-NEXT:    lxv v1, 32(r3)
+; CHECK-LE-WACC-NEXT:    lxv v4, 16(r3)
+; CHECK-LE-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-LE-WACC-NEXT:    pmxvi8ger4spp wacc0, v2, v2, 0, 0, 0
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test5:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    lxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
+; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-BE-WACC-NEXT:    pmxvi8ger4spp wacc0, v2, v2, 0, 0, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <512 x i1>, ptr %vqp, align 64
   %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
@@ -193,10 +329,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>,
 define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -208,10 +344,10 @@ define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test6:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -220,6 +356,36 @@ define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs3, 48(r7)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: test6:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    lxv v5, 0(r3)
+; CHECK-LE-WACC-NEXT:    lxv v1, 32(r3)
+; CHECK-LE-WACC-NEXT:    lxv v4, 16(r3)
+; CHECK-LE-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-LE-WACC-NEXT:    pmxvi16ger2pp wacc0, v2, v2, 0, 0, 0
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r7)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r7)
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: test6:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    lxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
+; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-BE-WACC-NEXT:    pmxvi16ger2pp wacc0, v2, v2, 0, 0, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <512 x i1>, ptr %vqp, align 64
   %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)

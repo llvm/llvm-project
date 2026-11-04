@@ -15,7 +15,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 
 #include <string.h> // for memcpy
 
@@ -288,6 +287,15 @@ MachODumper::processLoadCommandData<MachO::build_version_command>(
   return Start + NTools * sizeof(MachO::build_tool_version);
 }
 
+template <>
+Expected<const char *>
+MachODumper::processLoadCommandData<MachO::target_triple_command>(
+    MachOYAML::LoadCommand &LC,
+    const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd,
+    MachOYAML::Object &Y) {
+  return readString<MachO::target_triple_command>(LC, LoadCmd);
+}
+
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = std::make_unique<MachOYAML::Object>();
   Y->IsLittleEndian = Obj.isLittleEndian();
@@ -364,8 +372,7 @@ void MachODumper::dumpFunctionStarts(std::unique_ptr<MachOYAML::Object> &Y) {
   MachOYAML::LinkEditData &LEData = Y->LinkEdit;
 
   auto FunctionStarts = Obj.getFunctionStarts();
-  for (auto Addr : FunctionStarts)
-    LEData.FunctionStarts.push_back(Addr);
+  llvm::append_range(LEData.FunctionStarts, FunctionStarts);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -637,9 +644,7 @@ void MachODumper::dumpChainedFixups(std::unique_ptr<MachOYAML::Object> &Y) {
         assert(DC.dataoff < Obj.getData().size());
         assert(DC.dataoff + DC.datasize <= Obj.getData().size());
         const char *Bytes = Obj.getData().data() + DC.dataoff;
-        for (size_t Idx = 0; Idx < DC.datasize; Idx++) {
-          LEData.ChainedFixups.push_back(Bytes[Idx]);
-        }
+        llvm::append_range(LEData.ChainedFixups, ArrayRef(Bytes, DC.datasize));
       }
       break;
     }

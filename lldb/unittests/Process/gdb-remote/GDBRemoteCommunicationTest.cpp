@@ -5,7 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "GDBRemoteTestUtils.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private::process_gdb_remote;
@@ -15,9 +20,16 @@ typedef GDBRemoteCommunication::PacketResult PacketResult;
 
 namespace {
 
+class CapturingLogHandler : public LogHandler {
+public:
+  void Emit(llvm::StringRef message) override { output += message; }
+
+  std::string output;
+};
+
 class TestClient : public GDBRemoteCommunication {
 public:
-  TestClient() : GDBRemoteCommunication() {}
+  TestClient() : GDBRemoteCommunication("test.client") {}
 
   PacketResult ReadPacket(StringExtractorGDBRemote &response) {
     return GDBRemoteCommunication::ReadPacket(response, std::chrono::seconds(1),
@@ -28,8 +40,12 @@ public:
 class GDBRemoteCommunicationTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
-                      llvm::Succeeded());
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   }
 
 protected:
@@ -43,6 +59,24 @@ protected:
   }
 };
 } // end anonymous namespace
+
+TEST_F(GDBRemoteCommunicationTest, PacketLogsIncludeChannelName) {
+  ProcessGDBRemoteLog::Initialize();
+  llvm::scope_exit cleanup([] { ProcessGDBRemoteLog::Terminate(); });
+
+  auto handler = std::make_shared<CapturingLogHandler>();
+  ASSERT_THAT_ERROR(
+      Log::EnableLogChannel(handler, 0, "gdb-remote", {"packets"}),
+      llvm::Succeeded());
+
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("OK"));
+  StringExtractorGDBRemote response;
+  ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+
+  llvm::StringRef output = handler->output;
+  EXPECT_TRUE(output.contains("test.server <   6> send packet: $OK#9a"));
+  EXPECT_TRUE(output.contains("test.client <   6> read packet: $OK#9a"));
+}
 
 // Test that we can decode packets correctly. In particular, verify that
 // checksum calculation works.
@@ -66,5 +100,28 @@ TEST_F(GDBRemoteCommunicationTest, ReadPacket) {
     ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
     ASSERT_EQ(Test.Payload, response.GetStringRef());
     ASSERT_EQ(PacketResult::Success, server.GetAck());
+  }
+}
+
+// Test that packets with incorrect RLE sequences do not cause a crash and
+// reported as invalid.
+TEST_F(GDBRemoteCommunicationTest, CheckForPacket) {
+  using PacketType = GDBRemoteCommunication::PacketType;
+  struct TestCase {
+    llvm::StringLiteral Packet;
+    PacketType Result;
+  };
+  static constexpr TestCase Tests[] = {
+      {{"$#00"}, PacketType::Standard},
+      {{"$xx*#00"}, PacketType::Invalid}, // '*' without a count
+      {{"$*#00"}, PacketType::Invalid},   // '*' without a preceding character
+      {{"$xx}#00"}, PacketType::Invalid}, // bare escape character '}'
+      {{"%#00"}, PacketType::Notify},     // a correct packet after an invalid
+  };
+  for (const auto &Test : Tests) {
+    SCOPED_TRACE(Test.Packet);
+    StringExtractorGDBRemote response;
+    EXPECT_EQ(Test.Result, client.CheckForPacket(Test.Packet.bytes_begin(),
+                                                 Test.Packet.size(), response));
   }
 }

@@ -45,7 +45,7 @@ void test3() {
   // CHECK-NEXT: call void @_Z6calleev()
   callee();
   // CHECK-NEXT: call void @llvm.objc.destroyWeak
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[REF]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[REF]])
   // CHECK-NEXT: ret void
 }
 
@@ -71,10 +71,10 @@ void test5(__strong id &x) {
   sink(x);  
   // CHECK-NEXT: [[OBJ_A:%[a-zA-Z0-9]+]] = load ptr, ptr [[REFTMP]]
   // CHECK-NEXT: call void @llvm.objc.release
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 4, ptr [[I]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[I]])
   // CHECK-NEXT: store i32 17, ptr
   int i = 17;
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr [[I]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[I]])
   // CHECK-NEXT: ret void
 }
 

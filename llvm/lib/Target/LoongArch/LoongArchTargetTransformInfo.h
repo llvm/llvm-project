@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific to the
+/// This file a TargetTransformInfoImplBase conforming object specific to the
 /// LoongArch target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
@@ -40,18 +40,61 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
-  unsigned getNumberOfRegisters(unsigned ClassID) const;
-  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
-  const char *getRegisterClassName(unsigned ClassID) const;
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector,
+                                   Type *Ty = nullptr) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
+  const char *getRegisterClassName(unsigned ClassID) const override;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
 
-  // TODO: Implement more hooks to provide TTI machinery for LoongArch.
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const override;
+
+  using BaseT::getVectorInstrCost;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
+
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
+
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // end namespace llvm

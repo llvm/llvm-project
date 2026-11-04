@@ -11,11 +11,6 @@ import lldb
 import lldb.runtime.objc.objc_runtime
 import lldb.formatters.Logger
 
-try:
-    unichr
-except NameError:
-    unichr = chr
-
 
 def CFString_SummaryProvider(valobj, dict):
     logger = lldb.formatters.Logger.Logger()
@@ -107,7 +102,7 @@ class CFStringSynthProvider:
                 value = b1 * 256 + b0
             else:
                 value = b0 * 256 + b1
-            pystr = pystr + unichr(value)
+            pystr = pystr + chr(value)
             # read max_len unicode values, not max_len bytes
             max_len = max_len - 1
         return pystr

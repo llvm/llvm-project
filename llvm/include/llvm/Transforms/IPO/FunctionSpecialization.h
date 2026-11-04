@@ -86,6 +86,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -107,8 +108,7 @@ using ConstMap = DenseMap<Value *, Constant *>;
 // Specialization signature, used to uniquely designate a specialization within
 // a function.
 struct SpecSig {
-  // Hashing support, used to distinguish between ordinary, empty, or tombstone
-  // keys.
+  // Hashing support, used to distinguish between ordinary and empty keys.
   unsigned Key = 0;
   SmallVector<ArgInfo, 4> Args;
 
@@ -119,8 +119,7 @@ struct SpecSig {
   }
 
   friend hash_code hash_value(const SpecSig &S) {
-    return hash_combine(hash_value(S.Key),
-                        hash_combine_range(S.Args.begin(), S.Args.end()));
+    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args));
   }
 };
 
@@ -180,11 +179,11 @@ public:
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
+  LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
 
-  Cost getCodeSizeSavingsFromPendingPHIs();
+  LLVM_ABI Cost getCodeSizeSavingsFromPendingPHIs();
 
-  Cost getLatencySavingsForKnownConstants();
+  LLVM_ABI Cost getLatencySavingsForKnownConstants();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
@@ -198,7 +197,7 @@ private:
 
   Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
-  Cost estimateBranchInst(BranchInst &I);
+  Cost estimateCondBrInst(CondBrInst &I);
 
   // Transitively Incoming Values (TIV) is a set of Values that can "feed" a
   // value to the initial PHI-node. It is defined like this:
@@ -246,7 +245,7 @@ class FunctionSpecializer {
   std::function<AssumptionCache &(Function &)> GetAC;
 
   SmallPtrSet<Function *, 32> Specializations;
-  SmallPtrSet<Function *, 32> FullySpecialized;
+  SmallPtrSet<Function *, 32> DeadFunctions;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;
@@ -261,14 +260,16 @@ public:
       : Solver(Solver), M(M), FAM(FAM), GetBFI(GetBFI), GetTLI(GetTLI),
         GetTTI(GetTTI), GetAC(GetAC) {}
 
-  ~FunctionSpecializer();
+  LLVM_ABI ~FunctionSpecializer();
 
-  bool run();
+  LLVM_ABI bool run();
 
   InstCostVisitor getInstCostVisitorFor(Function *F) {
     auto &TTI = GetTTI(*F);
     return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
+
+  bool isDeadFunction(Function *F) { return DeadFunctions.contains(F); }
 
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);

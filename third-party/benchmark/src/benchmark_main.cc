@@ -14,5 +14,5 @@
 
 #include "benchmark/benchmark.h"
 
-BENCHMARK_EXPORT int main(int, char**);
+BENCHMARK_EXPORT int main(int /*argc*/, char** /*argv*/);
 BENCHMARK_MAIN();

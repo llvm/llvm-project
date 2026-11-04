@@ -24,6 +24,10 @@ class Pass;
 /// operations to SCF Dialect operations.
 class ControlFlowToSCFTransformation : public CFGToSCFInterface {
 public:
+  /// Returns true only for `cf.cond_br` and `cf.switch`, the two multi-
+  /// successor ops this transformation knows how to convert.
+  bool canConvertMultiSuccessorBranchOp(Operation *op) override;
+
   /// Creates an `scf.if` op if `controlFlowCondOp` is a `cf.cond_br` op or
   /// an `scf.index_switch` if `controlFlowCondOp` is a `cf.switch`.
   /// Returns failure otherwise.
@@ -59,13 +63,12 @@ public:
   /// Creates a `ub.poison` op of the given type.
   Value getUndefValue(Location loc, OpBuilder &builder, Type type) override;
 
-  /// Creates a `func.return` op with poison for each of the return values of
-  /// the function. It is guaranteed to be directly within the function body.
-  /// TODO: This can be made independent of the `func` dialect once the UB
-  ///       dialect has a `ub.unreachable` op.
+  /// Creates a `ub.unreachable` op.
   FailureOr<Operation *> createUnreachableTerminator(Location loc,
                                                      OpBuilder &builder,
                                                      Region &region) override;
+
+  bool isUnreachableTerminator(Operation *op) override;
 };
 
 #define GEN_PASS_DECL_LIFTCONTROLFLOWTOSCFPASS

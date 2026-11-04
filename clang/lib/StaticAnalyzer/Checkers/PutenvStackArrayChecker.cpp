@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AllocationState.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -45,8 +44,11 @@ void PutenvStackArrayChecker::checkPostCall(const CallEvent &Call,
   SVal ArgV = Call.getArgSVal(0);
   const Expr *ArgExpr = Call.getArgExpr(0);
 
+  if (!ArgV.getAsRegion())
+    return;
+
   const auto *SSR =
-      dyn_cast<StackSpaceRegion>(ArgV.getAsRegion()->getMemorySpace());
+      ArgV.getAsRegion()->getMemorySpaceAs<StackSpaceRegion>(C.getState());
   if (!SSR)
     return;
   const auto *StackFrameFuncD =
@@ -56,7 +58,7 @@ void PutenvStackArrayChecker::checkPostCall(const CallEvent &Call,
 
   StringRef ErrorMsg = "The 'putenv' function should not be called with "
                        "arrays that have automatic storage";
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   auto Report = std::make_unique<PathSensitiveBugReport>(BT, ErrorMsg, N);
 
   // Track the argument.

@@ -30,6 +30,7 @@ def CLASS_REMARK    : DiagClass;
 def CLASS_WARNING   : DiagClass;
 def CLASS_EXTENSION : DiagClass;
 def CLASS_ERROR     : DiagClass;
+def CLASS_TRAP      : DiagClass;
 
 // Responses to a diagnostic in a SFINAE context.
 class SFINAEResponse;
@@ -64,6 +65,23 @@ class DiagGroup<string Name, list<DiagGroup> subgroups = [], code docs = [{}]> {
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }
 
+// Specifies an explicit Stable ID for a diagnostic, rather than the default one
+// generated from the diagnostic's name.
+class StableId<string Id> { string StableId = Id; }
+
+// Specifies a list of Stable IDs by which the diagnostic was previously known.
+// If the Stable ID of a diagnostic is renamed, the previous Stable ID should be
+// added to the LegacyStableIds list.
+//
+// If a diagnostic is split into two or more diagnostics for specific cases, the
+// Stable ID of the original diagnostic should be added to the LegacyStableIds
+// list of each of the new diagnostics created from it.
+//
+// If two or more diagnostics are merged into a single diagnostic, the Stable ID
+// of each of the original diagnostics should be added to the LegacyStableIds
+// list of the new (merged) diagnostic.
+class LegacyStableIds<list<string> Ids> { list<string> LegacyStableIds = Ids; }
+
 // This defines documentation for diagnostic groups.
 include "DiagnosticDocs.td"
 
@@ -89,6 +107,10 @@ class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
   Severity       DefaultSeverity = defaultmapping;
   DiagGroup      Group;
   string         CategoryName = "";
+  /// The default of "" means that the actual Stable ID should be generated from
+  /// the name of the diagnostic.
+  string         StableId = "";
+  list<string>   LegacyStableIds = [];
 }
 
 class SFINAEFailure {
@@ -144,7 +166,8 @@ class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
 class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
 // Notes can provide supplementary information on errors, warnings, and remarks.
 class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
-
+// Trap messages attached to traps in debug info.
+class Trap<string str>      : Diagnostic<str, CLASS_TRAP, SEV_Fatal/*ignored*/>;
 
 class DefaultIgnore { Severity DefaultSeverity = SEV_Ignored; }
 class DefaultWarn   { Severity DefaultSeverity = SEV_Warning; }
@@ -155,8 +178,97 @@ class DefaultWarnNoWerror {
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
+class CompatWarningId<string name, int std, string diag, string diag_pre> {
+  string Component = ?;
+  string Name = name;
+  string Diag = diag;
+  string DiagPre = diag_pre;
+  int Std = std;
+
+  // This is unused, but Tablegen will complain if it's missing because we define
+  // the compatibility ids in the same place as the other diagnostics (which means
+  // that we'll be inside a 'let CategoryName = "" in { ... }' block).
+  string CategoryName = ?;
+}
+
+// Compatibility warnings.
+multiclass CompatWarning<
+    // Diagnostic message.
+    string message,
+    // Version number.
+    int std_ver,
+    // Is this C++?
+    bit cxx,
+    // ExtWarn if true, Extension if false.
+    bit ext_warn = true,
+    // Language mode name to use in the diagnostic text.
+    string std_ver_name = ""#std_ver,
+    // Version string used in diagnostic group names.
+    string diag_group_ver_str = ""#std_ver> {
+    defvar lang = !if(cxx, "C++", "C");
+    defvar prefix = !if(cxx, "CXX", "C");
+    defvar prefix_lower = !tolower(prefix#diag_group_ver_str);
+    defvar is_cxx_11 = !and(cxx, !eq(std_ver, 11));
+
+    // 'X is a C(++)YZ extension'.
+    def compat_pre_#prefix_lower#_#NAME :
+        Diagnostic<!strconcat(message, " a ", lang, std_ver_name,  " extension"),
+                   CLASS_EXTENSION,
+                   !if(ext_warn, SEV_Warning, SEV_Ignored)>,
+        InGroup<!cast<DiagGroup>(prefix#diag_group_ver_str)>;
+
+    // 'X is incompatible with C++98' (if is_cxx_11 is true).
+    // 'X is incompatible with C(++) standards before C(++)YZ' (otherwise).
+    def compat_#prefix_lower#_#NAME :
+        Warning<!if(is_cxx_11,
+                    !strconcat(message, " incompatible with C++98"),
+                    !strconcat(message, " incompatible with ", lang, " standards before ", lang, std_ver_name))>,
+        InGroup<!cast<DiagGroup>(!if(is_cxx_11,
+                                     !strconcat(prefix, "98Compat", !if(ext_warn, "", "Pedantic")),
+                                     !strconcat(prefix, "Pre", diag_group_ver_str, "Compat", !if(ext_warn, "", "Pedantic"))))>,
+        DefaultIgnore;
+
+    def : CompatWarningId<
+        NAME, std_ver,
+        "compat_"#prefix_lower#"_"#NAME,
+        "compat_pre_"#prefix_lower#"_"#NAME>;
+}
+
+// These generate pairs of C(++) compatibility warnings of the form:
+//
+//    - compat_c(xx)<std>_<name>
+//    - compat_pre_c(xx)<std>_<name>
+//
+// The 'compat_c(xx)...' warning is intended to be issued in C(++)<std> mode,
+// and the 'compat_pre_c(xx)...' warning in C(++) modes before C(++)<std>.
+//
+// Example:
+//
+//   defm inline_variable : C(XX)11Compat<"inline variables are">;
+//
+// This generates two warnings:
+//
+//   - compat_c(xx)11_inline_variable:     'inline variables are incompatible with C(++) standards before C(++)11'
+//   - compat_pre_c(xx)11_inline_variable: 'inline variables are a C(++)11 extension'
+//
+multiclass CXX11Compat<string message, bit ext_warn = true> : CompatWarning<message, 11, /*cxx=*/true, ext_warn>;
+multiclass CXX14Compat<string message, bit ext_warn = true> : CompatWarning<message, 14, /*cxx=*/true, ext_warn>;
+multiclass CXX17Compat<string message, bit ext_warn = true> : CompatWarning<message, 17, /*cxx=*/true, ext_warn>;
+multiclass CXX20Compat<string message, bit ext_warn = true> : CompatWarning<message, 20, /*cxx=*/true, ext_warn>;
+multiclass CXX23Compat<string message, bit ext_warn = true> : CompatWarning<message, 23, /*cxx=*/true, ext_warn>;
+multiclass CXX26Compat<string message, bit ext_warn = true> : CompatWarning<message, 26, /*cxx=*/true, ext_warn, "2c">;
+multiclass CXX29Compat<string message, bit ext_warn = true> : CompatWarning<message, 29, /*cxx=*/true, ext_warn, "2d">;
+
+// C compatibility warnings generally use Extension rather than ExtWarn.
+multiclass C99Compat<string message, bit ext_warn = false> : CompatWarning<message, 99, /*cxx=*/false, ext_warn>;
+multiclass C11Compat<string message, bit ext_warn = false> : CompatWarning<message, 11, /*cxx=*/false, ext_warn>;
+multiclass C17Compat<string message, bit ext_warn = false> : CompatWarning<message, 17, /*cxx=*/false, ext_warn>;
+multiclass C23Compat<string message, bit ext_warn = false> : CompatWarning<message, 23, /*cxx=*/false, ext_warn>;
+multiclass C2yCompat<string message, bit ext_warn = false> : CompatWarning<message, 29, /*cxx=*/false, ext_warn, "2y", "2y">;
+
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
+include "DiagnosticCodeGenKinds.td"
 include "DiagnosticCommentKinds.td"
 include "DiagnosticCommonKinds.td"
 include "DiagnosticCrossTUKinds.td"
@@ -168,3 +280,4 @@ include "DiagnosticParseKinds.td"
 include "DiagnosticRefactoringKinds.td"
 include "DiagnosticSemaKinds.td"
 include "DiagnosticSerializationKinds.td"
+include "DiagnosticTrapKinds.td"

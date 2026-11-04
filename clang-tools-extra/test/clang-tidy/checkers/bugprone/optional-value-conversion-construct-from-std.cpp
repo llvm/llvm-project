@@ -27,8 +27,18 @@ class unique_ptr {};
 template <typename type>
 class shared_ptr {};
 
+template <typename T>
+class initializer_list {};
+
 template <class T, class... Args> unique_ptr<T> make_unique(Args &&...args);
 template <class T, class... Args> shared_ptr<T> make_shared(Args &&...args);
+
+template <class T>
+constexpr std::optional<__decay(T)> make_optional(T &&value);
+template <class T, class... Args>
+constexpr std::optional<T> make_optional(Args &&...args);
+template <class T, class U, class... Args>
+constexpr std::optional<T> make_optional(std::initializer_list<U> il, Args &&...args);
 
 } // namespace std
 
@@ -45,9 +55,12 @@ void invalid() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: conversion from 'std::optional<int>' into 'int' and back into 'std::optional<int>', remove potentially error-prone optional dereference [bugprone-optional-value-conversion]
   std::make_shared<std::optional<int>>(opt.value());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: conversion from 'std::optional<int>' into 'int' and back into 'std::optional<int>', remove potentially error-prone optional dereference [bugprone-optional-value-conversion]
+  std::make_optional(opt.value());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: conversion from 'std::optional<int>' into 'int' and back into 'std::optional<int>', remove potentially error-prone optional dereference [bugprone-optional-value-conversion]
 }
 
 void valid() {
   std::make_unique<A>(opt.value());
   std::make_shared<A>(opt.value());
+  std::make_optional<int>(opt.value());
 }

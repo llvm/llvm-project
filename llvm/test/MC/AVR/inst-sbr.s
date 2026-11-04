@@ -15,7 +15,6 @@ foo:
 ; CHECK: ori r31, 0                    ; encoding: [0xf0,0x60]
 
 ; CHECK: ori     r19, _start           ; encoding: [0x30'A',0x60]
-; CHECK:                               ;   fixup A - offset: 0, value: _start, kind: fixup_ldi
 
 ; CHECK-INST: ori r17, 208
 ; CHECK-INST: ori r24, 190

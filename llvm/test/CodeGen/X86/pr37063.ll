@@ -7,7 +7,7 @@ define void @foo(ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %start
 ; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    andl $6, %eax
+; CHECK-NEXT:    andl $-2, %eax
 ; CHECK-NEXT:    cmpl $4, %eax
 ; CHECK-NEXT:    jne bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %bb1

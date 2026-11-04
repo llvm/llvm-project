@@ -17,11 +17,12 @@
 ; RUN:	-r=%t/foo.o,foo,plx \
 ; RUN:	-r=%t/foo.o,_Znam, \
 ; RUN:	-memprof-dump-ccg \
-; RUN:	 -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:	-print-before=memprof-context-disambiguation \
+; RUN:	-thinlto-threads=1 \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR
+
 ; DUMP: Callsite Context Graph:
 
-; RUN: llvm-dis %t.out.1.3.import.bc -o - | FileCheck %s --check-prefix=IR
 ; IR: @main()
 ; IR: !memprof {{.*}} !callsite
 ; IR: @_Znam(i64 0) #[[ATTR:[0-9]+]]
@@ -41,13 +42,12 @@
 ; RUN:	-r=%t/foo.o,foo,plx \
 ; RUN:	-r=%t/foo.o,_Znam, \
 ; RUN:	-memprof-dump-ccg \
-; RUN:	 -save-temps \
+; RUN:	-print-before=memprof-context-disambiguation \
+; RUN:	-thinlto-threads=1 \
 ; RUN:	-o %t.out 2>&1 | FileCheck %s --allow-empty \
-; RUN:  --implicit-check-not "Callsite Context Graph:"
-
-; RUN: llvm-dis %t.out.1.3.import.bc -o - | FileCheck %s \
-; RUN: --implicit-check-not "!memprof" --implicit-check-not "!callsite" \
-; RUN: --implicit-check-not "memprof"="cold"
+; RUN:  --implicit-check-not "Callsite Context Graph:" \
+; RUN: 	--implicit-check-not "!memprof" --implicit-check-not "!callsite" \
+; RUN: 	--implicit-check-not "memprof"="cold"
 
 ;--- main.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

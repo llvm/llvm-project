@@ -30,7 +30,14 @@ namespace tblgen {
 class Constraint {
 public:
   // Constraint kind
-  enum Kind { CK_Attr, CK_Region, CK_Successor, CK_Type, CK_Uncategorized };
+  enum Kind {
+    CK_Attr,
+    CK_Prop,
+    CK_Region,
+    CK_Successor,
+    CK_Type,
+    CK_Uncategorized
+  };
 
   // Create a constraint with a TableGen definition and a kind.
   Constraint(const llvm::Record *record, Kind kind) : def(record), kind(kind) {}
@@ -112,10 +119,6 @@ namespace llvm {
 /// correct error message is reported when verification fails.
 template <>
 struct DenseMapInfo<mlir::tblgen::Constraint> {
-  using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
-
-  static mlir::tblgen::Constraint getEmptyKey();
-  static mlir::tblgen::Constraint getTombstoneKey();
   static unsigned getHashValue(mlir::tblgen::Constraint constraint);
   static bool isEqual(mlir::tblgen::Constraint lhs,
                       mlir::tblgen::Constraint rhs);

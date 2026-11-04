@@ -1,86 +1,30 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
+llvm.func @gep_inrange_nonconstant_base(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // expected-error @below{{'inrange' GEP requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @gep_base() : i8
+
+llvm.func @gep_inrange_nonconstant_index(%idx: i64) -> !llvm.ptr {
+  %addr = llvm.mlir.addressof @gep_base : !llvm.ptr
+  // expected-error @below{{'inrange' GEP requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %addr[%idx] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // expected-error @below{{cannot be converted to LLVM IR}}
 func.func @foo() {
   llvm.return
 }
-
-// -----
-
-llvm.func @vector_with_non_vector_type() -> f32 {
-  // expected-error @below{{expected vector or array type}}
-  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
-  llvm.return %cst : f32
-}
-
-// -----
-
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @below{{expected an array attribute for a struct constant}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-}
-
-// -----
-
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
-  // expected-error @below{{expected an array attribute for a struct constant}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-}
-
-// -----
-
-llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
-  // expected-error @below{{expected struct element types to be floating point type or integer type}}
-  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
-  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
-}
-
-// -----
-
-llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{expected struct element attribute types to be floating point type or integer type}}
-  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
-  llvm.return %0 : !llvm.struct<(f64, f64)>
-}
-
-// -----
-
-llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{struct element at index 0 is of wrong type}}
-  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
-  llvm.return %0 : !llvm.struct<(f64, f64)>
-}
-
-// -----
-
-llvm.func @integer_with_float_type() -> f32 {
-  // expected-error @+1 {{expected integer type}}
-  %0 = llvm.mlir.constant(1 : index) : f32
-  llvm.return %0 : f32
-}
-
-// -----
-
-llvm.func @incompatible_float_attribute_type() -> f32 {
-  // expected-error @below{{expected float type of width 64}}
-  %cst = llvm.mlir.constant(1.0 : f64) : f32
-  llvm.return %cst : f32
-}
-
-// -----
-
-llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
-  // expected-error @below{{expected integer type of width 16}}
-  %cst = llvm.mlir.constant(1.0 : f16) : i32
-  llvm.return %cst : i32
-}
-
-// -----
-
-// expected-error @below{{unsupported constant value}}
-llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
 
 // -----
 
@@ -103,6 +47,26 @@ llvm.func @passthrough_wrong_type() attributes {passthrough = [42]}
 llvm.func @passthrough_wrong_type() attributes {
   passthrough = [[ 42, 42 ]]
 }
+
+// -----
+
+// expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
+llvm.mlir.global external @target_specific_attrs_unexpected_value() {target_specific_attrs = [["readonly", "42"]]} : f64
+
+// -----
+
+// expected-error @below{{LLVM attribute 'alignstack' expects a value}}
+llvm.mlir.global external @target_specific_attrs_expected_value() {target_specific_attrs = ["alignstack"]} : f64
+
+// -----
+
+// expected-error @below{{expected 'target_specific_attrs' to contain string or array attributes}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [42]} : f64
+
+// -----
+
+// expected-error @below{{expected arrays within 'target_specific_attrs' to contain two strings}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [[ 42, 42 ]]} : f64
 
 // -----
 
@@ -211,9 +175,9 @@ llvm.func @vec_reduce_fmax_intr_wrong_type(%arg0 : vector<4xi32>) -> i32 {
 // -----
 
 llvm.func @matrix_load_intr_wrong_type(%ptr : !llvm.ptr, %stride : i32) -> f32 {
-  // expected-error @below{{op result #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
-  %0 = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} : f32 from !llvm.ptr stride i32
+  // expected-error @+2{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 : f32 from !llvm.ptr stride i32
   llvm.return %0 : f32
 }
 
@@ -221,32 +185,32 @@ llvm.func @matrix_load_intr_wrong_type(%ptr : !llvm.ptr, %stride : i32) -> f32 {
 
 llvm.func @matrix_store_intr_wrong_type(%matrix : vector<48xf32>, %ptr : i32, %stride : i64) {
   // expected-error @below {{op operand #1 must be LLVM pointer type, but got 'i32'}}
-  llvm.intr.matrix.column.major.store %matrix, %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} : vector<48xf32> to i32 stride i64
+  llvm.intr.matrix.column.major.store %matrix, %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 : vector<48xf32> to i32 stride i64
   llvm.return
 }
 
 // -----
 
 llvm.func @matrix_multiply_intr_wrong_type(%arg0 : vector<64xf32>, %arg1 : f32) -> vector<12xf32> {
-  // expected-error @below{{op operand #1 must be LLVM dialect-compatible vector type, but got 'f32'}}
-  %0 = llvm.intr.matrix.multiply %arg0, %arg1
-    { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} : (vector<64xf32>, f32) -> vector<12xf32>
+  // expected-error @+2{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = llvm.intr.matrix.multiply %arg0, %arg1,
+    lhs_rows = 4, lhs_columns = 16, rhs_columns = 3 : (vector<64xf32>, f32) -> vector<12xf32>
   llvm.return %0 : vector<12xf32>
 }
 
 // -----
 
 llvm.func @matrix_transpose_intr_wrong_type(%matrix : f32) -> vector<48xf32> {
-  // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
-  %0 = llvm.intr.matrix.transpose %matrix {rows = 3: i32, columns = 16: i32} : f32 into vector<48xf32>
+  // expected-error @below{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = llvm.intr.matrix.transpose %matrix, rows = 3, columns = 16 : f32 into vector<48xf32>
   llvm.return %0 : vector<48xf32>
 }
 
 // -----
 
 llvm.func @active_lane_intr_wrong_type(%base : i64, %n : vector<7xi64>) -> vector<7xi1> {
-  // expected-error @below{{invalid kind of type specified}}
+  // expected-error @below{{invalid kind of type specified: expected builtin.integer, but found 'vector<7xi64>'}}
   %0 = llvm.intr.get.active.lane.mask %base, %n : i64, vector<7xi64> to vector<7xi1>
   llvm.return %0 : vector<7xi1>
 }
@@ -255,7 +219,7 @@ llvm.func @active_lane_intr_wrong_type(%base : i64, %n : vector<7xi64>) -> vecto
 
 llvm.func @masked_load_intr_wrong_type(%ptr : i64, %mask : vector<7xi1>) -> vector<7xf32> {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
-  %0 = llvm.intr.masked.load %ptr, %mask { alignment = 1: i32} : (i64, vector<7xi1>) -> vector<7xf32>
+  %0 = llvm.intr.masked.load(%ptr, %mask), alignment(1) : (i64, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
@@ -263,7 +227,7 @@ llvm.func @masked_load_intr_wrong_type(%ptr : i64, %mask : vector<7xi1>) -> vect
 
 llvm.func @masked_store_intr_wrong_type(%vec : vector<7xf32>, %ptr : !llvm.ptr, %mask : vector<7xi32>) {
   // expected-error @below{{op operand #2 must be LLVM dialect-compatible vector of 1-bit signless integer, but got 'vector<7xi32>}}
-  llvm.intr.masked.store %vec, %ptr, %mask { alignment = 1: i32} : vector<7xf32>, vector<7xi32> into !llvm.ptr
+  llvm.intr.masked.store(%vec, %ptr, %mask), alignment(1) : vector<7xf32>, vector<7xi32> into !llvm.ptr
   llvm.return
 }
 
@@ -271,31 +235,31 @@ llvm.func @masked_store_intr_wrong_type(%vec : vector<7xf32>, %ptr : !llvm.ptr, 
 
 llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7xi1>) -> vector<7xf32> {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector of LLVM pointer type, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (vector<7xf32>, vector<7xi1>) -> vector<7xf32>
+  %0 = llvm.intr.masked.gather(%ptrs, %mask), alignment(1) : (vector<7xf32>, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
 // -----
 
-llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : !llvm.vec<7 x ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
-  // expected-error @below{{expected operand #1 type to be '!llvm.vec<? x 7 x  ptr>'}}
-  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (!llvm.vec<7 x ptr>, vector<[7]xi1>) -> vector<[7]xf32>
+llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
+  // expected-error @below{{expected operand #1 type to be 'vector<[7]x!llvm.ptr>'}}
+  %0 = llvm.intr.masked.gather(%ptrs, %mask), alignment(1) : (vector<7x!llvm.ptr>, vector<[7]xi1>) -> vector<[7]xf32>
   llvm.return %0 : vector<[7]xf32>
 }
 
 // -----
 
-llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : !llvm.vec<7xptr>, %mask : vector<7xi1>) {
-  // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into !llvm.vec<7xptr>
+llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : vector<7x!llvm.ptr>, %mask : vector<7xi1>) {
+  // expected-error @below{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  llvm.intr.masked.scatter(%vec, %ptrs, %mask), alignment(1) : f32, vector<7xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 
 // -----
 
-llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : !llvm.vec<7xptr>, %mask : vector<[7]xi1>) {
-  // expected-error @below{{expected operand #2 type to be '!llvm.vec<? x 7 x  ptr>'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into !llvm.vec<7xptr>
+llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) {
+  // expected-error @below{{expected operand #2 type to be 'vector<[7]x!llvm.ptr>'}}
+  llvm.intr.masked.scatter(%vec, %ptrs, %mask), alignment(1) : vector<[7]xf32>, vector<[7]xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 
@@ -344,6 +308,37 @@ llvm.comdat @__llvm_comdat_1 {
 llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
+}
+
+// -----
+
+llvm.func @foo() {
+  // expected-error @below{{must appear at the module level}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>]
+}
+
+// -----
+
+module attributes {} {
+  // expected-error @below{{expected a module flag attribute}}
+  llvm.module_flags [4 : i32]
+}
+
+// -----
+
+// expected-error @below{{failed to convert named metadata 'bad': expected integer attribute in metadata constant}}
+// expected-error @below{{LLVM Translation failed for operation: llvm.named_metadata}}
+llvm.named_metadata "bad" [
+  #llvm.md_node<#llvm.md_const<"not an integer">>
+]
+
+// -----
+
+llvm.func @bad_metadata_as_value() {
+  // expected-error @below{{llvm.mlir.metadata_as_value: cannot lower metadata attribute: expected integer attribute in metadata constant}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.metadata_as_value}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_const<"not an integer">>
+  llvm.return
 }
 
 // -----
@@ -397,3 +392,74 @@ module @no_known_conversion_innermost_eltype {
     }
   }
 #-}
+
+// -----
+
+llvm.mlir.global external @zed(42 : i32) : i32
+
+llvm.mlir.alias external @foo : i32 {
+  %0 = llvm.mlir.addressof @zed : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{'llvm.dso_local_equivalent' op must reference an alias to a function}}
+  %0 = llvm.dso_local_equivalent @foo : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external @y() : !llvm.ptr
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{op must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'}}
+  %0 = llvm.dso_local_equivalent @y : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  // expected-error @below{{'llvm.dso_local_equivalent' op target function with 'extern_weak' linkage not allowed}}
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func extern_weak @extern_func()
+
+// -----
+
+llvm.func @invoke_branch_weights_callee()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error @below{{expects number of branch weights to match number of successors: 1 vs 2}}
+  llvm.invoke @invoke_branch_weights_callee() to ^bb2 unwind ^bb1 {branch_weights = array<i32 : 42>} : () -> ()
+^bb1:  // pred: ^bb0
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.br ^bb2
+^bb2:  // 2 preds: ^bb0, ^bb1
+  llvm.return %0 : i32
+}
+
+// -----
+
+// An in-function constant referring to a missing resource must fail the
+// translation rather than leaving a null value behind for its users.
+
+llvm.func @constant_resource_does_not_exist(%arg0: vector<4xi32>) {
+  // expected-error @below{{resource does not exist}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.constant}}
+  %0 = llvm.mlir.constant(dense_resource<missing> : vector<4xi32>) : vector<4xi32>
+  %1 = llvm.icmp "sgt" %arg0, %0 : vector<4xi32>
+  llvm.return
+}

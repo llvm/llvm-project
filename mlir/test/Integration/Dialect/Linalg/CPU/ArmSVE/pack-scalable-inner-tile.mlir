@@ -1,4 +1,5 @@
-// REQUIRES: arm-emulator
+// REQUIRES: arm-emulator 
+// XFAIL: mlir-expensive-checks
 
 // This test is a clone of pack-dynamic-inner-tile.mlir, but the inner tile is
 // vector.vscale * %c8 rather than %c8. In order to demonstrate the impact of
@@ -22,7 +23,7 @@
 
 // RUN: rm -f %t && %{compile} &&  %{run} |  FileCheck %s
 
-/// End-to-end test for tensor.pack where one of the inner tile sizes is
+/// End-to-end test for linalg.pack where one of the inner tile sizes is
 /// scalable.
 
 func.func @main() {
@@ -39,19 +40,20 @@ func.func @main() {
     [ 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112]
   ]> : tensor<7x16xi32>
 
-  func.call @pack(%A) : (tensor<7x16xi32>) -> ()
-
-  return
-}
-
-func.func private @pack(%A: tensor<7x16xi32>) {
-  %c1 = arith.constant 1 : index
-  %pad_val = arith.constant 123 : i32
 
   // Set vscale to 2 (vector width = 256). This will have identical effect to:
   //  * qemu-aarch64 -cpu max,sve-max-vq=2 (...)
   %c256 = arith.constant 256 : i32
   func.call @setArmVLBits(%c256) : (i32) -> ()
+
+  func.call @pack(%A) : (tensor<7x16xi32>) -> ()
+
+  return
+}
+
+func.func private @pack(%A: tensor<7x16xi32>) attributes {no_inline} {
+  %c1 = arith.constant 1 : index
+  %pad_val = arith.constant 123 : i32
 
   // Scalable tile size
   %vs = vector.vscale
@@ -60,7 +62,7 @@ func.func private @pack(%A: tensor<7x16xi32>) {
 
   %A_pack_empty = tensor.empty(%c1, %tile_size) : tensor<?x16x?x1xi32>
 
-  %A_pack = tensor.pack %A
+  %A_pack = linalg.pack %A
     padding_value(%pad_val : i32)
     inner_dims_pos = [0, 1]
     inner_tiles = [%tile_size, 1]
@@ -117,9 +119,9 @@ func.func private @pack(%A: tensor<7x16xi32>) {
 
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consume}) {
-    %pack = transform.structured.match ops{["tensor.pack"]} in %module : (!transform.any_op) -> !transform.any_op
+    %pack = transform.structured.match ops{["linalg.pack"]} in %module : (!transform.any_op) -> !transform.any_op
 
-    // 1. Tile so that we can decompose tensor.pack into tensor.pad and other
+    // 1. Tile so that we can decompose linalg.pack into tensor.pad and other
     // Ops (see step 2)
     %tiled_pack_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
@@ -144,7 +146,7 @@ module @transforms attributes { transform.with_named_sequence } {
     //  %inserted_slice = tensor.insert_slice %slice_of_A into %fill[0, 0] [%4, %5] [1, 1] :
     //    tensor<?x?xi32> into tensor<8x1xi32>
     //
-    %func_op = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.linalg.decompose_pack_unpack
       transform.apply_patterns.linalg.decompose_pad
@@ -162,7 +164,7 @@ module @transforms attributes { transform.with_named_sequence } {
 
     // 3. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
-      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
     // 4. Canonicalize + rank-reducing patters (to get rid of the trailing unit
     // dim).

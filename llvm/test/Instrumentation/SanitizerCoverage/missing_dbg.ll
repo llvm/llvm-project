@@ -12,7 +12,7 @@ define i32 @with_dbg(ptr %a, ptr %b) !dbg !3 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[BB0:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB0]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds ([2 x i32], ptr @__sancov_gen_, i64 0, i64 1)) #[[ATTR1]], !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_, i64 4)) #[[ATTR1]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[BB1]]
 ; CHECK:       [[BB1]]:
@@ -38,7 +38,7 @@ define i32 @without_dbg(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[BB0:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB0]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds ([2 x i32], ptr @__sancov_gen_.1, i64 0, i64 1)) #[[ATTR1]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.1, i64 4)) #[[ATTR1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[BB1]]
 ; CHECK:       [[BB1]]:
@@ -69,7 +69,7 @@ entry:
 
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C89, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "foo.c", directory: "")
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}foo.c", directory: {{.*}})
 ; CHECK: [[DBG3]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 190, type: [[META4:![0-9]+]], scopeLine: 192, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
 ; CHECK: [[META4]] = !DISubroutineType(types: [[META5:![0-9]+]])
 ; CHECK: [[META5]] = !{}

@@ -48,3 +48,7 @@ TEST(LlvmLibcStrCSpnTest, DuplicatedCharactersNotPartOfComplementarySpan) {
   EXPECT_EQ(LIBC_NAMESPACE::strcspn("aaaa", "aa"), size_t{0});
   EXPECT_EQ(LIBC_NAMESPACE::strcspn("aaaa", "baa"), size_t{0});
 }
+
+TEST(LlvmLibcStrCSpnTest, TopBitSet) {
+  EXPECT_EQ(LIBC_NAMESPACE::strcspn("hello\x80world", "\x80"), size_t{5});
+}

@@ -6,8 +6,13 @@ add_header_library(
     libc.hdr.types.fenv_t
     libc.hdr.fenv_macros
     libc.hdr.math_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.libc_errno
     libc.src.__support.macros.attributes
-    libc.src.errno.errno
+    libc.src.__support.macros.properties.cpu_features
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(
@@ -16,10 +21,10 @@ add_header_library(
     rounding_mode.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -27,6 +32,7 @@ add_header_library(
   HDRS
     FPBits.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -36,6 +42,19 @@ add_header_library(
     libc.src.__support.math_extras
     libc.src.__support.sign
     libc.src.__support.uint128
+)
+
+add_header_library(
+  fp_bitwise
+  HDRS
+    fp_bitwise.h
+  DEPENDS
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
@@ -59,10 +78,10 @@ add_header_library(
     .fp_bits
     .fenv_impl
     .rounding_mode
+    libc.hdr.errno_macros
     libc.hdr.math_macros
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -71,6 +90,7 @@ add_header_library(
     NormalFloat.h
   DEPENDS
     .fp_bits
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
 )
@@ -110,6 +130,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
@@ -120,6 +141,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.fma
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT
 )
@@ -130,6 +152,7 @@ add_header_library(
     multiply_add.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT
 )
@@ -149,7 +172,9 @@ add_header_library(
     nearest_integer.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -161,6 +186,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.number_pair
+    libc.src.__support.macros.properties.cpu_features
     .multiply_add
 )
 
@@ -205,11 +231,23 @@ add_header_library(
 )
 
 add_header_library(
+  comparison_operations
+  HDRS
+    comparison_operations.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   hypot
   HDRS
     Hypot.h
   DEPENDS
     .basic_operations
+    .cast
     .fenv_impl
     .fp_bits
     .rounding_mode
@@ -217,6 +255,17 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.uint128
+)
+
+add_header_library(
+  is_integer
+  HDRS
+    is_integer.h
+  DEPENDS
+    .fp_bits
+    libc.src.__support.CPP.bit
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -230,8 +279,9 @@ add_header_library(
     .fp_bits
     .nearest_integer_operations
     .normal_float
+    libc.hdr.errno_macros
     libc.hdr.math_macros
-    libc.src.errno.errno
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -250,6 +300,62 @@ add_header_library(
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  bfloat16
+  HDRS
+    bfloat16.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  float128
+  HDRS
+    float128.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  float80
+  HDRS
+    float80.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    .float128
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
 )
 
 add_subdirectory(generic)

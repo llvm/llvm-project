@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem
-// XFAIL: availability-filesystem-missing
-
 // template<class I>
 // concept __iterator_traits_detail::__cpp17_input_iterator;
 

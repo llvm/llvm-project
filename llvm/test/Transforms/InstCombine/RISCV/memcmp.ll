@@ -16,4 +16,4 @@ define signext i32 @test_bcmp(ptr %mem1, ptr %mem2, i64 %size) {
   ret i32 %zext
 }
 
-; CHECK: declare signext i32 @bcmp(ptr nocapture, ptr nocapture, i64)
+; CHECK: declare signext i32 @bcmp(ptr captures(none), ptr captures(none), i64)

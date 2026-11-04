@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only dump-alias-sets" -split-input-file | FileCheck %s --check-prefix=CHECK-ALIAS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -245,6 +246,29 @@ func.func @extract_slice_matching_insert_slice(
   //      CHECK: return
   // CHECK-SAME: __equivalent_func_args__ = [0, -1]
   return %r1, %r3: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_matching_insert_slice_dynamic
+func.func @extract_slice_matching_insert_slice_dynamic(
+    %tensor: tensor<?xf32> {bufferization.writable = true},
+    %offset: index, %size: index) -> tensor<?xf32> {
+  // Identical dynamic offsets/sizes and static strides should be recognized
+  // without constructing a ValueBounds constraint set.
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none", "none"]}
+  %slice = tensor.extract_slice %tensor[%offset][%size][1]
+      : tensor<?xf32> to tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
+  %result = tensor.insert_slice %slice into %tensor[%offset][%size][1]
+      : tensor<?xf32> into tensor<?xf32>
+
+  //      CHECK: return
+  // CHECK-SAME: __equivalent_func_args__ = [0]
+  return %result : tensor<?xf32>
 }
 
 // -----
@@ -1406,3 +1430,21 @@ func.func @caller(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5x
   return %r : tensor<5xf32>
 }
 
+// -----
+
+// CHECK-ALIAS-LABEL: func @foo
+func.func @foo(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-ALIAS: return
+  // CHECK-ALIAS-SAME: __equivalent_func_args__ = [0]
+  return %arg0 : tensor<?xf32>
+}
+
+// CHECK-ALIAS: func @bar(%[[arg0:.*]]: tensor<?xf32>
+func.func @bar(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-ALIAS: %[[call:.*]] = call @foo(%[[arg0]])
+  // CHECK-ALIAS-SAME: {__inplace_operands_attr__ = ["true"], __opresult_alias_set_attr__ = [{{\[}}"%[[call]]", "%[[arg0]]"]]}
+  %x = call @foo(%arg0) : (tensor<?xf32>) -> tensor<?xf32>
+  // CHECK-ALIAS: return
+  // CHECK-ALIAS-SAME: __equivalent_func_args__ = [0]
+  return %x : tensor<?xf32>
+}

@@ -1,0 +1,20 @@
+{
+  "general": {
+    "LIBC_COPT_PROVIDE_GNU_ALIASES": {
+      "value": true
+    }
+  },
+  "scanf": {
+    "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
+      "value": "${LLVM_LIBC_OVERLAY}"
+    }
+  },
+  "string": {
+    "LIBC_CONF_STRING_LENGTH_IMPL": {
+      "value": "clang_vector"
+    },
+    "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
+      "value": "word"
+    }
+  }
+}

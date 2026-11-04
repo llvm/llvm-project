@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
-; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure to update the debug value after dead code elimination.
 ; CHECK: %call = call signext i8 @b(i32 6), !dbg !39

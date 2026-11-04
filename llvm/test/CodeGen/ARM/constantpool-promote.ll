@@ -6,10 +6,10 @@
 ; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
 ; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
 ; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabi -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabi -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabi -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabi -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
 
 @.str = private unnamed_addr constant [2 x i8] c"s\00", align 1
 @.str1 = private unnamed_addr constant [69 x i8] c"this string is far too long to fit in a literal pool by far and away\00", align 1
@@ -200,8 +200,8 @@ declare void @d(ptr) #1
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
 declare void @llvm.memmove.p0.p0.i32(ptr, ptr, i32, i1) local_unnamed_addr
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !llvm.module.flags = !{!0, !1}

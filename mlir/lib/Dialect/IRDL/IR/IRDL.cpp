@@ -19,10 +19,8 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 
 using namespace mlir;
@@ -74,11 +72,65 @@ static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
   if (!region.getBlocks().front().empty())
     p.printRegion(region);
 }
+static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
+                                       const Twine &label) {
+  if (in.empty())
+    return loc->emitError("name of ") << label << " is empty";
+
+  char prev = '_'; // treat the initial as _ to eliminate leading underscores
+  for (const auto &elem : in) {
+    if (elem == '_') {
+      if (prev == '_')
+        return loc->emitError("name of ")
+               << label << " should not contain leading or double underscores";
+    } else {
+      if (elem == '.') {
+        if (prev == '.')
+          return loc->emitError("empty namespace not allowed");
+      } else {
+        if (!isalnum(elem))
+          return loc->emitError("name of ")
+                 << label
+                 << " must contain only lowercase letters, digits and "
+                    "underscores";
+
+        if (llvm::isUpper(elem))
+          return loc->emitError("name of ")
+                 << label << " should not contain uppercase letters";
+      }
+    }
+
+    prev = elem;
+  }
+
+  return success();
+}
 
 LogicalResult DialectOp::verify() {
   if (!Dialect::isValidNamespace(getName()))
     return emitOpError("invalid dialect name");
+  if (failed(isValidName(getSymName(), getOperation(), "dialect")))
+    return failure();
+
   return success();
+}
+
+LogicalResult OperationOp::verify() {
+  return isValidName(getSymName(), getOperation(), "operation");
+}
+
+LogicalResult TypeOp::verify() {
+  auto symName = getSymName();
+  if (!symName.empty() && symName.front() == '!')
+    symName = symName.substr(1);
+  return isValidName(symName, getOperation(), "type");
+}
+
+LogicalResult AttributeOp::verify() {
+  auto symName = getSymName();
+  if (!symName.empty() && symName.front() == '#')
+    symName = symName.substr(1);
+  return isValidName(symName, getOperation(), "attribute");
 }
 
 LogicalResult OperationOp::verifyRegions() {
@@ -96,12 +148,9 @@ LogicalResult OperationOp::verifyRegions() {
 
   for (Operation &op : getBody().getOps()) {
     TypeSwitch<Operation *>(&op)
-        .Case<OperandsOp>(
-            [&](OperandsOp op) { insertNames("operands", op.getNames()); })
-        .Case<ResultsOp>(
-            [&](ResultsOp op) { insertNames("results", op.getNames()); })
-        .Case<RegionsOp>(
-            [&](RegionsOp op) { insertNames("regions", op.getNames()); });
+        .Case([&](OperandsOp op) { insertNames("operands", op.getNames()); })
+        .Case([&](ResultsOp op) { insertNames("results", op.getNames()); })
+        .Case([&](RegionsOp op) { insertNames("regions", op.getNames()); });
   }
 
   // Verify that no two operand, result or region share the same name.
@@ -133,18 +182,10 @@ static LogicalResult verifyNames(Operation *op, StringRef kindName,
   DenseMap<StringRef, size_t> nameMap;
   for (auto [i, name] : llvm::enumerate(names)) {
     StringRef nameRef = llvm::cast<StringAttr>(name).getValue();
-    if (nameRef.empty())
-      return op->emitOpError()
-             << "name of " << kindName << " #" << i << " is empty";
-    if (!llvm::isAlpha(nameRef[0]) && nameRef[0] != '_')
-      return op->emitOpError()
-             << "name of " << kindName << " #" << i
-             << " must start with either a letter or an underscore";
-    if (llvm::any_of(nameRef,
-                     [](char c) { return !llvm::isAlnum(c) && c != '_'; }))
-      return op->emitOpError()
-             << "name of " << kindName << " #" << i
-             << " must contain only letters, digits and underscores";
+
+    if (failed(isValidName(nameRef, op, Twine(kindName) + " #" + Twine(i))))
+      return failure();
+
     if (nameMap.contains(nameRef))
       return op->emitOpError() << "name of " << kindName << " #" << i
                                << " is a duplicate of the name of " << kindName

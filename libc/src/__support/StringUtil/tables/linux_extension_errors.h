@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

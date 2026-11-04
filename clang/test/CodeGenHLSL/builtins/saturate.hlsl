@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -Dtar=dx
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF -Dtar=dx
 
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-library %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -Dtar=spv
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
@@ -45,6 +45,12 @@ float3 test_saturate_float3(float3 p0) { return saturate(p0); }
 // CHECK-LABEL: define{{.*}} <4 x float> @_Z20test_saturate_float4Dv4_f(<4 x float>
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[tar]].saturate.v4f32
 float4 test_saturate_float4(float4 p0) { return saturate(p0); }
+
+// CHECK-LABEL: define{{.*}} <5 x float> @{{.*}}test_saturate_float5{{.*}}(<5 x float>
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.[[tar]].saturate.v5f32(
+vector<float, 5> test_saturate_float5(vector<float, 5> p0) {
+	return saturate(p0);
+}
 
 // CHECK-LABEL: define{{.*}} double @_Z20test_saturate_doubled(double
 // CHECK: call reassoc nnan ninf nsz arcp afn double @llvm.[[tar]].saturate.f64(

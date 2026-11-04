@@ -336,7 +336,7 @@ template < unsigned > struct X {
   static const unsigned dimension = 3;
   template<unsigned dim=dimension>
   struct Y: Y<dim> { }; // expected-error{{base class has incomplete type}}
-                        // expected-note@-1{{definition of 'Y<dim>' is not complete until the closing '}'}}
+                        // expected-note@-1{{definition of 'PR11421::X::Y<dim>' is not complete until the closing '}'}}
 };
 typedef X<3> X3;
 X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::X<3>::Y<>'}}
@@ -362,6 +362,31 @@ namespace rdar12629723 {
   struct X<T>::B : public A {
     virtual void foo() { }
   };
+}
+
+namespace GH91131 {
+  template <typename T>
+  struct B : T {};
+
+  template <typename T>
+  struct A : B<T> {};
+
+  // expected-note@+1 {{attempt to specialize declaration here}}
+  struct C {}; // first declaration (valid and complete)
+
+  // expected-error@+1 {{extraneous 'template<>' in declaration of struct 'C'}}
+  template <>
+  struct C {}; // second declaration (invalid)
+  // expected-error@-1 {{specialization of member 'GH91131::C' does not specialize an instantiated member}}
+
+  // crash before pull 92597:
+  // definition for C was retrieved via TagDecl::getDefinition (inherited by RecordDecl),
+  // which returned the first declaration because that declaraion is a complete definition;
+  // that definition wasn't invalid, so A<C> wasn't invalid as well;
+  // later assertion failed when layout for A<C> was built.
+  //
+  // was fixed in pull 92597: because it checks definition retrieved via CXXRecordDecl::getDefinition.
+  A<C> v;
 }
 
 namespace test_reserved_identifiers {
@@ -458,3 +483,26 @@ namespace PR37680 {
   };
   int f(b<a> ba) { return ba.add<0>(); }
 }
+
+namespace TransformDependentTemplates {
+  template <class T> struct Test1 {
+    template <class T2>
+      using Arg = typename T::template Arg<T2>;
+    void f(Arg<void>);
+    void f(Arg<int>);
+  };
+} // namespace TransformDependentTemplates
+
+namespace TransformNestedName {
+  enum class S { kA };
+
+  template <class T> struct N {
+    using State = S;
+    template <typename T::template X<State::kA> = 0>
+    void F();
+  };
+
+  template <class T>
+  template <typename T::template X<N<T>::State::kA>>
+  inline void N<T>::F() {}
+} // namespace TransformNestedName

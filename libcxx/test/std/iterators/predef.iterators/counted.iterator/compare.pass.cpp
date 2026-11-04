@@ -12,9 +12,11 @@
 //   friend constexpr bool operator==(
 //     const counted_iterator& x, const counted_iterator<I2>& y);
 // friend constexpr bool operator==(
-//   const counted_iterator& x, default_sentinel_t);
+//   const counted_iterator& x, default_sentinel_t) noexcept;
 
+#include <cassert>
 #include <iterator>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -74,6 +76,11 @@ constexpr bool test() {
   {
     {
       std::counted_iterator iter(cpp20_input_iterator<int*>(buffer), 8);
+
+      static_assert(noexcept(iter == std::default_sentinel));
+      static_assert(noexcept(iter != std::default_sentinel));
+      static_assert(noexcept(std::default_sentinel == iter));
+      static_assert(noexcept(std::default_sentinel != iter));
 
       assert(iter != std::default_sentinel);
       assert(std::default_sentinel == std::ranges::next(std::move(iter), 8));

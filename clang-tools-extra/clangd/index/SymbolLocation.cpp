@@ -11,9 +11,6 @@
 namespace clang {
 namespace clangd {
 
-constexpr uint32_t SymbolLocation::Position::MaxLine;
-constexpr uint32_t SymbolLocation::Position::MaxColumn;
-
 void SymbolLocation::Position::setLine(uint32_t L) {
   if (L > MaxLine)
     L = MaxLine;

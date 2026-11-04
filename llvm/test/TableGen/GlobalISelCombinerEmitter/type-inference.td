@@ -50,7 +50,7 @@ def infer_complex_tempreg: GICombineRule <
 // CHECK-NEXT:         Groups for  __infer_variadic_outs_match_1:          [dst, x]
 // CHECK-NEXT:         Groups for  __infer_variadic_outs_apply_0:          [tmp, y]
 // CHECK-NEXT:         Groups for  __infer_variadic_outs_apply_1:
-// CHECK-NEXT: Final Type Equivalence Classes: [tmp, dst, x, y]  [vec]
+// CHECK-NEXT: Final Type Equivalence Classes: [vec] [tmp, dst, x, y]
 // CHECK-NEXT: INFER: MachineOperand $tmp -> GITypeOf<$dst>
 // CHECK-NEXT: Apply patterns for rule infer_variadic_outs after inference:
 // CHECK-NEXT:   (CodeGenInstructionPattern name:__infer_variadic_outs_apply_0 G_FNEG operands:[<def>GITypeOf<$dst>:$tmp, $y])

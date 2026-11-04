@@ -1,4 +1,4 @@
-; RUN: not --crash opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-ast>' -polly-ast-detect-parallel -disable-output < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not --crash opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-ast-detect-parallel -disable-output < %s 2>&1 >/dev/null | FileCheck %s
 ;
 ; CHECK: JScop file has no key named 'context'.
 ;

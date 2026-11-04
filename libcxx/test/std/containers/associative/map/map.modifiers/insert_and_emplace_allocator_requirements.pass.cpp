@@ -22,8 +22,7 @@
 #include "container_test_types.h"
 #include "../../../map_allocator_requirement_test_templates.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   testMapInsert<TCT::map<> >();
   testMapInsertHint<TCT::map<> >();
   testMapEmplace<TCT::map<> >();

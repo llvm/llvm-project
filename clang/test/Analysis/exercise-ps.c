@@ -31,7 +31,7 @@ static void f2(void *buf) {
 // what type of value do we expect.
 void f3(void *dest) {
   void *src = __builtin_alloca(5);
-  memcpy(dest, src, 1); // expected-warning{{2nd function call argument is a pointer to uninitialized value}}
+  memcpy(dest, src, 1); // expected-warning{{2nd function call argument points to an uninitialized value; function 'memcpy' expects memory pointed to by this argument to be initialized}}
 }
 
 // Reproduce crash from GH#94496. When array is used as subcript to another array, CSA cannot model it
@@ -41,7 +41,7 @@ void f4(char *array) {
 
   _Static_assert(sizeof(int) == 4, "Wrong triple for the test");
 
-  clang_analyzer_dump_int(__builtin_bit_cast(int, b)); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_int(__builtin_bit_cast(int, b)); // expected-warning {{Unknown}}
   clang_analyzer_dump_int(array[__builtin_bit_cast(int, b)]); // expected-warning {{Unknown}}
 
   array[__builtin_bit_cast(int, b)] = 0x10; // no crash

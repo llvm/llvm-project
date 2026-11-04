@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 // RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -fclang-abi-compat=23 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefix=ABICOMPAT23
 // expected-no-diagnostics
 
 namespace test1 {
@@ -70,7 +71,7 @@ namespace test7 {
     static const unsigned value = sizeof(T);
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -92,7 +93,7 @@ namespace test8 {
     };
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -399,3 +400,55 @@ namespace type_qualifier {
   // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
   template void g<int*>(int);
 }
+
+namespace unresolved_template_specialization_type {
+  template <int> struct enable_if {};
+  struct Foo {
+    static const int value = true;
+  };
+  struct HashStateBase {
+    template <typename> using is_hashable = Foo;
+  };
+  template <class> struct raw_hash_set {
+    template <typename H>
+    static enable_if<H::template is_hashable<int>::value>
+        AbslHashValue() {}
+  };
+  template enable_if<true> raw_hash_set<int>::AbslHashValue<HashStateBase>();
+  // CHECK: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
+} // namespace unresolved_template_specialization_type
+
+namespace GH133610 {
+  template <class T> struct A {
+    template <class V> struct B { int MEM; };
+  };
+
+  struct D {};
+  struct C: public A<int>::B<D> {};
+
+  template <class T, class U, class V>
+  auto k(T t, U u, V v) -> decltype (t.U::template B<V>::MEM) { return {}; }
+
+  void t() {
+    k( C(), A<int>(), D() );
+  }
+  // CHECK: @_ZN8GH1336101kINS_1CENS_1AIiEENS_1DEEEDtdtfp_sr1U1BIT1_EE3MEMET_T0_S5_
+} // namespace GH133610
+
+namespace GH88592 {
+  template <bool> struct A;
+  template <typename> struct B { static constexpr bool value = false; };
+
+  template <class T, template <class> class TT>
+  using C = A<TT<T>::value>;
+
+  // The alias substitutes B for TT without B having been mangled earlier, so
+  // the substituted template template parameter can't be a substitution and
+  // must be mangled as the replacement template itself.
+  template <class T, C<T, B> * = nullptr> void f() {}
+  template void f<int>();
+  // CHECK: @_ZN7GH885921fIiTnPNS_1AIXsr1BIT_EE5valueEEELPNS1_ILb0EEE0EEEvv
+  // Clang 23 and before mangled nothing for the template name, producing an
+  // ill-formed symbol.
+  // ABICOMPAT23: @_ZN7GH885921fIiTnPNS_1AIXsrIT_EE5valueEEELPNS1_ILb0EEE0EEEvv
+} // namespace GH88592

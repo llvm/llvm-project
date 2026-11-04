@@ -57,8 +57,7 @@ public:
   /// a JSON array with all commands the user and/or scripts executed during a
   /// debug session.
   ///
-  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
-  /// this is turned off unless specified.
+  /// Defaults to false.
   void SetIncludeTranscript(bool b);
   bool GetIncludeTranscript() const;
 

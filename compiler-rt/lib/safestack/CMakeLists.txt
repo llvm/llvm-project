@@ -5,6 +5,7 @@ set(SAFESTACK_SOURCES
   )
 
 include_directories(..)
+include_directories(../../include)
 
 set(SAFESTACK_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 

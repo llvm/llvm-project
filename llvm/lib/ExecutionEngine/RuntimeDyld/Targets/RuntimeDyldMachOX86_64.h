@@ -157,8 +157,7 @@ private:
   processSubtractRelocation(unsigned SectionID, relocation_iterator RelI,
                             const MachOObjectFile &BaseObj,
                             ObjSectionToIDMap &ObjSectionToID) {
-    const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile&>(BaseObj);
+    const MachOObjectFile &Obj = BaseObj;
     MachO::any_relocation_info RE =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 

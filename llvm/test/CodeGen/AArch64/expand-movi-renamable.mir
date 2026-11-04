@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=aarch64-expand-pseudo -mtriple=arm64-apple-darwin -o - %s | FileCheck %s
+# RUN: llc -passes=aarch64-expand-pseudo -mtriple=arm64-apple-darwin -o - %s | FileCheck %s
 
 # Check that we preserve renamble when expanding MOVi32imm/MOVi64imm.
 #

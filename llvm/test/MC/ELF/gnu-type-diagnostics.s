@@ -15,4 +15,5 @@
 // CHECK: .type symbol 32
 // CHECK:              ^
 
-
+.section "foo", "a", !progbits
+// CHECK: [[#@LINE-1]]:22: error: expected '@<type>', '%<type>' or "<type>"

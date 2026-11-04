@@ -25,12 +25,12 @@ define void @test_indirect_read_write_loop_also_modifies_pointer_array(ptr nound
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
-; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !0 ->
-; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !0
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -92,15 +92,15 @@ define void @test_indirect_read_loop_also_modifies_pointer_array(ptr noundef %ar
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i64, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
@@ -160,15 +160,15 @@ define void @test_indirect_write_loop_also_modifies_pointer_array(ptr noundef %a
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
@@ -230,12 +230,12 @@ define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr nou
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
-; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            %l.3 = load i64, ptr %gep.arr2.iv.1, align 8 ->
-; CHECK-NEXT:            store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !0
+; CHECK-NEXT:            store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

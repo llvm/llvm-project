@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -102,7 +103,7 @@ public:
   using reference = value_type &;
 
   RopePieceBTreeIterator() = default;
-  RopePieceBTreeIterator(const void /*RopePieceBTreeNode*/ *N);
+  LLVM_ABI RopePieceBTreeIterator(const void /*RopePieceBTreeNode*/ *N);
 
   char operator*() const { return (*CurPiece)[CurChar]; }
 
@@ -131,7 +132,7 @@ public:
     return llvm::StringRef(&(*CurPiece)[0], CurPiece->size());
   }
 
-  void MoveToNextPiece();
+  LLVM_ABI void MoveToNextPiece();
 };
 
 //===--------------------------------------------------------------------===//
@@ -142,23 +143,23 @@ class RopePieceBTree {
   void /*RopePieceBTreeNode*/ *Root;
 
 public:
-  RopePieceBTree();
-  RopePieceBTree(const RopePieceBTree &RHS);
+  LLVM_ABI RopePieceBTree();
+  LLVM_ABI RopePieceBTree(const RopePieceBTree &RHS);
   RopePieceBTree &operator=(const RopePieceBTree &) = delete;
-  ~RopePieceBTree();
+  LLVM_ABI ~RopePieceBTree();
 
   using iterator = RopePieceBTreeIterator;
 
   iterator begin() const { return iterator(Root); }
   iterator end() const { return iterator(); }
-  unsigned size() const;
+  LLVM_ABI unsigned size() const;
   unsigned empty() const { return size() == 0; }
 
-  void clear();
+  LLVM_ABI void clear();
 
-  void insert(unsigned Offset, const RopePiece &R);
+  LLVM_ABI void insert(unsigned Offset, const RopePiece &R);
 
-  void erase(unsigned Offset, unsigned NumBytes);
+  LLVM_ABI void erase(unsigned Offset, unsigned NumBytes);
 };
 
 //===--------------------------------------------------------------------===//
@@ -215,7 +216,7 @@ public:
   }
 
 private:
-  RopePiece MakeRopeString(const char *Start, const char *End);
+  LLVM_ABI RopePiece MakeRopeString(const char *Start, const char *End);
 };
 
 } // namespace llvm

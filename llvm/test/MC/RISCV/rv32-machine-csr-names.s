@@ -22,6 +22,20 @@ csrrs t1, mstatush, zero
 # uimm12
 csrrs t2, 0x310, zero
 
+# medelegh
+# name
+# CHECK-INST: csrrs t1, medelegh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x31]
+# CHECK-INST-ALIAS: csrr t1, medelegh
+# uimm12
+# CHECK-INST: csrrs t2, medelegh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x31]
+# CHECK-INST-ALIAS: csrr t2, medelegh
+# name
+csrrs t1, medelegh, zero
+# uimm12
+csrrs t2, 0x312, zero
+
 #########################
 # Machine Configuration
 #########################
@@ -1149,3 +1163,27 @@ csrrs t2, 0x319, zero
 csrrs t1, miph, zero
 # uimm12
 csrrs t2, 0x354, zero
+
+# mcyclecfgh
+# name
+# CHECK-INST: csrrs t1, mcyclecfgh, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x10,0x72]
+# CHECK-INST-ALIAS: csrr t1, mcyclecfgh
+csrrs t1, mcyclecfgh, zero
+# uimm12
+# CHECK-INST: csrrs t2, mcyclecfgh, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x10,0x72]
+# CHECK-INST-ALIAS: csrr t2, mcyclecfgh
+csrrs t2, 0x721, zero
+
+# minstretcfgh
+# name
+# CHECK-INST: csrrs t1, minstretcfgh, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x20,0x72]
+# CHECK-INST-ALIAS: csrr t1, minstretcfgh
+csrrs t1, minstretcfgh, zero
+# uimm12
+# CHECK-INST: csrrs t2, minstretcfgh, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x20,0x72]
+# CHECK-INST-ALIAS: csrr t2, minstretcfgh
+csrrs t2, 0x722, zero

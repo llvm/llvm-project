@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLDB_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H
-#define LLDB_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H
+#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H
+#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -35,4 +35,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H
+#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_ABORTWITHPAYLOADFRAMERECOGNIZER_H

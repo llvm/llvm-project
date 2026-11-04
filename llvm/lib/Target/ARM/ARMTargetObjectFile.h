@@ -16,13 +16,12 @@
 namespace llvm {
 
 class ARMElfTargetObjectFile : public TargetLoweringObjectFileELF {
-public:
-  ARMElfTargetObjectFile() {
-    PLTRelativeVariantKind = MCSymbolRefExpr::VK_ARM_PREL31;
-    SupportIndirectSymViaGOTPCRel = true;
-  }
+  bool UsesARMEH = false;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+public:
+  ARMElfTargetObjectFile();
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   MCRegister getStaticBase() const override;
 

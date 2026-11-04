@@ -43,7 +43,7 @@ extends to all of the MLIR constructs, including [Interfaces](../Interfaces.md) 
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our dialect. 
+// our dialect.
 include "mlir/IR/DialectBase.td"
 
 // Here is a simple definition of a dialect.
@@ -271,6 +271,24 @@ void *MyDialect::getRegisteredInterfaceForOp(TypeID typeID, StringAttr opName);
 
 For a more detail description of the expected usages of this hook, view the detailed 
 [interface documentation](../Interfaces.md/#dialect-fallback-for-opinterface).
+
+### Strict Property Assembly Formats
+
+Declarative assembly formats for property-backed operations must account for
+all inherent attributes and properties by default. An operation format must
+either bind every inherent attribute and property directly in the format or
+include the `prop-dict` directive. Generated parsers also reject inherent
+attributes that arrive through `attr-dict`, so `attr-dict` only carries
+discardable attributes for these formats.
+
+The `useStrictPropertiesInAssemblyFormat` field is deprecated. Setting it to
+`0` temporarily opts a dialect into legacy behavior, allowing inherent
+attributes to mix with discardable attributes in `attr-dict`. Dialects using
+this setting should migrate their formats to bind inherent attributes directly
+or use `prop-dict`.
+
+See the [declarative assembly format](Operations.md/#declarative-assembly-format)
+documentation for the corresponding format requirements.
 
 ### Default Attribute/Type Parsers and Printers 
 
@@ -649,7 +667,7 @@ Type MyDialect::parseType(DialectAsmParser &parser) const {
             return dynType;
          return Type();
     }
-    
+
     ...
 }
 ```
@@ -669,7 +687,7 @@ It is also possible to cast a `Type` known to be defined at runtime to a
 `DynamicType`.
 
 ```c++
-auto dynType = type.cast<DynamicType>();
+auto dynType = cast<DynamicType>(type);
 auto typeDef = dynType.getTypeDef();
 auto args = dynType.getParams();
 ```
@@ -679,7 +697,7 @@ auto args = dynType.getParams();
 Similar to types defined at runtime, attributes defined at runtime can only have
 as argument a list of `Attribute`.
 
-Similarily to types, an attribute is defined at runtime using the class
+Similarly to types, an attribute is defined at runtime using the class
 `DynamicAttrDefinition`, which is created using the `DynamicAttrDefinition::get`
 functions. An attribute definition requires a name, the dialect that will
 register the attribute, and a parameter verifier. It can also define optionally
@@ -767,7 +785,7 @@ It is also possible to cast an `Attribute` known to be defined at runtime to a
 `DynamicAttr`.
 
 ```c++
-auto dynAttr = attr.cast<DynamicAttr>();
+auto dynAttr = cast<DynamicAttr>(attr);
 auto attrDef = dynAttr.getAttrDef();
 auto args = dynAttr.getParams();
 ```

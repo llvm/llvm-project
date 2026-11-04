@@ -2,6 +2,9 @@
 # RUN: llvm-mc --triple=loongarch64 --filetype=obj -o %t/reloc.o %s
 # RUN: llvm-rtdyld --triple=loongarch64 --verify --check=%s %t/reloc.o \
 # RUN:     --map-section reloc.o,.got=0x21f00 \
+# RUN:     --map-section reloc.o,.sec.large.pc=0x0000000012345000 \
+# RUN:     --map-section reloc.o,.sec.large.got=0x44433333abcde000 \
+# RUN:     --map-section reloc.o,.sec.dummy=0x4443333334567111 \
 # RUN:     --dummy-extern abs=0x0123456789abcdef \
 # RUN:     --dummy-extern external_data=0x1234
 
@@ -100,3 +103,42 @@ named_data:
     .quad 0x2222222222222222
     .quad 0x3333333333333333
     .size named_data, .-named_data
+
+    .section .sec.large.pc,"ax"
+    .globl test_large_pc
+test_large_pc:
+## Code after link should be:
+## 1a44444d pcalau12i $t1, 139810
+## 02c4440c addi.d    $t0, $zero, 273
+## 1666666c lu32i.d   $t0, 209715
+## 0311118c lu52i.d   $t0, $t0, 1092
+
+# rtdyld-check: *{4}(test_large_pc) = 0x1a44444d
+    pcalau12i $t1, %pc_hi20(.sec.dummy)
+# rtdyld-check: *{4}(test_large_pc + 4) = 0x02c4440c
+    addi.d $t0, $zero, %pc_lo12(.sec.dummy)
+# rtdyld-check: *{4}(test_large_pc + 8) = 0x1666666c
+    lu32i.d $t0, %pc64_lo20(.sec.dummy)
+# rtdyld-check: *{4}(test_large_pc + 12) = 0x0311118c
+    lu52i.d $t0, $t0, %pc64_hi12(.sec.dummy)
+
+    .section .sec.large.got,"ax"
+    .globl test_large_got
+test_large_got:
+## Code after link should be:
+## 1aa8688d pcalau12i $t1, 344900
+## 02fc000c addi.d    $t0, $zero, -256
+## 1799996c lu32i.d   $t0, -209717
+## 032eed8c lu52i.d   $t0, $t0, -1093
+
+# rtdyld-check: *{4}(test_large_got) = 0x1aa8688d
+    pcalau12i $t1, %got_pc_hi20(external_data)
+# rtdyld-check: *{4}(test_large_got + 4) = 0x02fc000c
+    addi.d $t0, $zero, %got_pc_lo12(external_data)
+# rtdyld-check: *{4}(test_large_got + 8) = 0x1799996c
+    lu32i.d $t0, %got64_pc_lo20(external_data)
+# rtdyld-check: *{4}(test_large_got + 12) = 0x032eed8c
+    lu52i.d $t0, $t0, %got64_pc_hi12(external_data)
+
+    .section .sec.dummy,"a"
+    .word 0

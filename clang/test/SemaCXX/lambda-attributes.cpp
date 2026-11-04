@@ -14,7 +14,7 @@
 // CHECK: FunctionDecl {{.*}} f 'void ()' implicit_instantiation
 template <typename T>
 void f() {
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const __attribute__((preserve_most))':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
+  // CHECK: CXXMethodDecl {{.*}} operator() '__attribute__((preserve_most)) void (int) const':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
   (void) [] (T) __attribute__((preserve_most)) { };
 
   // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const {{\[}}[clang::annotate_type(...)]]':'void (int) const' implicit_instantiation
@@ -25,7 +25,7 @@ void f() {
                 [[clang::annotate_type("foo")]]
                 [[clang::annotate_type("foo")]] { };
 
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const __attribute__((preserve_most)) {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
+  // CHECK: CXXMethodDecl {{.*}} operator() '__attribute__((preserve_most)) void (int) const {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
   (void) [] (T) __attribute__((preserve_most))
                 [[clang::annotate_type("foo")]] { };
 
@@ -36,7 +36,7 @@ void f() {
   // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const {{\[}}[clang::annotate_type(...)]]':'void (int) const' implicit_instantiation
   (void) [] (T t) [[clang::annotate_type("foo", t)]] { };
 
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const __attribute__((preserve_most)) {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
+  // CHECK: CXXMethodDecl {{.*}} operator() '__attribute__((preserve_most)) void (int) const {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
   (void) [] (T t) __attribute__((preserve_most))
                 [[clang::annotate_type("foo", t, t, t, t)]] { };
 

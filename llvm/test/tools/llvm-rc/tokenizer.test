@@ -9,7 +9,10 @@
 ; CHECK-NEXT:  Int: 3214L; int value = 3214
 ; CHECK-NEXT:  Amp: &
 ; CHECK-NEXT:  Int: 0x120894; int value = 1181844
-; CHECK-NEXT:  Int: 032173; int value = 13435
+; CHECK-NEXT:  Int: 32173; int value = 32173
+; CHECK-NEXT:  Minus: -
+; CHECK-NEXT:  Int: 42; int value = 42
+; CHECK-NEXT:  Int: 9; int value = 9
 ; CHECK-NEXT:  Int: 2; int value = 2
 ; CHECK-NEXT:  Pipe: |
 ; CHECK-NEXT:  Amp: &
@@ -25,6 +28,11 @@
 ; CHECK-NEXT:  BlockEnd: }
 ; CHECK-NEXT:  BlockBegin: Begin
 ; CHECK-NEXT:  BlockEnd: End
+; CHECK-NEXT:  Int: 1; int value = 1
+; CHECK-NEXT:  Asterisk: *
+; CHECK-NEXT:  Int: 3; int value = 3
+; CHECK-NEXT:  Slash: /
+; CHECK-NEXT:  Int: 4; int value = 4
 ; CHECK-NEXT:  Identifier: He11o
 ; CHECK-NEXT:  Identifier: LLVM
 ; CHECK-NEXT:  Identifier: identifier-with-dashes

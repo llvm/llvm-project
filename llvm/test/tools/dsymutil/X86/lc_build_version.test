@@ -1,14 +1,25 @@
-# RUN: dsymutil -f %p/../Inputs/lc_build_version.x86_64 -o - \
-# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+# RUN: dsymutil --linker classic -f %p/../Inputs/lc_build_version.x86_64 -o %t.classic \
+# RUN:   -oso-prepend-path=%p/..
+# RUN: obj2yaml %t.classic | FileCheck %s
 
-# RUN: dsymutil --linker parallel -f %p/../Inputs/lc_build_version.x86_64 -o - \
-# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+# RUN: dsymutil --linker parallel -f %p/../Inputs/lc_build_version.x86_64 -o %t.parallel \
+# RUN:   -oso-prepend-path=%p/..
+# RUN: obj2yaml %t.parallel | FileCheck %s
+
+## Updating a dSYM replaces the dsymutil entry instead of adding another one.
+# RUN: dsymutil --linker classic --update -f %t.classic -o - | obj2yaml \
+# RUN:   | FileCheck %s
+# RUN: dsymutil --linker parallel --update -f %t.parallel -o - | obj2yaml \
+# RUN:   | FileCheck %s
 
 CHECK: LoadCommands:
 CHECK:   - cmd:             LC_BUILD_VERSION
-CHECK-NEXT:    cmdsize:         24
+CHECK-NEXT:    cmdsize:         32
 CHECK-NEXT:    platform:        1
 CHECK-NEXT:    minos:           658944
 CHECK-NEXT:    sdk:             658944
-CHECK-NEXT:    ntools:          0
+CHECK-NEXT:    ntools:          1
+CHECK-NEXT:    Tools:
+CHECK-NEXT:      - tool:            5
+CHECK-NEXT:        version:         {{[0-9]+}}
 CHECK-NEXT:   - cmd:             LC_BUILD_VERSION

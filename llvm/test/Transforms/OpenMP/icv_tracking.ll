@@ -34,12 +34,14 @@ define i32 @ok_use_assume(i32 %0) {
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @no_openmp_use(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   call void @use(i32 %0) "no_openmp"
   call void @use(i32 %0) "no_openmp_routines"
+  call void @use(i32 %0) "no_openmp_constructs"
   call void @no_openmp_use(i32 %0)
   %2 = add nsw i32 %0, 1
   ret i32 %2

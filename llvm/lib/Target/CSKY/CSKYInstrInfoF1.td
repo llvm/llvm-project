@@ -44,7 +44,7 @@ def CSKY_BITCAST_FROM_LOHI : SDNode<"CSKYISD::BITCAST_FROM_LOHI", SDT_BITCAST_FR
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0 : PatLeaf<(fpimm), [{ return N->isPosZero(); }]>;
 
 def fpimm32_hi16 : SDNodeXForm<fpimm, [{
   return CurDAG->getTargetConstant(

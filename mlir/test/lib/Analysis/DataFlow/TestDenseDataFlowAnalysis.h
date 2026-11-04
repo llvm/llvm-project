@@ -76,7 +76,7 @@ public:
     }
 
     size_t sizeBefore = accesses.size();
-    accesses.insert(other.accesses.begin(), other.accesses.end());
+    accesses.insert_range(other.accesses);
     return accesses.size() == sizeBefore ? ChangeResult::NoChange
                                          : ChangeResult::Change;
   }
@@ -196,7 +196,7 @@ public:
                  ArrayRef<const UnderlyingValueLattice *> operands,
                  ArrayRef<UnderlyingValueLattice *> results) override {
     // Hook to test error propagation from visitOperation.
-    if (op->hasAttr("always_fail"))
+    if (op->hasDiscardableAttr("always_fail"))
       return op->emitError("this op is always fails");
 
     setAllToEntryStates(results);

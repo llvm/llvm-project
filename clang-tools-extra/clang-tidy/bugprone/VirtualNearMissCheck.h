@@ -1,4 +1,4 @@
-//===--- VirtualNearMissCheck.h - clang-tidy---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_NEAR_MISS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_NEAR_MISS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUALNEARMISSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUALNEARMISSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// very similar name and an identical signature defined in a base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/virtual-near-miss.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/virtual-near-miss.html
 class VirtualNearMissCheck : public ClangTidyCheck {
 public:
   VirtualNearMissCheck(StringRef Name, ClangTidyContext *Context)
@@ -60,4 +60,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_NEAR_MISS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUALNEARMISSCHECK_H

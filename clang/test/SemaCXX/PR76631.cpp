@@ -5,5 +5,5 @@
 }
 
 void throw_int_wrapper() {
-  [[clang::musttail]] return throw_int(); // expected-error {{'musttail' attribute may not be used with no-return-attribute functions}}
+  [[clang::musttail]] return throw_int(); // expected-error {{'clang::musttail' attribute may not be used with no-return-attribute functions}}
 }

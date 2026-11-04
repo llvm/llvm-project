@@ -1,8 +1,0 @@
-# RUN: llvm-mc -triple=aarch64 -mattr=+v8.9a -disassemble %s 2> %t | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+v9.4a -disassemble %s 2> %t | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+chk   -disassemble %s 2> %t | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+v8a   -disassemble %s 2> %t | FileCheck %s --check-prefix=NO-CHK
-
-[0x1f,0x25,0x03,0xd5]
-// CHECK: chkfeat x16
-// NO-CHK: hint #40

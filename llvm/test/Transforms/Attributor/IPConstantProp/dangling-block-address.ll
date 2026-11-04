@@ -34,7 +34,7 @@ entry:
 define internal void @bar(ptr nocapture %pc) nounwind readonly {
 ; CGSCC: Function Attrs: nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (ptr nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr captures(none) [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; CGSCC:       lab0:

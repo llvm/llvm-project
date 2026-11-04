@@ -31,16 +31,16 @@ struct RefCountTy {
 
   ~RefCountTy() { assert(Refs == 0 && "Destroying with non-zero refcount"); }
 
-  /// Increase the reference count atomically.
-  void increase() { Refs.fetch_add(1, MemoryOrder); }
+  /// Increase the reference count atomically by \p Amount.
+  void increase(Ty Amount = 1) { Refs.fetch_add(Amount, MemoryOrder); }
 
-  /// Decrease the reference count and return whether it became zero. Decreasing
-  /// the counter in more units than it was previously increased results in
-  /// undefined behavior.
-  bool decrease() {
-    Ty Prev = Refs.fetch_sub(1, MemoryOrder);
-    assert(Prev > 0 && "Invalid refcount");
-    return (Prev == 1);
+  /// Decrease the reference count by \p Amount and return whether it became
+  /// zero. Decreasing the counter by more than it was previously increased
+  /// results in undefined behavior.
+  bool decrease(Ty Amount = 1) {
+    Ty Prev = Refs.fetch_sub(Amount, MemoryOrder);
+    assert(Prev >= Amount && "Invalid refcount");
+    return (Prev == Amount);
   }
 
   Ty get() const { return Refs.load(MemoryOrder); }

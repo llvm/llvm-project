@@ -87,6 +87,15 @@ define void @foo(i8 %v0) {
   EXPECT_FALSE(One.contains(I1));
   EXPECT_FALSE(One.contains(I2));
   EXPECT_FALSE(One.contains(Ret));
+  // Check touches().
+  {
+    sandboxir::Interval<sandboxir::Instruction> Intvl(I2, I2);
+    EXPECT_TRUE(Intvl.touches(I1));
+    EXPECT_TRUE(Intvl.contains(I2));
+    EXPECT_FALSE(Intvl.touches(I2));
+    EXPECT_TRUE(Intvl.touches(Ret));
+    EXPECT_FALSE(Intvl.touches(I0));
+  }
   // Check iterator.
   auto BBIt = BB->begin();
   for (auto &I : Intvl)
@@ -148,9 +157,7 @@ define void @foo(i8 %v0) {
 // of references.
 template <typename RangeT>
 static SmallVector<sandboxir::Instruction *> getPtrVec(RangeT Range) {
-  SmallVector<sandboxir::Instruction *> PtrVec;
-  for (sandboxir::Instruction &I : Range)
-    PtrVec.push_back(&I);
+  SmallVector<sandboxir::Instruction *> PtrVec(llvm::make_pointer_range(Range));
   return PtrVec;
 }
 

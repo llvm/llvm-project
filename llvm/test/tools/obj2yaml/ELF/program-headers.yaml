@@ -436,28 +436,38 @@ Sections:
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .bss
 # NOBITS-NEXT:     LastSec:  .bss
-# NOBITS-NEXT:     Offset:   0x159
+# NOBITS-NEXT:     VAddr:    0x1001
+# NOBITS-NEXT:     Offset:   0x191
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .data.1
 # NOBITS-NEXT:     LastSec:  .bss
-# NOBITS-NEXT:     Offset:   0x158
+# NOBITS-NEXT:     VAddr:    0x1000
+# NOBITS-NEXT:     Offset:   0x190
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .data.1
 # NOBITS-NEXT:     LastSec:  .data.2
-# NOBITS-NEXT:     Offset:   0x158
+# NOBITS-NEXT:     VAddr:    0x1000
+# NOBITS-NEXT:     Offset:   0x190
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .bss
 # NOBITS-NEXT:     LastSec:  .data.2
-# NOBITS-NEXT:     Offset:   0x159
+# NOBITS-NEXT:     VAddr:    0x1001
+# NOBITS-NEXT:     Offset:   0x191
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .foo.bss
 # NOBITS-NEXT:     LastSec:  .bar.bss
 # NOBITS-NEXT:     VAddr:    0x200000000
-# NOBITS-NEXT:     Offset:   0x15A
+# NOBITS-NEXT:     Offset:   0x193
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .data.3
+# NOBITS-NEXT:     LastSec:  .bss.large
+# NOBITS-NEXT:     VAddr:    0x200000030
+# NOBITS-NEXT:     Offset:   0x193
 # NOBITS-NEXT: Sections:
 
 --- !ELF
@@ -471,27 +481,37 @@ ProgramHeaders:
     Flags:    [ PF_W, PF_R ]
     FirstSec: .bss
     LastSec:  .bss
+    VAddr:    0x1001
 ## Case 2: the SHT_NOBITS section is the last section in the segment.
   - Type:     PT_LOAD
     Flags:    [ PF_W, PF_R ]
     FirstSec: .data.1
     LastSec:  .bss
+    VAddr:    0x1000
 ## Case 3: the SHT_NOBITS section is in the middle of the segment.
   - Type:     PT_LOAD
     Flags:    [ PF_W, PF_R ]
     FirstSec: .data.1
     LastSec:  .data.2
+    VAddr:    0x1000
 ## Case 4: the SHT_NOBITS section is the first section in the segment.
   - Type:     PT_LOAD
     Flags:    [ PF_W, PF_R ]
     FirstSec: .bss
     LastSec:  .data.2
+    VAddr:    0x1001
 ## Case 5: another two SHT_NOBITS sections in a different segment.
   - Type:     PT_LOAD
     Flags:    [ PF_W, PF_R ]
     FirstSec: .foo.bss
     LastSec:  .bar.bss
     VAddr:    0x200000000
+## Case 6: a SHT_NOBITS section following a normal section, where the SHT_NOBITS size points past the end of the program header.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .data.3
+    LastSec:  .bss.large
+    VAddr:    0x200000030
 Sections:
   - Name:    .data.1
     Type:    SHT_PROGBITS
@@ -502,13 +522,13 @@ Sections:
   - Name:   .bss
     Type:   SHT_NOBITS
     Flags:  [ SHF_WRITE, SHF_ALLOC ]
-## Use a size that is larger than the file size.
-    ShSize: 0x00000000FFFFFFFF
-  - Name:  .data.2
-    Type:  SHT_PROGBITS
-    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary non-zero size.
+    Size:   0x1
+  - Name:     .data.2
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_WRITE, SHF_ALLOC ]
 ## Use an arbitrary size.
-    Size:  0x1
+    Size:     0x1
   - Name:    .foo.bss
     Type:    SHT_NOBITS
     Flags:   [ SHF_WRITE, SHF_ALLOC ]
@@ -523,6 +543,19 @@ Sections:
 ## Use an arbitrary size that is different to the size of
 ## the previous section.
     Size:    0x20
+  - Name: .data.3
+    Type: SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use an abitrary size. Also use an address that is larger than the previous
+## section, because the tools expect segment addresses to be in order.
+    Size: 0x1
+    Address: 0x200000030
+  - Name: .bss.large
+    Type: SHT_NOBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use a size that is larger than the file size.
+    Size: 0x00000000FFFFFFFF
+    Address: 0x200000031
 
 ## Check that we require sections in a program header
 ## declaration to be sorted by their offsets.
@@ -530,7 +563,6 @@ Sections:
 # RUN:   FileCheck %s --check-prefix=UNSORTED --implicit-check-not="error:"
 
 # UNSORTED:      error: program header with index 0: the section index of .bar is greater than the index of .foo
-# UNSORTED-NEXT: error: sections in the program header with index 3 are not sorted by their file offset
 
 --- !ELF
 FileHeader:
@@ -552,15 +584,6 @@ ProgramHeaders:
     FirstSec: .foo
     LastSec:  .bar
     VAddr:    0x1000
-## Case 2: the .bar section is placed before the .zed section in the file,
-##         but the sh_offset of .zed is less than the sh_offset of
-##         the .bar section because of the "ShOffset" property.
-##         Document we report an error for such a case.
-  - Type:     PT_LOAD
-    Flags:    [ PF_R ]
-    FirstSec: .bar
-    LastSec:  .zed
-    VAddr:    0x1001
 Sections:
   - Name:    .foo
     Type:    SHT_PROGBITS
@@ -571,11 +594,6 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [ SHF_ALLOC ]
     Size:    0x1
-  - Name:     .zed
-    Type:     SHT_PROGBITS
-    Flags:    [ SHF_ALLOC ]
-    Size:     0x1
-    ShOffset: 0x0
 
 ## Check how we dump segments which contain empty sections.
 # RUN: yaml2obj --docnum=7 %s -o %t7

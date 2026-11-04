@@ -23,10 +23,10 @@
 %"class.llvm::Metadata.306.1758.9986.10470.10954.11438.11922.12406.12890.13374.13858.15310.15794.16278.17730.19182.21118.25958.26926.29346.29830.30314.30798.31282.31766.32250.32734.33702.36606.38058.41638" = type { i8, i8, i16, i32 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #0
+declare void @llvm.lifetime.end(ptr nocapture)
 
 ; Function Attrs: nounwind ssp uwtable
-define hidden void @fun(ptr %N, i1 %arg) #1 align 2 {
+define hidden void @fun(ptr %N, i1 %arg) align 2 {
 ; CHECK: define
 entry:
   %NumOperands.i = getelementptr inbounds %"class.llvm::SDNode.310.1762.9990.10474.10958.11442.11926.12410.12894.13378.13862.15314.15798.16282.17734.19186.21122.25962.26930.29350.29834.30318.30802.31286.31770.32254.32738.33706.36610.38062.41642", ptr %N, i64 0, i32 8
@@ -42,14 +42,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv190 = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next191, %for.body ]
-  call void @llvm.lifetime.end(i64 16, ptr nonnull null)
   %indvars.iv.next191 = add nuw nsw i64 %indvars.iv190, 1
   %exitcond193 = icmp eq i64 %indvars.iv.next191, %wide.trip.count192
   br i1 %exitcond193, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { argmemonly nounwind }
-attributes #1 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

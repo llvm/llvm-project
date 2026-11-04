@@ -15,11 +15,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <utility>
 
 namespace llvm {
 
@@ -89,6 +90,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   unsigned FRSaveSize = 0;
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
+  unsigned FPStatusSize = 0;
   unsigned DPRCSAlignGapSize = 0;
   unsigned DPRCS1Size = 0;
   unsigned GPRCS3Size = 0;
@@ -106,6 +108,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;
+
+  /// ForwardedMustTailRegParms - A list of virtual and physical registers that
+  /// must be forwarded to every musttail call.
+  SmallVector<ForwardedRegister, 4> ForwardedMustTailRegParms;
 
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
@@ -154,6 +160,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// True if BTI instructions should be placed at potential indirect jump
   /// destinations.
   bool BranchTargetEnforcement = false;
+
+  /// The result of EstimateFunctionSizeInBytes, if that was run during frame
+  /// lowering. Used to check later that the estimate was conservative.
+  std::optional<unsigned> EstimatedFunctionSizeInBytes;
 
 public:
   ARMFunctionInfo() = default;
@@ -205,6 +215,7 @@ public:
   unsigned getFrameRecordSavedAreaSize() const { return FRSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
+  unsigned getFPStatusSavesSize() const       { return FPStatusSize; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedArea1Size() const { return DPRCS1Size; }
   unsigned getGPRCalleeSavedArea3Size() const { return GPRCS3Size; }
@@ -213,6 +224,7 @@ public:
   void setFrameRecordSavedAreaSize(unsigned s) { FRSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
+  void setFPStatusSavesSize(unsigned s)       { FPStatusSize = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
   void setDPRCalleeSavedArea1Size(unsigned s) { DPRCS1Size = s; }
   void setGPRCalleeSavedArea3Size(unsigned s) { GPRCS3Size = s; }
@@ -222,6 +234,13 @@ public:
 
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
+
+  std::optional<unsigned> getEstimatedFunctionSizeInBytes() const {
+    return EstimatedFunctionSizeInBytes;
+  }
+  void setEstimatedFunctionSizeInBytes(unsigned v) {
+    EstimatedFunctionSizeInBytes = v;
+  }
 
   void initPICLabelUId(unsigned UId) {
     PICLabelUId = UId;
@@ -238,6 +257,10 @@ public:
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 
+  SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
+    return ForwardedMustTailRegParms;
+  }
+
   bool hasITBlocks() const { return HasITBlocks; }
   void setHasITBlocks(bool h) { HasITBlocks = h; }
 
@@ -250,7 +273,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else
@@ -309,7 +332,7 @@ struct ARMFunctionInfo final : public yaml::MachineFunctionInfo {
   ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~ARMFunctionInfo() = default;
+  ~ARMFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<ARMFunctionInfo> {

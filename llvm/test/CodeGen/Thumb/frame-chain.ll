@@ -150,8 +150,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-NEXT:    subs r1, r3, r1
 ; FP-NEXT:    mov sp, r1
 ; FP-NEXT:    movs r1, #0
-; FP-NEXT:    str r1, [r6, #4]
-; FP-NEXT:    str r0, [r2]
+; FP-NEXT:    stm r2!, {r0, r1}
 ; FP-NEXT:    subs r6, r7, #7
 ; FP-NEXT:    subs r6, #1
 ; FP-NEXT:    mov sp, r6
@@ -184,8 +183,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-AAPCS-NEXT:    subs r1, r3, r1
 ; FP-AAPCS-NEXT:    mov sp, r1
 ; FP-AAPCS-NEXT:    movs r1, #0
-; FP-AAPCS-NEXT:    str r1, [r6, #4]
-; FP-AAPCS-NEXT:    str r0, [r2]
+; FP-AAPCS-NEXT:    stm r2!, {r0, r1}
 ; FP-AAPCS-NEXT:    mov r6, r11
 ; FP-AAPCS-NEXT:    subs r6, #8
 ; FP-AAPCS-NEXT:    mov sp, r6
@@ -216,8 +214,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-NEXT:    subs r1, r3, r1
 ; NOFP-NEXT:    mov sp, r1
 ; NOFP-NEXT:    movs r1, #0
-; NOFP-NEXT:    str r1, [r6, #4]
-; NOFP-NEXT:    str r0, [r2]
+; NOFP-NEXT:    stm r2!, {r0, r1}
 ; NOFP-NEXT:    subs r6, r7, #7
 ; NOFP-NEXT:    subs r6, #1
 ; NOFP-NEXT:    mov sp, r6
@@ -250,8 +247,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-AAPCS-NEXT:    subs r1, r3, r1
 ; NOFP-AAPCS-NEXT:    mov sp, r1
 ; NOFP-AAPCS-NEXT:    movs r1, #0
-; NOFP-AAPCS-NEXT:    str r1, [r6, #4]
-; NOFP-AAPCS-NEXT:    str r0, [r2]
+; NOFP-AAPCS-NEXT:    stm r2!, {r0, r1}
 ; NOFP-AAPCS-NEXT:    mov r6, r11
 ; NOFP-AAPCS-NEXT:    subs r6, #8
 ; NOFP-AAPCS-NEXT:    mov sp, r6
@@ -272,4 +268,45 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
   %10 = alloca i32, i64 %8, align 4
   store i64 %8, ptr %6, align 8
   ret void
+}
+
+define dso_local noundef i32 @leaf_tailcall(i32 noundef %0) {
+; FP-LABEL: leaf_tailcall:
+; FP:       @ %bb.0:
+; FP-NEXT:    .save {r7, lr}
+; FP-NEXT:    push {r7, lr}
+; FP-NEXT:    .setfp r7, sp
+; FP-NEXT:    add r7, sp, #0
+; FP-NEXT:    bl leaf
+; FP-NEXT:    pop {r7, pc}
+;
+; FP-AAPCS-LABEL: leaf_tailcall:
+; FP-AAPCS:       @ %bb.0:
+; FP-AAPCS-NEXT:    .save {lr}
+; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    mov r3, r11
+; FP-AAPCS-NEXT:    .save {r11}
+; FP-AAPCS-NEXT:    push {r3}
+; FP-AAPCS-NEXT:    .setfp r11, sp
+; FP-AAPCS-NEXT:    mov r11, sp
+; FP-AAPCS-NEXT:    bl leaf
+; FP-AAPCS-NEXT:    pop {r1}
+; FP-AAPCS-NEXT:    mov r11, r1
+; FP-AAPCS-NEXT:    pop {pc}
+;
+; NOFP-LABEL: leaf_tailcall:
+; NOFP:       @ %bb.0:
+; NOFP-NEXT:    .save {r7, lr}
+; NOFP-NEXT:    push {r7, lr}
+; NOFP-NEXT:    bl leaf
+; NOFP-NEXT:    pop {r7, pc}
+;
+; NOFP-AAPCS-LABEL: leaf_tailcall:
+; NOFP-AAPCS:       @ %bb.0:
+; NOFP-AAPCS-NEXT:    .save {r7, lr}
+; NOFP-AAPCS-NEXT:    push {r7, lr}
+; NOFP-AAPCS-NEXT:    bl leaf
+; NOFP-AAPCS-NEXT:    pop {r7, pc}
+  %a = tail call noundef i32 @leaf(i32 noundef %0)
+  ret i32 %a
 }

@@ -13,10 +13,10 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/time/units.h"
 #include "src/__support/time/windows/performance_counter.h"
-#include "src/errno/libc_errno.h"
 #include "src/time/clock_getres.h"
 
 #define WIN32_LEAN_AND_MEAN

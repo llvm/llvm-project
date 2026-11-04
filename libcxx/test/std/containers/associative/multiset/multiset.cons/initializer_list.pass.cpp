@@ -12,7 +12,7 @@
 
 // class multiset
 
-// multiset(initializer_list<value_type> il, const key_compare& comp = key_compare());
+// multiset(initializer_list<value_type> il, const key_compare& comp = key_compare()); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -20,9 +20,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
     typedef std::multiset<int> C;
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
@@ -35,8 +34,8 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
-    {
+  }
+  {
     typedef std::multiset<int, std::less<int>, min_allocator<int>> C;
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
@@ -49,12 +48,12 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
-    {
+  }
+  {
     typedef std::multiset<int, std::less<int>, min_allocator<int>> C;
     typedef C::value_type V;
     min_allocator<int> a;
-    C m ({1, 2, 3, 4, 5, 6}, a);
+    C m({1, 2, 3, 4, 5, 6}, a);
     assert(m.size() == 6);
     assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
@@ -65,7 +64,15 @@ int main(int, char**)
     assert(*++i == V(5));
     assert(*++i == V(6));
     assert(m.get_allocator() == a);
-    }
+  }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

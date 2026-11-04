@@ -37,14 +37,4 @@
 #include "LibcTest.h"
 #endif
 
-// These are defined the same way for each framework, in terms of the macros
-// they all provide.
-
-#define ASSERT_ERRNO_EQ(VAL)                                                   \
-  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_SUCCESS()                                                 \
-  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_FAILURE()                                                 \
-  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-
 #endif // LLVM_LIBC_TEST_UNITTEST_TEST_H

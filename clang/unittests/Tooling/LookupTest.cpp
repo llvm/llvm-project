@@ -193,8 +193,8 @@ TEST(LookupTest, replaceNestedClassName) {
   auto replaceTypeLoc = [&](const NamedDecl *ND, SourceLocation Loc,
                             StringRef ReplacementString) {
     return tooling::replaceNestedName(
-        nullptr, Loc, Visitor.DeclStack.back()->getDeclContext(), ND,
-        ReplacementString);
+        /*Use=*/std::nullopt, Loc, Visitor.DeclStack.back()->getDeclContext(),
+        ND, ReplacementString);
   };
 
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
@@ -214,7 +214,7 @@ TEST(LookupTest, replaceNestedClassName) {
     // Filter Types by name since there are other `RecordTypeLoc` in the test
     // file.
     // `a::b::Foo` in using shadow decl is not `TypeLoc`.
-    auto *TD = Type.getFoundDecl()->getTargetDecl();
+    auto *TD = Type.getDecl()->getTargetDecl();
     if (TD->getQualifiedNameAsString() == "a::b::Foo") {
       EXPECT_EQ("Bar", replaceTypeLoc(TD, Type.getBeginLoc(), "::a::x::Bar"));
     }

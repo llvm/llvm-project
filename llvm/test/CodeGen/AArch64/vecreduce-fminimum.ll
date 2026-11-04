@@ -5,12 +5,8 @@
 ; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP --check-prefix=CHECK-FP-GI
 
 ; CHECK-NOFP-GI:       warning: Instruction selection used fallback path for test_v11f16
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
 ;
 ; CHECK-FP-GI:       warning: Instruction selection used fallback path for test_v11f16
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
 
 declare half @llvm.vector.reduce.fminimum.v1f16(<1 x half> %a)
 declare float @llvm.vector.reduce.fminimum.v1f32(<1 x float> %a)
@@ -440,26 +436,74 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; Neutral element is negative infinity which is chosen for padding the widened
 ; vector.
 define float @test_v3f32(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fminv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #2139095040 // =0x7f800000
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fminv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #2139095040 // =0x7f800000
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fminv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmin s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmin s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmin s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmin s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call float @llvm.vector.reduce.fminimum.v3f32(<3 x float> %a)
   ret float %b
 }
 
 ; Neutral element chosen for padding the widened vector is not negative infinity.
 define float @test_v3f32_ninf(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32_ninf:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fminv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #2139095039 // =0x7f7fffff
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fminv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32_ninf:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #2139095039 // =0x7f7fffff
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fminv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmin s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmin s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32_ninf:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmin s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmin s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call ninf float @llvm.vector.reduce.fminimum.v3f32(<3 x float> %a)
   ret float %b
 }

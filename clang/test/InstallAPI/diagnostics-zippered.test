@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %t/Mismatch.yaml -o %t/System/Library/Frameworks/Mismatch.framework/Mismatch
 

@@ -111,16 +111,12 @@ SUnit *ScheduleDAGSDNodes::Clone(SUnit *Old) {
 static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
-                                      const TargetLowering &TLI,
-                                      unsigned &PhysReg, int &Cost) {
+                                      MCRegister &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
-  unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
-    return;
-
-  if (Register::isVirtualRegister(Reg))
+  Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+  if (Reg.isVirtual())
     return;
 
   unsigned ResNo = User->getOperand(2).getResNo();
@@ -133,10 +129,9 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
       PhysReg = Reg;
   }
 
-  if (PhysReg != 0) {
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
+  if (PhysReg) {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    Cost = RC->expensiveOrImpossibleToCopy() ? -1 : RC->getCopyCost();
   }
 }
 
@@ -333,6 +328,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   unsigned NumNodes = 0;
   for (SDNode &NI : DAG->allnodes()) {
     NI.setNodeId(-1);
+    NI.setSchedulerWorklistVisited(false);
     ++NumNodes;
   }
 
@@ -347,16 +343,19 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   SmallVector<SDNode*, 64> Worklist;
   SmallPtrSet<SDNode*, 32> Visited;
   Worklist.push_back(DAG->getRoot().getNode());
-  Visited.insert(DAG->getRoot().getNode());
+  DAG->getRoot().getNode()->setSchedulerWorklistVisited(true);
 
   SmallVector<SUnit*, 8> CallSUnits;
   while (!Worklist.empty()) {
     SDNode *NI = Worklist.pop_back_val();
 
     // Add all operands to the worklist unless they've already been added.
-    for (const SDValue &Op : NI->op_values())
-      if (Visited.insert(Op.getNode()).second)
-        Worklist.push_back(Op.getNode());
+    for (const SDValue &Op : NI->op_values()) {
+      if (Op.getNode()->getSchedulerWorklistVisited())
+        continue;
+      Op.getNode()->setSchedulerWorklistVisited(true);
+      Worklist.push_back(Op.getNode());
+    }
 
     if (isPassiveNode(NI))  // Leaf node, e.g. a TargetImmediate.
       continue;
@@ -466,11 +465,18 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
           !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
+        const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
         SU.hasPhysRegClobbers = true;
+        // Results beyond the explicit defs are physical register defs, unless
+        // the target models variadic results as virtual registers. This must
+        // match InstrEmitter::EmitMachineNode.
+        bool HasVRegVariadicDefs = !MF.getTarget().usesPhysRegsForValues() &&
+                                   MCID.isVariadic() &&
+                                   MCID.variadicOpsAreDefs();
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
           --NumUsed;    // Skip over unused values at the end.
-        if (NumUsed > TII->get(N->getMachineOpcode()).getNumDefs())
+        if (!HasVRegVariadicDefs && NumUsed > MCID.getNumDefs())
           SU.hasPhysRegDefs = true;
       }
 
@@ -487,20 +493,18 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         assert(OpVT != MVT::Glue && "Glued nodes should be in same sunit!");
         bool isChain = OpVT == MVT::Other;
 
-        unsigned PhysReg = 0;
+        MCRegister PhysReg;
         int Cost = 1;
         // Determine if this is a physical register dependency.
-        const TargetLowering &TLI = DAG->getTargetLoweringInfo();
-        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
-        assert((PhysReg == 0 || !isChain) &&
-               "Chain dependence via physreg data?");
+        CheckForPhysRegDependency(OpN, N, i, TRI, TII, PhysReg, Cost);
+        assert((!PhysReg || !isChain) && "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
         // emits a copy from the physical register to a virtual register unless
         // it requires a cross class copy (cost < 0). That means we are only
         // treating "expensive to copy" register dependency as physical register
         // dependency. This may change in the future though.
         if (Cost >= 0 && !StressSched)
-          PhysReg = 0;
+          PhysReg = MCRegister();
 
         // If this is a ctrl dep, latency is 1.
         unsigned OpLatency = isChain ? 1 : OpSU->Latency;
@@ -536,7 +540,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
 /// are input.  This SUnit graph is similar to the SelectionDAG, but
 /// excludes nodes that aren't interesting to scheduling, and represents
 /// glued together nodes with a single SUnit.
-void ScheduleDAGSDNodes::BuildSchedGraph(AAResults *AA) {
+void ScheduleDAGSDNodes::BuildSchedGraph() {
   // Cluster certain nodes which should be scheduled together.
   ClusterNodes();
   // Populate the SUnits array.
@@ -664,8 +668,8 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
       TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
   if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
-    unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
-    if (Register::isVirtualRegister(Reg))
+    Register Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
+    if (Reg.isVirtual())
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
@@ -815,8 +819,7 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
       continue; // ignore chain preds
     if (Pred.getSUnit()->CopyDstRC) {
       // Copy to physical register.
-      DenseMap<SUnit *, Register>::iterator VRI =
-          VRBaseMap.find(Pred.getSUnit());
+      auto VRI = VRBaseMap.find(Pred.getSUnit());
       assert(VRI != VRBaseMap.end() && "Node emitted out of order - late");
       // Find the destination physical register.
       Register Reg;
@@ -841,6 +844,25 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
           .addReg(Pred.getReg());
     }
     break;
+  }
+}
+
+/// Mark physreg defs dead on \p MI, emitted for a cloned node \p SU. All copies
+/// share one SDNode, so InstrEmitter can't tell which copy lost its users. A
+/// live def of an expensive-to-copy physreg is carried on a scheduler edge by
+/// some copy, so it is dead if \p SU has no such edge.
+static void markClonedNodeDeadDefs(const SUnit &SU, MachineInstr &MI,
+                                   const TargetRegisterInfo *TRI) {
+  for (MachineOperand &MO : MI.implicit_operands()) {
+    if (!MO.isReg() || !MO.isDef() || MO.isDead())
+      continue;
+    Register Reg = MO.getReg();
+    if (!TRI->getMinimalPhysRegClass(Reg)->expensiveOrImpossibleToCopy())
+      continue;
+    if (none_of(SU.Succs, [=](const SDep &Succ) {
+          return Succ.isAssignedRegDep() && Succ.getReg() == Reg;
+        }))
+      MO.setIsDead();
   }
 }
 
@@ -889,7 +911,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForAdditionalCallInfo()) {
-      if (DAG->getTarget().Options.EmitCallSiteInfo)
+      if (DAG->getTarget().Options.EmitCallSiteInfo ||
+          DAG->getTarget().Options.EmitCallGraphSection)
         MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))
@@ -972,6 +995,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       if (NewInsn && NewInsn->isCall())
         NewInsn->setHeapAllocMarker(MF, MD);
     }
+
+    if (NewInsn && SU->OrigNode->isCloned)
+      markClonedNodeDeadDefs(*SU, *NewInsn, TRI);
   }
 
   // Insert all the dbg_values which have not already been inserted in source

@@ -11,16 +11,15 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @a = external global [255 x i32]
 
-; Function Attrs: nounwind readonly uwtable
 define i32 @vect() {
 ; CHECK: LV: Checking a loop in 'vect'
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
 ; We need to make sure we did vectorize the loop
 ; CHECK: LV: Found a loop: for.body
-; CHECK: LV: We can vectorize this loop!
+; CHECK: LV: Loop passed LoopVectorizationLegality checks!
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %red.05 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds [255 x i32], ptr @a, i64 0, i64 %indvars.iv
@@ -36,7 +35,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: for.body:
 ; CHECK: br {{.*}} label %for.body{{.*}}, !llvm.loop [[scalar:![0-9]+]]
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 %add
 }
 

@@ -235,11 +235,13 @@ class TestScriptedResolver(TestBase):
             substrs=["2"],
             msg="Was only passed modules",
         )
-
+        print(f"Made first breakpoint: {bkpt}")
+        bkpt = None
         # Make a breakpoint that asks for modules, check that we didn't get any files:
         bkpt = target.BreakpointCreateFromScript(
             "resolver.ResolverModuleDepth", extra_args, module_list, file_list
         )
+        print(f"Made Second breakpoint: {bkpt}")
         self.assertGreater(
             bkpt.GetNumLocations(), 0, "ResolverModuleDepth got no locations."
         )

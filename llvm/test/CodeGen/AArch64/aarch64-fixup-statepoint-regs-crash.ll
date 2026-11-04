@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 ; RUN: llc -verify-machineinstrs -max-registers-for-gc-values=256 -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 
-; Verify that FixupStatepointCallerSaved pass uses correct intruction for spilling a register after copyprop
+; Verify that FixupStatepointCallerSaved pass uses correct instruction for spilling a register after copyprop
 define dso_local ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-example" personality ptr null {
 ; CHECK-LABEL: foo:
 ; CHECK:       .Lfunc_begin0:
@@ -15,7 +15,7 @@ define dso_local ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-exa
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [sp, #16]
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    bl baz // 8-byte Folded Reload
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    ldp x19, x0, [sp, #8] // 8-byte Folded Reload

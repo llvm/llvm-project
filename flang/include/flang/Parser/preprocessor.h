@@ -38,6 +38,7 @@ public:
   Definition(const std::vector<std::string> &argNames, const TokenSequence &,
       std::size_t firstToken, std::size_t tokens, bool isVariadic = false);
   Definition(const std::string &predefined, AllSources &);
+  Definition(const TokenSequence &predefined);
 
   bool isFunctionLike() const { return isFunctionLike_; }
   std::size_t argumentCount() const { return argNames_.size(); }
@@ -48,8 +49,8 @@ public:
 
   bool set_isDisabled(bool disable);
 
-  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &,
-      bool inIfExpression = false);
+  TokenSequence Apply(const std::vector<TokenSequence> &args,
+      const Prescanner &, bool inIfExpression = false) const;
 
   void Print(llvm::raw_ostream &out, const char *macroName = "") const;
 
@@ -81,6 +82,7 @@ public:
   void Define(const std::string &macro, const std::string &value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
+  bool IsNameDefinedEmpty(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);
   bool AnyDefinitions() const { return !definitions_.empty(); }
   bool InConditional() const { return !ifStack_.empty(); }
@@ -93,7 +95,7 @@ public:
   // that result and try again.  All other Fortran preprocessors share this
   // behavior.
   std::optional<TokenSequence> MacroReplacement(const TokenSequence &,
-      Prescanner &,
+      const Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
 
@@ -107,7 +109,7 @@ private:
   enum class CanDeadElseAppear { No, Yes };
 
   CharBlock SaveTokenAsName(const CharBlock &);
-  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &,
+  TokenSequence ReplaceMacros(const TokenSequence &, const Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
   void SkipDisabledConditionalCode(
@@ -115,11 +117,14 @@ private:
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
       std::size_t exprTokens, Prescanner &);
   void LineDirective(const TokenSequence &, std::size_t, Prescanner &);
+  TokenSequence TokenizeMacroBody(const std::string &);
 
   AllSources &allSources_;
   std::list<std::string> names_;
   std::unordered_map<CharBlock, Definition> definitions_;
   std::stack<CanDeadElseAppear> ifStack_;
+
+  unsigned int counterVal_{0};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PREPROCESSOR_H_

@@ -1,21 +1,23 @@
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C,MIPS32
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C,MIPS32R2
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,32-CMP
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64-C
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C,MIPS64
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r2 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C,MIPS64R2
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r6 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64-CMP
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM,MM32R3
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM,MMR6,MM32R6
+; RUN: llc < %s -mtriple=mips64el -mcpu=r5900 | \
+; RUN:    FileCheck %s -check-prefixes=ALL,R5900
 
 define i32 @false_f32(float %a, float %b) nounwind {
 ; ALL-LABEL: false_f32:
@@ -26,6 +28,8 @@ define i32 @false_f32(float %a, float %b) nounwind {
 ; 64-C:          addiu $2, $zero, 0
 
 ; 64-CMP:        addiu $2, $zero, 0
+
+; R5900:         addiu $2, $zero, 0
 
 ; MM-DAG:        li16 $2, 0
 
@@ -44,6 +48,9 @@ define i32 @oeq_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.eq.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
+
+; R5900:         c.eq.s $f12, $f13
+; R5900:         bc1f
 
 ; 32-CMP-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -78,6 +85,9 @@ define i32 @ogt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ule.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
+; R5900:         c.olt.s $f13, $f12
+; R5900:         bc1f
+
 ; 32-CMP-DAG:    cmp.lt.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    andi $2, $[[T1]], 1
@@ -110,6 +120,9 @@ define i32 @oge_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.ult.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
+
+; R5900:         c.ole.s $f13, $f12
+; R5900:         bc1f
 
 ; 32-CMP-DAG:    cmp.le.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -144,6 +157,9 @@ define i32 @olt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.olt.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
+; R5900:         c.olt.s $f12, $f13
+; R5900:         bc1f
+
 ; 32-CMP-DAG:    cmp.lt.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    andi $2, $[[T1]], 1
@@ -176,6 +192,9 @@ define i32 @ole_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.ole.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
+
+; R5900:         c.ole.s $f12, $f13
+; R5900:         bc1f
 
 ; 32-CMP-DAG:    cmp.le.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -210,6 +229,10 @@ define i32 @one_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ueq.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
+; R5900:         c.olt.s $f12, $f13
+; R5900:         bc1t
+; R5900:         c.olt.s $f13, $f12
+
 ; 32-CMP-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    not $[[T2:[0-9]+]], $[[T1]]
@@ -227,7 +250,7 @@ define i32 @one_f32(float %a, float %b) nounwind {
 
 ; MM32R6-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp one float %a, %b
@@ -246,6 +269,9 @@ define i32 @ord_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.un.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
+; R5900:         c.eq.s $f13, $f13
+; R5900:         c.eq.s $f12, $f12
+
 ; 32-CMP-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    not $[[T2:[0-9]+]], $[[T1]]
@@ -263,7 +289,7 @@ define i32 @ord_f32(float %a, float %b) nounwind {
 
 ; MM32R6-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp ord float %a, %b
@@ -281,6 +307,9 @@ define i32 @ueq_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.ueq.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
+
+; R5900:         c.olt.s $f12, $f13
+; R5900:         c.olt.s $f13, $f12
 
 ; 32-CMP-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -315,6 +344,9 @@ define i32 @ugt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ole.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
+; R5900:         c.ole.s $f12, $f13
+; R5900:         bc1t
+
 ; 32-CMP-DAG:    cmp.ult.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    andi $2, $[[T1]], 1
@@ -347,6 +379,9 @@ define i32 @uge_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.olt.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
+
+; R5900:         c.olt.s $f12, $f13
+; R5900:         bc1t
 
 ; 32-CMP-DAG:    cmp.ule.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -381,6 +416,9 @@ define i32 @ult_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ult.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
+; R5900:         c.ole.s $f13, $f12
+; R5900:         bc1t
+
 ; 32-CMP-DAG:    cmp.ult.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    andi $2, $[[T1]], 1
@@ -413,6 +451,9 @@ define i32 @ule_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.ule.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
+
+; R5900:         c.olt.s $f13, $f12
+; R5900:         bc1t
 
 ; 32-CMP-DAG:    cmp.ule.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -447,6 +488,9 @@ define i32 @une_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.eq.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
+; R5900:         c.eq.s $f12, $f13
+; R5900:         bc1t
+
 ; 32-CMP-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
 ; 32-CMP-DAG:    not $[[T2:[0-9]+]], $[[T1]]
@@ -464,7 +508,7 @@ define i32 @une_f32(float %a, float %b) nounwind {
 
 ; MM32R6-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp une float %a, %b
@@ -482,6 +526,11 @@ define i32 @uno_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      addiu $2, $zero, 1
 ; 64-C-DAG:      c.un.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
+
+; R5900:         c.eq.s $f13, $f13
+; R5900:         bc1f
+; R5900:         c.eq.s $f12, $f12
+; R5900:         bc1f
 
 ; 32-CMP-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -514,6 +563,8 @@ define i32 @true_f32(float %a, float %b) nounwind {
 ; 64-C:          addiu $2, $zero, 1
 
 ; 64-CMP:        addiu $2, $zero, 1
+
+; R5900:         addiu $2, $zero, 1
 
 ; MM-DAG:        li16 $2, 1
 
@@ -732,7 +783,7 @@ define i32 @one_f64(double %a, double %b) nounwind {
 
 ; MM32R6-DAG:    cmp.ueq.d $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp one double %a, %b
@@ -768,7 +819,7 @@ define i32 @ord_f64(double %a, double %b) nounwind {
 
 ; MM32R6-DAG:    cmp.un.d $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp ord double %a, %b
@@ -969,7 +1020,7 @@ define i32 @une_f64(double %a, double %b) nounwind {
 
 ; MM32R6-DAG:    cmp.eq.d $[[T0:f[0-9]+]], $f12, $f14
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not16 $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp une double %a, %b
@@ -1040,10 +1091,7 @@ entry:
 ; 32-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %lo($CPI32_0)(
 ; 32-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
-; FIXME: This instruction is redundant.
-; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 32-CMP-DAG:    bnezc    $[[T4]],
+; 32-CMP-DAG:    bc1nez   $[[T2]],
 
 ; 64-C-DAG:      add.s    $[[T0:f[0-9]+]], $f13, $f12
 ; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %lo(.LCPI32_0)(
@@ -1053,10 +1101,7 @@ entry:
 ; 64-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
 ; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %lo(.LCPI32_0)(
 ; 64-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
-; FIXME: This instruction is redundant.
-; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 64-CMP-DAG:    bnezc    $[[T4]],
+; 64-CMP-DAG:    bc1nez   $[[T2]],
 
 ; MM32R3-DAG:    add.s    $[[T0:f[0-9]+]], $f14, $f12
 ; MM32R3-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI32_0)
@@ -1068,9 +1113,7 @@ entry:
 ; MM32R6-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI32_0)
 ; MM32R6-DAG:    lwc1     $[[T2:f[0-9]+]], %lo($CPI32_0)($[[T1]])
 ; MM32R6-DAG:    cmp.le.s $[[T3:f[0-9]+]], $[[T0]], $[[T2]]
-; MM32R6-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3:f[0-9]+]]
-; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
-; MM32R6-DAG:    bnezc    $[[T5]],
+; MM32R6-DAG:    bc1nezc  $[[T3]],
 
   %add = fadd fast float %at, %angle
   %cmp = fcmp ogt float %add, 1.000000e+00
@@ -1091,44 +1134,52 @@ entry:
 ; ALL-LABEL: bug1_f64:
 
 ; 32-C-DAG:      add.d    $[[T0:f[0-9]+]], $f14, $f12
-; 32-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; MIPS32-DAG:    ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; MIPS32R2-DAG:  lui      $[[T2:[0-9]+]], 16368
+; MIPS32R2-DAG:  mtc1     $zero, $[[T1:f[0-9]+]]
+; MIPS32R2-DAG:  mthc1    $[[T2]], $[[T1]]
 ; 32-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
 ; 32-C-DAG:      bc1t
 
-; 32-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; 32-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
-; 32-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
-; FIXME: This instruction is redundant.
-; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 32-CMP-DAG:    bnezc    $[[T4]],
+; 32-CMP-DAG:    lui      $[[T0:[0-9]+]], 16368
+; 32-CMP-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; 32-CMP-DAG:    mthc1    $[[T0]], $[[T1]]
+; 32-CMP-DAG:    add.d    $[[T2:f[0-9]+]], $f14, $f12
+; 32-CMP-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
+; 32-CMP-DAG:    bc1nez   $[[T3]],
 
-; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
-; 64-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
-; 64-C-DAG:      bc1t
+; MIPS64-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
+; MIPS64-DAG:      ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
+; MIPS64-DAG:      c.ole.d  $[[T0]], $[[T1]]
+; MIPS64-DAG:      bc1t
 
-; 64-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
-; 64-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
-; FIXME: This instruction is redundant.
-; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 64-CMP-DAG:    bnezc    $[[T4]],
+; MIPS64R2-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
+; MIPS64R2-DAG:      lui      $[[T1:[0-9]+]], 16368
+; MIPS64R2-DAG:      mtc1     $zero, $[[T2:f[0-9]+]]
+; MIPS64R2-DAG:      mthc1    $[[T1]], $[[T2]]
+; MIPS64R2-DAG:      c.ole.d  $[[T0]], $[[T2]]
+; MIPS64R2-DAG:      bc1t
+
+; 64-CMP-DAG:    lui      $[[T0:[0-9]+]], 16368
+; 64-CMP-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; 64-CMP-DAG:    mthc1    $[[T0]], $[[T1]]
+; 64-CMP-DAG:    add.d    $[[T2:f[0-9]+]], $f13, $f12
+; 64-CMP-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
+; 64-CMP-DAG:    bc1nez   $[[T3]],
 
 ; MM32R3-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; MM32R3-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI33_0)
-; MM32R3-DAG:    ldc1     $[[T2:f[0-9]+]], %lo($CPI33_0)($[[T1]])
+; MM32R3-DAG:    lui      $[[T1:[0-9]+]], 16368
+; MM32R3-DAG:    mtc1     $zero, $[[T2:f[0-9]+]]
+; MM32R3-DAG:    mthc1    $[[T1]], $[[T2]]
 ; MM32R3-DAG:    c.ole.d  $[[T0]], $[[T2]]
 ; MM32R3-DAG:    bc1t
 
-; MM32R6-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; MM32R6-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI33_0)
-; MM32R6-DAG:    ldc1     $[[T2:f[0-9]+]], %lo($CPI33_0)($[[T1]])
-; MM32R6-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T0]], $[[T2]]
-; MM32R6-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3]]
-; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
-; MM32R6-DAG:    bnezc    $[[T5]],
+; MM32R6-DAG:    lui      $[[T0:[0-9]+]], 16368
+; MM32R6-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; MM32R6-DAG:    mthc1    $[[T0]], $[[T1]]
+; MM32R6-DAG:    add.d    $[[T2:f[0-9]+]], $f14, $f12
+; MM32R6-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
+; MM32R6-DAG:    bc1nezc  $[[T3]],
 
   %add = fadd fast double %at, %angle
   %cmp = fcmp ogt double %add, 1.000000e+00

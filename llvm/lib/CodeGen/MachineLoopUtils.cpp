@@ -8,8 +8,10 @@
 
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include <iterator>
 using namespace llvm;
 
 namespace {
@@ -26,7 +28,8 @@ MachineInstr &findEquivalentInstruction(MachineInstr &MI,
 MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
                                              MachineBasicBlock *Loop,
                                              MachineRegisterInfo &MRI,
-                                             const TargetInstrInfo *TII) {
+                                             const TargetInstrInfo *TII,
+                                             MachineDomTreeUpdater *MDTU) {
   MachineFunction &MF = *Loop->getParent();
   MachineBasicBlock *Preheader = *Loop->pred_begin();
   if (Preheader == Loop)
@@ -76,8 +79,9 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
 
   for (auto I = NewBB->getFirstNonPHI(); I != NewBB->end(); ++I)
     for (MachineOperand &MO : I->uses())
-      if (MO.isReg() && Remaps.count(MO.getReg()))
-        MO.setReg(Remaps[MO.getReg()]);
+      if (MO.isReg())
+        if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
+          MO.setReg(It->second);
 
   for (auto I = NewBB->begin(); I->isPHI(); ++I) {
     MachineInstr &MI = *I;
@@ -90,8 +94,8 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
       // When peeling front, we are only left with the initial value from the
       // preheader.
       Register R = MI.getOperand(LoopRegIdx).getReg();
-      if (Remaps.count(R))
-        R = Remaps[R];
+      if (auto It = Remaps.find(R); It != Remaps.end())
+        R = It->second;
       OrigPhi.getOperand(InitRegIdx).setReg(R);
       MI.removeOperand(LoopRegIdx + 1);
       MI.removeOperand(LoopRegIdx + 0);
@@ -109,14 +113,20 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
   if (Direction == LPD_Front) {
     Preheader->ReplaceUsesOfBlockWith(Loop, NewBB);
     NewBB->addSuccessor(Loop);
+    if (MDTU)
+      MDTU->splitCriticalEdge(Preheader, Loop, NewBB);
     Loop->replacePhiUsesWith(Preheader, NewBB);
-    Preheader->updateTerminator(Loop);
+    if (auto PreheaderLayoutSuccessor = std::next(Preheader->getIterator());
+        PreheaderLayoutSuccessor != Preheader->getParent()->end())
+      Preheader->updateTerminator(&*PreheaderLayoutSuccessor);
     TII->removeBranch(*NewBB);
     TII->insertBranch(*NewBB, Loop, nullptr, {}, DL);
   } else {
     Loop->replaceSuccessor(Exit, NewBB);
     Exit->replacePhiUsesWith(Loop, NewBB);
     NewBB->addSuccessor(Exit);
+    if (MDTU)
+      MDTU->splitCriticalEdge(Loop, Exit, NewBB);
 
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;

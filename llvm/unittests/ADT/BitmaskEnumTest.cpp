@@ -166,6 +166,55 @@ TEST(BitmaskEnumTest, ConstantExpression) {
   EXPECT_EQ(f24, V1 ^ V2);
 }
 
+// The compound assignment operators must also be usable during constant
+// evaluation, so that a constexpr function can accumulate into a local.
+TEST(BitmaskEnumTest, ConstantExpressionCompoundAssignment) {
+  constexpr auto OrEq = [](Flags LHS, Flags RHS) {
+    LHS |= RHS;
+    return LHS;
+  };
+  constexpr auto AndEq = [](Flags LHS, Flags RHS) {
+    LHS &= RHS;
+    return LHS;
+  };
+  constexpr auto XorEq = [](Flags LHS, Flags RHS) {
+    LHS ^= RHS;
+    return LHS;
+  };
+  constexpr auto ShlEq = [](Flags LHS, Flags RHS) {
+    LHS <<= RHS;
+    return LHS;
+  };
+  constexpr auto ShrEq = [](Flags LHS, Flags RHS) {
+    LHS >>= RHS;
+    return LHS;
+  };
+
+  static_assert(OrEq(F1, F2) == (F1 | F2));
+  static_assert(AndEq(F1 | F2, F2) == F2);
+  static_assert(XorEq(F1 | F2, F2) == F1);
+  static_assert(ShlEq(F1, F1) == F2);
+  static_assert(ShrEq(F2, F1) == F1);
+
+  // Accumulating into a local across several statements, which is the pattern
+  // that requires the operators themselves to be constexpr.
+  constexpr auto Accumulate = [] {
+    Flags F = F0;
+    F |= F1;
+    F |= F2;
+    F &= ~F1;
+    F ^= F3;
+    return F;
+  };
+  static_assert(Accumulate() == (F2 | F3));
+
+  constexpr auto OrEq2 = [](Flags2 LHS, Flags2 RHS) {
+    LHS |= RHS;
+    return LHS;
+  };
+  static_assert(OrEq2(V1, V2) == (V1 | V2));
+}
+
 TEST(BitmaskEnumTest, BitwiseNot) {
   Flags f = ~F1;
   EXPECT_EQ(14, f); // Largest value for f is 15.
@@ -174,6 +223,17 @@ TEST(BitmaskEnumTest, BitwiseNot) {
   Flags2 f2 = ~V1;
   EXPECT_EQ(14, f2);
   EXPECT_EQ(15, ~V0);
+}
+
+TEST(BitmaskEnumTest, BooleanNot) {
+  bool b0 = !F0;
+  EXPECT_TRUE(b0);
+
+  bool b1 = !(F1 & F2);
+  EXPECT_TRUE(b1);
+
+  bool b2 = !(F2 | F4);
+  EXPECT_FALSE(b2);
 }
 
 enum class FlagsClass {
@@ -188,6 +248,13 @@ TEST(BitmaskEnumTest, ScopedEnum) {
   FlagsClass f = (FlagsClass::F1 & ~FlagsClass::F0) | FlagsClass::F2;
   f |= FlagsClass::F3;
   EXPECT_EQ(7, static_cast<int>(f));
+
+  constexpr auto OrEq = [](FlagsClass LHS, FlagsClass RHS) {
+    LHS |= RHS;
+    return LHS;
+  };
+  static_assert(OrEq(FlagsClass::F1, FlagsClass::F2) ==
+                (FlagsClass::F1 | FlagsClass::F2));
 }
 
 struct Container {

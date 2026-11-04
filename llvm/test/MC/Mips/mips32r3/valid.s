@@ -115,7 +115,7 @@ a:
         floor.w.s $f8,$f9              # CHECK: floor.w.s $f8, $f9        # encoding: [0x46,0x00,0x4a,0x0f]
                                        # CHECK:                           # <MCInst #{{.*}} FLOOR_W_S
         j         1f                   # CHECK: j $tmp0 # encoding: [0b000010AA,A,A,A]
-                                       # CHECK:         #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
+                                       # CHECK:         #   fixup A - offset: 0, value: $tmp0, kind: fixup_Mips_26
         j         a                    # CHECK: j a     # encoding: [0b000010AA,A,A,A]
                                        # CHECK:         #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j         1328                 # CHECK: j 1328  # encoding: [0x08,0x00,0x01,0x4c]
@@ -327,6 +327,11 @@ a:
                                        # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         sync      1                    # CHECK: sync 1                 # encoding: [0x00,0x00,0x00,0x4f]
                                        # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
+        sync_wmb                       # CHECK: sync_wmb               # encoding: [0x00,0x00,0x01,0x0f]
+        sync_mb                        # CHECK: sync_mb                # encoding: [0x00,0x00,0x04,0x0f]
+        sync_acquire                   # CHECK: sync_acquire           # encoding: [0x00,0x00,0x04,0x4f]
+        sync_release                   # CHECK: sync_release           # encoding: [0x00,0x00,0x04,0x8f]
+        sync_rmb                       # CHECK: sync_rmb               # encoding: [0x00,0x00,0x04,0xcf]
         syscall                        # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
         syscall   256                  # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         teq $zero, $3                  # CHECK: teq $zero, $3          # encoding: [0x00,0x03,0x00,0x34]

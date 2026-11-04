@@ -14,6 +14,7 @@ void f(char **sp, float *fp) {
   printf("%a", 1.0);
   scanf("%afoobar", fp);
   printf(nullptr);
+  // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
   printf(*sp); // expected-warning {{not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
 
@@ -32,4 +33,5 @@ void f(char **sp, float *fp) {
   printf("init list: %d", { 0 }); // expected-error {{cannot pass initializer list to variadic function; expected type from format string was 'int'}}
   printf("void: %d", f(sp, fp)); // expected-error {{cannot pass expression of type 'void' to variadic function; expected type from format string was 'int'}}
   printf(0, { 0 }); // expected-error {{cannot pass initializer list to variadic function}}
+  // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 }

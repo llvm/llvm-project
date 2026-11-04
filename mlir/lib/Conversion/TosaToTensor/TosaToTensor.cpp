@@ -13,11 +13,13 @@
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -35,10 +37,10 @@ TensorType inferReshapeInputType(TypedValue<TensorType> input,
     return input.getType();
 
   // The input type must be cast into a tensor with the same rank and all static
-  // dimensions set to 1. This prevents the generation of a tensor.collapse_shape
-  // op that converts a dynamically shaped tensor into a 0D tensor. While such
-  // construct is not incorrect on its own, bufferization cannot properly handle
-  // it at the moment, so we avoid it.
+  // dimensions set to 1. This prevents the generation of a
+  // tensor.collapse_shape op that converts a dynamically shaped tensor into a
+  // 0D tensor. While such construct is not incorrect on its own, bufferization
+  // cannot properly handle it at the moment, so we avoid it.
   SmallVector<int64_t> shape(input.getType().getRank(), 1);
   return input.getType().clone(shape);
 }
@@ -57,31 +59,32 @@ TensorType inferReshapeExpandedType(TensorType inputType,
   int64_t totalSize = inputIsStatic ? inputType.getNumElements() : -1;
 
   // Compute result shape
-  auto resultShape = llvm::map_to_vector(newShape, [&](int64_t size) -> int64_t {
-    // If this is not a placeholder, do not change it
-    if (size >= 0)
-      return size;
+  auto resultShape =
+      llvm::map_to_vector(newShape, [&](int64_t size) -> int64_t {
+        // If this is not a placeholder, do not change it.
+        if (size >= 0)
+          return size;
 
-    // If we do not know the total size of the tensor, keep this dimension
-    // dynamic in the result shape.
-    if (!inputIsStatic)
-      return ShapedType::kDynamic;
+        // If we do not know the total size of the tensor, keep this dimension
+        // dynamic in the result shape.
+        if (!inputIsStatic)
+          return ShapedType::kDynamic;
 
-    // Calculate the product of all elements in 'newShape' except for the -1
-    // placeholder, which we discard by negating the result.
-    int64_t totalSizeNoPlaceholder = -std::accumulate(
-        newShape.begin(), newShape.end(), 1, std::multiplies<int64_t>());
+        // Calculate the product of all elements in 'newShape' except for the -1
+        // placeholder, which we discard by negating the result.
+        int64_t totalSizeNoPlaceholder = -llvm::product_of(newShape);
 
-    // If there is a 0 component in 'newShape', resolve the placeholder as 0.
-    if (totalSizeNoPlaceholder == 0)
-      return 0;
+        // If there is a 0 component in 'newShape', resolve the placeholder as
+        // 0.
+        if (totalSizeNoPlaceholder == 0)
+          return 0;
 
-    // Resolve the placeholder as the quotient between the total tensor size and
-    // the product of all other sizes.
-    return totalSize / totalSizeNoPlaceholder;
-  });
+        // Resolve the placeholder as the quotient between the total tensor size
+        // and the product of all other sizes.
+        return totalSize / totalSizeNoPlaceholder;
+      });
 
-  bool resultIsStatic = !ShapedType::isDynamicShape(resultShape);
+  bool resultIsStatic = ShapedType::isStaticShape(resultShape);
 
   // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
   // shaped input from being reshaped into a statically shaped result. We may
@@ -107,7 +110,8 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
   if (lhsShape.empty() || rhsShape.empty())
     return lhsType.clone(ArrayRef<int64_t>{});
 
-  if (ShapedType::isDynamicShape(lhsShape) || ShapedType::isDynamicShape(rhsShape))
+  if (ShapedType::isDynamicShape(lhsShape) ||
+      ShapedType::isDynamicShape(rhsShape))
     return lhsType.clone({ShapedType::kDynamic});
 
   SmallVector<int64_t> intermediateShape;
@@ -149,14 +153,16 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
 }
 
 SmallVector<ReassociationExprs>
-createReassociationMapForCollapse(OpBuilder &builder, Type srcType, Type dstType) {
+createReassociationMapForCollapse(OpBuilder &builder, Type srcType,
+                                  Type dstType) {
   auto srcShape = cast<TensorType>(srcType).getShape();
   auto dstShape = cast<TensorType>(dstType).getShape();
 
   if (srcShape.empty() || dstShape.empty())
     return {};
 
-  if (ShapedType::isDynamicShape(srcShape) || ShapedType::isDynamicShape(dstShape)) {
+  if (ShapedType::isDynamicShape(srcShape) ||
+      ShapedType::isDynamicShape(dstShape)) {
     assert(dstShape.size() == 1);
     SmallVector<AffineExpr, 2> exprs;
     for (auto i : llvm::seq<int64_t>(srcShape.size()))
@@ -224,8 +230,8 @@ public:
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
-    auto resultType = cast_if_present<ShapedType>(
-        getTypeConverter()->convertType(reshape.getType()));
+    auto resultType =
+        getTypeConverter()->convertType<ShapedType>(reshape.getType());
     if (!resultType) {
       return rewriter.notifyMatchFailure(reshape.getLoc(),
                                          "could not convert result type");
@@ -235,7 +241,12 @@ public:
       return rewriter.notifyMatchFailure(reshape.getLoc(),
                                          "expected input type to be tensor");
     }
-    auto newShape = reshape.getNewShape();
+
+    llvm::SmallVector<int64_t> newShape;
+    if (!tosa::getConstShapeValues(reshape.getShape().getDefiningOp(),
+                                   newShape)) {
+      return failure();
+    }
 
     // Infer all intermediate types
     auto inputType = inferReshapeInputType(input, newShape);
@@ -243,14 +254,16 @@ public:
     auto collapsedType = inferReshapeCollapsedType(inputType, expandedType);
 
     // Cast input if needed
-    auto castInput = rewriter.createOrFold<tensor::CastOp>(loc, inputType, input);
+    auto castInput =
+        rewriter.createOrFold<tensor::CastOp>(loc, inputType, input);
 
     // Emit collaspe-expand pair
     auto collapsed = createCollapse(rewriter, loc, collapsedType, castInput);
     auto expanded = createExpand(rewriter, loc, expandedType, collapsed);
 
     // Cast to final result type if needed
-    auto result = rewriter.createOrFold<tensor::CastOp>(loc, resultType, expanded);
+    auto result =
+        rewriter.createOrFold<tensor::CastOp>(loc, resultType, expanded);
     rewriter.replaceOp(reshape, result);
     return success();
   }
@@ -268,29 +281,54 @@ public:
     ShapedType resultType = cast<ShapedType>(sliceOp.getType());
     if (llvm::isa<UnrankedTensorType>(resultType))
       return failure();
+
+    ElementsAttr startElems;
+    ElementsAttr sizeElems;
+
+    if (!matchPattern(sliceOp.getStart(), m_Constant(&startElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "start of slice must be a static ranked shape");
+
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+
+    llvm::SmallVector<int64_t> sliceStarts =
+        llvm::to_vector(startElems.getValues<int64_t>());
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
+
     SmallVector<int64_t> strides, sizes;
-    ArrayRef<int64_t> starts = sliceOp.getStart();
     strides.resize(cast<ShapedType>(sliceOp.getType()).getRank(), 1);
 
     SmallVector<Value> dynSizes;
-    for (const auto &i : llvm::enumerate(sliceOp.getSize())) {
+    for (const auto &i : llvm::enumerate(sliceSizes)) {
       int64_t size = i.value();
       size_t index = i.index();
       sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
-      if (!ShapedType::isDynamic(sizes.back()))
+      if (ShapedType::isStatic(sizes.back()))
         continue;
 
-      auto dim = rewriter.create<tensor::DimOp>(loc, input, index);
-      auto offset = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIndexAttr(starts[index]));
-      dynSizes.push_back(rewriter.create<arith::SubIOp>(loc, dim, offset));
+      auto dim = tensor::DimOp::create(rewriter, loc, input, index);
+      auto offset = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(sliceStarts[index]));
+      dynSizes.push_back(arith::SubIOp::create(rewriter, loc, dim, offset));
     }
 
-    auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}), dynSizes,
-        ValueRange({}), rewriter.getDenseI64ArrayAttr(starts),
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}),
+        dynSizes, ValueRange({}), rewriter.getDenseI64ArrayAttr(sliceStarts),
         rewriter.getDenseI64ArrayAttr(sizes),
         rewriter.getDenseI64ArrayAttr(strides));
+
+    // Remove const_shape ops when it no longer has use point.
+    Operation *startConstShape = sliceOp.getStart().getDefiningOp();
+    if (startConstShape->getResult(0).hasOneUse())
+      rewriter.eraseOp(startConstShape);
+
+    Operation *sizeConstShape = sliceOp.getSize().getDefiningOp();
+    if (sizeConstShape->getResult(0).hasOneUse())
+      rewriter.eraseOp(sizeConstShape);
 
     rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();
@@ -299,39 +337,42 @@ public:
 
 class PadConverter : public OpConversionPattern<tosa::PadOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(tosa::PadOp padOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = padOp.getLoc();
     auto input = padOp.getInput1();
-    auto padding = padOp.getPadding();
+
+    ElementsAttr paddingElems;
+    if (!matchPattern(padOp.getPadding(), m_Constant(&paddingElems))) {
+      return rewriter.notifyMatchFailure(
+          padOp, "padding must be a static shape value");
+    }
+    llvm::SmallVector<int64_t> paddingVals;
+    for (auto idx : paddingElems.getValues<IntegerAttr>()) {
+      paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
+    }
+
+    // The TOSA specification requires a negative padding to be diagnosed.
+    // We emit a runtime assertion, as this could be dead or unreachable code.
+    if (llvm::any_of(paddingVals, [](int64_t val) { return val < 0; })) {
+      Value fail =
+          arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(false));
+      cf::AssertOp::create(
+          rewriter, loc, fail,
+          rewriter.getStringAttr("tosa.pad: padding must be non-negative"));
+    }
 
     ShapedType inputTy = cast<ShapedType>(input.getType());
-    Type elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
     // Setup the default constantAttr.
 
-    Value padConstant;
-
-    if (padOp.getPadConst()) {
-      padConstant = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padOp.getPadConst(), ValueRange({}));
-    } else {
-      TypedAttr constantAttr;
-      if (isa<FloatType>(elementTy)) {
-        constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      } else if (isa<IntegerType>(elementTy) && !padOp.getQuantizationInfo()) {
-        constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      } else if (isa<IntegerType>(elementTy) && padOp.getQuantizationInfo()) {
-        int64_t value = padOp.getQuantizationInfo()->getInputZp();
-        constantAttr = rewriter.getIntegerAttr(elementTy, value);
-      }
-      if (constantAttr)
-        padConstant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
-    }
+    Value padConstant = rewriter.createOrFold<tensor::ExtractOp>(
+        loc, padOp.getPadConst(),
+        ValueRange({arith::ConstantIndexOp::create(rewriter, loc, 0)}));
 
     if (!padConstant) {
       return rewriter.notifyMatchFailure(
@@ -345,24 +386,16 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value lowIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i);
-      Value highIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i + 1);
-      Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({lowIndex}));
-      Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({highIndex}));
-
-      lowVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), lowVal);
-      highVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), highVal);
-
+      Value lowVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i]));
+      Value highVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
       lowValues.push_back(lowVal);
       highValues.push_back(highVal);
     }
 
-    auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, padOp.getType(), input, lowValues, highValues, padConstant);
+    auto newPadOp = tensor::PadOp::create(rewriter, loc, padOp.getType(), input,
+                                          lowValues, highValues, padConstant);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();
@@ -375,58 +408,14 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   LogicalResult
   matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = dyn_cast<RankedTensorType>(op.getType());
+    auto resultType =
+        getTypeConverter()->convertType<RankedTensorType>(op.getType());
+    if (!resultType)
+      return failure();
 
-    Location loc = op.getLoc();
-    int axis = op.getAxis();
-    Value axisValue =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(axis));
-    int64_t rank = resultType.getRank();
-
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    SmallVector<OpFoldResult> sizes =
-        tensor::getMixedSizes(rewriter, op.getLoc(), adaptor.getOperands()[0]);
-
-    // Pre-compute the offsets along the axis dimension.
-    // The axisOffsets will be of size rank + 1, where the last value
-    // will hold the total size of the tensor along the 'axis' dimension.
-    SmallVector<OpFoldResult> axisOffsets;
-    axisOffsets.push_back(rewriter.getIndexAttr(0));
-    axisOffsets.push_back(sizes[axis]);
-
-    for (auto arg : adaptor.getOperands().drop_front()) {
-      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
-      auto currentOffset =
-          getValueOrCreateConstantIndexOp(rewriter, loc, axisOffsets.back());
-      auto total =
-          rewriter.createOrFold<arith::AddIOp>(loc, currentOffset, size);
-      axisOffsets.push_back(getAsOpFoldResult(total));
-    }
-    sizes[axis] = axisOffsets.back();
-
-    // Compute the dynamic sizes of the tensor.empty operation.
-    // This is based off of the specified result type of the tosa.concat
-    // operation, since we don't want to change the result type of the operation
-    // during the conversion.
-    SmallVector<Value> dynDims;
-    for (int64_t i = 0; i < rank; ++i) {
-      if (resultType.isDynamicDim(i)) {
-        dynDims.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, sizes[i]));
-      }
-    }
-
-    Value result = rewriter.create<tensor::EmptyOp>(
-        loc, resultType.getShape(), resultType.getElementType(), dynDims);
-
-    for (auto [arg, offset] : llvm::zip(adaptor.getOperands(), axisOffsets)) {
-      auto sizes = tensor::getMixedSizes(rewriter, op.getLoc(), arg);
-      offsets[axis] = offset;
-      result = rewriter.createOrFold<tensor::InsertSliceOp>(
-          loc, arg, result, offsets, sizes, strides);
-    }
-    rewriter.replaceOp(op, result);
+    rewriter.replaceOpWithNewOp<tensor::ConcatOp>(
+        op, resultType, rewriter.getI64IntegerAttr(op.getAxis()),
+        adaptor.getInput1());
     return success();
   }
 };

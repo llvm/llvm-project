@@ -14,10 +14,12 @@
 #define LLVM_OBJECT_ELFOBJECTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -25,13 +27,13 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -43,8 +45,7 @@ template <typename T> class SmallVectorImpl;
 
 namespace object {
 
-constexpr int NumElfSymbolTypes = 16;
-extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
+LLVM_ABI EnumStrings<uint8_t, 2> getElfSymbolTypes();
 
 class elf_symbol_iterator;
 
@@ -54,7 +55,7 @@ struct ELFPltEntry {
   uint64_t Address;
 };
 
-class ELFObjectFileBase : public ObjectFile {
+class LLVM_ABI ELFObjectFileBase : public ObjectFile {
   friend class ELFRelocationRef;
   friend class ELFSectionRef;
   friend class ELFSymbolRef;
@@ -107,7 +108,9 @@ public:
 
   virtual uint8_t getEIdentABIVersion() const = 0;
 
-  std::vector<ELFPltEntry> getPltEntries() const;
+  virtual uint8_t getEIdentOSABI() const = 0;
+
+  std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -192,13 +195,7 @@ public:
   }
 
   StringRef getELFTypeName() const {
-    uint8_t Type = getELFType();
-    for (const auto &EE : ElfSymbolTypes) {
-      if (EE.Value == Type) {
-        return EE.AltName;
-      }
-    }
-    return "";
+    return getElfSymbolTypes().toString(getELFType(), 1);
   }
 };
 
@@ -266,6 +263,7 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
   uint8_t getEIdentABIVersion() const override;
+  uint8_t getEIdentOSABI() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -409,6 +407,9 @@ protected:
     switch (getEMachine()) {
     case ELF::EM_ARM:
       Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_AARCH64:
+      Type = ELF::SHT_AARCH64_ATTRIBUTES;
       break;
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;
@@ -682,6 +683,10 @@ template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
 
 template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentABIVersion() const {
   return EF.getHeader().e_ident[ELF::EI_ABIVERSION];
+}
+
+template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentOSABI() const {
+  return EF.getHeader().e_ident[ELF::EI_OSABI];
 }
 
 template <class ELFT>
@@ -1212,12 +1217,12 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
     : ELFObjectFileBase(getELFType(ELFT::Endianness == llvm::endianness::little,
                                    ELFT::Is64Bits),
                         Object),
-      EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
+      EF(std::move(EF)), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
       DotSymtabShndxSec(DotSymtabShndx) {}
 
 template <class ELFT>
 ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
-    : ELFObjectFile(Other.Data, Other.EF, Other.DotDynSymSec,
+    : ELFObjectFile(Other.Data, std::move(Other.EF), Other.DotDynSymSec,
                     Other.DotSymtabSec, Other.DotSymtabShndxSec) {}
 
 template <class ELFT>
@@ -1306,7 +1311,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_PPC:
       return (IsLittleEndian ? "elf32-powerpcle" : "elf32-powerpc");
     case ELF::EM_RISCV:
-      return "elf32-littleriscv";
+      return (IsLittleEndian ? "elf32-littleriscv" : "elf32-bigriscv");
     case ELF::EM_CSKY:
       return "elf32-csky";
     case ELF::EM_SPARC:
@@ -1332,7 +1337,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_PPC64:
       return (IsLittleEndian ? "elf64-powerpcle" : "elf64-powerpc");
     case ELF::EM_RISCV:
-      return "elf64-littleriscv";
+      return (IsLittleEndian ? "elf64-littleriscv" : "elf64-bigriscv");
     case ELF::EM_S390:
       return "elf64-s390";
     case ELF::EM_SPARCV9:
@@ -1394,9 +1399,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_RISCV:
     switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
     case ELF::ELFCLASS32:
-      return Triple::riscv32;
+      return IsLittleEndian ? Triple::riscv32 : Triple::riscv32be;
     case ELF::ELFCLASS64:
-      return Triple::riscv64;
+      return IsLittleEndian ? Triple::riscv64 : Triple::riscv64be;
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
@@ -1419,7 +1424,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
       return Triple::r600;
     if (MACH >= ELF::EF_AMDGPU_MACH_AMDGCN_FIRST &&
         MACH <= ELF::EF_AMDGPU_MACH_AMDGCN_LAST)
-      return Triple::amdgcn;
+      return Triple::amdgpu;
 
     return Triple::UnknownArch;
   }
@@ -1473,6 +1478,7 @@ template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
   case ELF::ELFOSABI_OPENBSD:
     return Triple::OpenBSD;
   case ELF::ELFOSABI_CUDA:
+  case ELF::ELFOSABI_CUDA_V2:
     return Triple::CUDA;
   case ELF::ELFOSABI_AMDGPU_HSA:
     return Triple::AMDHSA;

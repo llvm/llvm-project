@@ -24,11 +24,11 @@
 ; void (*x)(void);
 ; void y(void) { }
 
-; CHECK: DW_TAG_subroutine_type
+; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_AT_prototyped (true)
 
-; CHECK: DW_TAG_subprogram
+; CHECK: DW_TAG_subroutine_type
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_AT_prototyped (true)
 

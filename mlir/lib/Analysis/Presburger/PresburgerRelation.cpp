@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -1057,7 +1056,9 @@ void PresburgerRelation::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void PresburgerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 PresburgerSet PresburgerSet::getUniverse(const PresburgerSpace &space) {
   PresburgerSet result(space);

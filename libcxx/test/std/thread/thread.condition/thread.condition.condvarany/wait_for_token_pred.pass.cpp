@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // <condition_variable>
 
@@ -237,6 +236,22 @@ void test() {
     }
   }
 #endif //!defined(TEST_HAS_NO_EXCEPTIONS)
+
+  // Regression test for LWG 3504: wait_for() with a floating-point
+  {
+    std::condition_variable_any cv;
+    std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
+    std::stop_source ss;
+
+    auto start   = std::chrono::steady_clock::now();
+    bool result  = cv.wait_for(lock, ss.get_token(), std::chrono::duration<float>(0.25f), [] { return false; });
+    auto elapsed = std::chrono::steady_clock::now() - start;
+
+    assert(result == false);
+    assert(elapsed > std::chrono::milliseconds(200));
+    assert(elapsed < std::chrono::milliseconds(600));
+  }
 }
 
 int main(int, char**) {

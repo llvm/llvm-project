@@ -72,7 +72,7 @@ for.inner.preheader:
 ; CHECK: br label %for.outer
 for.inner:
   %j = phi i32 [ 0, %for.inner.preheader ], [ %inc1, %for.inner ]
-  %ptr = load volatile ptr, ptr %A, align 4
+  %ptr = load ptr, ptr %A, align 4
   %mul = mul i32 %i, %N
   %gep = getelementptr inbounds i32, ptr %ptr, i32 %mul
   %arrayidx = getelementptr inbounds i32, ptr %gep, i32 %j

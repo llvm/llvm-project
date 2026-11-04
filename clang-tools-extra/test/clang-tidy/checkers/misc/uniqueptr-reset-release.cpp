@@ -2,21 +2,7 @@
 
 // CHECK-FIXES: #include <utility>
 
-namespace std {
-
-template <typename T>
-struct default_delete {};
-
-template <typename T, class Deleter = std::default_delete<T>>
-struct unique_ptr {
-  unique_ptr();
-  explicit unique_ptr(T *);
-  template <typename U, typename E>
-  unique_ptr(unique_ptr<U, E> &&);
-  void reset(T *);
-  T *release();
-};
-} // namespace std
+#include <memory>
 
 struct Foo {};
 struct Bar : Foo {};

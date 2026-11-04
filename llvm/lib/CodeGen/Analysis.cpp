@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -69,6 +71,46 @@ unsigned llvm::ComputeLinearIndex(Type *Ty,
   return CurIndex + 1;
 }
 
+void llvm::ComputeValueTypes(const DataLayout &DL, Type *Ty,
+                             SmallVectorImpl<Type *> &Types,
+                             SmallVectorImpl<TypeSize> *Offsets,
+                             TypeSize StartingOffset) {
+  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
+          StartingOffset.isZero()) &&
+         "Offset/TypeSize mismatch!");
+  // Given a struct type, recursively traverse the elements.
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    // If the Offsets aren't needed, don't query the struct layout. This allows
+    // us to support structs with scalable vectors for operations that don't
+    // need offsets.
+    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
+    for (StructType::element_iterator EB = STy->element_begin(), EI = EB,
+                                      EE = STy->element_end();
+         EI != EE; ++EI) {
+      // Don't compute the element offset if we didn't get a StructLayout above.
+      TypeSize EltOffset =
+          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
+      ComputeValueTypes(DL, *EI, Types, Offsets, StartingOffset + EltOffset);
+    }
+    return;
+  }
+  // Given an array type, recursively traverse the elements.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
+      ComputeValueTypes(DL, EltTy, Types, Offsets,
+                        StartingOffset + i * EltSize);
+    return;
+  }
+  // Interpret void as zero return values.
+  if (Ty->isVoidTy())
+    return;
+  Types.push_back(Ty);
+  if (Offsets)
+    Offsets->push_back(StartingOffset);
+}
+
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
 /// non-aggregate types that comprise it.
@@ -81,45 +123,16 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<TypeSize> *Offsets,
                            TypeSize StartingOffset) {
-  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
-          StartingOffset.isZero()) &&
-         "Offset/TypeSize mismatch!");
-  // Given a struct type, recursively traverse the elements.
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    // If the Offsets aren't needed, don't query the struct layout. This allows
-    // us to support structs with scalable vectors for operations that don't
-    // need offsets.
-    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
-    for (StructType::element_iterator EB = STy->element_begin(),
-                                      EI = EB,
-                                      EE = STy->element_end();
-         EI != EE; ++EI) {
-      // Don't compute the element offset if we didn't get a StructLayout above.
-      TypeSize EltOffset =
-          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
-      ComputeValueVTs(TLI, DL, *EI, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + EltOffset);
-    }
-    return;
-  }
-  // Given an array type, recursively traverse the elements.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Type *EltTy = ATy->getElementType();
-    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
-    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      ComputeValueVTs(TLI, DL, EltTy, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + i * EltSize);
-    return;
-  }
-  // Interpret void as zero return values.
-  if (Ty->isVoidTy())
-    return;
-  // Base case: we can get an EVT for this LLVM IR type.
-  ValueVTs.push_back(TLI.getValueType(DL, Ty));
+  SmallVector<Type *> Types;
+  ComputeValueTypes(DL, Ty, Types, Offsets, StartingOffset);
+  ValueVTs.reserve(Types.size());
   if (MemVTs)
-    MemVTs->push_back(TLI.getMemValueType(DL, Ty));
-  if (Offsets)
-    Offsets->push_back(StartingOffset);
+    MemVTs->reserve(Types.size());
+  for (Type *Ty : Types) {
+    ValueVTs.push_back(TLI.getValueType(DL, Ty));
+    if (MemVTs)
+      MemVTs->push_back(TLI.getMemValueType(DL, Ty));
+  }
 }
 
 void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
@@ -131,6 +144,7 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   if (FixedOffsets) {
     SmallVector<TypeSize, 4> Offsets;
     ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, &Offsets, Offset);
+    FixedOffsets->reserve(Offsets.size());
     for (TypeSize Offset : Offsets)
       FixedOffsets->push_back(Offset.getFixedValue());
   } else {
@@ -139,38 +153,30 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
 }
 
 void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
-                            SmallVectorImpl<LLT> &ValueTys,
-                            SmallVectorImpl<uint64_t> *Offsets,
-                            uint64_t StartingOffset) {
-  // Given a struct type, recursively traverse the elements.
-  if (StructType *STy = dyn_cast<StructType>(&Ty)) {
-    // If the Offsets aren't needed, don't query the struct layout. This allows
-    // us to support structs with scalable vectors for operations that don't
-    // need offsets.
-    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
-    for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
-      uint64_t EltOffset = SL ? SL->getElementOffset(I) : 0;
-      computeValueLLTs(DL, *STy->getElementType(I), ValueTys, Offsets,
-                       StartingOffset + EltOffset);
-    }
-    return;
+                            SmallVectorImpl<LLT> &ValueLLTs,
+                            SmallVectorImpl<TypeSize> *Offsets,
+                            TypeSize StartingOffset) {
+  SmallVector<Type *> ValTys;
+  ComputeValueTypes(DL, &Ty, ValTys, Offsets, StartingOffset);
+  ValueLLTs.reserve(ValTys.size());
+  for (Type *ValTy : ValTys)
+    ValueLLTs.push_back(getLLTForType(*ValTy, DL));
+}
+
+void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
+                            SmallVectorImpl<LLT> &ValueLLTs,
+                            SmallVectorImpl<uint64_t> *FixedOffsets,
+                            uint64_t FixedStartingOffset) {
+  TypeSize StartingOffset = TypeSize::getFixed(FixedStartingOffset);
+  if (FixedOffsets) {
+    SmallVector<TypeSize, 4> Offsets;
+    computeValueLLTs(DL, Ty, ValueLLTs, &Offsets, StartingOffset);
+    FixedOffsets->reserve(Offsets.size());
+    for (TypeSize Offset : Offsets)
+      FixedOffsets->push_back(Offset.getFixedValue());
+  } else {
+    computeValueLLTs(DL, Ty, ValueLLTs, nullptr, StartingOffset);
   }
-  // Given an array type, recursively traverse the elements.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(&Ty)) {
-    Type *EltTy = ATy->getElementType();
-    uint64_t EltSize = DL.getTypeAllocSize(EltTy).getFixedValue();
-    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      computeValueLLTs(DL, *EltTy, ValueTys, Offsets,
-                       StartingOffset + i * EltSize);
-    return;
-  }
-  // Interpret void as zero return values.
-  if (Ty.isVoidTy())
-    return;
-  // Base case: we can get an LLT for this LLVM IR type.
-  ValueTys.push_back(getLLTForType(Ty, DL));
-  if (Offsets != nullptr)
-    Offsets->push_back(StartingOffset * 8);
 }
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
@@ -190,6 +196,15 @@ GlobalValue *llvm::ExtractTypeInfo(Value *V) {
   assert((GV || isa<ConstantPointerNull>(V)) &&
          "TypeInfo must be a global variable or NULL");
   return GV;
+}
+
+bool llvm::isExceptionPointerAndSelectorType(Type *Ty) {
+  auto *STy = dyn_cast<StructType>(Ty);
+  if (!STy || STy->getNumElements() != 2)
+    return false;
+  Type *ExnTy = STy->getElementType(0);
+  return (ExnTy->isPointerTy() || ExnTy->isIntegerTy()) &&
+         STy->getElementType(1)->isIntegerTy();
 }
 
 /// getFCmpCondCode - Return the ISD condition code corresponding to
@@ -525,6 +540,112 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
   return true;
 }
 
+/// Resolve the DWARF version the way DwarfDebug does.
+/// FIXME: Share this resolution with DwarfDebug's, which has to match.
+static unsigned getDwarfVersion(const MachineFunction &MF) {
+  unsigned DwarfVersion = MF.getTarget().Options.MCOptions.DwarfVersion;
+  if (!DwarfVersion)
+    DwarfVersion = MF.getFunction().getParent()->getDwarfVersion();
+  if (!DwarfVersion)
+    DwarfVersion = dwarf::DWARF_VERSION;
+  return DwarfVersion;
+}
+
+bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
+                                               const MachineFunction &MF) {
+  // Only definitions have an address a symbol reference can name.
+  if (GV->isDeclarationForLinker())
+    return false;
+  // A thread-local's address is not known until it is resolved against a
+  // thread's storage, which a plain symbol reference cannot express.
+  if (GV->isThreadLocal())
+    return false;
+  // Computing the address of a dllimport'd entity requires a load from the
+  // import address table, which a static symbol reference cannot express.
+  if (GV->hasDLLImportStorageClass())
+    return false;
+  // An ifunc resolves to whatever its resolver returns at load time, so the
+  // symbol's own address is not the value of the pointer.
+  if (isa<GlobalIFunc>(GV))
+    return false;
+
+  const Module &M = *MF.getFunction().getParent();
+  const TargetMachine &TM = MF.getTarget();
+
+  // AsmPrinter may fold a GOT equivalent (an unnamed private constant
+  // holding the address of another global) into a GOT-relative
+  // relocation at its use and then never define the symbol. Whether
+  // that happens is only known once every use has been emitted, and a
+  // debug info reference does not count as a use, so it is not safe
+  // return true here.
+  if (TM.getObjFileLowering()->supportIndirectSymViaGOTPCRel())
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasGlobalUnnamedAddr() && GVar->isConstant() &&
+          GVar->hasInitializer() && GVar->isDiscardableIfUnused() &&
+          isa<GlobalValue>(GVar->getOperand(0)))
+        return false;
+
+  // CodeView has no way to name a symbol in a local variable's location, so
+  // choosing one here would leave the variable with no location at all.
+  if (M.getCodeViewFlag())
+    return false;
+
+  // Saying that the variable holds this address, rather than that it lives at
+  // it, needs DW_OP_stack_value, which DWARF 4 introduced. Nothing older can
+  // express the difference, so leave those versions to describe the variable by
+  // wherever the address is materialized instead. DwarfExpression refuses the
+  // same versions; deciding here only picks the better of the two fallbacks,
+  // while a materialized location is still available to fall back on.
+  if (getDwarfVersion(MF) < 4)
+    return false;
+
+  // On some targets a global does not live at its symbol's address; a base
+  // known only at run time has to be added to it. DwarfCompileUnit builds
+  // those addends for global variables, but they need a relocation, which a
+  // location list cannot carry, so a local pointing at such a global has to
+  // keep being described by whatever register holds the computed address.
+  if (M.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
+    return false;
+  if (TM.getRelocationModel() == Reloc::RWPI ||
+      TM.getRelocationModel() == Reloc::ROPI_RWPI) {
+    // Only writable globals are addressed relative to the static base;
+    // read-only ones keep an absolute address. An alias may name either, so
+    // give up rather than chase it.
+    const auto *GO = dyn_cast<GlobalObject>(GV);
+    if (!GO || !TM.getObjFileLowering()->getKindForGlobal(GO, TM).isReadOnly())
+      return false;
+  }
+
+  return true;
+}
+
+const GlobalValue *
+llvm::getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
+                                  const MachineFunction &MF) {
+  Offset = 0;
+  if (!C->getType()->isPointerTy())
+    return nullptr;
+
+  // Non-inbounds offsets are stripped as well, which is the default. The
+  // inbounds flag constrains what the program may do with the pointer, not
+  // what its value is, and describing an address needs only the value.
+  int64_t GVOffset;
+  const auto *GV = dyn_cast<GlobalValue>(
+      GetPointerBaseWithConstantOffset(C, GVOffset, MF.getDataLayout()));
+  if (!GV || !canDescribeGlobalAddressInDebugInfo(GV, MF))
+    return nullptr;
+
+  Offset = GVOffset;
+  return GV;
+}
+
+bool llvm::canDescribeGlobalAddressInLocationList(const MachineFunction &MF) {
+  // A location list is emitted as plain bytes, which cannot carry the
+  // relocation a DW_OP_addr needs, so there the address has to be an index into
+  // the address pool. Before DWARF 5 that pool only exists under split DWARF.
+  return getDwarfVersion(MF) >= 5 ||
+         !MF.getTarget().Options.MCOptions.SplitDwarfFile.empty();
+}
 
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
@@ -558,9 +679,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
   for (BasicBlock::const_iterator BBI = std::prev(ExitBB->end(), 2);; --BBI) {
     if (&*BBI == &Call)
       break;
-    // Debug info intrinsics do not get in the way of tail call optimization.
-    // Pseudo probe intrinsics do not block tail call optimization either.
-    if (BBI->isDebugOrPseudoInst())
+    // Pseudo probe intrinsics do not block tail call optimization.
+    if (isa<PseudoProbeInst>(BBI))
       continue;
     // A lifetime end, assume or noalias.decl intrinsic should not stop tail
     // call optimization.
@@ -810,5 +930,13 @@ llvm::getEHScopeMembership(const MachineFunction &MF) {
        CatchRetSuccessors)
     collectEHScopeMembers(EHScopeMembership, CatchRetPair.second,
                           CatchRetPair.first);
+
+  // Add any remaining blocks in the function to the unreachable set, which
+  // might not otherwise have been identified as unreachable (such as infinite
+  // loops).
+  for (const MachineBasicBlock &MBB : MF)
+    if (!EHScopeMembership.count(&MBB))
+      collectEHScopeMembers(EHScopeMembership, EntryBBNumber, &MBB);
+
   return EHScopeMembership;
 }

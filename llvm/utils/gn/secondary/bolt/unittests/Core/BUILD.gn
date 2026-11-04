@@ -4,9 +4,10 @@ import("//third-party/unittest/unittest.gni")
 unittest("CoreTests") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
+    "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Core",
-    "//bolt/lib/Rewrite",
     "//bolt/lib/Profile",
+    "//bolt/lib/Rewrite",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
@@ -15,9 +16,11 @@ unittest("CoreTests") {
   ]
   sources = [
     "BinaryContext.cpp",
+    "ClusteredRows.cpp",
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
     "MemoryMaps.cpp",
+    "Relocation.cpp",
   ]
 
   defines = []
@@ -32,6 +35,9 @@ unittest("CoreTests") {
     # those headers here.
     include_dirs += [ "//llvm/lib/Target/AArch64" ]
     deps += [
+      "//bolt/lib/Target/AArch64",
+      "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
+      "//llvm/lib/Target/AArch64:AArch64Options",
       "//llvm/lib/Target/AArch64/MCTargetDesc",
       "//llvm/lib/Target/AArch64/Utils",
     ]
@@ -45,6 +51,10 @@ unittest("CoreTests") {
     # target here questionably includes). So depend on the target that generates
     # those headers here.
     include_dirs += [ "//llvm/lib/Target/X86" ]
-    deps += [ "//llvm/lib/Target/X86/MCTargetDesc" ]
+    deps += [
+      "//bolt/lib/Target/X86",
+      "//llvm/lib/Target/X86:X86GenSDNodeInfo",
+      "//llvm/lib/Target/X86/MCTargetDesc",
+    ]
   }
 }

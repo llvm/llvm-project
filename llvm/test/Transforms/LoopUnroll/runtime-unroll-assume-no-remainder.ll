@@ -91,7 +91,7 @@ define dso_local void @cannotProveDivisibleTC(ptr noalias nocapture %a, ptr noal
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; CHECK:       for.body.preheader.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -112,15 +112,15 @@ define dso_local void @cannotProveDivisibleTC(ptr noalias nocapture %a, ptr noal
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[I_011]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
-; CHECK:       exit.loopexit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[I_011_UNR_PH:%.*]] = phi i32 [ [[INC_1]], [[FOR_BODY]] ]
-; CHECK-NEXT:    br label [[EXIT_LOOPEXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[I_011_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[I_011_UNR_PH]], [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[I_011_UNR1:%.*]] = phi i32 [ [[INC_1]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_BODY_EPIL_PREHEADER]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       for.body.epil.preheader:
+; CHECK-NEXT:    [[I_011_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[I_011_UNR1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[I_011_UNR]]

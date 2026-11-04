@@ -9,8 +9,12 @@
 ! RUN:   -o /dev/null -S %s 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FEATURE
 
 ! RUN: not %flang_fc1 -triple amdgcn-amd-amdhsa -target-feature +wavefrontsize32 \
-! RUN:   -target-feature +wavefrontsize64 -o /dev/null -S %s 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-WAVEFRONT
+! RUN:   -target-feature +wavefrontsize64 -o /dev/null -S %s 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-WAVEFRONT-PLUS
+
+! RUN: not %flang_fc1 -triple amdgcn-amd-amdhsa -target-feature -wavefrontsize32 \
+! RUN:   -target-feature -wavefrontsize64 -o /dev/null -S %s 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-WAVEFRONT-MINUS
 
 ! CHECK-INVALID-CPU: 'supercpu' is not a recognized processor for this target (ignoring processor)
 ! CHECK-INVALID-FEATURE: '+superspeed' is not a recognized feature for this target (ignoring feature)
-! CHECK-INVALID-WAVEFRONT: 'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive
+! CHECK-INVALID-WAVEFRONT-PLUS: '+wavefrontsize32' and '+wavefrontsize64' are mutually exclusive
+! CHECK-INVALID-WAVEFRONT-MINUS: '-wavefrontsize32' and '-wavefrontsize64' are mutually exclusive

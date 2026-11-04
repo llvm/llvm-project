@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -mattr=+v -vector-library=sleefgnuabi -replace-with-veclib -S < %s | FileCheck %s
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [21 x ptr] [ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [22 x ptr] [ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_expdx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2], section "llvm.metadata"
 ;.
 define <vscale x 2 x double> @llvm_ceil_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: define <vscale x 2 x double> @llvm_ceil_vscale_f64(
@@ -67,7 +67,7 @@ define <vscale x 4 x float> @llvm_cos_vscale_f32(<vscale x 4 x float> %in) {
 define <vscale x 2 x double> @llvm_exp_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: define <vscale x 2 x double> @llvm_exp_vscale_f64(
 ; CHECK-SAME: <vscale x 2 x double> [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[IN]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> %in)
@@ -444,49 +444,7 @@ define <vscale x 4 x float> @frem_f32(<vscale x 4 x float> %in) {
   ret <vscale x 4 x float> %1
 }
 
-declare <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.exp2.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.log.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.log10.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.log2.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.sin.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float>)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "target-features"="+v" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
 ;.

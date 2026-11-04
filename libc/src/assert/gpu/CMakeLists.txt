@@ -10,5 +10,5 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.GPU.utils
     libc.src.__support.CPP.atomic
-    libc.src.stdlib.abort
+    libc.src.stdlib.abort_utils
 )

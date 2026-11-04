@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_AST_INTERP_SHARED_H
 #define LLVM_CLANG_LIB_AST_INTERP_SHARED_H
 
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
 
 namespace clang {
@@ -18,7 +19,7 @@ class Expr;
 namespace interp {
 
 llvm::BitVector collectNonNullArgs(const FunctionDecl *F,
-                                   const llvm::ArrayRef<const Expr *> &Args);
+                                   ArrayRef<const Expr *> Args);
 
 } // namespace interp
 } // namespace clang

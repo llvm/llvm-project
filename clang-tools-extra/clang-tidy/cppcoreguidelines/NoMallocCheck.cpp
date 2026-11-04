@@ -1,4 +1,4 @@
-//===--- NoMallocCheck.cpp - clang-tidy------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NoMallocCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
-#include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
@@ -36,14 +31,14 @@ void NoMallocCheck::registerMatchers(MatchFinder *Finder) {
   // Registering realloc calls, suggest std::vector or std::string.
   Finder->addMatcher(
       callExpr(callee(functionDecl(
-                   hasAnyName(utils::options::parseStringList((ReallocList))))))
+                   hasAnyName(utils::options::parseStringList(ReallocList)))))
           .bind("realloc"),
       this);
 
   // Registering free calls, will suggest RAII instead.
   Finder->addMatcher(
       callExpr(callee(functionDecl(
-                   hasAnyName(utils::options::parseStringList((DeallocList))))))
+                   hasAnyName(utils::options::parseStringList(DeallocList)))))
           .bind("free"),
       this);
 }

@@ -380,10 +380,9 @@ define <4 x i32> @test_recurse(<4 x i32> %l0, <4 x i32> %l1, <4 x i32> %l3) {
 ; CHECK-LABEL: @test_recurse(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[L3:%.*]], <4 x i32> [[L1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 5>
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[L1]], <4 x i32> [[L3]], <4 x i32> <i32 6, i32 1, i32 3, i32 0>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[L0:%.*]], <4 x i32> [[L1]], <4 x i32> <i32 4, i32 2, i32 6, i32 2>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[S2]], [[S2]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[S1]], [[S0]]
-; CHECK-NEXT:    [[T0:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> [[ADD]], <4 x i32> <i32 2, i32 0, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[L1]], <4 x i32> [[L0:%.*]], <4 x i32> <i32 2, i32 0, i32 0, i32 6>
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[T0]]
 ;
   %s0 = shufflevector <4 x i32> %l3, <4 x i32> %l1, <4 x i32> <i32 0, i32 2, i32 1, i32 5>

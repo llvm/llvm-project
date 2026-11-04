@@ -34,7 +34,7 @@ class ObjCSuperDeallocChecker
       this, "[super dealloc] should not be called more than once",
       categories::CoreFoundationObjectiveC};
 
-  void initIdentifierInfoAndSelectors(ASTContext &Ctx) const;
+  void initIdentifierInfoAndSelectors(const ASTContext &Ctx) const;
 
   bool isSuperDeallocMessage(const ObjCMethodCall &M) const;
 
@@ -117,8 +117,7 @@ void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
     return;
 
   ProgramStateRef State = C.getState();
-  const LocationContext *LC = C.getLocationContext();
-  SymbolRef SelfSymbol = State->getSelfSVal(LC).getAsSymbol();
+  SymbolRef SelfSymbol = State->getSelfSVal(C.getStackFrame()).getAsSymbol();
   assert(SelfSymbol && "No receiver symbol at call to [super dealloc]?");
 
   // We add this transition in checkPostObjCMessage to avoid warning when
@@ -180,7 +179,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
   // We have a use of self after free.
   // This likely causes a crash, so stop exploring the
   // path by generating a sink.
-  ExplodedNode *ErrNode = C.generateErrorNode();
+  ExplodedNode *ErrNode = C.addSink();
   // If we've already reached this node on another path, return.
   if (!ErrNode)
     return;
@@ -214,8 +213,8 @@ void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
   }
 }
 
-void
-ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(ASTContext &Ctx) const {
+void ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(
+    const ASTContext &Ctx) const {
   if (IIdealloc)
     return;
 
@@ -230,7 +229,7 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
   if (M.getOriginExpr()->getReceiverKind() != ObjCMessageExpr::SuperInstance)
     return false;
 
-  ASTContext &Ctx = M.getState()->getStateManager().getContext();
+  const ASTContext &Ctx = M.getASTContext();
   initIdentifierInfoAndSelectors(Ctx);
 
   return M.getSelector() == SELdealloc;
@@ -242,8 +241,6 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
                                  PathSensitiveBugReport &) {
   if (Satisfied)
     return nullptr;
-
-  ProgramStateRef State = Succ->getState();
 
   bool CalledNow =
       Succ->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);

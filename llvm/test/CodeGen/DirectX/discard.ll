@@ -1,4 +1,4 @@
-; RUN: opt -passes='function(scalarizer),module(dxil-op-lower,dxil-intrinsic-expansion)' -S -mtriple=dxil-pc-shadermodel6.3-pixel %s | FileCheck %s
+; RUN: opt -passes='function(scalarizer),module(dxil-intrinsic-expansion,dxil-op-lower)' -S -mtriple=dxil-pc-shadermodel6.3-pixel %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test_scalar
 ; CHECK: call void @dx.op.discard(i32 82, i1 %0)

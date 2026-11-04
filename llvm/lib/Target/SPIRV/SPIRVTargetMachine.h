@@ -35,16 +35,25 @@ public:
     return &Subtarget;
   }
 
+  SPIRVSubtarget *getMutableSubtargetImpl() { return &Subtarget; }
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   bool usesPhysRegsForValues() const override { return false; }
+  CSEConfigBase *createCSEConfig() const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 } // namespace llvm
 

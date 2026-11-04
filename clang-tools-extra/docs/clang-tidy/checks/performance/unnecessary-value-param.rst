@@ -54,6 +54,10 @@ Will become:
     Field = std::move(Value);
   }
 
+Because the fix-it needs to change the signature of the function, it may break
+builds if the function is used in multiple translation units or some codes
+depends on function signatures.
+
 Options
 -------
 
@@ -65,8 +69,15 @@ Options
 .. option:: AllowedTypes
 
    A semicolon-separated list of names of types allowed to be passed by value.
-   Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches every type
-   with suffix `Ref`, `ref`, `Reference` and `reference`. The default is
-   empty. If a name in the list contains the sequence `::` it is matched against
-   the qualified typename (i.e. `namespace::Type`, otherwise it is matched
-   against only the type name (i.e. `Type`).
+   Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches every
+   type with suffix ``Ref``, ``ref``, ``Reference`` and ``reference``. The
+   default is empty. If a name in the list contains the sequence `::`, it is
+   matched against the qualified type name (i.e. ``namespace::Type``),
+   otherwise it is matched against only the type name (i.e. ``Type``).
+
+.. option:: IgnoreCoroutines
+
+   A boolean specifying whether the check should suggest passing parameters by
+   reference in coroutines. Passing parameters by reference in coroutines may
+   not be safe, please see :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <../cppcoreguidelines/avoid-reference-coroutine-parameters>`
+   for more information. Default is `true`.

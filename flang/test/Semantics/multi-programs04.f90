@@ -4,6 +4,6 @@
 program m
 end
 !ERROR: A source file cannot contain more than one main program
-!ERROR: 'm' is already declared in this scoping unit
+!ERROR: 'M' is already declared in this scoping unit
 program m
 end

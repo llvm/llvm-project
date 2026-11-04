@@ -12,19 +12,30 @@
 
 class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
   RVInst16<(outs), (ins reg_class:$rs1), opcodestr, "$rs1", [], InstFormatOther> {
+  bits<5> rs1 = rs1val;
   let Inst{15-13} = 0b011;
   let Inst{12} = 0;
-  let Inst{11-7} = rs1val;
+  let Inst{11-7} = rs1;
   let Inst{6-2} = 0b00000;
   let Inst{1-0} = 0b01;
-  let DecoderMethod = "decodeCSSPushPopchk";
+}
+
+// ssrdp (below) shares its encoding with the generic mop.r.28 Zimop
+// instruction except when rd is x0, so fall back to decoding mop.r.28.
+// GPRNoX0 itself is used far too widely to set hasCompleteDecoder on directly,
+// so wrap it here instead.
+def GPRNoX0Zicfiss : RegisterOperand<GPRNoX0> {
+  let hasCompleteDecoder = false;
 }
 
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZicfiss] in {
+// Zicfiss instructions that use Zimop encoding space are available when Zimop
+// is enabled, without requiring Zicfiss explicitly. Per psABI decision
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
+let Predicates = [HasStdExtZimop] in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def SSPOPCHK : RVInstI<0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs1), "sspopchk",
                        "$rs1"> {
@@ -33,7 +44,9 @@ def SSPOPCHK : RVInstI<0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs1), "sspopchk"
 } // Uses = [SSP],  Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let Uses = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-def SSRDP : RVInstI<0b100, OPC_SYSTEM, (outs GPRNoX0:$rd), (ins), "ssrdp", "$rd"> {
+def SSRDP : RVInstI<0b100, OPC_SYSTEM,
+                    (outs GPRNoX0Zicfiss:$rd), (ins),
+                    "ssrdp", "$rd"> {
   let imm12 = 0b110011011100;
   let rs1 = 0b00000;
 }
@@ -45,16 +58,18 @@ def SSPUSH : RVInstR<0b1100111, 0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs2),
   let rd = 0b00000;
   let rs1 = 0b00000;
 }
-} // Predicates = [HasStdExtZicfiss]
+} // Predicates = [HasStdExtZimop]
 
-let Predicates = [HasStdExtZicfiss, HasStdExtZcmop],
-    DecoderNamespace = "Zicfiss" in {
+// Compressed Zicfiss instructions use Zcmop encoding space and are available
+// when Zcmop is enabled, without requiring Zicfiss explicitly. Per psABI
+// decision (riscv-non-isa/riscv-elf-psabi-doc#474).
+let Predicates = [HasStdExtZcmop] in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def C_SSPUSH : RVC_SSInst<0b00001, GPRX1, "c.sspush">;
 
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def C_SSPOPCHK : RVC_SSInst<0b00101, GPRX5, "c.sspopchk">;
-} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]
+} // Predicates = [HasStdExtZcmop]
 
 let Predicates = [HasStdExtZicfiss] in
 defm SSAMOSWAP_W  : AMO_rr_aq_rl<0b01001, 0b010, "ssamoswap.w">;
@@ -66,7 +81,14 @@ defm SSAMOSWAP_D  : AMO_rr_aq_rl<0b01001, 0b011, "ssamoswap.d">;
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZicfiss, HasStdExtZcmop] in {
+let Predicates = [HasStdExtZcmop] in {
 def : CompressPat<(SSPUSH X1), (C_SSPUSH X1)>;
 def : CompressPat<(SSPOPCHK X5), (C_SSPOPCHK X5)>;
-} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]
+} // Predicates = [HasStdExtZcmop]
+
+// c.mop.1 and c.mop.5 are aliases for c.sspush ra and c.sspopchk t0.
+// Use EmitPriority=0 so disassembler prints c.sspush/c.sspopchk.
+let Predicates = [HasStdExtZcmop], EmitPriority = 0 in {
+def : InstAlias<"c.mop.1", (C_SSPUSH X1)>;
+def : InstAlias<"c.mop.5", (C_SSPOPCHK X5)>;
+} // Predicates = [HasStdExtZcmop], EmitPriority = 0

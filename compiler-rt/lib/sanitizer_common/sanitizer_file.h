@@ -43,6 +43,9 @@ struct ReportFile {
   // PID of the process that opened fd. If a fork() occurs,
   // the PID of child will be different from fd_pid.
   uptr fd_pid;
+  // Set to true if the last attempt to open the logfile failed, perhaps due to
+  // permission errors
+  bool fallbackToStderrActive = false;
 
  private:
   void ReopenIfNecessary();

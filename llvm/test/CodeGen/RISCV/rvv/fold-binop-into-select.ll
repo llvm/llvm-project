@@ -39,9 +39,8 @@ define <vscale x 2 x i32> @i1_zext_add_commuted(<vscale x 2 x i1> %a, <vscale x 
 define <vscale x 2 x i32> @i1_zext_sub(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: i1_zext_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
   %sub = sub <vscale x 2 x i32> %b, %zext

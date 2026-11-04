@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -33,7 +35,12 @@ struct TestElementsAttrInterface
   }
   void runOnOperation() override {
     getOperation().walk([&](Operation *op) {
-      for (NamedAttribute attr : op->getAttrs()) {
+      NamedAttrList attrs(op->getDiscardableAttrDictionary());
+      if (op->getPropertiesStorageSize())
+        op->getName().walkInherentAttrs(
+            op,
+            [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+      for (NamedAttribute attr : attrs) {
         auto elementsAttr = dyn_cast<ElementsAttr>(attr.getValue());
         if (!elementsAttr)
           continue;
@@ -62,8 +69,9 @@ struct TestElementsAttrInterface
       return;
     }
 
-    llvm::interleaveComma(*values, diag,
-                          [&](T value) { printOneElement(diag, value); });
+    llvm::interleaveComma(*values, diag, [&](T value) {
+      printOneElement(diag, std::move(value));
+    });
   }
 };
 } // namespace

@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // [[nodiscard]] bool operator==(const stop_token& lhs, const stop_token& rhs) noexcept;
 // Returns: true if lhs and rhs have ownership of the same stop state or if both lhs and rhs do not have ownership of a stop state; otherwise false.

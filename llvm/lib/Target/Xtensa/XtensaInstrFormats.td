@@ -30,7 +30,6 @@ class XtensaInst24<dag outs, dag ins, string asmstr, list<dag> pattern,
                    InstrItinClass itin = NoItinerary>
   : XtensaInst<3, outs, ins, asmstr, pattern, itin> {
   field bits<24> Inst;
-  field bits<24> SoftFail = 0;
 }
 
 // Base class for Xtensa 16 bit Format
@@ -38,7 +37,6 @@ class XtensaInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
                    InstrItinClass itin = NoItinerary>
   : XtensaInst<2, outs, ins, asmstr, pattern, itin> {
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
   let Predicates = [HasDensity];
 }
 
@@ -208,6 +206,19 @@ class RI6_Inst<bits<4> op0, bits<1> i,  bits<1> z, dag outs, dag ins,
   let Inst{6} = z;
   let Inst{5-4} = imm6{5-4};
   let Inst{3-0} = op0;
+}
+
+class EE_Inst24<dag outs, dag ins, string asmstr, list<dag> pattern,
+                    InstrItinClass itin = NoItinerary>
+  : XtensaInst24<outs, ins, asmstr, pattern, itin> {
+  let DecoderNamespace = "ESP32S3";
+}
+
+class EE_Inst32<dag outs, dag ins, string asmstr, list<dag> pattern,
+                    InstrItinClass itin = NoItinerary>
+  : XtensaInst<4, outs, ins, asmstr, pattern, itin> {
+  field bits<32> Inst;
+  let DecoderNamespace = "ESP32S3";
 }
 
 // Pseudo instructions

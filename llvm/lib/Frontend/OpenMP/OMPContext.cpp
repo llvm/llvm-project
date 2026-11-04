@@ -24,84 +24,123 @@
 using namespace llvm;
 using namespace omp;
 
-OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
-  // Add the appropriate device kind trait based on the triple and the
-  // IsDeviceCompilation flag.
-  ActiveTraits.set(unsigned(IsDeviceCompilation
-                                ? TraitProperty::device_kind_nohost
-                                : TraitProperty::device_kind_host));
-  switch (TargetTriple.getArch()) {
-  case Triple::arm:
-  case Triple::armeb:
-  case Triple::aarch64:
-  case Triple::aarch64_be:
-  case Triple::aarch64_32:
-  case Triple::loongarch64:
-  case Triple::mips:
-  case Triple::mipsel:
-  case Triple::mips64:
-  case Triple::mips64el:
-  case Triple::ppc:
-  case Triple::ppcle:
-  case Triple::ppc64:
-  case Triple::ppc64le:
-  case Triple::systemz:
-  case Triple::x86:
-  case Triple::x86_64:
-    ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
-    break;
-  case Triple::amdgcn:
-  case Triple::nvptx:
-  case Triple::nvptx64:
-    ActiveTraits.set(unsigned(TraitProperty::device_kind_gpu));
-    break;
-  default:
-    break;
-  }
-
-  // Add the appropriate device architecture trait based on the triple.
+OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
+                       Triple TargetOffloadTriple, int DeviceNum) {
+  // Add the appropriate target device kind trait based on the target triple
+  if (!TargetOffloadTriple.getTriple().empty() && DeviceNum > -1) {
+    // If target triple is present, then target device is not a host
+    ActiveTraits.set(unsigned(TraitProperty::target_device_kind_nohost));
+    switch (TargetOffloadTriple.getArch()) {
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::aarch64:
+    case Triple::aarch64_be:
+    case Triple::aarch64_32:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::ppc:
+    case Triple::ppcle:
+    case Triple::ppc64:
+    case Triple::ppc64le:
+    case Triple::systemz:
+    case Triple::x86:
+    case Triple::x86_64:
+      ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
+      break;
+    case Triple::amdgpu:
+    case Triple::nvptx:
+    case Triple::nvptx64:
+    case Triple::spirv64:
+      ActiveTraits.set(unsigned(TraitProperty::target_device_kind_gpu));
+      break;
+    default:
+      break;
+    }
+    // Add the appropriate device architecture trait based on the triple.
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
-  if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch) {        \
-    if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
+  if (TraitSelector::TraitSelectorEnum == TraitSelector::target_device_arch) { \
+    if (TargetOffloadTriple.getArch() == Triple::parseArch(Str))               \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == "x86_64" &&                                          \
-        TargetTriple.getArch() == Triple::x86_64)                              \
+  }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  } else {
+    // Add the appropriate device kind trait based on the triple and the
+    // IsDeviceCompilation flag.
+    ActiveTraits.set(unsigned(IsDeviceCompilation
+                                  ? TraitProperty::device_kind_nohost
+                                  : TraitProperty::device_kind_host));
+    ActiveTraits.set(unsigned(TraitProperty::target_device_kind_host));
+    switch (TargetTriple.getArch()) {
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::aarch64:
+    case Triple::aarch64_be:
+    case Triple::aarch64_32:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::ppc:
+    case Triple::ppcle:
+    case Triple::ppc64:
+    case Triple::ppc64le:
+    case Triple::systemz:
+    case Triple::x86:
+    case Triple::x86_64:
+      ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
+      ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
+      break;
+    case Triple::amdgpu:
+    case Triple::nvptx:
+    case Triple::nvptx64:
+    case Triple::spirv64:
+      ActiveTraits.set(unsigned(TraitProperty::device_kind_gpu));
+      ActiveTraits.set(unsigned(TraitProperty::target_device_kind_gpu));
+      break;
+    default:
+      break;
+    }
+
+    // Add the appropriate device architecture trait based on the triple.
+#define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
+  if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch ||        \
+      TraitSelector::TraitSelectorEnum == TraitSelector::target_device_arch) { \
+    if (TargetTriple.getArch() == Triple::parseArch(Str))                      \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-  // TODO: What exactly do we want to see as device ISA trait?
-  //       The discussion on the list did not seem to have come to an agreed
-  //       upon solution.
+    // TODO: What exactly do we want to see as device ISA trait?
+    //       The discussion on the list did not seem to have come to an agreed
+    //       upon solution.
 
-  // LLVM is the "OpenMP vendor" but we could also interpret vendor as the
-  // target vendor.
-  ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_llvm));
+    // LLVM is the "OpenMP vendor" but we could also interpret vendor as the
+    // target vendor.
+    ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_llvm));
 
-  // The user condition true is accepted but not false.
-  ActiveTraits.set(unsigned(TraitProperty::user_condition_true));
+    // The user condition true is accepted but not false.
+    ActiveTraits.set(unsigned(TraitProperty::user_condition_true));
 
-  // This is for sure some device.
-  ActiveTraits.set(unsigned(TraitProperty::device_kind_any));
+    // This is for sure some device.
+    ActiveTraits.set(unsigned(TraitProperty::device_kind_any));
 
-  LLVM_DEBUG({
-    dbgs() << "[" << DEBUG_TYPE
-           << "] New OpenMP context with the following properties:\n";
-    for (unsigned Bit : ActiveTraits.set_bits()) {
-      TraitProperty Property = TraitProperty(Bit);
-      dbgs() << "\t " << getOpenMPContextTraitPropertyFullName(Property)
-             << "\n";
-    }
-  });
+    LLVM_DEBUG({
+      dbgs() << "[" << DEBUG_TYPE
+             << "] New OpenMP context with the following properties:\n";
+      for (unsigned Bit : ActiveTraits.set_bits()) {
+        TraitProperty Property = TraitProperty(Bit);
+        dbgs() << "\t " << getOpenMPContextTraitPropertyFullName(Property)
+               << "\n";
+      }
+    });
+  }
 }
 
-/// Return true if \p C0 is a subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-#ifdef EXPENSIVE_CHECKS
-  assert(llvm::is_sorted(C0) && llvm::is_sorted(C1) &&
-         "Expected sorted arrays!");
-#endif
+/// Return true if \p C0 is an ordered subsequence of \p C1.
+template <typename T>
+static bool isOrderedSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   if (C0.size() > C1.size())
     return false;
   auto It0 = C0.begin(), End0 = C0.end();
@@ -114,38 +153,46 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
       ++It1;
       continue;
     }
-    ++It0;
+    ++It1;
   }
   return true;
 }
 
-/// Return true if \p C0 is a strict subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T>
-static bool isStrictSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-  if (C0.size() >= C1.size())
-    return false;
-  return isSubset<T>(C0, C1);
-}
-
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
-  // If all required traits are a strict subset and the ordered vectors storing
-  // the construct traits, we say it is a strict subset. Note that the latter
-  // relation is not required to be strict.
-  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+  // VMI0 is a strict subset if its required traits are a subset of VMI1's, its
+  // construct traits are an ordered subsequence of VMI1's, and either relation
+  // is strict.
+  if (VMI0.RequiredTraits.count() > VMI1.RequiredTraits.count())
     return false;
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
-  if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
+  if (!isOrderedSubset<TraitProperty>(VMI0.ConstructTraits,
+                                      VMI1.ConstructTraits))
     return false;
-  return true;
+  if (VMI0.RequiredTraits.count() < VMI1.RequiredTraits.count())
+    return true;
+  // With the same traits, only a repeated construct makes VMI0 strict.
+  if (VMI0.ConstructTraits.size() == VMI1.ConstructTraits.size())
+    return false;
+  // Different conditions or ISA names share a trait, so they can't be compared.
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI0.RequiredTraits.test(unsigned(Property)))
+      return false;
+  return llvm::all_of(VMI0.ISATraits,
+                      [&](const VariantMatchInfo::ISATrait &Trait) {
+                        return llvm::is_contained(VMI1.ISATraits, Trait);
+                      });
 }
 
-static int isVariantApplicableInContextHelper(
-    const VariantMatchInfo &VMI, const OMPContext &Ctx,
-    SmallVectorImpl<unsigned> *ConstructMatches, bool DeviceSetOnly) {
+static int
+isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
+                                   const OMPContext &Ctx,
+                                   SmallVectorImpl<unsigned> *ConstructMatches,
+                                   bool DeviceOrImplementationSetOnly) {
 
   // The match kind determines if we need to match all traits, any of the
   // traits, or none of the traits for it to be an applicable context.
@@ -195,8 +242,10 @@ static int isVariantApplicableInContextHelper(
 
   for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
     TraitProperty Property = TraitProperty(Bit);
-    if (DeviceSetOnly &&
-        getOpenMPContextTraitSetForProperty(Property) != TraitSet::device)
+    if (DeviceOrImplementationSetOnly &&
+        getOpenMPContextTraitSetForProperty(Property) != TraitSet::device &&
+        getOpenMPContextTraitSetForProperty(Property) !=
+            TraitSet::implementation)
       continue;
 
     // So far all extensions are handled elsewhere, we skip them here as they
@@ -209,17 +258,18 @@ static int isVariantApplicableInContextHelper(
 
     // We overwrite the isa trait as it is actually up to the OMPContext hook to
     // check the raw string(s).
-    if (Property == TraitProperty::device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](const auto &Trait) {
+        return Trait.Property != Property || Ctx.matchesISATrait(Trait.Name);
       });
 
     if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
       return *Result;
   }
 
-  if (!DeviceSetOnly) {
-    // We could use isSubset here but we also want to record the match
+  if (!DeviceOrImplementationSetOnly) {
+    // We could use isOrderedSubset here but we also want to record the match
     // locations.
     unsigned ConstructIdx = 0, NoConstructTraits = Ctx.ConstructTraits.size();
     for (TraitProperty Property : VMI.ConstructTraits) {
@@ -247,7 +297,8 @@ static int isVariantApplicableInContextHelper(
       // TODO: Verify SIMD
     }
 
-    assert(isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
+    assert(isOrderedSubset<TraitProperty>(VMI.ConstructTraits,
+                                          Ctx.ConstructTraits) &&
            "Broken invariant!");
   }
 
@@ -261,11 +312,11 @@ static int isVariantApplicableInContextHelper(
   return true;
 }
 
-bool llvm::omp::isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                             const OMPContext &Ctx,
-                                             bool DeviceSetOnly) {
+bool llvm::omp::isVariantApplicableInContext(
+    const VariantMatchInfo &VMI, const OMPContext &Ctx,
+    bool DeviceOrImplementationSetOnly) {
   return isVariantApplicableInContextHelper(
-      VMI, Ctx, /* ConstructMatches */ nullptr, DeviceSetOnly);
+      VMI, Ctx, /* ConstructMatches */ nullptr, DeviceOrImplementationSetOnly);
 }
 
 static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
@@ -298,12 +349,17 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
     case TraitSet::device:
       // Handled separately below.
       break;
+    case TraitSet::target_device:
+      // TODO: Handling separately.
+      break;
     case TraitSet::invalid:
       llvm_unreachable("Unknown trait set is not to be used!");
     }
 
     // device={kind(any)} is "as if" no kind selector was specified.
     if (Property == TraitProperty::device_kind_any)
+      continue;
+    if (Property == TraitProperty::target_device_kind_any)
       continue;
 
     switch (getOpenMPContextTraitSelectorForProperty(Property)) {
@@ -314,6 +370,15 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
       Score += (1ULL << (NoConstructTraits + 1));
       continue;
     case TraitSelector::device_isa:
+      Score += (1ULL << (NoConstructTraits + 2));
+      continue;
+    case TraitSelector::target_device_kind:
+      Score += (1ULL << (NoConstructTraits + 0));
+      continue;
+    case TraitSelector::target_device_arch:
+      Score += (1ULL << (NoConstructTraits + 1));
+      continue;
+    case TraitSelector::target_device_isa:
       Score += (1ULL << (NoConstructTraits + 2));
       continue;
     default:
@@ -350,8 +415,9 @@ int llvm::omp::getBestVariantMatchForContext(
 
     SmallVector<unsigned, 8> ConstructMatches;
     // If the variant is not applicable its not the best.
-    if (!isVariantApplicableInContextHelper(VMI, Ctx, &ConstructMatches,
-                                            /* DeviceSetOnly */ false))
+    if (!isVariantApplicableInContextHelper(
+            VMI, Ctx, &ConstructMatches,
+            /* DeviceOrImplementationSetOnly */ false))
       continue;
     // Check if its clearly not the best.
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);
@@ -412,7 +478,14 @@ StringRef llvm::omp::getOpenMPContextTraitSetName(TraitSet Kind) {
   llvm_unreachable("Unknown trait set!");
 }
 
-TraitSelector llvm::omp::getOpenMPContextTraitSelectorKind(StringRef S) {
+TraitSelector llvm::omp::getOpenMPContextTraitSelectorKind(StringRef S,
+                                                           TraitSet Set) {
+  if (Set == TraitSet::target_device && S == "kind")
+    return TraitSelector::target_device_kind;
+  if (Set == TraitSet::target_device && S == "arch")
+    return TraitSelector::target_device_arch;
+  if (Set == TraitSet::target_device && S == "isa")
+    return TraitSelector::target_device_isa;
   return StringSwitch<TraitSelector>(S)
 #define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, ReqProp)                   \
   .Case(Str, TraitSelector::Enum)
@@ -445,6 +518,9 @@ TraitProperty llvm::omp::getOpenMPContextTraitPropertyKind(
   // up to the target to decide if the feature is available.
   if (Set == TraitSet::device && Selector == TraitSelector::device_isa)
     return TraitProperty::device_isa___ANY;
+  if (Set == TraitSet::target_device &&
+      Selector == TraitSelector::target_device_isa)
+    return TraitProperty::target_device_isa___ANY;
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (Set == TraitSet::TraitSetEnum && Str == S)                               \
     return TraitProperty::Enum;
@@ -465,6 +541,8 @@ llvm::omp::getOpenMPContextTraitPropertyForSelector(TraitSelector Selector) {
 StringRef llvm::omp::getOpenMPContextTraitPropertyName(TraitProperty Kind,
                                                        StringRef RawString) {
   if (Kind == TraitProperty::device_isa___ANY)
+    return RawString;
+  if (Kind == TraitProperty::target_device_isa___ANY)
     return RawString;
   switch (Kind) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
@@ -488,7 +566,8 @@ bool llvm::omp::isValidTraitSelectorForTraitSet(TraitSelector Selector,
                                                 TraitSet Set,
                                                 bool &AllowsTraitScore,
                                                 bool &RequiresProperty) {
-  AllowsTraitScore = Set != TraitSet::construct && Set != TraitSet::device;
+  AllowsTraitScore = Set != TraitSet::construct && Set != TraitSet::device &&
+                     Set != TraitSet::target_device;
   switch (Selector) {
 #define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, ReqProp)                   \
   case TraitSelector::Enum:                                                    \

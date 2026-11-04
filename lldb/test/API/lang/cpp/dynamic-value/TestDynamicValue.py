@@ -28,7 +28,6 @@ class DynamicValueTestCase(TestBase):
         )
 
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         self.build()
@@ -129,7 +128,7 @@ class DynamicValueTestCase(TestBase):
         self.expect(
             "frame var -d run-target --ptr-depth=2 --show-types anotherA.m_client_A",
             "frame var finds its way into a child member",
-            patterns=["\(B \*\)"],
+            patterns=[r"\(B \*\)"],
         )
 
         # Now make sure we also get it right for a reference as well:
@@ -192,10 +191,14 @@ class DynamicValueTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         anotherA_value = frame.FindVariable("anotherA", use_dynamic)
         self.assertTrue(anotherA_value)
-        self.assertIn("B", anotherA_value.GetTypeName())
-        anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
-        self.assertTrue(anon_b_value)
-        self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
+        if self.getDebugInfo() == "pdb":
+            # With PDB, we don't have the vtable symbols for classes in anonymous namespaces.
+            self.assertNotIn("B", anotherA_value.GetTypeName())
+        else:
+            self.assertIn("B", anotherA_value.GetTypeName())
+            anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
+            self.assertTrue(anon_b_value)
+            self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
 
     def examine_value_object_of_this_ptr(
         self, this_static, this_dynamic, dynamic_location
@@ -251,6 +254,10 @@ class DynamicValueTestCase(TestBase):
             contained_b = contained_auto_ptr.GetChildMemberWithName(
                 "__ptr_", use_dynamic
             )
+        if not contained_b:
+            contained_b = contained_auto_ptr.GetChildMemberWithName(
+                "_Myptr", use_dynamic
+            )
         self.assertTrue(contained_b)
 
         contained_b_static = contained_auto_ptr.GetChildMemberWithName(
@@ -260,9 +267,76 @@ class DynamicValueTestCase(TestBase):
             contained_b_static = contained_auto_ptr.GetChildMemberWithName(
                 "__ptr_", no_dynamic
             )
+        if not contained_b_static:
+            contained_b_static = contained_auto_ptr.GetChildMemberWithName(
+                "_Myptr", no_dynamic
+            )
         self.assertTrue(contained_b_static)
 
         contained_b_addr = int(contained_b.GetValue(), 16)
         contained_b_static_addr = int(contained_b_static.GetValue(), 16)
 
         self.assertLess(contained_b_addr, contained_b_static_addr)
+
+    def test_from_forward_decl(self):
+        """Test fetching C++ dynamic values forward-declared types. It's
+        imperative that this is a separate test so that we don't end up parsing
+        a definition of A from somewhere else."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "take_A")
+        self.expect(
+            "frame var -d run-target --ptr-depth=1 --show-types a",
+            substrs=["(B *) a", "m_b_value = 10"],
+        )
+
+    @expectedFailureWindows  # Can't read the RTTI locator and A is a virtual base of B, so AST strategy fails.
+    @expectedFailureAll(archs=["arm$"])  # Minidump saving not implemented
+    @skipIf(archs=["arm64e"])  # arm64e incompatible with minidump
+    @skipIfWasm  # No core file format for Wasm
+    def test_from_core_file(self):
+        """Test fetching C++ dynamic values from core files. Specifically, test
+        that we can determine the dynamic type of the value if the core file
+        does not contain the type vtable."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "take_A")
+
+        # Get the address of our object and its vtable
+        a = self.frame().FindVariable("a")
+        self.assertSuccess(a.GetError())
+        vtable = a.GetVTable()
+        self.assertSuccess(vtable.GetError())
+        a = a.GetValueAsAddress()
+        vtable = vtable.GetValueAsAddress()
+
+        # Create a core file which will only contain the memory region
+        # containing `a`. The object is on the stack, so this will automatically
+        # include the stack of the main thread.
+        core = self.getBuildArtifact("a.dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        options.SetOutputFile(lldb.SBFileSpec(core))
+        region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(self.process().GetMemoryRegionInfo(a, region))
+        self.assertSuccess(options.AddMemoryRegionToSave(region))
+
+        # Save the core file and load it.
+        self.assertSuccess(self.process().SaveCore(options))
+        self.process().Kill()
+        error = lldb.SBError()
+        self.target().LoadCore(core, error)
+        self.assertSuccess(error)
+
+        # Sanity check -- the process should be able to read the object but not
+        # its vtable..
+        self.process().ReadPointerFromMemory(a, error)
+        self.assertSuccess(error)
+        self.process().ReadPointerFromMemory(vtable, error)
+        self.assertTrue(error.Fail())
+
+        # .. but we should still be able to see the dynamic type by reading the
+        # vtable from the executable file.
+        self.expect(
+            "frame var -d run-target --ptr-depth=1 --show-types a",
+            substrs=["(B *) a", "m_b_value = 10"],
+        )

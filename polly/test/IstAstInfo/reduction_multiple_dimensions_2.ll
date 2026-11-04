@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK-NOT:#pragma known-parallel reduction
 ; CHECK:    #pragma known-parallel

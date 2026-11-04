@@ -7,4 +7,4 @@ body: |
     %0:_(notatype) = IMPLICIT_DEF
 ...
 
-# CHECK: expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, or <vscale x M x pA> for GlobalISel type
+# CHECK: expected tN, pA, <M x tN>, <M x pA>, <vscale x M x tN>, or <vscale x M x pA> for GlobalISel type, where t = {'s', 'i', 'f', 'bf'}

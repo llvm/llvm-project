@@ -1,4 +1,4 @@
-//===--- MisplacedPointerArithmeticInAllocCheck.cpp - clang-tidy-----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,9 +65,8 @@ void MisplacedPointerArithmeticInAllocCheck::check(
 
   if (const auto *Call = dyn_cast<CallExpr>(AllocExpr)) {
     const NamedDecl *Func = Call->getDirectCallee();
-    if (!Func) {
+    if (!Func)
       Func = cast<NamedDecl>(Call->getCalleeDecl());
-    }
     CallName = Func->getName().str();
   } else {
     const auto *New = cast<CXXNewExpr>(AllocExpr);
@@ -75,9 +74,10 @@ void MisplacedPointerArithmeticInAllocCheck::check(
       CallName = "operator new[]";
     } else {
       const auto *CtrE = New->getConstructExpr();
-      if (!CtrE || !CtrE->getArg(CtrE->getNumArgs() - 1)
-                                     ->getType()
-                                     ->isIntegralOrEnumerationType())
+      if (!CtrE || CtrE->getNumArgs() == 0 ||
+          !CtrE->getArg(CtrE->getNumArgs() - 1)
+               ->getType()
+               ->isIntegralOrEnumerationType())
         return;
       CallName = "operator new";
     }

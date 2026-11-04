@@ -34,6 +34,7 @@
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_defs.h"
 #include "tsan_flags.h"
 #include "tsan_ignoreset.h"
@@ -54,13 +55,15 @@
 
 namespace __tsan {
 
+extern bool ready_to_symbolize;
+
 #if !SANITIZER_GO
 struct MapUnmapCallback;
 #  if defined(__mips64) || defined(__aarch64__) || defined(__loongarch__) || \
       defined(__powerpc__) || SANITIZER_RISCV64
 
 struct AP32 {
-  static const uptr kSpaceBeg = 0;
+  static const uptr kSpaceBeg = SANITIZER_MMAP_BEGIN;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 0;
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
@@ -98,6 +101,7 @@ struct JmpBuf {
   uptr sp;
   int int_signal_send;
   bool in_blocking_func;
+  uptr oldset_stack_size;
   uptr in_signal_handler;
   uptr *shadow_stack_pos;
 };
@@ -233,6 +237,12 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
 
   const ReportDesc *current_report;
 
+#if SANITIZER_APPLE && !SANITIZER_GO
+  bool in_internal_write_call;
+#endif
+
+  AdaptiveDelayState adaptive_delay_state;
+
   explicit ThreadState(Tid tid);
 };
 
@@ -307,8 +317,7 @@ struct Context {
 
   MetaMap metamap;
 
-  Mutex report_mtx;
-  int nreported;
+  atomic_uint32_t nreported;
   atomic_uint64_t last_symbolize_time_ns;
 
   void *background_thread;
@@ -404,8 +413,11 @@ const char *GetObjectTypeFromTag(uptr tag);
 const char *GetReportHeaderFromTag(uptr tag);
 uptr TagFromShadowStackFrame(uptr pc);
 
-class ScopedReportBase {
+class ScopedReport {
  public:
+  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
+  ~ScopedReport();
+
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, Tid tid,
                        StackTrace stack, const MutexSet *mset);
   void AddStack(StackTrace stack, bool suppressable = false);
@@ -417,30 +429,21 @@ class ScopedReportBase {
   void AddSleep(StackID stack_id);
   void SetCount(int count);
   void SetSigNum(int sig);
+  void SymbolizeStackElems(void);
 
   const ReportDesc *GetReport() const;
-
- protected:
-  ScopedReportBase(ReportType typ, uptr tag);
-  ~ScopedReportBase();
 
  private:
   ReportDesc *rep_;
   // Symbolizer makes lots of intercepted calls. If we try to process them,
   // at best it will cause deadlocks on internal mutexes.
   ScopedIgnoreInterceptors ignore_interceptors_;
-
-  ScopedReportBase(const ScopedReportBase &) = delete;
-  void operator=(const ScopedReportBase &) = delete;
-};
-
-class ScopedReport : public ScopedReportBase {
- public:
-  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
-  ~ScopedReport();
-
- private:
   ScopedErrorReportLock lock_;
+
+  void AddThreadLocked(const ThreadContext* tctx, bool suppressable = false);
+
+  ScopedReport(const ScopedReport&) = delete;
+  void operator=(const ScopedReport&) = delete;
 };
 
 bool ShouldReport(ThreadState *thr, ReportType typ);
@@ -495,7 +498,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc, bool start_thread);
 
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ);
-bool OutputReport(ThreadState *thr, const ScopedReport &srep);
+bool OutputReport(ThreadState *thr, ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 
@@ -556,7 +559,7 @@ void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);
 void ThreadIgnoreSyncEnd(ThreadState *thr);
 
 Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type);
 void ThreadFinish(ThreadState *thr);
 Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);

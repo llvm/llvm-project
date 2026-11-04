@@ -95,7 +95,7 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[FOR_BODY_PEEL]] ], [ 2, [[FOR_BODY_PEEL2]] ], [ 3, [[FOR_BODY_PEEL7]] ], [ [[INC]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 3, [[FOR_BODY_PEEL7]] ], [ 1, [[FOR_BODY_PEEL]] ], [ 2, [[FOR_BODY_PEEL2]] ], [ [[INC]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:

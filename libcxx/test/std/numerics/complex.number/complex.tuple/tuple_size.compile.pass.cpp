@@ -28,7 +28,7 @@ void test() {
   using C = std::complex<T>;
 
   static_assert(HasTupleSize<C>);
-  static_assert(std::same_as<typename std::tuple_size<C>::value_type, size_t>);
+  static_assert(std::same_as<typename std::tuple_size<C>::value_type, std::size_t>);
   static_assert(std::tuple_size<C>() == 2);
 }
 

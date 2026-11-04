@@ -12,7 +12,7 @@ int main(void) {
   return 0;
 }
 void foo(int N) {
-  // CHECK-LABEL: define{{( dso_local)?}} void @foo(
+  // CHECK-LABEL: define{{( dso_local)?}}{{( arm_aapcs_vfpcc)?}} void @foo(
   // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[FOO:[0-9]+]]
   if (N) {}
 }

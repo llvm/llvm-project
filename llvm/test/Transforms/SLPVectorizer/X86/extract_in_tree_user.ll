@@ -6,17 +6,17 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 @a = common global ptr null, align 8
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @fn1() {
+define void @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 11, i64 56>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 11, i64 56>
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[ADD_PTR]], align 8
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load ptr, ptr @a, align 8
@@ -27,7 +27,7 @@ entry:
   %2 = ptrtoint ptr %add.ptr1 to i64
   %arrayidx2 = getelementptr inbounds i64, ptr %0, i64 12
   store i64 %2, ptr %arrayidx2, align 8
-  ret i32 undef
+  ret void
 }
 
 declare float @llvm.powi.f32.i32(float, i32)
@@ -37,7 +37,7 @@ define void @fn2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <4 x i32> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP4]], i32 [[TMP3]])
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[C:%.*]], align 4
@@ -90,9 +90,9 @@ define void @externally_used_ptrs() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 56, i64 11>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 56, i64 11>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[ADD_PTR]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]

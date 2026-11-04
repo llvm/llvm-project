@@ -1,24 +1,18 @@
 ;; Tests memprof profile matching (with and without instrumentation profiles).
+; RUN: rm -rf %t && split-file %s %t
 
-;; Several requirements due to using raw profile inputs:
-;; PGO profile uses zlib compression
-; REQUIRES: zlib
-;; Avoid failures on big-endian systems that can't read the profile properly
+;; Our memprof stack ID algorithm is inconsistent across platforms
 ; REQUIRES: x86_64-linux
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
-;; TODO: Use text profile inputs once that is available for memprof.
-;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
-;; # To generate below LLVM IR for use in matching:
-;; $ clang++ -gmlt -fdebug-info-for-profiling -fno-omit-frame-pointer \
-;;	-fno-optimize-sibling-calls memprof.cc -S -emit-llvm
-
 ;; Generate indexed profiles of all combinations:
-; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.pgomemprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext -o %t.pgoprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof.nocolinfo.memprofraw --profiled-binary %S/Inputs/memprof.nocolinfo.exe -o %t.nocolinfo.memprofdata
+; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
+; RUN: llvm-profdata merge %t/a.proftext %t/a.yaml -o %t/a.pgomemprofdata
+; RUN: llvm-profdata merge %t/a.proftext -o %t/a.pgoprofdata
+;; Simulate a profile from a -gno-column-info build by zeroing all columns.
+; RUN: sed -E 's/Column: [0-9]+,/Column: 0,/g' %t/a.yaml > %t/a.nocolinfo.yaml
+; RUN: llvm-profdata merge %t/a.nocolinfo.yaml -o %t/a.nocolinfo.memprofdata
 
 ;; In all below cases we should not get any messages about missing profile data
 ;; for any functions. Either we are not performing any matching for a particular
@@ -27,7 +21,7 @@
 ; ALL-NOT: no profile data available for function
 
 ;; Using a memprof-only profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS,AMBIG
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
@@ -35,65 +29,96 @@
 ;; should recognize that there are no non-zero columns in the profile and
 ;; not attempt to include column numbers in the matching (which means that the
 ;; stack ids will be different).
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.nocolinfo.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFNOCOLINFO,ALL,MEMPROFONLY
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.nocolinfo.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFNOCOLINFO,ALL,MEMPROFONLY
 
 ;; Test the same thing but by passing the memory profile through to a default
 ;; pipeline via -memory-profile-file=, which should cause the necessary field
 ;; of the PGOOptions structure to be populated with the profile filename.
-; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %t/a.ll -passes='default<O2>' -memory-profile-file=%t/a.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo+memprof profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo-only profile for memprof-use should give an error
-; RUN: not opt < %s -passes='memprof-use<profile-filename=%t.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
+; RUN: not opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
 ; MEMPROFWITHPGOONLY: Not a memory profile
 
 ;; Using a memprof-only profile for pgo-instr-use should give an error
-; RUN: not opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -S 2>&1 | FileCheck %s --check-prefixes=PGOWITHMEMPROFONLY
+; RUN: not opt < %t/a.ll -passes=pgo-instr-use -pgo-test-profile-file=%t/a.memprofdata -S 2>&1 | FileCheck %s --check-prefixes=PGOWITHMEMPROFONLY
 ; PGOWITHMEMPROFONLY: Not an IR level instrumentation profile
 
 ;; Using a pgo+memprof profile for pgo-instr-use should only give pgo metadata
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
+; RUN: opt < %t/a.ll -passes=pgo-instr-use -pgo-test-profile-file=%t/a.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
 ; There should not be any memprof related metadata
 ; PGOONLY-NOT: !memprof
 ; PGOONLY-NOT: !callsite
 
 ;; Using a pgo+memprof profile for both memprof-use and pgo-instr-use should
 ;; give both memprof and pgo metadata.
-; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
+; RUN: opt < %t/a.ll -passes='pgo-instr-use,memprof-use<profile-filename=%t/a.pgomemprofdata>' -pgo-test-profile-file=%t/a.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO,AMBIG
 
-;; Check that the total sizes are reported if requested.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES
+;; Check that the total sizes are reported if requested. A message should be
+;; emitted for the pruned context. Also check that remarks are emitted for the
+;; allocations hinted without context sensitivity.
+;; Per-context remarks with size info should be emitted when -memprof-report-hinted-sizes is enabled.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL,REMARKSINGLESIZE
+;; Per-context remarks with size info should be emitted when -memprof-keep-context-size-info is enabled.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-keep-context-size-info -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLESIZE
+;; Only per-allocation remarks should be emitted by default.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLEBASIC
 
-;; Check that we hint additional allocations with a threshold < 100%
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
+;; Check that the total sizes are reported if requested, and prevent pruning
+;; via -memprof-keep-all-not-cold-contexts.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZESKEEPALL
+
+;; Check that we hint additional allocations with a threshold < 100%.
+;; Per-context remarks with size info should be emitted when -memprof-report-hinted-sizes is enabled.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60,REMARKSINGLESIZE,REMARKDOMSIZE
+;; Per-context remarks with size info should be emitted when -memprof-keep-context-size-info is enabled.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-matching-cold-threshold=60 -memprof-keep-context-size-info -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLESIZE,REMARKDOMSIZE
+;; Only per-allocation remarks should be emitted by default.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-matching-cold-threshold=60 -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLEBASIC,REMARKDOMBASIC
 
 ;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
 ;; the size metadata to be generated for the LTO link.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES,TOTALSIZESKEEPALL
 
-;; Make sure we emit a random hotness seed if requested.
-; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
-; RAND: random hotness seed =
-;; Can't check the exact values, but make sure applying the random profile
-;; succeeds with the same stats
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=ALL,MEMPROFONLY,MEMPROFSTATS
+;; Make sure applying a random hotness profile succeeds.
+; RUN: llvm-profdata merge -memprof-random-hotness -random-seed=1730170724 %t/a.yaml -o %t/a.memprofdatarand
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND,ALL,MEMPROFONLY,MEMPROFSTATS
 
-;; Make sure we use a specific random hotness seed if requested.
-; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
-; RAND2: random hotness seed = 1730170724
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
+;; With the hot access density threshold set to 0, and hot hints enabled,
+;; the unconditionally notcold call to new should instead get a hot attribute.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats -memprof-min-ave-lifetime-access-density-hot-threshold=0 -memprof-use-hot-hints 2>&1 | FileCheck %s --check-prefixes=MEMPROFHOT,ALL
 
-; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
+;; However, with the same threshold, but hot hints not enabled, it should be
+;; notcold again.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,AMBIG
 
+;; Test that we don't get an ambiguous memprof attribute when
+;; -memprof-ambiguous-attributes is disabled.
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-ambiguous-attributes=false 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,NOAMBIG
+
+; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 748269490701775343
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 1544787832369987002
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2061451396820446691
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2104812325165620841
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 6281715513834610934
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8467819354083268568
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8690657650969109624
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 9086428284934609951
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12481870273128938184
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12699492813229484831
+
+;--- a.ll
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -105,7 +130,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
 entry:
-  ; MEMPROF: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
+  ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A0:[0-9]+]]{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !13
   ret ptr %call, !dbg !14
@@ -192,6 +217,7 @@ entry:
   store ptr %argv, ptr %argv.addr, align 8
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
+  ; MEMPROFHOT: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !35
   store ptr %call, ptr %a, align 8, !dbg !36
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A2:[0-9]+]]
@@ -328,9 +354,12 @@ for.end:                                          ; preds = %for.cond
   ret i32 0, !dbg !103
 }
 
+;; We optionally apply an ambiguous memprof attribute to ambiguous allocations
+; AMBIG: #[[A0]] = { builtin allocsize(0) "memprof"="ambiguous" }
+; NOAMBIG: #[[A0]] = { builtin allocsize(0) }
 ; MEMPROF: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROF: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
-; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROF: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK1]] = !{i64 2732490490862098848, i64 748269490701775343}
 ; MEMPROF: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"cold"}
@@ -339,8 +368,6 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[STACK3]] = !{i64 2732490490862098848, i64 2104812325165620841, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934}
 ; MEMPROF: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK4]] = !{i64 2732490490862098848, i64 8467819354083268568}
-; MEMPROF: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"notcold"}
-; MEMPROF: ![[STACK5]] = !{i64 2732490490862098848, i64 8690657650969109624}
 ; MEMPROF: ![[C1]] = !{i64 2732490490862098848}
 ; MEMPROF: ![[C2]] = !{i64 8467819354083268568}
 ; MEMPROF: ![[C3]] = !{i64 9086428284934609951}
@@ -353,16 +380,37 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
 
+; TOTALSIZENOKEEPALL: Total size for pruned non-cold full allocation context hash 1093248920606587996: 10
+
 ;; For non-context sensitive allocations that get attributes we emit a message
 ;; with the full allocation context hash, type, and size in bytes.
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 8525406123785421946 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 8525406123785421946 with total size 10
+;; Per-allocation remark without size info.
+; REMARKDOMBASIC: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 11714230664165068698 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 5725971306423925017 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 11714230664165068698 with total size 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 5725971306423925017: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 16342802530253093571 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 16342802530253093571 with total size 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 18254812774972004394 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 1093248920606587996 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 18254812774972004394 with total size 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 1093248920606587996: 10
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
+;; Per-context remark with size info.
+; REMARKSINGLESIZE: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold for full allocation context hash 6792096022461663180 with total size 10
+;; Per-allocation remark without size info.
+; REMARKSINGLEBASIC: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKSINGLESIZE: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold for full allocation context hash 15737101490731057601 with total size 10
+;; Per-allocation remark without size info.
+; REMARKSINGLEBASIC: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold
+
 ;; For context sensitive allocations the full context hash and size in bytes
 ;; are in separate metadata nodes included on the MIB metadata.
 ; TOTALSIZES: !"cold", ![[CONTEXT1:[0-9]+]]}
@@ -376,22 +424,20 @@ for.end:                                          ; preds = %for.cond
 ; TOTALSIZES: !"cold", ![[CONTEXT4:[0-9]+]], ![[CONTEXT5:[0-9]+]]}
 ; TOTALSIZES: ![[CONTEXT4]] = !{i64 -2103941543456458045, i64 10}
 ; TOTALSIZES: ![[CONTEXT5]] = !{i64 -191931298737547222, i64 10}
-; TOTALSIZES: !"notcold", ![[CONTEXT6:[0-9]+]]}
-; TOTALSIZES: ![[CONTEXT6]] = !{i64 1093248920606587996, i64 10}
+; TOTALSIZESKEEPALL: !"notcold", ![[CONTEXT6:[0-9]+]]}
+; TOTALSIZESKEEPALL: ![[CONTEXT6]] = !{i64 1093248920606587996, i64 10}
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
-; MEMPROFNOCOLINFO: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROFNOCOLINFO: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROFNOCOLINFO: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROFNOCOLINFO: ![[STACK1]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 3577763375057267810}
 ; MEMPROFNOCOLINFO: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"notcold"}
 ; MEMPROFNOCOLINFO: ![[STACK2]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790}
-; MEMPROFNOCOLINFO: ![[MIB3]] = !{![[STACK3:[0-9]+]], !"notcold"}
-; MEMPROFNOCOLINFO: ![[STACK3]] = !{i64 5281664982037379640, i64 -6896091699916449732}
+; MEMPROFNOCOLINFO: ![[MIB3]] = !{![[STACK3:[0-9]+]], !"cold"}
+; MEMPROFNOCOLINFO: ![[STACK3]] = !{i64 5281664982037379640, i64 -6871734214936418908}
 ; MEMPROFNOCOLINFO: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
-; MEMPROFNOCOLINFO: ![[STACK4]] = !{i64 5281664982037379640, i64 -6871734214936418908}
-; MEMPROFNOCOLINFO: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"cold"}
-; MEMPROFNOCOLINFO: ![[STACK5]] = !{i64 5281664982037379640, i64 -6201180255894224618}
+; MEMPROFNOCOLINFO: ![[STACK4]] = !{i64 5281664982037379640, i64 -6201180255894224618}
 ; MEMPROFNOCOLINFO: ![[C1]] = !{i64 5281664982037379640}
 ; MEMPROFNOCOLINFO: ![[C2]] = !{i64 -6871734214936418908}
 ; MEMPROFNOCOLINFO: ![[C3]] = !{i64 -5588766871448036195}
@@ -404,12 +450,13 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
 
+; MEMPROFHOT: #[[A1]] = { builtin allocsize(0) "memprof"="hot" }
+
 ;; For the specific random seed, this is the expected order of hotness
-; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"hot"
-; MEMPROFRAND2: !"hot"
+; MEMPROFRAND: !"cold"
+; MEMPROFRAND: !"cold"
+; MEMPROFRAND: !"notcold"
+; MEMPROFRAND: !"cold"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.
@@ -544,3 +591,177 @@ attributes #7 = { builtin nounwind }
 !101 = !DILocation(line: 51, column: 3, scope: !34)
 !102 = !{!"llvm.loop.mustprogress"}
 !103 = !DILocation(line: 58, column: 3, scope: !34)
+
+;--- a.proftext
+# IR level Instrumentation Flag
+:ir
+_Z3barv
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+_Z3bazv
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+_Z3foov
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+6
+
+_Z4foo2v
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+2
+
+_Z7recursej
+# Func Hash:
+146835647075900052
+# Num Counters:
+2
+# Counter Values:
+7
+2
+
+main
+# Func Hash:
+303685788594980264
+# Num Counters:
+10
+# Counter Values:
+2
+2
+1
+1
+1
+1
+1
+1
+1
+1
+
+;--- a.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3bazv
+    CallSites:
+      - Frames:
+          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+  - GUID:            _Z3barv
+    CallSites:
+      - Frames:
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+  - GUID:            main
+    AllocSites:
+      - Callstack:
+          - { Function: main, LineOffset: 4, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+      - Callstack:
+          - { Function: main, LineOffset: 5, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+    CallSites:
+      - Frames:
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
+      - Frames:
+          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
+      - Frames:
+          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
+      - Frames:
+          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
+      - Frames:
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+  - GUID:            _Z7recursej
+    CallSites:
+      - Frames:
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+      - Frames:
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+  - GUID:            _Z4foo2v
+    CallSites:
+      - Frames:
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+...

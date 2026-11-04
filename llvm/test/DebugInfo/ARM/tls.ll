@@ -18,10 +18,10 @@ source_filename = "test/DebugInfo/ARM/tls.ll"
 ; DW_OP_const4u
 ; CHECK: .byte 12
 ; The debug relocation of the address of the tls variable
-; CHECK: .long x(tlsldo)
+; CHECK: .long x(TLSLDO)
 
 ; TODO: Add expected output for -emulated-tls tests.
-; EMU-NOT: .long x(tlsldo)
+; EMU-NOT: .long x(TLSLDO)
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)

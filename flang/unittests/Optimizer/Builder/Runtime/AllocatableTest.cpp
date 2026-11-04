@@ -17,9 +17,9 @@ TEST_F(RuntimeCallTest, genMoveAlloc) {
   mlir::Location loc = firBuilder->getUnknownLoc();
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Value from = firBuilder->create<fir::UndefOp>(loc, seqTy);
-  mlir::Value to = firBuilder->create<fir::UndefOp>(loc, seqTy);
-  mlir::Value errMsg = firBuilder->create<fir::UndefOp>(loc, seqTy);
+  mlir::Value from = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  mlir::Value to = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  mlir::Value errMsg = fir::UndefOp::create(*firBuilder, loc, seqTy);
   mlir::Value hasStat = firBuilder->createBool(loc, false);
   fir::runtime::genMoveAlloc(*firBuilder, loc, to, from, hasStat, errMsg);
   checkCallOpFromResultBox(to, "_FortranAMoveAlloc", 5);

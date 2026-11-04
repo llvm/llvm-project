@@ -17,6 +17,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_THREADS
 static constinit __libcpp_mutex_t __rs_mut = _LIBCPP_MUTEX_INITIALIZER;
@@ -42,10 +43,11 @@ __rs_default::~__rs_default() {
 }
 
 __rs_default::result_type __rs_default::operator()() {
-  static mt19937 __rs_g;
-  return __rs_g();
+  static constinit mt19937 __random_shuffle_mersenne_twister;
+  return __random_shuffle_mersenne_twister();
 }
 
 __rs_default __rs_get() { return __rs_default(); }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

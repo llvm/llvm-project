@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// TODO: Change to XFAIL once https://llvm.org/PR40995 is fixed
 // UNSUPPORTED: availability-pmr-missing
 
 // <map>
@@ -23,8 +23,8 @@
 int main(int, char**) {
   {
     // Check that std::pmr::map is usable without <memory_resource>.
-    std::pmr::map<int, int> m;
-    std::pmr::multimap<int, int> mm;
+    [[maybe_unused]] std::pmr::map<int, int> m;
+    [[maybe_unused]] std::pmr::multimap<int, int> mm;
   }
 
   return 0;

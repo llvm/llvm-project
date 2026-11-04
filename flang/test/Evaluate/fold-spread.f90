@@ -12,4 +12,5 @@ module m1
   logical, parameter :: test_log4 = all(any(spread([.false., .true.], 2, 2), dim=2) .eqv. [.false., .true.])
   logical, parameter :: test_m2toa3 = all(spread(reshape([(j,j=1,6)],[2,3]),1,4) == &
                                           reshape([((j,k=1,4),j=1,6)],[4,2,3]))
+  logical, parameter :: test_shape_neg = all(shape(spread(0,1,-1)) == [0])
 end module

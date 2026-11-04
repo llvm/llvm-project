@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_FILEOUTPUTBUFFER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 
@@ -31,9 +32,9 @@ public:
     /// Set the 'x' bit on the resulting file.
     F_executable = 1,
 
-    /// Don't use mmap and instead write an in-memory buffer to a file when this
-    /// buffer is closed.
-    F_no_mmap = 2,
+    /// Build the output in an anonymous memory buffer and write it to the file
+    /// on commit() instead of mapping the file.
+    F_in_memory = 2,
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write
@@ -45,7 +46,7 @@ public:
   /// Otherwise, the file shrinks or grows as necessary based on the value of
   /// \p Size.  It is an error to specify F_modify and Size=-1 if \p FilePath
   /// does not exist.
-  static Expected<std::unique_ptr<FileOutputBuffer>>
+  LLVM_ABI static Expected<std::unique_ptr<FileOutputBuffer>>
   create(StringRef FilePath, size_t Size, unsigned Flags = 0);
 
   /// Returns a pointer to the start of the buffer.

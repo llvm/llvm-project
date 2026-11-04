@@ -4,7 +4,6 @@
 
 // `!fir.coordinate_of` - `!fir.array` inside "boxed" `!fir.type`
 func.func @coordinate_box_array_inside_derived(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.array<10 x i32>, field_2:i32}>>, %arg1 : index) {
-   %idx0 = arith.constant 0 : i32
-   %q = fir.coordinate_of %arg0, %idx0, %arg1 : (!fir.box<!fir.type<derived_2{field_1:!fir.array<10 x i32>, field_2:i32}>>, i32, index) -> !fir.ref<f32>
+   %q = fir.coordinate_of %arg0, field_1, %arg1 : (!fir.box<!fir.type<derived_2{field_1:!fir.array<10 x i32>, field_2:i32}>>, index) -> !fir.ref<f32>
    return
 }

@@ -14,7 +14,8 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; NOSHRINKW-NEXT:    bltu $a0, $a1, .LBB0_2
 ; NOSHRINKW-NEXT:    b .LBB0_1
 ; NOSHRINKW-NEXT:  .LBB0_1: # %if.then
-; NOSHRINKW-NEXT:    bl %plt(abort)
+; NOSHRINKW-NEXT:    pcaddu18i $ra, %call36(abort)
+; NOSHRINKW-NEXT:    jirl $ra, $ra, 0
 ; NOSHRINKW-NEXT:  .LBB0_2: # %if.end
 ; NOSHRINKW-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; NOSHRINKW-NEXT:    addi.d $sp, $sp, 16
@@ -30,7 +31,8 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; SHRINKW-NEXT:  .LBB0_2: # %if.then
 ; SHRINKW-NEXT:    addi.d $sp, $sp, -16
 ; SHRINKW-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; SHRINKW-NEXT:    bl %plt(abort)
+; SHRINKW-NEXT:    pcaddu18i $ra, %call36(abort)
+; SHRINKW-NEXT:    jirl $ra, $ra, 0
   %cmp = icmp ule i32 %n, 32
   br i1 %cmp, label %if.then, label %if.end
 
@@ -65,7 +67,8 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; NOSHRINKW-NEXT:    move $a0, $sp
 ; NOSHRINKW-NEXT:    sub.d $a0, $a0, $a1
 ; NOSHRINKW-NEXT:    move $sp, $a0
-; NOSHRINKW-NEXT:    bl %plt(notdead)
+; NOSHRINKW-NEXT:    pcaddu18i $ra, %call36(notdead)
+; NOSHRINKW-NEXT:    jirl $ra, $ra, 0
 ; NOSHRINKW-NEXT:    b .LBB1_2
 ; NOSHRINKW-NEXT:  .LBB1_2: # %if.end
 ; NOSHRINKW-NEXT:    addi.d $sp, $fp, -32
@@ -90,7 +93,8 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; SHRINKW-NEXT:    slli.d $a0, $a0, 4
 ; SHRINKW-NEXT:    sub.d $a0, $sp, $a0
 ; SHRINKW-NEXT:    move $sp, $a0
-; SHRINKW-NEXT:    bl %plt(notdead)
+; SHRINKW-NEXT:    pcaddu18i $ra, %call36(notdead)
+; SHRINKW-NEXT:    jirl $ra, $ra, 0
 ; SHRINKW-NEXT:    addi.d $sp, $fp, -16
 ; SHRINKW-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; SHRINKW-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload

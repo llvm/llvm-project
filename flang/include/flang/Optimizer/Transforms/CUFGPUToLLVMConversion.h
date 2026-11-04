@@ -9,8 +9,6 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_CUFGPUTOLLVMCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUFGPUTOLLVMCONVERSION_H_
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace fir {
@@ -19,9 +17,9 @@ class LLVMTypeConverter;
 
 namespace cuf {
 
-void populateCUFGPUToLLVMConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
-    mlir::PatternBenefit benefit = 1);
+void populateCUFGPUToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
+                                            mlir::RewritePatternSet &patterns,
+                                            mlir::PatternBenefit benefit = 1);
 
 } // namespace cuf
 

@@ -27,8 +27,8 @@ makeIsolatedFromAboveImpl(RewriterBase &rewriter,
       makeRegionIsolatedFromAbove(rewriter, region, callBack);
   SmallVector<Value> operands = regionOp.getOperands();
   operands.append(capturedValues);
-  auto isolatedRegionOp =
-      rewriter.create<test::IsolatedOneRegionOp>(regionOp.getLoc(), operands);
+  auto isolatedRegionOp = test::IsolatedOneRegionOp::create(
+      rewriter, regionOp.getLoc(), TypeRange(), operands);
   rewriter.inlineRegionBefore(region, isolatedRegionOp.getRegion(),
                               isolatedRegionOp.getRegion().begin());
   rewriter.eraseOp(regionOp);
@@ -41,7 +41,7 @@ namespace {
 /// operations.
 struct SimpleMakeIsolatedFromAbove
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -54,7 +54,7 @@ struct SimpleMakeIsolatedFromAbove
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -68,7 +68,7 @@ struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {

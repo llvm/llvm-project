@@ -1167,22 +1167,22 @@ xvldrepl.h $xr0, $a0, 2048
 
 ## simm12
 xvldrepl.b $xr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:23: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:23: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 xvldrepl.b $xr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:23: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:23: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 xvst $xr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 xvst $xr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 xvld $xr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 xvld $xr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 ## simm13
 xvldi $xr0, -4097

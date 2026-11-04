@@ -29,15 +29,15 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
+
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_file_spec.Clear();
-    m_line_number = LLDB_INVALID_LINE_NUMBER;
-    m_column_number = LLDB_INVALID_COLUMN_NUMBER;
-  }
+  void SetFile(const FileSpec &file_spec) { m_file_spec = file_spec; }
+  void SetLine(uint32_t line) { m_line_number = line; }
+  void SetColumn(uint32_t column) { m_column_number = column; }
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
@@ -49,6 +49,12 @@ public:
   void SetCompletionMask(uint32_t mask) { m_completion_mask = mask; }
 
 protected:
+  void ClearImpl() override {
+    m_file_spec.Clear();
+    m_line_number = LLDB_INVALID_LINE_NUMBER;
+    m_column_number = LLDB_INVALID_COLUMN_NUMBER;
+  }
+
   FileSpec m_file_spec;
   uint32_t m_line_number = LLDB_INVALID_LINE_NUMBER;
   uint32_t m_column_number = LLDB_INVALID_COLUMN_NUMBER;

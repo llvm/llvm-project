@@ -9,8 +9,6 @@
 // Test that the default verbose termination function aborts the program.
 // XFAIL: availability-verbose_abort-missing
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__verbose_abort>
 #include <csignal>
 #include <cstdlib>

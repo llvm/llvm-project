@@ -311,7 +311,7 @@ declare void @unknown(ptr)
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], inttoptr (i64 2048 to ptr)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -325,7 +325,7 @@ define i1 @consistent_nocapture_inttoptr() {
 define i1 @consistent_nocapture_offset() {
 ; CHECK-LABEL: @consistent_nocapture_offset(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = call ptr @malloc(i64 4)
@@ -339,7 +339,7 @@ define i1 @consistent_nocapture_offset() {
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = call ptr @malloc(i64 4)
@@ -395,6 +395,15 @@ define i1 @two_nonnull_mallocs_hidden() {
   ret i1 %cmp
 }
 
+define <4 x i1> @test_vector_icmp() {
+; CHECK-LABEL: @test_vector_icmp(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %ptr = call ptr @malloc(i64 16)
+  %gep = getelementptr i8, ptr %ptr, <4 x i64> <i64 4, i64 8, i64 12, i64 16>
+  %cmp = icmp eq <4 x ptr> %gep, splat (ptr null)
+  ret <4 x i1> %cmp
+}
 
 !0 = !{}
 

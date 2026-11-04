@@ -23,17 +23,12 @@ using namespace mlir;
 namespace {
 
 struct PoisonOpLowering final : OpConversionPattern<ub::PoisonOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ub::PoisonOp op, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type origType = op.getType();
-    if (!origType.isIntOrIndexOrFloat())
-      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-        diag << "unsupported type " << origType;
-      });
-
     Type resType = getTypeConverter()->convertType(origType);
     if (!resType)
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
@@ -41,6 +36,17 @@ struct PoisonOpLowering final : OpConversionPattern<ub::PoisonOp> {
       });
 
     rewriter.replaceOpWithNewOp<spirv::UndefOp>(op, resType);
+    return success();
+  }
+};
+
+struct UnreachableOpLowering final : OpConversionPattern<ub::UnreachableOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(ub::UnreachableOp op, OpAdaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<spirv::UnreachableOp>(op);
     return success();
   }
 };
@@ -80,5 +86,6 @@ struct UBToSPIRVConversionPass final
 
 void mlir::ub::populateUBToSPIRVConversionPatterns(
     const SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<PoisonOpLowering>(converter, patterns.getContext());
+  patterns.add<PoisonOpLowering, UnreachableOpLowering>(converter,
+                                                        patterns.getContext());
 }

@@ -28,7 +28,7 @@ PreservedAnalyses LoopAccessInfoPrinterPass::run(Function &F,
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
     OS.indent(2) << L->getHeader()->getName() << ":\n";
-    LAIs.getInfo(*L).print(OS, 4);
+    LAIs.getInfo(*L, AllowPartial).print(OS, 4);
   }
   return PreservedAnalyses::all();
 }

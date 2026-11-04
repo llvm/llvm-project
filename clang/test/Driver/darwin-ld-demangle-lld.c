@@ -1,5 +1,4 @@
 // With -fuse-ld=lld, -demangle is always passed to the linker on Darwin.
-// REQUIRES: shell
 
 // RUN: %clang --target=x86_64-apple-darwin -### -fuse-ld=lld \
 // RUN:   -B%S/Inputs/lld -mlinker-version=0 %s 2>&1 \

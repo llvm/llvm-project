@@ -11,6 +11,7 @@
 // constexpr V base() const& requires copy_constructible<V> { return base_; }
 // constexpr V base() && { return std::move(base_); }
 
+#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

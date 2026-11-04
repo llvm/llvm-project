@@ -34,14 +34,14 @@ int main() {
 
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25
-// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
-// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_kernel_environment, ptr [[DYN_PTR]])
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -50,7 +50,7 @@ int main() {
 // CHECK1-NEXT:    call void @_Z3usePi(ptr noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit()
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -66,7 +66,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[C_ADDR]], ptr [[TMP1]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 2, i32 -1, ptr @_Z3usePi_omp_outlined, ptr @_Z3usePi_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 2, i32 -1, ptr @_Z3usePi_omp_outlined, ptr @_Z3usePi_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -79,7 +79,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK1-NEXT:    call void @_Z3usePi(ptr noundef [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
@@ -111,7 +111,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META4]], !align [[META6:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // CHECK1-NEXT:    call void @_Z4workPi(ptr noundef [[TMP1]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
@@ -146,14 +146,14 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25
-// CHECK2-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
+// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
-// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
+// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_kernel_environment, ptr [[DYN_PTR]])
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -162,7 +162,7 @@ int main() {
 // CHECK2-NEXT:    call void @_Z3usePi(ptr noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit()
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -178,7 +178,7 @@ int main() {
 // CHECK2-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[C_ADDR]], ptr [[TMP1]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 2, i32 -1, ptr @_Z3usePi_omp_outlined, ptr @_Z3usePi_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 2, i32 -1, ptr @_Z3usePi_omp_outlined, ptr @_Z3usePi_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -191,7 +191,7 @@ int main() {
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK2-NEXT:    call void @_Z3usePi(ptr noundef [[TMP0]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
@@ -223,7 +223,7 @@ int main() {
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
 // CHECK2-NEXT:    call void @_Z4workPi(ptr noundef [[TMP1]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void

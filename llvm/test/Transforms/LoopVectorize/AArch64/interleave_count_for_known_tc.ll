@@ -204,7 +204,7 @@ define void @loop_with_tc_128(ptr noalias %p, ptr noalias %q) {
 ; CHECK-IR-LABEL: define void @loop_with_tc_128(
 ; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
 ; CHECK-IR-NEXT:  entry:
-; CHECK-IR-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IR-NEXT:    br label [[VECTOR_PH:%.*]]
 entry:
   br label %for.body
 
@@ -236,7 +236,7 @@ define void @loop_with_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %
 ; CHECK-IR-LABEL: define void @loop_with_tc_128_scalar_epilogue_reqd(
 ; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
 ; CHECK-IR-NEXT:  entry:
-; CHECK-IR-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IR-NEXT:    br label [[VECTOR_PH:%.*]]
 entry:
   br label %for.body
 

@@ -40,7 +40,8 @@ public:
   static void run_perf_in_range(Func my_func, Func other_func,
                                 StorageType starting_bit,
                                 StorageType ending_bit, StorageType step,
-                                size_t rounds, std::ofstream &log) {
+                                size_t rounds, const char *name_a,
+                                const char *name_b, std::ofstream &log) {
     auto runner = [=](Func func) {
       [[maybe_unused]] volatile T result;
       for (size_t i = 0; i < rounds; i++) {
@@ -60,7 +61,7 @@ public:
     size_t number_of_runs = (ending_bit - starting_bit) / step + 1;
     double my_average =
         static_cast<double>(timer.nanoseconds()) / number_of_runs / rounds;
-    log << "-- My function --\n";
+    log << "-- Function A: " << name_a << " --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << my_average << " ns/op \n";
     log << "     Ops per second  : "
@@ -72,17 +73,18 @@ public:
 
     double other_average =
         static_cast<double>(timer.nanoseconds()) / number_of_runs / rounds;
-    log << "-- Other function --\n";
+    log << "-- Function B: " << name_b << " --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << other_average << " ns/op \n";
     log << "     Ops per second  : "
         << static_cast<uint64_t>(1'000'000'000.0 / other_average) << " op/s \n";
 
-    log << "-- Average runtime ratio --\n";
-    log << "     Mine / Other's  : " << my_average / other_average << " \n";
+    log << "-- Average ops per second ratio --\n";
+    log << "     A / B  : " << other_average / my_average << " \n";
   }
 
   static void run_perf(Func my_func, Func other_func, size_t rounds,
+                       const char *name_a, const char *name_b,
                        const char *log_file) {
     std::ofstream log(log_file);
     log << "Performance tests with inputs in normal integral range:\n";
@@ -93,14 +95,14 @@ public:
         StorageType((FPBits::EXP_BIAS + FPBits::FRACTION_LEN - 1)
                     << FPBits::SIG_LEN),
         /*step=*/StorageType(1 << FPBits::SIG_LEN),
-        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, log);
+        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, name_a, name_b, log);
     log << "\n Performance tests with inputs in low integral range:\n";
     run_perf_in_range(
         my_func, other_func,
         /*starting_bit=*/StorageType(1 << FPBits::SIG_LEN),
         /*ending_bit=*/StorageType((FPBits::EXP_BIAS - 1) << FPBits::SIG_LEN),
         /*step_bit=*/StorageType(1 << FPBits::SIG_LEN),
-        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, log);
+        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, name_a, name_b, log);
     log << "\n Performance tests with inputs in high integral range:\n";
     run_perf_in_range(
         my_func, other_func,
@@ -110,7 +112,7 @@ public:
         /*ending_bit=*/
         StorageType(FPBits::MAX_BIASED_EXPONENT << FPBits::SIG_LEN),
         /*step=*/StorageType(1 << FPBits::SIG_LEN),
-        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, log);
+        rounds * FPBits::EXP_BIAS * FPBits::EXP_BIAS * 2, name_a, name_b, log);
     log << "\n Performance tests with inputs in normal fractional range:\n";
     run_perf_in_range(
         my_func, other_func,
@@ -118,11 +120,11 @@ public:
         StorageType(((FPBits::EXP_BIAS + 1) << FPBits::SIG_LEN) + 1),
         /*ending_bit=*/
         StorageType(((FPBits::EXP_BIAS + 2) << FPBits::SIG_LEN) - 1),
-        /*step=*/StorageType(1), rounds * 2, log);
+        /*step=*/StorageType(1), rounds * 2, name_a, name_b, log);
     log << "\n Performance tests with inputs in subnormal fractional range:\n";
     run_perf_in_range(my_func, other_func, /*starting_bit=*/StorageType(1),
                       /*ending_bit=*/StorageType(FPBits::SIG_MASK),
-                      /*step=*/StorageType(1), rounds, log);
+                      /*step=*/StorageType(1), rounds, name_a, name_b, log);
   }
 };
 
@@ -131,9 +133,7 @@ public:
 #define NEAREST_INTEGER_PERF(T, my_func, other_func, rounds, filename)         \
   {                                                                            \
     LIBC_NAMESPACE::testing::NearestIntegerPerf<T>::run_perf(                  \
-        &my_func, &other_func, rounds, filename);                              \
-    LIBC_NAMESPACE::testing::NearestIntegerPerf<T>::run_perf(                  \
-        &my_func, &other_func, rounds, filename);                              \
+        &my_func, &other_func, rounds, #my_func, #other_func, filename);       \
   }
 
 static constexpr size_t FLOAT16_ROUNDS = 20'000;

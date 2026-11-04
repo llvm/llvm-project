@@ -1425,6 +1425,56 @@ define void @store_v4f32_a32(ptr %p, <4 x float> %v) {
   ret void
 }
 
+define <4 x float> @load_zero_float_a1(ptr %p) {
+; CHECK-LABEL: load_zero_float_a1:
+; CHECK:         .functype load_zero_float_a1 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load float, ptr %p, align 1
+  %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
+  ret <4 x float> %v
+}
+
+define <4 x float> @load_zero_float_a2(ptr %p) {
+; CHECK-LABEL: load_zero_float_a2:
+; CHECK:         .functype load_zero_float_a2 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=1
+; CHECK-NEXT:    # fallthrough-return
+  %x = load float, ptr %p, align 2
+  %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
+  ret <4 x float> %v
+}
+
+; 4 is the default alignment for v128.load32_zero so no attribute is needed.
+define <4 x float> @load_zero_float_a4(ptr %p) {
+; CHECK-LABEL: load_zero_float_a4:
+; CHECK:         .functype load_zero_float_a4 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load float, ptr %p, align 4
+  %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
+  ret <4 x float> %v
+}
+
+; 8 is greater than the default alignment so it is ignored.
+define <4 x float> @load_zero_float_a8(ptr %p) {
+; CHECK-LABEL: load_zero_float_a8:
+; CHECK:         .functype load_zero_float_a8 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load float, ptr %p, align 8
+  %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
+  ret <4 x float> %v
+}
+
 ; ==============================================================================
 ; 2 x double
 ; ==============================================================================
@@ -1523,4 +1573,66 @@ define void @store_v2f64_a32(ptr %p, <2 x double> %v) {
 ; CHECK-NEXT:    # fallthrough-return
   store <2 x double> %v, ptr %p, align 32
   ret void
+}
+
+define <2 x double> @load_zero_double_a1(ptr %p) {
+; CHECK-LABEL: load_zero_double_a1:
+; CHECK:         .functype load_zero_double_a1 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load double, ptr %p, align 1
+  %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
+  ret <2 x double> %v
+}
+
+define <2 x double> @load_zero_double_a2(ptr %p) {
+; CHECK-LABEL: load_zero_double_a2:
+; CHECK:         .functype load_zero_double_a2 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=1
+; CHECK-NEXT:    # fallthrough-return
+  %x = load double, ptr %p, align 2
+  %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
+  ret <2 x double> %v
+}
+
+define <2 x double> @load_zero_double_a4(ptr %p) {
+; CHECK-LABEL: load_zero_double_a4:
+; CHECK:         .functype load_zero_double_a4 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=2
+; CHECK-NEXT:    # fallthrough-return
+  %x = load double, ptr %p, align 4
+  %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
+  ret <2 x double> %v
+}
+
+; 8 is the default alignment for v128.load64_zero so no attribute is needed.
+define <2 x double> @load_zero_double_a8(ptr %p) {
+; CHECK-LABEL: load_zero_double_a8:
+; CHECK:         .functype load_zero_double_a8 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load double, ptr %p, align 8
+  %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
+  ret <2 x double> %v
+}
+
+; 16 is greater than the default alignment so it is ignored.
+define <2 x double> @load_zero_double_a16(ptr %p) {
+; CHECK-LABEL: load_zero_double_a16:
+; CHECK:         .functype load_zero_double_a16 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load double, ptr %p, align 16
+  %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
+  ret <2 x double> %v
 }

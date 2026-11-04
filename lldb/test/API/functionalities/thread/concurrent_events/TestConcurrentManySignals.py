@@ -3,6 +3,7 @@ from lldbsuite.test.concurrent_base import ConcurrentEventsBase
 from lldbsuite.test.lldbtest import TestBase
 
 
+@requireThreadSupport
 @skipIfWindows
 class ConcurrentManySignals(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
@@ -10,7 +11,8 @@ class ConcurrentManySignals(ConcurrentEventsBase):
     # This test is flaky on Darwin.
     @skipIfDarwin
     @expectedFailureNetBSD
-    @skipIfOutOfTreeDebugserver
+    # Flakey in AArch64 Linux GitHub CI https://github.com/llvm/llvm-project/issues/171210.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test(self):
         """Test 100 signals from 100 threads."""
         self.build()

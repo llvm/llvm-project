@@ -15,9 +15,11 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SpecialCaseList.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {
@@ -27,28 +29,19 @@ class Module;
 /// pass instruments functions for coverage, adds initialization calls to the
 /// module for trace PC guards and 8bit counters if they are requested, and
 /// appends globals to llvm.compiler.used.
-class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
+class SanitizerCoveragePass
+    : public RequiredPassInfoMixin<SanitizerCoveragePass> {
 public:
-  explicit SanitizerCoveragePass(
+  LLVM_ABI explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
-      const std::vector<std::string> &AllowlistFiles =
-          std::vector<std::string>(),
-      const std::vector<std::string> &BlocklistFiles =
-          std::vector<std::string>())
-      : Options(Options) {
-    if (AllowlistFiles.size() > 0)
-      Allowlist = SpecialCaseList::createOrDie(AllowlistFiles,
-                                               *vfs::getRealFileSystem());
-    if (BlocklistFiles.size() > 0)
-      Blocklist = SpecialCaseList::createOrDie(BlocklistFiles,
-                                               *vfs::getRealFileSystem());
-  }
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr,
+      const std::vector<std::string> &AllowlistFiles = {},
+      const std::vector<std::string> &BlocklistFiles = {});
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   SanitizerCoverageOptions Options;
-
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
   std::unique_ptr<SpecialCaseList> Allowlist;
   std::unique_ptr<SpecialCaseList> Blocklist;
 };

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -S -passes=inline | FileCheck %s
-; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 ; Check that we only inline when we have compatible target attributes.
 
 define i32 @foo() #0 {
@@ -27,6 +26,14 @@ entry:
 ; CHECK: call i32 @bar()
 }
 
+define i32 @quux() #3 {
+entry:
+  %call = call i32 (...) @baz()
+  ret i32 %call
+; CHECK-LABEL: quux
+; CHECK: call i32 (...) @baz()
+}
+
 define i32 @strict_align() #2 {
 entry:
   %call = call i32 @foo()
@@ -35,6 +42,23 @@ entry:
 ; CHECK: call i32 (...) @baz()
 }
 
+define i32 @execute_only1() #3 {
+entry:
+  %call = call i32 @foo()
+  ret i32 %call
+; CHECK-LABEL: execute_only1
+; CHECK: call i32 @foo()
+}
+
+define i32 @execute_only2() #0 {
+entry:
+  %call = call i32 @quux()
+  ret i32 %call
+; CHECK-LABEL: execute_only2
+; CHECK: call i32 (...) @baz()
+}
+
 attributes #0 = { "target-cpu"="generic" "target-features"="+crc,+neon" }
 attributes #1 = { "target-cpu"="generic" "target-features"="+crc,+neon,+crypto" }
 attributes #2 = { "target-cpu"="generic" "target-features"="+crc,+neon,+strict-align" }
+attributes #3 = { "target-cpu"="generic" "target-features"="+crc,+neon,+execute-only" }

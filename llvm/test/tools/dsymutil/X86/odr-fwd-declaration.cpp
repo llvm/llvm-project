@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-fwd-declaration -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/odr-fwd-declaration -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 #ifdef FILE1
 # 1 "Header.h" 1

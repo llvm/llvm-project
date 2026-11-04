@@ -20,8 +20,7 @@ print *, 0u + 1u ! ok
 print *, 0u - 1u ! ok
 print *, 0u * 1u ! ok
 print *, 0u / 1u ! ok
-!ERROR: Operands must not be UNSIGNED
-print *, 0u ** 1u
+print *, 0u ** 1u ! ok
 
 print *, uint((0.,0.)) ! ok
 print *, uint(z'123') ! ok
@@ -33,6 +32,9 @@ print *, uint(.true.)
 print *, logical(0u)
 !ERROR: Actual argument for 'i=' has bad type 'UNSIGNED(4)'
 print *, char(0u)
+
+!ERROR: 'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER
+call signal(10, u)
 
 !ERROR: DO controls should be INTEGER
 !ERROR: DO controls should be INTEGER
@@ -64,7 +66,7 @@ u = 1
 !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types INTEGER(4) and UNSIGNED(4)
 j = 1u
 
-!ERROR: Must have INTEGER type, but is UNSIGNED(4)
+!ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type UNSIGNED(4)
 write(6u,*) 'hi'
 
 !ERROR: ARITHMETIC IF expression must not be an UNSIGNED expression

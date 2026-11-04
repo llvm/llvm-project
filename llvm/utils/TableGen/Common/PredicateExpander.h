@@ -25,9 +25,9 @@ namespace llvm {
 class Record;
 
 class PredicateExpander {
-  bool EmitCallsByRef;
-  bool NegatePredicate;
-  bool ExpandForMC;
+  bool EmitCallsByRef = true;
+  bool NegatePredicate = false;
+  bool ExpandForMC = false;
   StringRef TargetName;
 
   PredicateExpander(const PredicateExpander &) = delete;
@@ -38,8 +38,7 @@ protected:
 
 public:
   explicit PredicateExpander(StringRef Target, unsigned Indent = 1)
-      : EmitCallsByRef(true), NegatePredicate(false), ExpandForMC(false),
-        TargetName(Target), Indent(Indent, 2) {}
+      : TargetName(Target), Indent(Indent, 2) {}
   bool isByRef() const { return EmitCallsByRef; }
   bool shouldNegate() const { return NegatePredicate; }
   bool shouldExpandForMC() const { return ExpandForMC; }
@@ -53,16 +52,15 @@ public:
 
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
-  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal,
-                             StringRef FunctionMapper);
+  void expandCheckImmOperandCommon(raw_ostream &OS, int OpIndex, int ImmVal,
+                                   StringRef FunctionMapper,
+                                   StringRef CmpOperator);
   void expandCheckImmOperand(raw_ostream &OS, int OpIndex, StringRef ImmVal,
-                             StringRef FunctionMapperer);
+                             StringRef FunctionMapper);
   void expandCheckImmOperandSimple(raw_ostream &OS, int OpIndex,
                                    StringRef FunctionMapper);
-  void expandCheckImmOperandLT(raw_ostream &OS, int OpIndex, int ImmVal,
-                               StringRef FunctionMapper);
-  void expandCheckImmOperandGT(raw_ostream &OS, int OpIndex, int ImmVal,
-                               StringRef FunctionMapper);
+  void expandCheckImmOperandRange(raw_ostream &OS, int OpIndex, int StartVal,
+                                  int EndVal, StringRef FunctionMapper);
   void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg,
                              StringRef FunctionMapper);
   void expandCheckRegOperandSimple(raw_ostream &OS, int OpIndex,

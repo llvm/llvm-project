@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir::vector {
 
@@ -43,8 +42,8 @@ char ScalableValueBoundsConstraintSet::ID = 0;
 FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(
     Value value, std::optional<int64_t> dim, unsigned vscaleMin,
-    unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
-    StopConditionFn stopCondition) {
+    unsigned vscaleMax, presburger::BoundType boundType,
+    ValueBoundsOptions options, const StopConditionFn &stopCondition) {
   using namespace presburger;
   assert(vscaleMin <= vscaleMax);
 
@@ -57,7 +56,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   ScalableValueBoundsConstraintSet scalableCstr(
       value.getContext(), stopCondition ? stopCondition : defaultStopCondition,
-      vscaleMin, vscaleMax);
+      vscaleMin, vscaleMax, options);
   int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
   scalableCstr.processWorklist();
 
@@ -99,7 +98,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   SmallVector<AffineMap, 1> lowerBound(1), upperBound(1);
   scalableCstr.cstr.getSliceBounds(pos, 1, value.getContext(), &lowerBound,
-                                   &upperBound, closedUB);
+                                   &upperBound, options.closedUB);
 
   auto invalidBound = [](auto &bound) {
     return !bound[0] || bound[0].getNumResults() != 1;
@@ -107,13 +106,12 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   AffineMap bound = [&] {
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
-        lowerBound[0] == upperBound[0]) {
+        lowerBound[0] == upperBound[0])
       return lowerBound[0];
-    } else if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
+    if (boundType == BoundType::LB && !invalidBound(lowerBound))
       return lowerBound[0];
-    } else if (boundType == BoundType::UB && !invalidBound(upperBound)) {
+    if (boundType == BoundType::UB && !invalidBound(upperBound))
       return upperBound[0];
-    }
     return AffineMap{};
   }();
 

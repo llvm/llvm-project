@@ -64,6 +64,11 @@ struct DebugConfigCLOptions : public DebugConfig {
           auto [file, line, col] = *locBreakpoint;
           locBreakpointManager.addBreakpoint(file, line, col);
         }));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> enableDebuggerHook(
+        "mlir-enable-debugger-hook",
+        cl::desc("Enable Debugger hook for debugging MLIR Actions"),
+        cl::location(enableDebuggerActionHookFlag), cl::init(false));
   }
   tracing::FileLineColLocBreakpointManager locBreakpointManager;
 };

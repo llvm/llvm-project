@@ -37,14 +37,14 @@ template<int ...N> int bad12() { return (... N); } // expected-error {{expected 
 
 template<typename ...T> void as_operand_of_cast(int a, T ...t) {
   return
-    (int)(a + ... + undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(a + ... + undeclared_junk) + // expected-error {{undeclared}}
     (int)(t + ... + undeclared_junk) + // expected-error {{undeclared}}
-    (int)(... + undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(... + undeclared_junk) + // expected-error {{undeclared}}
     (int)(undeclared_junk + ...) + // expected-error {{undeclared}}
     (int)(a + ...) + // expected-error {{does not contain any unexpanded}}
     (int)(a, ...) + // expected-error {{does not contain any unexpanded}}
     (int)(..., a) + // expected-error {{does not contain any unexpanded}}
-    (int)(a, ..., undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(a, ..., undeclared_junk) + // expected-error {{undeclared}}
     (int)(t, ...) +
     (int)(..., t) +
     (int)(t, ..., a);
@@ -52,9 +52,11 @@ template<typename ...T> void as_operand_of_cast(int a, T ...t) {
 
 // fold-operator can be '>' or '>>'.
 template <int... N> constexpr bool greaterThan() { return (N > ...); }
+// expected-error@-1 {{comparison in fold expression}}
+
 template <int... N> constexpr int rightShift() { return (N >> ...); }
 
-static_assert(greaterThan<2, 1>());
+static_assert(greaterThan<2, 1>()); // expected-note {{in instantiation}}
 static_assert(rightShift<10, 1>() == 5);
 
 template <auto V> constexpr auto Identity = V;

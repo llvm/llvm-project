@@ -17,6 +17,7 @@
 //                              double& value, chars_format fmt = chars_format::general)
 
 #include <array>
+#include <cassert>
 #include <charconv>
 #include <cmath>
 #include <cstring>
@@ -24,8 +25,8 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "charconv_test_helpers.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class F>
 void test_infinity(std::chars_format fmt) {
@@ -325,8 +326,8 @@ void test_fmt_independent(std::chars_format fmt) {
   }
 }
 
-template <class F>
 struct test_basics {
+  template <class F>
   void operator()() {
     for (auto fmt : {std::chars_format::scientific,
                      std::chars_format::fixed,
@@ -335,8 +336,8 @@ struct test_basics {
   }
 };
 
-template <class F>
 struct test_fixed {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -396,7 +397,7 @@ struct test_fixed {
       assert(x == F(-0.5));
     }
 
-    { // double deciamal point
+    { // double decimal point
       const char* s = "1.25.78";
 
       // This number is halfway between two float values.
@@ -405,7 +406,7 @@ struct test_fixed {
       assert(r.ptr == s + 4);
       assert(x == F(1.25));
     }
-    { // exponenent no sign
+    { // exponent no sign
       const char* s = "1.5e10";
       r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
 
@@ -413,7 +414,7 @@ struct test_fixed {
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // exponenent capitalized no sign
+    { // exponent capitalized no sign
       const char* s = "1.5E10";
       r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
 
@@ -421,7 +422,7 @@ struct test_fixed {
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // exponenent + sign
+    { // exponent + sign
       const char* s = "1.5e+10";
       r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
 
@@ -429,7 +430,7 @@ struct test_fixed {
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // exponenent - sign
+    { // exponent - sign
       const char* s = "1.5e-10";
       r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
 
@@ -600,8 +601,8 @@ struct test_fixed {
   }
 };
 
-template <class F>
 struct test_scientific {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -739,7 +740,7 @@ struct test_scientific {
       assert(x == F(1.0));
     }
 
-    { // double deciamal point
+    { // double decimal point
       const char* s = "1.25e0.78";
 
       // This number is halfway between two float values.
@@ -749,7 +750,7 @@ struct test_scientific {
       assert(x == F(1.25));
     }
 
-    { // exponenent no sign
+    { // exponent no sign
       const char* s = "1.5e10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
@@ -757,7 +758,7 @@ struct test_scientific {
       assert(r.ptr == s + 6);
       assert(x == F(1.5e10));
     }
-    { // exponenent capitalized no sign
+    { // exponent capitalized no sign
       const char* s = "1.5E10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
@@ -765,7 +766,7 @@ struct test_scientific {
       assert(r.ptr == s + 6);
       assert(x == F(1.5e10));
     }
-    { // exponenent + sign
+    { // exponent + sign
       const char* s = "1.5e+10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
@@ -773,7 +774,7 @@ struct test_scientific {
       assert(r.ptr == s + 7);
       assert(x == F(1.5e10));
     }
-    { // exponenent - sign
+    { // exponent - sign
       const char* s = "1.5e-10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
@@ -874,8 +875,8 @@ struct test_scientific {
   }
 };
 
-template <class F>
 struct test_general {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -958,7 +959,7 @@ struct test_general {
       assert(r.ptr == s + 3);
       assert(x == F(-0.5));
     }
-    { // double deciamal point
+    { // double decimal point
       const char* s = "1.25.78";
 
       // This number is halfway between two float values.
@@ -967,7 +968,7 @@ struct test_general {
       assert(r.ptr == s + 4);
       assert(x == F(1.25));
     }
-    { // exponenent no sign
+    { // exponent no sign
       const char* s = "1.5e10";
 
       r = std::from_chars(s, s + std::strlen(s), x);
@@ -975,7 +976,7 @@ struct test_general {
       assert(r.ptr == s + 6);
       assert(x == F(1.5e10));
     }
-    { // exponenent capitalized no sign
+    { // exponent capitalized no sign
       const char* s = "1.5E10";
 
       r = std::from_chars(s, s + std::strlen(s), x);
@@ -983,7 +984,7 @@ struct test_general {
       assert(r.ptr == s + 6);
       assert(x == F(1.5e10));
     }
-    { // exponenent + sign
+    { // exponent + sign
       const char* s = "1.5e+10";
 
       r = std::from_chars(s, s + std::strlen(s), x);
@@ -991,7 +992,7 @@ struct test_general {
       assert(r.ptr == s + 7);
       assert(x == F(1.5e10));
     }
-    { // exponenent - sign
+    { // exponent - sign
       const char* s = "1.5e-10";
 
       r = std::from_chars(s, s + std::strlen(s), x);
@@ -1194,8 +1195,8 @@ struct test_general {
   }
 };
 
-template <class F>
 struct test_hex {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -1278,7 +1279,7 @@ struct test_hex {
       assert(r.ptr == s + 3);
       assert(x == F(-0x0.5p0));
     }
-    { // double deciamal point
+    { // double decimal point
       const char* s = "1.25.78";
 
       // This number is halfway between two float values.
@@ -1287,7 +1288,7 @@ struct test_hex {
       assert(r.ptr == s + 4);
       assert(x == F(0x1.25p0));
     }
-    { // exponenent no sign
+    { // exponent no sign
       const char* s = "1.5p10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
@@ -1295,7 +1296,7 @@ struct test_hex {
       assert(r.ptr == s + 6);
       assert(x == F(0x1.5p10));
     }
-    { // exponenent capitalized no sign
+    { // exponent capitalized no sign
       const char* s = "1.5P10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
@@ -1303,7 +1304,7 @@ struct test_hex {
       assert(r.ptr == s + 6);
       assert(x == F(0x1.5p10));
     }
-    { // exponenent + sign
+    { // exponent + sign
       const char* s = "1.5p+10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
@@ -1311,7 +1312,7 @@ struct test_hex {
       assert(r.ptr == s + 7);
       assert(x == F(0x1.5p10));
     }
-    { // exponenent - sign
+    { // exponent - sign
       const char* s = "1.5p-10";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
@@ -1547,12 +1548,13 @@ void test_random_errors() {
 }
 
 int main(int, char**) {
-  run<test_basics>(all_floats);
-  run<test_scientific>(all_floats);
-  run<test_fixed>(all_floats);
-  run<test_general>(all_floats);
+  using all_floats = types::type_list<float, double>; // TODO: Add long double
+  types::for_each(all_floats(), test_basics());
+  types::for_each(all_floats(), test_scientific());
+  types::for_each(all_floats(), test_fixed());
+  types::for_each(all_floats(), test_general());
 
-  run<test_hex>(all_floats);
+  types::for_each(all_floats(), test_hex());
 
   test_random_errors();
 

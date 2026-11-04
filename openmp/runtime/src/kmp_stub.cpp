@@ -32,6 +32,7 @@
 #define omp_get_team_size ompc_get_team_size
 
 #define omp_set_num_threads ompc_set_num_threads
+#define kmp_set_num_threads_8 kmpc_set_num_threads_8
 #define omp_set_dynamic ompc_set_dynamic
 #define omp_set_nested ompc_set_nested
 #define omp_set_affinity_format ompc_set_affinity_format
@@ -88,6 +89,7 @@ static size_t __kmps_init() {
 
 /* set API functions */
 void omp_set_num_threads(omp_int_t num_threads) { i; }
+void kmp_set_num_threads_8(int64_t num_threads) { i; }
 void omp_set_dynamic(omp_int_t dynamic) {
   i;
   __kmps_set_dynamic(dynamic);
@@ -357,8 +359,9 @@ omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc =
 omp_allocator_handle_t const llvm_omp_target_device_mem_alloc =
     (omp_allocator_handle_t const)102;
 
+omp_memspace_handle_t const omp_null_mem_space = (omp_memspace_handle_t const)0;
 omp_memspace_handle_t const omp_default_mem_space =
-    (omp_memspace_handle_t const)0;
+    (omp_memspace_handle_t const)99;
 omp_memspace_handle_t const omp_large_cap_mem_space =
     (omp_memspace_handle_t const)1;
 omp_memspace_handle_t const omp_const_mem_space =
@@ -367,6 +370,8 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
+omp_memspace_handle_t const omp_cgroup_mem_space =
+    (omp_memspace_handle_t const)5;
 omp_memspace_handle_t const llvm_omp_target_host_mem_space =
     (omp_memspace_handle_t const)100;
 omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
@@ -451,6 +456,31 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
 #else
   free(ptr);
 #endif
+}
+
+void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group) {
+  i;
+  return NULL;
+}
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
+  i;
+  return NULL;
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t access_group) {
+  i;
+  return 0;
+}
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t access_group) {
+  i;
+  return omp_null_mem_space;
+}
+
+size_t omp_get_gprivate_limit(int device_num, omp_access_t access_group) {
+  i;
+  return 0;
 }
 
 /* OpenMP 5.0 Affinity Format */

@@ -8,7 +8,7 @@ float float_val;
 double *double_ptr = &float_val;
 
 // RUN: rm -rf %t %t.diag %t.out
-// RUN: %clang -fmodules -fmodules-cache-path=%t/ModuleCache -I %S/Inputs/ModuleDiags -fsyntax-only %s --serialize-diagnostics %t.diag > /dev/null 2>&1
+// RUN: %clang -Wno-error=incompatible-pointer-types -fmodules -fmodules-cache-path=%t/ModuleCache -I %S/Inputs/ModuleDiags -fsyntax-only %s --serialize-diagnostics %t.diag > /dev/null 2>&1
 // RUN: c-index-test -read-diagnostics %t.diag > %t.out 2>&1
 // RUN: FileCheck --input-file=%t.out %s
 
@@ -18,7 +18,7 @@ double *double_ptr = &float_val;
 // CHECK: Number of diagnostics: 2
 
 // RUN: rm -rf %t %t.diag_errors %t.out_errors
-// RUN: not %clang -fmodules -fmodules-cache-path=%t/ModuleCache -I %S/Inputs/ModuleDiags -fsyntax-only -DWITH_ERRORS %s --serialize-diagnostics %t.diag_errors > /dev/null 2>&1
+// RUN: not %clang -Wno-error=incompatible-pointer-types -fmodules -fmodules-cache-path=%t/ModuleCache -I %S/Inputs/ModuleDiags -fsyntax-only -DWITH_ERRORS %s --serialize-diagnostics %t.diag_errors > /dev/null 2>&1
 // RUN: c-index-test -read-diagnostics %t.diag_errors > %t.out_errors 2>&1
 // RUN: FileCheck -check-prefix=CHECK-WITH-ERRORS --input-file=%t.out_errors %s
 

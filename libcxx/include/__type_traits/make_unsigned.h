@@ -15,7 +15,6 @@
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_unsigned.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/type_list.h>
 
@@ -73,7 +72,7 @@ using __make_unsigned_t = __copy_cv_t<_Tp, typename __make_unsigned<__remove_cv_
 #endif // __has_builtin(__make_unsigned)
 
 template <class _Tp>
-struct make_unsigned {
+struct _LIBCPP_NO_SPECIALIZATIONS make_unsigned {
   using type _LIBCPP_NODEBUG = __make_unsigned_t<_Tp>;
 };
 

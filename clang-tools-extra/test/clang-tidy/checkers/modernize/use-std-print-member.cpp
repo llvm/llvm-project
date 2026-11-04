@@ -6,9 +6,7 @@
 // RUN:               modernize-use-std-print.ReplacementPrintFunction: 'print', \
 // RUN:               modernize-use-std-print.ReplacementPrintlnFunction: 'println', \
 // RUN:             } \
-// RUN:            }" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }"
 #include <cstdio>
 #include <string.h>
 

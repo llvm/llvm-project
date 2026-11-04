@@ -6,7 +6,7 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 1, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 0 \
 // RUN:  }}' --
 
 void implicitDoesntBreakOtherStuff(int A, int B) {}
@@ -347,3 +347,17 @@ using FloatConverter = TemplateConversion<float>;
 void templateConversion(IntConverter IC, FloatConverter FC) { templateConversion(FC, IC); }
 // Note: even though this swap is possible, we do not model things when it comes to "template magic".
 // But at least the check should not crash!
+
+using SignedLong = long;
+using UnsignedLong = unsigned long;
+
+void aliasesWithoutCommonType(int Base, SignedLong MinLen, UnsignedLong MaxLen) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 3 adjacent parameters of 'aliasesWithoutCommonType' of convertible types are easily swapped by mistake [bugprone-easily-swappable-parameters]
+// CHECK-MESSAGES: :[[@LINE-2]]:35: note: the first parameter in the range is 'Base'
+// CHECK-MESSAGES: :[[@LINE-3]]:73: note: the last parameter in the range is 'MaxLen'
+// CHECK-MESSAGES-NOT: note:{{ *$}}
+// CHECK-MESSAGES: :[[@LINE-5]]:41: note: 'int' and 'SignedLong' may be implicitly converted: 'int' -> 'SignedLong' (as 'long'), 'SignedLong' (as 'long') -> 'int'
+// CHECK-MESSAGES-NOT: note:{{ *$}}
+// CHECK-MESSAGES: :[[@LINE-7]]:60: note: 'int' and 'UnsignedLong' may be implicitly converted: 'int' -> 'UnsignedLong' (as 'unsigned long'), 'UnsignedLong' (as 'unsigned long') -> 'int'
+// CHECK-MESSAGES-NOT: note:{{ *$}}
+// CHECK-MESSAGES: :[[@LINE-9]]:60: note: 'SignedLong' and 'UnsignedLong' may be implicitly converted: 'SignedLong' (as 'long') -> 'UnsignedLong' (as 'unsigned long'), 'UnsignedLong' (as 'unsigned long') -> 'SignedLong' (as 'long')

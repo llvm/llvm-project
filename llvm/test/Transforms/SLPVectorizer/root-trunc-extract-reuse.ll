@@ -10,16 +10,16 @@ define i1 @test() {
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, [[THEN]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[BF_CAST162:%.*]] = and i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> zeroinitializer, <2 x i32> [[TMP0]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[T13:%.*]] = and <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    br label [[ELSE1:%.*]]
 ; CHECK:       else1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[T13]], <2 x i32> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[BF_CAST162]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[BF_CAST162]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <2 x i32> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
 entry:

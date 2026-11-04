@@ -53,7 +53,7 @@ static_assert(!DotFollowingPointer::f(Bad{}), "");
 #if __cplusplus >= 202002L
 template <class T>
 concept C = requires(T t) { t.begin(); };
-  // cxx20-note@-1 {{because 't.begin()' would be invalid: member reference type 'Holder<Incomplete> *' is a pointer}}
+  // cxx20-note@-1 {{because 't.begin()' would be invalid: member reference type 'Bad' (aka 'Holder<Incomplete> *') is a pointer}}
 
 static_assert(C<Good>);
 static_assert(!C<Bad>);

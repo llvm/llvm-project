@@ -3,7 +3,7 @@
 ; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 
 declare void @use(i1)
-declare void @use.ptr(ptr) memory(read)
+declare void @use.ptr(i32, ptr) memory(read)
 
 define void @test1(float %x, float %y) {
 ; CHECK-LABEL: @test1(
@@ -52,42 +52,42 @@ define void @test_inbounds_program_not_ub_if_first_gep_poison(ptr %ptr, i64 %n) 
 define void @load_both_nonnull(ptr %p) {
 ; CHECK-LABEL: @load_both_nonnull(
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META0:![0-9]+]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
 define void @load_first_nonnull(ptr %p) {
 ; CHECK-LABEL: @load_first_nonnull(
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
 define void @load_first_nonnull_noundef(ptr %p) {
 ; CHECK-LABEL: @load_first_nonnull_noundef(
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META0]], !noundef [[META0]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
@@ -112,3 +112,47 @@ define i32 @load_undef_noundef(ptr %p) {
   %v = load i32, ptr %p, !noundef !{}
   ret i32 %v
 }
+
+define void @addrspacecast_both_nonnull(ptr addrspace(1) %p) {
+; CHECK-LABEL: @addrspacecast_both_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast nonnull ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[C1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 0, ptr %c1)
+  %c2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 1, ptr %c2)
+  ret void
+}
+
+define void @addrspacecast_first_nonnull(ptr addrspace(1) %p) {
+; CHECK-LABEL: @addrspacecast_first_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[C1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 0, ptr %c1)
+  %c2 = addrspacecast ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 1, ptr %c2)
+  ret void
+}
+
+define void @addrspacecast_vector_first_nonnull(<2 x ptr addrspace(1)> %p) {
+; CHECK-LABEL: @addrspacecast_vector_first_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast <2 x ptr addrspace(1)> [[P:%.*]] to <2 x ptr>
+; CHECK-NEXT:    call void @use.vec(i32 0, <2 x ptr> [[C1]])
+; CHECK-NEXT:    call void @use.vec(i32 1, <2 x ptr> [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull <2 x ptr addrspace(1)> %p to <2 x ptr>
+  call void @use.vec(i32 0, <2 x ptr> %c1)
+  %c2 = addrspacecast <2 x ptr addrspace(1)> %p to <2 x ptr>
+  call void @use.vec(i32 1, <2 x ptr> %c2)
+  ret void
+}
+
+declare void @use.vec(i32, <2 x ptr>) memory(read)

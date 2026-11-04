@@ -7,32 +7,32 @@
 @g4 = global i8 0, section "__TEXT,__objc_methname,cstring_literals"
 @g5 = global i8 0, section "__TEXT,__cstring,cstring_literals"
 
-declare void @g(i8)
+declare void @g(ptr)
 
 define void @f(ptr %a, ptr %b, ptr %c) {
-  %y1 = load i8, ptr %a
-  call void @g(i8 %y1)
+  %y1 = load ptr, ptr %a
+  call void @g(ptr %y1)
 
   %y2 = load ptr, ptr %b
   %y3 = load ptr, ptr %c
 
-  %x0 = load i8, ptr @"\01l_objc_msgSend_fixup_"
-  call void @g(i8 %x0)
+  %x0 = load ptr, ptr @"\01l_objc_msgSend_fixup_"
+  call void @g(ptr %x0)
 
-  %x1 = load i8, ptr @g1
-  call void @g(i8 %x1)
+  %x1 = load ptr, ptr @g1
+  call void @g(ptr %x1)
 
-  %x2 = load i8, ptr @g2
-  call void @g(i8 %x2)
+  %x2 = load ptr, ptr @g2
+  call void @g(ptr %x2)
 
-  %x3 = load i8, ptr @g3
-  call void @g(i8 %x3)
+  %x3 = load ptr, ptr @g3
+  call void @g(ptr %x3)
 
-  %x4 = load i8, ptr @g4
-  call void @g(i8 %x4)
+  %x4 = load ptr, ptr @g4
+  call void @g(ptr %x4)
 
-  %x5 = load i8, ptr @g5
-  call void @g(i8 %x5)
+  %x5 = load ptr, ptr @g5
+  call void @g(ptr %x5)
   ret void
 }
 

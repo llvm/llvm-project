@@ -59,13 +59,13 @@ define <4 x i32> @sel_Cplus1_or_C_vec(<4 x i1> %cond) {
 ; SSE-LABEL: sel_Cplus1_or_C_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [42,0,4294967294,4294967295]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sel_Cplus1_or_C_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [42,0,4294967294,4294967295]
 ; AVX-NEXT:    retq
   %add = select <4 x i1> %cond, <4 x i32> <i32 43, i32 1, i32 -1, i32 0>, <4 x i32> <i32 42, i32 0, i32 -2, i32 -1>
   ret <4 x i32> %add
@@ -96,14 +96,14 @@ define <4 x i32> @sel_Cminus1_or_C_vec(<4 x i1> %cond) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $31, %xmm0
 ; SSE-NEXT:    psrad $31, %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [44,2,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sel_Cminus1_or_C_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [44,2,0,1]
 ; AVX-NEXT:    retq
   %add = select <4 x i1> %cond, <4 x i32> <i32 43, i32 1, i32 -1, i32 0>, <4 x i32> <i32 44, i32 2, i32 0, i32 1>
   ret <4 x i32> %add
@@ -113,13 +113,13 @@ define <4 x i32> @cmp_sel_Cminus1_or_C_vec(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: cmp_sel_Cminus1_or_C_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [44,2,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cmp_sel_Cminus1_or_C_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [44,2,0,1]
 ; AVX-NEXT:    retq
   %cond = icmp eq <4 x i32> %x, %y
   %add = select <4 x i1> %cond, <4 x i32> <i32 43, i32 1, i32 -1, i32 0>, <4 x i32> <i32 44, i32 2, i32 0, i32 1>
@@ -301,4 +301,22 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
   %sel = select <2 x i1> %true_false, <2 x i16> <i16 2, i16 0>, <2 x i16> <i16 1, i16 0>
   %t1 = bitcast <2 x i16> %sel to i32
   ret i32 %t1
+}
+
+define i32 @pr129181() {
+; SSE-LABEL: pr129181:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pr129181:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    retq
+entry:
+  %x = insertelement <4 x i32> zeroinitializer, i32 0, i32 0
+  %cmp = icmp ult <4 x i32> %x, splat (i32 1)
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 1, i32 poison>
+  %reduce = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sel)
+  ret i32 %reduce
 }

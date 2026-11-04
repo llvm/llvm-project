@@ -116,9 +116,7 @@ static MapInfo gatherMapInfo() {
   // cstrings are not stored in sorted order in their OutputSections, so we sort
   // them here.
   for (auto &liveCStrings : info.liveCStringsForSection)
-    parallelSort(liveCStrings.second, [](const auto &p1, const auto &p2) {
-      return p1.first < p2.first;
-    });
+    parallelSort(liveCStrings.second, llvm::less_first());
   return info;
 }
 
@@ -143,8 +141,15 @@ static void printStubsEntries(
                  sym->getName().str().data());
 }
 
-static void printNonLazyPointerSection(raw_fd_ostream &os,
-                                       NonLazyPointerSectionBase *osec) {
+// For printing the contents of the __objc_stubs section.
+static void printObjCStubsEntries(raw_fd_ostream &os,
+                                  const ObjCStubsSection *osec) {
+  for (const Defined *sym : osec->getSymbols())
+    os << format("0x%08llX\t0x%08llX\t[  0] ", sym->getVA(), sym->size)
+       << sym->getName() << '\n';
+}
+
+static void printNonLazyPointerSection(raw_fd_ostream &os, GotSection *osec) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
   // I think we can follow suit unless there's demand for better symbol-to-file
@@ -241,7 +246,7 @@ void macho::writeMapFile() {
         printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
       } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
-      } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
+      } else if (is_contained(in.cStringSections, osec)) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
                                // is a sentinel value
@@ -259,6 +264,8 @@ void macho::writeMapFile() {
                      osec->addr, osec->getSize());
       } else if (osec == in.stubs) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.objcStubs) {
+        printObjCStubsEntries(os, in.objcStubs);
       } else if (osec == in.lazyPointers) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->wordSize);
       } else if (osec == in.stubHelper) {
@@ -267,8 +274,6 @@ void macho::writeMapFile() {
                      osec->getSize());
       } else if (osec == in.got) {
         printNonLazyPointerSection(os, in.got);
-      } else if (osec == in.tlvPointers) {
-        printNonLazyPointerSection(os, in.tlvPointers);
       } else if (osec == in.objcMethList) {
         printIsecArrSyms(in.objcMethList->getInputs());
       }

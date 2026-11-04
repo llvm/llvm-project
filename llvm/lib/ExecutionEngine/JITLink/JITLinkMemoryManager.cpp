@@ -157,9 +157,10 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G =
-      std::make_unique<LinkGraph>("", std::move(SSP), std::move(TT),
-                                  SubtargetFeatures(), getGenericEdgeKindName);
+  unsigned PointerSize = TT.getArchPointerBitWidth() / 8;
+  auto G = std::make_unique<LinkGraph>("", std::move(SSP), std::move(TT),
+                                       PointerSize, SubtargetFeatures(),
+                                       getGenericEdgeKindName);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);
@@ -247,7 +248,7 @@ public:
         StandardSegments(std::move(StandardSegments)),
         FinalizationSegments(std::move(FinalizationSegments)) {}
 
-  ~IPInFlightAlloc() {
+  ~IPInFlightAlloc() override {
     assert(!G && "InFlight alloc neither abandoned nor finalized");
   }
 

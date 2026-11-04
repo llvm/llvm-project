@@ -16,8 +16,11 @@
 
 #include "flang/Common/api-attrs.h"
 
-#if RT_USE_LIBCUDACXX && defined(RT_DEVICE_COMPILATION)
+#if RT_USE_LIBCUDACXX
 #include <cuda/std/complex>
+#endif
+
+#if RT_USE_LIBCUDACXX && defined(RT_DEVICE_COMPILATION)
 namespace Fortran::runtime::rtcmplx {
 using cuda::std::complex;
 using cuda::std::conj;

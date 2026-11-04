@@ -14,6 +14,8 @@
 #ifndef LLVM_SUPPORT_SYSTEMUTILS_H
 #define LLVM_SUPPORT_SYSTEMUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class raw_ostream;
 
@@ -21,7 +23,7 @@ class raw_ostream;
 /// generate a warning message to errs() advising against display of bitcode
 /// and return true. Otherwise just return false.
 /// Check for output written to a console
-bool CheckBitcodeOutputToConsole(
+LLVM_ABI bool CheckBitcodeOutputToConsole(
     raw_ostream &stream_to_check ///< The stream to be checked
 );
 

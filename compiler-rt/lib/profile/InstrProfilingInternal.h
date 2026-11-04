@@ -128,7 +128,7 @@ typedef struct VPDataReaderType {
                            uint8_t *SiteCountArray[]);
   /* Function pointer to getValueProfRecordHeader method. */
   uint32_t (*GetValueProfRecordHeaderSize)(uint32_t NumSites);
-  /* Function pointer to getFristValueProfRecord method. */  
+  /* Function pointer to getFirstValueProfRecord method. */
   struct ValueProfRecord *(*GetFirstValueProfRecord)(struct ValueProfData *);
   /* Return the number of value data for site \p Site.  */
   uint32_t (*GetNumValueDataForSite)(uint32_t VK, uint32_t Site);
@@ -152,15 +152,15 @@ typedef struct VPDataReaderType {
    the name data is already in destination, we just skip over it. */
 int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
                    int SkipNameDataWrite);
-int lprofWriteDataImpl(ProfDataWriter *Writer,
-                       const __llvm_profile_data *DataBegin,
-                       const __llvm_profile_data *DataEnd,
-                       const char *CountersBegin, const char *CountersEnd,
-                       const char *BitmapBegin, const char *BitmapEnd,
-                       VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, const VTableProfData *VTableBegin,
-                       const VTableProfData *VTableEnd, const char *VNamesBegin,
-                       const char *VNamesEnd, int SkipNameDataWrite);
+int lprofWriteDataImpl(
+    ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *UniformCountersBegin, const char *UniformCountersEnd,
+    VPDataReaderType *VPDataReader, const char *NamesBegin,
+    const char *NamesEnd, const VTableProfData *VTableBegin,
+    const VTableProfData *VTableEnd, const char *VNamesBegin,
+    const char *VNamesEnd, int SkipNameDataWrite, uint64_t Version);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

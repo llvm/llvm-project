@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DebugInfodOptsTableGen)
 
 add_llvm_tool(llvm-debuginfod
@@ -15,7 +15,7 @@ add_llvm_tool(llvm-debuginfod
   )
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-debuginfod PRIVATE LLVMDebuginfod)
+  target_link_libraries(llvm-debuginfod PRIVATE LLVMDebuginfod LLVMHTTP)
 endif()
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)

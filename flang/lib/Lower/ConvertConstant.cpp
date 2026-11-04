@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -48,27 +49,31 @@ static llvm::APFloat consAPFloat(const llvm::fltSemantics &fsem,
 //===----------------------------------------------------------------------===//
 
 /// Generate an mlir attribute from a literal value
-template <Fortran::common::TypeCategory TC, int KIND>
+template <Fortran::common::TypeCategory TC>
 static mlir::Attribute convertToAttribute(
     fir::FirOpBuilder &builder,
-    const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value,
+    const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>> &value,
     mlir::Type type) {
+  int kind{value.kind()}; // not const: GCC 7 ICE in generic lambdas
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    if constexpr (KIND <= 8)
+    if (kind <= 8)
       return builder.getIntegerAttr(type, value.ToInt64());
     else {
-      static_assert(KIND <= 16, "integers with KIND > 16 are not supported");
+      CHECK_MSG(kind <= 16, "integers with KIND > 16 are not supported");
       return builder.getIntegerAttr(
-          type, llvm::APInt(KIND * 8,
+          type, llvm::APInt(kind * 8,
                             {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.getIntegerAttr(type, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.getIntegerAttr(type, value.IsTrue());
+    else
+      return builder.getIntegerAttr(type, value.word().ToInt64());
   } else {
     auto getFloatAttr = [&](const auto &value, mlir::Type type) {
       std::string str = value.DumpHexadecimal();
       auto floatVal =
-          consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
+          consAPFloat(builder.getKindMap().getFloatSemantics(kind), str);
       return builder.getFloatAttr(type, floatVal);
     };
 
@@ -98,12 +103,11 @@ namespace {
 /// It does not currently support nested structures.
 class DenseGlobalBuilder {
 public:
-  static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Type symTy,
-                                   llvm::StringRef globalName,
-                                   mlir::StringAttr linkage, bool isConst,
-                                   const Fortran::lower::SomeExpr &initExpr,
-                                   cuf::DataAttributeAttr dataAttr) {
+  static fir::GlobalOp
+  tryCreating(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
+              llvm::StringRef globalName, fir::LinkageAttr linkage,
+              bool isConst, const Fortran::lower::SomeExpr &initExpr,
+              cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
     DenseGlobalBuilder globalBuilder;
     Fortran::common::visit(
         Fortran::common::visitors{
@@ -120,41 +124,62 @@ public:
         },
         initExpr.u);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst, dataAttr);
+                                           linkage, isConst, dataAttr,
+                                           setDefaultAlignment);
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static fir::GlobalOp tryCreating(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-      llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
-      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
-          &constant,
-      cuf::DataAttributeAttr dataAttr) {
+      llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
+      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>> &constant,
+      cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
     DenseGlobalBuilder globalBuilder;
     globalBuilder.tryConvertingToAttributes(builder, constant);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst, dataAttr);
+                                           linkage, isConst, dataAttr,
+                                           setDefaultAlignment);
   }
 
 private:
   DenseGlobalBuilder() = default;
 
   /// Try converting an evaluate::Constant to a list of MLIR attributes.
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   void tryConvertingToAttributes(
       fir::FirOpBuilder &builder,
-      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
+      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>>
           &constant) {
+    using Element = Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>>;
+
     static_assert(TC != Fortran::common::TypeCategory::Character,
                   "must be numerical or logical");
+    const int kind = constant.kind();
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
-    attributeElementType = Fortran::lower::getFIRType(
-        builder.getContext(), attrTc, KIND, std::nullopt);
-    for (auto element : constant.values())
+    attributeElementType =
+        Fortran::lower::getFIRType(builder.getContext(), attrTc, kind, {});
+
+    const std::vector<Element> &values = constant.values();
+    auto sameElements = [&]() -> bool {
+      if (values.empty())
+        return false;
+
+      return std::all_of(values.begin(), values.end(),
+                         [&](const auto &v) { return v == values.front(); });
+    };
+
+    if (sameElements()) {
+      auto attr =
+          convertToAttribute<TC>(builder, values.front(), attributeElementType);
+      attributes.assign(values.size(), attr);
+      return;
+    }
+
+    for (auto element : values)
       attributes.push_back(
-          convertToAttribute<TC, KIND>(builder, element, attributeElementType));
+          convertToAttribute<TC>(builder, element, attributeElementType));
   }
 
   /// Try converting an evaluate::Expr to a list of MLIR attributes.
@@ -166,8 +191,7 @@ private:
           using TR = Fortran::evaluate::ResultType<decltype(x)>;
           if (const auto *constant =
                   std::get_if<Fortran::evaluate::Constant<TR>>(&x.u))
-            tryConvertingToAttributes<TR::category, TR::kind>(builder,
-                                                              *constant);
+            tryConvertingToAttributes<TR::category>(builder, *constant);
         },
         expr.u);
   }
@@ -177,8 +201,9 @@ private:
   fir::GlobalOp tryCreatingGlobal(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage, bool isConst,
-                                  cuf::DataAttributeAttr dataAttr) const {
+                                  fir::LinkageAttr linkage, bool isConst,
+                                  cuf::DataAttributeAttr dataAttr,
+                                  bool setDefaultAlignment) const {
     // Not a "trivial" intrinsic constant array, or empty array.
     if (!attributeElementType || attributes.empty())
       return {};
@@ -191,7 +216,8 @@ private:
         mlir::RankedTensorType::get(tensorShape, attributeElementType);
     auto init = mlir::DenseElementsAttr::get(tensorTy, attributes);
     return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst,
-                                /*isTarget=*/false, dataAttr);
+                                /*isTarget=*/false, dataAttr,
+                                setDefaultAlignment);
   }
 
   llvm::SmallVector<mlir::Attribute> attributes;
@@ -201,10 +227,12 @@ private:
 
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-    llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
-    const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr) {
+    llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
+    const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr,
+    bool setDefaultAlignment) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,
-                                         linkage, isConst, initExpr, dataAttr);
+                                         linkage, isConst, initExpr, dataAttr,
+                                         setDefaultAlignment);
 }
 
 //===----------------------------------------------------------------------===//
@@ -213,63 +241,77 @@ fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
 //===----------------------------------------------------------------------===//
 
 /// Generate a real constant with a value `value`.
-template <int KIND>
-static mlir::Value genRealConstant(fir::FirOpBuilder &builder,
+static mlir::Value genRealConstant(int kind, fir::FirOpBuilder &builder,
                                    mlir::Location loc,
                                    const llvm::APFloat &value) {
-  mlir::Type fltTy = Fortran::lower::convertReal(builder.getContext(), KIND);
+  mlir::Type fltTy = Fortran::lower::convertReal(builder.getContext(), kind);
   return builder.createRealConstant(loc, fltTy, value);
 }
 
 /// Convert a scalar literal constant to IR.
-template <Fortran::common::TypeCategory TC, int KIND>
+template <Fortran::common::TypeCategory TC>
 static mlir::Value genScalarLit(
     fir::FirOpBuilder &builder, mlir::Location loc,
-    const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value) {
+    const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>> &value) {
+  int kind = value.kind();
   if constexpr (TC == Fortran::common::TypeCategory::Integer ||
                 TC == Fortran::common::TypeCategory::Unsigned) {
     // MLIR requires constants to be signless
     mlir::Type ty = Fortran::lower::getFIRType(
-        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
-        std::nullopt);
-    if (KIND == 16) {
+        builder.getContext(), Fortran::common::TypeCategory::Integer, kind, {});
+    if (kind == 16) {
       auto bigInt = llvm::APInt(ty.getIntOrFloatBitWidth(),
                                 TC == Fortran::common::TypeCategory::Unsigned
                                     ? value.UnsignedDecimal()
                                     : value.SignedDecimal(),
                                 10);
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty, mlir::IntegerAttr::get(ty, bigInt));
+      return mlir::arith::ConstantOp::create(
+          builder, loc, ty, mlir::IntegerAttr::get(ty, bigInt));
     }
     return builder.createIntegerConstant(loc, ty, value.ToInt64());
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.createBool(loc, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.createBool(loc, value.IsTrue());
+    mlir::Type logicalType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Logical, kind, {});
+    mlir::Type intType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, kind, {});
+    mlir::Value integer =
+        builder.createIntegerConstant(loc, intType, value.word().ToInt64());
+    return fir::BitcastOp::create(builder, loc, logicalType, integer);
   } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
     std::string str = value.DumpHexadecimal();
-    if constexpr (KIND == 2) {
+    switch (kind) {
+    case 2: {
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEhalf(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
-    } else if constexpr (KIND == 3) {
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
+    case 3: {
       auto floatVal = consAPFloat(llvm::APFloatBase::BFloat(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
-    } else if constexpr (KIND == 4) {
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
+    case 4: {
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEsingle(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
-    } else if constexpr (KIND == 10) {
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
+    case 10: {
       auto floatVal = consAPFloat(llvm::APFloatBase::x87DoubleExtended(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
-    } else if constexpr (KIND == 16) {
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
+    case 16: {
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEquad(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
-    } else {
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
+    default: {
       // convert everything else to double
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEdouble(), str);
-      return genRealConstant<KIND>(builder, loc, floatVal);
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
-    mlir::Value real = genScalarLit<Fortran::common::TypeCategory::Real, KIND>(
+    mlir::Value real = genScalarLit<Fortran::common::TypeCategory::Real>(
         builder, loc, value.REAL());
-    mlir::Value imag = genScalarLit<Fortran::common::TypeCategory::Real, KIND>(
+    mlir::Value imag = genScalarLit<Fortran::common::TypeCategory::Real>(
         builder, loc, value.AIMAG());
     return fir::factory::Complex{builder, loc}.createComplex(real, imag);
   } else /*constexpr*/ {
@@ -278,74 +320,77 @@ static mlir::Value genScalarLit(
 }
 
 /// Create fir::string_lit from a scalar character constant.
-template <int KIND>
 static fir::StringLitOp
 createStringLitOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Character, KIND>> &value,
+                      Fortran::common::TypeCategory::Character>> &value,
                   [[maybe_unused]] int64_t len) {
-  if constexpr (KIND == 1) {
+  int kind = value.kind();
+  if (kind == 1) {
     assert(value.size() == static_cast<std::uint64_t>(len));
-    return builder.createStringLitOp(loc, value);
+    return builder.createStringLitOp(loc, *value.AsStringRef());
   } else {
-    using ET = typename std::decay_t<decltype(value)>::value_type;
-    fir::CharacterType type =
-        fir::CharacterType::get(builder.getContext(), KIND, len);
-    mlir::MLIRContext *context = builder.getContext();
-    std::int64_t size = static_cast<std::int64_t>(value.size());
-    mlir::ShapedType shape = mlir::RankedTensorType::get(
-        llvm::ArrayRef<std::int64_t>{size},
-        mlir::IntegerType::get(builder.getContext(), sizeof(ET) * 8));
-    auto denseAttr = mlir::DenseElementsAttr::get(
-        shape, llvm::ArrayRef<ET>{value.data(), value.size()});
-    auto denseTag = mlir::StringAttr::get(context, fir::StringLitOp::xlist());
-    mlir::NamedAttribute dataAttr(denseTag, denseAttr);
-    auto sizeTag = mlir::StringAttr::get(context, fir::StringLitOp::size());
-    mlir::NamedAttribute sizeAttr(sizeTag, builder.getI64IntegerAttr(len));
-    llvm::SmallVector<mlir::NamedAttribute> attrs = {dataAttr, sizeAttr};
-    return builder.create<fir::StringLitOp>(
-        loc, llvm::ArrayRef<mlir::Type>{type}, std::nullopt, attrs);
+    return value.withStdString([&](const auto &value) -> fir::StringLitOp {
+      using ET = typename std::decay_t<decltype(value)>::value_type;
+      fir::CharacterType type =
+          fir::CharacterType::get(builder.getContext(), kind, len);
+      mlir::MLIRContext *context = builder.getContext();
+      std::int64_t size = static_cast<std::int64_t>(value.size());
+      mlir::ShapedType shape = mlir::RankedTensorType::get(
+          llvm::ArrayRef<std::int64_t>{size},
+          mlir::IntegerType::get(builder.getContext(), sizeof(ET) * 8));
+      auto denseAttr = mlir::DenseElementsAttr::get(
+          shape, llvm::ArrayRef<ET>{value.data(), value.size()});
+      auto denseTag = mlir::StringAttr::get(context, fir::StringLitOp::xlist());
+      mlir::NamedAttribute dataAttr(denseTag, denseAttr);
+      auto sizeTag = mlir::StringAttr::get(context, fir::StringLitOp::size());
+      mlir::NamedAttribute sizeAttr(sizeTag, builder.getI64IntegerAttr(len));
+      llvm::SmallVector<mlir::NamedAttribute> attrs = {dataAttr, sizeAttr};
+      return fir::StringLitOp::create(builder, loc,
+                                      llvm::ArrayRef<mlir::Type>{type},
+                                      mlir::ValueRange{}, attrs);
+    });
   }
 }
 
 /// Convert a scalar literal CHARACTER to IR.
-template <int KIND>
 static mlir::Value
 genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
              const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
-                 Fortran::common::TypeCategory::Character, KIND>> &value,
+                 Fortran::common::TypeCategory::Character>> &value,
              int64_t len, bool outlineInReadOnlyMemory) {
+  int kind = value.kind();
   // When in an initializer context, construct the literal op itself and do
   // not construct another constant object in rodata.
   if (!outlineInReadOnlyMemory)
-    return createStringLitOp<KIND>(builder, loc, value, len);
+    return createStringLitOp(builder, loc, value, len);
 
   // Otherwise, the string is in a plain old expression so "outline" the value
   // in read only data by hash consing it to a constant literal object.
 
   // ASCII global constants are created using an mlir string attribute.
-  if constexpr (KIND == 1) {
-    return fir::getBase(fir::factory::createStringLiteral(builder, loc, value));
+  if (kind == 1) {
+    return fir::getBase(
+        fir::factory::createStringLiteral(builder, loc, *value.AsStringRef()));
   }
 
-  auto size = builder.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
-  llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
+  auto size = builder.getKindMap().getCharacterBitsize(kind) / 8 * value.size();
+  llvm::StringRef strVal(reinterpret_cast<const char *>(value.data()), size);
   std::string globalName = fir::factory::uniqueCGIdent(
-      KIND == 1 ? "cl"s : "cl"s + std::to_string(KIND), strVal);
+      kind == 1 ? "cl"s : "cl"s + std::to_string(kind), strVal);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   fir::CharacterType type =
-      fir::CharacterType::get(builder.getContext(), KIND, len);
+      fir::CharacterType::get(builder.getContext(), kind, len);
   if (!global)
     global = builder.createGlobalConstant(
         loc, type, globalName,
         [&](fir::FirOpBuilder &builder) {
-          fir::StringLitOp str =
-              createStringLitOp<KIND>(builder, loc, value, len);
-          builder.create<fir::HasValueOp>(loc, str);
+          fir::StringLitOp str = createStringLitOp(builder, loc, value, len);
+          fir::HasValueOp::create(builder, loc, str);
         },
         builder.createLinkOnceLinkage());
-  return builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                       global.getSymbol());
+  return fir::AddrOfOp::create(builder, loc, global.resultType(),
+                               global.getSymbol());
 }
 
 // Helper to generate StructureConstructor component values.
@@ -365,22 +410,22 @@ static mlir::Value genStructureComponentInit(
   auto fieldTy = fir::FieldType::get(recTy.getContext());
   assert(componentTy && "failed to retrieve component");
   // FIXME: type parameters must come from the derived-type-spec
-  auto field = builder.create<fir::FieldIndexOp>(
-      loc, fieldTy, name, recTy,
-      /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+  auto field =
+      fir::FieldIndexOp::create(builder, loc, fieldTy, name, recTy,
+                                /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
   if (Fortran::semantics::IsAllocatable(sym)) {
-    if (!Fortran::evaluate::IsNullPointer(expr)) {
+    if (!Fortran::evaluate::IsNullPointerOrAllocatable(&expr)) {
       fir::emitFatalError(loc, "constant structure constructor with an "
                                "allocatable component value that is not NULL");
     } else {
       // Handle NULL() initialization
-      mlir::Value componentValue{fir::factory::createUnallocatedBox(
-          builder, loc, componentTy, std::nullopt)};
+      mlir::Value componentValue{
+          fir::factory::createUnallocatedBox(builder, loc, componentTy, {})};
       componentValue = builder.createConvert(loc, componentTy, componentValue);
 
-      return builder.create<fir::InsertValueOp>(
-          loc, recTy, res, componentValue,
+      return fir::InsertValueOp::create(
+          builder, loc, recTy, res, componentValue,
           builder.getArrayAttr(field.getAttributes()));
     }
   }
@@ -401,25 +446,24 @@ static mlir::Value genStructureComponentInit(
     } else
       initialTarget = Fortran::lower::genInitialDataTarget(converter, loc,
                                                            componentTy, expr);
-    res = builder.create<fir::InsertValueOp>(
-        loc, recTy, res, initialTarget,
-        builder.getArrayAttr(field.getAttributes()));
+    res =
+        fir::InsertValueOp::create(builder, loc, recTy, res, initialTarget,
+                                   builder.getArrayAttr(field.getAttributes()));
     return res;
   }
 
   if (Fortran::lower::isDerivedTypeWithLenParameters(sym))
     TODO(loc, "component with length parameters in structure constructor");
 
-  // Special handling for scalar c_ptr/c_funptr constants. The array constant
-  // must fall through to genConstantValue() below.
+  // Special handling for scalar c_ptr/c_funptr/c_devptr constants. The array
+  // constant must fall through to genConstantValue() below.
   if (Fortran::semantics::IsBuiltinCPtr(sym) && sym.Rank() == 0 &&
       (Fortran::evaluate::GetLastSymbol(expr) ||
-       Fortran::evaluate::IsNullPointer(expr))) {
-    // Builtin c_ptr and c_funptr have special handling because designators
-    // and NULL() are handled as initial values for them as an extension
-    // (otherwise only c_ptr_null/c_funptr_null are allowed and these are
-    // replaced by structure constructors by semantics, so GetLastSymbol
-    // returns nothing).
+       Fortran::evaluate::IsNullPointer(&expr))) {
+    // Builtin C pointer types have special handling because designators and
+    // NULL() are handled as initial values for them as an extension (otherwise
+    // only the named null constants are allowed and these are replaced by
+    // structure constructors by semantics, so GetLastSymbol returns nothing).
 
     // The Ev::Expr is an initializer that is a pointer target (e.g., 'x' or
     // NULL()) that must be inserted into an intermediate cptr record value's
@@ -427,33 +471,50 @@ static mlir::Value genStructureComponentInit(
     mlir::Value addr = fir::getBase(
         Fortran::lower::genExtAddrInInitializer(converter, loc, expr));
     if (mlir::isa<fir::BoxProcType>(addr.getType()))
-      addr = builder.create<fir::BoxAddrOp>(loc, addr);
+      addr = fir::BoxAddrOp::create(builder, loc, addr);
     assert((fir::isa_ref_type(addr.getType()) ||
             mlir::isa<mlir::FunctionType>(addr.getType())) &&
            "expect reference type for address field");
     assert(fir::isa_derived(componentTy) &&
-           "expect C_PTR, C_FUNPTR to be a record");
-    auto cPtrRecTy = mlir::cast<fir::RecordType>(componentTy);
+           "expect C_PTR, C_FUNPTR, C_DEVPTR to be a record");
+    auto componentRecTy = mlir::cast<fir::RecordType>(componentTy);
+    mlir::Type cPtrTy = componentTy;
+    if (fir::isa_builtin_cdevptr_type(componentTy)) {
+      assert(componentRecTy.getTypeList().size() == 1);
+      cPtrTy = componentRecTy.getTypeList()[0].second;
+    }
+    auto cPtrRecTy = mlir::cast<fir::RecordType>(cPtrTy);
     llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
     mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
-    auto addrField = builder.create<fir::FieldIndexOp>(
-        loc, fieldTy, addrFieldName, componentTy,
-        /*typeParams=*/mlir::ValueRange{});
+    auto addrField =
+        fir::FieldIndexOp::create(builder, loc, fieldTy, addrFieldName, cPtrTy,
+                                  /*typeParams=*/mlir::ValueRange{});
     mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
-    auto undef = builder.create<fir::UndefOp>(loc, componentTy);
-    addr = builder.create<fir::InsertValueOp>(
-        loc, componentTy, undef, castAddr,
+    auto undef = fir::UndefOp::create(builder, loc, cPtrTy);
+    mlir::Value componentValue = fir::InsertValueOp::create(
+        builder, loc, cPtrTy, undef, castAddr,
         builder.getArrayAttr(addrField.getAttributes()));
-    res = builder.create<fir::InsertValueOp>(
-        loc, recTy, res, addr, builder.getArrayAttr(field.getAttributes()));
+    if (fir::isa_builtin_cdevptr_type(componentTy)) {
+      auto cptrFieldName = componentRecTy.getTypeList()[0].first;
+      auto cptrField = fir::FieldIndexOp::create(
+          builder, loc, fieldTy, cptrFieldName, componentTy,
+          /*typeParams=*/mlir::ValueRange{});
+      auto cdevptrUndef = fir::UndefOp::create(builder, loc, componentTy);
+      componentValue = fir::InsertValueOp::create(
+          builder, loc, componentTy, cdevptrUndef, componentValue,
+          builder.getArrayAttr(cptrField.getAttributes()));
+    }
+    res =
+        fir::InsertValueOp::create(builder, loc, recTy, res, componentValue,
+                                   builder.getArrayAttr(field.getAttributes()));
     return res;
   }
 
   mlir::Value val = fir::getBase(genConstantValue(converter, loc, expr));
   assert(!fir::isa_ref_type(val.getType()) && "expecting a constant value");
   mlir::Value castVal = builder.createConvert(loc, componentTy, val);
-  res = builder.create<fir::InsertValueOp>(
-      loc, recTy, res, castVal, builder.getArrayAttr(field.getAttributes()));
+  res = fir::InsertValueOp::create(builder, loc, recTy, res, castVal,
+                                   builder.getArrayAttr(field.getAttributes()));
   return res;
 }
 
@@ -464,18 +525,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     const Fortran::evaluate::StructureConstructor &ctor, mlir::Type type) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto recTy = mlir::cast<fir::RecordType>(type);
-
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    mlir::Value res = builder.create<fir::UndefOp>(loc, recTy);
-    for (const auto &[sym, expr] : ctor.values()) {
-      // Parent components need more work because they do not appear in the
-      // fir.rec type.
-      if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-        TODO(loc, "parent component in structure constructor");
-      res = genStructureComponentInit(converter, loc, sym, expr.value(), res);
-    }
-    return res;
-  }
 
   auto fieldTy = fir::FieldType::get(recTy.getContext());
   mlir::Value res{};
@@ -496,13 +545,13 @@ static mlir::Value genInlinedStructureCtorLitImpl(
         break;
     }
     for (mlir::Type parentType : llvm::reverse(parentTypes)) {
-      auto undef = builder.create<fir::UndefOp>(loc, parentType);
+      auto undef = fir::UndefOp::create(builder, loc, parentType);
       fir::RecordType parentRecTy = mlir::cast<fir::RecordType>(parentType);
-      auto field = builder.create<fir::FieldIndexOp>(
-          loc, fieldTy, parentRecTy.getTypeList()[0].first, parentType,
+      auto field = fir::FieldIndexOp::create(
+          builder, loc, fieldTy, parentRecTy.getTypeList()[0].first, parentType,
           /*typeParams=*/mlir::ValueRange{} /*TODO*/);
-      res = builder.create<fir::InsertValueOp>(
-          loc, parentRecTy, undef, res,
+      res = fir::InsertValueOp::create(
+          builder, loc, parentRecTy, undef, res,
           builder.getArrayAttr(field.getAttributes()));
     }
   };
@@ -511,11 +560,17 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   for (const auto &[sym, expr] : ctor.values()) {
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
+    // TODO: This is not a complete fix. For some parameterized derived type
+    // component initializations, the component symbol owner does not have a
+    // derived type spec. Falling back to ctor.derivedTypeSpec() avoids the
+    // crash, but may not always represent the correct parent type.
+    if (!componentParentType)
+      TODO(loc, "parameterized derived types");
     assert(componentParentType && "failed to retrieve component parent type");
     if (!res) {
       mlir::Type parentType = converter.genType(*componentParentType);
       curentType = componentParentType;
-      res = builder.create<fir::UndefOp>(loc, parentType);
+      res = fir::UndefOp::create(builder, loc, parentType);
     } else if (*componentParentType != *curentType) {
       mlir::Type parentType = converter.genType(*componentParentType);
       insertParentValueIntoExtension(parentType);
@@ -525,7 +580,7 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   }
 
   if (!res) // structure constructor for empty type.
-    return builder.create<fir::UndefOp>(loc, recTy);
+    return fir::UndefOp::create(builder, loc, recTy);
 
   // The last component may belong to a parent type.
   if (res.getType() != recTy)
@@ -551,12 +606,12 @@ static mlir::Value genScalarLit(
         [&](fir::FirOpBuilder &builder) {
           mlir::Value result =
               genInlinedStructureCtorLitImpl(converter, loc, value, eleTy);
-          builder.create<fir::HasValueOp>(loc, result);
+          fir::HasValueOp::create(builder, loc, result);
         },
         builder.createInternalLinkage());
   }
-  return builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                       global.getSymbol());
+  return fir::AddrOfOp::create(builder, loc, global.resultType(),
+                               global.getSymbol());
 }
 
 /// Create an evaluate::Constant<T> array to a fir.array<> value
@@ -567,6 +622,7 @@ static mlir::Value
 genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc, mlir::Type arrayTy,
                    const Fortran::evaluate::Constant<T> &con) {
+  const int kind{con.kind()};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::IndexType idxTy = builder.getIndexType();
   Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
@@ -577,44 +633,55 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
           builder.getIntegerAttr(idxTy, subscripts[i] - con.lbounds()[i]));
     return idx;
   };
-  mlir::Value array = builder.create<fir::UndefOp>(loc, arrayTy);
+  mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   if (Fortran::evaluate::GetSize(con.shape()) == 0)
     return array;
-  if constexpr (T::category == Fortran::common::TypeCategory::Character) {
-    do {
-      mlir::Value elementVal =
-          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
-                                /*outlineInReadOnlyMemory=*/false);
-      array = builder.create<fir::InsertValueOp>(
-          loc, arrayTy, array, elementVal, builder.getArrayAttr(createIdx()));
-    } while (con.IncrementSubscripts(subscripts));
-  } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+  if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
       mlir::Type eleTy =
           mlir::cast<fir::SequenceType>(arrayTy).getElementType();
       mlir::Value elementVal =
           genScalarLit(converter, loc, con.At(subscripts), eleTy,
                        /*outlineInReadOnlyMemory=*/false);
-      array = builder.create<fir::InsertValueOp>(
-          loc, arrayTy, array, elementVal, builder.getArrayAttr(createIdx()));
+      array =
+          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
+                                     builder.getArrayAttr(createIdx()));
     } while (con.IncrementSubscripts(subscripts));
   } else {
+    if constexpr (T::category == Fortran::common::TypeCategory::Character) {
+      if (kind != 1) {
+        do {
+          mlir::Value elementVal =
+              genScalarLit(builder, loc, con.At(subscripts), con.LEN(),
+                           /*outlineInReadOnlyMemory=*/false);
+          array = fir::InsertValueOp::create(builder, loc, arrayTy, array,
+                                             elementVal,
+                                             builder.getArrayAttr(createIdx()));
+        } while (con.IncrementSubscripts(subscripts));
+        return array;
+      }
+    }
+
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
-        return builder.createConvert(loc, eleTy,
-                                     genScalarLit<T::category, T::kind>(
-                                         builder, loc, con.At(subscripts)));
+        if constexpr (T::category == Fortran::common::TypeCategory::Character)
+          return genScalarLit(builder, loc, con.At(subscripts), con.LEN(),
+                              /*outlineInReadOnlyMemory=*/false);
+        else
+          return builder.createConvert(
+              loc, eleTy,
+              genScalarLit<T::category>(builder, loc, con.At(subscripts)));
       };
       Fortran::evaluate::ConstantSubscripts nextSubscripts = subscripts;
       bool nextIsSame = con.IncrementSubscripts(nextSubscripts) &&
                         con.At(subscripts) == con.At(nextSubscripts);
       if (!rangeSize && !nextIsSame) { // single (non-range) value
-        array = builder.create<fir::InsertValueOp>(
-            loc, arrayTy, array, getElementVal(),
-            builder.getArrayAttr(createIdx()));
+        array = fir::InsertValueOp::create(builder, loc, arrayTy, array,
+                                           getElementVal(),
+                                           builder.getArrayAttr(createIdx()));
       } else if (!rangeSize) { // start a range
         rangeStartIdx = createIdx();
         rangeSize = 1;
@@ -630,8 +697,8 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
           rangeBounds.push_back(
               mlir::cast<mlir::IntegerAttr>(idx[i]).getValue().getSExtValue());
         }
-        array = builder.create<fir::InsertOnRangeOp>(
-            loc, arrayTy, array, getElementVal(),
+        array = fir::InsertOnRangeOp::create(
+            builder, loc, arrayTy, array, getElementVal(),
             builder.getIndexVectorAttr(rangeBounds));
         rangeSize = 0;
       }
@@ -657,7 +724,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     // Using a dense attribute for the initial value instead of creating an
-    // intialization body speeds up MLIR/LLVM compilation, but this is not
+    // initialization body speeds up MLIR/LLVM compilation, but this is not
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||
@@ -680,12 +747,12 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
           [&](fir::FirOpBuilder &builder) {
             mlir::Value result =
                 genInlinedArrayLit(converter, loc, arrayTy, constant);
-            builder.create<fir::HasValueOp>(loc, result);
+            fir::HasValueOp::create(builder, loc, result);
           },
           builder.createInternalLinkage());
   }
-  return builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                       global.getSymbol());
+  return fir::AddrOfOp::create(builder, loc, global.resultType(),
+                               global.getSymbol());
 }
 
 /// Convert an evaluate::Constant<T> array into an fir::ExtendedValue.
@@ -694,10 +761,11 @@ static fir::ExtendedValue
 genArrayLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             const Fortran::evaluate::Constant<T> &con,
             bool outlineInReadOnlyMemory) {
+  const int kind{con.kind()};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ConstantSubscript size =
       Fortran::evaluate::GetSize(con.shape());
-  if (size > std::numeric_limits<std::uint32_t>::max())
+  if (size > Fortran::common::numeric_limits<std::uint32_t>::max())
     // llvm::SmallVector has limited size
     TODO(loc, "Creation of very large array constants");
   fir::SequenceType::Shape shape(con.shape().begin(), con.shape().end());
@@ -709,8 +777,8 @@ genArrayLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     eleTy = Fortran::lower::translateDerivedTypeToFIRType(
         converter, con.GetType().GetDerivedTypeSpec());
   else
-    eleTy = Fortran::lower::getFIRType(builder.getContext(), T::category,
-                                       T::kind, typeParams);
+    eleTy = Fortran::lower::getFIRType(builder.getContext(), T::category, kind,
+                                       typeParams);
   auto arrayTy = fir::SequenceType::get(shape, eleTy);
   mlir::Value array = outlineInReadOnlyMemory
                           ? genOutlineArrayLit(converter, loc, arrayTy, con)
@@ -746,8 +814,7 @@ fir::ExtendedValue Fortran::lower::ConstantBuilder<T>::gen(
   assert(opt.has_value() && "constant has no value");
   if constexpr (T::category == Fortran::common::TypeCategory::Character) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    auto value =
-        genScalarLit<T::kind>(builder, loc, opt.value(), constant.LEN(),
+    auto value = genScalarLit(builder, loc, opt.value(), constant.LEN(),
                               outlineBigConstantsInReadOnlyMemory);
     mlir::Value len = builder.createIntegerConstant(
         loc, builder.getCharacterLengthType(), constant.LEN());
@@ -758,8 +825,8 @@ fir::ExtendedValue Fortran::lower::ConstantBuilder<T>::gen(
     return genScalarLit(converter, loc, *opt, eleTy,
                         outlineBigConstantsInReadOnlyMemory);
   } else {
-    return genScalarLit<T::category, T::kind>(converter.getFirOpBuilder(), loc,
-                                              opt.value());
+    return genScalarLit<T::category>(converter.getFirOpBuilder(), loc,
+                                     opt.value());
   }
 }
 
@@ -777,20 +844,42 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
           std::get_if<Fortran::evaluate::StructureConstructor>(&constantExpr.u))
     return Fortran::lower::genInlinedStructureCtorLit(converter, loc,
                                                       *structCtor);
-  fir::emitFatalError(loc, "not a constant derived type expression");
+  // Initializer folding preserves parentheses around a derived constant or a
+  // structure constructor (e.g. "type(t) :: x = (t(7))"). Look through them.
+  // UnwrapConstantValue cannot see through Parentheses<SomeDerived> because a
+  // StructureConstructor is not a Constant<SomeDerived>.
+  if (const auto *parens = std::get_if<
+          Fortran::evaluate::Parentheses<Fortran::evaluate::SomeDerived>>(
+          &constantExpr.u))
+    return genConstantValue(converter, loc, parens->left());
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // exactly the forms handled above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant derived type expression in "
+                           "initializer, but got: " +
+                               constantExpr.AsFortran());
 }
 
-template <Fortran::common::TypeCategory TC, int KIND>
+template <Fortran::common::TypeCategory TC>
 static fir::ExtendedValue genConstantValue(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC, KIND>>
-        &constantExpr) {
-  using T = Fortran::evaluate::Type<TC, KIND>;
+    const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC>> &constantExpr) {
+  using T = Fortran::evaluate::Type<TC>;
+  // Initializer folding preserves parentheses around a scalar constant (e.g.
+  // "integer :: i = (42)"). UnwrapConstantValue looks through them.
   if (const auto *constant =
-          std::get_if<Fortran::evaluate::Constant<T>>(&constantExpr.u))
+          Fortran::evaluate::UnwrapConstantValue<T>(constantExpr))
     return Fortran::lower::convertConstant(converter, loc, *constant,
                                            /*outline=*/false);
-  fir::emitFatalError(loc, "not an evaluate::Constant<T>");
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // a Constant<T>, possibly parenthesized, once the derived-type forms are
+  // handled by the overload above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant expression in initializer, "
+                           "but got: " +
+                               constantExpr.AsFortran());
 }
 
 static fir::ExtendedValue
@@ -817,6 +906,12 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
         }
       },
       constantExpr.u);
+}
+
+fir::ExtendedValue Fortran::lower::genConstantExprValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &expr) {
+  return genConstantValue(converter, loc, expr);
 }
 
 fir::ExtendedValue Fortran::lower::genInlinedStructureCtorLit(

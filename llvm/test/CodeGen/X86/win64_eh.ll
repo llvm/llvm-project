@@ -1,4 +1,5 @@
 ; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-windows-itanium | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
+; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-uefi | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
 ; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
 ; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 -mcpu=atom | FileCheck %s -check-prefix=WIN64 -check-prefix=ATOM
 
@@ -129,7 +130,9 @@ endtryfinally:
 ; ATOM:  leaq -40(%rsp), %rsp
 ; WIN64: .seh_stackalloc 40
 ; WIN64: .seh_endprologue
+; WIN64: .seh_startepilogue
 ; WIN64: addq $40, %rsp
+; WIN64: .seh_endepilogue
 ; WIN64: ret
 ; WIN64: .seh_handlerdata
 ; WIN64: .seh_endproc
@@ -163,9 +166,11 @@ entry:
 ; WIN64: andq  $-64, %rsp
 ; WIN64: movaps  -32(%rbp), %xmm6        # 16-byte Reload
 ; WIN64: movaps  -16(%rbp), %xmm7        # 16-byte Reload
+; WIN64: .seh_startepilogue
 ; WIN64: movq  %rbp, %rsp
 ; WIN64: popq  %rbx
 ; WIN64: popq  %rdi
 ; WIN64: popq  %rbp
+; WIN64: .seh_endepilogue
 ; WIN64: retq
 ; WIN64: .seh_endproc

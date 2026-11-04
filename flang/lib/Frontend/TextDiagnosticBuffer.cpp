@@ -18,18 +18,39 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
+
+static void printWarningOption(llvm::raw_ostream &os,
+                               clang::DiagnosticsEngine::Level level,
+                               const clang::Diagnostic &info) {
+  auto &diagIDs = *info.getDiags()->getDiagnosticIDs();
+
+  if (level == clang::DiagnosticsEngine::Warning) {
+    llvm::StringRef opt = diagIDs.getWarningOptionForDiag(info.getID());
+    if (!opt.empty()) {
+      os << " [-W" << opt;
+      llvm::StringRef optValue = info.getFlagValue();
+      if (!optValue.empty())
+        os << "=" << optValue;
+      os << "]";
+    }
+  }
+}
 
 /// HandleDiagnostic - Store the errors, warnings, and notes that are
 /// reported.
 void TextDiagnosticBuffer::HandleDiagnostic(
     clang::DiagnosticsEngine::Level level, const clang::Diagnostic &info) {
-  // Default implementation (warnings_/errors count).
+  // Default implementation (warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(level, info);
 
   llvm::SmallString<100> buf;
   info.FormatDiagnostic(buf);
+  llvm::raw_svector_ostream os(buf);
+  printWarningOption(os, level, info);
+
   switch (level) {
   default:
     llvm_unreachable("Diagnostic not handled during diagnostic buffering!");

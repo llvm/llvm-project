@@ -9,8 +9,8 @@
 // TODO: Reduce this test's coverage and be more specific about
 // expected behaviour.
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_cxx_build %s -o %t
+// RUN: not %dexter_regression_test_run --use-heuristic --binary %t -- %s | FileCheck %s
 // CHECK: expect_watch_type.cpp:
 
 template<class T>

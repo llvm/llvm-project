@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPOSTMORTEMTRACE_H
-#define LLDB_TARGET_THREADPOSTMORTEMTRACE_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_COMMON_THREADPOSTMORTEMTRACE_H
+#define LLDB_SOURCE_PLUGINS_TRACE_COMMON_THREADPOSTMORTEMTRACE_H
 
 #include "lldb/Target/Thread.h"
 #include <optional>
@@ -56,4 +56,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPOSTMORTEMTRACE_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_COMMON_THREADPOSTMORTEMTRACE_H

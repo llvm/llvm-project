@@ -26,18 +26,14 @@ namespace LoongArchABI {
 static ABI checkABIStandardized(ABI Abi) {
   StringRef ABIName;
   switch (Abi) {
-  case ABI_ILP32S:
-    ABIName = "ilp32s";
-    break;
   case ABI_ILP32F:
     ABIName = "ilp32f";
-    break;
-  case ABI_ILP32D:
-    ABIName = "ilp32d";
     break;
   case ABI_LP64F:
     ABIName = "lp64f";
     break;
+  case ABI_ILP32S:
+  case ABI_ILP32D:
   case ABI_LP64S:
   case ABI_LP64D:
     return Abi;
@@ -52,6 +48,9 @@ static ABI getTripleABI(const Triple &TT) {
   bool Is64Bit = TT.isArch64Bit();
   ABI TripleABI;
   switch (TT.getEnvironment()) {
+  case llvm::Triple::EnvironmentType::UnknownEnvironment:
+    TripleABI = ABI_Unknown;
+    break;
   case llvm::Triple::EnvironmentType::GNUSF:
   case llvm::Triple::EnvironmentType::MuslSF:
     TripleABI = Is64Bit ? ABI_LP64S : ABI_ILP32S;
@@ -96,7 +95,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
 
   // 1. If the '-target-abi' is valid, use it.
   if (IsABIValidForFeature(ArgProvidedABI)) {
-    if (TT.hasEnvironment() && ArgProvidedABI != TripleABI)
+    if (IsABIValidForFeature(TripleABI) && ArgProvidedABI != TripleABI)
       errs()
           << "warning: triple-implied ABI conflicts with provided target-abi '"
           << ABIName << "', using target-abi\n";
@@ -164,10 +163,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
       return Is64Bit ? ABI_LP64F : ABI_ILP32F;
     return Is64Bit ? ABI_LP64S : ABI_ILP32S;
   };
-  if (ABIName.empty())
-    errs() << "warning: the triple-implied ABI is invalid, ignoring and using "
-              "feature-implied ABI\n";
-  else
+  if (!ABIName.empty())
     errs() << "warning: both target-abi and the triple-implied ABI are "
               "invalid, ignoring and using feature-implied ABI\n";
   return checkABIStandardized(GetFeatureABI());

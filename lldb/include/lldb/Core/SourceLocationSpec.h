@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_SOURCELOCATIONSPEC_H
-#define LLDB_UTILITY_SOURCELOCATIONSPEC_H
+#ifndef LLDB_CORE_SOURCELOCATIONSPEC_H
+#define LLDB_CORE_SOURCELOCATIONSPEC_H
 
 #include "lldb/Core/Declaration.h"
 #include "lldb/lldb-defines.h"
@@ -185,4 +185,4 @@ protected:
 Stream &operator<<(Stream &s, const SourceLocationSpec &loc);
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_SOURCELOCATIONSPEC_H
+#endif // LLDB_CORE_SOURCELOCATIONSPEC_H

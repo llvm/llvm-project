@@ -4,11 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvfh \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
-declare <vscale x 1 x half> @llvm.riscv.vfrec7.nxv1f16(
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  iXLen, iXLen);
-
 define <vscale x 1 x half> @intrinsic_vfrec7_v_nxv1f16_nxv1f16(<vscale x 1 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
@@ -19,18 +14,12 @@ define <vscale x 1 x half> @intrinsic_vfrec7_v_nxv1f16_nxv1f16(<vscale x 1 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfrec7.nxv1f16(
-    <vscale x 1 x half> undef,
+    <vscale x 1 x half> poison,
     <vscale x 1 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 1 x half> %a
 }
-
-declare <vscale x 1 x half> @llvm.riscv.vfrec7.mask.nxv1f16(
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  <vscale x 1 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x half> @intrinsic_vfrec7_mask_v_nxv1f16_nxv1f16(<vscale x 1 x i1> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv1f16_nxv1f16:
@@ -50,11 +39,6 @@ entry:
   ret <vscale x 1 x half> %a
 }
 
-declare <vscale x 2 x half> @llvm.riscv.vfrec7.nxv2f16(
-  <vscale x 2 x half>,
-  <vscale x 2 x half>,
-  iXLen, iXLen);
-
 define <vscale x 2 x half> @intrinsic_vfrec7_v_nxv2f16_nxv2f16(<vscale x 2 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv2f16_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
@@ -65,18 +49,12 @@ define <vscale x 2 x half> @intrinsic_vfrec7_v_nxv2f16_nxv2f16(<vscale x 2 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vfrec7.nxv2f16(
-    <vscale x 2 x half> undef,
+    <vscale x 2 x half> poison,
     <vscale x 2 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 2 x half> %a
 }
-
-declare <vscale x 2 x half> @llvm.riscv.vfrec7.mask.nxv2f16(
-  <vscale x 2 x half>,
-  <vscale x 2 x half>,
-  <vscale x 2 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 2 x half> @intrinsic_vfrec7_mask_v_nxv2f16_nxv2f16(<vscale x 2 x i1> %0, <vscale x 2 x half> %1, <vscale x 2 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv2f16_nxv2f16:
@@ -96,11 +74,6 @@ entry:
   ret <vscale x 2 x half> %a
 }
 
-declare <vscale x 4 x half> @llvm.riscv.vfrec7.nxv4f16(
-  <vscale x 4 x half>,
-  <vscale x 4 x half>,
-  iXLen, iXLen);
-
 define <vscale x 4 x half> @intrinsic_vfrec7_v_nxv4f16_nxv4f16(<vscale x 4 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv4f16_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
@@ -111,18 +84,12 @@ define <vscale x 4 x half> @intrinsic_vfrec7_v_nxv4f16_nxv4f16(<vscale x 4 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfrec7.nxv4f16(
-    <vscale x 4 x half> undef,
+    <vscale x 4 x half> poison,
     <vscale x 4 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 4 x half> %a
 }
-
-declare <vscale x 4 x half> @llvm.riscv.vfrec7.mask.nxv4f16(
-  <vscale x 4 x half>,
-  <vscale x 4 x half>,
-  <vscale x 4 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 4 x half> @intrinsic_vfrec7_mask_v_nxv4f16_nxv4f16(<vscale x 4 x i1> %0, <vscale x 4 x half> %1, <vscale x 4 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv4f16_nxv4f16:
@@ -142,11 +109,6 @@ entry:
   ret <vscale x 4 x half> %a
 }
 
-declare <vscale x 8 x half> @llvm.riscv.vfrec7.nxv8f16(
-  <vscale x 8 x half>,
-  <vscale x 8 x half>,
-  iXLen, iXLen);
-
 define <vscale x 8 x half> @intrinsic_vfrec7_v_nxv8f16_nxv8f16(<vscale x 8 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv8f16_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
@@ -157,18 +119,12 @@ define <vscale x 8 x half> @intrinsic_vfrec7_v_nxv8f16_nxv8f16(<vscale x 8 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vfrec7.nxv8f16(
-    <vscale x 8 x half> undef,
+    <vscale x 8 x half> poison,
     <vscale x 8 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 8 x half> %a
 }
-
-declare <vscale x 8 x half> @llvm.riscv.vfrec7.mask.nxv8f16(
-  <vscale x 8 x half>,
-  <vscale x 8 x half>,
-  <vscale x 8 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 8 x half> @intrinsic_vfrec7_mask_v_nxv8f16_nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %1, <vscale x 8 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv8f16_nxv8f16:
@@ -188,11 +144,6 @@ entry:
   ret <vscale x 8 x half> %a
 }
 
-declare <vscale x 16 x half> @llvm.riscv.vfrec7.nxv16f16(
-  <vscale x 16 x half>,
-  <vscale x 16 x half>,
-  iXLen, iXLen);
-
 define <vscale x 16 x half> @intrinsic_vfrec7_v_nxv16f16_nxv16f16(<vscale x 16 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv16f16_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
@@ -203,18 +154,12 @@ define <vscale x 16 x half> @intrinsic_vfrec7_v_nxv16f16_nxv16f16(<vscale x 16 x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vfrec7.nxv16f16(
-    <vscale x 16 x half> undef,
+    <vscale x 16 x half> poison,
     <vscale x 16 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 16 x half> %a
 }
-
-declare <vscale x 16 x half> @llvm.riscv.vfrec7.mask.nxv16f16(
-  <vscale x 16 x half>,
-  <vscale x 16 x half>,
-  <vscale x 16 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 16 x half> @intrinsic_vfrec7_mask_v_nxv16f16_nxv16f16(<vscale x 16 x i1> %0, <vscale x 16 x half> %1, <vscale x 16 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv16f16_nxv16f16:
@@ -234,11 +179,6 @@ entry:
   ret <vscale x 16 x half> %a
 }
 
-declare <vscale x 32 x half> @llvm.riscv.vfrec7.nxv32f16(
-  <vscale x 32 x half>,
-  <vscale x 32 x half>,
-  iXLen, iXLen);
-
 define <vscale x 32 x half> @intrinsic_vfrec7_v_nxv32f16_nxv32f16(<vscale x 32 x half> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
@@ -249,18 +189,12 @@ define <vscale x 32 x half> @intrinsic_vfrec7_v_nxv32f16_nxv32f16(<vscale x 32 x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vfrec7.nxv32f16(
-    <vscale x 32 x half> undef,
+    <vscale x 32 x half> poison,
     <vscale x 32 x half> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 32 x half> %a
 }
-
-declare <vscale x 32 x half> @llvm.riscv.vfrec7.mask.nxv32f16(
-  <vscale x 32 x half>,
-  <vscale x 32 x half>,
-  <vscale x 32 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 32 x half> @intrinsic_vfrec7_mask_v_nxv32f16_nxv32f16(<vscale x 32 x i1> %0, <vscale x 32 x half> %1, <vscale x 32 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv32f16_nxv32f16:
@@ -280,11 +214,6 @@ entry:
   ret <vscale x 32 x half> %a
 }
 
-declare <vscale x 1 x float> @llvm.riscv.vfrec7.nxv1f32(
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  iXLen, iXLen);
-
 define <vscale x 1 x float> @intrinsic_vfrec7_v_nxv1f32_nxv1f32(<vscale x 1 x float> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv1f32_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
@@ -295,18 +224,12 @@ define <vscale x 1 x float> @intrinsic_vfrec7_v_nxv1f32_nxv1f32(<vscale x 1 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfrec7.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 1 x float> %a
 }
-
-declare <vscale x 1 x float> @llvm.riscv.vfrec7.mask.nxv1f32(
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  <vscale x 1 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x float> @intrinsic_vfrec7_mask_v_nxv1f32_nxv1f32(<vscale x 1 x i1> %0, <vscale x 1 x float> %1, <vscale x 1 x float> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv1f32_nxv1f32:
@@ -326,11 +249,6 @@ entry:
   ret <vscale x 1 x float> %a
 }
 
-declare <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(
-  <vscale x 2 x float>,
-  <vscale x 2 x float>,
-  iXLen, iXLen);
-
 define <vscale x 2 x float> @intrinsic_vfrec7_v_nxv2f32_nxv2f32(<vscale x 2 x float> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv2f32_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
@@ -341,18 +259,12 @@ define <vscale x 2 x float> @intrinsic_vfrec7_v_nxv2f32_nxv2f32(<vscale x 2 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(
-    <vscale x 2 x float> undef,
+    <vscale x 2 x float> poison,
     <vscale x 2 x float> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 2 x float> %a
 }
-
-declare <vscale x 2 x float> @llvm.riscv.vfrec7.mask.nxv2f32(
-  <vscale x 2 x float>,
-  <vscale x 2 x float>,
-  <vscale x 2 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 2 x float> @intrinsic_vfrec7_mask_v_nxv2f32_nxv2f32(<vscale x 2 x i1> %0, <vscale x 2 x float> %1, <vscale x 2 x float> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv2f32_nxv2f32:
@@ -372,11 +284,6 @@ entry:
   ret <vscale x 2 x float> %a
 }
 
-declare <vscale x 4 x float> @llvm.riscv.vfrec7.nxv4f32(
-  <vscale x 4 x float>,
-  <vscale x 4 x float>,
-  iXLen, iXLen);
-
 define <vscale x 4 x float> @intrinsic_vfrec7_v_nxv4f32_nxv4f32(<vscale x 4 x float> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv4f32_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
@@ -387,18 +294,12 @@ define <vscale x 4 x float> @intrinsic_vfrec7_v_nxv4f32_nxv4f32(<vscale x 4 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfrec7.nxv4f32(
-    <vscale x 4 x float> undef,
+    <vscale x 4 x float> poison,
     <vscale x 4 x float> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 4 x float> %a
 }
-
-declare <vscale x 4 x float> @llvm.riscv.vfrec7.mask.nxv4f32(
-  <vscale x 4 x float>,
-  <vscale x 4 x float>,
-  <vscale x 4 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 4 x float> @intrinsic_vfrec7_mask_v_nxv4f32_nxv4f32(<vscale x 4 x i1> %0, <vscale x 4 x float> %1, <vscale x 4 x float> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv4f32_nxv4f32:
@@ -418,11 +319,6 @@ entry:
   ret <vscale x 4 x float> %a
 }
 
-declare <vscale x 8 x float> @llvm.riscv.vfrec7.nxv8f32(
-  <vscale x 8 x float>,
-  <vscale x 8 x float>,
-  iXLen, iXLen);
-
 define <vscale x 8 x float> @intrinsic_vfrec7_v_nxv8f32_nxv8f32(<vscale x 8 x float> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv8f32_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
@@ -433,18 +329,12 @@ define <vscale x 8 x float> @intrinsic_vfrec7_v_nxv8f32_nxv8f32(<vscale x 8 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfrec7.nxv8f32(
-    <vscale x 8 x float> undef,
+    <vscale x 8 x float> poison,
     <vscale x 8 x float> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 8 x float> %a
 }
-
-declare <vscale x 8 x float> @llvm.riscv.vfrec7.mask.nxv8f32(
-  <vscale x 8 x float>,
-  <vscale x 8 x float>,
-  <vscale x 8 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 8 x float> @intrinsic_vfrec7_mask_v_nxv8f32_nxv8f32(<vscale x 8 x i1> %0, <vscale x 8 x float> %1, <vscale x 8 x float> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv8f32_nxv8f32:
@@ -464,11 +354,6 @@ entry:
   ret <vscale x 8 x float> %a
 }
 
-declare <vscale x 16 x float> @llvm.riscv.vfrec7.nxv16f32(
-  <vscale x 16 x float>,
-  <vscale x 16 x float>,
-  iXLen, iXLen);
-
 define <vscale x 16 x float> @intrinsic_vfrec7_v_nxv16f32_nxv16f32(<vscale x 16 x float> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
@@ -479,18 +364,12 @@ define <vscale x 16 x float> @intrinsic_vfrec7_v_nxv16f32_nxv16f32(<vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfrec7.nxv16f32(
-    <vscale x 16 x float> undef,
+    <vscale x 16 x float> poison,
     <vscale x 16 x float> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 16 x float> %a
 }
-
-declare <vscale x 16 x float> @llvm.riscv.vfrec7.mask.nxv16f32(
-  <vscale x 16 x float>,
-  <vscale x 16 x float>,
-  <vscale x 16 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 16 x float> @intrinsic_vfrec7_mask_v_nxv16f32_nxv16f32(<vscale x 16 x i1> %0, <vscale x 16 x float> %1, <vscale x 16 x float> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv16f32_nxv16f32:
@@ -510,11 +389,6 @@ entry:
   ret <vscale x 16 x float> %a
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfrec7.nxv1f64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  iXLen, iXLen);
-
 define <vscale x 1 x double> @intrinsic_vfrec7_v_nxv1f64_nxv1f64(<vscale x 1 x double> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv1f64_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
@@ -525,18 +399,12 @@ define <vscale x 1 x double> @intrinsic_vfrec7_v_nxv1f64_nxv1f64(<vscale x 1 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vfrec7.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 1 x double> %a
 }
-
-declare <vscale x 1 x double> @llvm.riscv.vfrec7.mask.nxv1f64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x double> @intrinsic_vfrec7_mask_v_nxv1f64_nxv1f64(<vscale x 1 x i1> %0, <vscale x 1 x double> %1, <vscale x 1 x double> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv1f64_nxv1f64:
@@ -556,11 +424,6 @@ entry:
   ret <vscale x 1 x double> %a
 }
 
-declare <vscale x 2 x double> @llvm.riscv.vfrec7.nxv2f64(
-  <vscale x 2 x double>,
-  <vscale x 2 x double>,
-  iXLen, iXLen);
-
 define <vscale x 2 x double> @intrinsic_vfrec7_v_nxv2f64_nxv2f64(<vscale x 2 x double> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv2f64_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
@@ -571,18 +434,12 @@ define <vscale x 2 x double> @intrinsic_vfrec7_v_nxv2f64_nxv2f64(<vscale x 2 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vfrec7.nxv2f64(
-    <vscale x 2 x double> undef,
+    <vscale x 2 x double> poison,
     <vscale x 2 x double> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 2 x double> %a
 }
-
-declare <vscale x 2 x double> @llvm.riscv.vfrec7.mask.nxv2f64(
-  <vscale x 2 x double>,
-  <vscale x 2 x double>,
-  <vscale x 2 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 2 x double> @intrinsic_vfrec7_mask_v_nxv2f64_nxv2f64(<vscale x 2 x i1> %0, <vscale x 2 x double> %1, <vscale x 2 x double> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv2f64_nxv2f64:
@@ -602,11 +459,6 @@ entry:
   ret <vscale x 2 x double> %a
 }
 
-declare <vscale x 4 x double> @llvm.riscv.vfrec7.nxv4f64(
-  <vscale x 4 x double>,
-  <vscale x 4 x double>,
-  iXLen, iXLen);
-
 define <vscale x 4 x double> @intrinsic_vfrec7_v_nxv4f64_nxv4f64(<vscale x 4 x double> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv4f64_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
@@ -617,18 +469,12 @@ define <vscale x 4 x double> @intrinsic_vfrec7_v_nxv4f64_nxv4f64(<vscale x 4 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vfrec7.nxv4f64(
-    <vscale x 4 x double> undef,
+    <vscale x 4 x double> poison,
     <vscale x 4 x double> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 4 x double> %a
 }
-
-declare <vscale x 4 x double> @llvm.riscv.vfrec7.mask.nxv4f64(
-  <vscale x 4 x double>,
-  <vscale x 4 x double>,
-  <vscale x 4 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 4 x double> @intrinsic_vfrec7_mask_v_nxv4f64_nxv4f64(<vscale x 4 x i1> %0, <vscale x 4 x double> %1, <vscale x 4 x double> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv4f64_nxv4f64:
@@ -648,11 +494,6 @@ entry:
   ret <vscale x 4 x double> %a
 }
 
-declare <vscale x 8 x double> @llvm.riscv.vfrec7.nxv8f64(
-  <vscale x 8 x double>,
-  <vscale x 8 x double>,
-  iXLen, iXLen);
-
 define <vscale x 8 x double> @intrinsic_vfrec7_v_nxv8f64_nxv8f64(<vscale x 8 x double> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_v_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
@@ -663,18 +504,12 @@ define <vscale x 8 x double> @intrinsic_vfrec7_v_nxv8f64_nxv8f64(<vscale x 8 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vfrec7.nxv8f64(
-    <vscale x 8 x double> undef,
+    <vscale x 8 x double> poison,
     <vscale x 8 x double> %0,
     iXLen 0, iXLen %1)
 
   ret <vscale x 8 x double> %a
 }
-
-declare <vscale x 8 x double> @llvm.riscv.vfrec7.mask.nxv8f64(
-  <vscale x 8 x double>,
-  <vscale x 8 x double>,
-  <vscale x 8 x i1>,
-  iXLen, iXLen, iXLen);
 
 define <vscale x 8 x double> @intrinsic_vfrec7_mask_v_nxv8f64_nxv8f64(<vscale x 8 x i1> %0, <vscale x 8 x double> %1, <vscale x 8 x double> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv8f64_nxv8f64:

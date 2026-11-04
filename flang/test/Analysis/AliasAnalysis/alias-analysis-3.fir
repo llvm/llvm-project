@@ -34,8 +34,7 @@ func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = 
   %0 = fir.address_of(@_QMmEa) {test.ptr = "a"} : !fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>
   %1 = fir.embox %arg1 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %1 to %arg0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %2 = fir.field_index pointer_component, !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>
-  %3 = fir.coordinate_of %0, %2 : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %3 = fir.coordinate_of %0, pointer_component : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %5 = fir.box_addr %4 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %6 = fir.convert %5 : (!fir.ptr<f32>) -> !fir.ref<f32>
@@ -71,12 +70,10 @@ fir.global @_QMmEa : !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}
 }
 func.func @_QMmPtest(%arg0: !fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>> {fir.bindc_name = "b"}, %arg1: !fir.ref<f32> {fir.bindc_name = "x", fir.target}) attributes {test.ptr = "func"} {
   %0 = fir.address_of(@_QMmEa) {test.ptr = "a"} : !fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>
-  %1 = fir.field_index pointer_component, !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>
-  %2 = fir.coordinate_of %0, %1 : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %2 = fir.coordinate_of %0, pointer_component : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %3 = fir.embox %arg1 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %3 to %2 : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %4 = fir.field_index pointer_component, !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>
-  %5 = fir.coordinate_of %arg0, %4 : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %5 = fir.coordinate_of %arg0, pointer_component : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %7 = fir.box_addr %6 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %8 = fir.convert %7 : (!fir.ptr<f32>) -> !fir.ref<f32>
@@ -106,12 +103,10 @@ func.func private @_QPtest2(!fir.ref<f32>)
 // CHECK: func.region0#0 <-> func.region0#1: NoAlias
 
 func.func @_QMmPtest(%arg0: !fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>> {fir.bindc_name = "b"}, %arg2: !fir.ref<f32> {fir.bindc_name = "x", fir.target}) attributes {test.ptr = "func"} {
-  %0 = fir.field_index pointer_component, !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>
-  %1 = fir.coordinate_of %arg0, %0 : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %1 = fir.coordinate_of %arg0, pointer_component : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %2 = fir.embox %arg2 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %2 to %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %3 = fir.field_index pointer_component, !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>
-  %4 = fir.coordinate_of %arg1, %3 : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %4 = fir.coordinate_of %arg1, pointer_component : (!fir.ref<!fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %5 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.box_addr %5 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %7 = fir.convert %6 : (!fir.ptr<f32>) -> !fir.ref<f32>
@@ -140,13 +135,11 @@ func.func private @_QPtest2(!fir.ref<f32>)
 // CHECK: func.region0#0 <-> func.region0#1: NoAlias
 
 func.func @_QMmPtest(%arg0: !fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>> {fir.bindc_name = "b"}) attributes {test.ptr = "func"} {
-  %0 = fir.field_index allocatable_component, !fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>
-  %1 = fir.coordinate_of %arg0, %0 : (!fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %1 = fir.coordinate_of %arg0, allocatable_component : (!fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %2 = fir.allocmem f32 {uniq_name = "_QMmEallocatable_component.alloc"}
   %3 = fir.embox %2 : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
   fir.store %3 to %1 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %4 = fir.field_index allocatable_component, !fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>
-  %5 = fir.coordinate_of %arg1, %4 : (!fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %5 = fir.coordinate_of %arg1, allocatable_component : (!fir.ref<!fir.type<_QMmTt{allocatable_component:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %6 = fir.load %5 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %7 = fir.box_addr %6 : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %8 = fir.convert %7 : (!fir.heap<f32>) -> !fir.ref<f32>

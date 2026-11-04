@@ -1,18 +1,13 @@
-<!--===- docs/ParserCombinators.md 
-  
+<!--===- docs/ParserCombinators.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Parser Combinators
 
-```{contents}
----
-local:
----
-```
 
 This document is a primer on Parser Combinators and their use in Flang.
 
@@ -63,6 +58,7 @@ These objects and functions are (or return) the fundamental parsers:
   the value that the parser never returns.
 * `nextCh` consumes the next character and returns its location,
   and fails at EOF.
+* `consumedAllInput` is equivalent, but preferable, to `!nextCh`.
 * `"xyz"_ch` succeeds if the next character consumed matches any of those
   in the string and returns its location.  Be advised that the source
   will have been normalized to lower case (miniscule) letters outside

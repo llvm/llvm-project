@@ -19,7 +19,8 @@ using namespace lld::macho;
 int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                        const relocation_info rel) const {
   if (rel.r_type != ARM64_RELOC_UNSIGNED &&
-      rel.r_type != ARM64_RELOC_SUBTRACTOR) {
+      rel.r_type != ARM64_RELOC_SUBTRACTOR &&
+      rel.r_type != ARM64_RELOC_AUTHENTICATED_POINTER) {
     // All other reloc types should use the ADDEND relocation to store their
     // addends.
     // TODO(gkm): extract embedded addend just so we can assert that it is 0
@@ -28,6 +29,8 @@ int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + offset + rel.r_address;
+  if (rel.r_type == ARM64_RELOC_AUTHENTICATED_POINTER)
+    return static_cast<int32_t>(read32le(loc));
   switch (rel.r_length) {
   case 2:
     return static_cast<int32_t>(read32le(loc));
@@ -38,7 +41,7 @@ int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
   }
 }
 
-static void writeValue(uint8_t *loc, const Reloc &r, uint64_t value) {
+static void writeValue(uint8_t *loc, const Relocation &r, uint64_t value) {
   switch (r.length) {
   case 2:
     checkInt(loc, r, value, 32);
@@ -57,7 +60,7 @@ static void writeValue(uint8_t *loc, const Reloc &r, uint64_t value) {
 // instruction has opcode & register-operand bits set, with immediate
 // operands zeroed. We read it from text, OR-in the immediate
 // operands, then write-back the completed instruction.
-void ARM64Common::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
+void ARM64Common::relocateOne(uint8_t *loc, const Relocation &r, uint64_t value,
                               uint64_t pc) const {
   auto loc32 = reinterpret_cast<uint32_t *>(loc);
   uint32_t base = ((r.length == 2) ? read32le(loc) : 0);
@@ -110,7 +113,7 @@ void ARM64Common::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   write32le(loc, instruction);
 }
 
-void ARM64Common::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+void ARM64Common::handleDtraceReloc(const Symbol *sym, const Relocation &r,
                                     uint8_t *loc) const {
   assert(r.type == ARM64_RELOC_BRANCH26);
 
@@ -138,12 +141,12 @@ static void reportUnalignedLdrStr(Twine loc, uint64_t va, int align,
         "-byte aligned");
 }
 
-void macho::reportUnalignedLdrStr(void *loc, const lld::macho::Reloc &r,
-                                  uint64_t va, int align) {
+void macho::reportUnalignedLdrStr(void *loc, const Relocation &r, uint64_t va,
+                                  int align) {
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;
   const InputSection *isec = offsetToInputSection(&off);
   std::string locStr = isec ? isec->getLocation(off) : "(invalid location)";
-  ::reportUnalignedLdrStr(locStr, va, align, r.referent.dyn_cast<Symbol *>());
+  ::reportUnalignedLdrStr(locStr, va, align, dyn_cast<Symbol *>(r.referent));
 }
 
 void macho::reportUnalignedLdrStr(void *loc, lld::macho::SymbolDiagnostic d,

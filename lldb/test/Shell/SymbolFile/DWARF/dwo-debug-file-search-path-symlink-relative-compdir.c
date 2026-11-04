@@ -23,7 +23,7 @@
 // RUN:   -O "settings append target.debug-file-search-paths %t.symlink_to_compdir" \
 // RUN:   -o "b main" -o "run" -o "p num" --batch 2>&1 | FileCheck %s
 
-// CHECK-NOT: warning: {{.*}}main unable to locate separate debug file (dwo, dwp). Debugging will be degraded.
+// CHECK-NOT: warning: {{.*}}main unable to locate separate debug file (dwo, dwp). Debugging will be degraded
 // CHECK: (int) 5
 
 int num = 5;

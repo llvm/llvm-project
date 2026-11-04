@@ -19,11 +19,11 @@ module m
     !ERROR: Name in DEALLOCATE statement is not definable
     !BECAUSE: 'mv1' may not be defined in pure subprogram 'subr' because it is host-associated
     deallocate(mv1%pc)
-    !ERROR: Object in DEALLOCATE statement is not deallocatable
-    !BECAUSE: 'pp1' is polymorphic in a pure subprogram
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'pp1' is a whole polymorphic object in a pure subprogram
     deallocate(pp1)
-    !ERROR: Object in DEALLOCATE statement is not deallocatable
-    !BECAUSE: 'pc' is polymorphic in a pure subprogram
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'pc' is a whole polymorphic object in a pure subprogram
     deallocate(pp2%pc)
     !ERROR: Object in DEALLOCATE statement is not deallocatable
     !BECAUSE: 'mp2' has polymorphic component '%pc' in a pure subprogram

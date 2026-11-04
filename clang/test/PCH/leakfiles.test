@@ -1,9 +1,8 @@
 // Test that compiling using a PCH doesn't leak file descriptors.
 // https://bugs.chromium.org/p/chromium/issues/detail?id=924225
 //
-// This test requires bash loops and ulimit.
-// REQUIRES: shell
-// UNSUPPORTED: target={{.*win32.*}}
+// This test uses ulimit.
+// UNSUPPORTED: system-windows
 //
 // Set up source files. lib/lib.h includes lots of lib*.h files in that dir.
 // client.c includes lib/lib.h, and also the individual files directly.
@@ -12,10 +11,10 @@
 // RUN: mkdir %t
 // RUN: cd %t
 // RUN: mkdir lib
-// RUN: for i in {1..300}; do touch lib/lib$i.h; done
-// RUN: for i in {1..300}; do echo "#include \"lib$i.h\"" >> lib/lib.h; done
+// RUN: %python -c "from pathlib import Path; list(map(lambda i: Path(f'lib/lib{i}.h').touch(), range(1, 301)))"
+// RUN: %python -c "for i in range(1, 301): print(f'#include \"lib{i}.h\"')" > lib/lib.h
 // RUN: echo "#include \"lib/lib.h\"" > client.c
-// RUN: for i in {1..300}; do echo "#include \"lib/lib$i.h\"" >> client.c; done
+// RUN: %python -c "for i in range(1, 301): print(f'#include \"lib/lib{i}.h\"')" > client.c
 //
 // We want to verify that we don't hold all the files open at the same time.
 // This is important e.g. on mac, which has a low default FD limit.

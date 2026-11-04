@@ -709,51 +709,43 @@ define <2 x i16> @test_v2f16_oeq_q(<2 x i16> %a, <2 x i16> %b, <2 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
+; X86-NEXT:    vucomish 10(%ebp), %xmm3
+; X86-NEXT:    setnp %cl
+; X86-NEXT:    sete %al
+; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    vucomish 8(%ebp), %xmm2
-; X86-NEXT:    setnp %al
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb %al, %cl
-; X86-NEXT:    setne %al
-; X86-NEXT:    kmovd %eax, %k0
-; X86-NEXT:    kshiftlb $7, %k0, %k0
-; X86-NEXT:    kshiftrb $7, %k0, %k0
-; X86-NEXT:    vpsrld $16, %xmm2, %xmm2
-; X86-NEXT:    vucomish 10(%ebp), %xmm2
-; X86-NEXT:    setnp %al
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb %al, %cl
-; X86-NEXT:    setne %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $6, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k1
+; X86-NEXT:    setnp %cl
+; X86-NEXT:    sete %dl
+; X86-NEXT:    andb %cl, %dl
+; X86-NEXT:    vmovd %edx, %xmm2
+; X86-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %k1
 ; X86-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_v2f16_oeq_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vucomish %xmm3, %xmm2
+; X64-NEXT:    vpsrld $16, %xmm3, %xmm4
+; X64-NEXT:    vpsrld $16, %xmm2, %xmm5
+; X64-NEXT:    vucomish %xmm4, %xmm5
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    sete %cl
-; X64-NEXT:    testb %al, %cl
-; X64-NEXT:    setne %al
-; X64-NEXT:    kmovd %eax, %k0
-; X64-NEXT:    kshiftlb $7, %k0, %k0
-; X64-NEXT:    kshiftrb $7, %k0, %k0
-; X64-NEXT:    vpsrld $16, %xmm3, %xmm3
-; X64-NEXT:    vpsrld $16, %xmm2, %xmm2
+; X64-NEXT:    andb %al, %cl
 ; X64-NEXT:    vucomish %xmm3, %xmm2
 ; X64-NEXT:    setnp %al
-; X64-NEXT:    sete %cl
-; X64-NEXT:    testb %al, %cl
-; X64-NEXT:    setne %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $6, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k1
+; X64-NEXT:    sete %dl
+; X64-NEXT:    andb %al, %dl
+; X64-NEXT:    vmovd %edx, %xmm2
+; X64-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
+; X64-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cond = call <2 x i1> @llvm.experimental.constrained.fcmp.v2f16(
                                                <2 x half> %f1, <2 x half> %f2, metadata !"oeq",
@@ -769,39 +761,35 @@ define <2 x i16> @test_v2f16_ogt_q(<2 x i16> %a, <2 x i16> %b, <2 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
+; X86-NEXT:    vcomish 10(%ebp), %xmm3
+; X86-NEXT:    seta %al
 ; X86-NEXT:    vcomish 8(%ebp), %xmm2
-; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k0
-; X86-NEXT:    kshiftlb $7, %k0, %k0
-; X86-NEXT:    kshiftrb $7, %k0, %k0
-; X86-NEXT:    vpsrld $16, %xmm2, %xmm2
-; X86-NEXT:    vcomish 10(%ebp), %xmm2
-; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $6, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k1
+; X86-NEXT:    seta %cl
+; X86-NEXT:    vmovd %ecx, %xmm2
+; X86-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %k1
 ; X86-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_v2f16_ogt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcomish %xmm3, %xmm2
+; X64-NEXT:    vpsrld $16, %xmm3, %xmm4
+; X64-NEXT:    vpsrld $16, %xmm2, %xmm5
+; X64-NEXT:    vcomish %xmm4, %xmm5
 ; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k0
-; X64-NEXT:    kshiftlb $7, %k0, %k0
-; X64-NEXT:    kshiftrb $7, %k0, %k0
-; X64-NEXT:    vpsrld $16, %xmm3, %xmm3
-; X64-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; X64-NEXT:    vcomish %xmm3, %xmm2
-; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $6, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k1
+; X64-NEXT:    seta %cl
+; X64-NEXT:    vmovd %ecx, %xmm2
+; X64-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; X64-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f16(
                                                <2 x half> %f1, <2 x half> %f2, metadata !"ogt",
@@ -817,81 +805,53 @@ define <4 x i16> @test_v4f16_oge_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vucomish 8(%ebp), %xmm2
-; X86-NEXT:    setae %al
-; X86-NEXT:    kmovd %eax, %k0
-; X86-NEXT:    kshiftlb $7, %k0, %k0
-; X86-NEXT:    kshiftrb $7, %k0, %k0
 ; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X86-NEXT:    vucomish 10(%ebp), %xmm3
 ; X86-NEXT:    setae %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $6, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
-; X86-NEXT:    movb $-5, %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kandb %k1, %k0, %k0
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; X86-NEXT:    vucomish 12(%ebp), %xmm3
+; X86-NEXT:    vucomish 8(%ebp), %xmm2
+; X86-NEXT:    setae %cl
+; X86-NEXT:    vmovd %ecx, %xmm3
+; X86-NEXT:    vpinsrb $1, %eax, %xmm3, %xmm3
+; X86-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; X86-NEXT:    vucomish 12(%ebp), %xmm4
 ; X86-NEXT:    setae %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $5, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
-; X86-NEXT:    movb $-9, %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kandb %k1, %k0, %k0
+; X86-NEXT:    vpinsrb $2, %eax, %xmm3, %xmm3
 ; X86-NEXT:    vpsrlq $48, %xmm2, %xmm2
 ; X86-NEXT:    vucomish 14(%ebp), %xmm2
 ; X86-NEXT:    setae %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $4, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k1
+; X86-NEXT:    vpinsrb $3, %eax, %xmm3, %xmm2
+; X86-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %k1
 ; X86-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_v4f16_oge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vucomish %xmm3, %xmm2
-; X64-NEXT:    setae %al
-; X64-NEXT:    kmovd %eax, %k0
-; X64-NEXT:    kshiftlb $7, %k0, %k0
-; X64-NEXT:    kshiftrb $7, %k0, %k0
 ; X64-NEXT:    vpsrld $16, %xmm3, %xmm4
 ; X64-NEXT:    vpsrld $16, %xmm2, %xmm5
 ; X64-NEXT:    vucomish %xmm4, %xmm5
 ; X64-NEXT:    setae %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $6, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k0
-; X64-NEXT:    movb $-5, %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kandb %k1, %k0, %k0
-; X64-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; X64-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; X64-NEXT:    vucomish %xmm4, %xmm5
+; X64-NEXT:    vucomish %xmm3, %xmm2
+; X64-NEXT:    setae %cl
+; X64-NEXT:    vmovd %ecx, %xmm4
+; X64-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; X64-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm3[1,1,3,3]
+; X64-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm2[1,1,3,3]
+; X64-NEXT:    vucomish %xmm5, %xmm6
 ; X64-NEXT:    setae %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $5, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k0
-; X64-NEXT:    movb $-9, %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kandb %k1, %k0, %k0
+; X64-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
 ; X64-NEXT:    vpsrlq $48, %xmm3, %xmm3
 ; X64-NEXT:    vpsrlq $48, %xmm2, %xmm2
 ; X64-NEXT:    vucomish %xmm3, %xmm2
 ; X64-NEXT:    setae %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $4, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k1
+; X64-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm2
+; X64-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f16(
                                                <4 x half> %f1, <4 x half> %f2, metadata !"oge",
@@ -907,85 +867,57 @@ define <4 x i16> @test_v4f16_olt_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovsh 8(%ebp), %xmm3
-; X86-NEXT:    vcomish %xmm2, %xmm3
-; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k0
-; X86-NEXT:    kshiftlb $7, %k0, %k0
-; X86-NEXT:    kshiftrb $7, %k0, %k0
 ; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
-; X86-NEXT:    vmovsh 10(%ebp), %xmm4
+; X86-NEXT:    vmovsh {{.*#+}} xmm4 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm3, %xmm4
 ; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $6, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
-; X86-NEXT:    movb $-5, %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kandb %k1, %k0, %k0
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; X86-NEXT:    vmovsh 12(%ebp), %xmm4
-; X86-NEXT:    vcomish %xmm3, %xmm4
-; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $5, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
-; X86-NEXT:    movb $-9, %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kandb %k1, %k0, %k0
-; X86-NEXT:    vpsrlq $48, %xmm2, %xmm2
-; X86-NEXT:    vmovsh 14(%ebp), %xmm3
+; X86-NEXT:    vmovsh {{.*#+}} xmm3 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm2, %xmm3
+; X86-NEXT:    seta %cl
+; X86-NEXT:    vmovd %ecx, %xmm3
+; X86-NEXT:    vpinsrb $1, %eax, %xmm3, %xmm3
+; X86-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; X86-NEXT:    vmovsh {{.*#+}} xmm5 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vcomish %xmm4, %xmm5
 ; X86-NEXT:    seta %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
-; X86-NEXT:    kshiftrb $4, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k1
+; X86-NEXT:    vpinsrb $2, %eax, %xmm3, %xmm3
+; X86-NEXT:    vpsrlq $48, %xmm2, %xmm2
+; X86-NEXT:    vmovsh {{.*#+}} xmm4 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vcomish %xmm2, %xmm4
+; X86-NEXT:    seta %al
+; X86-NEXT:    vpinsrb $3, %eax, %xmm3, %xmm2
+; X86-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %k1
 ; X86-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_v4f16_olt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcomish %xmm2, %xmm3
-; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k0
-; X64-NEXT:    kshiftlb $7, %k0, %k0
-; X64-NEXT:    kshiftrb $7, %k0, %k0
 ; X64-NEXT:    vpsrld $16, %xmm2, %xmm4
 ; X64-NEXT:    vpsrld $16, %xmm3, %xmm5
 ; X64-NEXT:    vcomish %xmm4, %xmm5
 ; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $6, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k0
-; X64-NEXT:    movb $-5, %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kandb %k1, %k0, %k0
-; X64-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; X64-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm3[1,1,3,3]
-; X64-NEXT:    vcomish %xmm4, %xmm5
+; X64-NEXT:    vcomish %xmm2, %xmm3
+; X64-NEXT:    seta %cl
+; X64-NEXT:    vmovd %ecx, %xmm4
+; X64-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; X64-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
+; X64-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
+; X64-NEXT:    vcomish %xmm5, %xmm6
 ; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $5, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k0
-; X64-NEXT:    movb $-9, %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kandb %k1, %k0, %k0
+; X64-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
 ; X64-NEXT:    vpsrlq $48, %xmm2, %xmm2
 ; X64-NEXT:    vpsrlq $48, %xmm3, %xmm3
 ; X64-NEXT:    vcomish %xmm2, %xmm3
 ; X64-NEXT:    seta %al
-; X64-NEXT:    kmovd %eax, %k1
-; X64-NEXT:    kshiftlb $7, %k1, %k1
-; X64-NEXT:    kshiftrb $4, %k1, %k1
-; X64-NEXT:    korb %k1, %k0, %k1
+; X64-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm2
+; X64-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f16(
                                                <4 x half> %f1, <4 x half> %f2, metadata !"olt",

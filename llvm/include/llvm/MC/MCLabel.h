@@ -13,6 +13,8 @@
 #ifndef LLVM_MC_MCLABEL_H
 #define LLVM_MC_MCLABEL_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class raw_ostream;
@@ -40,10 +42,10 @@ public:
   unsigned incInstance() { return ++Instance; }
 
   /// Print the value to the stream \p OS.
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Print the value to stderr.
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCLabel &Label) {

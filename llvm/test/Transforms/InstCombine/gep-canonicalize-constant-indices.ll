@@ -14,8 +14,8 @@ declare void @use(i1)
 define ptr @basic(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP2]], i64 [[B:%.*]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
@@ -27,7 +27,7 @@ define ptr @basic(ptr %p, i64 %a, i64 %b) {
 ; GEP with the last index being a constant should also be swapped.
 define ptr @partialConstant1(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @partialConstant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[B:%.*]]
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds [4 x i32], ptr %p, i64 %a, i64 1
@@ -38,7 +38,7 @@ define ptr @partialConstant1(ptr %p, i64 %a, i64 %b) {
 ; Negative test. GEP should not be swapped if the last index is not a constant.
 define ptr @partialConstant2(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @partialConstant2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[B:%.*]]
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds [4 x i32], ptr %p, i64 1, i64 %a
@@ -50,10 +50,9 @@ define ptr @partialConstant2(ptr %p, i64 %a, i64 %b) {
 ; result = ((ptr) p + a) + 3
 define ptr @merge(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
-; CHECK-NEXT:    ret ptr [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
   %2 = getelementptr inbounds i32, ptr %1, i64 %a
@@ -67,13 +66,11 @@ define ptr @merge(ptr %p, i64 %a) {
 ; result = (ptr) ((ptr) ((ptr) ptr + a) + (a * b)) + 9
 define ptr @nested(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @nested(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 128
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i64 16
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2 x i8], ptr [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 160
+; CHECK-NEXT:    ret ptr [[TMP4]]
 ;
   %1 = getelementptr inbounds <3 x i32>, ptr %p, i64 1
   %2 = getelementptr inbounds i8, ptr %1, i64 %a
@@ -89,7 +86,7 @@ define ptr @multipleUses1(ptr %p) {
 ; CHECK-LABEL: @multipleUses1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
@@ -102,7 +99,7 @@ define ptr @multipleUses1(ptr %p) {
 define ptr @multipleUses2(ptr %p, i64 %a) {
 ; CHECK-LABEL: @multipleUses2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[A:%.*]]
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
@@ -117,11 +114,146 @@ define ptr @multipleUses3(ptr %p) {
 ; CHECK-LABEL: @multipleUses3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
   %2 = ptrtoint ptr %1 to i64
   %3 = getelementptr inbounds i32, ptr %1, i64 %2
   ret ptr %3
+}
+
+define ptr @merge_nuw(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_nuw_inbounds(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_inbounds(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr inbounds nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr inbounds nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+; It would be okay to preserve nusw here, as the constant addition does not
+; overflow.
+define ptr @merge_nuw_nusw(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_nusw(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nusw nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr nusw nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nusw nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+; Can't preserve nusw on the final GEP
+define ptr @merge_nuw_nusw_overflow(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_nusw_overflow(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 -2305843009213693952
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nusw nuw i8, ptr %p, i64 u0x7000000000000000
+  %gep2 = getelementptr nusw nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nusw nuw i8, ptr %gep2, i64 u0x7000000000000000
+  ret ptr %gep3
+}
+
+define ptr @merge_missing_nuw1(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_missing_nuw1(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr i8, ptr %p, i64 1
+  %gep2 = getelementptr nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_missing_nuw2(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_missing_nuw2(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_missing_nuw3(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_missing_nuw3(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_nuw_missing_inbounds(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_missing_inbounds(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr inbounds nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr inbounds nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_nuw_missing_nusw(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_missing_nusw(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nusw nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nusw nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_inbounds_missing_nuw(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_inbounds_missing_nuw(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr inbounds i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr inbounds nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+define ptr @merge_nusw_missing_nuw(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nusw_missing_nuw(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nusw nuw i8, ptr %p, i64 1
+  %gep2 = getelementptr nusw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nusw nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
 }

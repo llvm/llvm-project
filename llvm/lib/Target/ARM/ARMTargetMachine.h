@@ -20,20 +20,13 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
-public:
-  enum ARMABI {
-    ARM_ABI_UNKNOWN,
-    ARM_ABI_APCS,
-    ARM_ABI_AAPCS, // ARM EABI
-    ARM_ABI_AAPCS16
-  } TargetABI;
-
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
@@ -46,8 +39,7 @@ public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool isLittle);
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
@@ -57,24 +49,25 @@ public:
   const ARMSubtarget *getSubtargetImpl() const = delete;
   bool isLittleEndian() const { return isLittle; }
 
+  /// Returns the floating-point ABI in effect for \p M: the "float-abi" module
+  /// flag if present, otherwise the ABI implied by the target triple. An
+  /// explicit -target-abi=aapcs16 forces the hard-float ABI.
+  FloatABI::ABIType getFloatABI(const Module &M) const;
+
+  /// Returns the ABI in effect for \p M: the "target-abi" module flag if
+  /// present, otherwise the legacy -target-abi option; falling back to the
+  /// TargetMachine-level ABI computed at construction.
+  ARM::ARMABI getEffectiveABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
-  }
-
-  bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() ||
-           TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
@@ -84,9 +77,24 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
+  }
+
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    return false;
   }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
@@ -96,6 +104,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

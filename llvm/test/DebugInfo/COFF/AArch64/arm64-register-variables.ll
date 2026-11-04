@@ -21,18 +21,18 @@
 ; }
 
 
-; OBJ:   DefRangeRegisterRelSym {
-; OBJ:     Kind: S_DEFRANGE_REGISTER_REL (0x1145)
-; OBJ:     BaseRegister: ARM64_SP (0x51)
-; OBJ:     HasSpilledUDTMember: No
-; OBJ:     OffsetInParent: 0
-; OBJ:     BasePointerOffset: 12
-; OBJ:     LocalVariableAddrRange {
-; OBJ:       OffsetStart: .text+0x14
-; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x30
-; OBJ:     }
-; OBJ:   }
+; OBJ:        DefRangeRegisterRelSym {
+; OBJ-NEXT:     Kind: S_DEFRANGE_REGISTER_REL (0x1145)
+; OBJ-NEXT:     BaseRegister: ARM64_SP (0x51)
+; OBJ-NEXT:     HasSpilledUDTMember: No
+; OBJ-NEXT:     OffsetInParent: 0
+; OBJ-NEXT:     BasePointerOffset: 12
+; OBJ-NEXT:     LocalVariableAddrRange {
+; OBJ-NEXT:       OffsetStart: .text+0x10
+; OBJ-NEXT:       ISectStart: 0x0
+; OBJ-NEXT:       Range: 0x2C
+; OBJ-NEXT:     }
+; OBJ-NEXT:   }
 
 ; ModuleID = 't.cpp'
 source_filename = "test/DebugInfo/COFF/register-variables-arm64.ll"

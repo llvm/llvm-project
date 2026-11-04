@@ -86,7 +86,7 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
   if (!Reg.isVirtual()) {
     // FIXME: This was probably a copy to a virtual register that does have a
     // type we could use.
-    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, TRI);
+    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     return RC ? &getRegBankFromRegClass(*RC, LLT()) : nullptr;
   }
 
@@ -97,16 +97,6 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
           dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank))
     return &getRegBankFromRegClass(*RC, MRI.getType(Reg));
   return nullptr;
-}
-
-const TargetRegisterClass *
-RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
-                                         const TargetRegisterInfo &TRI) const {
-  assert(Reg.isPhysical() && "Reg must be a physreg");
-  const auto [RegRCIt, Inserted] = PhysRegMinimalRCs.try_emplace(Reg);
-  if (Inserted)
-    RegRCIt->second = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
-  return RegRCIt->second;
 }
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
@@ -283,13 +273,13 @@ RegisterBankInfo::getPartialMapping(unsigned StartIdx, unsigned Length,
   ++NumPartialMappingsAccessed;
 
   hash_code Hash = hashPartialMapping(StartIdx, Length, &RegBank);
-  const auto &It = MapOfPartialMappings.find(Hash);
-  if (It != MapOfPartialMappings.end())
+  auto [It, Inserted] = MapOfPartialMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumPartialMappingsCreated;
 
-  auto &PartMapping = MapOfPartialMappings[Hash];
+  auto &PartMapping = It->second;
   PartMapping = std::make_unique<PartialMapping>(StartIdx, Length, RegBank);
   return *PartMapping;
 }
@@ -308,7 +298,7 @@ hashValueMapping(const RegisterBankInfo::PartialMapping *BreakDown,
   SmallVector<size_t, 8> Hashes(NumBreakDowns);
   for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
     Hashes.push_back(hash_value(BreakDown[Idx]));
-  return hash_combine_range(Hashes.begin(), Hashes.end());
+  return hash_combine_range(Hashes);
 }
 
 const RegisterBankInfo::ValueMapping &
@@ -317,13 +307,13 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
   ++NumValueMappingsAccessed;
 
   hash_code Hash = hashValueMapping(BreakDown, NumBreakDowns);
-  const auto &It = MapOfValueMappings.find(Hash);
-  if (It != MapOfValueMappings.end())
+  auto [It, Inserted] = MapOfValueMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumValueMappingsCreated;
 
-  auto &ValMapping = MapOfValueMappings[Hash];
+  auto &ValMapping = It->second;
   ValMapping = std::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
   return *ValMapping;
 }
@@ -391,13 +381,13 @@ RegisterBankInfo::getInstructionMappingImpl(
 
   hash_code Hash =
       hashInstructionMapping(ID, Cost, OperandsMapping, NumOperands);
-  const auto &It = MapOfInstructionMappings.find(Hash);
-  if (It != MapOfInstructionMappings.end())
+  auto [It, Inserted] = MapOfInstructionMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumInstructionMappingsCreated;
 
-  auto &InstrMapping = MapOfInstructionMappings[Hash];
+  auto &InstrMapping = It->second;
   InstrMapping = std::make_unique<InstructionMapping>(
       ID, Cost, OperandsMapping, NumOperands);
   return *InstrMapping;
@@ -502,8 +492,7 @@ TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
-    // Because this is expensive, we'll cache the register class by calling
-    auto *RC = getMinimalPhysRegClass(Reg, TRI);
+    auto *RC = TRI.getMinimalPhysRegClass(Reg);
     assert(RC && "Expecting Register class");
     return TRI.getRegSizeInBits(*RC);
   }
@@ -722,7 +711,7 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
     // of the instruction.
     // The rationale is that this generic code cannot guess how the
     // target plans to split the input type.
-    NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
+    NewVReg = MRI.createGenericVirtualRegister(LLT::integer(PartMap->Length));
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
   }

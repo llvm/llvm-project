@@ -5,7 +5,7 @@
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
-// RUN: llvm-readobj --dynamic-table -r %tout | FileCheck %s
+// RUN: llvm-readelf -S --dynamic-table -r %tout | FileCheck %s
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64_be %S/Inputs/shared2.s -o %t1.be.o
 // RUN: ld.lld %t1.be.o --shared --soname=t.so -o %t.be.so
@@ -13,24 +13,26 @@
 // RUN: ld.lld --hash-style=sysv %t.be.so %t.be.o -o %t.be
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.be | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.be | FileCheck %s --check-prefix=GOTPLT_BE
-// RUN: llvm-readobj --dynamic-table -r %t.be | FileCheck %s
+// RUN: llvm-readelf -S --dynamic-table -r %t.be | FileCheck %s
 
-// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
-// CHECK: DynamicSection [
-// CHECK:   0x0000000000000008 RELASZ               48 (bytes)
-// CHECK:   0x0000000000000002 PLTRELSZ             48 (bytes)
+// CHECK-LABEL: Section Headers:
+///       Name  Type     Address          Off    Size   ES Flg Lk Inf Al
+// CHECK: .iplt PROGBITS 0000000000210330 000330 000020 00 AXy  0   0 16
 
-// Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
-// CHECK: Relocations [
-// CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x230468 R_AARCH64_IRELATIVE - 0x2102D8
-// CHECK-NEXT:     0x230470 R_AARCH64_IRELATIVE - 0x2102DC
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Section (5) .rela.plt {
-// CHECK-NEXT:     0x230458 R_AARCH64_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x230460 R_AARCH64_JUMP_SLOT zed2 0x0
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+/// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
+// CHECK-LABEL: Dynamic section at offset 0x350 contains 15 entries:
+// CHECK: 0x0000000000000008 (RELASZ)   48 (bytes)
+// CHECK: 0x0000000000000002 (PLTRELSZ) 48 (bytes)
+
+/// Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
+// CHECK-LABEL: Relocation section '.rela.dyn' at offset 0x278 contains 2 entries:
+// CHECK-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+// CHECK-NEXT:  0000000000230468  0000000000000408 R_AARCH64_IRELATIVE                     2102d8
+// CHECK-NEXT:  0000000000230470  0000000000000408 R_AARCH64_IRELATIVE                     2102dc
+// CHECK-LABEL: Relocation section '.rela.plt' at offset 0x2a8 contains 2 entries:
+// CHECK-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+// CHECK-NEXT:  0000000000230458  0000000100000402 R_AARCH64_JUMP_SLOT    0000000000000000 bar2 + 0
+// CHECK-NEXT:  0000000000230460  0000000200000402 R_AARCH64_JUMP_SLOT    0000000000000000 zed2 + 0
 
 // Check that .got.plt entries point back to PLT header
 // GOTPLT: Contents of section .got.plt:

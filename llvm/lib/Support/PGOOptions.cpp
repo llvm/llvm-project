@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/PGOOptions.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 
 PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
                        std::string ProfileRemappingFile,
-                       std::string MemoryProfile,
-                       IntrusiveRefCntPtr<vfs::FileSystem> FS, PGOAction Action,
+                       std::string MemoryProfile, PGOAction Action,
                        CSPGOAction CSAction, ColdFuncOpt ColdType,
                        bool DebugInfoForProfiling, bool PseudoProbeForProfiling,
                        bool AtomicCounterUpdate)
@@ -24,7 +22,7 @@ PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
       DebugInfoForProfiling(DebugInfoForProfiling ||
                             (Action == SampleUse && !PseudoProbeForProfiling)),
       PseudoProbeForProfiling(PseudoProbeForProfiling),
-      AtomicCounterUpdate(AtomicCounterUpdate), FS(std::move(FS)) {
+      AtomicCounterUpdate(AtomicCounterUpdate) {
   // Note, we do allow ProfileFile.empty() for Action=IRUse LTO can
   // callback with IRUse action without ProfileFile.
 
@@ -47,10 +45,6 @@ PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
   assert(this->Action != NoAction || this->CSAction != NoCSAction ||
          !this->MemoryProfile.empty() || this->DebugInfoForProfiling ||
          this->PseudoProbeForProfiling);
-
-  // If we need to use the profile, the VFS cannot be nullptr.
-  assert(this->FS || !(this->Action == IRUse || this->CSAction == CSIRUse ||
-                       !this->MemoryProfile.empty()));
 }
 
 PGOOptions::PGOOptions(const PGOOptions &) = default;

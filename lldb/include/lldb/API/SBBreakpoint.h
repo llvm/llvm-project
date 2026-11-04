@@ -77,6 +77,10 @@ public:
 
   const char *GetCondition();
 
+  void SetConditionMode(lldb::BreakpointConditionMode mode);
+
+  lldb::BreakpointConditionMode GetConditionMode();
+
   void SetAutoContinue(bool auto_continue);
 
   bool GetAutoContinue();
@@ -148,9 +152,20 @@ public:
 
   bool IsHardware() const;
 
-  // Can only be called from a ScriptedBreakpointResolver...
+  /// Make this breakpoint a hardware breakpoint. This will replace all existing
+  /// breakpoint locations with hardware breakpoints. Returns an error if this
+  /// fails, e.g. when there aren't enough hardware resources available.
+  lldb::SBError SetIsHardware(bool is_hardware);
+
+  /// Adds a location to the breakpoint at the address passed in.
+  /// Can only be called from a ScriptedBreakpointResolver...
   SBError
   AddLocation(SBAddress &address);
+  /// Add a "Facade location" to the breakpoint.  This returns the Facade
+  /// Location that was added, which you can then use in
+  /// get_location_description and was_hit in your breakpoint resolver.
+  /// Can only be called from a ScriptedBreakpointResolver.
+  SBBreakpointLocation AddFacadeLocation();
 
   SBStructuredData SerializeToStructuredData();
 
@@ -160,7 +175,7 @@ private:
   friend class SBBreakpointName;
   friend class SBTarget;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBBreakpoint(const lldb::BreakpointSP &bp_sp);

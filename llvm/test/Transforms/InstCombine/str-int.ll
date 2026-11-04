@@ -75,7 +75,7 @@ define i32 @atoi_test() #0 {
 
 define i32 @strtol_not_const_str(ptr %s) #0 {
 ; CHECK-LABEL: @strtol_not_const_str(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nocapture [[S:%.*]], ptr null, i32 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr captures(none) [[S:%.*]], ptr null, i32 10)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @strtol(ptr %s, ptr null, i32 10) #3
@@ -93,7 +93,7 @@ define i32 @atoi_not_const_str(ptr %s) #0 {
 
 define i32 @strtol_not_const_base(i32 %b) #0 {
 ; CHECK-LABEL: @strtol_not_const_base(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nocapture nonnull @.str, ptr null, i32 [[B:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nonnull captures(none) @.str, ptr null, i32 [[B:%.*]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @strtol(ptr @.str, ptr null, i32 %b) #2
@@ -102,7 +102,7 @@ define i32 @strtol_not_const_base(i32 %b) #0 {
 
 define i32 @strtol_long_int() #0 {
 ; CHECK-LABEL: @strtol_long_int(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nocapture nonnull @.str.2, ptr null, i32 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nonnull captures(none) @.str.2, ptr null, i32 10)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @strtol(ptr @.str.2, ptr null, i32 10) #3
@@ -112,7 +112,7 @@ define i32 @strtol_long_int() #0 {
 
 define i32 @strtol_big_overflow() #0 {
 ; CHECK-LABEL: @strtol_big_overflow(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nocapture nonnull @.str.3, ptr null, i32 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtol(ptr nonnull captures(none) @.str.3, ptr null, i32 10)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @strtol(ptr nocapture @.str.3, ptr null, i32 10) #2

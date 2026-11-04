@@ -86,9 +86,14 @@ public:
                                 // macro stringizing or charizing operator.
     CommaAfterElided = 0x200, // The comma following this token was elided (MS).
     IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
-    IsReinjected = 0x800, // A phase 4 token that was produced before and
+    IsReinjected = 0x800,        // A phase 4 token that was produced before and
                           // re-added, e.g. via EnterTokenStream. Annotation
                           // tokens are *not* reinjected.
+    HasSeenNoTrivialPPDirective =
+        0x1000, // Whether we've seen any 'no-trivial' pp-directives before
+                // current position.
+    PhysicalStartOfLine =
+        0x2000, // This token is at the start of a physical line.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -97,12 +102,17 @@ public:
   /// is/isNot - Predicates to check if this token is a specific kind, as in
   /// "if (Tok.is(tok::l_brace)) {...}".
   bool is(tok::TokenKind K) const { return Kind == K; }
-  bool isNot(tok::TokenKind K) const { return Kind != K; }
-  bool isOneOf(tok::TokenKind K1, tok::TokenKind K2) const {
-    return is(K1) || is(K2);
+  template <typename... Ts> bool isOneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (is(Ks) || ...);
   }
-  template <typename... Ts> bool isOneOf(tok::TokenKind K1, Ts... Ks) const {
-    return is(K1) || isOneOf(Ks...);
+
+  bool isNot(tok::TokenKind K) const { return Kind != K; }
+  template <typename... Ts> bool isNoneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (isNot(Ks) && ...);
   }
 
   /// Return true if this is a raw identifier (when lexing
@@ -180,6 +190,34 @@ public:
     PtrData = nullptr;
     UintData = 0;
     Loc = SourceLocation().getRawEncoding();
+  }
+
+  static Token create(tok::TokenKind Kind, SourceLocation Loc,
+                      unsigned Length = 0) {
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setLocation(Loc);
+    Tok.setLength(Length);
+    return Tok;
+  }
+
+  static Token createAnnotation(tok::TokenKind Kind, SourceRange Range,
+                                void *Value = nullptr) {
+    assert(tok::isAnnotation(Kind) && "Expected an annotation token kind");
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setAnnotationRange(Range);
+    Tok.setAnnotationValue(Value);
+    return Tok;
+  }
+
+  static Token createEof(SourceLocation Loc = SourceLocation(),
+                         const void *Data = nullptr) {
+    Token Tok = create(tok::eof, Loc);
+    Tok.setEofData(Data);
+    return Tok;
   }
 
   bool hasPtrData() const { return PtrData != nullptr; }
@@ -275,6 +313,10 @@ public:
   ///
   bool isAtStartOfLine() const { return getFlag(StartOfLine); }
 
+  /// isAtPhysicalStartOfLine - Return true if this token is at the start of a
+  /// physical line.
+  bool isAtPhysicalStartOfLine() const { return getFlag(PhysicalStartOfLine); }
+
   /// Return true if this token has whitespace before it.
   ///
   bool hasLeadingSpace() const { return getFlag(LeadingSpace); }
@@ -288,6 +330,10 @@ public:
 
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
+
+  /// Return true if we have a C++20 modules contextual keyword(export, import
+  /// or module).
+  bool isModuleContextualKeyword(bool AllowExport = true) const;
 
   bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
 
@@ -318,6 +364,10 @@ public:
   /// represented as characters between '<#' and '#>' in the source code. The
   /// lexer uses identifier tokens to represent placeholders.
   bool isEditorPlaceholder() const { return getFlag(IsEditorPlaceholder); }
+
+  bool hasSeenNoTrivialPPDirective() const {
+    return getFlag(HasSeenNoTrivialPPDirective);
+  }
 };
 
 /// Information about the conditional stack (\#if directives)

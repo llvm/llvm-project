@@ -409,6 +409,17 @@ define i1 @trunc_equality_either(i16 %x, i16 %y) {
   ret i1 %c
 }
 
+define i1 @trunc_equality_bool(i8 %a, i8 %b) {
+; CHECK-LABEL: @trunc_equality_bool(
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %at = trunc nuw i8 %a to i1
+  %bt = trunc nuw i8 %b to i1
+  %eq = icmp eq i1 %at, %bt
+  ret i1 %eq
+}
+
 define i1 @trunc_unsigned_nuw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_unsigned_nuw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32

@@ -2,7 +2,7 @@
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -test-lower-to-arm-sme -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
-// DEFINE:   -march=aarch64 -mattr=+sve,+sme-f64f64 \
+// DEFINE:   -march=aarch64 -mattr=+sme,+sme-f64f64 \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
 // DEFINE:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
@@ -52,7 +52,7 @@ func.func @test_outerproduct_with_accumulator_2x2xf64() {
   %ones = arith.constant dense<1> : vector<[2]xi32>
   %f10 = arith.constant 10.0 : f64
 
-  %acc = vector.splat %f10 : vector<[2]x[2]xf64>
+  %acc = vector.broadcast %f10 : f64 to vector<[2]x[2]xf64>
   %step_vector = llvm.intr.stepvector : vector<[2]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[2]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[2]xi32> to vector<[2]xf64>
@@ -108,7 +108,7 @@ func.func @test_masked_outerproduct_with_accumulator_2x2xf64() {
   %ones = arith.constant dense<1> : vector<[2]xi32>
   %f10 = arith.constant 10.0 : f64
 
-  %acc = vector.splat %f10 : vector<[2]x[2]xf64>
+  %acc = vector.broadcast %f10 : f64 to vector<[2]x[2]xf64>
   %step_vector = llvm.intr.stepvector : vector<[2]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[2]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[2]xi32> to vector<[2]xf64>

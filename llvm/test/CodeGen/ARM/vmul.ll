@@ -130,7 +130,6 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vmulQ_lanef32(<4 x float> %arg0_float32x4_t, <2 x float> %arg1_float32x2_t) nounwind readnone {
 ; CHECK-LABEL: test_vmulQ_lanef32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d2 killed $d2 def $q1
 ; CHECK-NEXT:    vmul.f32 q0, q0, d2[1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -142,7 +141,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vmulQ_lanes16(<8 x i16> %arg0_int16x8_t, <4 x i16> %arg1_int16x4_t) nounwind readnone {
 ; CHECK-LABEL: test_vmulQ_lanes16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d2 killed $d2 def $q1
 ; CHECK-NEXT:    vmul.i16 q0, q0, d2[1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -154,7 +152,6 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmulQ_lanes32(<4 x i32> %arg0_int32x4_t, <2 x i32> %arg1_int32x2_t) nounwind readnone {
 ; CHECK-LABEL: test_vmulQ_lanes32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d2 killed $d2 def $q1
 ; CHECK-NEXT:    vmul.i32 q0, q0, d2[1]
 ; CHECK-NEXT:    bx lr
 entry:

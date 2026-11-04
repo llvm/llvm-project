@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
@@ -45,7 +45,7 @@ func.func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
 
 func.func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4xf32>
   vector.transfer_write %vf0, %A[%base]
       {permutation_map = affine_map<(d0) -> (d0)>} :
     vector<4xf32>, memref<?xf32>

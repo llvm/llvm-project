@@ -7,7 +7,7 @@
 ;
 define i32 @no_deps_interchange(ptr nocapture %Arr) {
 ; STATS-LABEL: define i32 @no_deps_interchange(
-; STATS-SAME: ptr nocapture [[ARR:%.*]]) {
+; STATS-SAME: ptr captures(none) [[ARR:%.*]]) {
 ; STATS-NEXT:  [[ENTRY:.*]]:
 ; STATS-NEXT:    br label %[[FOR2:.*]]
 ; STATS:       [[FOR1_HEADER:.*]]:

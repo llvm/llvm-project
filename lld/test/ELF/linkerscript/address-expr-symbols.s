@@ -3,7 +3,7 @@
 
 # RUN: echo "SECTIONS { .bar (foo) : { } };" > %t.script
 # RUN: not ld.lld -o /dev/null --script %t.script %t.o 2>&1 | FileCheck %s
-# CHECK: symbol not found: foo
+# CHECK: error: {{.*}}: symbol not found: foo
 
 # RUN: echo "SECTIONS { .bar : AT(foo) { } };" > %t.script
 # RUN: not ld.lld -o /dev/null --script %t.script %t.o 2>&1 | FileCheck %s

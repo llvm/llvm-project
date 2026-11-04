@@ -1,5 +1,5 @@
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 Function:        func0
 Args:
@@ -15,7 +15,7 @@ Args:
   - String:          ' instructions in function'
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 Function:        func1
 Args:

@@ -29,16 +29,11 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-
-  void Clear() override {
-    m_values.clear();
-    m_value_was_set = false;
-  }
 
   lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const override;
@@ -115,6 +110,11 @@ public:
   Status SetArgs(const Args &args, VarSetOperationType op);
 
 protected:
+  void ClearImpl() override {
+    m_values.clear();
+    m_value_was_set = false;
+  }
+
   typedef std::vector<lldb::OptionValueSP> collection;
 
   uint32_t m_type_mask;

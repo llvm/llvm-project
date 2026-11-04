@@ -13,10 +13,10 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -50,6 +50,12 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
   auto handleImmValue = [&](bool IsSigned, unsigned W) -> uint64_t {
     if (!(IsSigned ? checkFixupInRange(minIntN(W), maxIntN(W))
                    : checkFixupInRange(0, maxUIntN(W))))
+      return 0;
+    return Value;
+  };
+
+  auto handleXImmValue = [&](unsigned W) -> uint64_t {
+    if (!checkFixupInRange(minIntN(W), maxUIntN(W)))
       return 0;
     return Value;
   };
@@ -91,12 +97,18 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
     return handleImmValue(false, 4);
   case SystemZ::FK_390_U8Imm:
     return handleImmValue(false, 8);
+  case SystemZ::FK_390_X8Imm:
+    return handleXImmValue(8);
   case SystemZ::FK_390_U12Imm:
     return handleImmValue(false, 12);
   case SystemZ::FK_390_U16Imm:
     return handleImmValue(false, 16);
+  case SystemZ::FK_390_X16Imm:
+    return handleXImmValue(16);
   case SystemZ::FK_390_U32Imm:
     return handleImmValue(false, 32);
+  case SystemZ::FK_390_X32Imm:
+    return handleXImmValue(32);
   case SystemZ::FK_390_U48Imm:
     return handleImmValue(false, 48);
   }
@@ -110,18 +122,10 @@ public:
   SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
 
   // Override MCAsmBackend
-  unsigned getNumFixupKinds() const override {
-    return SystemZ::NumTargetFixupKinds;
-  }
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
-                             const MCSubtargetInfo *STI) override;
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 };
@@ -144,50 +148,41 @@ SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &
-SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_390_NONE. They
   // do not require any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+  if (mc::isRelocation(Kind))
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < SystemZ::NumTargetFixupKinds &&
          "Invalid kind!");
   return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
 }
 
-bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
-                                                const MCFixup &Fixup,
-                                                const MCValue &, const uint64_t,
-                                                const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
-}
-
-void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
-                                     const MCFixup &Fixup,
-                                     const MCValue &Target,
-                                     MutableArrayRef<char> Data, uint64_t Value,
-                                     bool IsResolved,
-                                     const MCSubtargetInfo *STI) const {
+void SystemZMCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                     const MCValue &Target, uint8_t *Data,
+                                     uint64_t Value, bool IsResolved) {
+  if (Target.getSpecifier())
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return;
-  unsigned Offset = Fixup.getOffset();
   unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
   unsigned Size = (BitSize + 7) / 8;
 
-  assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
-  Value = extractBitsForFixup(Kind, Value, Fixup, Asm.getContext());
+  Value = extractBitsForFixup(Kind, Value, Fixup, getContext());
   if (BitSize < 64)
     Value &= ((uint64_t)1 << BitSize) - 1;
   unsigned ShiftValue = (Size * 8) - 8;
   for (unsigned I = 0; I != Size; ++I) {
-    Data[Offset + I] |= uint8_t(Value >> ShiftValue);
+    Data[I] |= uint8_t(Value >> ShiftValue);
     ShiftValue -= 8;
   }
 }

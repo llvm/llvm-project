@@ -9,17 +9,17 @@ define i32 @test(ptr %p, ptr %p2) {
 ; CHECK-NEXT:    i32.eqz $2=, $3
 ; CHECK-NEXT:    i32.store8 0($1), $3
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    i32.const $4=, 1
-; CHECK-NEXT:    i32.and $5=, $2, $4
 ; CHECK-NEXT:    block
-; CHECK-NEXT:    br_if 0, $5 # 0: down to label0
+; CHECK-NEXT:    i32.const $push0=, 1
+; CHECK-NEXT:    i32.and $push1=, $2, $pop0
+; CHECK-NEXT:    br_if 0, $pop1 # 0: down to label0
 ; CHECK-NEXT:  # %bb.2: # %bb4
-; CHECK-NEXT:    i32.const $6=, 0
-; CHECK-NEXT:    return $6
+; CHECK-NEXT:    i32.const $push2=, 0
+; CHECK-NEXT:    return $pop2
 ; CHECK-NEXT:  .LBB0_3: # %bb3
 ; CHECK-NEXT:    end_block # label0:
-; CHECK-NEXT:    i32.const $7=, 1
-; CHECK-NEXT:    return $7
+; CHECK-NEXT:    i32.const $push3=, 1
+; CHECK-NEXT:    return $pop3
   %v = load i8, ptr %p
   %v.ext = zext i8 %v to i32
   %cond = icmp eq i32 %v.ext, 0

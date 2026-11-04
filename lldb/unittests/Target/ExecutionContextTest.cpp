@@ -24,7 +24,6 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
-using namespace lldb_private::repro;
 using namespace lldb;
 
 namespace {
@@ -52,8 +51,8 @@ public:
   }
   Status DoDestroy() override { return {}; }
   void RefreshStateAfterStop() override {}
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     return 0;
   }
   bool DoUpdateThreadList(ThreadList &old_thread_list,

@@ -1,0 +1,18 @@
+header: subdir/test.h
+standards:
+  - bsd
+functions:
+  - name: func
+    return_type: type_a
+    arguments:
+      - type: type_b
+  - name: gnufunc
+    return_type: void
+    arguments:
+      - type: type_a
+    standards:
+      - gnu
+  - name: ptrfunc
+    return_type: int *
+    arguments:
+      - type: int (*)(struct type_b **, struct type_c **)

@@ -31,12 +31,19 @@ class IsHandleType<string Type> {
                 !ne(!find(Type, "_handle_t", !sub(!size(Type), 9)), -1));
 }
 
+// Does the type end with '_cb_t'?
+class IsCallbackType<string Type> {
+  // size("_cb_t") == 5
+  bit ret = !if(!lt(!size(Type), 5), 0,
+                !ne(!find(Type, "_cb_t", !sub(!size(Type), 5)), -1));
+}
+
 // Does the type end with '*'?
 class IsPointerType<string Type> {
   bit ret = !ne(!find(Type, "*", !sub(!size(Type), 1)), -1);
 }
 
-// Describes the valid range of a pointer parameter that reperesents an array
+// Describes the valid range of a pointer parameter that represents an array
 class Range<string Begin, string End> {
   string begin = Begin;
   string end = End;
@@ -58,6 +65,7 @@ class Param<string Type, string Name, string Desc, bits<3> Flags = 0> {
   TypeInfo type_info = TypeInfo<"", "">;
   bit IsHandle = IsHandleType<type>.ret;
   bit IsPointer = IsPointerType<type>.ret;
+  bit IsCallback = IsCallbackType<type>.ret;
 }
 
 // A parameter whose range is described by other parameters in the function.
@@ -81,7 +89,7 @@ class ShouldCheckHandle<Param P> {
 }
 
 class ShouldCheckPointer<Param P> {
-  bit ret = !and(P.IsPointer, !eq(!and(PARAM_OPTIONAL, P.flags), 0));
+  bit ret = !and(!or(P.IsPointer, P.IsCallback), !eq(!and(PARAM_OPTIONAL, P.flags), 0));
 }
 
 // For a list of returns that contains a specific return code, find and append
@@ -110,7 +118,8 @@ class AddHandleChecksToReturns<list<Param> Params, list<Return> Returns> {
 
   list<Return> returns_out = !if(returns_has_inv_handle,
         AppendConditionsToReturn<Returns, PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>])
+        !if(!empty(handle_param_conds), Returns,
+            !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>]))
     );
 }
 
@@ -128,16 +137,32 @@ class AddPointerChecksToReturns<list<Param> Params, list<Return> Returns> {
       !or(HasErr, !eq(Ret.value, PREFIX#"_ERRC_INVALID_NULL_POINTER")));
   list<Return> returns_out = !if(returns_has_inv_ptr,
         AppendConditionsToReturn<Returns, PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>])
+        !if(!empty(ptr_param_conds), Returns,
+            !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>]))
     );
 }
 
-defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
-                         Return<PREFIX#"_ERRC_UNINITIALIZED">,
-                         Return<PREFIX#"_ERRC_DEVICE_LOST">];
+// Returns every function has. A function may list one of these itself to
+// replace the generic conditions with its own.
+defvar DefaultReturns = [
+    Return<PREFIX#"_SUCCESS", ["The call succeeded"]>,
+    Return<PREFIX#"_ERRC_UNINITIALIZED", [
+      "`olInit` has not been called, or the library has been shut down"
+    ]>];
+
+// Conditions that Returns lists for the return code Value.
+class ConditionsFor<string Value, list<Return> Returns> {
+  list<string> ret = !foldl([]<string>, Returns, Acc, R,
+                            !if(!eq(R.value, Value),
+                                !listconcat(Acc, R.conditions), Acc));
+}
+
+// Whether Returns contains the return code Value.
+class HasReturn<string Value, list<Return> Returns> {
+  bit ret = !foldl(0, Returns, Acc, R, !or(Acc, !eq(R.value, Value)));
+}
 
 class APIObject {
-  string name;
   string desc;
 }
 
@@ -147,7 +172,16 @@ class Function : APIObject {
   list<string> details = [];
   list<string> analogues = [];
 
-  list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
+  // When set, the generated function declaration is marked with OL_NODISCARD
+  // so the compiler warns if the returned result is ignored.
+  bit nodiscard = 0;
+
+  list<Return> defaults_merged = !foreach(D, DefaultReturns,
+      Return<D.value, !if(!empty(ConditionsFor<D.value, returns>.ret),
+                          D.conditions, ConditionsFor<D.value, returns>.ret)>);
+  list<Return> returns_own = !filter(R, returns,
+      !not(HasReturn<R.value, DefaultReturns>.ret));
+  list<Return> returns_with_def = !listconcat(defaults_merged, returns_own);
   list<Return> all_returns = AddPointerChecksToReturns<params,
         AddHandleChecksToReturns<params, returns_with_def>.returns_out>.returns_out;
 }
@@ -167,6 +201,14 @@ class Enum : APIObject {
   // type for functions where this enum may be used as an output type. If set,
   // all Etor values must be TaggedEtor records
   bit is_typed = 0;
+
+  // This refers to whether the enumerator is used to name bits of a bit field,
+  // where consecutive values are bit-shifted rather than incremented.
+  bit is_bit_field = 0;
+
+  // When set, the generated enum typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
 
   list<Etor> etors = [];
 }
@@ -189,6 +231,11 @@ class StructHasInheritedMembers<string BaseClass> {
 
 class Struct : APIObject {
   string base_class = "";
+
+  // When set, the generated struct typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
+
   list<StructMember> members;
   list<StructMember> all_members =
       !if(StructHasInheritedMembers<base_class>.ret,
@@ -199,7 +246,7 @@ class Typedef : APIObject { string value; }
 
 class FptrTypedef : APIObject {
   list<Param> params;
-  list<Return> returns;
+  string return;
 }
 
 class Macro : APIObject {

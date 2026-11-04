@@ -58,7 +58,6 @@ static_library("MCTargetDesc") {
     "LoongArchInstPrinter.cpp",
     "LoongArchMCAsmInfo.cpp",
     "LoongArchMCCodeEmitter.cpp",
-    "LoongArchMCExpr.cpp",
     "LoongArchMCTargetDesc.cpp",
     "LoongArchMatInt.cpp",
     "LoongArchTargetStreamer.cpp",

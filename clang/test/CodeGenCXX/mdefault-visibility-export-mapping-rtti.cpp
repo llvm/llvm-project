@@ -43,9 +43,9 @@ struct s {
   virtual void foo();
 };
 void s::foo() {}
-// UNSPECIFIED-DEF: @_ZTV1s = unnamed_addr constant
-// UNSPECIFIED-HID: @_ZTV1s = hidden unnamed_addr constant
-// UNSPECIFIED-EXP: @_ZTV1s = dllexport unnamed_addr constant
+// UNSPECIFIED-DEF: @_ZTV1s = constant
+// UNSPECIFIED-HID: @_ZTV1s = hidden constant
+// UNSPECIFIED-EXP: @_ZTV1s = dllexport constant
 // UNSPECIFIED-DEF: @_ZTI1s = constant
 // UNSPECIFIED-HID: @_ZTI1s = hidden constant
 // UNSPECIFIED-EXP: @_ZTI1s = dllexport constant
@@ -58,9 +58,9 @@ struct __attribute__((type_visibility("default"))) t {
   virtual void foo();
 };
 void t::foo() {}
-// EXPLICIT-DEF: @_ZTV1t = unnamed_addr constant
-// EXPLICIT-HID: @_ZTV1t = hidden unnamed_addr constant
-// EXPLICIT-EXP: @_ZTV1t = dllexport unnamed_addr constant
+// EXPLICIT-DEF: @_ZTV1t = constant
+// EXPLICIT-HID: @_ZTV1t = hidden constant
+// EXPLICIT-EXP: @_ZTV1t = dllexport constant
 // EXPLICIT-DEF: @_ZTI1t = constant
 // EXPLICIT-HID: @_ZTI1t = hidden constant
 // EXPLICIT-EXP: @_ZTI1t = dllexport constant
@@ -85,13 +85,13 @@ __fundamental_type_info::~__fundamental_type_info() {}
 } // namespace __cxxabiv1
 
 // __cxxabiv1::__fundamental_type_info
-// FUND-DEF: @_ZTVN10__cxxabiv123__fundamental_type_infoE = unnamed_addr constant
+// FUND-DEF: @_ZTVN10__cxxabiv123__fundamental_type_infoE = constant
 // FUND-DEF: @_ZTIN10__cxxabiv123__fundamental_type_infoE = constant
 // FUND-DEF: @_ZTSN10__cxxabiv123__fundamental_type_infoE = constant
-// FUND-HID: @_ZTVN10__cxxabiv123__fundamental_type_infoE = hidden unnamed_addr constant
+// FUND-HID: @_ZTVN10__cxxabiv123__fundamental_type_infoE = hidden constant
 // FUND-HID: @_ZTIN10__cxxabiv123__fundamental_type_infoE = hidden constant
 // FUND-HID: @_ZTSN10__cxxabiv123__fundamental_type_infoE = hidden constant
-// FUND-EXP: @_ZTVN10__cxxabiv123__fundamental_type_infoE = dllexport unnamed_addr constant
+// FUND-EXP: @_ZTVN10__cxxabiv123__fundamental_type_infoE = dllexport constant
 // FUND-EXP: @_ZTIN10__cxxabiv123__fundamental_type_infoE = dllexport constant
 // FUND-EXP: @_ZTSN10__cxxabiv123__fundamental_type_infoE = dllexport constant
 

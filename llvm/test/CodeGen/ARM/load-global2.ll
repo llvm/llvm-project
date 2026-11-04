@@ -28,7 +28,7 @@ define signext i8 @foo() {
 ; LINUX-PIC-NEXT:  @ %bb.3:
 ; LINUX-PIC-NEXT:  .LCPI0_0:
 ; LINUX-PIC-NEXT:  .Ltmp0:
-; LINUX-PIC-NEXT:    .long x(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)
+; LINUX-PIC-NEXT:    .long x(GOT_PREL)-(.LPC0_0+8-.Ltmp0)
 entry:
   %0 = load i8, ptr @x
   %tobool = icmp eq i8 %0, 0

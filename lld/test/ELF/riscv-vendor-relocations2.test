@@ -1,0 +1,32 @@
+# REQUIRES: riscv
+## R_RISCV_VENDOR followed by a relocation of code 256 (outside 192-255).
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld -pie %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: {{.*}}:(.text+0x0): R_RISCV_VENDOR is not followed by a relocation of code 192 to 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '13000000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Info:    .text
+    Relocations:
+      - Type:   R_RISCV_VENDOR
+        Symbol: vendor
+      - Type:   0x100  # 256, outside 192-255
+        Symbol: foo
+Symbols:
+  - Name:    vendor
+    Section: .text
+  - Name:    foo
+    Section: .text
+    Binding: STB_GLOBAL

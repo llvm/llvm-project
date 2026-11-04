@@ -52,14 +52,17 @@ public:
       : BucketSize(BucketSize), MinAddress(MinAddress), MaxAddress(MaxAddress),
         TextSections(TextSections) {}
 
+  uint64_t HotStart{0};
+  uint64_t HotEnd{0};
+
   inline bool ignoreAddress(uint64_t Address) const {
     return (Address > MaxAddress) || (Address < MinAddress);
   }
 
   /// Register a single sample at \p Address.
-  void registerAddress(uint64_t Address) {
+  void registerAddress(uint64_t Address, uint64_t Count) {
     if (!ignoreAddress(Address))
-      ++Map[Address / BucketSize];
+      Map[Address / BucketSize] += Count;
   }
 
   /// Register \p Count samples at [\p StartAddress, \p EndAddress ].
@@ -73,15 +76,18 @@ public:
 
   void print(raw_ostream &OS) const;
 
-  void printCDF(StringRef FileName) const;
+  void printCDF(StringRef FileName, StringRef Label) const;
 
-  void printCDF(raw_ostream &OS) const;
+  void printCDF(raw_ostream &OS, StringRef Label) const;
 
   void printSectionHotness(StringRef Filename) const;
 
   void printSectionHotness(raw_ostream &OS) const;
 
   size_t size() const { return Map.size(); }
+
+  /// Increase bucket size to \p NewSize, recomputing the heatmap.
+  void resizeBucket(uint64_t NewSize);
 };
 
 } // namespace bolt

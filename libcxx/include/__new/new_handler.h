@@ -15,15 +15,14 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_ABI_VCRUNTIME)
-#  include <new.h>
-#else
-// purposefully not using versioning namespace
-namespace std {
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 typedef void (*new_handler)();
 _LIBCPP_EXPORTED_FROM_ABI new_handler set_new_handler(new_handler) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
-} // namespace std
-#endif // _LIBCPP_ABI_VCRUNTIME
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___NEW_NEW_HANDLER_H

@@ -17,18 +17,8 @@
 // CHECK-LABEL: Testing : "_QQmain"
 // CHECK-DAG:   ptrA#0 <-> ArrayA#0: MayAlias
 
-omp.private {type = private} @_QFEi_private_ref_i32 : !fir.ref<i32> alloc {
-^bb0(%arg0: !fir.ref<i32>):
-  %0 = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFEi"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  omp.yield(%1#0 : !fir.ref<i32>)
-}
-omp.private {type = firstprivate} @_QFEptra_firstprivate_ref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
-^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
-  %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "ptra", pinned, uniq_name = "_QFEptra"}
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-  omp.yield(%1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-} copy {
+omp.private {type = private} @_QFEi_private_ref_i32 : i32
+omp.private {type = firstprivate} @_QFEptra_firstprivate_ref_box_ptr_Uxi32 : !fir.box<!fir.ptr<!fir.array<?xi32>>> copy {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
   %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   fir.store %0 to %arg1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
@@ -38,22 +28,22 @@ func.func @_QQmain() attributes {fir.bindc_name = "main"} {
   %0 = fir.address_of(@_QFEarraya) : !fir.ref<!fir.array<10xi32>>
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %0(%1) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEarraya"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QFEarraya") fortran_attrs<target> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %3 = fir.address_of(@_QFEarrayb) : !fir.ref<!fir.array<10xi32>>
   %c10_0 = arith.constant 10 : index
   %4 = fir.shape %c10_0 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %3(%4) {uniq_name = "_QFEarrayb"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %5:2 = hlfir.declare %3(%4) uniq_name("_QFEarrayb") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %6 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-  %7:2 = hlfir.declare %6 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %8 = fir.address_of(@_QFEptra) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  %9:2 = hlfir.declare %8 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %9:2 = hlfir.declare %8 uniq_name("_QFEptra") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %10 = fir.shape %c10 : (index) -> !fir.shape<1>
   %11 = fir.embox %2#1(%10) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
   fir.store %11 to %9#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   omp.teams {
     omp.parallel private(@_QFEptra_firstprivate_ref_box_ptr_Uxi32 %9#0 -> %arg0, @_QFEi_private_ref_i32 %7#0 -> %arg1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<i32>) {
-      %12:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-      %13:2 = hlfir.declare %arg1 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      %12:2 = hlfir.declare %arg0 uniq_name("_QFEptra") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+      %13:2 = hlfir.declare %arg1 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %c1_i32 = arith.constant 1 : i32
       %c10_i32 = arith.constant 10 : i32
       %c1_i32_1 = arith.constant 1 : i32

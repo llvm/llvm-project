@@ -46,6 +46,19 @@ void OptionValueFileColonLine::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValueFileColonLine::ToJSON(const ExecutionContext *exe_ctx) const {
+  StreamString stream;
+  if (m_file_spec)
+    stream << '"' << m_file_spec.GetPath().c_str() << '"';
+  if (m_line_number != LLDB_INVALID_LINE_NUMBER)
+    stream.Printf(":%d", m_line_number);
+  if (m_column_number != LLDB_INVALID_COLUMN_NUMBER)
+    stream.Printf(":%d", m_column_number);
+
+  return llvm::json::Value(stream.GetString());
+}
+
 Status OptionValueFileColonLine::SetValueFromString(llvm::StringRef value,
                                                     VarSetOperationType op) {
   Status error;

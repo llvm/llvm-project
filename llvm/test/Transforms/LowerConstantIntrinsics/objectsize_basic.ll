@@ -119,7 +119,7 @@ define i64 @test_objectsize_byref_arg(ptr byref([42 x i8]) %ptr) {
 define i64 @vla_pointer_size_mismatch(i42 %x) {
 ; CHECK-LABEL: @vla_pointer_size_mismatch(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i42 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 1, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i42 [[X]], align 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[A]], i8 17
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 17

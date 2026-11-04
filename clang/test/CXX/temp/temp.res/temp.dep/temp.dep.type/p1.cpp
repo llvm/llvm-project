@@ -17,7 +17,7 @@ namespace Example1 {
 
   template<class T> struct A<A<A<T>>> {
     struct C {};
-    B<B<T>>::C bc; // expected-warning {{implicit 'typename' is a C++20 extension}}
+    B<B<T>>::C bc; // expected-warning {{missing 'typename' prior to dependent type name 'B<B<T>>::C' is a C++20 extension}}
   };
 }
 

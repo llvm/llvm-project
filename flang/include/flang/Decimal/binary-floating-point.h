@@ -15,10 +15,9 @@
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
-#include <cinttypes>
+#include "flang/Runtime/freestanding-tools.h"
 #include <climits>
 #include <cstring>
-#include <type_traits>
 
 namespace Fortran::decimal {
 
@@ -32,6 +31,7 @@ enum FortranRounding {
 
 template <int BINARY_PRECISION> class BinaryFloatingPointNumber {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr common::RealCharacteristics realChars{BINARY_PRECISION};
   static constexpr int binaryPrecision{BINARY_PRECISION};
   static constexpr int bits{realChars.bits};
@@ -47,7 +47,6 @@ public:
 
   using RawType = common::HostUnsignedIntType<bits>;
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);
-  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr RawType significandMask{(RawType{1} << significandBits) - 1};
 
   constexpr RT_API_ATTRS BinaryFloatingPointNumber() {} // zero
@@ -68,7 +67,7 @@ public:
   template <typename A>
   explicit constexpr RT_API_ATTRS BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw_ <= sizeof x);
-    std::memcpy(reinterpret_cast<void *>(&raw_),
+    runtime::memcpy(reinterpret_cast<void *>(&raw_),
         reinterpret_cast<const void *>(&x), sizeof raw_);
   }
 

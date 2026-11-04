@@ -1860,7 +1860,7 @@ entry:
   ret void
 }
 
-; Don't the known-incremented retain+release elimination if the pointer is
+; Don't do the known-incremented retain+release elimination if the pointer is
 ; autoreleased and there's an autoreleasePoolPop.
 
 ; CHECK-LABEL: define void @test43(
@@ -2607,17 +2607,17 @@ cond.end:                                         ; preds = %cond.true, %entry
 
 @.str4 = private unnamed_addr constant [33 x i8] c"-[A z] = { %f, %f, { %f, %f } }\0A\00"
 @"OBJC_IVAR_$_A.myZ" = global i64 20, section "__DATA, __objc_const", align 8
-declare i32 @printf(ptr nocapture, ...) nounwind
-declare i32 @puts(ptr nocapture) nounwind
+declare i32 @printf(ptr captures(none), ...) nounwind
+declare i32 @puts(ptr captures(none)) nounwind
 @str = internal constant [16 x i8] c"-[ Top0 _getX ]\00"
 
 ; FIXME: Should be able to eliminate the retain and release
-; CHECK-LABEL: define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr nocapture %_cmd)
+; CHECK-LABEL: define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr captures(none) %_cmd)
 ; CHECK: tail call ptr @llvm.objc.retain(ptr %self)
 ; CHECK-NEXT: %call = tail call i32 (ptr, ...) @printf(
 ; CHECK: tail call void @llvm.objc.release(ptr %self)
 ; CHECK: {{^}}}
-define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr nocapture %_cmd) nounwind {
+define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr captures(none) %_cmd) nounwind {
 invoke.cont:
   %i1 = tail call ptr @llvm.objc.retain(ptr %self) nounwind
   tail call void @llvm.dbg.value(metadata ptr %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
@@ -2654,11 +2654,11 @@ invoke.cont:
 }
 
 ; FIXME: Should be able to eliminate the retain and release
-; CHECK-LABEL: @"\01-[Top0 _getX]"(ptr %self, ptr nocapture %_cmd)
+; CHECK-LABEL: @"\01-[Top0 _getX]"(ptr %self, ptr captures(none) %_cmd)
 ; CHECK: tail call ptr @llvm.objc.retain(ptr %self)
 ; CHECK: %puts = tail call i32 @puts
 ; CHECK: tail call void @llvm.objc.release(ptr %self)
-define i32 @"\01-[Top0 _getX]"(ptr %self, ptr nocapture %_cmd) nounwind {
+define i32 @"\01-[Top0 _getX]"(ptr %self, ptr captures(none) %_cmd) nounwind {
 invoke.cont:
   %i1 = tail call ptr @llvm.objc.retain(ptr %self) nounwind
   %puts = tail call i32 @puts(ptr @str)
@@ -2944,7 +2944,7 @@ define void @test68(ptr %a, ptr %b) {
 
 !0 = !{}
 !1 = !{i32 1, !"Debug Info Version", i32 3}
-!2 = distinct !DISubprogram(unit: !3)
+!2 = distinct !DISubprogram(unit: !3, type: !7)
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !4,
                              isOptimized: true, flags: "-O2",
@@ -2954,3 +2954,5 @@ define void @test68(ptr %a, ptr %b) {
 
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: ![[RELEASE]] = !{}
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)

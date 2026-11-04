@@ -181,14 +181,14 @@ for.end6:
 !30 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 !31 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 
-declare void @llvm.lifetime.start(i64, ptr nocapture)
+declare void @llvm.lifetime.start(ptr nocapture)
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
 declare i32 @memcmp(ptr, ptr, i64)
 declare i32 @bcmp(ptr, ptr, i64)
 
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            pgo-memop-opt

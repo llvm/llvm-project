@@ -8,7 +8,7 @@
 // IR, but is never emitted in this compilation unit. Because it won't be
 // emitted here, we cannot make an alias, but we won't need to in the first
 // place.
-// CHECK: @_ZTV1A = available_externally unnamed_addr constant { [3 x i32] }
+// CHECK: @_ZTV1A = available_externally constant { [3 x i32] }
 // CHECK-NOT: @_ZTV1A = {{.*}}alias
 
 class A {

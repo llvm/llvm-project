@@ -21,9 +21,8 @@
 #include "llvm/TableGen/Record.h"
 
 using llvm::Clause;
-using llvm::ClauseVal;
+using llvm::EnumVal;
 using llvm::raw_ostream;
-using llvm::Record;
 using llvm::RecordKeeper;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
@@ -64,11 +63,11 @@ static bool emitDecls(const RecordKeeper &records, llvm::StringRef dialect,
 
     std::vector<std::string> cvDefs;
     for (const auto &it : llvm::enumerate(clauseVals)) {
-      const ClauseVal cval{it.value()};
-      if (!cval.isUserVisible())
+      const EnumVal val{it.value()};
+      if (!val.isUserVisible())
         continue;
 
-      std::string name = cval.getFormattedName();
+      std::string name = val.getFormattedName();
       std::string enumValName(name.length(), ' ');
       llvm::transform(name, enumValName.begin(), llvm::toLower);
       enumValName[0] = llvm::toUpper(enumValName[0]);

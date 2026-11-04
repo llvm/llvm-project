@@ -1,0 +1,82 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+highpriinterrupts,+highpriinterrupts-level7 -disassemble %s | FileCheck -check-prefixes=CHECK-HPINTERRUPTS %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## Xtensa highpriinterrupts option enabled. Also verify that dissasembling without
+## Xtensa highpriinterrupts option generates warnings.
+
+[0x10,0x31,0x00]
+# CHECK-HPINTERRUPTS: rfi 1
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb2,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc2
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb3,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc3
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb4,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc4
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb5,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc5
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb6,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc6
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xb7,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, epc7
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc2,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps2
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc3,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps3
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc4,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps4
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc5,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps5
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc6,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps6
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xc7,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, eps7
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd2,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave2
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd3,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave3
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd4,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave4
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd5,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave5
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd6,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave6
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20,0xd7,0x61]
+#CHECK-HPINTERRUPTS: xsr a2, excsave7
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

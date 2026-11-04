@@ -14,10 +14,13 @@
 #include "DirectXSubtarget.h"
 #include "DirectXTargetMachine.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
-class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
+class DirectXTTIImpl final : public BasicTTIImplBase<DirectXTTIImpl> {
   using BaseT = BasicTTIImplBase<DirectXTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -25,19 +28,40 @@ class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
 
   const DirectXSubtarget *ST;
   const DirectXTargetLowering *TLI;
+  // True when native 16-bit types are enabled (i.e. -enable-16bit-types was
+  // passed), indicated by the dx.nativelowprec module flag.
+  const bool HasNativeLowPrecision;
 
   const DirectXSubtarget *getST() const { return ST; }
   const DirectXTargetLowering *getTLI() const { return TLI; }
 
+  static bool readNativeLowPrecisionFlag(const Function &F) {
+    if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
+            F.getParent()->getModuleFlag("dx.nativelowprec")))
+      return Flag->getValue().getBoolValue();
+    return false;
+  }
+
 public:
   explicit DirectXTTIImpl(const DirectXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()) {}
-  unsigned getMinVectorRegisterBitWidth() const { return 32; }
-  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
+        TLI(ST->getTargetLowering()),
+        HasNativeLowPrecision(readNativeLowPrecisionFlag(F)) {}
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                          unsigned ScalarOpdIdx);
-  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
+                                          unsigned ScalarOpdIdx) const override;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const override;
+  unsigned getMinimumLookupTableEntryBitWidth() const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 } // namespace llvm
 

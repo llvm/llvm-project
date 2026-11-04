@@ -390,7 +390,6 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, ptr %p1, ptr %p2) n
 define dso_local void @PR42880(i32 %t0) {
 ; X86-LABEL: PR42880:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB16_1
 ; X86-NEXT:  # %bb.2: # %if
@@ -398,7 +397,6 @@ define dso_local void @PR42880(i32 %t0) {
 ;
 ; X64-LABEL: PR42880:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    je .LBB16_1
 ; X64-NEXT:  # %bb.2: # %if
@@ -794,14 +792,24 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
 define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
 ; X86-LABEL: combineShiftOfShiftedLogic:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %ecx
 ; X86-NEXT:    movl %eax, 20(%ecx)
 ; X86-NEXT:    movl $0, 16(%ecx)
 ; X86-NEXT:    movl $0, 12(%ecx)
 ; X86-NEXT:    movl $0, 8(%ecx)
 ; X86-NEXT:    movl $0, 4(%ecx)
 ; X86-NEXT:    movl $0, (%ecx)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combineShiftOfShiftedLogic:
@@ -819,4 +827,58 @@ define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
   %res = shl i192 %or, 160
   store i192 %res, ptr %p, align 8
   ret void
+}
+
+; https://github.com/llvm/llvm-project/issues/231378
+define i32 @lshr_exact_narrow_shl(i32 %x, ptr %p) {
+; X86-LABEL: lshr_exact_narrow_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    andl $-4, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: lshr_exact_narrow_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $2, %ecx
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    retq
+  %z = zext i32 %x to i64
+  %s = lshr exact i64 %z, 2
+  %t = trunc i64 %s to i32
+  store volatile i32 %t, ptr %p
+  %r = shl i32 %t, 2
+  ret i32 %r
+}
+
+define i32 @lshr_narrow_shl(i32 %x, ptr %p) {
+; X86-LABEL: lshr_narrow_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    andl $-4, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: lshr_narrow_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $2, %ecx
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    andl $-4, %eax
+; X64-NEXT:    retq
+  %z = zext i32 %x to i64
+  %s = lshr i64 %z, 2
+  %t = trunc i64 %s to i32
+  store volatile i32 %t, ptr %p
+  %r = shl i32 %t, 2
+  ret i32 %r
 }

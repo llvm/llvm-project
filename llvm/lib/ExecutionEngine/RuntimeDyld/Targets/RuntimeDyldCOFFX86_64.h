@@ -160,13 +160,13 @@ public:
     OriginalRelValueRef.Addend = Addend;
     OriginalRelValueRef.SymbolName = TargetName.data();
 
-    auto Stub = Stubs.find(OriginalRelValueRef);
-    if (Stub == Stubs.end()) {
+    auto [Stub, Inserted] = Stubs.try_emplace(OriginalRelValueRef);
+    if (Inserted) {
       LLVM_DEBUG(dbgs() << " Create a new stub function for "
                         << TargetName.data() << "\n");
 
       StubOffset = Section.getStubOffset();
-      Stubs[OriginalRelValueRef] = StubOffset;
+      Stub->second = StubOffset;
       createStubFunction(Section.getAddressWithOffset(StubOffset));
       Section.advanceStubOffset(getMaxStubSize());
     } else {
@@ -263,6 +263,12 @@ public:
     case COFF::IMAGE_REL_AMD64_ADDR64: {
       uint8_t *Displacement = (uint8_t *)ObjTarget;
       Addend = readBytesUnaligned(Displacement, 8);
+      break;
+    }
+
+    case COFF::IMAGE_REL_AMD64_SECREL: {
+      uint8_t *Displacement = (uint8_t *)ObjTarget;
+      Addend = readBytesUnaligned(Displacement, 4);
       break;
     }
 

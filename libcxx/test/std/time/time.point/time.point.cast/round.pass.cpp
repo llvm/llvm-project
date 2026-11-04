@@ -21,6 +21,15 @@
 
 #include "test_macros.h"
 
+template <class T, class = void>
+inline constexpr bool has_round_v = false;
+
+template <class T>
+inline constexpr bool has_round_v<T, decltype((void)std::chrono::round<T>(std::chrono::system_clock::now()))> = true;
+
+static_assert(has_round_v<std::chrono::seconds>);
+static_assert(!has_round_v<int>);
+
 template <class FromDuration, class ToDuration>
 void
 test(const FromDuration& df, const ToDuration& d)

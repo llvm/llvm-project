@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=r600-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=r600-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test
 ; CHECK: NoAlias:      i8 addrspace(5)* %p, i8 addrspace(1)* %p1
@@ -176,7 +176,7 @@ define void @test_7_7(ptr addrspace(7) %p, ptr addrspace(7) %p1) {
   ret void
 }
 
-@cst = internal addrspace(4) global ptr undef, align 4
+@cst = internal addrspace(4) global ptr poison, align 4
 
 ; CHECK-LABEL: Function: test_8_0
 ; CHECK-DAG: NoAlias:   i8 addrspace(3)* %p, i8* %p1
@@ -220,7 +220,7 @@ define void @test_8_3(ptr %p) {
   ret void
 }
 
-@shm = internal addrspace(3) global [2 x i8] undef, align 4
+@shm = internal addrspace(3) global [2 x i8] poison, align 4
 
 ; CHECK-LABEL: Function: test_8_4
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(3)* %p1
@@ -316,6 +316,45 @@ define void @test_9_8(ptr addrspace(9) %p, ptr addrspace(8) %p1) {
 define void @test_9_9(ptr addrspace(9) %p, ptr addrspace(9) %p1) {
   load i8, ptr addrspace(9) %p
   load i8, ptr addrspace(9) %p1
+  ret void
+}
+
+; The VGPR address space is only reachable through its own indexed accesses, so
+; it aliases nothing else - not even flat, since a flat pointer obtained by
+; casting one cannot be dereferenced.
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8* %p1
+define void @test_13_0(ptr addrspace(13) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(0) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(1)* %p1
+define void @test_13_1(ptr addrspace(13) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(1) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(3)* %p1
+define void @test_13_3(ptr addrspace(13) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(3) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(5)* %p1
+define void @test_13_5(ptr addrspace(13) %p, ptr addrspace(5) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(5) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(13)* %p, i8 addrspace(13)* %p1
+define void @test_13_13(ptr addrspace(13) %p, ptr addrspace(13) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(13) %p1
   ret void
 }
 

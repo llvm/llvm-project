@@ -77,12 +77,11 @@ void func0(int *);
 void (*fnptr0)(int *);
 void (*fnptr1)(__attribute__((noescape)) int *);
 template<void (*fn)(int*)> struct S4 {};
-template<void (*fn)(int* __attribute__((noescape)))> struct S5 {};
-
 #if __cplusplus < 201406
-  // expected-note@-4 {{template parameter is declared here}}
-  // expected-note@-4 {{template parameter is declared here}}
+// expected-note@-2 {{template parameter is declared here}}
 #endif
+template<void (*fn)(int* __attribute__((noescape)))> struct S5 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 void test0() {
   fnptr0 = &func0;

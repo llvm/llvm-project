@@ -13,13 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CharUnits.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -179,7 +177,7 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
     SValBuilder &SVB = Ctx.getSValBuilder();
     if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right);
         MinRight && *MinRight >= LHSBitWidth) {
-      LowerBoundStr = formatv(" >= {0},", MinRight->getExtValue());
+      LowerBoundStr = formatv(" >= {0},", *MinRight);
     }
   }
 
@@ -333,7 +331,7 @@ const NoteTag *BitwiseShiftValidator::createNoteTag() const {
 std::unique_ptr<PathSensitiveBugReport>
 BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const {
   ProgramStateRef State = Ctx.getState();
-  if (ExplodedNode *ErrNode = Ctx.generateErrorNode(State)) {
+  if (ExplodedNode *ErrNode = Ctx.addSink(State)) {
     auto BR =
         std::make_unique<PathSensitiveBugReport>(BT, ShortMsg, Msg, ErrNode);
     bugreporter::trackExpressionValue(ErrNode, Op->getLHS(), *BR);

@@ -17,9 +17,8 @@ namespace llvm {
 class ARMAsmBackendELF : public ARMAsmBackend {
 public:
   uint8_t OSABI;
-  ARMAsmBackendELF(const Target &T, bool isThumb, uint8_t OSABI,
-                   llvm::endianness Endian)
-      : ARMAsmBackend(T, isThumb, Endian), OSABI(OSABI) {}
+  ARMAsmBackendELF(const Target &T, uint8_t OSABI, llvm::endianness Endian)
+      : ARMAsmBackend(T, Endian), OSABI(OSABI) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {

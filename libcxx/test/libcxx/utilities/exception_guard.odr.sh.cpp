@@ -9,14 +9,12 @@
 // This test relies on `typeid` and thus requires `-frtti`.
 // UNSUPPORTED: no-rtti
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // Make sure that we don't get ODR violations with __exception_guard when
 // linking together TUs compiled with different values of -f[no-]exceptions.
 
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.except.o   -O1 -fexceptions
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.noexcept.o -O1 -fno-exceptions
-// RUN: %{cxx} %{flags} %{link_flags} -o %t.exe %t.except.o %t.noexcept.o
+// RUN: %{cxx} %{flags} -o %t.exe %t.except.o %t.noexcept.o %{link_flags}
 // RUN: %{run}
 
 #include <__utility/exception_guard.h>

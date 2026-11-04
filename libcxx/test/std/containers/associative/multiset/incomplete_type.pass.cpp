@@ -16,17 +16,25 @@
 #include "test_macros.h"
 
 struct A {
-    typedef std::multiset<A> Set;
-    int data;
-    Set m;
-    Set::iterator it;
-    Set::const_iterator cit;
+  typedef std::multiset<A> Set;
+  int data;
+  Set m;
+  Set::iterator it;
+  Set::const_iterator cit;
 };
 
-inline bool operator==(A const& L, A const& R) { return &L == &R; }
-inline bool operator<(A const& L, A const& R)  { return L.data < R.data; }
-int main(int, char**) {
-    A a;
+inline TEST_CONSTEXPR_CXX26 bool operator==(A const& L, A const& R) { return &L == &R; }
+inline TEST_CONSTEXPR_CXX26 bool operator<(A const& L, A const& R) { return L.data < R.data; }
+TEST_CONSTEXPR_CXX26 bool test() {
+  A a;
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

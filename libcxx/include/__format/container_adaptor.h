@@ -15,7 +15,7 @@
 #endif
 
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/formattable.h>
 #include <__format/formatter.h>
 #include <__format/range_default_formatter.h>
 #include <__fwd/queue.h>
@@ -24,9 +24,9 @@
 #include <__type_traits/is_const.h>
 #include <__type_traits/maybe_const.h>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [container.adaptors.format] only specifies the library should provide the
 // formatter specializations, not which header should provide them.
@@ -35,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // adaptor headers. To use the format functions users already include <format>.
 
 template <class _Adaptor, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_container_adaptor {
+struct __formatter_container_adaptor {
 private:
   using __maybe_const_container _LIBCPP_NODEBUG = __fmt_maybe_const<typename _Adaptor::container_type, _CharT>;
   using __maybe_const_adaptor _LIBCPP_NODEBUG   = __maybe_const<is_const_v<__maybe_const_container>, _Adaptor>;
@@ -43,31 +43,30 @@ private:
 
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return __underlying_.parse(__ctx);
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
-  format(__maybe_const_adaptor& __adaptor, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(__maybe_const_adaptor& __adaptor, _FormatContext& __ctx) const {
     return __underlying_.format(__adaptor.__get_container(), __ctx);
   }
 };
 
 template <class _CharT, class _Tp, formattable<_CharT> _Container>
-struct _LIBCPP_TEMPLATE_VIS formatter<queue<_Tp, _Container>, _CharT>
+struct formatter<queue<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<queue<_Tp, _Container>, _CharT> {};
 
 template <class _CharT, class _Tp, class _Container, class _Compare>
-struct _LIBCPP_TEMPLATE_VIS formatter<priority_queue<_Tp, _Container, _Compare>, _CharT>
+struct formatter<priority_queue<_Tp, _Container, _Compare>, _CharT>
     : public __formatter_container_adaptor<priority_queue<_Tp, _Container, _Compare>, _CharT> {};
 
 template <class _CharT, class _Tp, formattable<_CharT> _Container>
-struct _LIBCPP_TEMPLATE_VIS formatter<stack<_Tp, _Container>, _CharT>
+struct formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H

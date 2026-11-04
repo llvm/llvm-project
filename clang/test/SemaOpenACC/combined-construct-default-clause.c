@@ -5,19 +5,19 @@ void SingleOnly() {
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc serial loop default(present) self default(none)
   for(int i = 5; i < 10;++i);
 
   int i;
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc kernels loop self default(present) present(i) default(none) copy(i)
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc parallel loop self default(present) private(i) default(none) copy(i)
   for(int i = 0; i < 5; ++i);
 

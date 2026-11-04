@@ -1,4 +1,5 @@
-! RUN: %python %S/test_symbols.py %s %flang_fc1
+! REQUIRES: x86-registered-target, flang-supports-f128-math
+! RUN: %python %S/test_symbols.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
  !DEF: /MainProgram1/jk1 ObjectEntity INTEGER(1)
  integer(kind=1) jk1
  !DEF: /MainProgram1/js1 ObjectEntity INTEGER(1)

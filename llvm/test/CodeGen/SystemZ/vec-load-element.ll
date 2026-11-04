@@ -5,8 +5,8 @@
 ; CHECK-LABEL: .LBB0_1:
 ; CHECK-NOT: l %r
 ; CHECK-NOT: vlvgf
-; CHECK: pfd
-; CHECK: vlef
+; CHECK-DAG: pfd
+; CHECK-DAG: vlef
 
 %type0 = type { i32, [400 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 @Mem = external global [150 x %type0], align 4

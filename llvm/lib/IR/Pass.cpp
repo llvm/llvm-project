@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -60,10 +61,15 @@ static std::string getDescription(const Module &M) {
   return "module (" + M.getName().str() + ")";
 }
 
-bool ModulePass::skipModule(Module &M) const {
-  OptPassGate &Gate = M.getContext().getOptPassGate();
+bool ModulePass::skipModule(const Module &M) const {
+  const OptPassGate &Gate = M.getContext().getOptPassGate();
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
   return Gate.isEnabled() &&
-         !Gate.shouldRunPass(this->getPassName(), getDescription(M));
+         !Gate.shouldRunPass(PassName, getDescription(M), "");
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -86,6 +92,16 @@ StringRef Pass::getPassName() const {
   return "Unnamed pass: implement Pass::getPassName()";
 }
 
+/// getPassArgument - Return a nice clean name for a pass
+/// corresponding to that used to enable the pass in opt
+StringRef Pass::getPassArgument() const {
+  AnalysisID AID = getPassID();
+  const PassInfo *PI = Pass::lookupPassInfo(AID);
+  if (PI)
+    return PI->getPassArgument();
+  return "";
+}
+
 void Pass::preparePassManager(PMStack &) {
   // By default, don't do anything.
 }
@@ -105,10 +121,6 @@ void Pass::releaseMemory() {
 
 void Pass::verifyAnalysis() const {
   // By default, don't do anything.
-}
-
-void *Pass::getAdjustedAnalysisPointer(AnalysisID AID) {
-  return this;
 }
 
 ImmutablePass *Pass::getAsImmutablePass() {
@@ -167,6 +179,13 @@ Pass *FunctionPass::createPrinterPass(raw_ostream &OS,
   return createPrintFunctionPass(OS, Banner);
 }
 
+bool FunctionPass::printIRUnit(raw_ostream &OS, Function &F) {
+  if (!shouldPrintFunction(F))
+    return false;
+  F.print(OS);
+  return true;
+}
+
 PassManagerType FunctionPass::getPotentialPassManagerType() const {
   return PMT_FunctionPassManager;
 }
@@ -177,8 +196,13 @@ static std::string getDescription(const Function &F) {
 
 bool FunctionPass::skipFunction(const Function &F) const {
   OptPassGate &Gate = F.getContext().getOptPassGate();
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
   if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(this->getPassName(), getDescription(F)))
+      !Gate.shouldRunPass(PassName, getDescription(F), F.getName()))
     return true;
 
   if (F.hasOptNone()) {
@@ -282,3 +306,21 @@ AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(char &ID) {
   pushUnique(RequiredTransitive, &ID);
   return *this;
 }
+
+#ifndef NDEBUG
+const char *llvm::to_string(ThinOrFullLTOPhase Phase) {
+  switch (Phase) {
+  case ThinOrFullLTOPhase::None:
+    return "None";
+  case ThinOrFullLTOPhase::ThinLTOPreLink:
+    return "ThinLTOPreLink";
+  case ThinOrFullLTOPhase::ThinLTOPostLink:
+    return "ThinLTOPostLink";
+  case ThinOrFullLTOPhase::FullLTOPreLink:
+    return "FullLTOPreLink";
+  case ThinOrFullLTOPhase::FullLTOPostLink:
+    return "FullLTOPostLink";
+  }
+  llvm_unreachable("invalid phase");
+}
+#endif

@@ -14,7 +14,7 @@ using namespace llvm;
 
 namespace {
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("loongarch64--"));
+  Triple TT("loongarch64--");
   std::string CPU("generic-la64");
   std::string FS("+64bit");
 
@@ -53,6 +53,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "jumpTable:\n"
                    "  kind:            block-address\n"
                    "  entries:\n"
@@ -70,8 +71,8 @@ void runChecks(
   std::unique_ptr<Module> M = MParser->parseIRModule();
   ASSERT_TRUE(M);
 
-  M->setTargetTriple(TM->getTargetTriple().getTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setTargetTriple(TM->getTargetTriple());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM);
   bool Res = MParser->parseMachineFunctions(*M, MMI);

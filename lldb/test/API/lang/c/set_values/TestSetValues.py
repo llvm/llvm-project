@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class SetValuesTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -18,6 +19,7 @@ class SetValuesTestCase(TestBase):
         self.line4 = line_number("main.c", "// Set break point #4.")
         self.line5 = line_number("main.c", "// Set break point #5.")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Test settings and readings of program variables."""
         self.build()
@@ -82,7 +84,7 @@ class SetValuesTestCase(TestBase):
         self.expect(
             "frame variable --show-types",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\((short unsigned int|unsigned short)\) i = 33"],
+            patterns=[r"\((short unsigned int|unsigned short)\) i = 33"],
         )
 
         # Now set variable 'i' and check that it is correctly displayed.
@@ -90,7 +92,7 @@ class SetValuesTestCase(TestBase):
         self.expect(
             "frame variable --show-types",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\((short unsigned int|unsigned short)\) i = 333"],
+            patterns=[r"\((short unsigned int|unsigned short)\) i = 333"],
         )
 
         self.runCmd("continue")

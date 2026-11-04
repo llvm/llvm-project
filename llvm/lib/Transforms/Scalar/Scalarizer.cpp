@@ -50,14 +50,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
-namespace {
-
-BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
+static BasicBlock::iterator skipPastPhiNodes(BasicBlock::iterator Itr) {
   BasicBlock *BB = Itr->getParent();
   if (isa<PHINode>(Itr))
     Itr = BB->getFirstInsertionPt();
-  if (Itr != BB->end())
-    Itr = skipDebugIntrinsics(Itr);
   return Itr;
 }
 
@@ -75,6 +71,8 @@ using ScatterMap = std::map<std::pair<Value *, Type *>, ValueVector>;
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
 using GatherList = SmallVector<std::pair<Instruction *, ValueVector *>, 16>;
+
+namespace {
 
 struct VectorSplit {
   // The type of the vector.
@@ -106,10 +104,10 @@ public:
   Scatterer() = default;
 
   // Scatter V into Size components.  If new instructions are needed,
-  // insert them before BBI in BB.  If Cache is nonnull, use it to cache
+  // insert them before BBI.  If Cache is nonnull, use it to cache
   // the results.
-  Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
-            const VectorSplit &VS, ValueVector *cachePtr = nullptr);
+  Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
+            ValueVector *cachePtr = nullptr);
 
   // Return component I, creating a new Value for it if necessary.
   Value *operator[](unsigned I);
@@ -118,7 +116,6 @@ public:
   unsigned size() const { return VS.NumFragments; }
 
 private:
-  BasicBlock *BB;
   BasicBlock::iterator BBI;
   Value *V;
   VectorSplit VS;
@@ -196,6 +193,7 @@ struct VectorLayout {
   // The size of each (non-remainder) fragment in bytes.
   uint64_t SplitSize = 0;
 };
+} // namespace
 
 static bool isStructOfMatchingFixedVectors(Type *Ty) {
   if (!isa<StructType>(Ty))
@@ -251,7 +249,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
+      if (NumPacked < VS.NumPacked) {
+        // If last pack of remained bits not match current ExtendMask size.
+        ExtendMask.truncate(NumPacked);
+        ExtendMask.resize(NumElements, -1);
+      }
+
+      Fragment = Builder.CreateShuffleVector(
+          Fragment, PoisonValue::get(Fragment->getType()), ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
@@ -268,6 +273,7 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
   return Res;
 }
 
+namespace {
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
   ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
@@ -355,12 +361,13 @@ char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 
-Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
-                     const VectorSplit &VS, ValueVector *cachePtr)
-    : BB(bb), BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
+Scatterer::Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
+                     ValueVector *cachePtr)
+    : BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
   IsPointer = V->getType()->isPointerTy();
   if (!CachePtr) {
     Tmp.resize(VS.NumFragments, nullptr);
@@ -379,7 +386,7 @@ Value *Scatterer::operator[](unsigned Frag) {
   // Try to reuse a previous value.
   if (CV[Frag])
     return CV[Frag];
-  IRBuilder<> Builder(BB, BBI);
+  IRBuilder<> Builder(BBI);
   if (IsPointer) {
     if (Frag == 0)
       CV[Frag] = V;
@@ -458,8 +465,10 @@ bool ScalarizerVisitor::visit(Function &F) {
       Instruction *I = &*II;
       bool Done = InstVisitor::visit(I);
       ++II;
-      if (Done && I->getType()->isVoidTy())
+      if (Done && I->getType()->isVoidTy()) {
         I->eraseFromParent();
+        Scalarized = true;
+      }
     }
   }
   return finish();
@@ -474,7 +483,7 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // so that it can be used everywhere.
     Function *F = VArg->getParent();
     BasicBlock *BB = &F->getEntryBlock();
-    return Scatterer(BB, BB->begin(), V, VS, &Scattered[{V, VS.SplitTy}]);
+    return Scatterer(BB->begin(), V, VS, &Scattered[{V, VS.SplitTy}]);
   }
   if (Instruction *VOp = dyn_cast<Instruction>(V)) {
     // When scalarizing PHI nodes we might try to examine/rewrite InsertElement
@@ -484,18 +493,16 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // originating from instructions in unreachable blocks as undef we do not
     // need to analyse them further.
     if (!DT->isReachableFromEntry(VOp->getParent()))
-      return Scatterer(Point->getParent(), Point->getIterator(),
-                       PoisonValue::get(V->getType()), VS);
+      return Scatterer(Point->getIterator(), PoisonValue::get(V->getType()),
+                       VS);
     // Put the scattered form of an instruction directly after the
-    // instruction, skipping over PHI nodes and debug intrinsics.
-    BasicBlock *BB = VOp->getParent();
-    return Scatterer(
-        BB, skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V, VS,
-        &Scattered[{V, VS.SplitTy}]);
+    // instruction, skipping over PHI nodes.
+    return Scatterer(skipPastPhiNodes(std::next(BasicBlock::iterator(VOp))), V,
+                     VS, &Scattered[{V, VS.SplitTy}]);
   }
   // In the fallback case, just put the scattered before Point and
   // keep the result local to Point.
-  return Scatterer(Point->getParent(), Point->getIterator(), V, VS);
+  return Scatterer(Point->getIterator(), V, VS);
 }
 
 // Replace Op with the gathered form of the components in CV.  Defer the
@@ -700,7 +707,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -719,13 +726,12 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
       std::optional<VectorSplit> CurrVS =
           getVectorSplit(cast<FixedVectorType>(CallType->getContainedType(I)));
-      // This case does not seem to happen, but it is possible for
-      // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
-      // is not returned and we will bailout of handling this call.
-      // The secondary bailout case is if NumPacked does not match.
-      // This can happen if ScalarizeMinBits is not set to the default.
-      // This means with certain ScalarizeMinBits intrinsics like frexp
-      // will only scalarize when the struct elements have the same bitness.
+      // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+      // VectorSplit is not returned and we will bailout of handling this call.
+      // The secondary bailout case is if NumPacked does not match. This can
+      // happen if ScalarizeMinBits is not set to the default. This means with
+      // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+      // the struct elements have the same bitness.
       if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
       if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
@@ -933,6 +939,46 @@ bool ScalarizerVisitor::visitCastInst(CastInst &CI) {
 bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   std::optional<VectorSplit> DstVS = getVectorSplit(BCI.getDestTy());
   std::optional<VectorSplit> SrcVS = getVectorSplit(BCI.getSrcTy());
+
+  if (DstVS && !SrcVS && BCI.getSrcTy()->isIntegerTy() && !DstVS->RemainderTy &&
+      DstVS->NumPacked == 1 && DstVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    ValueVector Res(DstVS->NumFragments);
+    unsigned FragmentBits = DstVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < DstVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? DstVS->NumFragments - I - 1 : I;
+      Value *Fragment = BCI.getOperand(0);
+      if (FragmentIndex)
+        Fragment = Builder.CreateLShr(Fragment, FragmentIndex * FragmentBits);
+      Res[I] = Builder.CreateTruncOrBitCast(Fragment, DstVS->getFragmentType(I),
+                                            BCI.getName() + ".i" + Twine(I));
+    }
+    gather(&BCI, Res, *DstVS);
+    return true;
+  }
+
+  if (!DstVS && SrcVS && BCI.getDestTy()->isIntegerTy() &&
+      !SrcVS->RemainderTy && SrcVS->NumPacked == 1 &&
+      SrcVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    Scatterer Op0 = scatter(&BCI, BCI.getOperand(0), *SrcVS);
+    Value *Result = nullptr;
+    unsigned FragmentBits = SrcVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < SrcVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? SrcVS->NumFragments - I - 1 : I;
+      Value *Fragment = Builder.CreateZExtOrTrunc(Op0[I], BCI.getDestTy());
+      if (FragmentIndex)
+        Fragment = Builder.CreateShl(Fragment, FragmentIndex * FragmentBits);
+      Result = Result ? Builder.CreateOr(Result, Fragment) : Fragment;
+    }
+    replaceUses(&BCI, Result);
+    return true;
+  }
+
   if (!DstVS || !SrcVS || DstVS->RemainderTy || SrcVS->RemainderTy)
     return false;
 
@@ -1073,7 +1119,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.
@@ -1083,6 +1129,18 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   std::optional<VectorSplit> VS = getVectorSplit(VecType);
   if (!VS)
     return false;
+  for (unsigned I = 1; I < OpTy->getNumContainedTypes(); I++) {
+    std::optional<VectorSplit> CurrVS =
+        getVectorSplit(cast<FixedVectorType>(OpTy->getContainedType(I)));
+    // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+    // VectorSplit is not returned and we will bailout of handling this call.
+    // The secondary bailout case is if NumPacked does not match. This can
+    // happen if ScalarizeMinBits is not set to the default. This means with
+    // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+    // the struct elements have the same bitness.
+    if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
+      return false;
+  }
   IRBuilder<> Builder(&EVI);
   Scatterer Op0 = scatter(&EVI, Op, *VS);
   assert(!EVI.getIndices().empty() && "Make sure an index exists");
@@ -1094,7 +1152,9 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     Res.push_back(ResElem);
   }
 
-  gather(&EVI, Res, *VS);
+  Type *ActualVecType = cast<FixedVectorType>(OpTy->getContainedType(Index));
+  std::optional<VectorSplit> AVS = getVectorSplit(ActualVecType);
+  gather(&EVI, Res, *AVS);
   return true;
 }
 
@@ -1109,6 +1169,8 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
     unsigned Idx = CI->getZExtValue();
+    if (Idx >= VS->VecTy->getNumElements())
+      return false;
     unsigned Fragment = Idx / VS->NumPacked;
     Value *Res = Op0[Fragment];
     bool IsPacked = VS->NumPacked > 1;
@@ -1269,7 +1331,7 @@ bool ScalarizerVisitor::finish() {
         BasicBlock *BB = Op->getParent();
         IRBuilder<> Builder(Op);
         if (isa<PHINode>(Op))
-          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+          Builder.SetInsertPoint(BB->getFirstInsertionPt());
 
         VectorSplit VS = *getVectorSplit(Ty);
         assert(VS.NumFragments == CV.size());
@@ -1281,7 +1343,7 @@ bool ScalarizerVisitor::finish() {
         BasicBlock *BB = Op->getParent();
         IRBuilder<> Builder(Op);
         if (isa<PHINode>(Op))
-          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+          Builder.SetInsertPoint(BB->getFirstInsertionPt());
 
         // Iterate over each element in the struct
         unsigned NumOfStructElements = Ty->getNumElements();

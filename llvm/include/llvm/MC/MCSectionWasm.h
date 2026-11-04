@@ -49,25 +49,17 @@ class MCSectionWasm final : public MCSection {
 
   // The storage of Name is owned by MCContext's WasmUniquingMap.
   friend class MCContext;
+  friend class MCAsmInfoWasm;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, Name, K.isText(), /*IsVirtual=*/false, Begin),
+      : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin),
         UniqueID(UniqueID), Group(Group),
         IsWasmData(K.isReadOnly() || K.isWriteable()),
         IsMetadata(K.isMetadata()), SegmentFlags(SegmentFlags) {}
 
 public:
-  /// Decides whether a '.section' directive should be printed before the
-  /// section name
-  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
-
   const MCSymbolWasm *getGroup() const { return Group; }
   unsigned getSegmentFlags() const { return SegmentFlags; }
-
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
 
   bool isWasmData() const { return IsWasmData; }
   bool isMetadata() const { return IsMetadata; }
@@ -89,7 +81,6 @@ public:
     assert(isWasmData());
     IsPassive = V;
   }
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_Wasm; }
 };
 
 } // end namespace llvm

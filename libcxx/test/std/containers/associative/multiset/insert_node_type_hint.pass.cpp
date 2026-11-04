@@ -12,50 +12,53 @@
 
 // class multiset
 
-// iterator insert(const_iterator hint, node_type&&);
+// iterator insert(const_iterator hint, node_type&&); // constexpr since C++26
 
 #include <set>
 #include "test_macros.h"
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type
-node_factory(typename Container::key_type const& key)
-{
-    static Container c;
-    auto it = c.insert(key);
-    return c.extract(it);
+TEST_CONSTEXPR_CXX26 typename Container::node_type node_factory(Container& c, typename Container::key_type const& key) {
+  auto it = c.insert(key);
+  return c.extract(it);
 }
 
 template <class Container>
-void test(Container& c)
-{
-    auto* nf = &node_factory<Container>;
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
+  auto* nf = &node_factory<Container>;
 
-    for (int i = 0; i != 10; ++i)
-    {
-        typename Container::node_type node = nf(i);
-        assert(!node.empty());
-        std::size_t prev = c.size();
-        auto it = c.insert(c.end(), std::move(node));
-        assert(prev + 1 == c.size());
-        assert(*it == i);
-    }
+  Container c2;
 
-    assert(c.size() == 10);
+  for (int i = 0; i != 10; ++i) {
+    typename Container::node_type node = nf(c2, i);
+    assert(!node.empty());
+    std::size_t prev = c.size();
+    auto it          = c.insert(c.end(), std::move(node));
+    assert(prev + 1 == c.size());
+    assert(*it == i);
+  }
 
-    for (int i = 0; i != 10; ++i)
-    {
-        assert(c.count(i) == 1);
-    }
+  assert(c.size() == 10);
+
+  for (int i = 0; i != 10; ++i) {
+    assert(c.count(i) == 1);
+  }
 }
 
-int main(int, char**)
-{
-    std::multiset<int> m;
-    test(m);
-    std::multiset<int, std::less<int>, min_allocator<int>> m2;
-    test(m2);
+TEST_CONSTEXPR_CXX26 bool test() {
+  std::multiset<int> m;
+  test(m);
+  std::multiset<int, std::less<int>, min_allocator<int>> m2;
+  test(m2);
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -62,11 +62,11 @@ public:
   bool WarnBeforeDetach() const override;
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  size_t ReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                    size_t size, lldb_private::Status &error) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   lldb::addr_t GetImageInfoAddress() override;
 
@@ -131,6 +131,7 @@ private:
   VMRangeToPermissions m_core_range_infos;
   lldb::ModuleSP m_core_module_sp;
   lldb::addr_t m_dyld_addr;
+  lldb::addr_t m_dyld_all_image_infos_addr;
   lldb::addr_t m_mach_kernel_addr;
   llvm::StringRef m_dyld_plugin_name;
 };

@@ -24,5 +24,5 @@ build_image() {
 
 cd "${THIS_DIR}"
 
-build_image 21-def-x86
+build_image 23-def-x86
 build_image 33-goog-x86_64

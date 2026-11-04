@@ -1,0 +1,44 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": "",
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "test.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ]
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 0,
+      "linkage": {
+        "type": "Internal"
+      }
+    }
+  ],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

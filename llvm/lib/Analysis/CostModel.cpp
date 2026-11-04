@@ -17,59 +17,82 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CostModel.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
-
-static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
-    "cost-kind", cl::desc("Target cost kind"),
-    cl::init(TargetTransformInfo::TCK_RecipThroughput),
-    cl::values(clEnumValN(TargetTransformInfo::TCK_RecipThroughput,
-                          "throughput", "Reciprocal throughput"),
-               clEnumValN(TargetTransformInfo::TCK_Latency,
-                          "latency", "Instruction latency"),
-               clEnumValN(TargetTransformInfo::TCK_CodeSize,
-                          "code-size", "Code size"),
-               clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
-                          "size-latency", "Code size and latency")));
-
-static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
-    cl::desc("Calculate intrinsics cost based only on argument types"),
-    cl::init(false));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
 
+static InstructionCost getCost(const AnalysisOptions &Opts, Instruction &Inst,
+                               TTI::TargetCostKind CostKind,
+                               TargetTransformInfo &TTI) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II &&
+      Opts.intrinsic_cost_strategy != IntrinsicCostStrategy::InstructionCost) {
+    IntrinsicCostAttributes ICA(
+        II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
+        /*TypeBasedOnly=*/Opts.intrinsic_cost_strategy ==
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost);
+    return TTI.getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  return TTI.getInstructionCost(&Inst, CostKind);
+}
+
+static TTI::TargetCostKind
+OutputCostKindToTargetCostKind(OutputCostKind CostKind) {
+  switch (CostKind) {
+  case OutputCostKind::RecipThroughput:
+    return TTI::TCK_RecipThroughput;
+  case OutputCostKind::Latency:
+    return TTI::TCK_Latency;
+  case OutputCostKind::CodeSize:
+    return TTI::TCK_CodeSize;
+  case OutputCostKind::SizeAndLatency:
+    return TTI::TCK_SizeAndLatency;
+  default:
+    llvm_unreachable("Unexpected OutputCostKind!");
+  };
+}
+
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  const AnalysisOptions &Opts = getAnalysisOptions(F);
   OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
-      // TODO: Use a pass parameter instead of cl::opt CostKind to determine
-      // which cost kind to print.
-      InstructionCost Cost;
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && TypeBasedIntrinsicCost) {
-        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
-                                    InstructionCost::getInvalid(), true);
-        Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+      OS << "Cost Model: ";
+      if (Opts.cost_kind == OutputCostKind::All) {
+        OS << "Found costs of ";
+        InstructionCost RThru =
+            getCost(Opts, Inst, TTI::TCK_RecipThroughput, TTI);
+        InstructionCost CodeSize = getCost(Opts, Inst, TTI::TCK_CodeSize, TTI);
+        InstructionCost Lat = getCost(Opts, Inst, TTI::TCK_Latency, TTI);
+        InstructionCost SizeLat =
+            getCost(Opts, Inst, TTI::TCK_SizeAndLatency, TTI);
+        if (RThru == CodeSize && RThru == Lat && RThru == SizeLat)
+          OS << RThru;
+        else
+          OS << "RThru:" << RThru << " CodeSize:" << CodeSize << " Lat:" << Lat
+             << " SizeLat:" << SizeLat;
+        OS << " for: " << Inst << "\n";
+      } else {
+        InstructionCost Cost = getCost(
+            Opts, Inst, OutputCostKindToTargetCostKind(Opts.cost_kind), TTI);
+        if (Cost.isValid())
+          OS << "Found an estimated cost of " << Cost;
+        else
+          OS << "Invalid cost";
+        OS << " for instruction: " << Inst << "\n";
       }
-      else {
-        Cost = TTI.getInstructionCost(&Inst, CostKind);
-      }
-
-      if (auto CostVal = Cost.getValue())
-        OS << "Cost Model: Found an estimated cost of " << *CostVal;
-      else
-        OS << "Cost Model: Invalid cost";
-
-      OS << " for instruction: " << Inst << "\n";
     }
   }
   return PreservedAnalyses::all();

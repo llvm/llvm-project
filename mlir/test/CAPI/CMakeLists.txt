@@ -31,11 +31,19 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
     MLIRCAPIExecutionEngine
     MLIRCAPIRegisterEverything
 )
+  _add_capi_test_executable(mlir-capi-global-constructors-test
+    global_constructors.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIConversion
+    MLIRCAPIExecutionEngine
+    MLIRCAPIRegisterEverything
+)
 endif()
 
 _add_capi_test_executable(mlir-capi-ir-test
   ir.c
   LINK_LIBS PRIVATE
+    MLIRCAPIInterfaces
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything
@@ -54,6 +62,20 @@ _add_capi_test_executable(mlir-capi-llvm-test
     MLIRCAPIIR
     MLIRCAPILLVM
     MLIRCAPIRegisterEverything
+)
+
+_add_capi_test_executable(mlir-capi-openacc-test
+  openacc.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIFunc
+    MLIRCAPIOpenACC
+)
+
+_add_capi_test_executable(mlir-capi-remarks-test
+  remarks.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
 )
 
 _add_capi_test_executable(mlir-capi-pass-test
@@ -92,8 +114,9 @@ _add_capi_test_executable(mlir-capi-quant-test
 _add_capi_test_executable(mlir-capi-rewrite-test
   rewrite.c
   LINK_LIBS PRIVATE
+    MLIRCAPIArith
+    MLIRCAPIFunc
     MLIRCAPIIR
-    MLIRCAPIRegisterEverything
     MLIRCAPITransforms
 )
 
@@ -102,6 +125,7 @@ _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
+    MLIRCAPIInterfaces
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
 )
@@ -122,4 +146,14 @@ _add_capi_test_executable(mlir-capi-translation-test
     MLIRCAPILLVM
     MLIRCAPIRegisterEverything
     MLIRCAPITarget
+)
+
+_add_capi_test_executable(mlir-capi-smt-test
+  smt.c
+
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIFunc
+    MLIRCAPISMT
+    MLIRCAPIExportSMTLIB
 )

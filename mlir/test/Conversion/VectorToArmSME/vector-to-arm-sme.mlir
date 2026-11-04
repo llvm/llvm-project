@@ -429,38 +429,6 @@ func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
   return
 }
 
-//===----------------------------------------------------------------------===//
-// vector.splat
-//===----------------------------------------------------------------------===//
-
-// -----
-
-// CHECK-LABEL:   func.func @splat_vec2d_from_i32(
-// CHECK-SAME:      %[[SRC:.*]]: i32) {
-// CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
-// CHECK:   arm_sme.get_tile : vector<[4]x[4]xi32>
-// CHECK:   %[[VSCALE:.*]] = vector.vscale
-// CHECK:   %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %{{.*}} : index
-// CHECK:   scf.for {{.*}} to %[[NUM_TILE_SLICES]] {{.*}} {
-// CHECK:     arm_sme.insert_tile_slice %[[BCST]], {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
-func.func @splat_vec2d_from_i32(%arg0: i32) {
-  %0 = vector.splat %arg0 : vector<[4]x[4]xi32>
-  "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
-  return
-}
-
-// -----
-
-// CHECK-LABEL:   func.func @splat_vec2d_from_f16(
-// CHECK-SAME:      %[[SRC:.*]]: f16) {
-// CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : f16 to vector<[8]xf16>
-// CHECK:   scf.for
-// CHECK:     arm_sme.insert_tile_slice %[[BCST]], {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
-func.func @splat_vec2d_from_f16(%arg0: f16) {
-  %0 = vector.splat %arg0 : vector<[8]x[8]xf16>
-  "prevent.dce"(%0) : (vector<[8]x[8]xf16>) -> ()
-  return
-}
 
 //===----------------------------------------------------------------------===//
 // vector.transpose
@@ -713,18 +681,6 @@ func.func @vector_load_i8_with_offset(%arg0 : memref<?x?xi8>) -> vector<[16]x[16
   %c0 = arith.constant 0 : index
   %c123 = arith.constant 123 : index
   %tile = vector.load %arg0[%c123, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
-  return %tile : vector<[16]x[16]xi8>
-}
-
-// -----
-
-// CHECK-LABEL: @vector_load_i8_from_rank_1_memref(
-// CHECK-SAME:                                     %[[MEMREF:.*]]: memref<?xi8>)
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: arm_sme.tile_load %[[MEMREF]][%[[C0]]] : memref<?xi8>, vector<[16]x[16]xi8>
-func.func @vector_load_i8_from_rank_1_memref(%arg0 : memref<?xi8>) -> vector<[16]x[16]xi8> {
-  %c0 = arith.constant 0 : index
-  %tile = vector.load %arg0[%c0] : memref<?xi8>, vector<[16]x[16]xi8>
   return %tile : vector<[16]x[16]xi8>
 }
 

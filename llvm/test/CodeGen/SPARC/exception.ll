@@ -3,6 +3,8 @@
 ; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=static | FileCheck -check-prefix=V9ABS %s
 ; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=pic    | FileCheck -check-prefix=V9PIC %s
 
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=static -filetype=obj | llvm-readobj -r - | FileCheck -check-prefix=V9ABS-REL %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=pic -filetype=obj | llvm-readobj -r - | FileCheck -check-prefix=V9PIC-REL %s
 
 %struct.__fundamental_type_info_pseudo = type { %struct.__type_info_pseudo }
 %struct.__type_info_pseudo = type { ptr, ptr }
@@ -57,6 +59,16 @@
 ; V9ABS-NOT:    .section
 ; V9ABS:        .xword _ZTIi
 
+; V9ABS-REL:      .rela.gcc_except_table {
+; V9ABS-REL-NEXT:   0x14 R_SPARC_64 _ZTIi 0x0
+; V9ABS-REL-NEXT:   0x1C R_SPARC_64 _ZTIf 0x0
+; V9ABS-REL-NEXT: }
+; V9ABS-REL-NEXT: .rela.eh_frame {
+; V9ABS-REL-NEXT:   0x13 R_SPARC_UA64 __gxx_personality_v0 0x0
+; V9ABS-REL-NEXT:   0x2C R_SPARC_DISP32 .text 0x0
+; V9ABS-REL-NEXT:   0x35 R_SPARC_DISP32 .gcc_except_table 0x0
+; V9ABS-REL-NEXT: }
+
 ; V9PIC-LABEL: main:
 ; V9PIC:        .cfi_startproc
 ; V9PIC:        .cfi_personality 155, DW.ref.__gxx_personality_v0
@@ -70,6 +82,18 @@
 ; V9PIC:        .data
 ; V9PIC: .L_ZTIi.DW.stub:
 ; V9PIC-NEXT:   .xword _ZTIi
+
+; V9PIC-REL:      .rela.gcc_except_table {
+; V9PIC-REL-NEXT:   0x14 R_SPARC_DISP32 .data 0x8
+; V9PIC-REL-NEXT:   0x18 R_SPARC_DISP32 .data 0x0
+; V9PIC-REL-NEXT: }
+; V9PIC-REL-NEXT: .rela.data {
+; V9PIC-REL:      .rela.data.DW.ref.__gxx_personality_v0 {
+; V9PIC-REL:      .rela.eh_frame {
+; V9PIC-REL-NEXT:   0x13 R_SPARC_DISP32 DW.ref.__gxx_personality_v0 0x0
+; V9PIC-REL-NEXT:   0x28 R_SPARC_DISP32 .text 0x0
+; V9PIC-REL-NEXT:   0x31 R_SPARC_DISP32 .gcc_except_table 0x0
+; V9PIC-REL-NEXT: }
 
 define i32 @main(i32 %argc, ptr nocapture readnone %argv) unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 entry:

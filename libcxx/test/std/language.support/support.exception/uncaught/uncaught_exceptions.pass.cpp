@@ -8,11 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// std::uncaught_exceptions() gives the wrong answer in versions of
-// the dylib that don't contain 3a92ecc. Previously, it only returned
-// 0 or 1.
-// XFAIL: using-built-library-before-llvm-9
-
 // test uncaught_exceptions
 
 #include <exception>

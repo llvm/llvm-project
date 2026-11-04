@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_RECORDOPS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_RECORDOPS_H
 
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 
@@ -36,8 +37,11 @@ namespace dataflow {
 ///    - The type of `Src` must be derived from `Dest`, or
 ///    - The type of `Dest` must be derived from `Src` (in this case, any fields
 ///      that are only present in `Dest` are not overwritten).
+///    - The types of `Dest` and `Src` are both derived from a non-null
+///      `TypeToCopy` (in this case, only fields present in `TypeToCopy` are
+///      overwritten).
 void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
-                Environment &Env);
+                Environment &Env, QualType TypeToCopy = QualType());
 
 /// Returns whether the records `Loc1` and `Loc2` are equal.
 ///

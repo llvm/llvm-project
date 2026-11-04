@@ -44,10 +44,10 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-NEXT:    mfvsrd r10, v3
 ; CHECK-NEXT:    std r5, 0(r3)
 ; CHECK-NEXT:    lbz r5, 2(r7)
-; CHECK-NEXT:    mr r7, r9
 ; CHECK-NEXT:    stb r11, 0(r3)
 ; CHECK-NEXT:    stb r12, 0(r3)
 ; CHECK-NEXT:    std r2, 0(r3)
+; CHECK-NEXT:    mr r7, r9
 ; CHECK-NEXT:    neg r10, r10
 ; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-NEXT:    stb r5, 0(0)
@@ -93,10 +93,10 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-BE-NEXT:    neg r5, r5
 ; CHECK-BE-NEXT:    std r5, 0(r3)
 ; CHECK-BE-NEXT:    lbz r5, 2(r7)
-; CHECK-BE-NEXT:    mr r7, r9
 ; CHECK-BE-NEXT:    stb r11, 0(r3)
 ; CHECK-BE-NEXT:    stb r12, 0(r3)
 ; CHECK-BE-NEXT:    std r30, 0(r3)
+; CHECK-BE-NEXT:    mr r7, r9
 ; CHECK-BE-NEXT:    neg r10, r10
 ; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-BE-NEXT:    stb r5, 0(0)

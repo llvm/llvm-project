@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -57,24 +58,26 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   SkipNum = 2;
   // These flags are all of the form -Flag <Arg> and are treated as two
   // arguments.  Therefore, we need to skip the flag and the next argument.
-  bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
-    .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
-    .Cases("-o", "-dependency-file", true)
-    .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
-    .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
-    .Default(false);
+  bool ShouldSkip =
+      llvm::StringSwitch<bool>(Flag)
+          .Cases({"-MF", "-MT", "-MQ", "-serialize-diagnostic-file"}, true)
+          .Cases({"-o", "-dependency-file"}, true)
+          .Cases({"-fdebug-compilation-dir", "-diagnostic-log-file"}, true)
+          .Cases({"-dwarf-debug-flags", "-ivfsoverlay"}, true)
+          .Default(false);
   if (ShouldSkip)
     return true;
 
   // Some include flags shouldn't be skipped if we have a crash VFS
-  IsInclude = llvm::StringSwitch<bool>(Flag)
-    .Cases("-include", "-header-include-file", true)
-    .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
-    .Cases("-internal-externc-isystem", "-iprefix", true)
-    .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-    .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-    .Cases("-iframework", "-include-pch", true)
-    .Default(false);
+  IsInclude =
+      llvm::StringSwitch<bool>(Flag)
+          .Cases({"-include", "-header-include-file"}, true)
+          .Cases({"-idirafter", "-internal-isystem", "-iwithprefix"}, true)
+          .Cases({"-internal-externc-isystem", "-iprefix"}, true)
+          .Cases({"-iwithprefixbefore", "-isystem", "-iquote"}, true)
+          .Cases({"-isysroot", "-I", "-F", "-resource-dir"}, true)
+          .Cases({"-internal-iframework", "-iframework", "-include-pch"}, true)
+          .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
 
@@ -82,9 +85,9 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
 
   // These flags are all of the form -Flag and have no second argument.
   ShouldSkip = llvm::StringSwitch<bool>(Flag)
-    .Cases("-M", "-MM", "-MG", "-MP", "-MD", true)
-    .Case("-MMD", true)
-    .Default(false);
+                   .Cases({"-M", "-MM", "-MG", "-MP", "-MD"}, true)
+                   .Case("-MMD", true)
+                   .Default(false);
 
   // Match found.
   SkipNum = 1;
@@ -140,9 +143,7 @@ void Command::buildArgvForResponseFile(
     return;
   }
 
-  llvm::StringSet<> Inputs;
-  for (const auto *InputName : InputFileList)
-    Inputs.insert(InputName);
+  llvm::StringSet<> Inputs(llvm::from_range, InputFileList);
   Out.push_back(Executable);
 
   if (PrependArg)
@@ -185,7 +186,7 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
     StringRef FlagRef(Args[Idx + NumArgs - 1]);
     assert((FlagRef.starts_with("-F") || FlagRef.starts_with("-I")) &&
            "Expecting -I or -F");
-    StringRef Inc = FlagRef.slice(2, StringRef::npos);
+    StringRef Inc = FlagRef.substr(2);
     if (getAbsPath(Inc, NewInc)) {
       SmallString<128> NewArg(FlagRef.slice(0, 2));
       NewArg += NewInc;
@@ -425,6 +426,10 @@ int CC1Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
   // applicable here.
   if (ExecutionFailed)
     *ExecutionFailed = false;
+
+  // Enabling the sandbox here allows us to restore its previous state even when
+  // this cc1 invocation crashes.
+  auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
 
   llvm::CrashRecoveryContext CRC;
   CRC.DumpStackAndCleanupOnFailure = true;

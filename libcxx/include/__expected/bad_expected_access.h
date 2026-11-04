@@ -23,6 +23,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Err>
 class bad_expected_access;
@@ -43,9 +44,11 @@ protected:
 
 public:
 #  if _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION
-  const char* what() const noexcept override;
+  [[nodiscard]] const char* what() const noexcept override;
 #  else
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override { return "bad access to std::expected"; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override {
+    return "bad access to std::expected";
+  }
 #  endif
 };
 _LIBCPP_DIAGNOSTIC_POP
@@ -55,15 +58,16 @@ class bad_expected_access : public bad_expected_access<void> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit bad_expected_access(_Err __e) : __unex_(std::move(__e)) {}
 
-  _LIBCPP_HIDE_FROM_ABI _Err& error() & noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI const _Err& error() const& noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI _Err&& error() && noexcept { return std::move(__unex_); }
-  _LIBCPP_HIDE_FROM_ABI const _Err&& error() const&& noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Err& error() & noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const _Err& error() const& noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Err&& error() && noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const _Err&& error() const&& noexcept { return std::move(__unex_); }
 
 private:
   _Err __unex_;
 };
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23

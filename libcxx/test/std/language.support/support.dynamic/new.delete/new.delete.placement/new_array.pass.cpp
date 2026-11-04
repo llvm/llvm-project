@@ -26,7 +26,10 @@ TEST_CONSTEXPR_OPERATOR_NEW void test_direct_call() {
 
   char ch = '*';
   assert(::operator new[](1, &ch) == &ch);
+  ::operator delete[](&ch, &ch);
   assert(ch == '*');
+
+  ::operator delete[](nullptr, nullptr);
 }
 
 #ifdef __cpp_lib_constexpr_new

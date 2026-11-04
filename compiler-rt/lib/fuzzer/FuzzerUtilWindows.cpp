@@ -24,7 +24,7 @@
 // clang-format off
 #include <windows.h>
 // These must be included after windows.h.
-// archicture need to be set before including
+// architecture need to be set before including
 // libloaderapi
 #include <libloaderapi.h>
 #include <stringapiset.h>
@@ -260,6 +260,8 @@ void SetThreadName(std::thread &thread, const std::string &name) {
   }
 #endif
 }
+
+void PlatformInit() {}
 
 } // namespace fuzzer
 

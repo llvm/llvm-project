@@ -33,8 +33,9 @@ class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
   llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
-  explicit ExternalASTSourceWrapper(ExternalASTSource *Source)
-      : m_Source(Source) {
+  explicit ExternalASTSourceWrapper(
+      llvm::IntrusiveRefCntPtr<ExternalASTSource> Source)
+      : m_Source(std::move(Source)) {
     assert(m_Source && "Can't wrap nullptr ExternalASTSource");
   }
 
@@ -150,6 +151,18 @@ public:
           &VirtualBaseOffsets) override {
     return m_Source->layoutRecordType(Record, Size, Alignment, FieldOffsets,
                                       BaseOffsets, VirtualBaseOffsets);
+  }
+
+  void StartedQualifiedLookup(const clang::DeclContext *DC) override {
+    if (auto *sema_source =
+            llvm::dyn_cast<clang::ExternalSemaSource>(m_Source.get()))
+      sema_source->StartedQualifiedLookup(DC);
+  }
+
+  void FinishedQualifiedLookup(const clang::DeclContext *DC) override {
+    if (auto *sema_source =
+            llvm::dyn_cast<clang::ExternalSemaSource>(m_Source.get()))
+      sema_source->FinishedQualifiedLookup(DC);
   }
 
   /// This gets called when Sema is reconciling undefined but used decls.
@@ -284,7 +297,8 @@ class SemaSourceWithPriorities : public clang::ExternalSemaSource {
 
 private:
   /// The sources ordered in decreasing priority.
-  llvm::SmallVector<clang::ExternalSemaSource *, 2> Sources;
+  llvm::SmallVector<llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource>, 2>
+      Sources;
 
 public:
   /// Construct a SemaSourceWithPriorities with a 'high quality' source that
@@ -292,16 +306,14 @@ public:
   /// as a fallback.
   ///
   /// This class assumes shared ownership of the sources provided to it.
-  SemaSourceWithPriorities(clang::ExternalSemaSource *high_quality_source,
-                           clang::ExternalSemaSource *low_quality_source) {
+  SemaSourceWithPriorities(
+      llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource> high_quality_source,
+      llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource> low_quality_source) {
     assert(high_quality_source);
     assert(low_quality_source);
 
-    high_quality_source->Retain();
-    low_quality_source->Retain();
-
-    Sources.push_back(high_quality_source);
-    Sources.push_back(low_quality_source);
+    Sources.push_back(std::move(high_quality_source));
+    Sources.push_back(std::move(low_quality_source));
   }
 
   ~SemaSourceWithPriorities() override;
@@ -374,7 +386,7 @@ public:
 
   clang::CXXCtorInitializer **
   GetExternalCXXCtorInitializers(uint64_t Offset) override {
-    for (auto *S : Sources)
+    for (const auto &S : Sources)
       if (auto *R = S->GetExternalCXXCtorInitializers(Offset))
         return R;
     return nullptr;
@@ -422,7 +434,7 @@ public:
   }
 
   void CompleteType(clang::TagDecl *Tag) override {
-    for (clang::ExternalSemaSource *S : Sources) {
+    for (const auto &S : Sources) {
       S->CompleteType(Tag);
       // Stop after the first source completed the type.
       if (Tag->isCompleteDefinition())
@@ -563,7 +575,7 @@ public:
   }
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const clang::TypedefNameDecl *, 4> &Decls) override {
+      llvm::SmallPtrSetImpl<const clang::TypedefNameDecl *> &Decls) override {
     for (auto &Source : Sources)
       Source->ReadUnusedLocalTypedefNameCandidates(Decls);
   }
@@ -580,6 +592,13 @@ public:
           &WI) override {
     for (auto &Source : Sources)
       Source->ReadWeakUndeclaredIdentifiers(WI);
+  }
+
+  void ReadExtnameUndeclaredIdentifiers(
+      llvm::SmallVectorImpl<std::pair<clang::IdentifierInfo *,
+                                      clang::AsmLabelAttr *>> &EI) override {
+    for (auto &Source : Sources)
+      Source->ReadExtnameUndeclaredIdentifiers(EI);
   }
 
   void ReadUsedVTables(
@@ -626,6 +645,16 @@ public:
         return true;
     }
     return false;
+  }
+
+  void StartedQualifiedLookup(const clang::DeclContext *DC) override {
+    for (auto &Source : Sources)
+      Source->StartedQualifiedLookup(DC);
+  }
+
+  void FinishedQualifiedLookup(const clang::DeclContext *DC) override {
+    for (auto &Source : Sources)
+      Source->FinishedQualifiedLookup(DC);
   }
 };
 

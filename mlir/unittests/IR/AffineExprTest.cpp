@@ -84,6 +84,20 @@ TEST(AffineExprTest, constantFolding) {
   ASSERT_EQ(cminfloordivcn1.getKind(), AffineExprKind::FloorDiv);
 }
 
+TEST(AffineExprTest, commutative) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto c2 = b.getAffineConstantExpr(1);
+  auto d0 = b.getAffineDimExpr(0);
+  auto d1 = b.getAffineDimExpr(1);
+  auto s0 = b.getAffineSymbolExpr(0);
+  auto s1 = b.getAffineSymbolExpr(1);
+
+  ASSERT_EQ(d0 * d1, d1 * d0);
+  ASSERT_EQ(s0 + s1, s1 + s0);
+  ASSERT_EQ(s0 * c2, c2 * s0);
+}
+
 TEST(AffineExprTest, divisionSimplification) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
@@ -146,4 +160,13 @@ TEST(AffineExprTest, simpleAffineExprFlattenerRegression) {
 
   ASSERT_TRUE(isa<AffineConstantExpr>(result));
   ASSERT_EQ(cast<AffineConstantExpr>(result).getValue(), 7);
+}
+
+TEST(AffineExprTest, simplifyCommutative) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto s0 = b.getAffineSymbolExpr(0);
+  auto s1 = b.getAffineSymbolExpr(1);
+
+  ASSERT_EQ(s0 * s1 - s1 * s0 + 1, 1);
 }

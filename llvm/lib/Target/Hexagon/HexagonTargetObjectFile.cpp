@@ -109,9 +109,10 @@ static const char *getSectionSuffixForSize(unsigned Size) {
   }
 }
 
-void HexagonTargetObjectFile::Initialize(MCContext &Ctx,
-      const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void HexagonTargetObjectFile::initialize(MCContext &Ctx,
+                                         const TargetMachine &TM,
+                                         const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   SmallDataSection =
     getContext().getELFSection(".sdata", ELF::SHT_PROGBITS,
@@ -316,6 +317,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::HalfTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
+  case Type::ByteTyID:
   case Type::IntegerTyID: {
     const DataLayout &DL = GV->getDataLayout();
     // It is unfortunate that DL's function take non-const Type*.

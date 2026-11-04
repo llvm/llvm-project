@@ -24,6 +24,8 @@
 // RUN:  -msve-vector-bits=2048+ 2>&1 | FileCheck --check-prefix=CHECK-2048P %s
 // RUN: %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve \
 // RUN:  -msve-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-SCALABLE %s
+// RUN: %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve+sme \
+// RUN:  -msve-streaming-vector-bits=128 2>&1 | FileCheck --check-prefix=STREAMING-128 %s
 
 // CHECK-128: "-mvscale-max=1" "-mvscale-min=1"
 // CHECK-256: "-mvscale-max=2" "-mvscale-min=2"
@@ -43,6 +45,8 @@
 // CHECK-2048P-NOT: "-mvscale-max"
 // CHECK-SCALABLE-NOT: "-mvscale-min=
 // CHECK-SCALABLE-NOT: "-mvscale-max=
+
+// STREAMING-128: "-mvscale-streaming-max=1" "-mvscale-streaming-min=1"
 
 // Error out if an unsupported value is passed to -msve-vector-bits.
 // -----------------------------------------------------------------------------

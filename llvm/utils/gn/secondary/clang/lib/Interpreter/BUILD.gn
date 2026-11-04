@@ -26,11 +26,14 @@ static_library("Interpreter") {
   sources = [
     "CodeCompletion.cpp",
     "DeviceOffload.cpp",
-    "IncrementalExecutor.cpp",
+    "IncrementalAction.cpp",
+    "IncrementalExecutorBuilder.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
     "InterpreterValuePrinter.cpp",
+    "OrcIncrementalExecutor.cpp",
+    "OrcIncrementalExecutorBuilder.cpp",
     "Value.cpp",
   ]
 }

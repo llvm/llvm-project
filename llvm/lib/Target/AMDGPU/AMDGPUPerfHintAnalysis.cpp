@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -134,8 +133,8 @@ static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
 
 bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   LLVM_DEBUG(dbgs() << "[isIndirectAccess] " << *Inst << '\n');
-  SmallSet<const Value *, 32> WorkSet;
-  SmallSet<const Value *, 32> Visited;
+  SmallPtrSet<const Value *, 32> WorkSet;
+  SmallPtrSet<const Value *, 32> Visited;
   if (const Value *MO = getMemoryInstrPtrAndType(Inst).first) {
     if (isGlobalAddr(MO))
       WorkSet.insert(MO);
@@ -219,10 +218,10 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
 
   for (auto &B : F) {
     LastAccess = MemAccessInfo();
-    unsigned UsedGlobalLoadsInBB = 0;
+    uint64_t UsedGlobalLoadsInBB = 0;
     for (auto &I : B) {
       if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
-        unsigned Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
+        uint64_t Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
         // TODO: Check if the global load and its user are close to each other
         // instead (Or do this analysis in GCNSchedStrategy?).
         if (isGlobalLoadUsedInBB(I))
@@ -268,7 +267,7 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
     }
 
     if (!FI.HasDenseGlobalMemAcc) {
-      unsigned GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
+      uint64_t GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
       if (GlobalMemAccPercentage > 50) {
         LLVM_DEBUG(dbgs() << "[HasDenseGlobalMemAcc] Set to true since "
                           << B.getName() << " has " << GlobalMemAccPercentage

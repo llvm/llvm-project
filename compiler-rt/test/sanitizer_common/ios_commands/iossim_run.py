@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import glob, os, pipes, sys, subprocess
+import glob, os, shlex, sys, subprocess
 
 
 device_id = os.environ.get("SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER")
@@ -21,8 +21,11 @@ for e in [
     "ASAN_ACTIVATION_OPTIONS",
     "MallocNanoZone",
 ]:
-    if e in os.environ:
-        os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
+    simctl_version = "SIMCTL_CHILD_" + e
+    # iossim_env.py might have already set these using arguments it was given
+    # (and that we can't see from inside this script). Don't overwrite them!
+    if e in os.environ and simctl_version not in os.environ:
+        os.environ[simctl_version] = os.environ[e]
 
 find_atos_cmd = "xcrun -sdk iphonesimulator -f atos"
 atos_path = (
@@ -49,8 +52,7 @@ if prog == "rm":
             # Don't quote glob pattern
             rm_args.append(arg)
         else:
-            # FIXME(dliew): pipes.quote() is deprecated
-            rm_args.append(pipes.quote(arg))
+            rm_args.append(shlex.quote(arg))
     rm_cmd_line = ["/bin/rm"] + rm_args
     rm_cmd_line_str = " ".join(rm_cmd_line)
     # We use `shell=True` so that any wildcard globs get expanded by the shell.

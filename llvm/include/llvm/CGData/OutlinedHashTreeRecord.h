@@ -17,6 +17,7 @@
 #define LLVM_CGDATA_OUTLINEDHASHTREERECORD_H
 
 #include "llvm/CGData/OutlinedHashTree.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -40,13 +41,13 @@ struct OutlinedHashTreeRecord {
       : HashTree(std::move(HashTree)) {};
 
   /// Serialize the outlined hash tree to a raw_ostream.
-  void serialize(raw_ostream &OS) const;
+  LLVM_ABI void serialize(raw_ostream &OS) const;
   /// Deserialize the outlined hash tree from a raw_ostream.
-  void deserialize(const unsigned char *&Ptr);
+  LLVM_ABI void deserialize(const unsigned char *&Ptr);
   /// Serialize the outlined hash tree to a YAML stream.
-  void serializeYAML(yaml::Output &YOS) const;
+  LLVM_ABI void serializeYAML(yaml::Output &YOS) const;
   /// Deserialize the outlined hash tree from a YAML stream.
-  void deserializeYAML(yaml::Input &YIS);
+  LLVM_ABI void deserializeYAML(yaml::Input &YIS);
 
   /// Merge the other outlined hash tree into this one.
   void merge(const OutlinedHashTreeRecord &Other) {

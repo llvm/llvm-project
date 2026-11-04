@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %union.u = type { x86_fp80 }
 %struct.s = type { double, i16, i8, [5 x i8] }
 
-@b = internal global %struct.s { double 3.14, i16 9439, i8 25, [5 x i8] undef }, align 16
+@b = internal global %struct.s { double 3.14, i16 9439, i8 25, [5 x i8] poison }, align 16
 
 %struct.Foo = type { i32, i64 }
 @a = internal global %struct.Foo { i32 1, i64 2 }, align 8

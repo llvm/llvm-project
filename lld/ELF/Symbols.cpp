@@ -15,7 +15,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -36,7 +36,7 @@ template <typename T> struct AssertSymbol {
                 "SymbolUnion not aligned enough");
 };
 
-LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+[[maybe_unused]] static inline void assertSymbols() {
   AssertSymbol<Defined>();
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
@@ -89,8 +89,16 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection())
+    if (d.isSection()) {
       offset += addend;
+      if (auto *ms = dyn_cast<MergeInputSection>(isec);
+          ms && offset >= ms->content().size()) {
+        if (offset > ms->content().size())
+          Err(ctx) << ms << ": offset 0x" << Twine::utohexstr(offset)
+                   << " is outside the section";
+        return 0;
+      }
+    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -174,11 +182,15 @@ uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
          ctx.target->gotEntrySize;
 }
 
+uint64_t Symbol::getPltOffset(Ctx &ctx) const {
+  if (isInIplt)
+    return getPltIdx(ctx) * ctx.target->ipltEntrySize;
+  return ctx.in.plt->headerSize + getPltIdx(ctx) * ctx.target->pltEntrySize;
+}
+
 uint64_t Symbol::getPltVA(Ctx &ctx) const {
-  uint64_t outVA = isInIplt ? ctx.in.iplt->getVA() +
-                                  getPltIdx(ctx) * ctx.target->ipltEntrySize
-                            : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
-                                  getPltIdx(ctx) * ctx.target->pltEntrySize;
+  uint64_t outVA = (isInIplt ? ctx.in.iplt->getVA() : ctx.in.plt->getVA()) +
+                   getPltOffset(ctx);
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
@@ -235,10 +247,24 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
     if (ver.name != verstr)
       continue;
 
-    if (isDefault)
-      versionId = ver.id;
+    // Like GNU ld, localize a versioned symbol (foo@v1 or foo@@v1) if a
+    // local: pattern in its own node v1 matches foo and no global: pattern
+    // does.
+    StringRef base = s.take_front(pos);
+    std::string demangled = demangle(base);
+    auto matches = [&](ArrayRef<SymbolVersion> pats) {
+      for (const SymbolVersion &pat : pats) {
+        StringRef name = pat.isExternCpp ? StringRef(demangled) : base;
+        if (pat.hasWildcard ? SingleStringMatcher(pat.name).match(name)
+                            : pat.name == name)
+          return true;
+      }
+      return false;
+    };
+    if (!matches(ver.nonLocalPatterns) && matches(ver.localPatterns))
+      versionId = VER_NDX_LOCAL;
     else
-      versionId = ver.id | VERSYM_HIDDEN;
+      versionId = isDefault ? ver.id : ver.id | VERSYM_HIDDEN;
     return;
   }
 
@@ -254,10 +280,9 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
 }
 
 void Symbol::extract(Ctx &ctx) const {
-  if (file->lazy) {
-    file->lazy = false;
-    parseFile(ctx, file);
-  }
+  assert(file->lazy);
+  file->lazy = false;
+  parseFile(ctx, file);
 }
 
 uint8_t Symbol::computeBinding(Ctx &ctx) const {
@@ -267,20 +292,6 @@ uint8_t Symbol::computeBinding(Ctx &ctx) const {
   if (binding == STB_GNU_UNIQUE && !ctx.arg.gnuUnique)
     return STB_GLOBAL;
   return binding;
-}
-
-bool Symbol::includeInDynsym(Ctx &ctx) const {
-  if (computeBinding(ctx) == STB_LOCAL)
-    return false;
-  if (!isDefined() && !isCommon())
-    // This should unconditionally return true, unfortunately glibc -static-pie
-    // expects undefined weak symbols not to exist in .dynsym, e.g.
-    // __pthread_mutex_lock reference in _dl_add_to_namespace_list,
-    // __pthread_initialize_minimal reference in csu/libc-start.c.
-    return !(isUndefWeak() && ctx.arg.noDynamicLinker);
-
-  return exportDynamic ||
-         (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
 }
 
 // Print out a log message for --trace-symbol.
@@ -320,23 +331,23 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
     return;
 
   const InputFile *file = sym->file;
-  auto *d = dyn_cast<Defined>(sym);
-
   auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
-
-  if (sym->isUndefined()) {
+  if (auto *d = dyn_cast<Defined>(sym)) {
+    if (!d->section)
+      report(": unable to order absolute symbol: ");
+    else if (isa<OutputSection>(d->section))
+      report(": unable to order synthetic symbol: ");
+    else if (!d->section->isLive())
+      report(": unable to order discarded symbol: ");
+  } else if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
       report(": unable to order discarded symbol: ");
     else
       report(": unable to order undefined symbol: ");
-  } else if (sym->isShared())
+  } else {
+    assert(sym->isShared());
     report(": unable to order shared symbol: ");
-  else if (d && !d->section)
-    report(": unable to order absolute symbol: ");
-  else if (d && isa<OutputSection>(d->section))
-    report(": unable to order synthetic symbol: ");
-  else if (d && !d->section->isLive())
-    report(": unable to order discarded symbol: ");
+  }
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -349,10 +360,13 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   if (sym.visibility() != STV_DEFAULT)
     return false;
 
-  // At this point copy relocations have not been created yet, so any
-  // symbol that is not defined locally is preemptible.
+  // At this point copy relocations have not been created yet.
+  // Shared symbols are preemptible. Undefined symbols are preemptible
+  // when zDynamicUndefined (default in dynamic linking). Weakness is not
+  // checked, though undefined non-weak would typically trigger relocation
+  // errors unless options like -z undefs are used.
   if (!sym.isDefined())
-    return true;
+    return !sym.isUndefined() || ctx.arg.zDynamicUndefined;
 
   if (!ctx.arg.shared)
     return false;
@@ -375,13 +389,21 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  // In addition, compute isExported and isPreemptible.
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (hasDynSymTab)
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    if (sym->computeBinding(ctx) == STB_LOCAL) {
+      sym->isExported = false;
+      continue;
+    }
+    if (!sym->isDefined() && !sym->isCommon()) {
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    } else if (ctx.arg.exportDynamic &&
+               (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
+      sym->isExported = true;
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    }
   }
 }
 
@@ -506,6 +528,12 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
+    // -u creates a placeholder Undefined (internalFile, STT_NOTYPE).
+    // Adopt the real file and type from the object file's undefined.
+    if (file == ctx.internalFile) {
+      file = other.file;
+      type = other.type;
+    }
   }
 }
 
@@ -570,7 +598,7 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
-  if (isDefined() && !isWeak() && !other.isWeak())
+  if (!isWeak() && !other.isWeak())
     reportDuplicate(ctx, *this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);
@@ -629,16 +657,8 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 
   if (LLVM_UNLIKELY(!isUndefined())) {
     // See the comment in resolve(Ctx &, const Undefined &).
-    if (isDefined()) {
+    if (isDefined())
       ctx.backwardReferences.erase(this);
-    } else if (isCommon() && ctx.arg.fortranCommon &&
-               other.file->shouldExtractForCommon(getName())) {
-      // For common objects, we want to look for global or weak definitions that
-      // should be extracted as the canonical definition instead.
-      ctx.backwardReferences.erase(this);
-      other.overwrite(*this);
-      other.extract(ctx);
-    }
     return;
   }
 
@@ -659,7 +679,7 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const SharedSymbol &other) {
-  exportDynamic = true;
+  isExported = true;
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;

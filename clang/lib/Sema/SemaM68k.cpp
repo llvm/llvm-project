@@ -32,7 +32,7 @@ void SemaM68k::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   // FIXME: Check for decl - it should be void ()(void).
 
-  Expr *NumParamsExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
+  Expr *NumParamsExpr = AL.getArgAsExpr(0);
   auto MaybeNumParams = NumParamsExpr->getIntegerConstantExpr(getASTContext());
   if (!MaybeNumParams) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)

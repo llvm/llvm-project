@@ -11,7 +11,7 @@
 # RUN: %lldb %t -o "image lookup -a 0x48000 -v" -o exit | FileCheck %s
 
 # CHECK:   CompileUnit: id = {0x00000001}, file = "/tmp/a.cc", language = "c++"
-# CHECK:      Function: id = {0x0000006a}, name = "::_start({{.*}})", range = [0x0000000000048000-0x000000000004800c)
+# CHECK:      Function: id = {0x0000006a}, name = "::_start({{.*}})", mangled = "_start", range = [0x0000000000048000-0x000000000004800c)
 # CHECK:     LineEntry: [0x0000000000048000-0x000000000004800a): /tmp/a.cc:4
 # CHECK:        Symbol: id = {0x00000002}, range = [0x0000000000048000-0x000000000004800c), name="_start"
 # CHECK:      Variable: id = {0x00000075}, name = "v1", {{.*}} decl = a.cc:4

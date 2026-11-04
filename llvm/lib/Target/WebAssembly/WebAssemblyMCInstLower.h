@@ -21,6 +21,8 @@
 
 namespace llvm {
 class WebAssemblyAsmPrinter;
+class DebugLoc;
+class GlobalValue;
 class MCContext;
 class MCSymbol;
 class MachineInstr;
@@ -31,11 +33,13 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyMCInstLower {
   MCContext &Ctx;
   WebAssemblyAsmPrinter &Printer;
 
-  MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
+  MCSymbol *GetGlobalAddressSymbol(const GlobalValue &Global,
+                                   const DebugLoc &DL) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
   MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
   MCOperand lowerTypeIndexOperand(SmallVectorImpl<wasm::ValType> &&,
                                   SmallVectorImpl<wasm::ValType> &&) const;
+  MCOperand lowerEncodedFunctionSignature(const APInt &Sig) const;
 
 public:
   WebAssemblyMCInstLower(MCContext &ctx, WebAssemblyAsmPrinter &printer)

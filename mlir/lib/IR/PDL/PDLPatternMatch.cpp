@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/IRMapping.h"
-#include "mlir/IR/Iterators.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/RegionKindInterface.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -34,13 +32,13 @@ void PDLValue::print(raw_ostream &os) const {
     os << cast<Type>();
     break;
   case Kind::TypeRange:
-    llvm::interleaveComma(cast<TypeRange>(), os);
+    os << llvm::interleaved(cast<TypeRange>());
     break;
   case Kind::Value:
     os << cast<Value>();
     break;
   case Kind::ValueRange:
-    llvm::interleaveComma(cast<ValueRange>(), os);
+    os << llvm::interleaved(cast<ValueRange>());
     break;
   }
 }
@@ -84,8 +82,7 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
     registerRewriteFunction(it.first(), std::move(it.second));
   for (auto &it : other.configs)
     configs.emplace_back(std::move(it));
-  for (auto &it : other.configMap)
-    configMap.insert(it);
+  configMap.insert_range(other.configMap);
 
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
@@ -113,6 +110,7 @@ void PDLPatternModule::attachConfigToPatterns(ModuleOp module,
 
 //===----------------------------------------------------------------------===//
 // Function Registry
+//===----------------------------------------------------------------------===//
 
 void PDLPatternModule::registerConstraintFunction(
     StringRef name, PDLConstraintFunction constraintFn) {

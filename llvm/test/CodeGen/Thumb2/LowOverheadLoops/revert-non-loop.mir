@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s --verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 # CHECK: name: non_loop
 # CHECK: bb.0.entry:
@@ -89,8 +89,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 

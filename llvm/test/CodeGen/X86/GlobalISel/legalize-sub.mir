@@ -19,6 +19,7 @@ name:            test_sub_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -45,6 +46,7 @@ name:            test_sub_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -70,6 +72,7 @@ name:            test_sub_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -95,6 +98,7 @@ name:            test_sub_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -118,6 +122,7 @@ name:            test_sub_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -141,6 +146,7 @@ name:            test_sub_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -157,8 +163,8 @@ body:             |
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
+    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s8) = G_USUBO [[UV]], [[UV2]]
+    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s8) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0
@@ -174,6 +180,7 @@ name:            test_sub_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -192,8 +199,8 @@ body:             |
     ; X86-NEXT: [[DEF1:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF1]](s64)
-    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
+    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s8) = G_USUBO [[UV]], [[UV2]]
+    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s8) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0
@@ -208,6 +215,7 @@ name:            test_sub_i128
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -219,8 +227,8 @@ body:             |
     ; X64-NEXT: [[DEF1:%[0-9]+]]:_(s128) = IMPLICIT_DEF
     ; X64-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[DEF]](s128)
     ; X64-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[DEF1]](s128)
-    ; X64-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; X64-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
+    ; X64-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s8) = G_USUBO [[UV]], [[UV2]]
+    ; X64-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s8) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; X64-NEXT: $rax = COPY [[USUBO]](s64)
     ; X64-NEXT: $rdx = COPY [[USUBE]](s64)
     ; X64-NEXT: RET 0
@@ -230,10 +238,10 @@ body:             |
     ; X86-NEXT: [[DEF1:%[0-9]+]]:_(s128) = IMPLICIT_DEF
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s128)
     ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF1]](s128)
-    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV4]]
-    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV5]], [[USUBO1]]
-    ; X86-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV2]], [[UV6]], [[USUBE1]]
-    ; X86-NEXT: [[USUBE4:%[0-9]+]]:_(s32), [[USUBE5:%[0-9]+]]:_(s1) = G_USUBE [[UV3]], [[UV7]], [[USUBE3]]
+    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s8) = G_USUBO [[UV]], [[UV4]]
+    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s8) = G_USUBE [[UV1]], [[UV5]], [[USUBO1]]
+    ; X86-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s8) = G_USUBE [[UV2]], [[UV6]], [[USUBE1]]
+    ; X86-NEXT: [[USUBE4:%[0-9]+]]:_(s32), [[USUBE5:%[0-9]+]]:_(s8) = G_USUBE [[UV3]], [[UV7]], [[USUBE3]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; X86-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBE2]](s32), [[USUBE4]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)

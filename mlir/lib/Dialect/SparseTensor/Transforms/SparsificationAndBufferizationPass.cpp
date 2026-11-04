@@ -20,10 +20,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -61,7 +59,7 @@ class SparsificationAndBufferizationPass
     : public impl::SparsificationAndBufferizationBase<
           SparsificationAndBufferizationPass> {
 public:
-  // Private pass options only.
+  // Bufferization, sparsification, and sparse storage options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
@@ -70,8 +68,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization) {}
+        enableBufferInitialization(enableBufferInitialization) {
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
+  }
   // Private pass options and visible pass options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
@@ -83,9 +82,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
         enableBufferInitialization(enableBufferInitialization) {
     // Set the visible pass options explicitly.
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
     vectorLength = vl;
     enableVLAVectorization = vla;
     enableSIMDIndex32 = index32;
@@ -114,8 +113,10 @@ public:
       return false;
     });
 
-    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::bufferizeModuleOp(getOperation(), updatedOptions,
+                                                bufferizationState)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -128,6 +129,9 @@ public:
 
     // Overrides the default parallelization strategy using user-provided value.
     this->sparsificationOptions.parallelizationStrategy = parallelization;
+
+    // Keep sparsification and sparse storage lowering on the same runtime path.
+    this->sparsificationOptions.enableRuntimeLibrary = enableRuntimeLibrary;
 
     // Run enabling transformations.
     {
@@ -149,8 +153,10 @@ public:
     // invalidate the results of the analysis. From now on, only small and
     // localized rewrites are allowed, such as replacing a tensor op with its
     // memref equivalent.
-    if (failed(bufferization::insertTensorCopies(getOperation(),
-                                                 bufferizationOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(
+            getOperation(), bufferizationOptions, bufferizationState)))
       return signalPassFailure();
 
     // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of
@@ -205,7 +211,6 @@ private:
   bufferization::OneShotBufferizationOptions bufferizationOptions;
   SparsificationOptions sparsificationOptions;
   bool createSparseDeallocs;
-  bool enableRuntimeLibrary;
   bool enableBufferInitialization;
 };
 
@@ -218,10 +223,12 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
+  options.unknownTypeConverterFn = [](TensorLikeType tensorType,
+                                      Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
+    return cast<bufferization::BufferLikeType>(
+        getMemRefTypeWithStaticIdentityLayout(cast<TensorType>(tensorType),
+                                              memorySpace));
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

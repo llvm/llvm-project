@@ -367,7 +367,7 @@
     .vbyte  4, 0x00000000           # Traceback table begin
     .byte   0x00                    # Version = 0
     .byte   0x09                    # Language = CPlusPlus
-    .byte   0x20                    # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+    .byte   0x20                    # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
                                     # +HasTraceBackTableOffset, -IsInternalProcedure
                                     # -HasControlledStorage, -IsTOCless
                                     # -IsFloatingPointPresent

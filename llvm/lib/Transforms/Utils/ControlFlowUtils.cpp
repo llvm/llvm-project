@@ -12,8 +12,8 @@
 
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -34,27 +34,25 @@ using EdgeDescriptor = ControlFlowHub::BranchDescriptor;
 //   branch to the FirstGuardBlock.
 static Value *redirectToHub(BasicBlock *BB, BasicBlock *Succ0,
                             BasicBlock *Succ1, BasicBlock *FirstGuardBlock) {
-  assert(isa<BranchInst>(BB->getTerminator()) &&
-         "Only support branch terminator.");
-  auto *Branch = cast<BranchInst>(BB->getTerminator());
-  auto *Condition = Branch->isConditional() ? Branch->getCondition() : nullptr;
-
-  assert(Succ0 || Succ1);
-
-  if (Branch->isUnconditional()) {
+  if (auto *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
     assert(Succ0 == Branch->getSuccessor(0));
     assert(!Succ1);
+    Branch->setSuccessor(FirstGuardBlock);
+    return nullptr;
+  }
+
+  auto *Branch = cast<CondBrInst>(BB->getTerminator());
+  auto *Condition = Branch->getCondition();
+
+  assert(Succ0 || Succ1);
+  assert(!Succ1 || Succ1 == Branch->getSuccessor(1));
+  if (Succ0 && !Succ1) {
     Branch->setSuccessor(0, FirstGuardBlock);
+  } else if (Succ1 && !Succ0) {
+    Branch->setSuccessor(1, FirstGuardBlock);
   } else {
-    assert(!Succ1 || Succ1 == Branch->getSuccessor(1));
-    if (Succ0 && !Succ1) {
-      Branch->setSuccessor(0, FirstGuardBlock);
-    } else if (Succ1 && !Succ0) {
-      Branch->setSuccessor(1, FirstGuardBlock);
-    } else {
-      Branch->eraseFromParent();
-      BranchInst::Create(FirstGuardBlock, BB);
-    }
+    Branch->eraseFromParent();
+    UncondBrInst::Create(FirstGuardBlock, BB);
   }
 
   return Condition;
@@ -73,11 +71,11 @@ static void setupBranchForGuard(ArrayRef<BasicBlock *> GuardBlocks,
   int I = 0;
   for (int E = GuardBlocks.size() - 1; I != E; ++I) {
     BasicBlock *Out = Outgoing[I];
-    BranchInst::Create(Out, GuardBlocks[I + 1], GuardPredicates[Out],
+    CondBrInst::Create(GuardPredicates[Out], Out, GuardBlocks[I + 1],
                        GuardBlocks[I]);
   }
   BasicBlock *Out = Outgoing[I];
-  BranchInst::Create(Out, Outgoing[I + 1], GuardPredicates[Out],
+  CondBrInst::Create(GuardPredicates[Out], Out, Outgoing[I + 1],
                      GuardBlocks[I]);
 }
 
@@ -97,7 +95,7 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
   for (auto [BB, Succ0, Succ1] : Branches) {
     Value *Condition = redirectToHub(BB, Succ0, Succ1, FirstGuardBlock);
     Value *IncomingId = nullptr;
-    if (Succ0 && Succ1) {
+    if (Succ0 && Succ1 && Succ0 != Succ1) {
       auto Succ0Iter = find(Outgoing, Succ0);
       auto Succ1Iter = find(Outgoing, Succ1);
       Value *Id0 =
@@ -107,7 +105,8 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
       IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
                                       BB->getTerminator()->getIterator());
     } else {
-      // Get the index of the non-null successor.
+      // Get the index of the non-null successor, or when both successors
+      // are the same block, use that block's index directly.
       auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
       IncomingId =
           ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), SuccIter));
@@ -166,9 +165,10 @@ static void calcPredicateUsingBooleans(
       PHINode *Phi = cast<PHINode>(GuardPredicates[Out]);
       if (Out != Succ0 && Out != Succ1) {
         Phi->addIncoming(BoolFalse, BB);
-      } else if (!Succ0 || !Succ1 || OneSuccessorDone) {
+      } else if (!Succ0 || !Succ1 || Succ0 == Succ1 || OneSuccessorDone) {
         // Optimization: When only one successor is an outgoing block,
-        // the incoming predicate from `BB` is always true.
+        // or both successors are the same block, the incoming predicate
+        // from `BB` is always true.
         Phi->addIncoming(BoolTrue, BB);
       } else {
         assert(Succ0 && Succ1);
@@ -226,10 +226,11 @@ static void convertToGuardPredicates(
 }
 
 // After creating a control flow hub, the operands of PHINodes in an outgoing
-// block Out no longer match the predecessors of that block. Predecessors of Out
-// that are incoming blocks to the hub are now replaced by just one edge from
-// the hub. To match this new control flow, the corresponding values from each
-// PHINode must now be moved a new PHINode in the first guard block of the hub.
+// block Out no longer match the predecessors of that block. The edges to Out
+// that are redirected through the hub are now replaced by just one edge from
+// the hub; other edges to Out, even from incoming blocks of the hub, are kept.
+// To match this new control flow, the values for the redirected edges are
+// moved from each PHINode to a new PHINode in the first guard block of the hub.
 //
 // This operation cannot be performed with SSAUpdater, because it involves one
 // new use: If the block Out is in the list of Incoming blocks, then the newly
@@ -244,21 +245,36 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
         PHINode::Create(Phi->getType(), Incoming.size(),
                         Phi->getName() + ".moved", FirstGuardBlock->begin());
     bool AllUndef = true;
+    bool AllPoison = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
-      if (BB == Out) {
-        V = NewPhi;
-      } else if (Phi->getBasicBlockIndex(BB) != -1) {
+      // Only edges from BB to Out that go through the hub move their value.
+      // BB may have another edge to Out that is not redirected.
+      if ((Succ0 == Out || Succ1 == Out) && Phi->getBasicBlockIndex(BB) != -1) {
         V = Phi->removeIncomingValue(BB, false);
+        // When both successors are the same (Succ0 == Succ1), there are two
+        // edges from BB to Out, so we need to remove the second PHI entry too.
+        if (Succ0 && Succ1 && Succ0 == Succ1 &&
+            Phi->getBasicBlockIndex(BB) != -1)
+          Phi->removeIncomingValue(BB, false);
+        if (BB == Out) {
+          V = NewPhi;
+        }
         AllUndef &= isa<UndefValue>(V);
+        AllPoison &= isa<PoisonValue>(V);
       }
+
       NewPhi->addIncoming(V, BB);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
     Value *NewV = NewPhi;
+    // If all moved values are undef or poison, use that instead of a PHI. Only
+    // use poison if they are all poison: replacing undef with poison would make
+    // the program less defined.
     if (AllUndef) {
       NewPhi->eraseFromParent();
-      NewV = PoisonValue::get(Phi->getType());
+      NewV = AllPoison ? PoisonValue::get(Phi->getType())
+                       : UndefValue::get(Phi->getType());
     }
     if (Phi->getNumOperands() == 0) {
       Phi->replaceAllUsesWith(NewV);
@@ -270,17 +286,19 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
-BasicBlock *ControlFlowHub::finalize(
+std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 8> Incoming;
+  SmallPtrSet<BasicBlock *, 8> Incoming;
 #endif
   SetVector<BasicBlock *> Outgoing;
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
+    assert(
+        (Incoming.insert(BB).second || isa<CallBrInst>(BB->getTerminator())) &&
+        "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);
@@ -288,15 +306,18 @@ BasicBlock *ControlFlowHub::finalize(
       Outgoing.insert(Succ1);
   }
 
+  assert(Outgoing.size() && "No outgoing edges");
+
   if (Outgoing.size() < 2)
-    return Outgoing.front();
+    return {Outgoing.front(), false};
 
   SmallVector<DominatorTree::UpdateType, 16> Updates;
   if (DTU) {
     for (auto [BB, Succ0, Succ1] : Branches) {
       if (Succ0)
         Updates.push_back({DominatorTree::Delete, BB, Succ0});
-      if (Succ1)
+      // Only add Succ1 if it's different from Succ0 to avoid duplicate updates
+      if (Succ1 && Succ1 != Succ0)
         Updates.push_back({DominatorTree::Delete, BB, Succ1});
     }
   }
@@ -338,5 +359,5 @@ BasicBlock *ControlFlowHub::finalize(
         Inst->eraseFromParent();
   }
 
-  return FirstGuardBlock;
+  return {FirstGuardBlock, true};
 }

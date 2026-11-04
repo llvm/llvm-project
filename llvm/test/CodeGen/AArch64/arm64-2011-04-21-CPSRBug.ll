@@ -3,7 +3,7 @@
 ; CPSR is not allocatable so fast allocatable wouldn't mark them killed.
 ; rdar://9313272
 
-define hidden void @t() nounwind {
+define hidden void @t(i1 %arg) nounwind {
 entry:
   %cmp = icmp eq ptr null, undef
   %frombool = zext i1 %cmp to i8
@@ -16,7 +16,7 @@ land.lhs.true:                                    ; preds = %entry
   unreachable
 
 if.end:                                           ; preds = %entry
-  br i1 undef, label %land.lhs.true14, label %if.end33
+  br i1 %arg, label %land.lhs.true14, label %if.end33
 
 land.lhs.true14:                                  ; preds = %if.end
   unreachable

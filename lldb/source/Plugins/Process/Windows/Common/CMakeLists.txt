@@ -1,6 +1,7 @@
 
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   DebuggerThread.cpp
+  ExceptionRecord.cpp
   LocalDebugDelegate.cpp
   NativeProcessWindows.cpp
   NativeRegisterContextWindows.cpp
@@ -20,16 +21,17 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   x64/RegisterContextWindows_x64.cpp
   x86/RegisterContextWindows_x86.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
     lldbInterpreter
     lldbPluginDynamicLoaderWindowsDYLD
+    lldbPluginRegisterNative
     lldbSymbol
     lldbTarget
     ws2_32
     rpcrt4
     psapi
-  LINK_COMPONENTS
-    Support
   )

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-expand-default-aggr-inits=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-expand-default-aggr-inits=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 static char a[] = "foobar";

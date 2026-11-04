@@ -463,10 +463,11 @@ void BinaryFunction::updateEHRanges() {
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
 
 CFIReaderWriter::CFIReaderWriter(BinaryContext &BC,
-                                 const DWARFDebugFrame &EHFrame)
-    : BC(BC) {
+                                 std::unique_ptr<DWARFDebugFrame> Frame,
+                                 DWARFDataExtractor Data)
+    : BC(BC), EHFrame(std::move(Frame)), EHFrameData(std::move(Data)) {
   // Prepare FDEs for fast lookup
-  for (const dwarf::FrameEntry &Entry : EHFrame.entries()) {
+  for (const dwarf::FrameEntry &Entry : EHFrame->entries()) {
     const auto *CurFDE = dyn_cast<dwarf::FDE>(&Entry);
     // Skip CIEs.
     if (!CurFDE)
@@ -500,7 +501,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
 
   const FDE &CurFDE = *I->second;
   std::optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
-  Function.setLSDAAddress(LSDA ? *LSDA : 0);
+  Function.setLSDAAddress(LSDA.value_or(0));
 
   uint64_t Offset = Function.getFirstInstructionOffset();
   uint64_t CodeAlignment = CurFDE.getLinkedCIE()->getCodeAlignmentFactor();
@@ -568,10 +569,25 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     case DW_CFA_remember_state:
       Function.addCFIInstruction(
           Offset, MCCFIInstruction::createRememberState(nullptr));
+
+      if (Function.getBinaryContext().isAArch64()) {
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
+      }
       break;
     case DW_CFA_restore_state:
       Function.addCFIInstruction(Offset,
                                  MCCFIInstruction::createRestoreState(nullptr));
+      if (Function.getBinaryContext().isAArch64()) {
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
+      }
       break;
     case DW_CFA_def_cfa:
       Function.addCFIInstruction(
@@ -629,11 +645,24 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         BC.errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
-      // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
-      // id but mean different things. The latter is used in AArch64.
+      // DW_CFA_GNU_window_save and DW_CFA_AARCH64_negate_ra_state just use the
+      // same id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        Function.addCFIInstruction(
-            Offset, MCCFIInstruction::createNegateRAState(nullptr));
+        Function.setContainedNegateRAState();
+        // The location OpNegateRAState CFIs are needed depends on the order of
+        // BasicBlocks, which changes during optimizations. Instead of adding
+        // OpNegateRAState CFIs, an annotation is added to the instruction, to
+        // mark that the instruction modifies the RA State. The actual state for
+        // instructions are worked out in PointerAuthCFIAnalyzer based on these
+        // annotations.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
+                                          Offset);
+        else
+          // We cannot Annotate an instruction at Offset == 0.
+          // Instead, we save the initial (Signed) state, and push it to
+          // PointerAuthCFIAnalyzer's RAStateStack.
+          Function.setInitialRAState(true);
         break;
       }
       if (opts::Verbosity >= 1)
@@ -654,13 +683,41 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     return true;
   };
 
-  for (const CFIProgram::Instruction &Instr : CurFDE.getLinkedCIE()->cfis())
-    if (!decodeFrameInstruction(Instr))
-      return false;
+  // The CFI instruction programs were not decoded during the initial
+  // (index-only) parse of .eh_frame. Parse the CIE's and this FDE's programs on
+  // demand now, so that only the functions we actually process pay the cost and
+  // the decoded instructions are discarded as soon as they are consumed.
+  const Triple::ArchType Arch = BC.TheTriple->getArch();
+  auto decodeInstructions = [&](const CFIProgram &Program) {
+    for (const CFIProgram::Instruction &Instr : Program)
+      if (!decodeFrameInstruction(Instr))
+        return false;
+    return true;
+  };
+  auto decodeProgram = [&](const dwarf::FrameEntry &Entry) -> bool {
+    // An entry that carries no offset to parse from already holds its decoded
+    // program: either the section was parsed eagerly, or the entry has no
+    // instructions at all.
+    const std::optional<uint64_t> CFIStartOffset =
+        Entry.getUnparsedCFIStartOffset();
+    if (!CFIStartOffset)
+      return decodeInstructions(Entry.cfis());
 
-  for (const CFIProgram::Instruction &Instr : CurFDE.cfis())
-    if (!decodeFrameInstruction(Instr))
+    DWARFDataExtractor Data = EHFrameData;
+    CFIProgram Program(CodeAlignment, DataAlignment, Arch);
+    uint64_t CFIOffset = *CFIStartOffset;
+    if (Error E = Program.parse(Data, &CFIOffset, Entry.getEndOffset())) {
+      consumeError(std::move(E));
       return false;
+    }
+    return decodeInstructions(Program);
+  };
+
+  if (!decodeProgram(*CurFDE.getLinkedCIE()))
+    return false;
+
+  if (!decodeProgram(CurFDE))
+    return false;
 
   return true;
 }
@@ -716,37 +773,52 @@ CFIReaderWriter::generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
 
   // Generate a new .eh_frame_hdr based on the new map.
 
-  // Header plus table of entries of size 8 bytes.
-  std::vector<char> EHFrameHeader(12 + PCToFDE.size() * 8);
+  const int64_t EHFramePtr =
+      NewEHFrame.getEHFrameAddress() - (EHFrameHeaderAddress + 4);
+
+  // Switch to 8-byte encodings if any offset does not fit into 32 bits.
+  const bool UseSData8 =
+      !isInt<32>(EHFramePtr) || llvm::any_of(PCToFDE, [&](const auto &PCI) {
+        return !isInt<32>(PCI.first - EHFrameHeaderAddress) ||
+               !isInt<32>(PCI.second - EHFrameHeaderAddress);
+      });
+  const unsigned FieldSize = UseSData8 ? 8 : 4;
+  const uint8_t FieldEncoding = UseSData8 ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4;
+
+  // 4 bytes of version and encodings, eh_frame_ptr, 4-byte FDE count, table.
+  std::vector<char> EHFrameHeader(8 + FieldSize +
+                                  PCToFDE.size() * 2 * FieldSize);
+
+  auto writeField = [&](uint32_t Offset, int64_t Value) {
+    if (UseSData8)
+      support::ulittle64_t::ref(EHFrameHeader.data() + Offset) = Value;
+    else
+      support::ulittle32_t::ref(EHFrameHeader.data() + Offset) = Value;
+  };
 
   // Version is 1.
   EHFrameHeader[0] = 1;
   // Encoding of the eh_frame pointer.
-  EHFrameHeader[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
+  EHFrameHeader[1] = DW_EH_PE_pcrel | FieldEncoding;
   // Encoding of the count field to follow.
   EHFrameHeader[2] = DW_EH_PE_udata4;
-  // Encoding of the table entries - 4-byte offset from the start of the header.
-  EHFrameHeader[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
+  // Encoding of the table entries - offset from the start of the header.
+  EHFrameHeader[3] = DW_EH_PE_datarel | FieldEncoding;
 
   // Address of eh_frame. Use the new one.
-  support::ulittle32_t::ref(EHFrameHeader.data() + 4) =
-      NewEHFrame.getEHFrameAddress() - (EHFrameHeaderAddress + 4);
+  writeField(4, EHFramePtr);
 
   // Number of entries in the table (FDE count).
-  support::ulittle32_t::ref(EHFrameHeader.data() + 8) = PCToFDE.size();
+  support::ulittle32_t::ref(EHFrameHeader.data() + 4 + FieldSize) =
+      PCToFDE.size();
 
-  // Write the table at offset 12.
-  char *Ptr = EHFrameHeader.data();
-  uint32_t Offset = 12;
+  // Write the table after the FDE count.
+  uint32_t Offset = 8 + FieldSize;
   for (const auto &PCI : PCToFDE) {
-    int64_t InitialPCOffset = PCI.first - EHFrameHeaderAddress;
-    assert(isInt<32>(InitialPCOffset) && "PC offset out of bounds");
-    support::ulittle32_t::ref(Ptr + Offset) = InitialPCOffset;
-    Offset += 4;
-    int64_t FDEOffset = PCI.second - EHFrameHeaderAddress;
-    assert(isInt<32>(FDEOffset) && "FDE offset out of bounds");
-    support::ulittle32_t::ref(Ptr + Offset) = FDEOffset;
-    Offset += 4;
+    writeField(Offset, PCI.first - EHFrameHeaderAddress);
+    Offset += FieldSize;
+    writeField(Offset, PCI.second - EHFrameHeaderAddress);
+    Offset += FieldSize;
   }
 
   return EHFrameHeader;

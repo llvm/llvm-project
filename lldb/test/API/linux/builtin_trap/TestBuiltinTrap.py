@@ -18,9 +18,10 @@ class BuiltinTrapTestCase(TestBase):
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
     # gcc generates incorrect linetable
-    @expectedFailureAll(archs="arm", compiler="gcc", triple=".*-android")
-    @expectedFailureAll(archs=["aarch64"], oslist=no_match(["freebsd", "linux"]))
-    @skipIfWindows
+    @expectedFailureAll(archs="arm$", compiler="gcc", triple=".*-android")
+    @expectedFailureAll(
+        archs=["aarch64"], oslist=no_match(["freebsd", "linux", "windows"])
+    )
     def test_with_run_command(self):
         """Test that LLDB handles a function with __builtin_trap correctly."""
         self.build()

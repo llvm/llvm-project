@@ -34,7 +34,7 @@ block1:
   br label %loop
 }
 
-define float @forward_use_with_load(float* %p) sanitize_numerical_stability {
+define float @forward_use_with_load(ptr %p) sanitize_numerical_stability {
 ; CHECK-LABEL: @forward_use_with_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BLOCK1:%.*]]
@@ -71,7 +71,7 @@ loop:
 
 block1:
   %a = phi float [ %d, %loop], [ 1.0, %entry ]
-  %l = load float, float* %p ; the load creates a new block
+  %l = load float, ptr %p ; the load creates a new block
   %b = fadd float %l, 1.0 ; this requires shadow(%l).
   br label %loop
 }

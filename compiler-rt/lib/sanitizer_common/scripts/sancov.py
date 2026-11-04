@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Merge or print the coverage data collected by asan's coverage.
 # Input files are sequences of 4-byte integers.
 # We need to merge these integers into a set and then

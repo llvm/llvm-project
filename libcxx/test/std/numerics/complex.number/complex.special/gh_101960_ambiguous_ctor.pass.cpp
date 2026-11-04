@@ -8,8 +8,7 @@
 
 // <complex>
 
-// Regression test for https://github.com/llvm/llvm-project/issues/101960 where we used to
-// trigger an ambiguous constructor.
+// Regression test for https://llvm.org/PR101960 where we used to trigger an ambiguous constructor.
 
 #include <complex>
 #include <cassert>

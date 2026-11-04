@@ -37,6 +37,7 @@ struct SymbolMapping {
   std::optional<yaml::Hex64> ObjectAddress;
   yaml::Hex64 BinaryAddress;
   yaml::Hex32 Size;
+  yaml::Hex8 Type;
 
   SymbolMapping(std::optional<uint64_t> ObjectAddr, uint64_t BinaryAddress,
                 uint32_t Size)
@@ -139,12 +140,10 @@ template <> struct MappingTraits<dsymutil::ValidReloc> {
 };
 
 template <> struct MappingTraits<dsymutil::RelocationMap> {
-  struct YamlRM;
   static void mapping(IO &io, dsymutil::RelocationMap &RM);
 };
 
 template <> struct MappingTraits<std::unique_ptr<dsymutil::RelocationMap>> {
-  struct YamlRM;
   static void mapping(IO &io, std::unique_ptr<dsymutil::RelocationMap> &RM);
 };
 

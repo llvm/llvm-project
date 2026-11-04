@@ -20,7 +20,6 @@ add_libc_test(
     libc.src.__support.HashTable.table
     libc.src.__support.common
     libc.src.search.hsearch
-  UNIT_TEST_ONLY
 )
 
 add_libc_test(
@@ -30,6 +29,7 @@ add_libc_test(
   SRCS
     group_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.HashTable.bitmask
     libc.src.stdlib.rand
     libc.src.search.hsearch

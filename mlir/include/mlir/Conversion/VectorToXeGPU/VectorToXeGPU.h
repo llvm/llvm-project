@@ -21,9 +21,6 @@ class RewritePatternSet;
 /// Collect a set of patterns to convert from the vector to XeGPU ops.
 void populateVectorToXeGPUConversionPatterns(RewritePatternSet &patterns);
 
-/// Create a pass to convert ops from vector to XeGPU.
-std::unique_ptr<Pass> createConvertVectorToXeGPUPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOXEGPU_VECTORTOXEGPU_H

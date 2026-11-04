@@ -7,16 +7,16 @@ define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB4:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP3:%.*]], %[[BB4:.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    br i1 false, label %[[BB7:.*]], label %[[BB4]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4]] = add <2 x i32> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP3]] = add <2 x i32> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br i1 false, label %[[BB7]], label %[[BB1]]
 ; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP1]], %[[BB1]] ], [ [[TMP3]], %[[BB4]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP1]], %[[BB1]] ], [ [[TMP4]], %[[BB4]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

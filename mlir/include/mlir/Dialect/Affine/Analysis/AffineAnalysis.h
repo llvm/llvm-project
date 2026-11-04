@@ -16,7 +16,7 @@
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -81,13 +81,13 @@ LogicalResult getIndexSet(MutableArrayRef<Operation *> ops,
 /// Encapsulates a memref load or store access information.
 struct MemRefAccess {
   Value memref;
-  Operation *opInst;
+  Operation *opInst = nullptr;
   SmallVector<Value, 4> indices;
 
-  /// Constructs a MemRefAccess from a load or store operation.
-  // TODO: add accessors to standard op's load, store, DMA op's to return
-  // MemRefAccess, i.e., loadOp->getAccess(), dmaOp->getRead/WriteAccess.
-  explicit MemRefAccess(Operation *opInst);
+  /// Constructs a MemRefAccess from an affine read/write operation.
+  explicit MemRefAccess(Operation *memOp);
+
+  MemRefAccess() = default;
 
   // Returns the rank of the memref associated with this access.
   unsigned getRank() const;
@@ -126,10 +126,12 @@ struct MemRefAccess {
   /// time (considering the memrefs, their respective affine access maps  and
   /// operands). The equality of access functions + operands is checked by
   /// subtracting fully composed value maps, and then simplifying the difference
-  /// using the expression flattener.
-  /// TODO: this does not account for aliasing of memrefs.
+  /// using the expression flattener. This does not account for aliasing of
+  /// memrefs.
   bool operator==(const MemRefAccess &rhs) const;
   bool operator!=(const MemRefAccess &rhs) const { return !(*this == rhs); }
+
+  explicit operator bool() const { return !!memref; }
 };
 
 // DependenceComponent contains state about the direction of a dependence as an
@@ -173,6 +175,35 @@ DependenceResult checkMemrefAccessDependence(
     FlatAffineValueConstraints *dependenceConstraints = nullptr,
     SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr,
     bool allowRAR = false);
+
+/// Builds in `rel` the access relation of an access that reads or writes
+/// `accessValueMap` over the iteration `domain`, relating the iterations of
+/// the domain to the elements they touch. Unlike `MemRefAccess`'s method of
+/// the same name, it takes the access and its domain as they are, rather than
+/// reading them from an operation, so it can describe an access that is going
+/// to exist (for example, one a transformation is deciding whether to create)
+/// as well as one that already does.
+LogicalResult getAccessRelation(const AffineValueMap &accessValueMap,
+                                const FlatAffineValueConstraints &domain,
+                                presburger::IntegerRelation &rel);
+
+/// Checks whether the accesses two relations describe touch the same element,
+/// i.e. whether there is a dependence between them carried at `loopDepth`.
+/// This is `checkMemrefAccessDependence` from the point where it has nothing
+/// but the relations left to work on, so it serves an access built by hand out
+/// of an access map and a domain just as well as one read off an operation.
+///
+/// Returns 'NoDependence' if it can be determined conclusively that the two do
+/// not touch the same element. Note that a caller working from relations it
+/// built itself has to have established what the operation-based entry point
+/// checks on its own account: that the two access the same memref, that at
+/// least one of them writes, and, where `loopDepth` is past the loops they
+/// share, that the source precedes the destination.
+DependenceResult checkAccessDependence(
+    presburger::IntegerRelation srcRel, presburger::IntegerRelation dstRel,
+    unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints = nullptr,
+    SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr);
 
 /// Utility function that returns true if the provided DependenceResult
 /// corresponds to a dependence result.

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   -cuid=123 | FileCheck -check-prefix=DEV %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
@@ -7,7 +7,7 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   | FileCheck -check-prefix=DEV-NEG %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
@@ -74,8 +74,8 @@ inline constexpr int constexpr_var1b = 1;
 
 // Check constant constexpr variables ODR-used by host code only.
 // Device-side constexpr variables accessed by host code should be externalized and kept.
-// DEV-DAG: @_ZL15constexpr_var2a = addrspace(4) externally_initialized constant i32 2
-// DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) externally_initialized constant i32 2
+// DEV-DAG: @_ZL15constexpr_var2a = addrspace(4) constant i32 2
+// DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) constant i32 2
 __constant__ constexpr int constexpr_var2a = 2;
 inline __constant__ constexpr int constexpr_var2b = 2;
 

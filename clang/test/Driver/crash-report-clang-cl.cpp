@@ -2,7 +2,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 
-// RUN: not %clang_cl -fsyntax-only /Brepro /source-charset:utf-8 \
+// RUN: not %crash_opt %clang_cl -fsyntax-only /Brepro /source-charset:utf-8 \
 // RUN:     -fcrash-diagnostics-dir=%t -- %s 2>&1 | FileCheck %s
 // RUN: cat %t/crash-report-clang-cl-*.cpp | FileCheck --check-prefix=CHECKSRC %s
 // RUN: cat %t/crash-report-clang-cl-*.sh | FileCheck --check-prefix=CHECKSH %s
@@ -11,7 +11,7 @@
 
 #pragma clang __debug crash
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 
 // __has_feature(cxx_exceptions) is default-off in the cl-compatible driver.
 FOO

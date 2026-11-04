@@ -35,7 +35,7 @@ public:
   static IRObjectWithUseList<BlockOperand> *getUseList(Block *value);
 
   /// Return which operand this is in the BlockOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -106,7 +106,7 @@ class BlockRange final
           Block *, Block *, Block *> {
 public:
   using RangeBaseT::RangeBaseT;
-  BlockRange(ArrayRef<Block *> blocks = std::nullopt);
+  BlockRange(ArrayRef<Block *> blocks = {});
   BlockRange(SuccessorRange successors);
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Block *>, Arg>::value>>
@@ -135,40 +135,6 @@ private:
 // Operation Iterators
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// A utility iterator that filters out operations that are not 'OpT'.
-template <typename OpT, typename IteratorT>
-class op_filter_iterator
-    : public llvm::filter_iterator<IteratorT, bool (*)(Operation &)> {
-  static bool filter(Operation &op) { return llvm::isa<OpT>(op); }
-
-public:
-  op_filter_iterator(IteratorT it, IteratorT end)
-      : llvm::filter_iterator<IteratorT, bool (*)(Operation &)>(it, end,
-                                                                &filter) {}
-
-  /// Allow implicit conversion to the underlying iterator.
-  operator const IteratorT &() const { return this->wrapped(); }
-};
-
-/// This class provides iteration over the held operations of a block for a
-/// specific operation type.
-template <typename OpT, typename IteratorT>
-class op_iterator
-    : public llvm::mapped_iterator<op_filter_iterator<OpT, IteratorT>,
-                                   OpT (*)(Operation &)> {
-  static OpT unwrap(Operation &op) { return cast<OpT>(op); }
-
-public:
-  /// Initializes the iterator to the specified filter iterator.
-  op_iterator(op_filter_iterator<OpT, IteratorT> it)
-      : llvm::mapped_iterator<op_filter_iterator<OpT, IteratorT>,
-                              OpT (*)(Operation &)>(it, &unwrap) {}
-
-  /// Allow implicit conversion to the underlying block iterator.
-  operator const IteratorT &() const { return this->wrapped(); }
-};
-} // namespace detail
 } // namespace mlir
 
 namespace llvm {
@@ -176,22 +142,10 @@ namespace llvm {
 /// Provide support for hashing successor ranges.
 template <>
 struct DenseMapInfo<mlir::SuccessorRange> {
-  static mlir::SuccessorRange getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getEmptyKey();
-    return mlir::SuccessorRange(pointer, 0);
-  }
-  static mlir::SuccessorRange getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getTombstoneKey();
-    return mlir::SuccessorRange(pointer, 0);
-  }
   static unsigned getHashValue(mlir::SuccessorRange value) {
-    return llvm::hash_combine_range(value.begin(), value.end());
+    return llvm::hash_combine_range(value);
   }
   static bool isEqual(mlir::SuccessorRange lhs, mlir::SuccessorRange rhs) {
-    if (rhs.getBase() == getEmptyKey().getBase())
-      return lhs.getBase() == getEmptyKey().getBase();
-    if (rhs.getBase() == getTombstoneKey().getBase())
-      return lhs.getBase() == getTombstoneKey().getBase();
     return lhs == rhs;
   }
 };
@@ -206,12 +160,12 @@ namespace ilist_detail {
 // operations to have trailing Regions without a circular include
 // dependence.
 template <>
-struct SpecificNodeAccess<
-    typename compute_node_options<::mlir::Operation>::type> : NodeAccess {
+struct SpecificNodeAccess<compute_node_options<::mlir::Operation>::type>
+    : NodeAccess {
 protected:
-  using OptionsT = typename compute_node_options<mlir::Operation>::type;
-  using pointer = typename OptionsT::pointer;
-  using const_pointer = typename OptionsT::const_pointer;
+  using OptionsT = compute_node_options<mlir::Operation>::type;
+  using pointer = OptionsT::pointer;
+  using const_pointer = OptionsT::const_pointer;
   using node_type = ilist_node_impl<OptionsT>;
 
   static node_type *getNodePtr(pointer N);

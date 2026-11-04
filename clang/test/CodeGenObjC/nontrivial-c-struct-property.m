@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+@interface SuperClass
+@end
 
 typedef struct {
   id x;
 } S0;
 
-@interface C {
+@interface C : SuperClass {
   S0 _p1;
 }
 @property(nonatomic) S0 nonatomic;

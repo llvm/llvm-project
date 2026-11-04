@@ -20,7 +20,7 @@ program test
   type(pdt(1)) x1(1)
   type(pdt(2)) x2(1)
   type(pdt(3)) x3(1)
-  !PORTABILITY: Variable 'x1([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'finalarr'
+  !PORTABILITY: Variable 'x1([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'finalarr' [-Wvector-subscript-finalization]
   x1([1]) = pdt(1)()
   x2([1]) = pdt(2)() ! ok, doesn't match either
   x3([1]) = pdt(3)() ! ok, calls finalElem

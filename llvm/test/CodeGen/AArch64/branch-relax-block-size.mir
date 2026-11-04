@@ -1,5 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=aarch64--linux-gnu -run-pass=branch-relaxation -debug-only=branch-relaxation %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -passes=branch-relaxation -debug-only=branch-relaxation %s -o /dev/null 2>&1 | FileCheck %s
 
 # Ensure meta instructions (e.g. CFI_INSTRUCTION) don't contribute to the code
 # size of a basic block.

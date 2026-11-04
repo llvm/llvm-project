@@ -61,19 +61,19 @@ class VRegRenamer {
 
   /// For all the VRegs that are candidates for renaming,
   /// return a mapping from old vregs to new vregs with names.
-  std::map<unsigned, unsigned>
+  std::map<Register, Register>
   getVRegRenameMap(const std::vector<NamedVReg> &VRegs);
 
   /// Perform replacing of registers based on the <old,new> vreg map.
-  bool doVRegRenaming(const std::map<unsigned, unsigned> &VRegRenameMap);
+  bool doVRegRenaming(const std::map<Register, Register> &VRegRenameMap);
 
   /// createVirtualRegister - Given an existing vreg, create a named vreg to
   /// take its place. The name is determined by calling
   /// getInstructionOpcodeHash.
-  unsigned createVirtualRegister(unsigned VReg);
+  Register createVirtualRegister(Register VReg);
 
   /// Create a vreg with name and return it.
-  unsigned createVirtualRegisterWithLowerName(unsigned VReg, StringRef Name);
+  Register createVirtualRegisterWithLowerName(Register VReg, StringRef Name);
 
   /// Linearly traverse the MachineBasicBlock and rename each instruction's
   /// vreg definition based on the semantics of the instruction.

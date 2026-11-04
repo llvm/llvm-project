@@ -447,3 +447,15 @@ def int_hexagon_instrprof_custom
 
 
 include "llvm/IR/IntrinsicsHexagonDep.td"
+
+class Hexagon__ptri32i32v64i16_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [llvm_ptr_ty,llvm_i32_ty,llvm_i32_ty,llvm_v64i16_ty],
+       intr_properties>;
+
+def int_hexagon_V6_vgather_vscattermh :
+Hexagon__ptri32i32v64i16_Intrinsic<"HEXAGON_V6_vgather_vscattermh", [IntrArgMemOnly]>;
+
+def int_hexagon_V6_vgather_vscattermh_128B :
+Hexagon__ptri32i32v32i32_Intrinsic<"HEXAGON_V6_vgather_vscattermh_128B", [IntrArgMemOnly]>;

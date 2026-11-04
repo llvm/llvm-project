@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-objc-function-naming %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s google-objc-function-naming %t
 
 #include <stdio.h>
 
@@ -8,7 +8,7 @@ static void TestImplicitFunctionDeclaration(int a) {
   printf("%d", a);
 }
 
-typedef _Bool bool;
+#define bool _Bool
 
 static bool ispositive(int a) { return a > 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: static function named 'ispositive'

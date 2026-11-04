@@ -7,11 +7,13 @@
 define void @test_blockaddress() nounwind {
 ; LA32-LABEL: test_blockaddress:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(addr)
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.Ltmp0)
-; LA32-NEXT:    addi.w $a1, $a1, %pc_lo12(.Ltmp0)
-; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(addr)
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(addr)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(addr)
+; LA32-NEXT:  .Lpcadd_hi1:
+; LA32-NEXT:    pcaddu12i $a1, %pcadd_hi20(.Ltmp0)
+; LA32-NEXT:    addi.w $a1, $a1, %pcadd_lo12(.Lpcadd_hi1)
+; LA32-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi0)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    jr $a0
 ; LA32-NEXT:  .Ltmp0: # Block address taken
 ; LA32-NEXT:  .LBB0_1: # %block

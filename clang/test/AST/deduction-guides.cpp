@@ -30,11 +30,11 @@ struct HasDeductionGuideTypeAlias {
 HasDeductionGuideTypeAlias()->HasDeductionGuideTypeAlias<int>;
 
 // The parameter to this one shouldn't be an elaborated type.
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuide> 'auto (typename STy::Child) -> HasDeductionGuide<T>'
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuide> 'auto (HasDeductionGuide<T>) -> HasDeductionGuide<T>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuide> 'auto (typename STy::Child) -> PR46111::HasDeductionGuide<T>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuide> 'auto (PR46111::HasDeductionGuide<T>) -> PR46111::HasDeductionGuide<T>'
 // CHECK: CXXDeductionGuideDecl {{.*}} <deduction guide for HasDeductionGuide> 'auto () -> HasDeductionGuide<int>'
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuideTypeAlias> 'auto (typename STy::Child) -> HasDeductionGuideTypeAlias<T>'
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuideTypeAlias> 'auto (HasDeductionGuideTypeAlias<T>) -> HasDeductionGuideTypeAlias<T>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuideTypeAlias> 'auto (typename STy::Child) -> PR46111::HasDeductionGuideTypeAlias<T>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for HasDeductionGuideTypeAlias> 'auto (PR46111::HasDeductionGuideTypeAlias<T>) -> PR46111::HasDeductionGuideTypeAlias<T>'
 // CHECK: CXXDeductionGuideDecl {{.*}} <deduction guide for HasDeductionGuideTypeAlias> 'auto () -> HasDeductionGuideTypeAlias<int>'
 } // namespace PR46111
 
@@ -64,15 +64,15 @@ namespace PR48177 {
 
 // CHECK: CXXRecordDecl {{.*}} struct Derived
 // CHECK: TypeAliasDecl {{.*}} type_alias 'typename Derived<int, 1, int>::type_alias':'int'
-// CHECK-NEXT: ElaboratedType {{.*}} 'typename Derived<int, 1, int>::type_alias' sugar
-// CHECK-NEXT: TypedefType {{.*}} 'PR48177::Base<int>::type_alias' sugar
+// CHECK-NEXT: TypedefType {{.*}} 'typename Derived<int, 1, int>::type_alias' sugar
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'Derived<int, 1, int>'
 // CHECK-NEXT: TypeAlias {{.*}} 'type_alias'
 // CHECK-NEXT: SubstTemplateTypeParmType {{.*}} 'int' sugar class depth 0 index 0 A
 // CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'Base'
 // CHECK-NEXT: BuiltinType {{.*}} 'int'
 
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (Derived<T, S, A> &&, const typename Derived<T, S, A>::type_alias &) -> Derived<T, S, A>'
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (T) -> Derived<T, S, A>'
-// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (Derived<T, S, A>) -> Derived<T, S, A>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (Derived<T, S, A> &&, const typename Derived<T, S, A>::type_alias &) -> PR48177::Derived<T, S, A>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (T) -> PR48177::Derived<T, S, A>'
+// CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (PR48177::Derived<T, S, A>) -> PR48177::Derived<T, S, A>'
 // CHECK: CXXDeductionGuideDecl {{.*}} <deduction guide for Derived> 'auto (T, A) -> Derived<T, 1, A>'
 // CHECK: CXXDeductionGuideDecl {{.*}} <deduction guide for Derived> 'auto (int, int) -> Derived<int, 1, int>'

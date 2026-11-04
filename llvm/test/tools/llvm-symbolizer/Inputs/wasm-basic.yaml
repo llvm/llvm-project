@@ -1,0 +1,61 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+      - Index:           1
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x1
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            foo
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            bar
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            010F0B
+      - Index:           1
+        Locals:          []
+        Body:            2000010F0B
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         C9000000040000000000040100000000000000006C6C766D2D70726F6A6563742F6C6C766D2F746573742F746F6F6C732F6C6C766D2D73796D626F6C697A65722F7761736D2D62617369632E73002F7573722F6C6F63616C2F676F6F676C652F62747266735F6D6F756E742F7761736D2D62617369632F656D722D7761736D2D6261736963006C6C766D2D6D6320286261736564206F6E204C4C564D2032332E302E306769742900018002666F6F00010000000B00000002000000026261720001000000120000000700000000
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         0111011017551703081B08250813050000020A0003083A063B061101000000
+  - Type:            CUSTOM
+    Name:            .debug_aranges
+    Payload:         '24000000020000000000040000000000020000000400000007000000060000000000000000000000'
+  - Type:            CUSTOM
+    Name:            .debug_ranges
+    Payload:         FFFFFFFF020000000000000004000000FFFFFFFF0700000000000000060000000000000000000000
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         7A000000040051000000010101FB0E0D0001010101000000010000016C6C766D2D70726F6A6563742F6C6C766D2F746573742F746F6F6C732F6C6C766D2D73796D626F6C697A657200007761736D2D62617369632E73000100000000050202000000030C012F210201000101000502070000000313013D21210201000101
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            foo
+      - Index:           1
+        Name:            bar
+...

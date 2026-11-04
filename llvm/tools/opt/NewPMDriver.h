@@ -23,10 +23,11 @@
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+class LLVMContext;
 class PassBuilder;
 class StringRef;
+struct PassPluginLibraryInfo;
 class Module;
-class PassPlugin;
 class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
@@ -52,9 +53,9 @@ enum PGOKind {
   SampleUse
 };
 enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
-}
+} // namespace opt_tool
 
-void printPasses(raw_ostream &OS);
+void printPasses(LLVMContext &Context, raw_ostream &OS);
 
 /// Driver function to run the new pass manager over a module.
 ///
@@ -69,13 +70,13 @@ bool runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
     bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO = false);
+    bool EnableProfcheck, bool UnifiedLTO = false);
 } // namespace llvm
 
 #endif

@@ -2,7 +2,7 @@
 
 ; Generator: vdeal(0x37), vdeal(0x53), vshuff(0x2f), vdeal(0x4b), vdeal(0x27), vdeal(0x43), vshuff(0x1f), vdeal(0x5b), vshuff(0x7e), vshuff(0x6c), vdeal(0x5a), vdeal(0x38), vshuff(0x16), vshuff(0x44), vdeal(0x72)
 ; CHECK-LABEL: test_0000:
-; CHECK-DAG: [[R00:r[0-9]+]] = #66
+; CHECK-DAG: [[R00:r[0-9]+]] = #-62
 ; CHECK-DAG: [[R01:r[0-9]+]] = #46
 ; CHECK-DAG: [[R02:r[0-9]+]] = #1
 ; CHECK: v[[H00:[0-9]+]]:[[L00:[0-9]+]] = vshuff(v1,v0,[[R00]])
@@ -18,7 +18,7 @@ define <256 x i8> @test_0000(<256 x i8> %v0) #0 {
 ; CHECK-LABEL: test_0001:
 ; CHECK-DAG: [[R10:r[0-9]+]] = #24
 ; CHECK-DAG: [[R11:r[0-9]+]] = #9
-; CHECK-DAG: [[R12:r[0-9]+]] = #68
+; CHECK-DAG: [[R12:r[0-9]+]] = #-60
 ; CHECK-DAG: [[R13:r[0-9]+]] = #34
 ; CHECK: v[[H10:[0-9]+]]:[[L10:[0-9]+]] = vshuff(v1,v0,[[R10]])
 ; CHECK: v[[H11:[0-9]+]]:[[L11:[0-9]+]] = vdeal(v[[H10]],v[[L10]],[[R11]])
@@ -34,7 +34,7 @@ define <256 x i8> @test_0001(<256 x i8> %v0) #0 {
 ; CHECK-LABEL: test_0002:
 ; CHECK-DAG: [[R20:r[0-9]+]] = #18
 ; CHECK-DAG: [[R21:r[0-9]+]] = #10
-; CHECK-DAG: [[R22:r[0-9]+]] = #68
+; CHECK-DAG: [[R22:r[0-9]+]] = #-60
 ; CHECK-DAG: [[R23:r[0-9]+]] = #5
 ; CHECK: v[[H20:[0-9]+]]:[[L20:[0-9]+]] = vshuff(v1,v0,[[R20]])
 ; CHECK: v[[H21:[0-9]+]]:[[L21:[0-9]+]] = vdeal(v[[H20]],v[[L20]],[[R21]])
@@ -51,7 +51,7 @@ define <256 x i8> @test_0002(<256 x i8> %v0) #0 {
 ; CHECK-DAG: [[R30:r[0-9]+]] = #21
 ; CHECK-DAG: [[R31:r[0-9]+]] = #9
 ; CHECK-DAG: [[R32:r[0-9]+]] = #34
-; CHECK-DAG: [[R33:r[0-9]+]] = #66
+; CHECK-DAG: [[R33:r[0-9]+]] = #-62
 ; CHECK: v[[H30:[0-9]+]]:[[L30:[0-9]+]] = vshuff(v1,v0,[[R30]])
 ; CHECK: v[[H31:[0-9]+]]:[[L31:[0-9]+]] = vdeal(v[[H30]],v[[L30]],[[R31]])
 ; CHECK: v[[H32:[0-9]+]]:[[L32:[0-9]+]] = vshuff(v[[H31]],v[[L31]],[[R32]])
@@ -65,7 +65,7 @@ define <256 x i8> @test_0003(<256 x i8> %v0) #0 {
 ; Generator: vdeal(0x63), vshuff(0x6f), vdeal(0x77), vshuff(0x75), vdeal(0x3d), vshuff(0x2d), vshuff(0x00), vshuff(0x5c), vdeal(0x04), vshuff(0x79), vshuff(0x21), vdeal(0x7b), vdeal(0x66), vshuff(0x59), vdeal(0x54)
 ; CHECK-LABEL: test_0004:
 ; CHECK-DAG: [[R40:r[0-9]+]] = #38
-; CHECK-DAG: [[R41:r[0-9]+]] = #72
+; CHECK-DAG: [[R41:r[0-9]+]] = #-56
 ; CHECK-DAG: [[R42:r[0-9]+]] = #18
 ; CHECK: v[[H40:[0-9]+]]:[[L40:[0-9]+]] = vshuff(v1,v0,[[R40]])
 ; CHECK: v[[H41:[0-9]+]]:[[L41:[0-9]+]] = vshuff(v[[H40]],v[[L40]],[[R41]])
@@ -81,7 +81,7 @@ define <256 x i8> @test_0004(<256 x i8> %v0) #0 {
 ; CHECK-DAG: [[R50:r[0-9]+]] = #9
 ; CHECK-DAG: [[R51:r[0-9]+]] = #3
 ; CHECK-DAG: [[R52:r[0-9]+]] = #48
-; CHECK-DAG: [[R53:r[0-9]+]] = #68
+; CHECK-DAG: [[R53:r[0-9]+]] = #-60
 ; CHECK: v[[H50:[0-9]+]]:[[L50:[0-9]+]] = vshuff(v1,v0,[[R50]])
 ; CHECK: v[[H51:[0-9]+]]:[[L51:[0-9]+]] = vdeal(v[[H50]],v[[L50]],[[R51]])
 ; CHECK: v[[H52:[0-9]+]]:[[L52:[0-9]+]] = vdeal(v[[H51]],v[[L51]],[[R52]])
@@ -94,7 +94,7 @@ define <256 x i8> @test_0005(<256 x i8> %v0) #0 {
 
 ; Generator: vshuff(0x34), vshuff(0x07), vdeal(0x5d), vshuff(0x05), vshuff(0x50), vshuff(0x13), vdeal(0x31), vdeal(0x6e), vdeal(0x0f), vdeal(0x2c), vdeal(0x28), vdeal(0x76), vdeal(0x22), vdeal(0x3a), vdeal(0x51)
 ; CHECK-LABEL: test_0006:
-; CHECK-DAG: [[R60:r[0-9]+]] = #85
+; CHECK-DAG: [[R60:r[0-9]+]] = #-43
 ; CHECK-DAG: [[R61:r[0-9]+]] = #2
 ; CHECK: v[[H60:[0-9]+]]:[[L60:[0-9]+]] = vdeal(v1,v0,[[R60]])
 ; CHECK: v[[H61:[0-9]+]]:[[L61:[0-9]+]] = vshuff(v[[H60]],v[[L60]],[[R61]])
@@ -106,7 +106,7 @@ define <256 x i8> @test_0006(<256 x i8> %v0) #0 {
 
 ; Generator: vshuff(0x25), vshuff(0x4c), vshuff(0x72), vdeal(0x70), vshuff(0x3b), vshuff(0x26), vshuff(0x4d), vdeal(0x20), vshuff(0x7f), vdeal(0x6a), vdeal(0x78), vshuff(0x5f), vdeal(0x10), vdeal(0x71), vshuff(0x6d)
 ; CHECK-LABEL: test_0007:
-; CHECK-DAG: [[R70:r[0-9]+]] = #74
+; CHECK-DAG: [[R70:r[0-9]+]] = #-54
 ; CHECK-DAG: [[R71:r[0-9]+]] = #20
 ; CHECK-DAG: [[R72:r[0-9]+]] = #34
 ; CHECK: v[[H70:[0-9]+]]:[[L70:[0-9]+]] = vshuff(v1,v0,[[R70]])
@@ -120,7 +120,7 @@ define <256 x i8> @test_0007(<256 x i8> %v0) #0 {
 
 ; Generator: vshuff(0x2e), vshuff(0x40), vdeal(0x35), vdeal(0x3e), vdeal(0x06), vshuff(0x4b), vshuff(0x24), vshuff(0x09), vdeal(0x18), vshuff(0x42), vshuff(0x43), vshuff(0x41), vshuff(0x23), vdeal(0x3f), vdeal(0x39)
 ; CHECK-LABEL: test_0008:
-; CHECK-DAG: [[R80:r[0-9]+]] = #73
+; CHECK-DAG: [[R80:r[0-9]+]] = #-55
 ; CHECK-DAG: [[R81:r[0-9]+]] = #5
 ; CHECK-DAG: [[R82:r[0-9]+]] = #48
 ; CHECK-DAG: [[R83:r[0-9]+]] = #2
@@ -136,7 +136,7 @@ define <256 x i8> @test_0008(<256 x i8> %v0) #0 {
 
 ; Generator: vshuff(0x33), vshuff(0x5e), vshuff(0x2a), vdeal(0x2f), vdeal(0x1f), vshuff(0x14), vshuff(0x17), vshuff(0x1b), vdeal(0x1c), vdeal(0x15), vshuff(0x37), vshuff(0x3c), vdeal(0x4e), vdeal(0x7d), vshuff(0x61)
 ; CHECK-LABEL: test_0009:
-; CHECK-DAG: [[R90:r[0-9]+]] = #96
+; CHECK-DAG: [[R90:r[0-9]+]] = #-32
 ; CHECK-DAG: [[R91:r[0-9]+]] = #18
 ; CHECK-DAG: [[R92:r[0-9]+]] = #5
 ; CHECK: v[[H90:[0-9]+]]:[[L90:[0-9]+]] = vshuff(v1,v0,[[R90]])
@@ -152,7 +152,7 @@ define <256 x i8> @test_0009(<256 x i8> %v0) #0 {
 ; CHECK-LABEL: test_000a:
 ; CHECK-DAG: [[Ra0:r[0-9]+]] = #44
 ; CHECK-DAG: [[Ra1:r[0-9]+]] = #6
-; CHECK-DAG: [[Ra2:r[0-9]+]] = #80
+; CHECK-DAG: [[Ra2:r[0-9]+]] = #-48
 ; CHECK: v[[Ha0:[0-9]+]]:[[La0:[0-9]+]] = vshuff(v1,v0,[[Ra0]])
 ; CHECK: v[[Ha1:[0-9]+]]:[[La1:[0-9]+]] = vdeal(v[[Ha0]],v[[La0]],[[Ra1]])
 ; CHECK: v[[Ha2:[0-9]+]]:[[La2:[0-9]+]] = vshuff(v[[Ha1]],v[[La1]],[[Ra2]])
@@ -164,7 +164,7 @@ define <256 x i8> @test_000a(<256 x i8> %v0) #0 {
 
 ; Generator: vshuff(0x74), vshuff(0x11), vshuff(0x53), vshuff(0x66), vshuff(0x1d), vdeal(0x59), vshuff(0x63), vshuff(0x49), vdeal(0x00), vshuff(0x38), vshuff(0x45), vdeal(0x68), vshuff(0x65), vshuff(0x6e), vdeal(0x62)
 ; CHECK-LABEL: test_000b:
-; CHECK-DAG: [[Rb0:r[0-9]+]] = #68
+; CHECK-DAG: [[Rb0:r[0-9]+]] = #-60
 ; CHECK-DAG: [[Rb1:r[0-9]+]] = #5
 ; CHECK-DAG: [[Rb2:r[0-9]+]] = #18
 ; CHECK-DAG: [[Rb3:r[0-9]+]] = #40
@@ -182,7 +182,7 @@ define <256 x i8> @test_000b(<256 x i8> %v0) #0 {
 ; CHECK-LABEL: test_000c:
 ; CHECK-DAG: [[Rc0:r[0-9]+]] = #10
 ; CHECK-DAG: [[Rc1:r[0-9]+]] = #3
-; CHECK-DAG: [[Rc2:r[0-9]+]] = #84
+; CHECK-DAG: [[Rc2:r[0-9]+]] = #-44
 ; CHECK: v[[Hc0:[0-9]+]]:[[Lc0:[0-9]+]] = vshuff(v1,v0,[[Rc0]])
 ; CHECK: v[[Hc1:[0-9]+]]:[[Lc1:[0-9]+]] = vdeal(v[[Hc0]],v[[Lc0]],[[Rc1]])
 ; CHECK: v[[Hc2:[0-9]+]]:[[Lc2:[0-9]+]] = vshuff(v[[Hc1]],v[[Lc1]],[[Rc2]])
@@ -195,7 +195,7 @@ define <256 x i8> @test_000c(<256 x i8> %v0) #0 {
 ; Generator: vdeal(0x58), vdeal(0x0b), vdeal(0x21), vdeal(0x7f), vshuff(0x6a), vshuff(0x78), vshuff(0x52), vshuff(0x73), vshuff(0x06), vdeal(0x2d), vdeal(0x32), vdeal(0x48), vdeal(0x75), vdeal(0x55), vshuff(0x0e)
 ; CHECK-LABEL: test_000d:
 ; CHECK-DAG: [[Rd0:r[0-9]+]] = #36
-; CHECK-DAG: [[Rd1:r[0-9]+]] = #80
+; CHECK-DAG: [[Rd1:r[0-9]+]] = #-48
 ; CHECK-DAG: [[Rd2:r[0-9]+]] = #9
 ; CHECK: v[[Hd0:[0-9]+]]:[[Ld0:[0-9]+]] = vshuff(v1,v0,[[Rd0]])
 ; CHECK: v[[Hd1:[0-9]+]]:[[Ld1:[0-9]+]] = vshuff(v[[Hd0]],v[[Ld0]],[[Rd1]])
@@ -208,7 +208,7 @@ define <256 x i8> @test_000d(<256 x i8> %v0) #0 {
 
 ; Generator: vdeal(0x6f), vdeal(0x13), vdeal(0x07), vdeal(0x56), vshuff(0x2c), vdeal(0x0c), vdeal(0x33), vshuff(0x22), vdeal(0x02), vshuff(0x18), vdeal(0x4d), vshuff(0x51), vshuff(0x3e), vshuff(0x77), vshuff(0x30)
 ; CHECK-LABEL: test_000e:
-; CHECK-DAG: [[Re0:r[0-9]+]] = #65
+; CHECK-DAG: [[Re0:r[0-9]+]] = #-63
 ; CHECK-DAG: [[Re1:r[0-9]+]] = #24
 ; CHECK-DAG: [[Re2:r[0-9]+]] = #36
 ; CHECK: v[[He0:[0-9]+]]:[[Le0:[0-9]+]] = vshuff(v1,v0,[[Re0]])

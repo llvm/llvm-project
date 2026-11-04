@@ -15,6 +15,7 @@ include "mlir/Interfaces/SideEffectInterfaceBase.td"
 // A set of type interfaces used to test interface inheritance.
 def TestBaseTypeInterfacePrintTypeA : TypeInterface<"TestBaseTypeInterfacePrintTypeA"> {
   let cppNamespace = "::test";
+  let cppIncludes = ["TestTypes.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeA", (ins "::mlir::Location":$loc), [{
@@ -26,6 +27,7 @@ def TestBaseTypeInterfacePrintTypeA : TypeInterface<"TestBaseTypeInterfacePrintT
 def TestBaseTypeInterfacePrintTypeB
   : TypeInterface<"TestBaseTypeInterfacePrintTypeB", [TestBaseTypeInterfacePrintTypeA]> {
   let cppNamespace = "::test";
+  let cppIncludes = ["TestTypes.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeB", (ins "::mlir::Location":$loc),
@@ -40,9 +42,20 @@ def TestBaseTypeInterfacePrintTypeB
 def TestTypeInterface
   : TypeInterface<"TestTypeInterface", [TestBaseTypeInterfacePrintTypeB]> {
   let cppNamespace = "::test";
+  let cppIncludes = ["TestTypes.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "::mlir::Location":$loc)
+    >,
+    // Check that we can have multiple method with the same name.
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "int":$value)
+    >,
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "float":$value),
+      [{}], /*defaultImplementation=*/[{
+        emitRemark(loc) << $_type << " - " << value << " - Float TestC";
+      }]
     >,
     // It should be possible to use the interface type name as result type
     // as well as in the implementation.
@@ -70,6 +83,7 @@ def TestTypeInterface
 
 def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestTypes.h"];
   let methods = [
     InterfaceMethod<"Returns the bitwidth of the type plus 'arg'.",
       "unsigned", "getBitwidthPlusArg", (ins "unsigned":$arg)>,
@@ -81,12 +95,25 @@ def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
     StaticInterfaceMethod<"Returns the argument.",
       "unsigned", "staticGetArgument", (ins "unsigned":$arg), "",
       "return arg;">,
+    // Overloaded method (same name, different arity) used to check that an
+    // external model can override an overloaded interface method by its source
+    // name. Both overloads have a default so other models stay unaffected.
+    InterfaceMethod<"Overloaded method, single argument.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg), "",
+      "return 1000 + arg;">,
+    InterfaceMethod<"Overloaded method, two arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2),
+      "", "return 2000 + arg + arg2;">,
+    InterfaceMethod<"Overloaded method, three arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2, "unsigned":$arg3),
+      "", "return 3000 + arg + arg2 + arg3;">,
   ];
 }
 
 def TestExternalFallbackTypeInterface
     : TypeInterface<"TestExternalFallbackTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestTypes.h"];
   let methods = [
     InterfaceMethod<"Returns the bitwidth of the given integer type.",
       "unsigned", "getBitwidth", (ins), "", "return $_type.getWidth();">,
@@ -95,6 +122,7 @@ def TestExternalFallbackTypeInterface
 
 def TestExternalAttrInterface : AttrInterface<"TestExternalAttrInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestAttributes.h"];
   let methods = [
     InterfaceMethod<"Gets the dialect pointer.", "const ::mlir::Dialect *",
       "getDialectPtr">,
@@ -104,6 +132,7 @@ def TestExternalAttrInterface : AttrInterface<"TestExternalAttrInterface"> {
 
 def TestExternalOpInterface : OpInterface<"TestExternalOpInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestInterfaces.h"];
   let methods = [
     InterfaceMethod<"Returns the length of the operation name plus arg.",
       "unsigned", "getNameLengthPlusArg", (ins "unsigned":$arg)>,
@@ -124,6 +153,7 @@ def TestEffectOpInterface
     : EffectOpInterfaceBase<"TestEffectOpInterface",
                             "::mlir::TestEffects::Effect"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestInterfaces.h"];
 }
 
 class TestEffect<string effectName>
@@ -138,6 +168,7 @@ def TestConcreteEffect : TestEffect<"TestEffects::Concrete">;
 def TestOptionallyImplementedOpInterface
     : OpInterface<"TestOptionallyImplementedOpInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestInterfaces.h"];
 
   let methods = [
     InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
@@ -151,6 +182,7 @@ def TestOptionallyImplementedOpInterface
 def TestOptionallyImplementedAttrInterface
     : AttrInterface<"TestOptionallyImplementedAttrInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestAttributes.h"];
 
   let methods = [
     InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
@@ -164,6 +196,7 @@ def TestOptionallyImplementedAttrInterface
 def TestOptionallyImplementedTypeInterface
     : TypeInterface<"TestOptionallyImplementedTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["TestTypes.h"];
 
   let methods = [
     InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
@@ -172,6 +205,36 @@ def TestOptionallyImplementedTypeInterface
   let extraClassOf = [{
     return $_type.getImplementsInterface();
   }];
+}
+
+// Dummy type interface "A" that requires type interface "B" to be complete.
+def TestCyclicTypeInterfaceA : TypeInterface<"TestCyclicTypeInterfaceA"> {
+  let cppNamespace = "::mlir";
+  let cppIncludes = ["TestTypes.h"];
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceB>",
+      /*methodName=*/"returnB",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
+}
+
+// Dummy type interface "B" that requires type interface "A" to be complete.
+def TestCyclicTypeInterfaceB : TypeInterface<"TestCyclicTypeInterfaceB"> {
+  let cppNamespace = "::mlir";
+  let cppIncludes = ["TestTypes.h"];
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceA>",
+      /*methodName=*/"returnA",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
 }
 
 #endif // MLIR_TEST_DIALECT_TEST_INTERFACES

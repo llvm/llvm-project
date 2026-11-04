@@ -11,33 +11,52 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
 namespace {
-struct PatchableFunction : public MachineFunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  PatchableFunction() : MachineFunctionPass(ID) {
-    initializePatchableFunctionPass(*PassRegistry::getPassRegistry());
+struct PatchableFunction {
+  bool run(MachineFunction &F);
+};
+
+struct PatchableFunctionLegacy : public MachineFunctionPass {
+  static char ID;
+  PatchableFunctionLegacy() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &F) override {
+    return PatchableFunction().run(F);
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
-   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+} // namespace
+
+PreservedAnalyses
+PatchableFunctionPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  if (!PatchableFunction().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
 }
 
-bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
+bool PatchableFunction::run(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = *MF.begin();
 
   if (MF.getFunction().hasFnAttribute("patchable-function-entry")) {
@@ -62,7 +81,7 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-char PatchableFunction::ID = 0;
-char &llvm::PatchableFunctionID = PatchableFunction::ID;
-INITIALIZE_PASS(PatchableFunction, "patchable-function",
+char PatchableFunctionLegacy::ID = 0;
+char &llvm::PatchableFunctionID = PatchableFunctionLegacy::ID;
+INITIALIZE_PASS(PatchableFunctionLegacy, "patchable-function",
                 "Implement the 'patchable-function' attribute", false, false)

@@ -1,4 +1,4 @@
-//===--- SizeofContainerCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SizeofContainerCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -36,7 +35,7 @@ void SizeofContainerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *SizeOf =
       Result.Nodes.getNodeAs<UnaryExprOrTypeTraitExpr>("sizeof");
 
-  auto Diag =
+  const auto Diag =
       diag(SizeOf->getBeginLoc(), "sizeof() doesn't return the size of the "
                                   "container; did you mean .size()?");
 }

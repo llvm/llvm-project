@@ -1,7 +1,31 @@
-// This tests that the coroutine elide optimization could happen succesfully.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 -emit-llvm %s -o - | FileCheck %s
 
 #include "Inputs/coroutine.h"
+
+namespace {
+struct coro {
+    using promise_type = coro;
+
+    auto get_return_object() noexcept { return coro{std::coroutine_handle<coro>::from_promise(*this)}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
+    std::suspend_never final_suspend() noexcept { return {}; }
+    void return_void() noexcept {}
+    void unhandled_exception() {}
+
+    std::coroutine_handle<> handle;
+};
+}
+
+void flowoff() {
+  []() -> coro {
+    co_await std::suspend_always{};
+  }().handle.resume();
+}
+
+// Tests that the coroutine elide optimization could happen if control flows off the end of the coroutine
+// CHECK-LABEL: define{{.*}} void @_Z7flowoffv
+// CHECK-NEXT: entry:
+// CHECK-NEXT: ret void
 
 struct Task {
   struct promise_type {
@@ -58,5 +82,6 @@ Task task1() {
   co_return co_await task0();
 }
 
+// Tests that the coroutine elide optimization could happen if handle.destroy() is invoked
 // CHECK-LABEL: define{{.*}} void @_Z5task1v.resume
 // CHECK-NOT: call{{.*}}_Znwm

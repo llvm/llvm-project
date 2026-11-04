@@ -51,7 +51,7 @@ define half @half_test(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0

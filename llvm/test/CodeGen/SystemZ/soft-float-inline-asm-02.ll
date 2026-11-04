@@ -7,4 +7,4 @@ define float @f1() {
   ret float %ret
 }
 
-; CHECK: error: couldn't allocate output register for constraint '{f0}'
+; CHECK: error: could not allocate output register for constraint '{f0}'

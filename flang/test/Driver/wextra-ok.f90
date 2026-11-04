@@ -5,7 +5,7 @@
 ! RUN: not %flang -std=f2018 -Wblah -Wextra %s -c 2>&1 | FileCheck %s --check-prefix=WRONG
 
 ! CHECK-OK: the warning option '-Wextra' is not supported
-! WRONG: Only `-Werror` is supported currently.
+! WRONG: Unknown diagnostic option: -Wblah
 
 program wextra_ok
 end program wextra_ok

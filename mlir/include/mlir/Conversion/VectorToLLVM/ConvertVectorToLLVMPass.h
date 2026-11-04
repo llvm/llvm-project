@@ -9,6 +9,7 @@
 #define MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVMPASS_H_
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
 namespace mlir {
 class Pass;

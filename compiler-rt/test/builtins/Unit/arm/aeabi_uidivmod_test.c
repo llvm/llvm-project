@@ -1,5 +1,8 @@
-// REQUIRES: arm-target-arch || armv6m-target-arch
+// REQUIRES: arm-target-arch || armv4t-target-arch || armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// RUN: %if !armv6m-target-arch %{ \
+// RUN:   %clang_builtins -mthumb %s %librt -o %t.thumb && %run %t.thumb \
+// RUN: %}
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -13,8 +16,19 @@ int test__aeabi_uidivmod(su_int a, su_int b,
 						su_int expected_result, su_int expected_rem)
 {
     du_int ret = __aeabi_uidivmod(a, b);
+    // __aeabi_uidivmod actually returns a struct { quotient; remainder; }
+    // using value_in_regs calling convention. Due to the ABI rules, struct
+    // fields come in the same order regardless of endianness. However since
+    // the result is received here as a 64-bit integer, in which endianness
+    // does matter, the position of each component (quotient and remainder)
+    // varies depending on endianness.
+#  if _YUGA_BIG_ENDIAN
+    su_int rem = ret & 0xFFFFFFFF;
+    si_int result = ret >> 32;
+#  else
     su_int rem = ret >> 32;
     si_int result = ret & 0xFFFFFFFF;
+#  endif
 
     if (result != expected_result) {
         printf("error in __aeabi_uidivmod: %u / %u = %u, expected %u\n",

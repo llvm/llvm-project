@@ -38,29 +38,29 @@
 // function clang_registerCheckers. For example:
 //
 //    extern "C"
-//    void clang_registerCheckers (CheckerRegistry &registry) {
-//      registry.addChecker<MainCallChecker>("example.MainCallChecker",
-//        "Disallows calls to functions called main");
+//    void clang_registerCheckers(CheckerRegistry &Registry) {
+//      Registry.addChecker<MainCallChecker>(
+//                    "example.MainCallChecker",
+//                    "Disallows calls to functions called main");
 //    }
 //
-// The first method argument is the full name of the checker, including its
-// enclosing package. By convention, the registered name of a checker is the
-// name of the associated class (the template argument).
-// The second method argument is a short human-readable description of the
-// checker.
+// The first argument of this templated method is the full name of the checker
+// (including its package), while the second argument is a short description
+// that is printed by `-analyzer-checker-help`.
 //
-// The clang_registerCheckers function may add any number of checkers to the
-// registry. If any checkers require additional initialization, use the three-
-// argument form of CheckerRegistry::addChecker.
+// A plugin may register several separate checkers by calling `addChecker()`
+// multiple times. If a checker requires custom registration functions (e.g.
+// checker option handling) use the non-templated overload of `addChecker` that
+// takes two callback functions as the first two parameters.
 //
 // To load a checker plugin, specify the full path to the dynamic library as
 // the argument to the -load option in the cc1 frontend. You can then enable
 // your custom checker using the -analyzer-checker:
 //
-//   clang -cc1 -load </path/to/plugin.dylib> -analyze
-//     -analyzer-checker=<example.MainCallChecker>
+//   clang -cc1 -load /path/to/plugin.dylib -analyze
+//     -analyzer-checker=example.MainCallChecker
 //
-// For a complete working example, see examples/analyzer-plugin.
+// For complete examples, see clang/lib/Analysis/plugins/SampleAnalyzer
 
 #ifndef CLANG_ANALYZER_API_VERSION_STRING
 // FIXME: The Clang version string is not particularly granular;
@@ -108,30 +108,25 @@ private:
     mgr.template registerChecker<T>();
   }
 
-  template <typename T> static bool returnTrue(const CheckerManager &mgr) {
-    return true;
-  }
+  static bool returnTrue(const CheckerManager &) { return true; }
 
 public:
-  /// Adds a checker to the registry. Use this non-templated overload when your
-  /// checker requires custom initialization.
-  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction sfn,
-                  StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden);
+  /// Adds a checker to the registry.
+  /// Use this for a checker defined in a plugin if it requires custom
+  /// registration functions (e.g. for handling checker options).
+  /// NOTE: As of now `DocsUri` is never queried from the checker registry.
+  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
+                  StringRef FullName, StringRef Desc,
+                  StringRef DocsUri = "NoDocsUri", bool IsHidden = false);
 
-  /// Adds a checker to the registry. Use this templated overload when your
-  /// checker does not require any custom initialization.
-  /// This function isn't really needed and probably causes more headaches than
-  /// the tiny convenience that it provides, but external plugins might use it,
-  /// and there isn't a strong incentive to remove it.
+  /// Adds a checker to the registry.
+  /// Use this for a checker defined in a plugin if it doesn't require custom
+  /// registration functions.
   template <class T>
-  void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden = false) {
-    // Avoid MSVC's Compiler Error C2276:
-    // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
+  void addChecker(StringRef FullName, StringRef Desc,
+                  StringRef DocsUri = "NoDocsUri", bool IsHidden = false) {
     addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
-               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri,
-               IsHidden);
+               &CheckerRegistry::returnTrue, FullName, Desc, DocsUri, IsHidden);
   }
 
   /// Makes the checker with the full name \p fullName depend on the checker

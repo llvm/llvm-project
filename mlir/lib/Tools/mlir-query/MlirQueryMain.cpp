@@ -21,6 +21,7 @@
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 
 //===----------------------------------------------------------------------===//
@@ -31,11 +32,6 @@ llvm::LogicalResult
 mlir::mlirQueryMain(int argc, char **argv, MLIRContext &context,
                     const mlir::query::matcher::Registry &matcherRegistry) {
 
-  // Override the default '-h' and use the default PrintHelpMessage() which
-  // won't print options in categories.
-  static llvm::cl::opt<bool> help("h", llvm::cl::desc("Alias for -help"),
-                                  llvm::cl::Hidden);
-
   static llvm::cl::OptionCategory mlirQueryCategory("mlir-query options");
 
   static llvm::cl::list<std::string> commands(
@@ -43,7 +39,7 @@ mlir::mlirQueryMain(int argc, char **argv, MLIRContext &context,
       llvm::cl::value_desc("command"), llvm::cl::cat(mlirQueryCategory));
 
   static llvm::cl::opt<std::string> inputFilename(
-      llvm::cl::Positional, llvm::cl::desc("<input file>"),
+      llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init("-"),
       llvm::cl::cat(mlirQueryCategory));
 
   static llvm::cl::opt<bool> noImplicitModule{
@@ -63,10 +59,13 @@ mlir::mlirQueryMain(int argc, char **argv, MLIRContext &context,
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR test case query tool.\n");
 
-  if (help) {
-    llvm::cl::PrintHelpMessage();
-    return mlir::success();
-  }
+  // When reading from stdin and the input is a tty, it is often a user mistake
+  // and the process "appears to be stuck". Print a message to let the user
+  // know!
+  if (inputFilename == "-" &&
+      llvm::sys::Process::FileDescriptorIsDisplayed(fileno(stdin)))
+    llvm::errs() << "(processing input from stdin now, hit ctrl-c/ctrl-d to "
+                    "interrupt)\n";
 
   // Set up the input file.
   std::string errorMessage;

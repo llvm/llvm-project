@@ -11,6 +11,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
@@ -112,7 +113,7 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
 
 // Sparse tensor encoding attribute.
 def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
-         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding> ] > {
+         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding>, OpAsmAttrInterface ] > {
   let mnemonic = "encoding";
 
   let description = [{
@@ -124,6 +125,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     loops operate on sparse storage formats rather than tensors with a sparsity
     encoding. Compiler passes that run before this sparsifier pass need to be aware
     of the semantics of tensor types with such a sparsity encoding.
+
+    This encoding can only be applied to tensors with supported primary element
+    types (e.g., `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`, `i32`, `i64`, and
+    complex variants of `f32` and `f64`).
 
     In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
     and **level** to refer to the axes of the actual storage format, i.e., the
@@ -543,6 +548,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     void printSymbols(AffineMap &map, AsmPrinter &printer) const;
     void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
     void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::LevelType> lvlTypes) const;
+
+    //
+    // OpAsmAttrInterface methods.
+    //
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "sparse";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
 
   let genVerifyDecl = 1;

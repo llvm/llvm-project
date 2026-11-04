@@ -15,9 +15,9 @@
 #include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -29,7 +29,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
-#include <map>
 #include <optional>
 
 using namespace llvm;
@@ -78,8 +77,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
       OptLevel(TM.getOptLevel()),
       CPUString(std::string(Hexagon_MC::selectHexagonCPU(CPU))),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      RegInfo(getHwMode()), TLInfo(TM, *this),
-      InstrItins(getInstrItineraryForCPU(CPUString)) {
+      TLInfo(TM, *this), InstrItins(getInstrItineraryForCPU(CPUString)) {
   Hexagon_MC::addArchSubtarget(this, FS);
   // Beware of the default constructor of InstrItineraryData: it will
   // reset all members to 0.
@@ -141,6 +139,25 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string FeatureString = Features.getString();
   ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
 
+  // Resolve the shadow call stack pointer register.  At most one "scs-reg-rN"
+  // feature may be given; R18 is the default.  R18 is chosen because it is the
+  // lowest callee-saved register that neither the Hexagon Linux kernel (which
+  // reserves R19 for the thread-info pointer) nor code that reserves the upper
+  // callee-saved range already claims.
+  static_assert(Hexagon::R27 - Hexagon::R16 == 11,
+                "Callee-saved R16-R27 are assumed to be consecutive");
+  SCSPReg = Hexagon::R18;
+  bool SCSRegSelected = false;
+  for (unsigned Reg = Hexagon::R16; Reg <= Hexagon::R27; ++Reg) {
+    if (!SCSPointerRegister[Reg])
+      continue;
+    if (SCSRegSelected)
+      report_fatal_error(
+          "Only one shadow call stack pointer register may be selected");
+    SCSPReg = Reg;
+    SCSRegSelected = true;
+  }
+
   if (useHVXV68Ops())
     UseHVXFloatingPoint = UseHVXIEEEFPOps || UseHVXQFloatOps;
 
@@ -166,6 +183,34 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   setFeatureBits(Hexagon_MC::completeHVXFeatures(FeatureBits));
 
   return *this;
+}
+
+void HexagonSubtarget::initLibcallLoweringInfo(
+    LibcallLoweringInfo &Info) const {
+  // The generic arithmetic/division helper routines (__adddf3, __divsi3, ...)
+  // exist in Hexagon's compiler-rt alongside the preferred __hexagon_*
+  // variants, so both are available. The __hexagon_* variant is the one that
+  // must be used; select it explicitly here.
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } LibraryCalls[] = {
+      {RTLIB::SDIV_I32, RTLIB::impl___hexagon_divsi3},
+      {RTLIB::SDIV_I64, RTLIB::impl___hexagon_divdi3},
+      {RTLIB::UDIV_I32, RTLIB::impl___hexagon_udivsi3},
+      {RTLIB::UDIV_I64, RTLIB::impl___hexagon_udivdi3},
+      {RTLIB::SREM_I32, RTLIB::impl___hexagon_modsi3},
+      {RTLIB::SREM_I64, RTLIB::impl___hexagon_moddi3},
+      {RTLIB::UREM_I32, RTLIB::impl___hexagon_umodsi3},
+      {RTLIB::UREM_I64, RTLIB::impl___hexagon_umoddi3},
+      {RTLIB::ADD_F64, RTLIB::impl___hexagon_adddf3},
+      {RTLIB::SUB_F64, RTLIB::impl___hexagon_subdf3},
+      {RTLIB::MUL_F64, RTLIB::impl___hexagon_muldf3},
+      {RTLIB::DIV_F64, RTLIB::impl___hexagon_divdf3},
+      {RTLIB::DIV_F32, RTLIB::impl___hexagon_divsf3},
+  };
+  for (const auto &LC : LibraryCalls)
+    Info.setLibcallImpl(LC.Op, LC.Impl);
 }
 
 bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
@@ -361,11 +406,13 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
           } else if (MO.isDef() && MO.getReg().isPhysical()) {
             for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
                  ++AI) {
-              if (LastVRegUse.count(*AI) &&
-                  LastVRegUse[*AI] != &DAG->SUnits[su])
-                // %r0 = ...
-                DAG->addEdge(&DAG->SUnits[su], SDep(LastVRegUse[*AI], SDep::Barrier));
-              LastVRegUse.erase(*AI);
+              if (auto It = LastVRegUse.find(*AI); It != LastVRegUse.end()) {
+                if (It->second != &DAG->SUnits[su])
+                  // %r0 = ...
+                  DAG->addEdge(&DAG->SUnits[su],
+                               SDep(It->second, SDep::Barrier));
+                LastVRegUse.erase(It);
+              }
             }
           }
         }
@@ -390,7 +437,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
         HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
       continue;
     int64_t Offset0;
-    LocationSize Size0 = 0;
+    LocationSize Size0 = LocationSize::precise(0);
     MachineOperand *BaseOp0 = HII.getBaseAndOffset(L0, Offset0, Size0);
     // Is the access size is longer than the L1 cache line, skip the check.
     if (BaseOp0 == nullptr || !BaseOp0->isReg() || !Size0.hasValue() ||
@@ -404,7 +451,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
           HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
         continue;
       int64_t Offset1;
-      LocationSize Size1 = 0;
+      LocationSize Size1 = LocationSize::precise(0);
       MachineOperand *BaseOp1 = HII.getBaseAndOffset(L1, Offset1, Size1);
       if (BaseOp1 == nullptr || !BaseOp1->isReg() || !Size0.hasValue() ||
           Size1.getValue() >= 32 || BaseOp0->getReg() != BaseOp1->getReg())
@@ -443,8 +490,8 @@ void HexagonSubtarget::adjustSchedDependency(
   const HexagonInstrInfo *QII = getInstrInfo();
 
   // Instructions with .new operands have zero latency.
-  SmallSet<SUnit *, 4> ExclSrc;
-  SmallSet<SUnit *, 4> ExclDst;
+  SmallPtrSet<SUnit *, 4> ExclSrc;
+  SmallPtrSet<SUnit *, 4> ExclDst;
   if (QII->canExecuteInBundle(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII, ExclSrc, ExclDst)) {
     Dep.setLatency(0);
@@ -543,7 +590,7 @@ int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
   if (!hasV60Ops())
     return Latency;
 
-  auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
+  const HexagonInstrInfo &QII = *getInstrInfo();
   // BSB scheduling.
   if (QII.isHVXVec(SrcInst) || useBSBScheduling())
     Latency = (Latency + 1) >> 1;
@@ -628,9 +675,9 @@ static SUnit *getZeroLatency(SUnit *N, SmallVector<SDep, 4> &Deps) {
 // together with a zero latency. Only one dependence should have a zero
 // latency. If there are multiple choices, choose the best, and change
 // the others, if needed.
-bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
-      const HexagonInstrInfo *TII, SmallSet<SUnit*, 4> &ExclSrc,
-      SmallSet<SUnit*, 4> &ExclDst) const {
+bool HexagonSubtarget::isBestZeroLatency(
+    SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,
+    SmallPtrSet<SUnit *, 4> &ExclSrc, SmallPtrSet<SUnit *, 4> &ExclDst) const {
   MachineInstr &SrcInst = *Src->getInstr();
   MachineInstr &DstInst = *Dst->getInstr();
 
@@ -686,7 +733,7 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       restoreLatency(Src, DstBest);
   }
 
-  // Attempt to find another opprotunity for zero latency in a different
+  // Attempt to find another opportunity for zero latency in a different
   // dependence.
   if (SrcBest && DstBest)
     // If there is an edge from SrcBest to DstBst, then try to change that

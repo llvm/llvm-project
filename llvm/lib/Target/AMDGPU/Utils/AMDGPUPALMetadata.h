@@ -21,7 +21,6 @@
 namespace llvm {
 
 class Module;
-class StringRef;
 
 class AMDGPUPALMetadata {
 public:
@@ -51,6 +50,7 @@ public:
   // Set PAL metadata from a binary blob from the applicable .note record.
   // Returns false if bad format.  Blob must remain valid for the lifetime of
   // the Metadata.
+  // Not used in-tree, but used by the out-of-tree amdgpu-dis disassembler.
   bool setFromBlob(unsigned Type, StringRef Blob);
 
   // Set the rsrc1 register in the metadata for a particular shader stage.
@@ -147,15 +147,13 @@ public:
   // This is called from AMDGPUTargetELFStreamer::Finish().
   void toBlob(unsigned Type, std::string &S);
 
-  // Get the msgpack::Document for the PAL metadata.
-  msgpack::Document *getMsgPackDoc() { return &MsgPackDoc; }
-
   // Set legacy PAL metadata format.
   void setLegacy();
 
   unsigned getPALMajorVersion();
-  unsigned getPALMinorVersion();
+  VersionTuple getPALVersion();
 
+  void updateHwStageMaximum(unsigned CC, StringRef field, unsigned Val);
   void setHwStage(unsigned CC, StringRef field, unsigned Val);
   void setHwStage(unsigned CC, StringRef field, bool Val);
   void setHwStage(unsigned CC, StringRef field, msgpack::Type Type,

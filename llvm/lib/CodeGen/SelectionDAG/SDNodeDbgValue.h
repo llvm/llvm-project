@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
@@ -22,19 +23,22 @@ namespace llvm {
 
 class DIVariable;
 class DIExpression;
+class GlobalValue;
 class SDNode;
 class Value;
 class raw_ostream;
 
 /// Holds the information for a single machine location through SDISel; either
-/// an SDNode, a constant, a stack location, or a virtual register.
+/// an SDNode, a constant, a stack location, a virtual register, or the address
+/// of a global.
 class SDDbgOperand {
 public:
   enum Kind {
-    SDNODE = 0,  ///< Value is the result of an expression.
-    CONST = 1,   ///< Value is a constant.
-    FRAMEIX = 2, ///< Value is contents of a stack location.
-    VREG = 3     ///< Value is a virtual register.
+    SDNODE = 0,    ///< Value is the result of an expression.
+    CONST = 1,     ///< Value is a constant.
+    FRAMEIX = 2,   ///< Value is contents of a stack location.
+    VREG = 3,      ///< Value is a virtual register.
+    GLOBALADDR = 4 ///< Value is the address of a global.
   };
   Kind getKind() const { return kind; }
 
@@ -63,9 +67,15 @@ public:
   }
 
   /// Returns the Virtual Register for a VReg
-  unsigned getVReg() const {
+  Register getVReg() const {
     assert(kind == VREG);
     return u.VReg;
+  }
+
+  /// Returns the GlobalValue whose address describes the variable.
+  const GlobalValue *getGlobal() const {
+    assert(kind == GLOBALADDR);
+    return u.GA;
   }
 
   static SDDbgOperand fromNode(SDNode *Node, unsigned ResNo) {
@@ -74,11 +84,14 @@ public:
   static SDDbgOperand fromFrameIdx(unsigned FrameIdx) {
     return SDDbgOperand(FrameIdx, FRAMEIX);
   }
-  static SDDbgOperand fromVReg(unsigned VReg) {
-    return SDDbgOperand(VReg, VREG);
+  static SDDbgOperand fromVReg(Register VReg) {
+    return SDDbgOperand(VReg.id(), VREG);
   }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
+  }
+  static SDDbgOperand fromGlobalAddr(const GlobalValue *GV) {
+    return SDDbgOperand(GV, GLOBALADDR);
   }
 
   bool operator!=(const SDDbgOperand &Other) const { return !(*this == Other); }
@@ -94,6 +107,8 @@ public:
       return getVReg() == Other.getVReg();
     case FRAMEIX:
       return getFrameIx() == Other.getFrameIx();
+    case GLOBALADDR:
+      return getGlobal() == Other.getGlobal();
     }
     return false;
   }
@@ -105,9 +120,10 @@ private:
       SDNode *Node;   ///< Valid for expressions.
       unsigned ResNo; ///< Valid for expressions.
     } s;
-    const Value *Const; ///< Valid for constants.
-    unsigned FrameIx;   ///< Valid for stack objects.
-    unsigned VReg;      ///< Valid for registers.
+    const Value *Const;    ///< Valid for constants.
+    unsigned FrameIx;      ///< Valid for stack objects.
+    unsigned VReg;         ///< Valid for registers.
+    const GlobalValue *GA; ///< Valid for global addresses.
   } u;
 
   /// Constructor for non-constants.
@@ -117,6 +133,12 @@ private:
   }
   /// Constructor for constants.
   SDDbgOperand(const Value *C) : kind(CONST) { u.Const = C; }
+  /// Constructor for global addresses. Takes an explicit Kind because a
+  /// GlobalValue would otherwise be ambiguous with the Value constructor.
+  SDDbgOperand(const GlobalValue *GV, Kind Kind) : kind(Kind) {
+    assert(Kind == GLOBALADDR && "Invalid SDDbgValue constructor");
+    u.GA = GV;
+  }
   /// Constructor for virtual registers and frame indices.
   SDDbgOperand(unsigned VRegOrFrameIdx, Kind Kind) : kind(Kind) {
     assert((Kind == VREG || Kind == FRAMEIX) &&
@@ -164,8 +186,8 @@ public:
         IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
-    std::copy(L.begin(), L.end(), LocationOps);
-    std::copy(Dependencies.begin(), Dependencies.end(), AdditionalDependencies);
+    llvm::copy(L, LocationOps);
+    llvm::copy(Dependencies, AdditionalDependencies);
   }
 
   // We allocate arrays with the BumpPtrAllocator and never free or copy them,
@@ -196,8 +218,7 @@ public:
     for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
-    for (SDNode *Node : getAdditionalDependencies())
-      Dependencies.push_back(Node);
+    llvm::append_range(Dependencies, getAdditionalDependencies());
     return Dependencies;
   }
 

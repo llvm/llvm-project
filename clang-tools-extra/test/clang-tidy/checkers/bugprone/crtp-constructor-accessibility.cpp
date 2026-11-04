@@ -253,3 +253,48 @@ void foo() {
     (void) A;
 }
 } // namespace no_warning_unsupported
+
+namespace public_copy_move_constructors_deleted {
+template <typename T>
+class CRTP
+{
+    CRTP() = default;
+    friend T;
+  public:
+    CRTP(const CRTP&) = delete;
+    CRTP(CRTP&&) = delete;
+};
+
+class A : CRTP<A> {};
+
+} // namespace public_copy_move_constructors_deleted
+
+namespace public_copy_protected_move_constructor_deleted {
+template <typename T>
+class CRTP
+{
+    CRTP() = default;
+    friend T;
+  public:
+    CRTP(const CRTP&) = delete;
+  protected:
+    CRTP(CRTP&&) = delete;
+};
+
+class A : CRTP<A> {};
+
+} // namespace public_copy_protected_move_constructor_deleted
+
+namespace ctor_right_after_access_specifier {
+template <typename T>
+class CRTP {
+public:CRTP() {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-FIXES: public:private:
+    // CHECK-FIXES-NEXT: CRTP() {}
+    // CHECK-FIXES-NEXT: public:
+    // CHECK-FIXES: friend T;
+};
+
+class A : CRTP<A> {};
+} // namespace ctor_right_after_access_specifier

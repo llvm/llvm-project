@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s
 
 // CHECK: target triple = "spir64-unknown-unknown"
 

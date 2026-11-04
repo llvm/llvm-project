@@ -79,9 +79,8 @@ define <3 x double> @fdiv_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-NEXT:    fdiv v2.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fdiv v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fdiv_v3f64:

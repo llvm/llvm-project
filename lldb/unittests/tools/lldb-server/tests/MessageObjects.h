@@ -173,8 +173,7 @@ llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {
   std::string error =
       "Unable to parse " +
       llvm::formatv(format.data(), std::forward<Args>(args)...).str();
-  return llvm::make_error<llvm::StringError>(error,
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError(error);
 }
 
 } // namespace llgs_tests

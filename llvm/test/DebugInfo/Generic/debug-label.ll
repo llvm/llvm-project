@@ -5,6 +5,7 @@
 ; CHECK-NEXT: DW_AT_name {{.*}}"top"
 ; CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1] {{.*}}debug-label.c
 ; CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1] {{.*}}4
+; CHECK-NEXT: DW_AT_decl_column [DW_FORM_data1] {{.*}}9
 ; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] {{.*}}{{0x[0-9a-f]+}}
 ; CHECK: DW_TAG_label
 ; CHECK-NEXT: DW_AT_name {{.*}}"done"
@@ -22,6 +23,7 @@
 ; ASM-NEXT: DW_AT_name
 ; ASM: 1 {{.*}} DW_AT_decl_file
 ; ASM-NEXT: 4 {{.*}} DW_AT_decl_line
+; ASM-NEXT: 9 {{.*}} DW_AT_decl_column
 ; ASM-NEXT: [[TOP_LOW_PC]]{{.*}} DW_AT_low_pc
 ; ASM: DW_TAG_label
 ; ASM-NEXT: DW_AT_name
@@ -68,7 +70,7 @@ declare void @llvm.dbg.label(metadata)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !DILabel(scope: !6, name: "top", file: !1, line: 4)
+!10 = !DILabel(scope: !6, name: "top", file: !1, line: 4, column: 9)
 !11 = !DILocation(line: 4, column: 1, scope: !6)
 !12 = !DILabel(scope: !15, name: "done", file: !1, line: 7)
 !13 = !DILocation(line: 7, column: 1, scope: !6)

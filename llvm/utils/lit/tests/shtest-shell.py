@@ -1,17 +1,11 @@
 # Check the internal shell handling component of the ShTest format.
 
 # RUN: not %{lit} -v %{inputs}/shtest-shell > %t.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
 # on stdout-encoding.txt
 # RUN: env PYTHONIOENCODING=ascii not %{lit} -a %{inputs}/shtest-shell > %t.ascii.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.ascii.out
 # RUN: FileCheck --input-file %t.ascii.out %s
 #
 # END.
@@ -586,6 +580,11 @@
 # CHECK: # error: command failed with exit status: 127
 # CHECK: ***
 
+# CHECK: FAIL: shtest-shell :: pipefail.txt
+# CHECK: *** TEST 'shtest-shell :: pipefail.txt' FAILED ***
+# CHECK: error: command failed with exit status: 1
+# CHECK: ***
+
 # CHECK: PASS: shtest-shell :: redirects.txt
 
 # CHECK: FAIL: shtest-shell :: rm-error-0.txt
@@ -635,4 +634,4 @@
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (36)
+# CHECK: Failed Tests (37)

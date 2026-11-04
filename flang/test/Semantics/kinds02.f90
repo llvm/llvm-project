@@ -1,16 +1,17 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
-! C712 The value of scalar-int-constant-expr shall be nonnegative and 
+! REQUIRES: x86-registered-target
+! RUN: %python %S/test_errors.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
+! C712 The value of scalar-int-constant-expr shall be nonnegative and
 ! shall specify a representation method that exists on the processor.
 ! C714 The value of kind-param shall be nonnegative.
-! C715 The value of kind-param shall specify a representation method that 
+! C715 The value of kind-param shall specify a representation method that
 ! exists on the processor.
-! C719 The value of scalar-int-constant-expr shall be nonnegative and shall 
+! C719 The value of scalar-int-constant-expr shall be nonnegative and shall
 ! specify a representation method that exists on the processor.
-! C725 The optional comma in a length-selector is permitted only if no 
+! C725 The optional comma in a length-selector is permitted only if no
 ! double-colon separator appears in the typedeclaration- stmt.
-! C727 The value of kind-param shall specify a representation method that 
+! C727 The value of kind-param shall specify a representation method that
 ! exists on the processor.
-! C728 The value of kind-param shall specify a representation method that 
+! C728 The value of kind-param shall specify a representation method that
 ! exists on the processor.
 !
 !ERROR: INTEGER(KIND=0) is not a supported type
@@ -43,9 +44,9 @@ complex(kind=7) :: z7
 complex(kind=32) :: z32
 !ERROR: COMPLEX*1 is not a supported type
 complex*1 :: zs1
-!ERROR: COMPLEX*2 is not a supported type
+!ERROR: COMPLEX(KIND=1) is not a supported type
 complex*2 :: zs2
-!ERROR: COMPLEX*64 is not a supported type
+!ERROR: COMPLEX(KIND=32) is not a supported type
 complex*64 :: zs64
 !ERROR: LOGICAL(KIND=0) is not a supported type
 logical(kind=0) :: l0

@@ -112,7 +112,7 @@ define i32 @test8(ptr %p) {
 define i32 @load_noundef_load(ptr %p) {
 ; CHECK-LABEL: define i32 @load_noundef_load
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]], !noundef !6
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]], !noundef [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -138,7 +138,7 @@ define i32 @load_load_noundef(ptr %p) {
 define void @load_dereferenceable_dominating(ptr %p) {
 ; CHECK-LABEL: define void @load_dereferenceable_dominating
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable !7
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable [[META7:![0-9]+]]
 ; CHECK-NEXT:    call void @use.ptr(ptr [[A]])
 ; CHECK-NEXT:    call void @use.ptr(ptr [[A]])
 ; CHECK-NEXT:    ret void
@@ -185,7 +185,7 @@ define void @load_ptr_nonnull_to_i64(ptr %p) {
 define void @load_ptr_nonnull_noundef_to_i64(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_nonnull_noundef_to_i64
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6, !noundef !6
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META6]], !noundef [[META6]]
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -202,7 +202,7 @@ define void @load_ptr_nonnull_noundef_to_i64(ptr %p) {
 define void @load_ptr_invariant_load_to_i64(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_invariant_load_to_i64
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !invariant.load [[META6]]
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -219,7 +219,7 @@ define void @load_ptr_invariant_load_to_i64(ptr %p) {
 define void @load_ptr_dereferenceable_to_i64(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_dereferenceable_to_i64
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable !7
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable [[META7]]
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -236,7 +236,7 @@ define void @load_ptr_dereferenceable_to_i64(ptr %p) {
 define void @load_ptr_dereferenceable_or_null_to_i64(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_dereferenceable_or_null_to_i64
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable_or_null !7
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable_or_null [[META7]]
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -409,6 +409,139 @@ join:
   ret void
 }
 
+; We should preserve the !nosanitize if both insns have it.
+define void @test_nosanitize1(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize1
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !nosanitize [[META6]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+  %v1 = load i32, ptr %p, !nosanitize !11
+  %cond = icmp eq i32 %v1, 0
+  br i1 %cond, label %if, label %join
+
+if:
+  %v2 = load i32, ptr %p, !nosanitize !11
+  call void @use.i32(i32 %v2)
+  br label %join
+
+join:
+  ret void
+}
+
+define void @test_nosanitize2(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize2
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+  %v1 = load i32, ptr %p, !nosanitize !11
+  %cond = icmp eq i32 %v1, 0
+  br i1 %cond, label %if, label %join
+
+if:
+  %v2 = load i32, ptr %p
+  call void @use.i32(i32 %v2)
+  br label %join
+
+join:
+  ret void
+}
+
+define void @test_nosanitize3(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize3
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+  %v1 = load i32, ptr %p
+  %cond = icmp eq i32 %v1, 0
+  br i1 %cond, label %if, label %join
+
+if:
+  %v2 = load i32, ptr %p, !nosanitize !11
+  call void @use.i32(i32 %v2)
+  br label %join
+
+join:
+  ret void
+}
+
+; Both loads have the same !mem.cache_hint node so we preserve it after GVN deduplication.
+define i64 @test_mem_cache_hint_both(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_both
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META11:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p, !mem.cache_hint !12
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Cache hint values can be integer constants.
+define i64 @test_mem_cache_hint_integer_value(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_integer_value
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !14
+  %b = load i64, ptr %p, !mem.cache_hint !14
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Only one load has !mem.cache_hint so we drop the metadata after GVN deduplication.
+define i64 @test_mem_cache_hint_one(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_one
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Both loads have different !mem.cache_hint metadata so we drop the metadata.
+; TODO: delegate to TTI to let targets decide how to merge differing payloads.
+define i64 @test_mem_cache_hint_diff(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_diff
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p, !mem.cache_hint !16
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
 !0 = !{i32 0, i32 2}
 !1 = !{i32 3, i32 5}
 !2 = !{i32 2, i32 5}
@@ -421,6 +554,12 @@ join:
 !9 = !{i32 1, i32 5}
 !10 = !{i32 5, i32 1}
 !11 = !{}
+!12 = !{ i32 0, !13 }
+!13 = !{ !"nvvm.l1_eviction", !"first" }
+!14 = !{ i32 0, !15 }
+!15 = !{ !"nvvm.prefetch_bytes", i32 128 }
+!16 = !{ i32 0, !17 }
+!17 = !{ !"nvvm.l1_eviction", !"last" }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
@@ -430,9 +569,13 @@ join:
 ; CHECK: [[RNG3]] = !{i32 -5, i32 -2, i32 1, i32 5}
 ; CHECK: [[RNG4]] = !{i32 10, i32 1}
 ; CHECK: [[RNG5]] = !{i32 3, i32 4, i32 5, i32 2}
-; CHECK: [[META6:![0-9]+]] = !{}
-; CHECK: [[META7:![0-9]+]] = !{i64 10}
+; CHECK: [[META6]] = !{}
+; CHECK: [[META7]] = !{i64 10}
 ; CHECK: [[RNG8]] = !{i64 0, i64 10}
 ; CHECK: [[RNG9]] = !{i64 0, i64 10, i64 20, i64 30}
 ; CHECK: [[RNG10]] = !{i64 10, i64 30}
+; CHECK: [[META11]] = !{i32 0, [[META12:![0-9]+]]}
+; CHECK: [[META12]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = !{!"nvvm.prefetch_bytes", i32 128}
 ;.

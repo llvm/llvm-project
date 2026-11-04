@@ -20,6 +20,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSymbolTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 #include <vector>
@@ -63,27 +64,27 @@ private:
             TargetMachine *TM);
 
 public:
-  ~LTOModule();
+  LLVM_ABI ~LTOModule();
 
   /// Returns 'true' if the file or memory contents is LLVM bitcode.
-  static bool isBitcodeFile(const void *mem, size_t length);
-  static bool isBitcodeFile(StringRef path);
+  LLVM_ABI static bool isBitcodeFile(const void *mem, size_t length);
+  LLVM_ABI static bool isBitcodeFile(StringRef path);
 
   /// Returns 'true' if the Module is produced for ThinLTO.
-  bool isThinLTO();
+  LLVM_ABI bool isThinLTO();
 
   /// Returns 'true' if the memory buffer is LLVM bitcode for the specified
   /// triple.
-  static bool isBitcodeForTarget(MemoryBuffer *memBuffer,
-                                 StringRef triplePrefix);
+  LLVM_ABI static bool isBitcodeForTarget(MemoryBuffer *memBuffer,
+                                          StringRef triplePrefix);
 
   /// Returns a string representing the producer identification stored in the
   /// bitcode, or "" if the bitcode does not contains any.
   ///
-  static std::string getProducerString(MemoryBuffer *Buffer);
+  LLVM_ABI static std::string getProducerString(MemoryBuffer *Buffer);
 
   /// Create a MemoryBuffer from a memory range with an optional name.
-  static std::unique_ptr<MemoryBuffer>
+  LLVM_ABI static std::unique_ptr<MemoryBuffer>
   makeBuffer(const void *mem, size_t length, StringRef name = "");
 
   /// Create an LTOModule. N.B. These methods take ownership of the buffer. The
@@ -94,20 +95,20 @@ public:
   /// InitializeAllTargetMCs();
   /// InitializeAllAsmPrinters();
   /// InitializeAllAsmParsers();
-  static ErrorOr<std::unique_ptr<LTOModule>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<LTOModule>>
   createFromFile(LLVMContext &Context, StringRef path,
                  const TargetOptions &options);
-  static ErrorOr<std::unique_ptr<LTOModule>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<LTOModule>>
   createFromOpenFile(LLVMContext &Context, int fd, StringRef path, size_t size,
                      const TargetOptions &options);
-  static ErrorOr<std::unique_ptr<LTOModule>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<LTOModule>>
   createFromOpenFileSlice(LLVMContext &Context, int fd, StringRef path,
                           size_t map_size, off_t offset,
                           const TargetOptions &options);
-  static ErrorOr<std::unique_ptr<LTOModule>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<LTOModule>>
   createFromBuffer(LLVMContext &Context, const void *mem, size_t length,
                    const TargetOptions &options, StringRef path = "");
-  static ErrorOr<std::unique_ptr<LTOModule>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<LTOModule>>
   createInLocalContext(std::unique_ptr<LLVMContext> Context, const void *mem,
                        size_t length, const TargetOptions &options,
                        StringRef path);
@@ -118,14 +119,10 @@ public:
   std::unique_ptr<Module> takeModule() { return std::move(Mod); }
 
   /// Return the Module's target triple.
-  const std::string &getTargetTriple() {
-    return getModule().getTargetTriple();
-  }
+  const Triple &getTargetTriple() { return getModule().getTargetTriple(); }
 
   /// Set the Module's target triple.
-  void setTargetTriple(StringRef Triple) {
-    getModule().setTargetTriple(Triple);
-  }
+  void setTargetTriple(Triple T) { getModule().setTargetTriple(T); }
 
   /// Get the number of symbols
   uint32_t getSymbolCount() {
@@ -146,6 +143,14 @@ public:
     return StringRef();
   }
 
+  uint32_t getAsmUndefSymbolCount() { return _asm_undefines.size(); }
+
+  StringRef getAsmUndefSymbolName(uint32_t index) {
+    if (index < _asm_undefines.size())
+      return _asm_undefines[index];
+    return StringRef();
+  }
+
   const GlobalValue *getSymbolGV(uint32_t index) {
     if (index < _symbols.size())
       return _symbols[index].symbol;
@@ -156,20 +161,23 @@ public:
 
   const std::vector<StringRef> &getAsmUndefinedRefs() { return _asm_undefines; }
 
-  static lto::InputFile *createInputFile(const void *buffer, size_t buffer_size,
-                                         const char *path, std::string &out_error);
+  LLVM_ABI static lto::InputFile *createInputFile(const void *buffer,
+                                                  size_t buffer_size,
+                                                  const char *path,
+                                                  std::string &out_error);
 
-  static size_t getDependentLibraryCount(lto::InputFile *input);
+  LLVM_ABI static size_t getDependentLibraryCount(lto::InputFile *input);
 
-  static const char *getDependentLibrary(lto::InputFile *input, size_t index, size_t *size);
+  LLVM_ABI static const char *getDependentLibrary(lto::InputFile *input,
+                                                  size_t index, size_t *size);
 
-  Expected<uint32_t> getMachOCPUType() const;
+  LLVM_ABI Expected<uint32_t> getMachOCPUType() const;
 
-  Expected<uint32_t> getMachOCPUSubType() const;
+  LLVM_ABI Expected<uint32_t> getMachOCPUSubType() const;
 
   /// Returns true if the module has either the @llvm.global_ctors or the
   /// @llvm.global_dtors symbol. Otherwise returns false.
-  bool hasCtorDtor() const;
+  LLVM_ABI bool hasCtorDtor() const;
 
 private:
   /// Parse metadata from the module

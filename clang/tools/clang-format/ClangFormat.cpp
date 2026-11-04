@@ -25,12 +25,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <fstream>
 
 using namespace llvm;
 using clang::tooling::Replacements;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
@@ -88,7 +87,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json\n"
+             "  JSON: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -176,7 +175,7 @@ namespace {
 enum class WNoError { Unknown };
 }
 
-static cl::bits<WNoError> WNoErrorList(
+static cl::list<WNoError> WNoErrorList(
     "Wno-error",
     cl::desc("If set, don't error out on the specified warning type."),
     cl::values(
@@ -237,24 +236,23 @@ static bool parseLineRange(StringRef Input, unsigned &FromLine,
 
 static bool fillRanges(MemoryBuffer *Code,
                        std::vector<tooling::Range> &Ranges) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
-  FileID ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
-                                 InMemoryFileSystem.get());
+  const auto ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
+                                     InMemoryFileSystem.get());
   if (!LineRanges.empty()) {
     if (!Offsets.empty() || !Lengths.empty()) {
       errs() << "error: cannot use -lines with -offset/-length\n";
       return true;
     }
 
-    for (unsigned i = 0, e = LineRanges.size(); i < e; ++i) {
+    for (const auto &LineRange : LineRanges) {
       unsigned FromLine, ToLine;
-      if (parseLineRange(LineRanges[i], FromLine, ToLine)) {
+      if (parseLineRange(LineRange, FromLine, ToLine)) {
         errs() << "error: invalid <start line>:<end line> pair\n";
         return true;
       }
@@ -266,12 +264,12 @@ static bool fillRanges(MemoryBuffer *Code,
         errs() << "error: start line should not exceed end line\n";
         return true;
       }
-      SourceLocation Start = Sources.translateLineCol(ID, FromLine, 1);
-      SourceLocation End = Sources.translateLineCol(ID, ToLine, UINT_MAX);
+      const auto Start = Sources.translateLineCol(ID, FromLine, 1);
+      const auto End = Sources.translateLineCol(ID, ToLine, UINT_MAX);
       if (Start.isInvalid() || End.isInvalid())
         return true;
-      unsigned Offset = Sources.getFileOffset(Start);
-      unsigned Length = Sources.getFileOffset(End) - Offset;
+      const auto Offset = Sources.getFileOffset(Start);
+      const auto Length = Sources.getFileOffset(End) - Offset;
       Ranges.push_back(tooling::Range(Offset, Length));
     }
     return false;
@@ -279,32 +277,28 @@ static bool fillRanges(MemoryBuffer *Code,
 
   if (Offsets.empty())
     Offsets.push_back(0);
-  if (Offsets.size() != Lengths.size() &&
-      !(Offsets.size() == 1 && Lengths.empty())) {
+  const bool EmptyLengths = Lengths.empty();
+  unsigned Length = 0;
+  if (Offsets.size() == 1 && EmptyLengths) {
+    Length = Sources.getFileOffset(Sources.getLocForEndOfFile(ID)) - Offsets[0];
+  } else if (Offsets.size() != Lengths.size()) {
     errs() << "error: number of -offset and -length arguments must match.\n";
     return true;
   }
-  for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
-    if (Offsets[i] >= Code->getBufferSize()) {
-      errs() << "error: offset " << Offsets[i] << " is outside the file\n";
+  for (unsigned I = 0, E = Offsets.size(), CodeSize = Code->getBufferSize();
+       I < E; ++I) {
+    const auto Offset = Offsets[I];
+    if (Offset >= CodeSize) {
+      errs() << "error: offset " << Offset << " is outside the file\n";
       return true;
     }
-    SourceLocation Start =
-        Sources.getLocForStartOfFile(ID).getLocWithOffset(Offsets[i]);
-    SourceLocation End;
-    if (i < Lengths.size()) {
-      if (Offsets[i] + Lengths[i] > Code->getBufferSize()) {
-        errs() << "error: invalid length " << Lengths[i]
-               << ", offset + length (" << Offsets[i] + Lengths[i]
-               << ") is outside the file.\n";
-        return true;
-      }
-      End = Start.getLocWithOffset(Lengths[i]);
-    } else {
-      End = Sources.getLocForEndOfFile(ID);
+    if (!EmptyLengths)
+      Length = Lengths[I];
+    if (Offset + Length > CodeSize) {
+      errs() << "error: invalid length " << Length << ", offset + length ("
+             << Offset + Length << ") is outside the file.\n";
+      return true;
     }
-    unsigned Offset = Sources.getFileOffset(Start);
-    unsigned Length = Sources.getFileOffset(End) - Offset;
     Ranges.push_back(tooling::Range(Offset, Length));
   }
   return false;
@@ -348,16 +342,15 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-static bool
-emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
-                        const std::unique_ptr<llvm::MemoryBuffer> &Code) {
+static bool emitReplacementWarnings(const Replacements &Replaces,
+                                    StringRef AssumedFileName,
+                                    std::unique_ptr<llvm::MemoryBuffer> Code) {
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
-    Mgr.AddNewSourceBuffer(
-        MemoryBuffer::getMemBuffer(StartBuf, AssumedFileName), SMLoc());
+    Mgr.AddNewSourceBuffer(std::move(Code), SMLoc());
     for (const auto &R : Replaces) {
       SMDiagnostic Diag = Mgr.GetMessage(
           SMLoc::getFromPointer(StartBuf + R.getOffset()),
@@ -450,7 +443,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
-               nullptr, WNoErrorList.isSet(WNoError::Unknown));
+               nullptr, is_contained(WNoErrorList, WNoError::Unknown));
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
@@ -478,10 +471,9 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   }
 
   if (SortIncludes.getNumOccurrences() != 0) {
+    FormatStyle->SortIncludes = {};
     if (SortIncludes)
-      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
-    else
-      FormatStyle->SortIncludes = FormatStyle::SI_Never;
+      FormatStyle->SortIncludes.Enabled = true;
   }
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
@@ -492,10 +484,10 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   // To format JSON insert a variable to trick the code into thinking its
   // JavaScript.
   if (IsJson && !FormatStyle->DisableFormat) {
-    auto Err = Replaces.add(tooling::Replacement(
-        tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
+    auto Err =
+        Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
-      llvm::errs() << "Bad Json variable insertion\n";
+      llvm::errs() << "Bad JSON variable insertion\n";
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -511,20 +503,19 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
-           emitReplacementWarnings(Replaces, AssumedFileName, Code);
+           emitReplacementWarnings(Replaces, AssumedFileName, std::move(Code));
   }
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
-    IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-        new llvm::vfs::InMemoryFileSystem);
+    auto InMemoryFileSystem =
+        makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
 
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    DiagnosticOptions DiagOpts;
     ClangFormatDiagConsumer IgnoreDiagnostics;
-    DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
-        &IgnoreDiagnostics, false);
+    DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                  &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,
                                    InMemoryFileSystem.get());
@@ -644,6 +635,7 @@ static bool isIgnored(StringRef FilePath) {
   if (IgnoreDir.empty())
     return false;
 
+  bool IsIgnored = false;
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
     const bool IsNegated = Pat[0] == '!';
@@ -665,11 +657,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path;
     }
 
-    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
-      return true;
+    if (clang::format::matchFilePath(Pattern, Pathname))
+      IsIgnored = !IsNegated;
   }
 
-  return false;
+  return IsIgnored;
 }
 
 int main(int argc, const char **argv) {
@@ -688,11 +680,6 @@ int main(int argc, const char **argv) {
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
 
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
-
   if (DumpConfig)
     return dumpConfig();
 
@@ -708,8 +695,15 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName)) {
+      // The user should be able to expect that running
+      // `cat foo | clang-format --assume-filename foo` and writing the output
+      // to foo will format foo.
+      // Thus, we need to just output stdin untouched if it is ignored.
+      if (!OutputXML)
+        outs() << MemoryBuffer::getSTDIN()->get()->getBuffer();
       return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
   }
 

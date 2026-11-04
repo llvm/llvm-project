@@ -29,6 +29,10 @@ extern void __xray_FunctionTailExit();
 extern void __xray_ArgLoggerEntry();
 extern void __xray_CustomEvent();
 extern void __xray_TypedEvent();
+#if defined(__s390x__)
+extern void __xray_FunctionEntryVec();
+extern void __xray_FunctionExitVec();
+#endif
 }
 
 extern "C" {

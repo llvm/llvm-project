@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -23,20 +22,17 @@ using namespace mlir;
 
 spirv::TargetEnv::TargetEnv(spirv::TargetEnvAttr targetAttr)
     : targetAttr(targetAttr) {
-  for (spirv::Extension ext : targetAttr.getExtensions())
-    givenExtensions.insert(ext);
+  givenExtensions.insert_range(targetAttr.getExtensions());
 
   // Add extensions implied by the current version.
-  for (spirv::Extension ext :
-       spirv::getImpliedExtensions(targetAttr.getVersion()))
-    givenExtensions.insert(ext);
+  givenExtensions.insert_range(
+      spirv::getImpliedExtensions(targetAttr.getVersion()));
 
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
     givenCapabilities.insert(cap);
 
     // Add capabilities implied by the current capability.
-    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
-      givenCapabilities.insert(c);
+    givenCapabilities.insert_range(spirv::getRecursiveImpliedCapabilities(cap));
   }
 }
 
@@ -96,6 +92,10 @@ MLIRContext *spirv::TargetEnv::getContext() const {
 // Utility functions
 //===----------------------------------------------------------------------===//
 
+StringRef spirv::getFuncParamAlignmentAttrName() { return "spirv.alignment"; }
+
+StringRef spirv::getFuncParamAttrName() { return "spirv.func_param_attr"; }
+
 StringRef spirv::getInterfaceVarABIAttrName() {
   return "spirv.interface_var_abi";
 }
@@ -138,7 +138,7 @@ spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
   if (!op)
     return {};
 
-  if (auto attr = op->getAttrOfType<spirv::EntryPointABIAttr>(
+  if (auto attr = op->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName()))
     return attr;
 
@@ -169,6 +169,12 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*cooperative_matrix_properties_nv=*/ArrayAttr{});
 }
 
+StringRef spirv::getLoopControlAttrName() { return "spirv.loop_control"; }
+
+StringRef spirv::getSelectionControlAttrName() {
+  return "spirv.selection_control";
+}
+
 StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }
 
 spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
@@ -187,7 +193,7 @@ spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {
     if (!op)
       break;
 
-    if (auto attr = op->getAttrOfType<spirv::TargetEnvAttr>(
+    if (auto attr = op->getDiscardableAttrOfType<spirv::TargetEnvAttr>(
             spirv::getTargetEnvAttrName()))
       return attr;
 

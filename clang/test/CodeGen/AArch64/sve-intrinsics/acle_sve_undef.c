@@ -155,3 +155,29 @@ svfloat64_t test_svundef_f64(void) MODE_ATTR
 {
   return svundef_f64();
 }
+
+// CHECK-LABEL: @test_svundef_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <vscale x 16 x i8> undef
+//
+// CPP-CHECK-LABEL: @_Z16test_svundef_mf8v(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> undef
+//
+svmfloat8_t test_svundef_mf8(void) MODE_ATTR
+{
+  return svundef_mf8();
+}
+
+// CHECK-LABEL: @test_svundef_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> undef
+//
+// CPP-CHECK-LABEL: @_Z17test_svundef_bf16v(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> undef
+//
+svbfloat16_t test_svundef_bf16(void) MODE_ATTR
+{
+  return svundef_bf16();
+}

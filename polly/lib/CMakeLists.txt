@@ -24,6 +24,7 @@ set(POLLY_COMPONENTS
     ipo
     MC
     Passes
+    Plugins
     Linker
     IRReader
     Analysis
@@ -43,13 +44,11 @@ add_llvm_pass_plugin(Polly
   NO_MODULE
   SUBPROJECT Polly
   Analysis/DependenceInfo.cpp
-  Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
   Analysis/ScopDetectionDiagnostic.cpp
   Analysis/ScopInfo.cpp
   Analysis/ScopBuilder.cpp
   Analysis/ScopGraphPrinter.cpp
-  Analysis/ScopPass.cpp
   Analysis/PruneUnprofitable.cpp
   CodeGen/BlockGenerators.cpp
   ${ISL_CODEGEN_FILES}
@@ -61,6 +60,9 @@ add_llvm_pass_plugin(Polly
   CodeGen/RuntimeDebugBuilder.cpp
   CodeGen/PerfMonitor.cpp
   Exchange/JSONExporter.cpp
+  Pass/PhaseManager.cpp
+  Pass/PollyFunctionPass.cpp
+  Pass/PollyModulePass.cpp
   Support/GICHelper.cpp
   Support/PollyDebug.cpp
   Support/SCEVAffinator.cpp
@@ -88,6 +90,10 @@ add_llvm_pass_plugin(Polly
   Transform/ManualOptimizer.cpp
   Transform/MatmulOptimizer.cpp
   ${POLLY_HEADER_FILES}
+
+  # Polly unconditionally uses -fno-rtti -fno-exceptions. This can be
+  # incompatible with PCH if LLVM is built with RTTI or exceptions.
+  DISABLE_PCH_REUSE
 
   LINK_COMPONENTS
   ${POLLY_COMPONENTS}

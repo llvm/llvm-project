@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
-#include "SingleInputSingleOutputPerf.h"
+#include "PerfTest.h"
 #include "src/math/copysignf.h"
 #include "src/math/copysignf16.h"
 #include "src/math/fabsf.h"
@@ -28,14 +27,15 @@ int main() {
   SINGLE_INPUT_SINGLE_OUTPUT_PERF_EX(float16, LIBC_NAMESPACE::fabsf16,
                                      placeholder_unaryf16, FLOAT16_ROUNDS,
                                      "fabsf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::copysignf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "copysignf16_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
+      float16, float16, LIBC_NAMESPACE::copysignf16, placeholder_binaryf16,
+      FLOAT16_ROUNDS, "copysignf16_perf.log")
 
   SINGLE_INPUT_SINGLE_OUTPUT_PERF_EX(float, LIBC_NAMESPACE::fabsf, fabsf,
                                      FLOAT_ROUNDS, "fabsf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::copysignf,
-                                  copysignf, FLOAT_ROUNDS, "copysignf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::copysignf,
+                                     copysignf, FLOAT_ROUNDS,
+                                     "copysignf_perf.log")
 
   return 0;
 }

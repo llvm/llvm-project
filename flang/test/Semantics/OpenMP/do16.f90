@@ -5,7 +5,6 @@
 program omp
   integer i, j, k
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     select case (i)
@@ -21,7 +20,6 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10

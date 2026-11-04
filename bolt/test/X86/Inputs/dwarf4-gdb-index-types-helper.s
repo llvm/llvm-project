@@ -16,7 +16,7 @@
 	.type	_Z3foov,@function
 _Z3foov:                                # @_Z3foov
 .Lfunc_begin0:
-	.file	1 "/dwarf4-lenght-test" "helper.cpp"
+	.file	1 "/dwarf4-length-test" "helper.cpp"
 	.loc	1 7 0                           # helper.cpp:7:0
 	.cfi_startproc
 # %bb.0:
@@ -257,7 +257,7 @@ _Z3foov:                                # @_Z3foov
 .Linfo_string1:
 	.asciz	"helper.cpp"                    # string offset=146
 .Linfo_string2:
-	.asciz	"/home/ayermolo/local/tasks/T117448832/dwarf4-lenght-test" # string offset=157
+	.asciz	"/home/ayermolo/local/tasks/T117448832/dwarf4-length-test" # string offset=157
 .Linfo_string3:
 	.asciz	"_Z3foov"                       # string offset=214
 .Linfo_string4:

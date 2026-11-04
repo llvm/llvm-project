@@ -1,4 +1,5 @@
 # RUN: llc -emit-call-site-info -mtriple=x86_64-pc-linux -run-pass=unreachable-mbb-elimination -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple=x86_64-pc-linux -passes=unreachable-mbb-elimination -o - %s | FileCheck %s
 
 # Verify that the call site information for the call residing in the eliminated
 # block is removed. This test case would previously trigger an assertion when
@@ -47,7 +48,7 @@
 name:            main
 tracksRegLiveness: true
 callSites:
-  - { bb: 1, offset: 0 }
+  - { bb: '%bb.1', offset: 0 }
 body:             |
   bb.0:
     successors: %bb.2(0x80000000)

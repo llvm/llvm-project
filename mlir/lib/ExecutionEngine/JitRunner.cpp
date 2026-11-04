@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -114,6 +115,9 @@ struct Options {
 };
 
 struct CompileAndExecuteConfig {
+  /// Library options passed to ExecutionEngine.
+  const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr;
+
   /// LLVM module transformer that is passed to ExecutionEngine.
   std::function<llvm::Error(llvm::Module *)> transformer;
 
@@ -189,6 +193,7 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
                                        options.clSharedLibs.end());
 
   mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.libraryOptions = config.libraryOptions;
   engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
   if (config.transformer)
     engineOptions.transformer = config.transformer;
@@ -201,6 +206,8 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
     return expectedEngine.takeError();
 
   auto engine = std::move(*expectedEngine);
+
+  engine->initialize();
 
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
@@ -222,8 +229,13 @@ static Error compileAndExecuteVoidFunction(
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(module, entryPoint));
-  if (!mainFunction || mainFunction.empty())
+  if (!mainFunction || mainFunction.isExternal())
     return makeStringError("entry point not found");
+
+  if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+          .getNumParams() != 0)
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   auto resultType = dyn_cast<LLVM::LLVMVoidType>(
       mainFunction.getFunctionType().getReturnType());
@@ -264,7 +276,7 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
   return Error::success();
 }
 template <typename Type>
-Error compileAndExecuteSingleReturnFunction(
+static Error compileAndExecuteSingleReturnFunction(
     Options &options, Operation *module, StringRef entryPoint,
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
@@ -274,7 +286,8 @@ Error compileAndExecuteSingleReturnFunction(
 
   if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
           .getNumParams() != 0)
-    return makeStringError("function inputs not supported");
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;
@@ -304,7 +317,9 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   // Create the options struct containing the command line options for the
   // runner. This must come before the command line options are parsed.
   Options options;
-  llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR CPU execution driver\n");
+  llvm::cl::LibraryOptionsContext libraryOptions;
+  llvm::cl::parseCommandLineOptions(libraryOptions, ArrayRef(argv, argc),
+                                    "MLIR CPU execution driver\n");
 
   if (options.hostSupportsJit) {
     auto j = llvm::orc::LLJITBuilder().create();
@@ -354,6 +369,7 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   }
 
   // Build TargetMachine
+  tmBuilderOrError->getOptions().MCOptions.LibraryOptions = &libraryOptions;
   auto tmOrError = tmBuilderOrError->createTargetMachine();
 
   if (!tmOrError) {
@@ -368,6 +384,7 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   });
 
   CompileAndExecuteConfig compileAndExecuteConfig;
+  compileAndExecuteConfig.libraryOptions = &libraryOptions;
   if (optLevel) {
     compileAndExecuteConfig.transformer = mlir::makeOptimizingTransformer(
         *optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());

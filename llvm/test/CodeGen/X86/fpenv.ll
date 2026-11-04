@@ -11,244 +11,6 @@ declare i32 @llvm.get.fpmode.i32()
 declare void @llvm.set.fpmode.i32(i32 %fpmode)
 declare void @llvm.reset.fpmode()
 
-define void @func_01() nounwind {
-; X86-NOSSE-LABEL: func_01:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    fnstcw (%esp)
-; X86-NOSSE-NEXT:    orb $12, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldcw (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE-LABEL: func_01:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    fnstcw (%esp)
-; X86-SSE-NEXT:    orb $12, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fldcw (%esp)
-; X86-SSE-NEXT:    stmxcsr (%esp)
-; X86-SSE-NEXT:    orb $96, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    ldmxcsr (%esp)
-; X86-SSE-NEXT:    popl %eax
-; X86-SSE-NEXT:    retl
-;
-; X64-LABEL: func_01:
-; X64:       # %bb.0:
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    orb $12, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    orb $96, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    retq
-  call void @llvm.set.rounding(i32 0)  ; TowardZero (CW[11-10] = 11)
-  ret void
-}
-
-define void @func_02() nounwind {
-; X86-NOSSE-LABEL: func_02:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    fnstcw (%esp)
-; X86-NOSSE-NEXT:    andb $-13, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldcw (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE-LABEL: func_02:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    fnstcw (%esp)
-; X86-SSE-NEXT:    andb $-13, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fldcw (%esp)
-; X86-SSE-NEXT:    stmxcsr (%esp)
-; X86-SSE-NEXT:    andb $-97, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    ldmxcsr (%esp)
-; X86-SSE-NEXT:    popl %eax
-; X86-SSE-NEXT:    retl
-;
-; X64-LABEL: func_02:
-; X64:       # %bb.0:
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andb $-13, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andb $-97, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    retq
-  call void @llvm.set.rounding(i32 1)  ; ToNearestTiesToEven (CW[11-10] = 00)
-  ret void
-}
-
-define void @func_03() nounwind {
-; X86-NOSSE-LABEL: func_03:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    fnstcw (%esp)
-; X86-NOSSE-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X86-NOSSE-NEXT:    andl (%esp), %eax
-; X86-NOSSE-NEXT:    orl $2048, %eax # imm = 0x800
-; X86-NOSSE-NEXT:    movw %ax, (%esp)
-; X86-NOSSE-NEXT:    fldcw (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE-LABEL: func_03:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    fnstcw (%esp)
-; X86-SSE-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X86-SSE-NEXT:    andl (%esp), %eax
-; X86-SSE-NEXT:    orl $2048, %eax # imm = 0x800
-; X86-SSE-NEXT:    movw %ax, (%esp)
-; X86-SSE-NEXT:    fldcw (%esp)
-; X86-SSE-NEXT:    stmxcsr (%esp)
-; X86-SSE-NEXT:    movl $-24577, %eax # imm = 0x9FFF
-; X86-SSE-NEXT:    andl (%esp), %eax
-; X86-SSE-NEXT:    orl $16384, %eax # imm = 0x4000
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    ldmxcsr (%esp)
-; X86-SSE-NEXT:    popl %eax
-; X86-SSE-NEXT:    retl
-;
-; X64-LABEL: func_03:
-; X64:       # %bb.0:
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    orl $2048, %eax # imm = 0x800
-; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-24577, %eax # imm = 0x9FFF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    orl $16384, %eax # imm = 0x4000
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    retq
-  call void @llvm.set.rounding(i32 2)  ; Upward (CW[11-10] = 10)
-  ret void
-}
-
-define void @func_04() nounwind {
-; X86-NOSSE-LABEL: func_04:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    fnstcw (%esp)
-; X86-NOSSE-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X86-NOSSE-NEXT:    andl (%esp), %eax
-; X86-NOSSE-NEXT:    orl $1024, %eax # imm = 0x400
-; X86-NOSSE-NEXT:    movw %ax, (%esp)
-; X86-NOSSE-NEXT:    fldcw (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE-LABEL: func_04:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    fnstcw (%esp)
-; X86-SSE-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X86-SSE-NEXT:    andl (%esp), %eax
-; X86-SSE-NEXT:    orl $1024, %eax # imm = 0x400
-; X86-SSE-NEXT:    movw %ax, (%esp)
-; X86-SSE-NEXT:    fldcw (%esp)
-; X86-SSE-NEXT:    stmxcsr (%esp)
-; X86-SSE-NEXT:    movl $-24577, %eax # imm = 0x9FFF
-; X86-SSE-NEXT:    andl (%esp), %eax
-; X86-SSE-NEXT:    orl $8192, %eax # imm = 0x2000
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    ldmxcsr (%esp)
-; X86-SSE-NEXT:    popl %eax
-; X86-SSE-NEXT:    retl
-;
-; X64-LABEL: func_04:
-; X64:       # %bb.0:
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-3073, %eax # imm = 0xF3FF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    orl $1024, %eax # imm = 0x400
-; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-24577, %eax # imm = 0x9FFF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    orl $8192, %eax # imm = 0x2000
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    retq
-  call void @llvm.set.rounding(i32 3)  ; Downward (CW[11-10] = 01)
-  ret void
-}
-
-define void @func_05(i32 %x) nounwind {
-; X86-NOSSE-LABEL: func_05:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    leal 4(%eax,%eax), %ecx
-; X86-NOSSE-NEXT:    movl $201, %eax
-; X86-NOSSE-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NOSSE-NEXT:    shll %cl, %eax
-; X86-NOSSE-NEXT:    andl $3072, %eax # imm = 0xC00
-; X86-NOSSE-NEXT:    fnstcw (%esp)
-; X86-NOSSE-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
-; X86-NOSSE-NEXT:    andl (%esp), %ecx
-; X86-NOSSE-NEXT:    orl %eax, %ecx
-; X86-NOSSE-NEXT:    movw %cx, (%esp)
-; X86-NOSSE-NEXT:    fldcw (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE-LABEL: func_05:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    leal 4(%eax,%eax), %ecx
-; X86-SSE-NEXT:    movl $201, %eax
-; X86-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE-NEXT:    shll %cl, %eax
-; X86-SSE-NEXT:    andl $3072, %eax # imm = 0xC00
-; X86-SSE-NEXT:    fnstcw (%esp)
-; X86-SSE-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
-; X86-SSE-NEXT:    andl (%esp), %ecx
-; X86-SSE-NEXT:    orl %eax, %ecx
-; X86-SSE-NEXT:    movw %cx, (%esp)
-; X86-SSE-NEXT:    fldcw (%esp)
-; X86-SSE-NEXT:    stmxcsr (%esp)
-; X86-SSE-NEXT:    movl $-24577, %ecx # imm = 0x9FFF
-; X86-SSE-NEXT:    andl (%esp), %ecx
-; X86-SSE-NEXT:    leal (%ecx,%eax,8), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    ldmxcsr (%esp)
-; X86-SSE-NEXT:    popl %eax
-; X86-SSE-NEXT:    retl
-;
-; X64-LABEL: func_05:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal 4(%rdi,%rdi), %ecx
-; X64-NEXT:    movl $201, %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    andl $3072, %eax # imm = 0xC00
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    orl %eax, %ecx
-; X64-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $-24577, %ecx # imm = 0x9FFF
-; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    leal (%rcx,%rax,8), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; X64-NEXT:    retq
-  call void @llvm.set.rounding(i32 %x)  ; Downward
-  ret void
-}
-
 define void @get_fpenv_01(ptr %ptr) #0 {
 ; X86-NOSSE-LABEL: get_fpenv_01:
 ; X86-NOSSE:       # %bb.0: # %entry
@@ -310,6 +72,106 @@ entry:
   %env = call i256 @llvm.get.fpenv.i256()
   store i256 %env, ptr %ptr
   ret void
+}
+
+; The i256 result is returned through a hidden sret pointer that is copied out
+; of a virtual register after the load from the stack temporary. Folding the
+; store into GET_FPENV_MEM must not create a cycle.
+; https://github.com/llvm/llvm-project/issues/228828
+define i256 @get_fpenv_ret() nounwind {
+; X86-NOSSE-LABEL: get_fpenv_ret:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %ebp
+; X86-NOSSE-NEXT:    pushl %ebx
+; X86-NOSSE-NEXT:    pushl %edi
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    subl $60, %esp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    fnstenv {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fldenv {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOSSE-NEXT:    movl %edx, 24(%eax)
+; X86-NOSSE-NEXT:    movl %ecx, 28(%eax)
+; X86-NOSSE-NEXT:    movl %ebp, 16(%eax)
+; X86-NOSSE-NEXT:    movl %ebx, 20(%eax)
+; X86-NOSSE-NEXT:    movl %edi, 8(%eax)
+; X86-NOSSE-NEXT:    movl %esi, 12(%eax)
+; X86-NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOSSE-NEXT:    movl %ecx, (%eax)
+; X86-NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOSSE-NEXT:    movl %ecx, 4(%eax)
+; X86-NOSSE-NEXT:    addl $60, %esp
+; X86-NOSSE-NEXT:    popl %esi
+; X86-NOSSE-NEXT:    popl %edi
+; X86-NOSSE-NEXT:    popl %ebx
+; X86-NOSSE-NEXT:    popl %ebp
+; X86-NOSSE-NEXT:    retl $4
+;
+; X86-SSE-LABEL: get_fpenv_ret:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %ebp
+; X86-SSE-NEXT:    pushl %ebx
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $60, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    fnstenv {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldenv {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    stmxcsr {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movl %edx, 24(%eax)
+; X86-SSE-NEXT:    movl %ecx, 28(%eax)
+; X86-SSE-NEXT:    movl %ebp, 16(%eax)
+; X86-SSE-NEXT:    movl %ebx, 20(%eax)
+; X86-SSE-NEXT:    movl %edi, 8(%eax)
+; X86-SSE-NEXT:    movl %esi, 12(%eax)
+; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE-NEXT:    movl %ecx, (%eax)
+; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE-NEXT:    addl $60, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    popl %edi
+; X86-SSE-NEXT:    popl %ebx
+; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    retl $4
+;
+; X64-LABEL: get_fpenv_ret:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    fnstenv -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldenv -{{[0-9]+}}(%rsp)
+; X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rsi
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movq %rdi, 16(%rax)
+; X64-NEXT:    movq %rsi, 24(%rax)
+; X64-NEXT:    movq %rcx, (%rax)
+; X64-NEXT:    movq %rdx, 8(%rax)
+; X64-NEXT:    retq
+entry:
+  %env = call i256 @llvm.get.fpenv.i256()
+  ret i256 %env
 }
 
 define void @set_fpenv_01(ptr %ptr) #0 {

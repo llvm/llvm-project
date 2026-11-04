@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 // Tests that dependent expressions are always allowed, whereas non-dependent
 // are checked as usual.
@@ -32,7 +34,7 @@ T f1(T t1, U u1, int i1, T** tpp)
   i1 = t1[u1];
   i1 *= t1;
 
-  i1(u1, t1); // error
+  i1(u1, t1);
   u1(i1, t1);
 
   U u2 = (T)i1;
@@ -60,3 +62,151 @@ void f3() {
   f2<int*>(0);
   f2<int>(0); // expected-error {{no matching function for call to 'f2'}}
 }
+
+#if __cplusplus >= 202002L
+namespace GH138657 {
+template <auto V> // #gh138657-template-head
+class meta {};
+template<int N>
+class meta<N()> {}; // expected-error {{called object type 'int' is not a function or function point}}
+
+template<int N[1]>
+class meta<N()> {}; // expected-error {{called object type 'int *' is not a function or function point}}
+
+template<char* N>
+class meta<N()> {}; // expected-error {{called object type 'char *' is not a function or function point}}
+
+struct S {};
+template<S>
+class meta<S()> {}; // expected-error {{template argument for non-type template parameter is treated as function type 'S ()'}}
+                    // expected-note@#gh138657-template-head {{template parameter is declared here}}
+
+}
+
+namespace GH115725 {
+template<auto ...> struct X {};
+template<typename T, typename ...Ts> struct A {
+  template<Ts ...Ns, T *...Ps>
+  A(X<0(Ps)...>, Ts (*...qs)[Ns]);
+  // expected-error@-1{{called object type 'int' is not a function or function pointer}}
+
+};
+}
+
+namespace GH68852 {
+template <auto v>
+struct constexpr_value {
+  template <class... Ts>
+  constexpr constexpr_value<v(Ts::value...)> call(Ts...) {
+    //expected-error@-1 {{called object type 'int' is not a function or function pointer}}
+    return {};
+  }
+};
+
+template <auto v> constexpr static inline auto c_ = constexpr_value<v>{};
+// expected-note@-1 {{in instantiation of template}}
+auto k = c_<1>; // expected-note {{in instantiation of variable}}
+
+}
+
+namespace GH207565 {
+    template <auto... Cs> struct S {
+    static constexpr auto cl  = [](auto... args) { return (..., (Cs(), args)); };
+    static constexpr auto cl2 = []() { return (..., Cs()); }; // expected-error {{called object type 'int' is not a function or function pointer}} \
+                                                             // expected-note {{while substituting into a lambda expression here}}
+};
+
+template struct S<>;
+template struct S<1>; // expected-note {{in instantiation}}
+
+}
+
+namespace GH218323 {
+template <auto V> struct W {
+  static constexpr auto value = V;
+  template <class T> auto f(T) -> W<value(T::value)>; // #gh218323-f
+  template <class T> auto g(T) -> W<int(T::type)>; // #gh218323-g
+  template <class T> auto h(T) -> W<value(T::type)>; // #gh218323-h
+  template <class... Ts> auto p(Ts...) -> W<value(Ts::value...)>;
+};
+template struct W<42>;
+
+template <auto V> struct WPtr {
+  static constexpr int arr[1] = {V};
+  static constexpr const int *p = arr;
+  template <class T> auto f(T) -> WPtr<p(T::value)>;
+};
+template struct WPtr<42>;
+
+struct HasValue { static constexpr int value = 1; };
+struct HasAlias { using type = int; };
+void use(W<42> w) {
+  w.f(HasValue{}); // expected-error {{no matching member function for call to 'f'}}
+                   // expected-note@#gh218323-f {{candidate template ignored: substitution failure [with T = HasValue]: called object type 'int' is not a function or function pointer}}
+  w.g(HasAlias{}); // expected-error {{no matching member function for call to 'g'}}
+                   // expected-note@#gh218323-g {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
+  w.h(HasAlias{}); // expected-error {{no matching member function for call to 'h'}}
+                   // expected-note@#gh218323-h {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
+}
+
+template <auto V> struct WTypename { // #gh218323-WTypename
+  static constexpr auto value = V;
+  template <class T> auto f(T) -> WTypename<int(typename T::type)>; // expected-error {{template argument for non-type template parameter is treated as function type 'int (typename T::type)'}}
+                                                                    // expected-note@#gh218323-WTypename {{template parameter is declared here}}
+  template <class T> auto g(T) -> WTypename<typename T::type(value)>;
+};
+template struct WTypename<42>;
+void use_typename(WTypename<42> w) {
+  w.g(HasAlias{});
+}
+}
+
+#endif
+#if __cplusplus >= 201702L
+
+namespace GH138731 {
+template <class...>
+using void_t = void;
+
+template <class T>
+T&& declval();
+
+struct S {
+  S();
+  static int f();
+  static int var;
+};
+
+namespace invoke_detail {
+
+template <typename F>
+struct traits {
+  template <typename... A>
+  using result = decltype(declval<F>()(declval<A>()...));
+};
+
+template <typename F, typename... A>
+using invoke_result_t = typename traits<F>::template result<A...>;
+
+template <typename Void, typename F, typename... A>
+inline constexpr bool is_invocable_v = false;
+
+template <typename F, typename... A>
+inline constexpr bool
+    is_invocable_v<void_t<invoke_result_t<F, A...>>, F, A...> = true;
+
+}
+
+template <typename F, typename... A>
+inline constexpr bool is_invocable_v =
+    invoke_detail::is_invocable_v<void, F, A...>;
+
+static_assert(!is_invocable_v<int>);
+static_assert(!is_invocable_v<int, int>);
+static_assert(!is_invocable_v<S>);
+static_assert(is_invocable_v<decltype(&S::f)>);
+static_assert(!is_invocable_v<decltype(&S::var)>);
+
+}
+
+#endif

@@ -6,20 +6,11 @@ import argparse
 import os
 import subprocess
 import sys
+import shutil
 
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 LLVM_DIR = os.path.dirname(os.path.dirname(os.path.dirname(THIS_DIR)))
-
-
-def which(program):
-    # distutils.spawn.which() doesn't find .bat files,
-    # https://bugs.python.org/issue2200
-    for path in os.environ["PATH"].split(os.pathsep):
-        candidate = os.path.join(path, program)
-        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
-            return candidate
-    return None
 
 
 def main():
@@ -46,11 +37,11 @@ def main():
 
     vcsrevision_contents = ""
     if args.write_git_rev:
-        git, use_shell = which("git"), False
+        git, use_shell = shutil.which("git"), False
         if not git:
-            git = which("git.exe")
+            git = shutil.which("git.exe")
         if not git:
-            git, use_shell = which("git.bat"), True
+            git, use_shell = shutil.which("git.bat"), True
         git_dir = (
             subprocess.check_output(
                 [git, "rev-parse", "--git-dir"], cwd=LLVM_DIR, shell=use_shell

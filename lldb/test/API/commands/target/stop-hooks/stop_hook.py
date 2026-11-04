@@ -48,3 +48,28 @@ class bad_handle_stop:
 class no_handle_stop:
     def __init__(self, target, extra_args, dict):
         print("I am okay")
+
+
+class self_deleting_stop:
+    def __init__(self, target, extra_args, dict):
+        self.target = target
+
+    def handle_stop(self, exe_ctx, stream):
+        interp = exe_ctx.target.debugger.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("handle_id", result)
+        id_str = result.GetOutput().rstrip()
+
+        command = f"target stop-hook delete {id_str}"
+        interp.HandleCommand(command, result)
+
+
+stop_hook_id = 0
+
+
+def handle_stop_hook_id(debugger, command, exe_ctx, result, extra_args):
+    global stop_hook_id
+    if command == "":
+        result.AppendMessage(str(stop_hook_id))
+    else:
+        stop_hook_id = int(command)

@@ -31,10 +31,10 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
-                                    createTripleWithCOFFFormat(std::move(TT)),
-                                    std::move(Features),
-                                    std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(
+          Obj.getFileName().str(), std::move(SSP),
+          createTripleWithCOFFFormat(std::move(TT)), Obj.getBytesInAddress(),
+          std::move(Features), std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -366,11 +366,11 @@ Symbol *COFFLinkGraphBuilder::createExternalSymbol(
     COFFSymbolIndex SymIndex, orc::SymbolStringPtr SymbolName,
     object::COFFSymbolRef Symbol, const object::coff_section *Section) {
   llvm::jitlink::Symbol *Sym = nullptr;
-  if (!ExternalSymbols.count(SymbolName)) {
+  if (auto It = ExternalSymbols.find(SymbolName); It == ExternalSymbols.end()) {
     Sym = &G->addExternalSymbol(*SymbolName, Symbol.getValue(), false);
     ExternalSymbols[Sym->getName()] = Sym;
   } else {
-    Sym = ExternalSymbols[SymbolName];
+    Sym = It->second;
   }
 
   LLVM_DEBUG({
@@ -628,24 +628,6 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
   DefinedSymbols[SymbolName] = GSym;
   PendingComdatExport = std::nullopt;
   return GSym;
-}
-
-Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
-  if (ImageBase)
-    return *ImageBase;
-
-  auto IBN = G.intern(ImageBaseName);
-  ImageBase = G.findExternalSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findAbsoluteSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findDefinedSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-
-  return nullptr;
 }
 
 } // namespace jitlink

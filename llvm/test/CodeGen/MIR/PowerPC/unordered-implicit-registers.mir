@@ -7,7 +7,7 @@
     %0 = load i32, ptr %p, align 4
     %or = or i32 0, %0
     store i32 %or, ptr %p, align 4
-    %lnot.1 = icmp eq i32 undef, 0
+    %lnot.1 = icmp eq i32 poison, 0
     %lnot.ext.1 = zext i1 %lnot.1 to i32
     %shr.i.1 = lshr i32 2072, %lnot.ext.1
     %call.lobit.1 = lshr i32 %shr.i.1, 7
@@ -36,8 +36,8 @@ body: |
     %0 = COPY $x3
     %1 = LWZ 0, %0 :: (load (s32) from %ir.p)
     %2 = LI 0
-    %3 = RLWIMI %2, killed %1, 0, 0, 31
-    %4 = EXTSW_32_64 killed %3
+    %3 = RLWIMI %2, %1, 0, 0, 31
+    %4 = EXTSW_32_64 %3
     $x3 = COPY %4
   ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
     BLR8 implicit $lr8, implicit $rm, implicit $x3

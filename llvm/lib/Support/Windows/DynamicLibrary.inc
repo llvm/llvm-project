@@ -26,7 +26,7 @@ DynamicLibrary::HandleSet::~HandleSet() {
     FreeLibrary(HMODULE(Handle));
 
   // 'Process' should not be released on Windows.
-  assert((!Process || Process == this) && "Bad Handle");
+  assert((Process == &Invalid || Process == this) && "Bad Handle");
   // llvm_shutdown called, Return to default
   DynamicLibrary::SearchOrder = DynamicLibrary::SO_Linker;
 }
@@ -60,7 +60,7 @@ static DynamicLibrary::HandleSet *IsOpenedHandlesInstance(void *Handle) {
 
 void DynamicLibrary::HandleSet::DLClose(void *Handle) {
   if (HandleSet *HS = IsOpenedHandlesInstance(Handle))
-    HS->Process = nullptr; // Just drop the *Process* handle.
+    HS->Process = &Invalid; // Just drop the *Process* handle.
   else
     FreeLibrary((HMODULE)Handle);
 }
@@ -89,7 +89,7 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
     return (void *)uintptr_t(GetProcAddress((HMODULE)Handle, Symbol));
 
   // Could have done a dlclose on the *Process* handle
-  if (!HS->Process)
+  if (HS->Process == &Invalid)
     return nullptr;
 
   // Trials indicate EnumProcessModulesEx is consistantly faster than using
@@ -131,10 +131,10 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
 
   if (Handles.size() > 1) {
     // This is different behaviour than what Posix dlsym(dlopen(NULL)) does.
-    // Doing that here is causing real problems for the JIT where msvc.dll
+    // Doing that here is causing real problems for the JIT where msvcrt.dll
     // and ucrt.dll can define the same symbols. The runtime linker will choose
     // symbols from ucrt.dll first, but iterating NOT in reverse here would
-    // mean that the msvc.dll versions would be returned.
+    // mean that the msvcrt.dll versions would be returned.
 
     for (auto I = Handles.rbegin(), E = Handles.rend() - 1; I != E; ++I) {
       if (FARPROC Ptr = GetProcAddress(HMODULE(*I), Symbol))

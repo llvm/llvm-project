@@ -1,15 +1,11 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s
 
-
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s
-
 ;; Handwritten test.
 
 ;; Here we have dbg.assign intrinsics with fragments (in the value-expression)
 ;; and address-expressions that involve arithmetic. The generated DBG_VALUE
-;; intructions needs a DIExpression that:
+;; instructions needs a DIExpression that:
 ;;     a) Uses the fragment from the value-expression,
 ;;     b) Uses the offset expression of the address-expression,
 ;;     c) Has a DW_OP_deref appended.

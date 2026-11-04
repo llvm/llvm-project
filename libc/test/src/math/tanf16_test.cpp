@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/tanf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcTanf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
@@ -27,7 +34,7 @@ TEST_F(LlvmLibcTanf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   LIBC_NAMESPACE::tanf16(x), 0.5);
+                                   LIBC_NAMESPACE::tanf16(x), TOLERANCE + 0.5);
   }
 }
 
@@ -35,6 +42,6 @@ TEST_F(LlvmLibcTanf16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   LIBC_NAMESPACE::tanf16(x), 0.5);
+                                   LIBC_NAMESPACE::tanf16(x), TOLERANCE + 0.5);
   }
 }

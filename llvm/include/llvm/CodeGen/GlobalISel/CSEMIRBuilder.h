@@ -13,6 +13,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_CSEMIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -35,7 +36,7 @@ class GISelInstProfileBuilder;
 ///
 /// Explicitly passing in a register would materialize a copy if possible.
 /// CSEMIRBuilder also does trivial constant folding for binary ops.
-class CSEMIRBuilder : public MachineIRBuilder {
+class LLVM_ABI CSEMIRBuilder : public MachineIRBuilder {
 
   /// Returns true if A dominates B (within the same basic block).
   /// Both iterators must be in the same basic block.
@@ -54,7 +55,7 @@ class CSEMIRBuilder : public MachineIRBuilder {
   /// current insertion point and return it. If not found, return Null
   /// MachineInstrBuilder.
   MachineInstrBuilder getDominatingInstrForID(FoldingSetNodeID &ID,
-                                              void *&NodeInsertPos);
+                                              FoldingSetInsertToken &Token);
   /// Simple check if we can CSE (we have the CSEInfo) or if this Opcode is
   /// safe to CSE.
   bool canPerformCSEForOpc(unsigned Opc) const;
@@ -79,9 +80,9 @@ class CSEMIRBuilder : public MachineIRBuilder {
                          ArrayRef<SrcOp> SrcOps, std::optional<unsigned> Flags,
                          GISelInstProfileBuilder &B) const;
 
-  // Takes a MachineInstrBuilder and inserts it into the CSEMap using the
-  // NodeInsertPos.
-  MachineInstrBuilder memoizeMI(MachineInstrBuilder MIB, void *NodeInsertPos);
+  // Takes a MachineInstrBuilder and inserts it into the CSEMap using Token.
+  MachineInstrBuilder memoizeMI(MachineInstrBuilder MIB,
+                                FoldingSetInsertToken Token);
 
   // If we have can CSE an instruction, but still need to materialize to a VReg,
   // we emit a copy from the CSE'd inst to the VReg.

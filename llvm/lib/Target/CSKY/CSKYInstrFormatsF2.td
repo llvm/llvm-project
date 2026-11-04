@@ -91,8 +91,9 @@ multiclass F2_XZ_SET_T<bits<6> sop, string op, string suffix = ""> {
 let vrz = 0, isCompare = 1 in
 class F2_CXY<bits<5> datatype, RegisterOperand regtype, bits<6> sop, string op>
     : F2_XYZ<datatype, sop, !strconcat(op, "\t$vrx, $vry"),
-             (outs CARRY:$ca), (ins regtype:$vrx, regtype:$vry),
-             []>;
+             (outs CARRY:$ca), (ins regtype:$vrx, regtype:$vry), []> {
+  bits<0> ca;
+}
 
 multiclass F2_CXY_T<bits<6> sop, string op> {
   def _S : F2_CXY<0b00000, FPR32Op, sop, op#".32">;
@@ -103,9 +104,10 @@ multiclass F2_CXY_T<bits<6> sop, string op> {
 
 let vrz = 0, vry = 0, isCompare = 1 in
 class F2_CX<bits<5> datatype, RegisterOperand regtype, bits<6> sop, string op>
-    : F2_XYZ<datatype, sop, !strconcat(op, "\t$vrx"),
-             (outs CARRY:$ca), (ins regtype:$vrx),
-             []>;
+    : F2_XYZ<datatype, sop, !strconcat(op, "\t$vrx"), (outs CARRY:$ca),
+             (ins regtype:$vrx), []> {
+  bits<0> ca;
+}
 
 multiclass F2_CX_T<bits<6> sop, string op> {
   def _S : F2_CX<0b00000, FPR32Op, sop, op#".32">;
@@ -183,7 +185,10 @@ class F2_LDSTR_D<bits<1> sop, string op, dag outs, dag ins>
 class F2_CXYZ<bits<5> datatype, RegisterOperand regtype, bits<6> sop, string op>
     : F2_XYZ<datatype, sop, !strconcat(op, "\t$vrz, $vrx, $vry"),
              (outs regtype:$vrz), (ins CARRY:$ca, regtype:$vrx, regtype:$vry),
-             []>;
+             []> {
+  bits<0> ca;
+}
+
 multiclass F2_CXYZ_T<bits<6> sop, string op> {
   def _S : F2_CXYZ<0b00000, FPR32Op, sop, op#".32">;
   let Predicates = [HasFPUv3_DF] in

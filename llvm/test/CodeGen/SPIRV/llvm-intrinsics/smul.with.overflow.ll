@@ -8,11 +8,11 @@
 ; CHECK-DAG: %[[Void:.*]] = OpTypeVoid
 ; CHECK-DAG: %[[PtrChar:.*]] = OpTypePointer Function %[[Char]]
 ; CHECK-DAG: %[[StructChar:.*]] = OpTypeStruct %[[Char]] %[[Char]]
-; CHECK-DAG: %[[ZeroChar:.*]] = OpConstant %[[Char]] 0
+; CHECK-DAG: %[[NullChar:.*]] = OpConstantNull %[[Char]]
 ; CHECK-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[PtrInt:.*]] = OpTypePointer Function %[[Int]]
 ; CHECK-DAG: %[[StructInt:.*]] = OpTypeStruct %[[Int]] %[[Int]]
-; CHECK-DAG: %[[ZeroInt:.*]] = OpConstant %[[Int]] 0
+; CHECK-DAG: %[[NullInt:.*]] = OpConstantNull %[[Int]]
 ; CHECK-DAG: %[[Bool:.*]] = OpTypeBool
 ; CHECK-DAG: %[[V2Bool:.*]] = OpTypeVector %[[Bool]] 2
 ; CHECK-DAG: %[[Long:.*]] = OpTypeInt 64 0
@@ -28,8 +28,8 @@
 ; CHECK: %[[Struct:.*]] = OpSMulExtended %[[StructChar]] %[[A]] %[[B]]
 ; CHECK: %[[Val:.*]] = OpCompositeExtract %[[Char]] %[[Struct]] 0
 ; CHECK: %[[Over:.*]] = OpCompositeExtract %[[Char]] %[[Struct]] 1
-; CHECK: %[[IsOver:.*]] = OpINotEqual %[[Bool]] %[[Over]] %[[ZeroChar]]
-; CHECK: %[[Res:.*]] = OpSelect %[[Char]] %[[IsOver]] %[[ZeroChar]] %[[Val]]
+; CHECK: %[[IsOver:.*]] = OpINotEqual %[[Bool]] %[[Over]] %[[NullChar]]
+; CHECK: %[[Res:.*]] = OpSelect %[[Char]] %[[IsOver]] %[[NullChar]] %[[Val]]
 ; CHECK: OpStore %[[Ptr]] %[[Res]] Aligned 1
 ; CHECK: OpReturn
 define dso_local spir_func void @umulo_i8(i8 zeroext %a, i8 zeroext %b, ptr nocapture %c) local_unnamed_addr {
@@ -49,8 +49,8 @@ entry:
 ; CHECK: %[[Struct2:.*]] = OpSMulExtended %[[StructInt]] %[[B2]] %[[A2]]
 ; CHECK: %[[Val2:.*]] = OpCompositeExtract %[[Int]] %[[Struct2]] 0
 ; CHECK: %[[Over2:.*]] = OpCompositeExtract %[[Int]] %[[Struct2]] 1
-; CHECK: %[[IsOver2:.*]] = OpINotEqual %[[Bool]] %[[Over2]] %[[ZeroInt]]
-; CHECK: %[[Res2:.*]] = OpSelect %[[Int]] %[[IsOver2]] %[[ZeroInt]] %[[Val2]]
+; CHECK: %[[IsOver2:.*]] = OpINotEqual %[[Bool]] %[[Over2]] %[[NullInt]]
+; CHECK: %[[Res2:.*]] = OpSelect %[[Int]] %[[IsOver2]] %[[NullInt]] %[[Val2]]
 ; CHECK: OpStore %[[Ptr2]] %[[Res2]] Aligned 4
 ; CHECK: OpReturn
 define dso_local spir_func void @umulo_i32(i32 %a, i32 %b, ptr nocapture %c) local_unnamed_addr {

@@ -12,9 +12,11 @@
 
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "bolt"
 
@@ -22,11 +24,19 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
+extern cl::opt<bool> PrintRelocations;
 } // namespace opts
 
 uint64_t BinarySection::Count = 0;
+
+void BinarySection::addDynamicRelocation(const Relocation &Reloc) {
+  assert(Reloc.Offset < getSize() && "offset not within section bounds");
+  assert(
+      (!Reloc.isRELR() || BC.getRelocationHandler().isRelative(Reloc.Type)) &&
+      "Only relative relocations can be relr.");
+  DynamicRelocations.emplace(Reloc);
+}
 
 bool BinarySection::isELF() const { return BC.isELF(); }
 
@@ -59,7 +69,7 @@ BinarySection::hash(const BinaryData &BD,
         Hash, hash_value(Contents.substr(Offset, Begin->Offset - Offset)));
     if (BinaryData *RelBD = BC.getBinaryDataByName(Rel.Symbol->getName()))
       Hash = hash_combine(Hash, hash(*RelBD, Cache));
-    Offset = Rel.Offset + Rel.getSize();
+    Offset = Rel.Offset + Rel.getSize(BC.getRelocationHandler());
   }
 
   Hash = hash_combine(Hash,
@@ -72,6 +82,7 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
+  const RelocationHandler &RH = BC.getRelocationHandler();
   StringRef SectionContents =
       isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
@@ -111,8 +122,10 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       RI = ROE;
 
       // Skip undefined symbols.
-      auto HasUndefSym = [this](const auto &Relocation) {
-        return BC.UndefinedSymbols.count(Relocation.Symbol);
+      auto HasUndefSym = [](const auto &Relocation) {
+        return Relocation.Symbol && Relocation.Symbol->isTemporary() &&
+               Relocation.Symbol->isUndefined() &&
+               !Relocation.Symbol->isRegistered();
       };
 
       if (std::any_of(ROI, ROE, HasUndefSym))
@@ -120,17 +133,17 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
 
 #ifndef NDEBUG
       for (const auto &Relocation : make_range(ROI, ROE)) {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: emitting relocation for symbol "
-                   << (Relocation.Symbol ? Relocation.Symbol->getName()
-                                         : StringRef("<none>"))
-                   << " at offset 0x" << Twine::utohexstr(Relocation.Offset)
-                   << " with size "
-                   << Relocation::getSizeForType(Relocation.Type) << '\n');
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting relocation for symbol "
+                          << (Relocation.Symbol ? Relocation.Symbol->getName()
+                                                : StringRef("<none>"))
+                          << " at offset 0x"
+                          << Twine::utohexstr(Relocation.Offset)
+                          << " with size " << RH.getSizeForType(Relocation.Type)
+                          << '\n');
       }
 #endif
 
-      size_t RelocationSize = Relocation::emit(ROI, ROE, &Streamer);
+      size_t RelocationSize = Relocation::emit(ROI, ROE, &Streamer, RH);
       SectionOffset += RelocationSize;
     }
     assert(SectionOffset <= SectionContents.size() && "overflow error");
@@ -151,12 +164,13 @@ uint64_t BinarySection::write(raw_ostream &OS) const {
   return getOutputSize();
 }
 
-void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
+void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
                                             SymbolResolverFuncTy Resolver) {
   if (PendingRelocations.empty() && Patches.empty())
     return;
 
   const uint64_t SectionAddress = getAddress();
+  const RelocationHandler &RH = BC.getRelocationHandler();
 
   // We apply relocations to original section contents. For allocatable sections
   // this means using their input file offsets, since the output file offset
@@ -171,24 +185,42 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
              << "  offset: 0x" << Twine::utohexstr(SectionFileOffset) << '\n');
 
   for (BinaryPatch &Patch : Patches)
-    OS.pwrite(Patch.Bytes.data(), Patch.Bytes.size(),
-              SectionFileOffset + Patch.Offset);
+    safePWrite(OS, Patch.Bytes.data(), Patch.Bytes.size(),
+               SectionFileOffset + Patch.Offset);
 
+  uint64_t SkippedPendingRelocations = 0;
   for (Relocation &Reloc : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
-    Value = Relocation::encodeValue(Reloc.Type, Value,
-                                    SectionAddress + Reloc.Offset);
+    // Safely skip any optional pending relocation that cannot be encoded.
+    if (Reloc.isOptional() &&
+        !RH.canEncodeValue(Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
 
-    OS.pwrite(reinterpret_cast<const char *>(&Value),
-              Relocation::getSizeForType(Reloc.Type),
-              SectionFileOffset + Reloc.Offset);
+      ++SkippedPendingRelocations;
+      continue;
+    }
+
+    uint32_t OriginalInst = 0;
+    // Are we dealing with B.cond, TBZ/TBNZ, CBZ/CBNZ and need extra info
+    // to be able to encode the instruction.
+    if (BC.isAArch64() && (Reloc.Type == ELF::R_AARCH64_CONDBR19 ||
+                           Reloc.Type == ELF::R_AARCH64_TSTBR14)) {
+      StringRef Contents = getContents();
+      assert(Contents.size() >= Reloc.Offset + 4 &&
+             "Complete instruction must lie in contents.");
+      OriginalInst = support::endian::read32le(Contents.data() + Reloc.Offset);
+    }
+    Value = RH.encodeValue(Reloc.Type, Value, SectionAddress + Reloc.Offset,
+                           OriginalInst);
+
+    safePWrite(OS, reinterpret_cast<const char *>(&Value),
+               RH.getSizeForType(Reloc.Type), SectionFileOffset + Reloc.Offset);
 
     LLVM_DEBUG(
         dbgs() << "BOLT-DEBUG: writing value 0x" << Twine::utohexstr(Value)
-               << " of size " << Relocation::getSizeForType(Reloc.Type)
+               << " of size " << RH.getSizeForType(Reloc.Type)
                << " at section offset 0x" << Twine::utohexstr(Reloc.Offset)
                << " address 0x"
                << Twine::utohexstr(SectionAddress + Reloc.Offset)
@@ -197,6 +229,11 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 
   clearList(PendingRelocations);
+
+  if (SkippedPendingRelocations > 0 && opts::Verbosity >= 1) {
+    BC.outs() << "BOLT-INFO: skipped " << SkippedPendingRelocations
+              << " out-of-range optional relocations\n";
+  }
 }
 
 BinarySection::~BinarySection() { updateContents(nullptr, 0); }
@@ -219,8 +256,10 @@ void BinarySection::print(raw_ostream &OS) const {
     OS << " (tls)";
 
   if (opts::PrintRelocations)
-    for (const Relocation &R : relocations())
-      OS << "\n  " << R;
+    for (const Relocation &R : relocations()) {
+      OS << "\n  ";
+      R.print(OS, BC.getRelocationHandler());
+    }
 }
 
 BinarySection::RelocationSetType
@@ -241,8 +280,13 @@ BinarySection::reorderRelocations(bool Inplace) const {
     uint64_t RelOffset = RelAddr - BD->getAddress();
     NewRel.Offset = BD->getOutputOffset() + RelOffset;
     assert(NewRel.Offset < getSize());
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: moving " << Rel << " -> " << NewRel
-                      << "\n");
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: moving ";
+      Rel.print(dbgs(), BC.getRelocationHandler());
+      dbgs() << " -> ";
+      NewRel.print(dbgs(), BC.getRelocationHandler());
+      dbgs() << "\n";
+    });
     NewRelocations.emplace(std::move(NewRel));
   }
   return NewRelocations;
@@ -250,6 +294,7 @@ BinarySection::reorderRelocations(bool Inplace) const {
 
 void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
                                     bool Inplace) {
+  const RelocationHandler &RH = BC.getRelocationHandler();
   IsReordered = true;
 
   Relocations = reorderRelocations(Inplace);
@@ -275,7 +320,7 @@ void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
     // of the reordered segment to force LLVM to recognize and map this
     // section.
     MCSymbol *ZeroSym = BC.registerNameAtAddress("Zero", 0, 0, 0);
-    addRelocation(OS.tell(), ZeroSym, Relocation::getAbs64(), 0xdeadbeef);
+    addRelocation(OS.tell(), ZeroSym, RH.getAbs64(), 0xdeadbeef);
 
     uint64_t Zero = 0;
     OS.write(reinterpret_cast<const char *>(&Zero), sizeof(Zero));

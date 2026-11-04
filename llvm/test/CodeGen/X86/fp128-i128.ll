@@ -419,11 +419,11 @@ define fp128 @TestFABS_LD(fp128 %x) #0 {
 ; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %call = tail call fp128 @fabsl(fp128 %x) #2
+  %call = tail call fp128 @llvm.fabs.f128(fp128 %x) #2
   ret fp128 %call
 }
 
-declare fp128 @fabsl(fp128) #1
+declare fp128 @llvm.fabs.f128(fp128) #1
 
 declare fp128 @copysignl(fp128, fp128) #1
 
@@ -511,7 +511,7 @@ entry:
   br i1 %cmp, label %if.then, label %cleanup
 
 if.then:                                          ; preds = %entry
-  %call = tail call fp128 @fabsl(fp128 %sub) #2
+  %call = tail call fp128 @llvm.fabs.f128(fp128 %sub) #2
   br label %cleanup
 
 cleanup:                                          ; preds = %entry, %if.then
@@ -526,6 +526,6 @@ cleanup:                                          ; preds = %entry, %if.then
 }
 
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+ssse3,+sse3,+popcnt,+sse,+sse2,+sse4.1,+sse4.2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+ssse3,+sse3,+popcnt,+sse,+sse2,+sse4.1,+sse4.2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+ssse3,+sse3,+popcnt,+sse,+sse2,+sse4.1,+sse4.2" "use-soft-float"="false" }
+attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+ssse3,+sse3,+popcnt,+sse,+sse2,+sse4.1,+sse4.2" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }

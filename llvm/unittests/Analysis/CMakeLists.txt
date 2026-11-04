@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Instrumentation
   Passes
+  Plugins
   Support
   TargetParser
   TransformUtils
@@ -24,14 +25,16 @@ set(ANALYSIS_TEST_SOURCES
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
   CtxProfAnalysisTest.cpp
+  CycleInfoTest.cpp
   DDGTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp
+  EphemeralValuesCacheTest.cpp
   GraphWriterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
-  IRSimilarityIdentifierTest.cpp
+  IR2VecTest.cpp
   IVDescriptorsTest.cpp
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
@@ -41,6 +44,7 @@ set(ANALYSIS_TEST_SOURCES
   MemoryBuiltinsTest.cpp
   MemoryProfileInfoTest.cpp
   MemorySSATest.cpp
+  MLGOUtilsTest.cpp
   MLModelRunnerTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp

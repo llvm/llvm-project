@@ -41,8 +41,8 @@ return:
 define i32 @native_i32(i32 %a)  {
 ; CHECK-LABEL: native_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -79,8 +79,8 @@ return:
 define i32 @trunc_i32(i64 %a)  {
 ; CHECK-LABEL: trunc_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -119,7 +119,7 @@ define i32 @trunc_i17(i64 %a)  {
 ; CHECK-LABEL: trunc_i17:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 32
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -159,7 +159,7 @@ define i32 @trunc_i16(i64 %a)  {
 ; CHECK-LABEL: trunc_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -200,7 +200,7 @@ define i32 @trunc_i12(i64 %a)  {
 ; CHECK-LABEL: trunc_i12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -239,8 +239,8 @@ return:
 define i32 @trunc_i11(i64 %a)  {
 ; CHECK-LABEL: trunc_i11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 2047
 ; CHECK-NEXT:    li a1, 2047
+; CHECK-NEXT:    andi a0, a0, 2047
 ; CHECK-NEXT:    beq a0, a1, .LBB6_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -279,8 +279,8 @@ return:
 define i32 @trunc_i10(i64 %a)  {
 ; CHECK-LABEL: trunc_i10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1023
 ; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    andi a0, a0, 1023
 ; CHECK-NEXT:    beq a0, a1, .LBB7_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1

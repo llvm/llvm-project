@@ -28,7 +28,7 @@ def parse_line(line):
     if open_paren == -1:
         return None, None
     close_paren = line.rfind(")", open_paren)
-    if open_paren == -1:
+    if close_paren == -1:
         return None, None
     mangled = line[question:open_paren]
     demangled = line[open_paren + 1 : close_paren]

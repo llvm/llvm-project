@@ -12,11 +12,31 @@
 
 #include "DirectX.h"
 #include "Targets.h"
+#include "clang/Basic/TargetBuiltins.h"
 
 using namespace clang;
 using namespace clang::targets;
 
+static constexpr int NumBuiltins =
+    clang::DirectX::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsDirectX.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsDirectX.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
 void DirectXTargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   DefineStd(Builder, "DIRECTX", Opts);
+}
+
+llvm::SmallVector<Builtin::InfosShard>
+DirectXTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }

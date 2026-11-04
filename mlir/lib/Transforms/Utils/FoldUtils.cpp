@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -67,7 +68,8 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 // OperationFolder
 //===----------------------------------------------------------------------===//
 
-LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
+LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate,
+                                         int maxIterations) {
   if (inPlaceUpdate)
     *inPlaceUpdate = false;
 
@@ -78,7 +80,7 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
     // inserted before this one.
     Block *opBlock = op->getBlock();
     if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
-      op->moveBefore(&opBlock->front());
+      rewriter.moveOpBefore(op, &opBlock->front());
       op->setLoc(erasedFoldedLocation);
     }
     return failure();
@@ -86,7 +88,7 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
-  if (failed(tryToFold(op, results)))
+  if (failed(tryToFold(op, results, maxIterations)))
     return failure();
 
   // Check to see if the operation was just updated in place.
@@ -108,17 +110,19 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
   return success();
 }
 
-bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
+OperationFolder::ConstantInsertionResult
+OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   Block *opBlock = op->getBlock();
 
   // If this is a constant we unique'd, we don't need to insert, but we can
   // check to see if we should rehoist it.
   if (isFolderOwnedConstant(op)) {
     if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
-      op->moveBefore(&opBlock->front());
+      rewriter.moveOpBefore(op, &opBlock->front());
       op->setLoc(erasedFoldedLocation);
+      return ConstantInsertionResult::Hoisted;
     }
-    return true;
+    return ConstantInsertionResult::Unchanged;
   }
 
   // Get the constant value of the op if necessary.
@@ -147,23 +151,29 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
     notifyRemoval(op);
     rewriter.replaceOp(op, folderConstOp->getResults());
     folderConstOp->setLoc(erasedFoldedLocation);
-    return false;
+    return ConstantInsertionResult::Replaced;
   }
 
   // Otherwise, we insert `op`. If `op` is in the insertion block and is either
   // already at the front of the block, or the previous operation is already a
   // constant we unique'd (i.e. one we inserted), then we don't need to do
   // anything. Otherwise, we move the constant to the insertion block.
+  // The location info is erased if the constant is moved to a different block.
+  ConstantInsertionResult result = ConstantInsertionResult::Unchanged;
   Block *insertBlock = &insertRegion->front();
-  if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode()))) {
-    op->moveBefore(&insertBlock->front());
+  if (opBlock != insertBlock) {
+    rewriter.moveOpBefore(op, &insertBlock->front());
     op->setLoc(erasedFoldedLocation);
+    result = ConstantInsertionResult::Hoisted;
+  } else if (&insertBlock->front() != op &&
+             !isFolderOwnedConstant(op->getPrevNode())) {
+    rewriter.moveOpBefore(op, &insertBlock->front());
+    result = ConstantInsertionResult::Hoisted;
   }
 
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
-  return true;
+  return result;
 }
 
 /// Notifies that the given constant `op` should be remove from this
@@ -221,10 +231,19 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(Operation *op,
-                                         SmallVectorImpl<Value> &results) {
+                                         SmallVectorImpl<Value> &results,
+                                         int maxIterations) {
   SmallVector<OpFoldResult, 8> foldResults;
-  if (failed(op->fold(foldResults)) ||
-      failed(processFoldResults(op, results, foldResults)))
+  if (failed(op->fold(foldResults)))
+    return failure();
+  int count = 1;
+  do {
+    LDBG() << "Folded in place #" << count
+           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  } while (count++ < maxIterations && foldResults.empty() &&
+           succeeded(op->fold(foldResults)));
+
+  if (failed(processFoldResults(op, results, foldResults)))
     return failure();
   return success();
 }
@@ -269,7 +288,7 @@ OperationFolder::processFoldResults(Operation *op,
       // was inserted before the constant within the insertion block.
       Block *opBlock = op->getBlock();
       if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
-        constOp->moveBefore(&opBlock->front());
+        rewriter.moveOpBefore(constOp, &opBlock->front());
 
       results.push_back(constOp->getResult(0));
       continue;

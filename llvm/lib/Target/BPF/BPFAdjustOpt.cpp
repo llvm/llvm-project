@@ -71,6 +71,15 @@ private:
 bool BPFAdjustOptImpl::run() {
   bool Changed = adjustICmpToBuiltin();
 
+  // The verifier checks a global function on its own against its BTF type,
+  // and freplace can replace it. The callers know the prototype and no more.
+  for (Function &F : *M) {
+    if (F.isDeclaration() || F.hasLocalLinkage())
+      continue;
+    F.addFnAttr(Attribute::NoIPA);
+    Changed = true;
+  }
+
   for (Function &F : *M)
     for (auto &BB : F) {
       adjustBasicBlock(BB);
@@ -128,7 +137,7 @@ bool BPFAdjustOptImpl::adjustICmpToBuiltin() {
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             M, Intrinsic::bpf_compare, {Op0->getType(), ConstOp1->getType()});
         auto *NewInst = CallInst::Create(Fn, {Opcode, Op0, ConstOp1});
-        NewInst->insertBefore(&I);
+        NewInst->insertBefore(I.getIterator());
         Icmp->replaceAllUsesWith(NewInst);
         Changed = true;
         ToBeDeleted = Icmp;
@@ -218,18 +227,18 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
     return false;
 
   Instruction *TI = B2->getTerminator();
-  auto *BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return false;
   auto *Cond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!Cond || B2->getFirstNonPHI() != Cond)
+  if (!Cond || &*B2->getFirstNonPHIIt() != Cond)
     return false;
   Value *B2Op0 = Cond->getOperand(0);
   auto Cond2Op = Cond->getPredicate();
 
   TI = B1->getTerminator();
-  BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return false;
   Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)

@@ -28,7 +28,6 @@
 #include <cassert>
 #include <iterator>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -83,7 +82,7 @@ void LiveRangeCalc::updateFromLiveIns() {
   LiveIn.clear();
 }
 
-void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
+void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, Register PhysReg,
                            ArrayRef<SlotIndex> Undefs) {
   assert(Use.isValid() && "Invalid SlotIndex");
   assert(Indexes && "Missing SlotIndexes");
@@ -188,7 +187,7 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
 }
 
 bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
-                                     SlotIndex Use, unsigned PhysReg,
+                                     SlotIndex Use, Register PhysReg,
                                      ArrayRef<SlotIndex> Undefs) {
   unsigned UseMBBNum = UseMBB.getNumber();
 
@@ -216,7 +215,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       report_fatal_error("Use not jointly dominated by defs.");
     }
 
-    if (Register::isPhysicalRegister(PhysReg)) {
+    if (PhysReg.isPhysical()) {
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       bool IsLiveIn = MBB->isLiveIn(PhysReg);
       for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)
@@ -277,20 +276,21 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   // Both updateSSA() and LiveRangeUpdater benefit from ordered blocks, but
   // neither require it. Skip the sorting overhead for small updates.
   if (WorkList.size() > 4)
-    array_pod_sort(WorkList.begin(), WorkList.end());
+    llvm::sort(WorkList, std::less<>());
 
   // If a unique reaching def was found, blit in the live ranges immediately.
   if (UniqueVNI) {
     assert(TheVNI != nullptr && TheVNI != &UndefVNI);
     LiveRangeUpdater Updater(&LR);
     for (unsigned BN : WorkList) {
+      MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
       SlotIndex Start, End;
-      std::tie(Start, End) = Indexes->getMBBRange(BN);
+      std::tie(Start, End) = Indexes->getMBBRange(MBB);
       // Trim the live range in UseMBB.
       if (BN == UseMBBNum && Use.isValid())
         End = Use;
       else
-        Map[MF->getBlockNumbered(BN)] = LiveOutPair(TheVNI, nullptr);
+        Map[MBB] = LiveOutPair(TheVNI, nullptr);
       Updater.add(Start, End, TheVNI);
     }
     return true;

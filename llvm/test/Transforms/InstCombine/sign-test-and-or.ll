@@ -349,6 +349,29 @@ define i1 @test9_logical(i32 %a) {
   ret i1 %or.cond
 }
 
+define i1 @test9_logical_samesign(i32 %a) {
+; CHECK-LABEL: @test9_logical_samesign(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %masked = and i32 %a, -1073741825
+  %cmp1 = icmp eq i32 %masked, 0
+  %cmp2 = icmp samesign sgt i32 %a, -1
+  %or.cond = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %or.cond
+}
+
+define i1 @test_logical_or_icmp_icmp_samesign(i32 %a) {
+; CHECK-LABEL: @test_logical_or_icmp_icmp_samesign(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = icmp eq i32 %a, 0
+  %cmp2 = icmp samesign sgt i32 %a, -1
+  %or = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %or
+}
+
 define i1 @test10(i32 %a) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[A:%.*]], 2

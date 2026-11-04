@@ -1,17 +1,17 @@
 ; RUN: llvm-as %s -o %t.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
 ; RUN:    -shared %t.o -o /dev/null
 ; RUN: FileCheck --input-file %t2.json %s
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
 ; RUN:    --plugin-opt=time-trace-granularity=250  \
 ; RUN:    -shared %t.o -o /dev/null
 ; RUN: FileCheck --input-file %t2.json %s
 
-; RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: not %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
 ; RUN:    --plugin-opt=time-trace-granularity=hello  \
 ; RUN:    -shared %t.o -o /dev/null 2> %t4.txt

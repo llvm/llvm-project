@@ -93,7 +93,7 @@ void false_positives() {
 #endif
 }
 
-// Do not diagnose self-assigment in an unevaluated context
+// Do not diagnose self-assignment in an unevaluated context
 struct SNoExcept {
   SNoExcept() = default;
   SNoExcept &operator=(const SNoExcept &) noexcept;

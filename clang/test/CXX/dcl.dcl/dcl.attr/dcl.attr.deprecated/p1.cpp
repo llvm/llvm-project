@@ -45,7 +45,7 @@ template <typename T> struct [[deprecated]] B;//expected-note {{'B<int>' has bee
 B<int> *q2; // expected-warning {{'B<int>' is deprecated}}
 B<float> *r2; // expected-warning {{'B<float>' is deprecated}}
 
-template <typename T> 
+template <typename T>
 T some_func(T t) {
   struct [[deprecated]] FunS{}; // expected-note {{'FunS' has been explicitly marked deprecated here}}
   FunS f;// expected-warning {{'FunS' is deprecated}}
@@ -57,4 +57,85 @@ template <typename T>
   struct FunS2{};
   FunS2 f;// No warning, entire function is deprecated, so usage here should be fine.
 
+}
+
+namespace GH58547 {
+struct A {
+  using ta [[deprecated]] = int; // expected-note 2{{marked deprecated here}}
+};
+
+using t1 = typename A::ta; // expected-warning {{'ta' is deprecated}}
+
+template <class B1> struct B {
+  using tb = typename B1::ta; // expected-warning {{'ta' is deprecated}}
+};
+
+template struct B<A>; // expected-note {{requested here}}
+} // namespace GH58547
+
+
+namespace GH44496 {
+
+
+template <typename T>
+class function { };
+template <typename A>
+class __attribute__((deprecated)) function<void(A)> { };
+// expected-note@-1 {{'function<void (int)>' has been explicitly marked deprecated here}}
+
+void test() {
+    [[maybe_unused]] function<void(int)> f; // expected-warning{{'function<void (int)>' is deprecated}}
+}
+
+template <class> struct my_template {
+  using type = void;
+};
+
+template <class T>
+struct [[deprecated("primary")]] deprecated { // #deprecated-primary-marked-here
+    using type = T;
+};
+
+template <class T>
+struct my_template<volatile T> : deprecated<T> {}; // #deprecated-primary-base
+
+template <class T>
+struct [[deprecated("specialization")]] my_template<const T> : deprecated<const T> {}; // #my_template-explicit-here
+
+
+template <class T> using my_template_t = typename my_template<T>::type; // #deprecated-my-template-alias
+
+// We cannot warn on X because no instantiation has taken place yet
+using X  = my_template<volatile int>;
+
+// Because we already warn on the attribute on the plimary template, we ignore the attribute on the specialization
+using Y  = my_template_t<const int>;
+// expected-warning@#deprecated-primary-base {{'deprecated<int>' is deprecated: primary}} \
+// expected-note@-1 {{in instantiation of template type alias}} \
+// expected-note@#deprecated-primary-marked-here {{has been explicitly marked deprecated here}}
+
+using Z  = my_template_t<volatile int>;
+// expected-warning@#deprecated-my-template-alias {{'my_template<const int>' is deprecated: specialization}} \
+// expected-note@#my_template-explicit-here {{'my_template<const int>' has been explicitly marked deprecated here}} \
+// expected-note@#deprecated-my-template-alias {{in instantiation of template class 'GH44496::my_template<volatile int>' requested here}} \
+// expected-note@-1 {{in instantiation of template type alias 'my_template_t' requested here}}
+
+template <class T>
+struct primary_not_deprecated {
+    using type = T;
+};
+template <class T>
+struct [[deprecated("specialization")]] primary_not_deprecated<volatile T> : deprecated<T> {};
+// expected-note@-1 {{'primary_not_deprecated<volatile int>' has been explicitly marked deprecated here}}
+
+// We cannot warn on S1 because no instantiation has taken place yet
+using S1 = primary_not_deprecated<volatile int>;
+
+
+using S2 = primary_not_deprecated<volatile int>;
+
+X x;
+Z z;
+S2 s2;
+// expected-warning@-1 {{'primary_not_deprecated<volatile int>' is deprecated: specialization}}
 }

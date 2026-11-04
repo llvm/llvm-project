@@ -2,13 +2,13 @@
 
 __attribute__((callback())) void no_callee(void (*callback)(void)); // expected-error {{'callback' attribute specifies no callback callee}}
 
-__attribute__((callback(1, 1))) void too_many_args_1(void (*callback)(void)) {}      // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(1, -1))) void too_many_args_2(double (*callback)(void));     // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(1, 2, 2))) void too_many_args_3(void (*callback)(int), int); // expected-error {{'callback' attribute requires exactly 2 arguments}}
+__attribute__((callback(1, 1))) void too_many_args_1(void (*callback)(void)) {}      // expected-error-re {{'callback' attribute references function of type 'void ({{(void)?}})' which expects 0 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(1, -1))) void too_many_args_2(double (*callback)(void));     // expected-error-re {{'callback' attribute references function of type 'double ({{(void)?}})' which expects 0 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(1, 2, 2))) void too_many_args_3(void (*callback)(int), int); // expected-error {{'callback' attribute references function of type 'void (int)' which expects 1 argument but attribute specifies 2 parameter index arguments}}
 
-__attribute__((callback(1, 2))) void too_few_args_1(void (*callback)(int, int), int); // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(1))) void too_few_args_2(int (*callback)(int));               // expected-error {{'callback' attribute takes no arguments}}
-__attribute__((callback(1, -1))) void too_few_args_3(void (*callback)(int, int)) {}   // expected-error {{'callback' attribute takes one argument}}
+__attribute__((callback(1, 2))) void too_few_args_1(void (*callback)(int, int), int); // expected-error {{'callback' attribute references function of type 'void (int, int)' which expects 2 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(1))) void too_few_args_2(int (*callback)(int));               // expected-error {{'callback' attribute references function of type 'int (int)' which expects 1 argument but attribute specifies 0 parameter index arguments}}
+__attribute__((callback(1, -1))) void too_few_args_3(void (*callback)(int, int)) {}   // expected-error {{'callback' attribute references function of type 'void (int, int)' which expects 2 arguments but attribute specifies 1 parameter index argument}}
 
 __attribute__((callback(-1))) void oob_args_1(void (*callback)(void));         // expected-error {{'callback' attribute specifies invalid callback callee}}
 __attribute__((callback(2))) void oob_args_2(int *(*callback)(void)) {}        // expected-error {{'callback' attribute parameter 1 is out of bounds}}
@@ -33,22 +33,22 @@ __attribute__((callback(1, 0))) void no_this_2(void *(*callback)(int, void *)); 
 __attribute__((callback(1, -1))) void vararg_cb_1(void (*callback)(int, ...)) {}     // expected-error {{'callback' attribute callee may not be variadic}}
 __attribute__((callback(1, 1))) void vararg_cb_2(void (*callback)(int, ...), int a); // expected-error {{'callback' attribute callee may not be variadic}}
 
-__attribute__((callback(1, -1, 1, 2, 3, 4, -1))) void varargs_1(void (*callback)(int, ...), int a, float b, double c) {}               // expected-error {{'callback' attribute requires exactly 6 arguments}}
-__attribute__((callback(1, -1, 4, 2, 3, 4, -1))) void varargs_2(void (*callback)(void *, double, int, ...), int a, float b, double c); // expected-error {{'callback' attribute requires exactly 6 arguments}}
+__attribute__((callback(1, -1, 1, 2, 3, 4, -1))) void varargs_1(void (*callback)(int, ...), int a, float b, double c) {}               // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 6 parameter index arguments}}
+__attribute__((callback(1, -1, 4, 2, 3, 4, -1))) void varargs_2(void (*callback)(void *, double, int, ...), int a, float b, double c); // expected-error {{'callback' attribute references function of type 'void (void *, double, int, ...)' which expects 3 arguments but attribute specifies 6 parameter index arguments}}
 
-__attribute__((callback(1, -1, 1))) void self_arg_1(void (*callback)(int, ...)) {}          // expected-error {{'callback' attribute requires exactly 2 arguments}}
-__attribute__((callback(1, -1, 1, -1, -1, 1))) void self_arg_2(void (*callback)(int, ...)); // expected-error {{'callback' attribute requires exactly 5 arguments}}
+__attribute__((callback(1, -1, 1))) void self_arg_1(void (*callback)(int, ...)) {}          // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 2 parameter index arguments}}
+__attribute__((callback(1, -1, 1, -1, -1, 1))) void self_arg_2(void (*callback)(int, ...)); // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 5 parameter index arguments}}
 
 __attribute__((callback(cb))) void unknown_name1(void (*callback)(void)) {}     // expected-error {{'callback' attribute argument 'cb' is not a known function parameter}}
 __attribute__((callback(cb, ab))) void unknown_name2(void (*cb)(int), int a) {} // expected-error {{'callback' attribute argument 'ab' is not a known function parameter}}
 
-__attribute__((callback(callback, 1))) void too_many_args_1b(void (*callback)(void)) {}      // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(callback, __))) void too_many_args_2b(double (*callback)(void));     // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(callback, 2, 2))) void too_many_args_3b(void (*callback)(int), int); // expected-error {{'callback' attribute requires exactly 2 arguments}}
+__attribute__((callback(callback, 1))) void too_many_args_1b(void (*callback)(void)) {}      // expected-error-re {{'callback' attribute references function of type 'void ({{(void)?}})' which expects 0 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(callback, __))) void too_many_args_2b(double (*callback)(void));     // expected-error-re {{'callback' attribute references function of type 'double ({{(void)?}})' which expects 0 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(callback, 2, 2))) void too_many_args_3b(void (*callback)(int), int); // expected-error {{'callback' attribute references function of type 'void (int)' which expects 1 argument but attribute specifies 2 parameter index arguments}}
 
-__attribute__((callback(callback, a))) void too_few_args_1b(void (*callback)(int, int), int a); // expected-error {{'callback' attribute takes one argument}}
-__attribute__((callback(callback))) void too_few_args_2b(int (*callback)(int));                 // expected-error {{'callback' attribute takes no arguments}}
-__attribute__((callback(callback, __))) void too_few_args_3b(void (*callback)(int, int)) {}     // expected-error {{'callback' attribute takes one argument}}
+__attribute__((callback(callback, a))) void too_few_args_1b(void (*callback)(int, int), int a); // expected-error {{'callback' attribute references function of type 'void (int, int)' which expects 2 arguments but attribute specifies 1 parameter index argument}}
+__attribute__((callback(callback))) void too_few_args_2b(int (*callback)(int));                 // expected-error {{'callback' attribute references function of type 'int (int)' which expects 1 argument but attribute specifies 0 parameter index arguments}}
+__attribute__((callback(callback, __))) void too_few_args_3b(void (*callback)(int, int)) {}     // expected-error {{'callback' attribute references function of type 'void (int, int)' which expects 2 arguments but attribute specifies 1 parameter index argument}}
 
 __attribute__((callback(__))) void oob_args_1b(void (*callback)(void)); // expected-error {{'callback' attribute specifies invalid callback callee}}
 
@@ -68,8 +68,8 @@ __attribute__((callback(1, this))) void no_this_2b(void *(*callback)(int, void *
 __attribute__((callback(callback, __))) void vararg_cb_1b(void (*callback)(int, ...)) {} // expected-error {{'callback' attribute callee may not be variadic}}
 __attribute__((callback(1, a))) void vararg_cb_2b(void (*callback)(int, ...), int a);    // expected-error {{'callback' attribute callee may not be variadic}}
 
-__attribute__((callback(callback, __, callback, a, b, c, __))) void varargs_1b(void (*callback)(int, ...), int a, float b, double c) {} // expected-error {{'callback' attribute requires exactly 6 arguments}}
-__attribute__((callback(1, __, c, a, b, c, -1))) void varargs_2b(void (*callback)(void *, double, int, ...), int a, float b, double c); // expected-error {{'callback' attribute requires exactly 6 arguments}}
+__attribute__((callback(callback, __, callback, a, b, c, __))) void varargs_1b(void (*callback)(int, ...), int a, float b, double c) {} // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 6 parameter index arguments}}
+__attribute__((callback(1, __, c, a, b, c, -1))) void varargs_2b(void (*callback)(void *, double, int, ...), int a, float b, double c); // expected-error {{'callback' attribute references function of type 'void (void *, double, int, ...)' which expects 3 arguments but attribute specifies 6 parameter index arguments}}
 
-__attribute__((callback(1, __, callback))) void self_arg_1b(void (*callback)(int, ...)) {}                        // expected-error {{'callback' attribute requires exactly 2 arguments}}
-__attribute__((callback(callback, __, callback, __, __, callback))) void self_arg_2b(void (*callback)(int, ...)); // expected-error {{'callback' attribute requires exactly 5 arguments}}
+__attribute__((callback(1, __, callback))) void self_arg_1b(void (*callback)(int, ...)) {}                        // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 2 parameter index arguments}}
+__attribute__((callback(callback, __, callback, __, __, callback))) void self_arg_2b(void (*callback)(int, ...)); // expected-error {{'callback' attribute references function of type 'void (int, ...)' which expects 1 argument but attribute specifies 5 parameter index arguments}}

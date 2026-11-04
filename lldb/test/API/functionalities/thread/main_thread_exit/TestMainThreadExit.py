@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@requireThreadSupport
 class ThreadExitTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

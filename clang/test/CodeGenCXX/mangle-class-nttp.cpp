@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-windows -emit-llvm -o - | FileCheck %s --check-prefix=MSABI
+// RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -triple x86_64-windows -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=MSABI
+
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 
@@ -27,12 +30,14 @@ template void f<B{nullptr}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BLPKi32EEEEvv(
 // MSABI: define {{.*}} @"??$f@$2UB@@PEBH0CA@H0A@@@@YAXXZ"
 template void f<B{fold((int*)32)}>();
-#ifndef _WIN32
-// FIXME: On MS ABI, we mangle this the same as nullptr, despite considering a
-// null pointer and zero bitcast to a pointer to be distinct pointer values.
-// CHECK: define weak_odr void @_Z1fIXtl1BrcPKiLi0EEEEvv(
-template void f<B{fold(reinterpret_cast<int*>(0))}>();
-#endif
+
+// CHECK: define weak_odr void @_Z1fIXtl1BLPKi0ELi2EEEEvv(
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBH0A@H01@@@YAXXZ"(
+template void f<B{fold(reinterpret_cast<int*>(0)), 2}>();
+
+// CHECK: define weak_odr void @_Z1fIXtl1BLPKi12EEEEvv(
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBH0M@H0A@@@@YAXXZ"(
+template void f<B{fold(reinterpret_cast<int*>(12))}>();
 
 // Pointers to subobjects.
 struct Nested { union { int k; int arr[2]; }; } nested[2];

@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/string/strdup.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcStrDupTest, EmptyString) {
+using LlvmLibcStrDupTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcStrDupTest, EmptyString) {
   const char *empty = "";
 
-  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(empty);
   ASSERT_ERRNO_SUCCESS();
 
@@ -23,10 +24,9 @@ TEST(LlvmLibcStrDupTest, EmptyString) {
   ::free(result);
 }
 
-TEST(LlvmLibcStrDupTest, AnyString) {
+TEST_F(LlvmLibcStrDupTest, AnyString) {
   const char *abc = "abc";
 
-  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(abc);
   ASSERT_ERRNO_SUCCESS();
 
@@ -36,8 +36,7 @@ TEST(LlvmLibcStrDupTest, AnyString) {
   ::free(result);
 }
 
-TEST(LlvmLibcStrDupTest, NullPtr) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcStrDupTest, NullPtr) {
   char *result = LIBC_NAMESPACE::strdup(nullptr);
   ASSERT_ERRNO_SUCCESS();
 

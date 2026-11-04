@@ -34,7 +34,7 @@ elif lsan_lit_test_mode == "AddressSanitizer":
     config.name = "LeakSanitizer-AddressSanitizer"
     lsan_cflags = ["-fsanitize=address"]
     config.available_features.add("asan")
-    if config.host_os == "NetBSD":
+    if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
 elif lsan_lit_test_mode == "HWAddressSanitizer":
     config.name = "LeakSanitizer-HWAddressSanitizer"
@@ -42,7 +42,7 @@ elif lsan_lit_test_mode == "HWAddressSanitizer":
     if target_arch == "x86_64":
         lsan_cflags = lsan_cflags + ["-fsanitize-hwaddress-experimental-aliasing"]
     config.available_features.add("hwasan")
-    if config.host_os == "NetBSD":
+    if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
 else:
     lit_config.fatal("Unknown LSan test mode: %r" % lsan_lit_test_mode)
@@ -51,7 +51,7 @@ config.name += config.name_suffix
 # Platform-specific default LSAN_OPTIONS for lit tests.
 default_common_opts_str = ":".join(list(config.default_sanitizer_opts))
 default_lsan_opts = default_common_opts_str + ":detect_leaks=1"
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     # Also, make sure we do not overwhelm the syslog while testing.
@@ -101,7 +101,7 @@ supported_android = (
 )
 supported_linux = (
     (not config.android)
-    and config.host_os == "Linux"
+    and config.target_os == "Linux"
     and config.host_arch
     in [
         "aarch64",
@@ -117,8 +117,8 @@ supported_linux = (
         "loongarch64",
     ]
 )
-supported_darwin = config.host_os == "Darwin" and config.target_arch in ["x86_64"]
-supported_netbsd = config.host_os == "NetBSD" and config.target_arch in [
+supported_darwin = config.target_os == "Darwin" and config.target_arch in ["x86_64"]
+supported_netbsd = config.target_os == "NetBSD" and config.target_arch in [
     "x86_64",
     "i386",
 ]

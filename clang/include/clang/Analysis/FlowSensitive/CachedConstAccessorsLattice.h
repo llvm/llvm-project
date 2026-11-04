@@ -65,23 +65,6 @@ public:
 
   /// Creates or returns a previously created `StorageLocation` associated with
   /// a const method call `obj.getFoo()` where `RecordLoc` is the
-  /// `RecordStorageLocation` of `obj`.
-  ///
-  /// The callback `Initialize` runs on the storage location if newly created.
-  /// Returns nullptr if unable to find or create a value.
-  ///
-  /// Requirements:
-  ///
-  ///  - `CE` should return a location (GLValue or a record type).
-  ///
-  /// DEPRECATED: switch users to the below overload which takes Callee and Type
-  /// directly.
-  StorageLocation *getOrCreateConstMethodReturnStorageLocation(
-      const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-      Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
-
-  /// Creates or returns a previously created `StorageLocation` associated with
-  /// a const method call `obj.getFoo()` where `RecordLoc` is the
   /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`.
   ///
   /// The callback `Initialize` runs on the storage location if newly created.
@@ -107,7 +90,7 @@ public:
     return Base::operator==(Other);
   }
 
-  LatticeJoinEffect join(const CachedConstAccessorsLattice &Other);
+  LatticeEffect join(const CachedConstAccessorsLattice &Other);
 
 private:
   // Maps a record storage location and const method to the value to return
@@ -138,13 +121,14 @@ joinConstMethodMap(
                               llvm::SmallDenseMap<const FunctionDecl *, T *>>
         &Map2,
     LatticeEffect &Effect) {
+  // Intersect the two maps, and note if change was made.
   llvm::SmallDenseMap<const RecordStorageLocation *,
                       llvm::SmallDenseMap<const FunctionDecl *, T *>>
       Result;
   for (auto &[Loc, DeclToT] : Map1) {
     auto It = Map2.find(Loc);
     if (It == Map2.end()) {
-      Effect = LatticeJoinEffect::Changed;
+      Effect = LatticeEffect::Changed;
       continue;
     }
     const auto &OtherDeclToT = It->second;
@@ -152,7 +136,7 @@ joinConstMethodMap(
     for (auto [Func, Var] : DeclToT) {
       T *OtherVar = OtherDeclToT.lookup(Func);
       if (OtherVar == nullptr || OtherVar != Var) {
-        Effect = LatticeJoinEffect::Changed;
+        Effect = LatticeEffect::Changed;
         continue;
       }
       JoinedDeclToT.insert({Func, Var});
@@ -206,29 +190,6 @@ Value *CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnValue(
   if (Val != nullptr)
     ObjMap.insert({DirectCallee, Val});
   return Val;
-}
-
-template <typename Base>
-StorageLocation *
-CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
-    const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
-  assert(!CE->getType().isNull());
-  assert(CE->isGLValue() || CE->getType()->isRecordType());
-  auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
-  const FunctionDecl *DirectCallee = CE->getDirectCallee();
-  if (DirectCallee == nullptr)
-    return nullptr;
-  auto it = ObjMap.find(DirectCallee);
-  if (it != ObjMap.end())
-    return it->second;
-
-  StorageLocation &Loc =
-      Env.createStorageLocation(CE->getType().getNonReferenceType());
-  Initialize(Loc);
-
-  ObjMap.insert({DirectCallee, &Loc});
-  return &Loc;
 }
 
 template <typename Base>

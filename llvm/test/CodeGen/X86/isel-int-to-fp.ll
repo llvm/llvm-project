@@ -33,7 +33,7 @@ define double @test_ui64_to_double(i64 %x) {
 ;
 ; AVX512-LABEL: test_ui64_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = uitofp i64 %x to double
@@ -49,7 +49,7 @@ define double @test_ui32_to_double(i32 %x) {
 ;
 ; AVX512-LABEL: test_ui32_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = uitofp i32 %x to double
@@ -64,12 +64,12 @@ define double @test_ui16_to_double(i16 zeroext %x) {
 ;
 ; SDAG-AVX512-LABEL: test_ui16_to_double:
 ; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; SDAG-AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; SDAG-AVX512-NEXT:    retq
 ;
 ; GISEL-AVX512-LABEL: test_ui16_to_double:
 ; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; GISEL-AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; GISEL-AVX512-NEXT:    retq
 entry:
   %conv = uitofp i16 %x to double
@@ -84,12 +84,12 @@ define double @test_ui8_to_double(i8 zeroext %x) {
 ;
 ; SDAG-AVX512-LABEL: test_ui8_to_double:
 ; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; SDAG-AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; SDAG-AVX512-NEXT:    retq
 ;
 ; GISEL-AVX512-LABEL: test_ui8_to_double:
 ; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; GISEL-AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; GISEL-AVX512-NEXT:    retq
 entry:
   %conv = uitofp i8 %x to double
@@ -135,7 +135,7 @@ define float @test_ui64_to_float(i64 %x) {
 ;
 ; AVX512-LABEL: test_ui64_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = uitofp i64 %x to float
@@ -151,7 +151,7 @@ define float @test_ui32_to_float(i32 %x) {
 ;
 ; AVX512-LABEL: test_ui32_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = uitofp i32 %x to float
@@ -166,12 +166,12 @@ define float @test_ui16_to_float(i16 zeroext %x) {
 ;
 ; SDAG-AVX512-LABEL: test_ui16_to_float:
 ; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; SDAG-AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; SDAG-AVX512-NEXT:    retq
 ;
 ; GISEL-AVX512-LABEL: test_ui16_to_float:
 ; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; GISEL-AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; GISEL-AVX512-NEXT:    retq
 entry:
   %conv = uitofp i16 %x to float
@@ -186,12 +186,12 @@ define float @test_ui8_to_float(i8 zeroext %x) {
 ;
 ; SDAG-AVX512-LABEL: test_ui8_to_float:
 ; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; SDAG-AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; SDAG-AVX512-NEXT:    retq
 ;
 ; GISEL-AVX512-LABEL: test_ui8_to_float:
 ; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; GISEL-AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; GISEL-AVX512-NEXT:    retq
 entry:
   %conv = uitofp i8 %x to float
@@ -206,7 +206,7 @@ define double @test_si64_to_double(i64 %x) {
 ;
 ; AVX512-LABEL: test_si64_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i64 %x to double
@@ -221,7 +221,7 @@ define double @test_si32_to_double(i32 %x) {
 ;
 ; AVX512-LABEL: test_si32_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i32 %x to double
@@ -236,7 +236,7 @@ define double @test_si16_to_double(i16 signext %x) {
 ;
 ; AVX512-LABEL: test_si16_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i16 %x to double
@@ -251,7 +251,7 @@ define double @test_si8_to_double(i8 signext %x) {
 ;
 ; AVX512-LABEL: test_si8_to_double:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i8 %x to double
@@ -270,7 +270,7 @@ define double @test_si31_to_double(i31 %x) {
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    addl %edi, %edi
 ; AVX512-NEXT:    sarl %edi
-; AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i31 %x to double
@@ -289,7 +289,7 @@ define double @test_si33_to_double(i33 %x) {
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    shlq $31, %rdi
 ; AVX512-NEXT:    sarq $31, %rdi
-; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i33 %x to double
@@ -304,7 +304,7 @@ define float @test_si64_to_float(i64 %x) {
 ;
 ; AVX512-LABEL: test_si64_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i64 %x to float
@@ -319,7 +319,7 @@ define float @test_si32_to_float(i32 %x) {
 ;
 ; AVX512-LABEL: test_si32_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i32 %x to float
@@ -334,7 +334,7 @@ define float @test_si16_to_float(i16 signext %x) {
 ;
 ; AVX512-LABEL: test_si16_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i16 %x to float
@@ -349,7 +349,7 @@ define float @test_si8_to_float(i8 signext %x) {
 ;
 ; AVX512-LABEL: test_si8_to_float:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i8 %x to float
@@ -368,7 +368,7 @@ define float @test_si31_to_float(i31 %x) {
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    addl %edi, %edi
 ; AVX512-NEXT:    sarl %edi
-; AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i31 %x to float
@@ -387,7 +387,7 @@ define float @test_si33_to_float(i33 %x) {
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    shlq $31, %rdi
 ; AVX512-NEXT:    sarq $31, %rdi
-; AVX512-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = sitofp i33 %x to float

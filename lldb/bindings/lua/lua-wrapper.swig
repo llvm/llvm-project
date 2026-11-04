@@ -1,4 +1,5 @@
 %header %{
+#include "llvm/Support/ErrorExtras.h"
 
 template <typename T> void PushSBClass(lua_State * L, T * obj);
 
@@ -26,9 +27,7 @@ lldb_private::lua::SWIGBridge::LLDBSwigLuaBreakpointCallbackFunction(
   // Call into the Lua callback passing 'sb_frame' and 'sb_bp_loc'.
   // Expects a boolean return.
   if (lua_pcall(L, nargs, 1, 0) != LUA_OK) {
-    llvm::Error E = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}\n", lua_tostring(L, -1)),
-        llvm::inconvertibleErrorCode());
+    llvm::Error E = llvm::createStringErrorV("{0}\n", lua_tostring(L, -1));
     // Pop error message from the stack.
     lua_pop(L, 1);
     return std::move(E);
@@ -56,9 +55,7 @@ lldb_private::lua::SWIGBridge::LLDBSwigLuaWatchpointCallbackFunction(
   // Call into the Lua callback passing 'sb_frame' and 'sb_wp'.
   // Expects a boolean return.
   if (lua_pcall(L, nargs, 1, 0) != LUA_OK) {
-    llvm::Error E = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}\n", lua_tostring(L, -1)),
-        llvm::inconvertibleErrorCode());
+    llvm::Error E = llvm::createStringErrorV("{0}\n", lua_tostring(L, -1));
     // Pop error message from the stack.
     lua_pop(L, 1);
     return std::move(E);

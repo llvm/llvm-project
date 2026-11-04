@@ -20,36 +20,36 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _StateT>
-class _LIBCPP_TEMPLATE_VIS fpos {
+class fpos {
 private:
   _StateT __st_;
   streamoff __off_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI fpos(streamoff __off = streamoff()) : __st_(), __off_(__off) {}
+  fpos(streamoff __off = streamoff()) : __st_(), __off_(__off) {}
 
-  _LIBCPP_HIDE_FROM_ABI operator streamoff() const { return __off_; }
+  operator streamoff() const { return __off_; }
 
-  _LIBCPP_HIDE_FROM_ABI _StateT state() const { return __st_; }
-  _LIBCPP_HIDE_FROM_ABI void state(_StateT __st) { __st_ = __st; }
+  [[__nodiscard__]] _StateT state() const { return __st_; }
+  void state(_StateT __st) { __st_ = __st; }
 
-  _LIBCPP_HIDE_FROM_ABI fpos& operator+=(streamoff __off) {
+  fpos& operator+=(streamoff __off) {
     __off_ += __off;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI fpos operator+(streamoff __off) const {
+  [[__nodiscard__]] fpos operator+(streamoff __off) const {
     fpos __t(*this);
     __t += __off;
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI fpos& operator-=(streamoff __off) {
+  fpos& operator-=(streamoff __off) {
     __off_ -= __off;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI fpos operator-(streamoff __off) const {
+  [[__nodiscard__]] fpos operator-(streamoff __off) const {
     fpos __t(*this);
     __t -= __off;
     return __t;
@@ -57,17 +57,17 @@ public:
 };
 
 template <class _StateT>
-inline _LIBCPP_HIDE_FROM_ABI streamoff operator-(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
+[[__nodiscard__]] inline streamoff operator-(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
   return streamoff(__x) - streamoff(__y);
 }
 
 template <class _StateT>
-inline _LIBCPP_HIDE_FROM_ABI bool operator==(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
+inline bool operator==(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
   return streamoff(__x) == streamoff(__y);
 }
 
 template <class _StateT>
-inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
+inline bool operator!=(const fpos<_StateT>& __x, const fpos<_StateT>& __y) {
   return streamoff(__x) != streamoff(__y);
 }
 

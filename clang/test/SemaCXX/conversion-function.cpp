@@ -458,7 +458,7 @@ namespace PR18234 {
 #endif
   } a;
   A::S s = a; // expected-error {{no viable conversion from 'struct A' to 'A::S'}}
-  A::E e = a;
+  A::E e = a; // expected-note {{'e' declared here}}
   bool k1 = e == A::e; // expected-error {{no member named 'e'}}
   bool k2 = e.n == 0;
 }
@@ -472,6 +472,24 @@ struct S {
   operator const int() const;
 };
 }
+
+#if __cplusplus >= 201103L
+namespace GH218261 {
+  struct S {
+    template <typename T>
+    constexpr operator T() const {
+      return 10;
+    }
+
+    template <>
+    constexpr operator int() const {
+      return 4;
+    }
+  };
+
+  static_assert(S().operator int() == 4, "");
+}
+#endif
 
 #if __cplusplus >= 201103L
 namespace dependent_conversion_function_id_lookup {
@@ -501,3 +519,41 @@ struct S {
   **operator char(); // expected-error {{cannot specify any part of a return type in the declaration of a conversion function; put the complete type after 'operator'}}
 };
 }
+
+#if __cplusplus >= 201402L
+namespace GH189146 {
+  struct M {
+    template <class T> static constexpr int static_foo(T) { return 5; }
+    template <class T> operator T() { return T{}; }
+    constexpr operator auto() { return &static_foo<int>; }
+  };
+
+  struct N : M {
+    using M::operator auto;
+  };
+
+  template <class T> constexpr int test() {
+    return T{}(3);
+  }
+  static_assert(test<M>() == 5, "");
+  static_assert(test<N>() == 5, "");
+
+  using FP = int (*)(int);
+  constexpr int bar(int) { return 7; }
+  struct P {
+    constexpr operator FP() const { return &bar; }
+  };
+  struct Q : P {
+    using P::operator FP;
+  };
+  static_assert(Q{}(0) == 7, "");
+
+  struct R {
+    operator FP() const = delete; // expected-note {{has been explicitly marked deleted here}}
+  };
+  struct S : R {
+    using R::operator FP;
+  };
+  int s = S{}(0); // expected-error {{attempt to use a deleted function}}
+}
+#endif

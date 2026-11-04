@@ -18,8 +18,10 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 namespace llvm {
 
@@ -38,10 +40,21 @@ class VPDominatorTree : public DominatorTreeBase<VPBlockBase, false> {
   using Base = DominatorTreeBase<VPBlockBase, false>;
 
 public:
-  VPDominatorTree() = default;
+  explicit VPDominatorTree(VPlan &Plan) { recalculate(Plan); }
 
   /// Returns true if \p A properly dominates \p B.
-  bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B);
+  using Base::properlyDominates;
+  LLVM_ABI_FOR_TEST bool properlyDominates(const VPRecipeBase *A,
+                                           const VPRecipeBase *B) const;
+};
+
+/// Template specialization of the standard LLVM post-dominator tree utility for
+/// VPBlockBases.
+class VPPostDominatorTree : public PostDomTreeBase<VPBlockBase> {
+  using Base = PostDomTreeBase<VPBlockBase>;
+
+public:
+  explicit VPPostDominatorTree(VPlan &Plan) { recalculate(Plan); }
 };
 
 using VPDomTreeNode = DomTreeNodeBase<VPBlockBase>;
@@ -56,5 +69,10 @@ template <>
 struct GraphTraits<const VPDomTreeNode *>
     : public DomTreeGraphTraitsBase<const VPDomTreeNode,
                                     VPDomTreeNode::const_iterator> {};
+
+struct VPPostDominanceFrontier
+    : public DominanceFrontierBase<VPBlockBase, true> {
+  explicit VPPostDominanceFrontier(const DomTreeT &VPDT);
+};
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANDOMINATORTREE_H

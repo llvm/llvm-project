@@ -24,6 +24,9 @@ public:
     return lldb::eStopReasonInstrumentation;
   }
 
+  std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) override;
+
   const char *GetDescription() override;
 
   bool DoShouldNotify(Event *event_ptr) override { return true; }

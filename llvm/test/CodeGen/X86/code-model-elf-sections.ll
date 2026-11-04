@@ -66,7 +66,7 @@
 ; LARGE: .lbss {{.*}} WAl {{.*}}
 ; LARGE: .rodata {{.*}} A {{.*}}
 ; LARGE: .lrodata {{.*}} Al {{.*}}
-; LARGE: .ldata.rel.ro {{.*}} WAl {{.*}}
+; LARGE: .data.rel.ro {{.*}} WA {{.*}}
 ; LARGE: .tbss {{.*}} WAT {{.*}}
 ; LARGE: .tdata {{.*}} WAT {{.*}}
 
@@ -84,7 +84,7 @@
 ; LARGE-DS: .lbss.bss {{.*}} WAl {{.*}}
 ; LARGE-DS: .rodata {{.*}} A {{.*}}
 ; LARGE-DS: .lrodata.rodata {{.*}} Al {{.*}}
-; LARGE-DS: .ldata.rel.ro.relro {{.*}} WAl {{.*}}
+; LARGE-DS: .data.rel.ro.relro {{.*}} WA {{.*}}
 ; LARGE-DS: .tbss.tbss {{.*}} WAT {{.*}}
 ; LARGE-DS: .tdata.tdata {{.*}} WAT {{.*}}
 

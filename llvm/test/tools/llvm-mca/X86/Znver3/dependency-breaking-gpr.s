@@ -110,7 +110,7 @@ cmovael %eax, %ecx
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbl	%eax, %eax
 # CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxl	%eax, %eax, %eax
-# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
+# CHECK-NEXT:        4     2.0    0.3    0.8       <total>
 
 # CHECK:      [1] Code Region
 
@@ -187,7 +187,7 @@ cmovael %eax, %ecx
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbq	%rax, %rax
 # CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxq	%rax, %rax, %rax
-# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
+# CHECK-NEXT:        4     2.0    0.3    0.8       <total>
 
 # CHECK:      [2] Code Region
 
@@ -270,7 +270,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpl	%eax, %eax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [3] Code Region
 
@@ -353,7 +353,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxq	%rax, %rax, %rax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpq	%rax, %rax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovaeq	%rax, %rcx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [4] Code Region
 
@@ -436,7 +436,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpw	%ax, %ax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [5] Code Region
 
@@ -519,4 +519,4 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpb	%al, %al
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
