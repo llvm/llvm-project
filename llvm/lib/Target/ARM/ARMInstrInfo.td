@@ -5340,7 +5340,7 @@ def TSB : AInoP<(outs), (ins tsb_opt:$opt), MiscFrm, NoItinerary,
 }
 
 // Armv8.5-A speculation barrier
-def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
+def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", [(int_arm_sb)]>,
          Requires<[IsARM, HasSB]>, Sched<[]> {
   let Inst{31-0} = 0xf57ff070;
   let Unpredictable = 0x000fff0f;

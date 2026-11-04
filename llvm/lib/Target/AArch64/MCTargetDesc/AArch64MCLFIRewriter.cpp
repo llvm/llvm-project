@@ -137,6 +137,7 @@ static bool isFakeMemAccess(const MCInst &Inst) {
   case AArch64::DMB:
   case AArch64::DSB:
   case AArch64::ISB:
+  case AArch64::SB:
   case AArch64::HINT:
     // The range of sub-architectures supported by LFI do not include any load
     // or store instructions in the HINT space.

@@ -306,6 +306,8 @@ def int_arm_dsb : ClangBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">,
                   Intrinsic<[], [llvm_i32_ty]>;
 def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
                   Intrinsic<[], [llvm_i32_ty]>;
+def int_arm_sb : ClangBuiltin<"__builtin_arm_sb">, MSBuiltin<"__sb">,
+                 Intrinsic<[], [], [IntrNoFree, IntrWillReturn]>;
 
 //===----------------------------------------------------------------------===//
 // VFP
