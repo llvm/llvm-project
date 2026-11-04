@@ -97,7 +97,7 @@ Symbol *SymbolTable::insert(StringRef name) {
 
 Symbol *SymbolTable::intern(CachedHashStringRef name) {
   Shard &shard = getShard(name);
-  auto l = lock(shard);
+  auto l = shard.getLock(concurrent);
   Symbol *&sym = shard.map[name];
   if (!sym) {
     // The storage is value-initialized, so the Symbol fields are zero. Set the

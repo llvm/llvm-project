@@ -107,14 +107,14 @@ private:
   struct Shard {
     llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> map;
     std::mutex mu;
+    std::unique_lock<std::mutex> getLock(bool concurrent) {
+      return concurrent ? std::unique_lock<std::mutex>(mu)
+                        : std::unique_lock<std::mutex>();
+    }
   };
   std::array<Shard, 256> symMap;
   Shard &getShard(llvm::CachedHashStringRef key) {
     return symMap[key.hash() >> 24];
-  }
-  std::unique_lock<std::mutex> lock(Shard &shard) {
-    return concurrent ? std::unique_lock<std::mutex>(shard.mu)
-                      : std::unique_lock<std::mutex>();
   }
 
   // Global symbols in insertion order, which must be deterministic even when
