@@ -31,9 +31,12 @@ TEST(LlvmLibcPosixSpawnFileActionsTest, AddActions) {
 
   ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_adddup2(&actions, 11, 12),
             0);
-  ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_addopen(
-                &actions, 13, "path/to/file", 0, 0),
+  // The path must be copied, so the caller can reuse the buffer right away.
+  char path[] = "path/to/file";
+  ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_addopen(&actions, 13, path,
+                                                             42, 0644),
             0);
+  path[0] = 'X';
 
   LIBC_NAMESPACE::BaseSpawnFileAction *act =
       reinterpret_cast<LIBC_NAMESPACE::BaseSpawnFileAction *>(actions.__front);
@@ -48,6 +51,11 @@ TEST(LlvmLibcPosixSpawnFileActionsTest, AddActions) {
     }
     if (action_count == 3) {
       ASSERT_EQ(act->type, LIBC_NAMESPACE::BaseSpawnFileAction::OPEN);
+      auto *open_act = static_cast<LIBC_NAMESPACE::SpawnFileOpenAction *>(act);
+      ASSERT_EQ(open_act->fd, 13);
+      ASSERT_EQ(open_act->oflag, 42);
+      ASSERT_EQ(open_act->mode, mode_t(0644));
+      ASSERT_STREQ(open_act->path, "path/to/file");
     }
     act = act->next;
   }
@@ -78,3 +86,18 @@ TEST(LlvmLibcPosixSpawnFileActionsTest, InvalidActions) {
             EBADF);
   ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_destroy(&actions), 0);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcPosixSpawnFileActionsTest, CrashOnNullPath) {
+  ASSERT_DEATH(
+      []() {
+        posix_spawn_file_actions_t actions;
+        LIBC_NAMESPACE::posix_spawn_file_actions_init(&actions);
+        LIBC_NAMESPACE::posix_spawn_file_actions_addopen(&actions, 1, nullptr,
+                                                         0, 0);
+      },
+      WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)

@@ -31,8 +31,12 @@ void spawn_and_wait_for_normal_exit(char **envp) {
   pid_t cpid;
   posix_spawn_file_actions_t file_actions;
   ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_init(&file_actions), 0);
-  LIBC_NAMESPACE::posix_spawn_file_actions_addopen(
-      &file_actions, CHILD_FD, "testdata/posix_spawn.test", O_RDONLY, 0);
+  // The path must be copied, so the buffer can be reused before posix_spawn.
+  char path[] = "testdata/posix_spawn.test";
+  ASSERT_EQ(LIBC_NAMESPACE::posix_spawn_file_actions_addopen(
+                &file_actions, CHILD_FD, path, O_RDONLY, 0),
+            0);
+  path[0] = '\0';
   ASSERT_EQ(LIBC_NAMESPACE::posix_spawn(&cpid, arg0, &file_actions, nullptr,
                                         argv, envp),
             0);
