@@ -4074,8 +4074,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Range: {
         auto [Val, Range] = getAssumeRangeInfo(OBU);
 
-        auto KnownRange = computeConstantRange(
-            Val, false, getSimplifyQuery().getWithInstruction(II));
+        auto KnownRange = computeConstantRangeIncludingKnownBits(
+            Val.get(), false, getSimplifyQuery().getWithInstruction(II));
 
         // Drop the assume if we can prove it already without the assume
         if (Range.contains(KnownRange))
@@ -4084,9 +4084,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // If we know more, update the range assume to be more precise. This
         // allows dropping another range assume on the same value if they have
         // overlapping ranges.
-        if (auto Intersected = Range.intersectWith(KnownRange);
-            Intersected != Range) {
-          Builder.CreateRangeAssumption(Val, Intersected);
+        if (auto Intersected = Range.exactIntersectWith(KnownRange);
+            Intersected && *Intersected != Range) {
+          Builder.CreateRangeAssumption(Val, *Intersected);
           return RemoveBundle();
         }
 
