@@ -764,8 +764,8 @@ public:
 
   /// Insert [\p Begin, \p End) before \p At, which may be end(). The source
   /// iterators must be multipass and the range must not refer to instructions
-  /// in this block. Return the first inserted instruction, or \p At if the
-  /// range is empty.
+  /// in this block. Return the iterator following the inserted range, or \p At
+  /// if the range is empty.
   template <typename Itr>
   iterator insertInstructions(iterator At, Itr Begin, Itr End) {
     if (Begin == End)
