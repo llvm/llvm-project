@@ -182,7 +182,7 @@ def : Builtin {
 #endif
 
 #ifdef ERROR_EXPECTED_E
-def : Builtin {
+def : LibBuiltin<"stdint.h"> {
 // ERROR_EXPECTED_E: :[[# @LINE + 1]]:7: error: Unknown Type: uint128_t
   let Prototype = "uint128_t(void)";
   let Spellings = ["__builtin_test_unknown_typedef_in_builtin"];
