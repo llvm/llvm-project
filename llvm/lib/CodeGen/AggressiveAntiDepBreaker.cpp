@@ -172,6 +172,12 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
       continue;
     for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
       MCRegister AliasReg = *AI;
+      // Don't mark the super-registers of a callee-saved register as live. A
+      // super-register can contain registers that are not callee-saved (e.g. a
+      // register tuple). If it were live, those registers would be treated as
+      // live out too and could not be renamed.
+      if (TRI->isSuperRegister(Reg, AliasReg))
+        continue;
       State->UnionGroups(AliasReg, 0);
       KillIndices[AliasReg.id()] = BB->size();
       DefIndices[AliasReg.id()] = ~0u;
