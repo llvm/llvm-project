@@ -576,6 +576,47 @@ TEST_F(InstrProfTest, test_memprof_getrecord_error) {
       ErrorEquals(instrprof_error::unknown_function, RecordOr.takeError()));
 }
 
+// Adding a second MemProf input to the same writer must merge its frames,
+// call stacks, and records instead of returning after the first new frame.
+TEST_F(InstrProfTest, test_memprof_add_data_merges_multiple_inputs) {
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  IndexedMemProfData FirstData = getMemProfDataForTest();
+  const IndexedMemProfRecord FirstRecord = makeRecord(
+      /*AllocFrames=*/{0x111}, /*CallSiteFrames=*/{0x222}, makePartialMIB(),
+      memprof::getHotColdSchema());
+  FirstData.Records.try_emplace(0x9999, FirstRecord);
+  ASSERT_TRUE(Writer.addMemProfData(FirstData, Err));
+
+  IndexedMemProfData SecondData;
+  SecondData.Frames.try_emplace(10, 0xabc, 10, 20, false);
+  SecondData.Frames.try_emplace(11, 0xdef, 30, 40, true);
+  SecondData.CallStacks.try_emplace(
+      0x444, std::initializer_list<memprof::FrameId>{10, 11});
+  const IndexedMemProfRecord SecondRecord = makeRecord(
+      /*AllocFrames=*/{0x444}, /*CallSiteFrames=*/{0x444}, makePartialMIB(),
+      memprof::getHotColdSchema());
+  SecondData.Records.try_emplace(0x8888, SecondRecord);
+  ASSERT_TRUE(Writer.addMemProfData(SecondData, Err));
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto FirstRecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(FirstRecordOr.takeError(), Succeeded());
+  memprof::IndexedCallstackIdConverter FirstCSIdConv(FirstData);
+  EXPECT_THAT(FirstRecord.toMemProfRecord(FirstCSIdConv),
+              EqualsRecord(FirstRecordOr.get()));
+
+  auto SecondRecordOr = Reader->getMemProfRecord(0x8888);
+  ASSERT_THAT_ERROR(SecondRecordOr.takeError(), Succeeded());
+  memprof::IndexedCallstackIdConverter SecondCSIdConv(SecondData);
+  EXPECT_THAT(SecondRecord.toMemProfRecord(SecondCSIdConv),
+              EqualsRecord(SecondRecordOr.get()));
+}
+
 TEST_F(InstrProfTest, test_memprof_merge) {
   Writer.addRecord({"func1", 0x1234, {42}}, Err);
 
