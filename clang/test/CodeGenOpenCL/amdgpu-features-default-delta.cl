@@ -6,10 +6,12 @@
 // Default behavior for gfx90a: test_default has no target-features,
 // test_explicit_attr has only the delta (+gfx11-insts).
 // RUN: %clang_cc1 -triple amdgpu9.0a -emit-llvm -o - %s | FileCheck --check-prefix=GFX90A %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu9.0a -emit-llvm -o - %s | FileCheck --check-prefix=GFX90A %s %}
 
 // With -target-feature, both functions get the delta feature.
 // gfx1030 defaults to wavefrontsize32, so +wavefrontsize64 is a delta.
 // RUN: %clang_cc1 -triple amdgpu10.30 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck --check-prefix=CMDLINE %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu10.30 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck --check-prefix=CMDLINE %s %}
 
 // GFX90A-LABEL: define {{.*}} @test_default()
 // GFX90A-SAME: #[[ATTR_DEFAULT:[0-9]+]]

@@ -207,20 +207,25 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    if (auto *Call = dyn_cast<CallBase>(&I)) {
-      // We can optimistically ignore calls to functions in the same SCC, with
-      // two caveats:
-      //  * Calls with operand bundles may have additional effects.
-      //  * Argument memory accesses may imply additional effects depending on
-      //    what the argument location is.
-      if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
-          SCCNodes.count(Call->getCalledFunction())) {
-        // Keep track of which additional locations are accessed if the SCC
-        // turns out to access argmem.
-        addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
-        continue;
-      }
+    // We can optimistically ignore calls to functions in the same SCC, with
+    // two caveats:
+    //  * Calls with operand bundles may have additional effects.
+    //  * Argument memory accesses may imply additional effects depending on
+    //    what the argument location is.
+    auto *Call = dyn_cast<CallBase>(&I);
+    if (Call && !Call->hasOperandBundles() && Call->getCalledFunction() &&
+        SCCNodes.count(Call->getCalledFunction())) {
+      // Keep track of which additional locations are accessed if the SCC
+      // turns out to access argmem.
+      addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
+      continue;
+    }
 
+    // Once ME covers OrigME, the returned effects are final.
+    if ((ME & OrigME) == OrigME)
+      continue;
+
+    if (Call) {
       MemoryEffects CallME = AAR.getMemoryEffects(Call);
 
       // If the call doesn't access memory, we're done.
@@ -761,7 +766,7 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
 
 // Collect the uses of argument "A" in "F".
 ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   unsigned PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
   ArgumentUsesSummary Result;
@@ -1368,7 +1373,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
           CC |= Use->CC;
         else
           CC |= CaptureComponents(A->getAttributes().getCaptureInfo());
-        break;
       }
       if (capturesAll(CC))
         break;

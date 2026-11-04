@@ -95,15 +95,15 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_pointer()
 ! CHECK: %[[C1_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c1", uniq_name = "_QMpolyFtest_pointerEc1"}>
-! CHECK: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1_DESC]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_pointerEc1"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1_DESC]] uniq_name("_QMpolyFtest_pointerEc1") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[C2_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c2", uniq_name = "_QMpolyFtest_pointerEc2"}>
-! CHECK: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2_DESC]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_pointerEc2"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2_DESC]] uniq_name("_QMpolyFtest_pointerEc2") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[C3_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c3", uniq_name = "_QMpolyFtest_pointerEc3"}>
-! CHECK: %[[C3_DECL:.*]]:2 = hlfir.declare %[[C3_DESC]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_pointerEc3"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[C3_DECL:.*]]:2 = hlfir.declare %[[C3_DESC]] uniq_name("_QMpolyFtest_pointerEc3") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK: %[[C4_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c4", uniq_name = "_QMpolyFtest_pointerEc4"}>
-! CHECK: %[[C4_DECL:.*]]:2 = hlfir.declare %[[C4_DESC]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_pointerEc4"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[C4_DECL:.*]]:2 = hlfir.declare %[[C4_DESC]] uniq_name("_QMpolyFtest_pointerEc4") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK: %[[P_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_pointerEp"}>
-! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P_DESC]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_pointerEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P_DESC]] uniq_name("_QMpolyFtest_pointerEp") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 
 ! CHECK: %[[TYPE_DESC_P1:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK-DAG: %[[P_DESC_CAST:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -147,12 +147,12 @@ contains
 ! call c1%proc2()
 ! CHECK: %[[C1_LOAD:.*]] = fir.load %[[C1_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[C1_REBOX:.*]] = fir.rebox %[[C1_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! call c2%proc2()
 ! CHECK: %[[C2_LOAD:.*]] = fir.load %[[C2_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: %[[TYPE_DESC_P1:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK-DAG: %[[C3_CAST:.*]] = fir.convert %[[C3_DECL]]#0 : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
@@ -179,12 +179,12 @@ contains
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C3:.*]] = hlfir.designate %[[C3_LOAD]] (%{{.*}})  : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C4:.*]] = hlfir.designate %[[C4_LOAD]] (%{{.*}})  : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 
 ! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
@@ -258,15 +258,15 @@ contains
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable()
 
 ! CHECK-DAG: %[[C1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c1", uniq_name = "_QMpolyFtest_allocatableEc1"}>
-! CHECK-DAG: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatableEc1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK-DAG: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1]] uniq_name("_QMpolyFtest_allocatableEc1") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 ! CHECK-DAG: %[[C2:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c2", uniq_name = "_QMpolyFtest_allocatableEc2"}>
-! CHECK-DAG: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatableEc2"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK-DAG: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2]] uniq_name("_QMpolyFtest_allocatableEc2") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 ! CHECK-DAG: %[[C3:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c3", uniq_name = "_QMpolyFtest_allocatableEc3"}>
-! CHECK-DAG: %[[C3_DECL:.*]]:2 = hlfir.declare %[[C3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatableEc3"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK-DAG: %[[C3_DECL:.*]]:2 = hlfir.declare %[[C3]] uniq_name("_QMpolyFtest_allocatableEc3") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK-DAG: %[[C4:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c4", uniq_name = "_QMpolyFtest_allocatableEc4"}>
-! CHECK-DAG: %[[C4_DECL:.*]]:2 = hlfir.declare %[[C4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatableEc4"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK-DAG: %[[C4_DECL:.*]]:2 = hlfir.declare %[[C4]] uniq_name("_QMpolyFtest_allocatableEc4") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK-DAG: %[[P:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_allocatableEp"}>
-! CHECK-DAG: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatableEp"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
+! CHECK-DAG: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] uniq_name("_QMpolyFtest_allocatableEp") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>)
 
 ! CHECK: %[[TYPE_DESC_P1:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK-DAG: %[[P_CAST:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -334,21 +334,21 @@ contains
 
 ! CHECK: %[[C1_LOAD2:.*]] = fir.load %[[C1_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[C1_REBOX:.*]] = fir.rebox %[[C1_LOAD2]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: %[[C2_LOAD2:.*]] = fir.load %[[C2_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD2]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C3:.*]] = hlfir.designate %[[C3_LOAD]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C4:.*]] = hlfir.designate %[[C4_LOAD]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK: %[[P_CAST:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -388,9 +388,9 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_unlimited_polymorphic_with_intrinsic_type_spec() {
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEp"}>
-! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEp"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] uniq_name("_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEp") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
 ! CHECK: %[[PTR:.*]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = "ptr", uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEptr"}>
-! CHECK: %[[PTR_DECL:.*]]:2 = hlfir.declare %[[PTR]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEptr"} : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
+! CHECK: %[[PTR_DECL:.*]]:2 = hlfir.declare %[[PTR]] uniq_name("_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEptr") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
 ! CHECK-DAG: %[[BOX_NONE:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG: %[[CAT:.*]] = arith.constant 0 : i32
 ! CHECK-DAG: %[[KIND:.*]] = arith.constant 4 : i32
@@ -429,12 +429,12 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_type_with_polymorphic_pointer_component()
 ! CHECK: %[[TYPE_PTR:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>> <{bindc_name = "a", uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa"}>
-! CHECK: %[[TYPE_PTR_DECL:.*]]:2 = hlfir.declare %[[TYPE_PTR]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>)
+! CHECK: %[[TYPE_PTR_DECL:.*]]:2 = hlfir.declare %[[TYPE_PTR]] uniq_name("_QMpolyFtest_type_with_polymorphic_pointer_componentEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>)
 ! CHECK: %[[TYPE_PTR_CONV:.*]] = fir.convert %[[TYPE_PTR_DECL]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: fir.call @_FortranAPointerAllocate(%[[TYPE_PTR_CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK: %[[TYPE_PTR_LOAD:.*]] = fir.load %[[TYPE_PTR_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[TYPE_PTR_LOAD]] : (!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>) -> !fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>
-! CHECK: %[[ELEMENT:.*]] = hlfir.designate %[[BOX_ADDR]]{"element"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[ELEMENT:.*]] = hlfir.designate %[[BOX_ADDR]]{"element"}   fortran_attrs<pointer> : (!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: %[[ZERO_DESC:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
 ! CHECK: fir.store %[[ZERO_DESC]] to %[[ELEMENT]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
@@ -459,13 +459,13 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocate_with_mold() {
 ! CHECK: %[[I:.*]] = fir.alloca !fir.array<20xi32> <{bindc_name = "i", uniq_name = "_QMpolyFtest_allocate_with_moldEi"}>
-! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]](%{{.*}}) {uniq_name = "_QMpolyFtest_allocate_with_moldEi"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
+! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]](%{{.*}}) uniq_name("_QMpolyFtest_allocate_with_moldEi") : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_allocate_with_moldEp"}>
-! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocate_with_moldEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] uniq_name("_QMpolyFtest_allocate_with_moldEp") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK: %[[UP:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> <{bindc_name = "up", uniq_name = "_QMpolyFtest_allocate_with_moldEup"}>
-! CHECK: %[[UP_DECL:.*]]:2 = hlfir.declare %[[UP:.*]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocate_with_moldEup"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
+! CHECK: %[[UP_DECL:.*]]:2 = hlfir.declare %[[UP:.*]] uniq_name("_QMpolyFtest_allocate_with_moldEup") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
 ! CHECK: %[[X:.*]] = fir.alloca !fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>> <{bindc_name = "x", uniq_name = "_QMpolyFtest_allocate_with_moldEx"}>
-! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QMpolyFtest_allocate_with_moldEx"} : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>)
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) uniq_name("_QMpolyFtest_allocate_with_moldEx") : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>)
 
 ! CHECK: %[[EMBOX_X:.*]] = fir.embox %[[X_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
@@ -494,13 +494,13 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocate_with_source() {
 ! CHECK: %[[I:.*]] = fir.alloca !fir.array<20xi32> <{bindc_name = "i", uniq_name = "_QMpolyFtest_allocate_with_sourceEi"}>
-! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]](%{{.*}}) {uniq_name = "_QMpolyFtest_allocate_with_sourceEi"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
+! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]](%{{.*}}) uniq_name("_QMpolyFtest_allocate_with_sourceEi") : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_allocate_with_sourceEp"}>
-! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocate_with_sourceEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] uniq_name("_QMpolyFtest_allocate_with_sourceEp") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>)
 ! CHECK: %[[UP:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> <{bindc_name = "up", uniq_name = "_QMpolyFtest_allocate_with_sourceEup"}>
-! CHECK: %[[UP_DECL:.*]]:2 = hlfir.declare %[[UP]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocate_with_sourceEup"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
+! CHECK: %[[UP_DECL:.*]]:2 = hlfir.declare %[[UP]] uniq_name("_QMpolyFtest_allocate_with_sourceEup") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
 ! CHECK: %[[X:.*]] = fir.alloca !fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>> <{bindc_name = "x", uniq_name = "_QMpolyFtest_allocate_with_sourceEx"}>
-! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QMpolyFtest_allocate_with_sourceEx"} : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>)
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) uniq_name("_QMpolyFtest_allocate_with_sourceEx") : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>)
 ! CHECK: %[[EMBOX_X:.*]] = fir.embox %[[X_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
@@ -528,8 +528,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_from_up_mold(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "b"}) {
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEa"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
-! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEb"} : (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpolyFtest_allocatable_up_from_up_moldEa") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpolyFtest_allocatable_up_from_up_moldEb") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
 ! CHECK: %[[LOAD_B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A_DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
@@ -547,7 +547,7 @@ contains
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_from_mold_rank(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[VALUE_10:.*]] = fir.alloca i32
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_mold_rankEa"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpolyFtest_allocatable_up_from_mold_rankEa") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
 ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK: fir.store %[[C10]] to %[[VALUE_10]] : !fir.ref<i32>
 ! CHECK: %[[EMBOX_10:.*]] = fir.embox %[[VALUE_10]] : (!fir.ref<i32>) -> !fir.box<i32>
@@ -573,7 +573,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_character() {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "a", uniq_name = "_QMpolyFtest_allocatable_up_characterEa"}>
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_characterEa"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] uniq_name("_QMpolyFtest_allocatable_up_characterEa") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
 ! CHECK-DAG: %[[LEN:.*]] = arith.constant 10 : i64
 ! CHECK-DAG: %[[A_NONE:.*]] = fir.convert %[[A_DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG: %[[KIND:.*]] = arith.constant 1 : i32

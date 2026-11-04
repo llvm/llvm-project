@@ -266,6 +266,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
+  assert(oldInsertPoint.isValid() && "Builder must have insertion point set!");
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
   MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
@@ -1346,6 +1347,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
+      SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
       findMI(Ty, false, &MIRBuilder.getMF()) || isSpecialOpaqueType(Ty))
     return SpirvType;
 

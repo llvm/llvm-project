@@ -147,7 +147,8 @@ public:
     }
 
     const bool is_internal = IsReservedName(var.name) || m_is_internal;
-    const bool is_readonly = is_internal || v.GetType().IsAggregateType() ||
+    const bool is_readonly = is_internal || !v.CanSet().Success() ||
+                             v.GetType().IsAggregateType() ||
                              v.GetValueType() == lldb::eValueTypeRegisterSet ||
                              var.name == "(Return Value)";
 

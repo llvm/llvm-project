@@ -560,3 +560,27 @@ gpu.module @xevm_module {
     gpu.return
   }
 }
+
+// -----
+// An all-ones vector.constant_mask. The mask pattern must run before the
+// driver folds the op: the fold builds an arith.constant without the layout,
+// which stays at subgroup size behind an unrealized cast.
+// CHECK-LABEL: gpu.func @scatter_ops_all_ones_constant_mask
+// CHECK-DAG:     %[[MASK:.*]] = arith.constant dense<true> : vector<2xi1>
+// CHECK-DAG:     %[[OFFSET:.*]] = arith.constant dense<12> : vector<2xindex>
+// CHECK:         %[[LD:.*]] = xegpu.load %{{.*}}[%[[OFFSET]]], %[[MASK]]
+// CHECK-SAME:      : memref<256xf16>, vector<2xindex>, vector<2xi1> -> vector<2xf16>
+// CHECK-NEXT:    xegpu.store %[[LD]], %{{.*}}[%[[OFFSET]]], %[[MASK]]
+// CHECK-SAME:      : vector<2xf16>, memref<256xf16>, vector<2xindex>, vector<2xi1>
+// CHECK-NOT:     builtin.unrealized_conversion_cast
+gpu.module @xevm_module{
+  gpu.func @scatter_ops_all_ones_constant_mask(%src: memref<256xf16>) {
+    %mask = vector.constant_mask [32] : vector<32xi1>
+    %offset = arith.constant dense<12> : vector<32xindex>
+    %0 = xegpu.load %src[%offset], %mask <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+      : memref<256xf16>, vector<32xindex>, vector<32xi1> -> vector<32xf16>
+    xegpu.store %0, %src[%offset], %mask <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+      : vector<32xf16>, memref<256xf16>, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
