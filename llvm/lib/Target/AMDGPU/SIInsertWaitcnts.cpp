@@ -275,6 +275,10 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
+    // Targets without a separate store counter count stores in LOAD_CNT
+    // (see below), so STORE_CNT has no events of its own there.
+    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
+      return HWEvents::NONE;
     HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
     if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
       EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
@@ -566,7 +570,8 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
+        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
+                         Context->getWaitEvents(AMDGPU::STORE_CNT));
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
@@ -650,11 +655,6 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    // On targets without a separate store counter, stores share LOAD_CNT
-    // and are drained by the entry/call waits; claiming them here would
-    // hide invalidation-only waits behind phantom store events.
-    if (!Context->ST.hasVscnt())
-      return;
     setScoreUB(AMDGPU::STORE_CNT,
                getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
     PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
