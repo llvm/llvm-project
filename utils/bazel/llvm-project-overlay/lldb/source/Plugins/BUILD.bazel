@@ -939,7 +939,7 @@ cc_library(
         "//llvm:Demangle",
         "//llvm:Support",
     ],
-)   
+)
 
 gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
