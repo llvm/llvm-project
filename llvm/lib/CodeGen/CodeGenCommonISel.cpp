@@ -262,12 +262,36 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForExtend(const MachineRegisterInfo &MRI,
+                                              MachineInstr &Ext,
+                                              SmallVectorImpl<uint64_t> &Ops) {
+  assert((Ext.getOpcode() == TargetOpcode::G_SEXT ||
+          Ext.getOpcode() == TargetOpcode::G_ZEXT) &&
+         "Must be a G_SEXT or G_ZEXT");
+
+  const auto FromLLT = MRI.getType(Ext.getOperand(1).getReg());
+  const auto ToLLT = MRI.getType(Ext.defs().begin()->getReg());
+
+  // TODO: Support non-scalar types.
+  if (!FromLLT.isScalar())
+    return nullptr;
+
+  auto ExtOps =
+      DIExpression::getExtOps(FromLLT.getSizeInBits(), ToLLT.getSizeInBits(),
+                              Ext.getOpcode() == TargetOpcode::G_SEXT);
+  Ops.append(ExtOps.begin(), ExtOps.end());
+  return &Ext.getOperand(1);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+    return getSalvageOpsForExtend(MRI, MI, Ops);
   case TargetOpcode::COPY:
     return getSalvageOpsForCopy(MRI, MI);
   default:
