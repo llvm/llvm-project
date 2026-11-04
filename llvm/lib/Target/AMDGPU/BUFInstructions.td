@@ -90,7 +90,7 @@ class BUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_offset  = 1;
   bits<1> has_slc     = 1;
   bits<1> tfe         = 0;
-  bits<32> elements   = 0;
+  bits<4> elements    = 0;
   bits<1> has_sccb    = 1;
   bits<1> sccb_value  = 0;
   bits<1> IsBufferInv = 0;
