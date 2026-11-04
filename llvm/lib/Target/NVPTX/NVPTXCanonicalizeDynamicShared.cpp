@@ -56,7 +56,7 @@ static bool canonicalizeDynamicShared(Module &M) {
   if (DynSharedDecls.size() < 2)
     return false;
 
-  // Redirecting uses also rewrites the used lists; rebuild them at the end so
+  // Redirecting uses also rewrites the used lists. Rebuild them at the end so
   // that they keep naming the original symbols.
   SmallVector<GlobalValue *, 8> Used, CompilerUsed;
   GlobalVariable *UsedList = collectUsedGlobalVariables(M, Used, false);
