@@ -976,14 +976,15 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     PerLane,
   };
 
-  /// Implements llvm.masked.load, llvm.masked.expandload, llvm.masked.store
-  /// and llvm.masked.gather. For loads, \p Data holds the pass-through values
-  /// and is updated with the loaded lanes; for stores, it holds the values to
-  /// store. Lane addresses are computed according to \p Mode.
+  /// Implements the masked intrinsic family. For loads, \p Data holds the
+  /// pass-through values and is updated with the loaded lanes; for stores, it
+  /// holds the values to store. Lane addresses are computed according to \p
+  /// Mode.
   AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &Mask, AnyValue Data,
                                         MaskedAddrMode Mode) {
-    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1123,7 +1124,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.
@@ -1965,6 +1971,23 @@ public:
     case Intrinsic::masked_gather:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
                                           MaskedAddrMode::PerLane);
+    case Intrinsic::masked_scatter:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::PerLane);
+    case Intrinsic::matrix_transpose: {
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned Rows =
+          cast<ConstantInt>(CB.getArgOperand(1))->getZExtValue();
+      const unsigned Cols =
+          cast<ConstantInt>(CB.getArgOperand(2))->getZExtValue();
+      // Column I of the result is row I of the column-major input.
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (unsigned I = 0; I != Rows; ++I)
+        for (unsigned J = 0; J != Cols; ++J)
+          Res.push_back(Vec[J * Rows + I]);
+      return std::move(Res);
+    }
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();

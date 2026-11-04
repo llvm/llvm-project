@@ -672,7 +672,7 @@ define void @zext_nneg(ptr %p, ptr %q) {
 ; CHECK-LABEL: @zext_nneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <8 x i8> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[TMP2]], splat (i32 65536)
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[Q:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -707,7 +707,7 @@ define void @uitofp_nneg(ptr %p, ptr %q) {
 ; CHECK-LABEL: @uitofp_nneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <8 x i32> [[TMP0]] to <8 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp nneg <8 x i32> [[TMP0]] to <8 x float>
 ; CHECK-NEXT:    store <8 x float> [[TMP1]], ptr [[Q:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

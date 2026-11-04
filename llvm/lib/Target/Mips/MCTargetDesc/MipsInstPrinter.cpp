@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -70,6 +71,15 @@ const char* Mips::MipsFCCToString(Mips::CondCode CC) {
   case FCOND_GT:  return "ngt";
   }
   llvm_unreachable("Impossible condition code!");
+}
+
+void MipsInstPrinter::printCOP0Operand(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  unsigned Encoding = MRI.getEncodingValue(MI->getOperand(OpNo).getReg());
+  markup(O, Markup::Register) << '$' << MIPS_MC::getCOP0RegNum(Encoding);
+  O << ", ";
+  markup(O, Markup::Immediate) << MIPS_MC::getCOP0Sel(Encoding);
 }
 
 void MipsInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
