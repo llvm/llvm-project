@@ -4895,6 +4895,44 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   return SDValue();
 }
 
+/// Return true if \p N is a strict llvm.amdgcn.sched.agpr, either still as the
+/// intrinsic or already selected to A_SCHEDULE_AGPR_B*.
+static bool isStrictSchedAGPR(const SDNode *N) {
+  if (N->isMachineOpcode()) {
+    switch (N->getMachineOpcode()) {
+    case AMDGPU::A_SCHEDULE_AGPR_B32:
+    case AMDGPU::A_SCHEDULE_AGPR_B64:
+    case AMDGPU::A_SCHEDULE_AGPR_B128:
+    case AMDGPU::A_SCHEDULE_AGPR_B256:
+    case AMDGPU::A_SCHEDULE_AGPR_B512:
+      // Operands: src, regnum, strict.
+      return N->getConstantOperandVal(2) != 0;
+    default:
+      return false;
+    }
+  }
+  if (N->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      N->getConstantOperandVal(0) != Intrinsic::amdgcn_sched_agpr)
+    return false;
+  // Operands: intrinsic id, src, regnum, strict.
+  auto *StrictC = dyn_cast<ConstantSDNode>(N->getOperand(3));
+  return StrictC && !StrictC->isZero();
+}
+
+/// An MFMA whose src2 or result is strictly pinned to AGPRs gains nothing from
+/// the VGPR form: selecting it would only add AGPR<->VGPR copies around the
+/// MFMA for AMDGPURewriteAGPRCopyMFMA to undo after RA, and that rewrite may
+/// leave src2 in a different AGPR than dst.
+bool AMDGPUDAGToDAGISel::isStrictAGPRPinnedMFMA(const SDNode *N) const {
+  // MFMA intrinsic operands: intrinsic id, src0, src1, src2, ...
+  if (N->getNumOperands() > 3 && isStrictSchedAGPR(N->getOperand(3).getNode()))
+    return true;
+  for (const SDNode *U : N->users())
+    if (isStrictSchedAGPR(U))
+      return true;
+  return false;
+}
+
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
