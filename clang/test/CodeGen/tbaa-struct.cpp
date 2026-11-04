@@ -196,7 +196,7 @@ void copy13(ComplexMembers *a1, ComplexMembers *a2) {
 // CHECK-LABEL: _Z6copy13P14ComplexMembersS0_
 // CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) %a1, ptr noundef nonnull align 8 dereferenceable(32) %a2, i64 32, i1 false),
 // CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT21:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA45:![0-9]+]], !tbaa.struct
+// CHECK-NEW-SAME: !tbaa [[TBAA45:![0-9]+]], !tbaa.struct [[TBAA_STRUCT47:![0-9]+]]
   *a1 = *a2;
 }
 
@@ -214,6 +214,19 @@ void copy14(MayAliasComplexMember *a1, MayAliasComplexMember *a2) {
 // CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT24:![0-9]+]]
 // CHECK-NEW-SAME: !tbaa [[TBAA50:![0-9]+]], !tbaa.struct
   *a1 = *a2;
+}
+
+// Make sure that __real__ and __imag__ accesses are tagged correctly.
+void store_parts(ComplexMembers *a, float re, float im) {
+// CHECK-LABEL: _Z11store_partsP14ComplexMembersff
+// CHECK:   store float %re, ptr %{{.*}}, align 4,
+// CHECK-OLD-SAME: !tbaa [[TBAA23:![0-9]+]]
+// CHECK-NEW-SAME: !tbaa [[TBAA48:![0-9]+]]
+// CHECK:   store float %im, ptr %{{.*}}, align 4,
+// CHECK-OLD-SAME: !tbaa [[TBAA23]]
+// CHECK-NEW-SAME: !tbaa [[TBAA48]]
+  __real__ a->f = re;
+  __imag__ a->f = im;
 }
 
 // (offset, size) = (0,1) char; (4,2) short; (8,4) int; (12,1) char; (16,4) int; (20,4) int
@@ -240,8 +253,8 @@ void copy14(MayAliasComplexMember *a1, MayAliasComplexMember *a2) {
 // CHECK-OLD: [[TBAA_STRUCT18]] = !{i64 0, i64 4, [[META9]], i64 8, i64 8, [[META15]]}
 // CHECK-OLD: [[TBAA_STRUCT19]] = !{i64 0, i64 8, [[META9]], i64 8, i64 4, [[META2]]}
 // CHECK-OLD: [[TBAA_STRUCT20]] = !{i64 0, i64 4, [[META2]], i64 8, i64 8, [[META9]]}
-// CHECK-OLD: [[TBAA_STRUCT21]] = !{i64 0, i64 4, [[META2]], i64 4, i64 4, [[META22:![0-9]+]], i64 8, i64 4, [[META22]], i64 16, i64 8, [[META15]], i64 24, i64 8, [[META15]]}
-// CHECK-OLD: [[META22]] = !{[[META23:![0-9]+]], [[META23]], i64 0}
+// CHECK-OLD: [[TBAA_STRUCT21]] = !{i64 0, i64 4, [[META2]], i64 4, i64 4, [[TBAA23]], i64 8, i64 4, [[TBAA23]], i64 16, i64 8, [[META15]], i64 24, i64 8, [[META15]]}
+// CHECK-OLD: [[TBAA23]] = !{[[META23:![0-9]+]], [[META23]], i64 0}
 // CHECK-OLD: [[META23]] = !{!"float", [[META4]], i64 0}
 // CHECK-OLD: [[TBAA_STRUCT24]] = !{i64 0, i64 4, [[META2]], i64 8, i64 8, [[META9]], i64 16, i64 8, [[META9]]}
 //.
@@ -272,6 +285,9 @@ void copy14(MayAliasComplexMember *a1, MayAliasComplexMember *a2) {
 // CHECK-NEW: [[META42]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 8}
 // CHECK-NEW: [[TBAA45]] = !{[[META46:![0-9]+]], [[META46]], i64 0, i64 32}
 // CHECK-NEW: [[META46]] = !{[[META4]], i64 32, !"_ZTS14ComplexMembers", [[META3]], i64 0, i64 4, [[META4]], i64 4, i64 8, [[META4]], i64 16, i64 16}
+// CHECK-NEW: [[TBAA_STRUCT47]] = !{i64 0, i64 4, [[META11:![0-9]+]], i64 4, i64 4, [[TBAA48]], i64 8, i64 4, [[TBAA48]], i64 16, i64 8, [[META30:![0-9]+]], i64 24, i64 8, [[META30]]}
+// CHECK-NEW: [[TBAA48]] = !{[[META49:![0-9]+]], [[META49]], i64 0, i64 4}
+// CHECK-NEW: [[META49]] = !{[[META4]], i64 4, !"float"}
 // CHECK-NEW: [[TBAA50]] = !{[[META51:![0-9]+]], [[META51]], i64 0, i64 24}
 // CHECK-NEW: [[META51]] = !{[[META4]], i64 24, !"_ZTS21MayAliasComplexMember", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 16}
 //.
