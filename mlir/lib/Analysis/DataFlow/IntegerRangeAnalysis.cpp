@@ -138,16 +138,13 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
-      auto arg = dyn_cast<BlockArgument>(v);
-      if (!arg)
-        return;
-      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
+      auto it = llvm::find(nonSuccessorInputs, v);
+      if (it == nonSuccessorInputs.end())
         return;
 
       LDBG() << "Inferred range " << attrs;
-      auto it = llvm::find(successor.getSuccessor()->getArguments(), arg);
       unsigned nonSuccessorInputIdx =
-          std::distance(successor.getSuccessor()->getArguments().begin(), it);
+          std::distance(nonSuccessorInputs.begin(), it);
       IntegerValueRangeLattice *lattice =
           nonSuccessorInputLattices[nonSuccessorInputIdx];
       propagateIfChanged(lattice, lattice->join(attrs));
