@@ -491,136 +491,136 @@ define void @f32s8_0(ptr %a0, ptr %a1) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = combine(#1,#8)
-; CHECK-NEXT:     r4 = ##-2147483648
-; CHECK-NEXT:     v5 = vmem(r0+#1)
+; CHECK-NEXT:     r3:2 = combine(##-2147483648,#8)
+; CHECK-NEXT:     r4 = #1
+; CHECK-NEXT:     v4 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vsplat(r4)
+; CHECK-NEXT:     v3 = vsplat(r3)
 ; CHECK-NEXT:     r7 = #30
 ; CHECK-NEXT:     r6 = #24
-; CHECK-NEXT:     v4 = vmem(r0+#0)
+; CHECK-NEXT:     v6 = vmem(r0+#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v10 = vsplat(r7)
 ; CHECK-NEXT:     r5 = #32
-; CHECK-NEXT:     v9.w = vasl(v5.w,r3)
+; CHECK-NEXT:     v8.w = vasl(v4.w,r4)
 ; CHECK-NEXT:     v1 = vmem(r0+#3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v8.w = vasl(v4.w,r3)
+; CHECK-NEXT:     v9.w = vasl(v6.w,r4)
 ; CHECK-NEXT:     v14 = vxor(v14,v14)
-; CHECK-NEXT:     v9.w = vsub(v9.w,v0.w)
-; CHECK-NEXT:     v2 = vmem(r0+#2)
+; CHECK-NEXT:     v8.w = vsub(v8.w,v3.w)
+; CHECK-NEXT:     v0 = vmem(r0+#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v13 = vsplat(r5)
-; CHECK-NEXT:     v11.w = vasl(v2.w,r3)
-; CHECK-NEXT:     v8.w = vsub(v8.w,v0.w)
-; CHECK-NEXT:     q1 = vcmp.gt(v14.w,v5.w)
+; CHECK-NEXT:     v11.w = vasl(v0.w,r4)
+; CHECK-NEXT:     v9.w = vsub(v9.w,v3.w)
+; CHECK-NEXT:     q1 = vcmp.gt(v14.w,v6.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v12.w = vasl(v1.w,r3)
+; CHECK-NEXT:     v12.w = vasl(v1.w,r4)
 ; CHECK-NEXT:     q0 = vcmp.gt(v14.w,v4.w)
-; CHECK-NEXT:     v11.w = vsub(v11.w,v0.w)
+; CHECK-NEXT:     v11.w = vsub(v11.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = ##2147483647
+; CHECK-NEXT:     r4 = ##2147483647
 ; CHECK-NEXT:     r7 = #64
-; CHECK-NEXT:     v9.w = vasr(v9.w,r6)
+; CHECK-NEXT:     v8.w = vasr(v8.w,r6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v18 = vsplat(r3)
-; CHECK-NEXT:     v7.w = vasl(v5.w,r2)
-; CHECK-NEXT:     v19.w = vsub(v12.w,v0.w)
+; CHECK-NEXT:     v18 = vsplat(r4)
+; CHECK-NEXT:     v9.w = vasr(v9.w,r6)
+; CHECK-NEXT:     v19.w = vsub(v12.w,v3.w)
+; CHECK-NEXT:     v8.w = vsub(v10.w,v8.w)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v7.w = vasl(v6.w,r2)
+; CHECK-NEXT:     v23 = vmux(q0,v3,v18)
+; CHECK-NEXT:     v25 = vmux(q1,v3,v18)
 ; CHECK-NEXT:     v9.w = vsub(v10.w,v9.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v8.w = vasr(v8.w,r6)
-; CHECK-NEXT:     v25 = vmux(q1,v0,v18)
-; CHECK-NEXT:     v23 = vmux(q0,v0,v18)
+; CHECK-NEXT:     v5.w = vasl(v4.w,r2)
+; CHECK-NEXT:     v8.w = vmin(v8.w,v13.w)
 ; CHECK-NEXT:     v9.w = vmin(v9.w,v13.w)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.w = vasl(v4.w,r2)
-; CHECK-NEXT:     v7 = vor(v7,v0)
-; CHECK-NEXT:     v8.w = vsub(v10.w,v8.w)
-; CHECK-NEXT:     q3 = vcmp.gt(v9.w,v14.w)
+; CHECK-NEXT:     v7 = vor(v7,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v11.w = vasr(v11.w,r6)
-; CHECK-NEXT:     v8.w = vmin(v8.w,v13.w)
-; CHECK-NEXT:     v6 = vor(v6,v0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v5.w = vasr(v19.w,r6)
-; CHECK-NEXT:     v11.w = vsub(v10.w,v11.w)
 ; CHECK-NEXT:     q2 = vcmp.gt(v8.w,v14.w)
+; CHECK-NEXT:     v5 = vor(v5,v3)
+; CHECK-NEXT:     q3 = vcmp.gt(v9.w,v14.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.w = vasl(v1.w,r2)
-; CHECK-NEXT:     v5.w = vsub(v10.w,v5.w)
+; CHECK-NEXT:     v6.w = vasr(v19.w,r6)
+; CHECK-NEXT:     v11.w = vsub(v10.w,v11.w)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v2.w = vasl(v1.w,r2)
+; CHECK-NEXT:     v6.w = vsub(v10.w,v6.w)
 ; CHECK-NEXT:     v21.w = vmin(v11.w,v13.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v20.w = vasl(v2.w,r2)
-; CHECK-NEXT:     v3 = vor(v3,v0)
-; CHECK-NEXT:     v5.w = vmin(v5.w,v13.w)
+; CHECK-NEXT:     v20.w = vasl(v0.w,r2)
+; CHECK-NEXT:     v2 = vor(v2,v3)
+; CHECK-NEXT:     v6.w = vmin(v6.w,v13.w)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v5.w = vlsr(v5.w,v8.w)
+; CHECK-NEXT:     v12 = vor(v20,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v7.w = vlsr(v7.w,v9.w)
-; CHECK-NEXT:     v12 = vor(v20,v0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.w = vlsr(v6.w,v8.w)
-; CHECK-NEXT:     v24.w = vsub(v14.w,v7.w)
+; CHECK-NEXT:     v22.w = vsub(v14.w,v5.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v26.w = vlsr(v12.w,v21.w)
-; CHECK-NEXT:     v22.w = vsub(v14.w,v6.w)
+; CHECK-NEXT:     v24.w = vsub(v14.w,v7.w)
+; CHECK-NEXT:     v5 = vmux(q0,v22,v5)
+; CHECK-NEXT:     q0 = vcmp.gt(v14.w,v0.w)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v2.w = vlsr(v2.w,v6.w)
 ; CHECK-NEXT:     v7 = vmux(q1,v24,v7)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.w = vlsr(v3.w,v5.w)
-; CHECK-NEXT:     v6 = vmux(q0,v22,v6)
-; CHECK-NEXT:     q0 = vcmp.gt(v14.w,v2.w)
 ; CHECK-NEXT:     v27.w = vsub(v14.w,v26.w)
+; CHECK-NEXT:     v5 = vmux(q2,v5,v23)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2 = vmux(q3,v7,v25)
-; CHECK-NEXT:     v29.w = vsub(v14.w,v3.w)
+; CHECK-NEXT:     v0 = vmux(q3,v7,v25)
+; CHECK-NEXT:     v29.w = vsub(v14.w,v2.w)
 ; CHECK-NEXT:     q3 = vcmp.gt(v14.w,v1.w)
-; CHECK-NEXT:     v6 = vmux(q2,v6,v23)
+; CHECK-NEXT:     v30 = vmux(q0,v3,v18)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v30 = vmux(q0,v0,v18)
 ; CHECK-NEXT:     v28 = vmux(q0,v27,v26)
 ; CHECK-NEXT:     q2 = vcmp.gt(v21.w,v14.w)
-; CHECK-NEXT:     v3 = vmux(q3,v29,v3)
+; CHECK-NEXT:     v2 = vmux(q3,v29,v2)
+; CHECK-NEXT:     v3 = vmux(q3,v3,v18)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2.h = vpack(v2.w,v6.w):sat
-; CHECK-NEXT:     v0 = vmux(q3,v0,v18)
-; CHECK-NEXT:     q3 = vcmp.gt(v5.w,v14.w)
+; CHECK-NEXT:     v0.h = vpack(v0.w,v5.w):sat
+; CHECK-NEXT:     q3 = vcmp.gt(v6.w,v14.w)
 ; CHECK-NEXT:     v1 = vmux(q2,v28,v30)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmux(q3,v3,v0)
+; CHECK-NEXT:     v2 = vmux(q3,v2,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.h = vpack(v1.w,v0.w):sat
+; CHECK-NEXT:     v31.h = vpack(v1.w,v0.w):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.h = vpack(v0.w,v1.w):sat
+; CHECK-NEXT:     v1.h = vpack(v2.w,v1.w):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v31.b = vpack(v3.h,v2.h):sat
+; CHECK-NEXT:     v0.b = vpack(v31.h,v0.h):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.b = vpack(v3.h,v0.h):sat
+; CHECK-NEXT:     v1.b = vpack(v31.h,v1.h):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0 = vshuff(v0,v31,r7)
+; CHECK-NEXT:     v1:0 = vshuff(v1,v0,r7)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:     vmem(r1+#0) = v0.new
 ; CHECK-NEXT:    }
@@ -1545,110 +1545,108 @@ define void @f32u8_0(ptr %a0, ptr %a1) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = combine(#8,#1)
-; CHECK-NEXT:     r4 = ##-2147483648
-; CHECK-NEXT:     v5 = vmem(r0+#0)
+; CHECK-NEXT:     r3:2 = combine(##-2147483648,#8)
+; CHECK-NEXT:     r4 = #1
+; CHECK-NEXT:     v4 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v4 = vsplat(r4)
+; CHECK-NEXT:     v3 = vsplat(r3)
 ; CHECK-NEXT:     r5 = #30
 ; CHECK-NEXT:     r6 = #24
-; CHECK-NEXT:     v2 = vmem(r0+#1)
+; CHECK-NEXT:     v6 = vmem(r0+#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v14 = vsplat(r5)
-; CHECK-NEXT:     r4 = #32
-; CHECK-NEXT:     v8.w = vasl(v5.w,r2)
+; CHECK-NEXT:     v8.w = vasl(v4.w,r4)
+; CHECK-NEXT:     v13 = vxor(v13,v13)
 ; CHECK-NEXT:     v0 = vmem(r0+#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v9.w = vasl(v2.w,r2)
-; CHECK-NEXT:     v13 = vxor(v13,v13)
-; CHECK-NEXT:     v8.w = vsub(v8.w,v4.w)
+; CHECK-NEXT:     r7 = #64
+; CHECK-NEXT:     v9.w = vasl(v6.w,r4)
+; CHECK-NEXT:     v8.w = vsub(v8.w,v3.w)
 ; CHECK-NEXT:     v1 = vmem(r0+#3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v21 = vsplat(r4)
-; CHECK-NEXT:     v11.w = vasl(v0.w,r2)
-; CHECK-NEXT:     v9.w = vsub(v9.w,v4.w)
-; CHECK-NEXT:     q0 = vcmp.gt(v13.w,v5.w)
+; CHECK-NEXT:     v11.w = vasl(v0.w,r4)
+; CHECK-NEXT:     q0 = vcmp.gt(v13.w,v4.w)
+; CHECK-NEXT:     v9.w = vsub(v9.w,v3.w)
+; CHECK-NEXT:     q3 = vcmp.gt(v13.w,v6.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v12.w = vasl(v1.w,r2)
-; CHECK-NEXT:     q3 = vcmp.gt(v13.w,v2.w)
-; CHECK-NEXT:     v11.w = vsub(v11.w,v4.w)
+; CHECK-NEXT:     r4 = #32
+; CHECK-NEXT:     v12.w = vasl(v1.w,r4)
+; CHECK-NEXT:     v11.w = vsub(v11.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = ##2147483647
-; CHECK-NEXT:     r7 = #64
-; CHECK-NEXT:     v12.w = vsub(v12.w,v4.w)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v23 = vsplat(r2)
+; CHECK-NEXT:     v20 = vsplat(r4)
 ; CHECK-NEXT:     v8.w = vasr(v8.w,r6)
+; CHECK-NEXT:     v12.w = vsub(v12.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v9.w = vasr(v9.w,r6)
 ; CHECK-NEXT:     v8.w = vsub(v14.w,v8.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.w = vasl(v5.w,r3)
+; CHECK-NEXT:     v5.w = vasl(v4.w,r2)
 ; CHECK-NEXT:     v9.w = vsub(v14.w,v9.w)
-; CHECK-NEXT:     v8.w = vmin(v8.w,v21.w)
+; CHECK-NEXT:     v8.w = vmin(v8.w,v20.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v7.w = vasl(v2.w,r3)
-; CHECK-NEXT:     v6 = vor(v6,v4)
-; CHECK-NEXT:     v9.w = vmin(v9.w,v21.w)
+; CHECK-NEXT:     v7.w = vasl(v6.w,r2)
+; CHECK-NEXT:     v5 = vor(v5,v3)
+; CHECK-NEXT:     v9.w = vmin(v9.w,v20.w)
 ; CHECK-NEXT:     q1 = vcmp.gt(v13.w,v8.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v20.w = vasr(v11.w,r6)
-; CHECK-NEXT:     v7 = vor(v7,v4)
+; CHECK-NEXT:     v19.w = vasr(v11.w,r6)
+; CHECK-NEXT:     v7 = vor(v7,v3)
 ; CHECK-NEXT:     q2 = vcmp.gt(v13.w,v9.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v12.w = vasr(v12.w,r6)
-; CHECK-NEXT:     v5.w = vsub(v14.w,v20.w)
+; CHECK-NEXT:     v4.w = vsub(v14.w,v19.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.w = vasl(v1.w,r3)
-; CHECK-NEXT:     v22.w = vsub(v14.w,v12.w)
-; CHECK-NEXT:     v5.w = vmin(v5.w,v21.w)
+; CHECK-NEXT:     v2.w = vasl(v1.w,r2)
+; CHECK-NEXT:     v21.w = vsub(v14.w,v12.w)
+; CHECK-NEXT:     v4.w = vmin(v4.w,v20.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v10.w = vasl(v0.w,r3)
-; CHECK-NEXT:     v3 = vor(v3,v4)
+; CHECK-NEXT:     r2 = ##2147483647
+; CHECK-NEXT:     v10.w = vasl(v0.w,r2)
+; CHECK-NEXT:     v2 = vor(v2,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.w = vlsr(v6.w,v8.w)
-; CHECK-NEXT:     v10 = vor(v10,v4)
-; CHECK-NEXT:     v4.w = vmin(v22.w,v21.w)
+; CHECK-NEXT:     v22 = vsplat(r2)
+; CHECK-NEXT:     v5.w = vlsr(v5.w,v8.w)
+; CHECK-NEXT:     v10 = vor(v10,v3)
+; CHECK-NEXT:     v3.w = vmin(v21.w,v20.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v7.w = vlsr(v7.w,v9.w)
-; CHECK-NEXT:     v6 = vmux(q1,v23,v6)
-; CHECK-NEXT:     q1 = vcmp.gt(v13.w,v5.w)
+; CHECK-NEXT:     v5 = vmux(q1,v22,v5)
+; CHECK-NEXT:     q1 = vcmp.gt(v13.w,v4.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v24.w = vlsr(v10.w,v5.w)
-; CHECK-NEXT:     v7 = vmux(q2,v23,v7)
-; CHECK-NEXT:     q2 = vcmp.gt(v13.w,v4.w)
-; CHECK-NEXT:     v25 = vmux(q0,v13,v6)
+; CHECK-NEXT:     v23.w = vlsr(v10.w,v4.w)
+; CHECK-NEXT:     v7 = vmux(q2,v22,v7)
+; CHECK-NEXT:     q2 = vcmp.gt(v13.w,v3.w)
+; CHECK-NEXT:     v24 = vmux(q0,v13,v5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.w = vlsr(v3.w,v4.w)
-; CHECK-NEXT:     v26 = vmux(q3,v13,v7)
-; CHECK-NEXT:     v2 = vmux(q1,v23,v24)
+; CHECK-NEXT:     v2.w = vlsr(v2.w,v3.w)
+; CHECK-NEXT:     v25 = vmux(q3,v13,v7)
+; CHECK-NEXT:     v26 = vmux(q1,v22,v23)
 ; CHECK-NEXT:     q1 = vcmp.gt(v13.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v27 = vmux(q2,v23,v3)
+; CHECK-NEXT:     v27 = vmux(q2,v22,v2)
 ; CHECK-NEXT:     q3 = vcmp.gt(v13.w,v1.w)
-; CHECK-NEXT:     v28 = vmux(q1,v13,v2)
+; CHECK-NEXT:     v28 = vmux(q1,v13,v26)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v29.uh = vpack(v26.w,v25.w):sat
+; CHECK-NEXT:     v29.uh = vpack(v25.w,v24.w):sat
 ; CHECK-NEXT:     v0 = vmux(q3,v13,v27)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
