@@ -343,10 +343,12 @@ getSymbolAddressImpl(const ELFObjectFile<ELFT> &ELFObj,
   if (Section->sh_type == ELF::SHT_NOBITS)
     return nullptr;
 
-  // Some producers place zero-initialized globals past the end of a
-  // section that is not marked SHT_NOBITS. Such symbols have no contents
-  // in the file, so return no address.
-  if (Symbol.st_value + Symbol.st_size > Section->sh_size)
+  // Level Zero native binaries (relocatable objects) place zero-initialized
+  // globals past the end of a section that is not marked SHT_NOBITS. Such
+  // symbols have no contents in the file, so return no address.
+  // FIXME: Remove this check when Level Zero ELF files are fixed.
+  if (ELFFile.getHeader().e_machine == ELF::EM_INTELGT &&
+      Symbol.st_value + Symbol.st_size > Section->sh_size)
     return nullptr;
 
   uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
