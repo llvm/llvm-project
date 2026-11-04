@@ -295,4 +295,12 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setRange(argRanges[3], blockDims.x, threadIds.x);
   setRange(argRanges[4], blockDims.y, threadIds.y);
   setRange(argRanges[5], blockDims.z, threadIds.z);
+
+  if (auto clusterIds = getClusterIds()) {
+    KernelDim3 clusterDims = *getClusterSize();
+    for (Value id : {clusterIds->x, clusterIds->y, clusterIds->z})
+      setResultRange(id, getIndexRange(0, kMaxDim - 1));
+    for (Value dim : {clusterDims.x, clusterDims.y, clusterDims.z})
+      setResultRange(dim, getIndexRange(1, kMaxDim));
+  }
 }
