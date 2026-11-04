@@ -335,7 +335,7 @@ Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
         formatv("File {0} is not a supported file type", Path),
         inconvertibleErrorCode());
 
-  auto Result = MemoryBuffer::getFile(Path, /*IsText=*/false,
+  auto Result = MemoryBuffer::getFile(Path, /*Flags=*/sys::fs::OF_None,
                                       /*RequiresNullTerminator=*/false);
   if (!Result)
     return make_error<StringError>(

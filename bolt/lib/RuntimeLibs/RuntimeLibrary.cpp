@@ -89,7 +89,7 @@ std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
 void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
                                  BOLTLinker::SectionsMapper MapSections) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
-      MemoryBuffer::getFile(LibPath, false, false);
+      MemoryBuffer::getFile(LibPath, sys::fs::OF_None, false);
   check_error(MaybeBuf.getError(), LibPath);
   std::unique_ptr<MemoryBuffer> B = std::move(MaybeBuf.get());
   file_magic Magic = identify_magic(B->getBuffer());

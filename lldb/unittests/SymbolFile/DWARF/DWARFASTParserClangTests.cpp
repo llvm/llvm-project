@@ -676,7 +676,8 @@ TEST_F(ExtractIntFromFormValueTest, TestUnsignedInt) {
 TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
   // Tests parsing DW_AT_default_value for template parameters.
   auto BufferOrError = llvm::MemoryBuffer::getFile(
-      GetInputFilePath("DW_AT_default_value-test.yaml"), /*IsText=*/true);
+      GetInputFilePath("DW_AT_default_value-test.yaml"),
+      llvm::sys::fs::OF_TextWithCRLF);
   ASSERT_TRUE(BufferOrError);
 
   DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
@@ -720,7 +721,8 @@ TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
   // Tests that parsing a ClassTemplateSpecializationDecl that already exists
   // is handled gracefully.
   auto BufferOrError = llvm::MemoryBuffer::getFile(
-      GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"), /*IsText=*/true);
+      GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"),
+      llvm::sys::fs::OF_TextWithCRLF);
   ASSERT_TRUE(BufferOrError);
   DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
   DWARFDIE cu_die = tester.GetCUDIE();
@@ -2217,7 +2219,8 @@ DWARF:
 TEST_F(DWARFASTParserClangTests, TestRustVariantMember) {
   // Tests that 128-bit discriminants are output to variant names correctly.
   auto yamldata = llvm::MemoryBuffer::getFile(
-      GetInputFilePath("DW_TAG_variant_rust-test.yaml"), /*IsText=*/true);
+      GetInputFilePath("DW_TAG_variant_rust-test.yaml"),
+      llvm::sys::fs::OF_TextWithCRLF);
   ASSERT_TRUE(yamldata);
 
   DWARFASTParserClangYAMLTester tester(yamldata->get()->getBuffer());

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -23,7 +24,7 @@ struct ConfusableEntry {
 } // namespace
 
 int main(int argc, char *argv[]) {
-  auto ErrorOrBuffer = MemoryBuffer::getFile(argv[1], true);
+  auto ErrorOrBuffer = MemoryBuffer::getFile(argv[1], sys::fs::OF_TextWithCRLF);
   if (!ErrorOrBuffer)
     return 1;
   std::unique_ptr<MemoryBuffer> Buffer = std::move(ErrorOrBuffer.get());
