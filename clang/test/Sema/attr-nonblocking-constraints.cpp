@@ -614,6 +614,55 @@ void nb28() [[clang::nonblocking]] {
 	bool x = __is_constructible(int, const int&);
 }
 
+// --- Callees which are unsafe only because they throw ---
+namespace ThrowOnly {
+
+void throws() {
+	throw 42; // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+}
+void calls_throws() { throws(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'ThrowOnly::throws'}}
+
+// A noexcept caller turns the exception into termination. The first call to
+// throws() defers inference; later ones see the completed analysis.
+void ok1() noexcept [[clang::nonblocking]] { throws(); }
+void ok2() noexcept [[clang::nonblocking]] { throws(); }
+void ok3() noexcept [[clang::nonblocking]] { calls_throws(); }
+void inferred_noexcept() noexcept { throws(); }
+void ok4() noexcept [[clang::nonblocking]] { inferred_noexcept(); }
+
+// Without noexcept, the exception can escape.
+void bad1() [[clang::nonblocking]] {
+	calls_throws(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'ThrowOnly::calls_throws'}}
+}
+
+// Not throw-only: caught, or unsafe for another reason too.
+void catches() {
+	try {} catch (...) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+}
+void throws_and_allocates() {
+	throw 42;
+	(void)new int; // expected-note {{function cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+}
+void bad2() noexcept [[clang::nonblocking]] {
+	catches(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'ThrowOnly::catches'}}
+	throws_and_allocates(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'ThrowOnly::throws_and_allocates'}}
+}
+
+// A throw-only function in a call cycle.
+void recurse_b(int);
+void recurse_a(int n) {
+	if (n)
+		recurse_b(n - 1);
+	throw 42; // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+}
+void recurse_b(int n) { recurse_a(n); }
+void recurse_ok() noexcept [[clang::nonblocking]] { recurse_a(1); }
+void recurse_bad() [[clang::nonblocking]] {
+	recurse_a(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'ThrowOnly::recurse_a'}}
+}
+
+} // namespace ThrowOnly
+
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
 

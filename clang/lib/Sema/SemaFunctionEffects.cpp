@@ -88,12 +88,17 @@ struct Violation {
   SourceLocation Loc;
   const Decl *Callee =
       nullptr; // Only valid for ViolationIDs Calls{Decl,Expr}WithoutEffect.
+  // True if the violation is, or is solely due to, an exception which
+  // propagates out of the function uncaught. A noexcept caller turns such an
+  // exception into termination, so it need not treat the callee as unsafe.
+  bool ThrowOnly = false;
 
   Violation(FunctionEffect Effect, ViolationID ID, ViolationSite VS,
             SourceLocation Loc, const Decl *Callee = nullptr,
-            std::optional<FunctionEffect> CalleeEffect = std::nullopt)
+            std::optional<FunctionEffect> CalleeEffect = std::nullopt,
+            bool ThrowOnly = false)
       : Effect(Effect), CalleeEffectPreventingInference(CalleeEffect), ID(ID),
-        Site(VS), Loc(Loc), Callee(Callee) {}
+        Site(VS), Loc(Loc), Callee(Callee), ThrowOnly(ThrowOnly) {}
 
   unsigned diagnosticSelectIndex() const {
     return unsigned(ID) - unsigned(ViolationID::BaseDiagnosticIndex);
@@ -121,8 +126,26 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
 }
 
 static bool isNoexcept(const FunctionDecl *FD) {
+  assert(FD != nullptr);
   const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
   return FPT && (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>());
+}
+
+static bool isNoexcept(const Decl *D) {
+  assert(D != nullptr);
+  if (const auto *FD = D->getAsFunction())
+    return isNoexcept(FD);
+  if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+    // The written signature is only the return type when the block has no
+    // explicit parameter list (e.g. `^int { ... }`), so it may not be a
+    // function type at all.
+    if (auto *TSI = BD->getSignatureAsWritten())
+      if (const auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
+        if (FPT->isNothrow())
+          return true;
+    return BD->hasAttr<NoThrowAttr>();
+  }
+  return false;
 }
 
 // This list is probably incomplete.
@@ -314,17 +337,31 @@ class EffectToViolationMap {
   std::unique_ptr<ImplVec> Impl;
 
 public:
-  // Insert a new Violation if we do not already have one for its effect.
+  // Insert a new Violation if we do not already have one for its effect. A
+  // throw-only Violation is replaced by any other kind, so that the stored
+  // Violation is throw-only only if all of the effect's Violations are.
   void maybeInsert(const Violation &Viol) {
     if (Impl == nullptr)
       Impl = std::make_unique<ImplVec>();
-    else if (lookup(Viol.Effect) != nullptr)
+    else if (Violation *Existing = lookupMutable(Viol.Effect)) {
+      if (Existing->ThrowOnly && !Viol.ThrowOnly)
+        *Existing = Viol;
       return;
+    }
 
     Impl->push_back(Viol);
   }
 
-  const Violation *lookup(FunctionEffect Key) {
+  const Violation *lookup(FunctionEffect Key) const {
+    return lookupMutable(Key);
+  }
+
+  size_t size() const { return Impl ? Impl->size() : 0; }
+
+private:
+  // const so that lookup() can share it: Impl's constness is shallow, so the
+  // Violations it owns are mutable here. Only maybeInsert() may modify them.
+  Violation *lookupMutable(FunctionEffect Key) const {
     if (Impl == nullptr)
       return nullptr;
 
@@ -332,8 +369,6 @@ public:
         *Impl, [&](const auto &Item) { return Item.Effect == Key; });
     return Iter != Impl->end() ? &*Iter : nullptr;
   }
-
-  size_t size() const { return Impl ? Impl->size() : 0; }
 };
 
 // ----------
@@ -415,7 +450,7 @@ public:
   // Analysis is complete when there are no unverified direct calls.
   bool isComplete() const { return UnverifiedDirectCalls.empty(); }
 
-  const Violation *violationForInferrableEffect(FunctionEffect effect) {
+  const Violation *violationForInferrableEffect(FunctionEffect effect) const {
     return InferrableEffectToFirstViolation.lookup(effect);
   }
 
@@ -480,8 +515,15 @@ public:
         std::move(Pending.InferrableEffectToFirstViolation);
   }
 
-  const Violation *firstViolationForEffect(FunctionEffect Effect) {
+  const Violation *firstViolationForEffect(FunctionEffect Effect) const {
     return InferrableEffectToFirstViolation.lookup(Effect);
+  }
+
+  // True if every reason this function lacks Effect is an exception escaping
+  // it, i.e. it would have the effect but for throwing.
+  bool isThrowOnly(FunctionEffect Effect) const {
+    const Violation *V = firstViolationForEffect(Effect);
+    return V != nullptr && V->ThrowOnly;
   }
 
   void dump(llvm::raw_ostream &OS) const {
@@ -630,16 +672,7 @@ private:
         if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
           continue;
 
-        bool IsNoexcept = false;
-        if (auto *FD = D->getAsFunction()) {
-          IsNoexcept = isNoexcept(FD);
-        } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
-          if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
-            IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
-          }
-        }
-        if (!IsNoexcept)
+        if (!isNoexcept(D))
           S.Diag(D->getBeginLoc(), diag::warn_perf_constraint_implies_noexcept)
               << GetCallableDeclKind(D, nullptr) << Effect.name();
         break;
@@ -721,11 +754,12 @@ private:
 
     bool IsInferencePossible = DirectCall;
 
+    CompleteFunctionAnalysis *CalleeAnalysis = nullptr;
     if (DirectCall)
-      if (CompleteFunctionAnalysis *CFA =
-              DeclAnalysis.completedAnalysisForDecl(Callee.CDecl)) {
+      if ((CalleeAnalysis =
+               DeclAnalysis.completedAnalysisForDecl(Callee.CDecl))) {
         // Combine declared effects with those which may have been inferred.
-        CalleeEffects.insert(CFA->VerifiedEffects);
+        CalleeEffects.insert(CalleeAnalysis->VerifiedEffects);
         IsInferencePossible = false; // We've already traversed it.
       }
 
@@ -752,11 +786,19 @@ private:
       // method/function ptr?), generate a Violation now.
       if (!IsInferencePossible ||
           !(Effect.flags() & FunctionEffect::FE_InferrableOnCallees)) {
-        if (Callee.FuncType == SpecialFuncType::None)
+        if (Callee.FuncType == SpecialFuncType::None) {
+          // An exception escaping the callee cannot escape a noexcept caller;
+          // it terminates the program instead.
+          const bool CalleeThrowOnly =
+              CalleeAnalysis != nullptr && CalleeAnalysis->isThrowOnly(Effect);
+          if (CalleeThrowOnly && S.getLangOpts().CPlusPlus &&
+              isNoexcept(Caller.CDecl))
+            return;
           PFA.checkAddViolation(Inferring,
                                 {Effect, ViolationID::CallsDeclWithoutEffect,
-                                 VSite, CallLoc, Callee.CDecl});
-        else
+                                 VSite, CallLoc, Callee.CDecl, std::nullopt,
+                                 CalleeThrowOnly});
+        } else
           PFA.checkAddViolation(
               Inferring,
               {Effect, ViolationID::AllocatesMemory, VSite, CallLoc});
@@ -1027,11 +1069,13 @@ private:
     void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag,
                                    ViolationID VID, SourceLocation Loc,
                                    const Decl *Callee = nullptr) {
+      const bool ThrowOnly = (Flag == FunctionEffect::FE_ExcludeThrow);
       // If there are any declared verifiable effects which forbid the construct
       // represented by the flag, store just one violation.
       for (FunctionEffect Effect : CurrentFunction.DeclaredVerifiableEffects) {
         if (Effect.flags() & Flag) {
-          addViolation(/*inferring=*/false, Effect, VID, Loc, Callee);
+          addViolation(/*inferring=*/false, Effect, VID, Loc, Callee,
+                       ThrowOnly);
           break;
         }
       }
@@ -1039,13 +1083,15 @@ private:
       // violation, if we don't already have a violation for that effect.
       for (FunctionEffect Effect : CurrentFunction.EffectsToInfer)
         if (Effect.flags() & Flag)
-          addViolation(/*inferring=*/true, Effect, VID, Loc, Callee);
+          addViolation(/*inferring=*/true, Effect, VID, Loc, Callee, ThrowOnly);
     }
 
     void addViolation(bool Inferring, FunctionEffect Effect, ViolationID VID,
-                      SourceLocation Loc, const Decl *Callee = nullptr) {
+                      SourceLocation Loc, const Decl *Callee = nullptr,
+                      bool ThrowOnly = false) {
       CurrentFunction.checkAddViolation(
-          Inferring, Violation(Effect, VID, VSite, Loc, Callee));
+          Inferring,
+          Violation(Effect, VID, VSite, Loc, Callee, std::nullopt, ThrowOnly));
     }
 
     // Here we have a call to a Decl, either explicitly via a CallExpr or some

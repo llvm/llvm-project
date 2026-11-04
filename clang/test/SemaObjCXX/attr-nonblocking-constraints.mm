@@ -37,3 +37,12 @@ void nb5() [[clang::nonblocking]] {
 	@synchronized(someLock) { // expected-warning {{function with 'nonblocking' attribute must not access ObjC methods or properties}}
 	}
 }
+
+// An uncaught @throw terminates a noexcept caller, like a C++ throw.
+void objc_throws() {
+	@throw @"foo"; // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+}
+void objc_ok() noexcept [[clang::nonblocking]] { objc_throws(); }
+void objc_bad() [[clang::nonblocking]] {
+	objc_throws(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'objc_throws'}}
+}
