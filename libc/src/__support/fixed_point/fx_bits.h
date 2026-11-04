@@ -417,33 +417,30 @@ mulifx(IntType n, FXType m) {
   static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
                 "IntType and FXType must have matching signedness");
 
-  CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
-
   constexpr int F = FXRep::FRACTION_LEN;
 
-  constexpr int INTERMEDIATE_BITS =
-      cpp::numeric_limits<IntType>::digits + FXRep::VALUE_LEN;
+  using LargerType = cpp::make_unsigned_t<cpp::conditional_t<
+      (sizeof(IntType) >= sizeof(CompType)), IntType, CompType>>;
+  using CalcType =
+      cpp::conditional_t<(2 * F <= cpp::numeric_limits<LargerType>::digits),
+                         LargerType, uint64_t>;
 
-  using WideType = cpp::conditional_t<
-      cpp::is_signed_v<IntType>,
-      cpp::conditional_t<INTERMEDIATE_BITS <=
-                             cpp::numeric_limits<int64_t>::digits,
-                         int64_t, Int128>,
-      cpp::conditional_t<INTERMEDIATE_BITS <=
-                             cpp::numeric_limits<uint64_t>::digits,
-                         uint64_t, UInt128>>;
+  CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
+  bool is_negative = (n < 0) != (m_comp < 0);
 
-  WideType unscaled_result =
-      static_cast<WideType>(n) * static_cast<WideType>(m_comp);
+  CalcType n_mag =
+      (n < 0) ? -static_cast<CalcType>(n) : static_cast<CalcType>(n);
+  CalcType m_mag = (m_comp < 0) ? -static_cast<CalcType>(m_comp)
+                                : static_cast<CalcType>(m_comp);
 
-  if constexpr (FXRep::SIGN_LEN > 0) {
-    constexpr WideType BIAS = (WideType(1) << F) - 1;
-    WideType result =
-        (unscaled_result + (unscaled_result < 0 ? BIAS : WideType(0))) >> F;
-    return static_cast<IntType>(result);
-  }
-  WideType result = unscaled_result >> F;
-  return static_cast<IntType>(result);
+  constexpr CalcType LOW_MASK = mask_trailing_ones<CalcType, F>();
+  CalcType n_hi = n_mag >> F;
+  CalcType n_lo = n_mag & LOW_MASK;
+  CalcType m_hi = m_mag >> F;
+  CalcType m_lo = m_mag & LOW_MASK;
+
+  CalcType result = m_hi * n_mag + n_hi * m_lo + ((n_lo * m_lo) >> F);
+  return static_cast<IntType>(is_negative ? -result : result);
 }
 
 } // namespace fixed_point
