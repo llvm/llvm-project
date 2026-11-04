@@ -820,7 +820,7 @@ private:
   /// By default a pointer passed to an opaque call would be marked as
   /// "escaped" (i.e. using it, releasing it and not releasing it are all
   /// accepted as potentially valid) but if the called function is from a
-  /// system header we can often see that it wont't release the memory.
+  /// system header we can often see that it won't release the memory.
   ///
   /// \param [out] EscapingSymbol A function might not free memory in general,
   ///   but could be known to free a particular symbol. In this case, false is
