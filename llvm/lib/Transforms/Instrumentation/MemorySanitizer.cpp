@@ -5763,18 +5763,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                          bool forceIntegerIntrinsic) {
     IRBuilder<> IRB(&I);
 
+    assert(verbatimArgIndices.size() <= I.arg_size());
+
     // verbatimArgIndices may have negative indices, and the indices may be in
     // any order (e.g., [5, -1, 2]). Convert it to a lookup table.
     SmallVector<bool, 4> verbatimArgLookup(I.arg_size(), false);
 
     for (int index : verbatimArgIndices) {
-      int zeroIndexed = index;
       if (index < 0)
-        zeroIndexed = I.arg_size() + index;
-
-      assert(zeroIndexed >= 0);
-      assert(static_cast<unsigned int>(zeroIndexed) < I.arg_size());
-      verbatimArgLookup[zeroIndexed] = true;
+        index += I.arg_size();
+      assert(index >= 0 && static_cast<unsigned int>(index) < I.arg_size());
+      verbatimArgLookup[index] = true;
     }
 
     SmallVector<Value *, 8> ShadowArgs;
@@ -5813,11 +5812,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // N.B. we could merge this with the earlier loop, but we keep it separate
     // for the IR to be byte-identical with the existing tests.
     for (unsigned int i = 0; i < I.arg_size(); i++) {
-      if (verbatimArgLookup[i]) {
-        Value *Shadow =
-            CreateShadowCast(IRB, getShadow(&I, i), CombinedShadow->getType());
-        CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
-      }
+      if (!verbatimArgLookup[i])
+        continue;
+
+      Value *Shadow =
+          CreateShadowCast(IRB, getShadow(&I, i), CombinedShadow->getType());
+      CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
     }
 
     setShadow(&I, CombinedShadow);
