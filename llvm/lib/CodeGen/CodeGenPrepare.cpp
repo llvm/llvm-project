@@ -8572,9 +8572,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   // Check that GEPI is a constant ptradd with canonical index type.
   Instruction *GEPIOp;
   ConstantInt *GEPIIdx;
-  if (!match(GEPI, m_PtrAdd(m_Instruction(GEPIOp), m_ConstantInt(GEPIIdx))))
-    return false;
-  if (GEPIIdx->getType() != DL.getIndexType(GEPI->getType()))
+  if (!match(GEPI, m_PtrAdd(DL, m_Instruction(GEPIOp), m_ConstantInt(GEPIIdx))))
     return false;
   // Check that GEPI is a cheap one.
   if (TTI->getIntImmCost(GEPIIdx->getValue(), GEPIIdx->getType(),
@@ -8612,7 +8610,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
     // If so, record it in the vector. If not, give up.
     ConstantInt *UGEPIIdx;
-    if (!match(Usr, m_PtrAdd(m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
+    if (!match(Usr, m_PtrAdd(DL, m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
       return false;
     if (GEPIIdx->getType() != UGEPIIdx->getType())
       return false;
