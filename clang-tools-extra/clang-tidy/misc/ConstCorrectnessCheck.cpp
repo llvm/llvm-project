@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -295,6 +296,10 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     // Offload const-analysis to utility function.
     if (isMutated(Variable, LocalScope, Function, Result.Context))
       return;
+    // Adding 'const' to a reference parameter changes the function type.
+    if (VC == VariableCategory::Reference && isa<ParmVarDecl>(Variable) &&
+        isUsedAsValue(Function, *Result.Context))
+      return;
 
     const auto Diag = diag(Variable->getBeginLoc(),
                            "variable %0 of type %1 can be declared 'const'")
@@ -333,6 +338,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     assert(VC == VariableCategory::Pointer);
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
+      return;
+    if (isa<ParmVarDecl>(Variable) && isUsedAsValue(Function, *Result.Context))
       return;
     const auto Diag =
         diag(Variable->getBeginLoc(),
@@ -379,6 +386,28 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     }
     return;
   }
+}
+
+bool ConstCorrectnessCheck::isUsedAsValue(const FunctionDecl *Func,
+                                          ASTContext &Context) {
+  if (!FunctionsUsedAsValue) {
+    FunctionsUsedAsValue.emplace();
+    const auto Matches =
+        match(translationUnitDecl(forEachDescendant(
+                  stmt(eachOf(declRefExpr(to(functionDecl())).bind("ref"),
+                              callExpr(callee(expr(ignoringParenImpCasts(
+                                  declRefExpr().bind("callee"))))))))),
+              Context);
+    llvm::SmallPtrSet<const DeclRefExpr *, 32> Callees;
+    for (const auto &Match : Matches)
+      if (const auto *Callee = Match.getNodeAs<DeclRefExpr>("callee"))
+        Callees.insert(Callee);
+    for (const auto &Match : Matches)
+      if (const auto *Ref = Match.getNodeAs<DeclRefExpr>("ref");
+          Ref && !Callees.contains(Ref))
+        FunctionsUsedAsValue->insert(Ref->getDecl()->getCanonicalDecl());
+  }
+  return FunctionsUsedAsValue->contains(Func->getCanonicalDecl());
 }
 
 void ConstCorrectnessCheck::registerScope(const Stmt *LocalScope,

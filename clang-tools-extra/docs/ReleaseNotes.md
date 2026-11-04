@@ -274,6 +274,10 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
 
+  - No longer suggests adding `const` to the pointee or reference of a
+    parameter when the function is used as a value, such as having its
+    address taken, where the changed signature would no longer match.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.

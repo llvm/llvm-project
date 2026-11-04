@@ -12,6 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 namespace clang::tidy::misc {
 
@@ -30,12 +31,18 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onStartOfTranslationUnit() override { FunctionsUsedAsValue.reset(); }
 
 private:
   void registerScope(const Stmt *LocalScope, ASTContext *Context);
 
   bool isMutated(const VarDecl *Variable, const Stmt *Scope,
                  const FunctionDecl *Func, ASTContext *Context);
+  // Whether the function is referenced other than by being called, e.g. its
+  // address is taken. Its parameter types can't be changed then.
+  bool isUsedAsValue(const FunctionDecl *Func, ASTContext &Context);
+  std::optional<llvm::DenseSet<const Decl *>> FunctionsUsedAsValue;
+
   using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
   llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
