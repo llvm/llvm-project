@@ -98,7 +98,9 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
   return ptrLike;
 }
 
-bool ptr::hasStaticStridedLayout(MemRefType type) {
+/// Returns true if `type` has a strided layout whose offset, sizes and strides
+/// are all static, so that a `from_ptr` producing it needs no metadata.
+static bool hasStaticStridedLayout(MemRefType type) {
   SmallVector<int64_t> strides;
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
