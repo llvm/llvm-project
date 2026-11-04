@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -22,13 +22,8 @@ using namespace llvm;
 STATISTIC(NumSkippedPasses, "Number of skipped passes");
 STATISTIC(NumLRTQueries, "Number of LastRunTracking queries");
 
-static cl::opt<bool>
-    DisableLastRunTracking("disable-last-run-tracking", cl::Hidden,
-                           cl::desc("Disable last run tracking"),
-                           cl::init(false));
-
 bool LastRunTrackingInfo::shouldSkipImpl(PassID ID, OptionPtr Ptr) const {
-  if (DisableLastRunTracking)
+  if (!Opts.enable_last_run_tracking)
     return false;
   ++NumLRTQueries;
   auto Iter = TrackedPasses.find(ID);
@@ -49,3 +44,13 @@ void LastRunTrackingInfo::updateImpl(PassID ID, bool Changed,
 }
 
 AnalysisKey LastRunTrackingAnalysis::Key;
+
+LastRunTrackingInfo LastRunTrackingAnalysis::run(Function &F,
+                                                 FunctionAnalysisManager &) {
+  return LastRunTrackingInfo(getAnalysisOptions(F));
+}
+
+LastRunTrackingInfo LastRunTrackingAnalysis::run(Module &M,
+                                                 ModuleAnalysisManager &) {
+  return LastRunTrackingInfo(getAnalysisOptions(M));
+}

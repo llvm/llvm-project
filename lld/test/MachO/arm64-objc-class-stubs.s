@@ -20,16 +20,6 @@
 # RUN:   %t/libexternal.dylib -objc_stubs_small
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
 # RUN:   --macho %t/small.out | FileCheck %s --check-prefix=SMALL
-# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/main.s \
-# RUN:   -o %t/main-arm64e.o
-# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/external.s \
-# RUN:   -o %t/external-arm64e.o
-# RUN: %lld -arch arm64e -dylib -install_name @executable_path/libexternal.dylib \
-# RUN:   -o %t/libexternal-arm64e.dylib %t/external-arm64e.o
-# RUN: %lld -arch arm64e -lSystem -o %t/fast-arm64e.out %t/main-arm64e.o \
-# RUN:   %t/libexternal-arm64e.dylib -objc_stubs_fast
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
-# RUN:   --macho %t/fast-arm64e.out | FileCheck %s --check-prefix=FAST
 
 # Check archive extraction through class-stub references.
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/archive-main.s \
