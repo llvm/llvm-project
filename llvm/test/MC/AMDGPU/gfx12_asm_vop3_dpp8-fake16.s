@@ -2979,8 +2979,8 @@ v_subrev_co_u32_e64_dpp v5, s6, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, s6, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
-// W32: [0x05,0x06,0x02,0xd7,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, s105, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // W32: [0x05,0x69,0x02,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
@@ -3007,8 +3007,8 @@ v_subrev_co_u32_e64_dpp v5, s[104:105], v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, s[104:105], v1, s2 dpp8:[7,6,5,4,3,2,1,0]
-// W64: [0x05,0x68,0x02,0xd7,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:45: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, vcc, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // W64: [0x05,0x6a,0x02,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]

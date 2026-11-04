@@ -1783,6 +1783,10 @@ bool isDPALU_DPP32BitOpc(unsigned Opc);
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                  const MCSubtargetInfo &ST);
 
+/// \returns true if an instruction is a VOP3 DPP REV-type where DPP applies to
+/// src1, so it must be a VGPR even on targets with FeatureDPPSrc1SGPR.
+bool isVOP3DPPSrc1RevOpc(unsigned Opc);
+
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 

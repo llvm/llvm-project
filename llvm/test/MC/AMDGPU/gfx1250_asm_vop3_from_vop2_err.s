@@ -12,3 +12,18 @@ v_fmamk_f16_e64_dpp v4, v2, 3, v6 row_share:1
 
 v_fmamk_f32_e64_dpp v4, v2, 3, v6 row_share:1
 // GFX1250-ERR: :[[@LINE-1]]:1: error: e64_dpp variant of this instruction is not supported
+
+v_subrev_co_ci_u32_e64_dpp v5, vcc_lo, v1, s2, vcc_lo quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX1250-ERR: :[[@LINE-1]]:44: error: invalid operand for instruction
+
+v_subrev_co_u32_e64_dpp v5, s6, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX1250-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_subrev_nc_u32_e64_dpp v5, v1, 10 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX1250-ERR: :[[@LINE-1]]:1: error: src1 immediate operand invalid for instruction
+
+v_subrev_nc_u32_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_subrev_nc_u32_e64_dpp v5, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX1250-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction

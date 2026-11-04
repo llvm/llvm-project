@@ -3675,6 +3675,29 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
+bool isVOP3DPPSrc1RevOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_SUBREV_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp8_gfx12:
+  case AMDGPU::V_SUBBREV_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp8_gfx12:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F32_gfx1250:

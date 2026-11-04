@@ -5235,7 +5235,8 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                                     int64_t ImmVal) const {
   const unsigned Opc = InstDesc.getOpcode();
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
-  if (Src1Idx != -1 && isDPP(Opc) && !ST.hasDPPSrc1SGPR() &&
+  if (Src1Idx != -1 && isDPP(Opc) &&
+      (!ST.hasDPPSrc1SGPR() || AMDGPU::isVOP3DPPSrc1RevOpc(Opc)) &&
       OpNo == static_cast<unsigned>(Src1Idx))
     return false;
 
@@ -5892,7 +5893,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (isDPP(MI) && !ST.hasDPPSrc1SGPR() && Src1Idx != -1) {
+  // REV-type opcodes apply DPP to src1, so src1 must be a VGPR even on
+  // subtargets that otherwise permit an SGPR there.
+  if (isDPP(MI) && Src1Idx != -1 &&
+      (!ST.hasDPPSrc1SGPR() || AMDGPU::isVOP3DPPSrc1RevOpc(Opcode))) {
     const MachineOperand &Src1MO = MI.getOperand(Src1Idx);
     if (Src1MO.isReg() && RI.isSGPRReg(MRI, Src1MO.getReg())) {
       ErrInfo = "DPP src1 cannot be SGPR on this subtarget";
@@ -6894,7 +6898,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
     if (Opc == AMDGPU::S_BITCMP0_B64 || Opc == AMDGPU::S_BITCMP1_B64)
       return false;
   }
-  if (!ST.hasDPPSrc1SGPR() && isDPP(MI) && RI.isSGPRReg(MRI, MO.getReg()) &&
+  if ((!ST.hasDPPSrc1SGPR() || AMDGPU::isVOP3DPPSrc1RevOpc(Opc)) && isDPP(MI) &&
+      RI.isSGPRReg(MRI, MO.getReg()) &&
       (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1))
     return false;
 
