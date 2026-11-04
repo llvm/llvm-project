@@ -5,7 +5,7 @@
 ! More than one DIFile can name this source, so take the one the module is
 ! described in from the module itself rather than trying to tell them apart by
 ! how each spells the path.
-! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GLOBALS:.*]])
+! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GLOBALS:[0-9]+]]
 ! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE:[0-9]+]]{{.*}})
 ! CHECK-DAG: ![[FILE]] = !DIFile(filename: "debug-module-2.f90"{{.*}})
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)

@@ -1263,9 +1263,8 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
                                                FuncInfo.getScratchRSrcReg());
 
-    auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
-                             ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                             : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+    Register CalleeRSrcReg =
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CalleeCC);
 
     MIRBuilder.buildCopy(CalleeRSrcReg, ScratchRSrcReg);
     CallInst.addReg(CalleeRSrcReg, RegState::Implicit);
@@ -1464,8 +1463,10 @@ bool AMDGPUCallLowering::lowerTailCall(
 
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
-  if (!ST.hasFlatScratchEnabled())
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  if (!ST.hasFlatScratchEnabled()) {
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(Info.CallConv));
+  }
 
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
@@ -1694,8 +1695,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
   if (!ST.hasFlatScratchEnabled()) {
-    const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(Info.CallConv));
   }
 
   // Do the actual argument marshalling.
