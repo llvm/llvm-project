@@ -973,11 +973,11 @@ Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
   return Address(elementValue, vectorElementTy, alignment);
 }
 
-static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
+cir::FuncOp CIRGenModule::getRawFunctionPointer(GlobalDecl gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   if (fd->hasAttr<WeakRefAttr>())
-    return cast<cir::FuncOp>(cgm.getWeakRefReference(fd));
-  return cgm.getAddrOfFunction(gd);
+    return cast<cir::FuncOp>(getWeakRefReference(fd));
+  return getAddrOfFunction(gd);
 }
 
 static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
@@ -1039,7 +1039,7 @@ LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field) {
 static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                      GlobalDecl gd) {
   const FunctionDecl *fd = cast<FunctionDecl>(gd.getDecl());
-  cir::FuncOp funcOp = emitFunctionDeclPointer(cgf.cgm, gd);
+  cir::FuncOp funcOp = cgf.cgm.getFunctionPointer(gd);
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   CharUnits align = cgf.getContext().getDeclAlign(fd);
 
@@ -2440,7 +2440,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       if (!clone) {
         // Create a forward declaration - the body will be generated in
         // generateCode when the function definition is processed
-        cir::FuncOp calleeFunc = emitFunctionDeclPointer(cgm, gd);
+        cir::FuncOp calleeFunc = cgm.getRawFunctionPointer(gd);
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(cgm.getModule().getBody());
 
@@ -2465,7 +2465,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       return CIRGenCallee::forBuiltin(builtinID, fd);
   }
 
-  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+  cir::FuncOp callee = cgm.getRawFunctionPointer(gd);
 
   if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
       !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {

@@ -655,6 +655,16 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  cir::FuncOp getRawFunctionPointer(GlobalDecl GD);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  cir::FuncOp getFunctionPointer(GlobalDecl GD);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
     return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&

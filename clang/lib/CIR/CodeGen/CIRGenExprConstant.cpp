@@ -947,10 +947,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     d = cast<ValueDecl>(d->getMostRecentDecl());
 
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cir::FuncOp fop =
-          fd->hasAttr<WeakRefAttr>()
-              ? mlir::cast<cir::FuncOp>(cgm.getWeakRefReference(fd))
-              : cgm.getAddrOfFunction(fd);
+      cir::FuncOp fop = cgm.getRawFunctionPointer(GlobalDecl{fd});
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
       // Use the destination pointer type (e.g. struct field type), not
