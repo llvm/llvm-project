@@ -455,9 +455,9 @@ public:
 
   bool enableOrderedReductions() const override { return true; }
 
-  /// In-order cores cannot issue past the reduction's dependency chain, so
-  /// applying the start value after the loop only adds an instruction.
   bool preferReductionStartAfterLoop() const override {
+    // In-order cores cannot issue past the reduction's dependency chain, so
+    // applying the start value after the loop only adds an instruction.
     return ST->getSchedModel().isOutOfOrder();
   }
 

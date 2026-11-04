@@ -6512,7 +6512,7 @@ void VPlanTransforms::applyReductionStartAfterLoop(VPlan &Plan) {
 
     // The start vector may be shared with other reductions. Seed this
     // one with a new start vector holding the identity.
-    auto *NewStartVec = cast<VPInstruction>(StartVec->clone());
+    auto *NewStartVec = StartVec->clone();
     NewStartVec->setOperand(0, StartVec->getOperand(1));
     NewStartVec->insertBefore(StartVec);
     PhiR.setStartValue(NewStartVec);
