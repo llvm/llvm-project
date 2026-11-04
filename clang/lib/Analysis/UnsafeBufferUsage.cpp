@@ -1166,28 +1166,22 @@ getPredefinedUnsafeLibcFuncFamily(const FunctionDecl &Node) {
       for (StringRef N : Names)
         M[N] = Family;
     };
-    // numeric conversion:
     Add(F::NumericConversion,
         {"atof", "atoi", "atol", "atoll", "strtol", "strtoll", "strtoul",
          "strtoull", "strtof", "strtod", "strtold", "strtoimax", "strtoumax"});
     // "strfromf",  "strfromd", "strfroml", // C23?
-    // string manipulation:
     Add(F::StringManipulation,
         {"strcpy", "strncpy", "strlcpy", "strcat", "strncat", "strlcat",
          "strxfrm", "strdup", "strndup"});
-    // string examination:
     Add(F::StringExamination,
         {"strlen", "strnlen", "strcmp", "strncmp", "stricmp", "strcasecmp",
          "strcoll", "strchr", "strrchr", "strspn", "strcspn", "strpbrk",
          "strstr", "strtok"});
-    // "mem-" functions
     Add(F::Memory, {"memchr", "wmemchr", "memcmp", "wmemcmp", "memcpy",
                     "memccpy", "mempcpy", "wmemcpy", "memmove", "wmemmove",
                     "wmemset", "bcopy", "bzero"});
-    // IO:
     Add(F::IO, {"fread", "fwrite", "fgets", "fgetws", "gets", "fputs", "fputws",
                 "puts"});
-    // others
     Add(F::Other, {"strerror_s", "strerror_r", "bsearch", "qsort"});
     return M;
   }();
