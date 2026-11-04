@@ -23,8 +23,7 @@ namespace math {
 
 using LIBC_NAMESPACE::fputil::Float80;
 
-LIBC_INLINE constexpr int totalordermagf80(const Float80 *x,
-                                            const Float80 *y) {
+LIBC_INLINE constexpr int totalordermagf80(const Float80 *x, const Float80 *y) {
   return static_cast<int>(fputil::totalordermag(*x, *y));
 }
 
