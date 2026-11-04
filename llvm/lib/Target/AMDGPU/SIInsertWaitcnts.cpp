@@ -653,7 +653,7 @@ public:
     // On targets without a separate store counter, stores share LOAD_CNT
     // and are drained by the entry/call waits; claiming them here would
     // hide invalidation-only waits behind phantom store events.
-    if (!Context->ST.hasVscnt() && !Context->ST.hasExtendedWaitCounts())
+    if (!Context->ST.hasVscnt())
       return;
     setScoreUB(AMDGPU::STORE_CNT,
                getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
