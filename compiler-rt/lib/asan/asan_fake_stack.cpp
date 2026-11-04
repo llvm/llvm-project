@@ -375,6 +375,19 @@ void __asan_alloca_poison(uptr addr, uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __asan_allocas_unpoison(uptr top, uptr bottom) {
+#if SANITIZER_HPPA
+  // The stack grows up: the allocas lie between bottom and this frame, and
+  // none of that memory is live any more.
+  if (!top)
+    return;
+  uptr local;
+  uptr begin = RoundDownTo(bottom, ASAN_SHADOW_GRANULARITY);
+  uptr end = RoundDownTo((uptr)&local, ASAN_SHADOW_GRANULARITY);
+  if (begin < end)
+    REAL(memset)(reinterpret_cast<void*>(MemToShadow(begin)), 0,
+                 (end - begin) / ASAN_SHADOW_GRANULARITY);
+  return;
+#endif
   if ((!top) || (top > bottom))
     return;
   REAL(memset)(reinterpret_cast<void*>(MemToShadow(top)), 0,
