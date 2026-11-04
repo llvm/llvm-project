@@ -27,14 +27,6 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
-/// \returns true if \p Ty is a pointer, or a vector of pointers, in a
-/// non-integral address space, which has no stable integer representation.
-static bool isNonIntegralPtr(Type *Ty, const DataLayout &DL) {
-  Type *ScalarTy = Ty->getScalarType();
-  return ScalarTy->isPointerTy() &&
-         DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
-}
-
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
@@ -95,14 +87,12 @@ Type *Reinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
   return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
 }
 
-std::optional<SmallVector<Reinterpret::CastStep, 3>>
+SmallVector<Reinterpret::CastStep, 3>
 Reinterpret::getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
+  assert(canReinterpret(SrcTy, DestTy, DL) &&
+         "Cannot reinterpret a non-integral pointer!");
   assert(Utils::getNumBits(SrcTy, DL) == Utils::getNumBits(DestTy, DL) &&
          "Expected types of the same size!");
-  // A non-integral pointer has no fixed ptrtoint/inttoptr representation.
-  if (VecUtils::isNonIntegralPtr(SrcTy, DL) ||
-      VecUtils::isNonIntegralPtr(DestTy, DL))
-    return std::nullopt;
   SmallVector<CastStep, 3> Chain;
   if (SrcTy == DestTy)
     return Chain;
@@ -117,41 +107,33 @@ Reinterpret::getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
     Chain.emplace_back(Instruction::Opcode::BitCast, BitCastTy);
   if (DestIsPtr)
     Chain.emplace_back(Instruction::Opcode::IntToPtr, DestTy);
+  // ptrtoint, bitcast, and inttoptr, with any step omitted. A vector of
+  // pointers and a scalar pointer of the same width need all three.
+  assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
   return Chain;
-}
-
-Value *Reinterpret::reinterpretValue(Value *V, Type *DestTy,
-                                     BasicBlock::iterator WhereIt, Context &Ctx,
-                                     const DataLayout &DL) {
-  auto Chain = getCastChain(V->getType(), DestTy, DL);
-  if (!Chain)
-    return nullptr;
-  for (auto [Opc, Ty] : *Chain)
-    V = CastInst::create(Ty, Opc, V, WhereIt, Ctx, "VCast");
-  return V;
 }
 
 Constant *Reinterpret::reinterpretConstant(Constant *C, Type *DestTy,
                                            const DataLayout &DL) {
-  auto Chain = getCastChain(C->getType(), DestTy, DL);
-  if (!Chain)
+  if (!canReinterpret(C->getType(), DestTy, DL))
     return nullptr;
-  for (auto [Opc, Ty] : *Chain) {
+  Constant *NewC = C;
+  for (auto [Opc, Ty] : getCastChain(C->getType(), DestTy, DL)) {
     switch (Opc) {
     case Instruction::Opcode::PtrToInt:
-      C = ConstantExpr::getPtrToInt(C, Ty);
+      NewC = ConstantExpr::getPtrToInt(NewC, Ty);
       break;
     case Instruction::Opcode::BitCast:
-      C = ConstantExpr::getBitCast(C, Ty);
+      NewC = ConstantExpr::getBitCast(NewC, Ty);
       break;
     case Instruction::Opcode::IntToPtr:
-      C = ConstantExpr::getIntToPtr(C, Ty);
+      NewC = ConstantExpr::getIntToPtr(NewC, Ty);
       break;
     default:
       llvm_unreachable("Unexpected cast in reinterpret chain!");
     }
   }
-  return C;
+  return NewC;
 }
 
 Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
