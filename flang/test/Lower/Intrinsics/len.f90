@@ -65,6 +65,7 @@ subroutine len_test_array_local_alloc(i)
 ! CHECK:  %[[I:.*]]:2 = hlfir.declare %[[VAL_0]]
 ! CHECK:  %[[C10:.*]] = arith.constant 10 : i32
   allocate(character(10):: c(100))
+! CHECK:  fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[C_LOADED:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[ELESIZE:.*]] = fir.box_elesize %[[C_LOADED]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
 ! CHECK:  %[[RESULT:.*]] = fir.convert %[[ELESIZE]] : (index) -> i32

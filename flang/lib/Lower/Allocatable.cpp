@@ -24,6 +24,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -476,6 +477,25 @@ private:
       } else {
         extents.emplace_back(ub);
       }
+    }
+    // F2023 9.7.1.3: ALLOCATE of an allocated allocatable is an error.
+    // `%` is a fir.assert format directive, so escape it in the symbol name.
+    if (converter.getLoweringOptions().getCheckAlreadyAllocated()) {
+      std::string objectName;
+      std::string rawName = alloc.getSymbol().name().ToString();
+      objectName.reserve(rawName.size());
+      for (char c : rawName) {
+        if (c == '%')
+          objectName.append("%%");
+        else if (c != '\0')
+          objectName.push_back(c);
+      }
+      fir::AssertOp::create(
+          builder, loc,
+          fir::factory::genIsNotAllocatedOrAssociatedTest(builder, loc, box),
+          fir::RuntimeCheckKind::status,
+          "The object '" + objectName + "' is already allocated",
+          mlir::ValueRange{}, mlir::ValueRange{});
     }
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
                                        lenParams, mangleAlloc(alloc),
