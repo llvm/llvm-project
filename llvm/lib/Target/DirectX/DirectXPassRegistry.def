@@ -26,6 +26,7 @@ MODULE_ANALYSIS("dxil-signature-analysis", dxil::SignatureAnalysis())
 #endif
 MODULE_PASS("dxil-cbuffer-access", DXILCBufferAccessPass())
 MODULE_PASS("dxil-container-globals", DXILContainerGlobalsPass())
+MODULE_PASS("dxil-container-pdb", DXILContainerPDBPass())
 MODULE_PASS("dxil-finalize-linkage", DXILFinalizeLinkagePass())
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarizationPass())
 MODULE_PASS("dxil-flatten-arrays", DXILFlattenArraysPass())
