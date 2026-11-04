@@ -168,7 +168,9 @@ def CC_AMDGPU : CallingConv<[
 
 def CC_AMDGPU_CS_CHAIN : CallingConv<[
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
-    !foreach(i, !range(105), !cast<Register>("SGPR"#i))
+    !listconcat(!foreach(i, !range(32), !cast<Register>("SGPR"#i)),      // SGPR0-31
+                // reserved: SGPR32 = SP, SGPR33 = FP, SGPR34 = BP
+                !foreach(i, !range(35, 105), !cast<Register>("SGPR"#i))) // SGPR35-104
   >>>,
 
   CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
