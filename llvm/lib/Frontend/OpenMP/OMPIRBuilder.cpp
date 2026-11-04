@@ -11567,7 +11567,8 @@ Error OpenMPIRBuilder::emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
 }
 
 bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
-    const LocationDescription &Loc, llvm::AtomicOrdering AO, AtomicKind AK) {
+    const LocationDescription &Loc, llvm::AtomicOrdering AO, AtomicKind AK,
+    AtomicScope Scope) {
   assert(!(AO == AtomicOrdering::NotAtomic ||
            AO == llvm::AtomicOrdering::Unordered) &&
          "Unexpected Atomic Ordering.");
@@ -11599,7 +11600,7 @@ bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
   // that belongs on entry, and a release fence there would order nothing. So
   // the flush is seq_cst whichever flush the construct implies.
   if (Flush)
-    emitFlush(Loc);
+    emitFlush(Loc, AtomicOrdering::SequentiallyConsistent, Scope);
   return Flush;
 }
 
@@ -12004,18 +12005,19 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, bool IsWeak) {
+    bool IsFailOnly, bool IsWeak, AtomicScope Scope) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak,
+                             Scope);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak, AtomicScope Scope) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -12357,7 +12359,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     }
   }
 
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Compare);
+  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Compare, Scope);
 
   return Builder.saveIP();
 }

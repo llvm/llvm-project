@@ -2952,10 +2952,11 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
-                                SourceLocation Loc, llvm::AtomicOrdering AO) {
+                                SourceLocation Loc, llvm::AtomicOrdering AO,
+                                SyncScope Scope) {
   // The OpenMPIRBuilder emits a fence on a GPU, so GPUs always use it.
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder || isGPU()) {
-    OMPBuilder.createFlush(CGF.Builder, AO);
+    OMPBuilder.createFlush(CGF.Builder, AO, getAtomicScope(Scope));
     return;
   }
   if (!CGF.HaveInsertPoint())
@@ -2966,7 +2967,8 @@ void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
   // A flush with a list is a strong flush, which is treated as seq_cst.
   if (AO == llvm::AtomicOrdering::NotAtomic)
     AO = llvm::AtomicOrdering::SequentiallyConsistent;
-  if (AO == llvm::AtomicOrdering::SequentiallyConsistent) {
+  if (AO == llvm::AtomicOrdering::SequentiallyConsistent &&
+      Scope == SyncScope::DeviceScope) {
     // Build call void __kmpc_flush(ident_t *loc)
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_flush),
@@ -2974,12 +2976,12 @@ void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
     return;
   }
   // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
-  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is the
-  // __MEMORY_SCOPE_* value for device scope.
+  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is a
+  // __MEMORY_SCOPE_* value.
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc),
       CGF.Builder.getInt32(static_cast<unsigned>(llvm::toCABI(AO))),
-      CGF.Builder.getInt32(static_cast<unsigned>(llvm::AtomicScope::Device))};
+      CGF.Builder.getInt32(static_cast<unsigned>(getAtomicScope(Scope)))};
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                           CGM.getModule(), OMPRTL___kmpc_flush_explicit),
                       Args);
@@ -13605,8 +13607,8 @@ Address CGOpenMPSIMDRuntime::getAddrOfArtificialThreadPrivate(
 
 void CGOpenMPSIMDRuntime::emitFlush(CodeGenFunction &CGF,
                                     ArrayRef<const Expr *> Vars,
-                                    SourceLocation Loc,
-                                    llvm::AtomicOrdering AO) {
+                                    SourceLocation Loc, llvm::AtomicOrdering AO,
+                                    SyncScope Scope) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

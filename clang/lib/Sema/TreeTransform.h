@@ -2603,6 +2603,19 @@ public:
                                                         LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'memscope' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPMemscopeClause(OpenMPMemscopeClauseKind Kind,
+                                      SourceLocation KwLoc,
+                                      SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPMemscopeClause(Kind, KwLoc, StartLoc,
+                                                        LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'message' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -11632,6 +11645,14 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPSeverityClause(OMPSeverityClause *C) {
   return getDerived().RebuildOMPSeverityClause(
       C->getSeverityKind(), C->getSeverityKindKwLoc(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPMemscopeClause(OMPMemscopeClause *C) {
+  return getDerived().RebuildOMPMemscopeClause(
+      C->getMemscopeKind(), C->getMemscopeKindKwLoc(), C->getBeginLoc(),
       C->getLParenLoc(), C->getEndLoc());
 }
 
