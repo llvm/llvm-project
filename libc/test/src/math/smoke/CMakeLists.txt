@@ -2329,6 +2329,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  isnanbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    isnanbf16_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnanbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   llogb_test
   SUITE
     libc-math-smoke-tests

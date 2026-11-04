@@ -165,6 +165,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::rintf16(0.0f16));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf16(0.0f16));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanbf16(bfloat16(0.016)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
   EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf16("")).is_nan());
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::roundf16(0.0f16));
