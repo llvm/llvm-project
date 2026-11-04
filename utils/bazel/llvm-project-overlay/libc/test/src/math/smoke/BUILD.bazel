@@ -1347,6 +1347,14 @@ math_test(
 )
 
 math_test(
+    name = "frexpf80",
+    hdrs = ["FrexpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "frexpf16",
     hdrs = ["FrexpTest.h"],
 )

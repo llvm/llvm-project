@@ -315,6 +315,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
     libc.src.math.canonicalizef80
+    libc.src.math.frexpf80
+    libc.src.math.ilogbf80
+    libc.src.math.llogbf80
+    libc.src.math.logbf80
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.cbrtbf16

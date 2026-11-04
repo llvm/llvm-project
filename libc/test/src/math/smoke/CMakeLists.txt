@@ -1800,6 +1800,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf80_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf80
+)
+
+add_fp_unittest(
   frexpf128_test
   SUITE
     libc-math-smoke-tests

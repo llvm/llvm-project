@@ -461,6 +461,13 @@ static_assert(0 == [] {
   Float80 x(0.0);
   return LIBC_NAMESPACE::shared::canonicalizef80(&cx, &x);
 }());
+static_assert(Float80(0.0) == [] {
+  int exp = 0;
+  return LIBC_NAMESPACE::shared::frexpf80(Float80(0.0), &exp);
+}());
+static_assert(0 == LIBC_NAMESPACE::shared::ilogbf80(Float80(1.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbf80(Float80(1.0)));
+static_assert(Float80(0.0) == LIBC_NAMESPACE::shared::logbf80(Float80(1.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==

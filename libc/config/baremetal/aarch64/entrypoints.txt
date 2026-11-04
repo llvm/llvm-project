@@ -801,6 +801,10 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.canonicalizef80
+    libc.src.math.frexpf80
+    libc.src.math.ilogbf80
+    libc.src.math.llogbf80
+    libc.src.math.logbf80
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128

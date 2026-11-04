@@ -80,6 +80,10 @@ else()
       libc.src.__support.math.canonicalizef
       libc.src.__support.math.canonicalizef128
       libc.src.__support.math.canonicalizef80
+      libc.src.__support.math.frexpf80
+      libc.src.__support.math.ilogbf80
+      libc.src.__support.math.llogbf80
+      libc.src.__support.math.logbf80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel
       libc.src.__support.math.cbrt
@@ -567,6 +571,10 @@ else()
       libc.src.__support.math.canonicalizef
       libc.src.__support.math.canonicalizef128
       libc.src.__support.math.canonicalizef80
+      libc.src.__support.math.frexpf80
+      libc.src.__support.math.ilogbf80
+      libc.src.__support.math.llogbf80
+      libc.src.__support.math.logbf80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel
       libc.src.__support.math.ceil

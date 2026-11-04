@@ -721,6 +721,13 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
   Float80 canonicalizef80_x = Float80(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef80(&canonicalizef80_cx,
                                                        &canonicalizef80_x));
+  int frexpf80_exp = 0;
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::frexpf80(Float80(0.0), &frexpf80_exp));
+  EXPECT_EQ(frexpf80_exp, 0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf80(Float80(1.0)));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf80(Float80(1.0)));
+  EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::logbf80(Float80(1.0)));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
