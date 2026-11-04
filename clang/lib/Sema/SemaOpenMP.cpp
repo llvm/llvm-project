@@ -9661,6 +9661,26 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
   if (NeedToReorganize) {
     Diff = Lower;
 
+    // (Lower - Step [+ 1]) may be negative. Compute it in at least Upper's
+    // width: in a narrower unsigned type it would wrap around and then be
+    // zero-extended in the subtraction from Upper, giving a wrong number of
+    // iterations, e.g. for
+    //   for (unsigned i = 0; i < (size_t)N; i += 2)
+    QualType LowerTy = Lower->getType();
+    QualType UpperTy = Upper->getType();
+    if (!LowerTy->isDependentType() && !UpperTy->isDependentType() &&
+        LowerTy->isIntegerType() && UpperTy->isIntegerType() &&
+        SemaRef.Context.getTypeSize(LowerTy) <
+            SemaRef.Context.getTypeSize(UpperTy)) {
+      QualType WideTy = getIntTypeForBitwidthOrBitInt(
+          SemaRef.Context, SemaRef.Context.getTypeSize(UpperTy),
+          UpperTy->hasSignedIntegerRepresentation());
+      Diff = SemaRef.PerformImplicitConversion(Lower, WideTy,
+                                               AssignmentAction::Converting);
+      if (!Diff.isUsable())
+        return nullptr;
+    }
+
     if (RoundToStep) {
       // Lower - Step
       Diff =
