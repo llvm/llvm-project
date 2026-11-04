@@ -3137,12 +3137,13 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
 
 bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
   // Do not sink MI if it might be used to optimize a redundant compare.
-  // We heuristically only look at the instruction immediately following MI to
-  // avoid potentially searching the entire basic block.
+  // We heuristically only look at the next non-debug instruction to avoid
+  // potentially searching the entire basic block.
   if (isPredicated(MI))
     return true;
-  MachineBasicBlock::const_iterator Next = &MI;
-  ++Next;
+  MachineBasicBlock::const_iterator Next =
+      next_nodbg(MachineBasicBlock::const_iterator(MI), MI.getParent()->end(),
+                 /*SkipPseudoOp=*/false);
   Register SrcReg, SrcReg2;
   int64_t CmpMask, CmpValue;
   bool IsThumb1;
@@ -5692,9 +5693,8 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
                           MachineBasicBlock::reverse_iterator E) {
   // At the end of the function LR dead.
   bool Live = false;
-  for (; I != E; ++I) {
-    const MachineInstr &MI = *I;
-
+  for (const MachineInstr &MI :
+       instructionsWithoutDebug(I, E, /*SkipPseudoOp=*/false)) {
     // Check defs of LR.
     if (MI.modifiesRegister(ARM::LR, &TRI))
       Live = false;

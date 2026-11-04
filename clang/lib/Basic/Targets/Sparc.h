@@ -77,10 +77,7 @@ public:
     }
     return false;
   }
-  std::string_view getClobbers() const override {
-    // FIXME: Implement!
-    return "";
-  }
+  std::string_view getClobbers() const override { return "~{y}"; }
 
   // No Sparc V7 for now, the backend doesn't support it anyway.
   enum CPUKind {
@@ -127,7 +124,14 @@ public:
     CG_V9,
   };
 
+  enum CPUFamily {
+    CF_NONE,
+    CF_LEON,
+  };
+
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
+
+  CPUFamily getCPUFamily(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef Name) const;
 

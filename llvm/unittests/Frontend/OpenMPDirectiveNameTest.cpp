@@ -82,7 +82,7 @@ TEST(OpenMPDirectiveNames, DirectiveKind52) {
     auto [K, R] = getOpenMPDirectiveKindAndVersions(Name);
     ASSERT_EQ(K, Kind);
     // Expect the name to be valid in 5.2, but not in 6.0.
-    EXPECT_TRUE(52 <= R.Max && R.Max < 60);
+    EXPECT_TRUE(R.Max >= 52 && R.Max < 60);
   }
 }
 
@@ -91,6 +91,6 @@ TEST(OpenMPDirectiveNames, DirectiveKind60) {
     auto [K, R] = getOpenMPDirectiveKindAndVersions(Name);
     ASSERT_EQ(K, Kind);
     // Expect the name to be valid in 6.0 and later.
-    EXPECT_TRUE(60 <= R.Min);
+    EXPECT_TRUE(R.Min >= 60);
   }
 }

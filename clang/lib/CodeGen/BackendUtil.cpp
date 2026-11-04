@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -706,6 +707,12 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Concurrency)) {
+      MPM.addPass(ModuleConcurrencySanitizerPass());
+      MPM.addPass(
+          createModuleToFunctionPassAdaptor(ConcurrencySanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::Type))
       MPM.addPass(TypeSanitizerPass());
 
@@ -1282,7 +1289,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, !CodeGenOpts.VerifyModule,
+        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+        !CodeGenOpts.VerifyModule,
         /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
