@@ -1125,14 +1125,25 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (auto OBU = I->getOperandBundleAt(Elem.Index);
-          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+      auto OBU = I->getOperandBundleAt(Elem.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::Align: {
         auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
           Known.One |= (*Alignment - 1) & *Offset;
         }
+      } break;
+
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+        if (Val == V && isValidAssumeForContext(I, Q))
+          Known = Known.unionWith(Range.toKnownBits());
+      } break;
+
+      default:
+        break;
       }
       continue;
     }
@@ -1705,6 +1716,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Q, Depth,
                                       KF);
+    // X << X is even: X is either zero or shifts by at least one bit. Both
+    // uses must observe the same value, so X must not be undef.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        isGuaranteedNotToBeUndef(I->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                 Depth + 1))
+      Known.Zero.setBit(0);
+
     // Trailing zeros of a right-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
@@ -5490,11 +5508,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
+        FPClassTest InterestedSquared = InterestedClasses;
+        FPClassTest InterestedAddend = InterestedClasses;
+        // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+        // squaring.
+        if (InterestedClasses & fcQNan) {
+          InterestedSquared |= fcSNan | fcInf;
+          InterestedAddend |= fcSNan | fcNegInf;
+        }
+
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
-                            InterestedClasses, KnownAddend, Q, Depth + 1);
+                            InterestedAddend, KnownAddend, Q, Depth + 1);
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Q, Depth + 1);
+                            InterestedSquared, KnownSrc, Q, Depth + 1);
 
         const Function *F = II->getFunction();
         const fltSemantics &FltSem =
@@ -6144,8 +6171,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     Value *LHS = Op->getOperand(0);
     Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
-    if (LHS == RHS &&
-        isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT, Depth + 1)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
@@ -6217,7 +6244,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Q, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 
@@ -10899,6 +10926,16 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
+      if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+        auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+        if (getBundleAttrFromOBU(OBU) == BundleAttr::Range) {
+          auto [Val, Range] = getAssumeRangeInfo(OBU);
+          if (Val == V && isValidAssumeForContext(I, SQ))
+            CR = CR.intersectWith(Range);
+        }
+        continue;
+      }
+
       if (!isValidAssumeForContext(I, SQ))
         continue;
       Value *Arg = I->getArgOperand(0);
@@ -11054,7 +11091,8 @@ void llvm::findValuesAffectedByCondition(
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(A, m_FNegOrFSubNegZero(m_Value(A))))
         AddAffected(A);
       if (match(A, m_FAbs(m_Value(A))))
         AddAffected(A);

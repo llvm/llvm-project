@@ -578,7 +578,7 @@ TEST(BTFParserTest, allTypeKinds) {
 }
 
 TEST(BTFParserTest, bigStruct) {
-  const uint32_t N = 1000u;
+  const uint32_t N = 70000u;
   MockData2 D;
   uint32_t FStr = D.addString("f");
   D.addType({D.addString("foo"), mkInfo(BTF::BTF_KIND_INT), {4}});

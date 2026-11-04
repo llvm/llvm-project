@@ -132,9 +132,13 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (MF.needsFrameMoves()) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
-    CFIBuilder.buildDefCFARegister(SP::I6);
-    CFIBuilder.buildWindowSave();
-    CFIBuilder.buildRegister(SP::O7, SP::I7);
+    if (FuncInfo->isLeafProc()) {
+      CFIBuilder.buildDefCFAOffset(NumBytes + Subtarget.getStackPointerBias());
+    } else {
+      CFIBuilder.buildDefCFARegister(SP::I6);
+      CFIBuilder.buildWindowSave();
+      CFIBuilder.buildRegister(SP::O7, SP::I7);
+    }
   }
 }
 
@@ -271,12 +275,18 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  SmallVector<MCRegister, 2> UntrackedLiveIns;
+
   // Remap %i[0-7] to %o[0-7].
   for (unsigned reg = SP::I0; reg <= SP::I7; ++reg) {
     if (!MRI.isPhysRegUsed(reg))
       continue;
 
     unsigned mapped_reg = reg - SP::I0 + SP::O0;
+
+    // Reserved registers are not tracked by liveness
+    if (MRI.isReserved(reg) && !MRI.isReserved(mapped_reg))
+      UntrackedLiveIns.push_back(mapped_reg);
 
     // Replace I register with O register.
     MRI.replaceRegWith(reg, mapped_reg);
@@ -303,7 +313,12 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
       MBB.removeLiveIn(reg);
       MBB.addLiveIn(reg - SP::I0 + SP::O0);
     }
+    for (MCRegister Reg : UntrackedLiveIns)
+      if (!MBB.isLiveIn(Reg))
+        MBB.addLiveIn(Reg);
   }
+  for (MCRegister Reg : UntrackedLiveIns)
+    MRI.clearKillFlags(Reg);
 
   assert(verifyLeafProcRegUse(&MRI));
 #ifdef EXPENSIVE_CHECKS
