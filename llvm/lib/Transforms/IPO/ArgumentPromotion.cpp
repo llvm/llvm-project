@@ -1227,7 +1227,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
       // Only propagate constants in functions rejected for having too many
       // promotable fields.
-      if (Parts.size() <= MaxElements)
+      if (MaxElements == 0 || Parts.size() <= MaxElements)
         continue;
 
       // Avoid propagating constants that can generate poison from metadata
