@@ -466,11 +466,14 @@ type and is then destroyed or deleted as the original type
 ([basic.life]/11, [expr.delete]/3). Destructor calls and deletions inside the
 standard library, such as `std::destroy_at`, are reported at the call site.
 
-Deleting or destroying the object through a base class with a virtual
-destructor is allowed. Placement new into raw storage, such as a character
-buffer or memory from `::operator new`, into a union and into an object with a
-trivial destructor is not reported. Members and array elements destroyed by a
-destructor that is not inlined are checked when that destructor is called.
+Deleting a single object through a base class with a virtual destructor, a
+destroying `operator delete` and an explicit destructor call of a base class
+are allowed. Placement new into raw storage, such as a character buffer or
+memory from `::operator new`, into a union and into an object with a trivial
+destructor is not reported. Members and array elements destroyed by a
+destructor that is not inlined are checked when that destructor is called. A
+report inside the standard library names the function that made the call, for
+example `by 'std::destroy_at'`.
 
 ```cpp
 class A {};
@@ -482,8 +485,7 @@ public:
 void test1() {
   B b;
   new (&b) A;
-} // warn: destructor of 'B' is called on storage that holds an object of
-  //       type 'A'
+} // warn: destructor of 'B' is called on an object of type 'A'
 
 void test2() {
   B *b = new B;

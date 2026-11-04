@@ -66,7 +66,7 @@ class RegionOffset {
   const MemRegion *R = nullptr;
 
   /// The bit offset within the base region. Can be negative.
-  int64_t Offset;
+  int64_t Offset = 0;
 
 public:
   // We're using a const instead of an enumeration due to the size required;
@@ -87,6 +87,14 @@ public:
   }
 
   bool isValid() const { return R; }
+
+  /// Symbolic offsets with the same base region compare equal even if they
+  /// describe different locations.
+  bool operator==(const RegionOffset &Other) const {
+    return R == Other.R && Offset == Other.Offset;
+  }
+
+  bool operator!=(const RegionOffset &Other) const { return !(*this == Other); }
 };
 
 //===----------------------------------------------------------------------===//

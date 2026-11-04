@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace clang;
@@ -39,11 +40,32 @@ struct WrongDestruction {
     ID.AddPointer(DtorClass);
     ID.AddPointer(Delete);
   }
+
+  std::string getReportMessage(const PrintingPolicy &PP,
+                               const NamedDecl *StdCaller) const {
+    std::string Caller;
+    if (StdCaller)
+      Caller =
+          llvm::formatv(" by '{0}'", StdCaller->getQualifiedNameAsString());
+    if (Delete)
+      return llvm::formatv(
+          "Deleting an object of type '{0}' through a pointer to '{1}'{2}",
+          Placed.getAsString(PP),
+          Delete->getDestroyedType().getUnqualifiedType().getAsString(PP),
+          Caller);
+    return llvm::formatv("Destructor of '{0}' is called{1} on storage that "
+                         "holds an object of type '{2}'",
+                         DtorClass->getQualifiedNameAsString(), Caller,
+                         Placed.getAsString(PP));
+  }
 };
 } // namespace
 
+// Storage reused by placement new -> type of the new object.
 REGISTER_MAP_WITH_PROGRAMSTATE(PlacedObjectTypes, const MemRegion *, QualType)
+// Memory from a non-placement new, which holds an original object.
 REGISTER_SET_WITH_PROGRAMSTATE(NewAllocatedObjects, const MemRegion *)
+// Found inside std; reported on return to user code.
 REGISTER_MAP_WITH_PROGRAMSTATE(PendingDestructions, const MemRegion *,
                                WrongDestruction)
 
@@ -55,7 +77,7 @@ class DestroyedAsWrongTypeChecker
                    categories::MemoryError};
 
   void reportBug(const MemRegion *R, const WrongDestruction &W,
-                 CheckerContext &C) const;
+                 CheckerContext &C, const NamedDecl *StdCaller = nullptr) const;
   void reportOrDefer(const MemRegion *R, const WrongDestruction &W,
                      CheckerContext &C) const;
 
@@ -78,8 +100,7 @@ static const MemRegion *getStorageRegion(SVal V, CheckerContext &C) {
     const ArrayType *AT = Ctx.getAsArrayType(TR->getValueType());
     if (!AT)
       break;
-    R = C.getStoreManager().getRegionManager().getElementRegion(
-        AT->getElementType(), C.getSValBuilder().makeZeroArrayIndex(), TR, Ctx);
+    R = C.getStoreManager().GetElementZeroRegion(TR, AT->getElementType());
   }
   return R;
 }
@@ -111,18 +132,18 @@ static QualType getStorageType(const MemRegion *R) {
 
 // A field and a byte offset from its parent are different regions.
 static bool isSameLocation(const MemRegion *A, const MemRegion *B) {
+  if (A == B)
+    return true;
   RegionOffset OA = A->getAsOffset();
   RegionOffset OB = B->getAsOffset();
-  return OA.isValid() && OB.isValid() && !OA.hasSymbolicOffset() &&
-         !OB.hasSymbolicOffset() && OA.getRegion() == OB.getRegion() &&
-         OA.getOffset() == OB.getOffset();
+  return OA.isValid() && !OA.hasSymbolicOffset() && OA == OB;
 }
 
 static ProgramStateRef forgetPlacedTypes(ProgramStateRef State,
                                          const MemRegion *R) {
   for (const MemRegion *Key :
        llvm::make_first_range(State->get<PlacedObjectTypes>()))
-    if (Key == R || Key->isSubRegionOf(R) || isSameLocation(Key, R))
+    if (Key->isSubRegionOf(R) || isSameLocation(Key, R))
       State = State->remove<PlacedObjectTypes>(Key);
   return State;
 }
@@ -138,27 +159,19 @@ getPlacementStorages(const CXXNewExpr *NE, CheckerContext &C) {
 }
 
 static bool isInStdFrame(CheckerContext &C) {
-  return AnalysisDeclContext::isInStdNamespace(C.getStackFrame()->getDecl());
+  const Decl *D = C.getStackFrame()->getDecl();
+  return D && AnalysisDeclContext::isInStdNamespace(D);
 }
 
 void DestroyedAsWrongTypeChecker::reportBug(const MemRegion *R,
                                             const WrongDestruction &W,
-                                            CheckerContext &C) const {
-  ExplodedNode *N = C.generateErrorNode();
+                                            CheckerContext &C,
+                                            const NamedDecl *StdCaller) const {
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
-  const PrintingPolicy &PP = C.getASTContext().getPrintingPolicy();
-  std::string Placed = W.Placed.getAsString(PP);
   std::string Msg =
-      W.Delete
-          ? "Deleting an object of type '" + Placed +
-                "' through a pointer to '" +
-                W.Delete->getDestroyedType().getUnqualifiedType().getAsString(
-                    PP) +
-                "'"
-          : "Destructor of '" + W.DtorClass->getQualifiedNameAsString() +
-                "' is called on storage that holds an object of type '" +
-                Placed + "'";
+      W.getReportMessage(C.getASTContext().getPrintingPolicy(), StdCaller);
   auto Report = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
   Report->markInteresting(R);
   C.emitReport(std::move(Report));
@@ -181,7 +194,7 @@ void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
   // The result may be typed as the new object, so use the storage argument.
   const MemRegion *R = nullptr;
   for (const MemRegion *Storage : Storages)
-    if (OperatorNew->isReservedGlobalPlacementOperator() || Storage == Result ||
+    if (OperatorNew->isReservedGlobalPlacementOperator() ||
         isSameLocation(Storage, Result))
       R = Storage;
   if (!R) {
@@ -216,13 +229,13 @@ void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
   C.addTransition(State->set<PlacedObjectTypes>(R, Placed), Tag);
 }
 
-// Destroying through a base class with a virtual destructor is well-defined.
-static bool isVirtualBaseDestruction(QualType Placed,
-                                     const CXXRecordDecl *Static) {
+static bool isDerivedFrom(QualType Placed, const CXXRecordDecl *Base) {
   const CXXRecordDecl *PlacedRD = Placed->getAsCXXRecordDecl();
-  if (!PlacedRD || !PlacedRD->isDerivedFrom(Static))
-    return false;
-  const CXXDestructorDecl *Dtor = Static->getDestructor();
+  return PlacedRD && PlacedRD->isDerivedFrom(Base);
+}
+
+static bool hasVirtualDestructor(const CXXRecordDecl *RD) {
+  const CXXDestructorDecl *Dtor = RD->getDestructor();
   return Dtor && Dtor->isVirtual();
 }
 
@@ -252,30 +265,37 @@ findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
     return std::nullopt;
 
   const auto *Implicit = dyn_cast<CXXDestructorCall>(&Call);
+  // An explicit destructor call may name a base class ([class.dtor]p16).
+  if (!Implicit)
+    return isDerivedFrom(*Placed, DtorClass)
+               ? std::nullopt
+               : std::optional(WrongDestruction{*Placed, DtorClass, nullptr});
+
   std::optional<CFGDeleteDtor> Delete =
-      Implicit ? Implicit->getCFGElementRef()->getAs<CFGDeleteDtor>()
-               : std::nullopt;
-  // Implicit destructors of automatic objects and members are not virtual.
-  bool CallIsVirtual = !Implicit || Delete;
-  if (CallIsVirtual && isVirtualBaseDestruction(*Placed, DtorClass))
+      Implicit->getCFGElementRef()->getAs<CFGDeleteDtor>();
+  if (!Delete)
+    return WrongDestruction{*Placed, DtorClass, nullptr};
+  const CXXDeleteExpr *DE = Delete->getDeleteExpr();
+  // [expr.delete]p3 does not cover a destroying operator delete, and allows a
+  // base class with a virtual destructor only for a single object.
+  const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
+  if (OperatorDelete && OperatorDelete->isDestroyingOperatorDelete())
     return std::nullopt;
-  return WrongDestruction{*Placed, DtorClass,
-                          Delete ? Delete->getDeleteExpr() : nullptr};
+  if (!DE->isArrayForm() && isDerivedFrom(*Placed, DtorClass) &&
+      hasVirtualDestructor(DtorClass))
+    return std::nullopt;
+  return WrongDestruction{*Placed, DtorClass, DE};
 }
 
-// A destructor without a body destroys members, and the analyzer then destroys
-// only the last element of an array, out of the checker's sight.
+// Finds a wrong destruction of storage within Scope other than R itself.
 static std::optional<std::pair<const MemRegion *, WrongDestruction>>
-findHiddenWrongDestruction(const CallEvent &Call, const MemRegion *R,
+findHiddenWrongDestruction(const MemRegion *R, const MemRegion *Scope,
                            ProgramStateRef State) {
-  const MemRegion *Scope = R;
-  if (const auto *ER = dyn_cast<ElementRegion>(R);
-      ER && isa<CXXDestructorCall>(Call))
-    Scope = ER->getSuperRegion();
   for (const auto &[Key, Placed] : State->get<PlacedObjectTypes>()) {
     QualType StorageType = getStorageType(Key);
-    const CXXRecordDecl *RD =
-        StorageType.isNull() ? nullptr : StorageType->getAsCXXRecordDecl();
+    if (StorageType.isNull())
+      continue;
+    const CXXRecordDecl *RD = StorageType->getAsCXXRecordDecl();
     if (RD && Key != R && Key->isSubRegionOf(Scope) &&
         !isSameRecord(Placed, RD))
       return std::make_pair(Key, WrongDestruction{Placed, RD, nullptr});
@@ -302,9 +322,15 @@ void DestroyedAsWrongTypeChecker::checkPreCall(const CallEvent &Call,
     reportOrDefer(R, *W, C);
     return;
   }
-  if (Call.getRuntimeDefinition().getDecl())
+  // The analyzer may destroy an array with a single call on its last element,
+  // and does not show the destruction of members by a destructor without a
+  // body, so check these here.
+  const MemRegion *Scope = R;
+  if (const auto *ER = dyn_cast<ElementRegion>(R); ER && Implicit)
+    Scope = ER->getSuperRegion();
+  else if (Call.getRuntimeDefinition().getDecl())
     return;
-  if (auto Hidden = findHiddenWrongDestruction(Call, R, State))
+  if (auto Hidden = findHiddenWrongDestruction(R, Scope, State))
     reportOrDefer(Hidden->first, Hidden->second, C);
 }
 
@@ -314,7 +340,7 @@ void DestroyedAsWrongTypeChecker::checkPostCall(const CallEvent &Call,
   if (Pending.isEmpty() || isInStdFrame(C))
     return;
   const auto &[R, W] = *Pending.begin();
-  reportBug(R, W, C);
+  reportBug(R, W, C, dyn_cast_if_present<NamedDecl>(Call.getDecl()));
 }
 
 void DestroyedAsWrongTypeChecker::checkDeadSymbols(SymbolReaper &SR,
@@ -334,6 +360,7 @@ void ento::registerDestroyedAsWrongTypeChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<DestroyedAsWrongTypeChecker>();
 }
 
-bool ento::shouldRegisterDestroyedAsWrongTypeChecker(const CheckerManager &) {
-  return true;
+bool ento::shouldRegisterDestroyedAsWrongTypeChecker(
+    const CheckerManager &Mgr) {
+  return Mgr.getLangOpts().CPlusPlus;
 }
