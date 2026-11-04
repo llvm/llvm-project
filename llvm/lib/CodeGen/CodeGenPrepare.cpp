@@ -8788,7 +8788,7 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
     return false;
 
   Value *LoopStride = nullptr;
-  if (!match(Step, m_c_Add(m_Specific(Phi), m_Value(LoopStride))))
+  if (!match(Step, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(LoopStride)))))
     return false;
 
   // Make sure the loop stride matches the pointer stride.
@@ -8799,6 +8799,11 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
           LoopStride,
           m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
       (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue())
+    return false;
+
+  // Make sure the stride isn't defined inside the loop, so we don't have to
+  // worry about dominance.
+  if (L->contains(cast<Instruction>(PtrStride)))
     return false;
 
   // For the simplest case, we're only interested if the phi has two users;
@@ -8825,6 +8830,10 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
     if (!L->isLoopInvariant(Base))
       return false;
   }
+
+  // Make sure we found a GEP.
+  if (!GEP)
+    return false;
 
   // Check that the indexed size is also the same.
   unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
