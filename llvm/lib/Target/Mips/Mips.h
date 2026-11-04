@@ -103,7 +103,15 @@ FunctionPass *createMipsDelaySlotFillerPass();
 FunctionPass *createMipsBranchExpansion();
 FunctionPass *createMipsConstantIslandPass();
 FunctionPass *createMicroMipsSizeReducePass();
-FunctionPass *createMipsExpandPseudoPass();
+
+class MipsExpandPseudoPass
+    : public RequiredPassInfoMixin<MipsExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsExpandPseudoLegacyPass();
 FunctionPass *createMipsPreLegalizeCombiner();
 FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createMipsMulMulBugPass();
