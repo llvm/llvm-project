@@ -8,6 +8,10 @@ target triple = "aarch64--linux-gnu"
 ; and block probability scaling. Note that the functionality being tested is
 ; not specific to AArch64. We specify a target to get actual values for the
 ; instruction costs.
+;
+; The branches of the replicate regions are costed by BRANCH-ON-MASK, which
+; extracts each lane of the mask and branches on it:
+;   extractelement(2) * 2 + br(0) * 2 = 4
 
 ; CHECK-LABEL: predicated_udiv
 ;
@@ -20,7 +24,8 @@ target triple = "aarch64--linux-gnu"
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
-; CHECK: Precomputed costs for VF 2: 4
+; CHECK: Precomputed costs for VF 2: 0
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define i32 @predicated_udiv(ptr %a, ptr %b, i1 %c, i64 %n) {
 entry:
@@ -62,7 +67,8 @@ for.end:
 ;
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
-; CHECK: Precomputed costs for VF 2: 8
+; CHECK: Precomputed costs for VF 2: 4
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define void @predicated_store(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -97,7 +103,8 @@ for.end:
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
 ; CHECK: Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
-; CHECK: Precomputed costs for VF 2: 8
+; CHECK: Precomputed costs for VF 2: 4
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -140,7 +147,8 @@ for.end:
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
-; CHECK: Precomputed costs for VF 2: 7
+; CHECK: Precomputed costs for VF 2: 3
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -187,7 +195,8 @@ for.end:
 ; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
-; CHECK: Precomputed costs for VF 2: 9
+; CHECK: Precomputed costs for VF 2: 5
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -244,7 +253,8 @@ for.end:
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
 ; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
 ; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
-; CHECK: Precomputed costs for VF 2: 9
+; CHECK: Precomputed costs for VF 2: 5
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -276,8 +286,9 @@ for.end:
 ; CHECK-LABEL: predicated_store_trunc_iv
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i8 %iv.trunc, ptr %gep.dst, align 1
 ; CHECK-NOT: profitable to scalarize   %iv.trunc = trunc i64 %iv to i8
-; CHECK: Precomputed costs for VF 2: 6
+; CHECK: Precomputed costs for VF 2: 2
 ; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp<[[IV_TRUNC:%[0-9]+]]> = trunc vp<[[CAN_IV:%[0-9]+]]> to i8
+; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<{{.+}}>
 ; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[IV_TRUNC]]>, ir<1>, vp<{{.+}}>
 ; CHECK: Cost of 1 for VF 2: EMIT branch-on-count
