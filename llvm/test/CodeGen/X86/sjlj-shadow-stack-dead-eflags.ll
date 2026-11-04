@@ -9,7 +9,7 @@ define i32 @setjmp_dead_eflags() {
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @buf, $noreg :: (load (s64) from got)
-  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rbp
   ; CHECK-NEXT:   MOV64mr [[MOV64rm1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (s64) into %ir.0)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsp
@@ -52,7 +52,7 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @buf, $noreg :: (load (s64) from got)
-  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.6(0x40000000), %bb.2(0x40000000)
@@ -95,7 +95,7 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT: bb.6.entry:
   ; CHECK-NEXT:   $rbp = frame-destroy MOV64rm [[MOV64rm1]], 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm1]], 1, $noreg, 8, $noreg
-  ; CHECK-NEXT:   $rsp = frame-destroy MOV64rm killed [[MOV64rm1]], 1, $noreg, 16, $noreg
+  ; CHECK-NEXT:   $rsp = frame-destroy MOV64rm [[MOV64rm1]], 1, $noreg, 16, $noreg
   ; CHECK-NEXT:   JMP64r [[MOV64rm3]]
 entry:
   %0 = load ptr, ptr @buf, align 8

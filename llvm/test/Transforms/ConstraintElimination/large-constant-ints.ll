@@ -379,8 +379,9 @@ define i1 @gep_decomp_large_index_63_bits_chained_overflow(ptr %a) {
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[GEP_2]], i64 1152921504606846976
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_3]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_3]]
 ; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_3]]
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[CMP_ULE]], [[CMP_ULE]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:

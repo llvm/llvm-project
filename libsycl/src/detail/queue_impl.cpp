@@ -149,6 +149,7 @@ void QueueImpl::setKernelLaunchParams(
     std::vector<EventImplPtr> &&Events,
     const ol_kernel_launch_size_args_t &Range) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(Events, *MContext);
   MCurrentSubmitInfo.DepEvents = std::move(Events);
   MCurrentSubmitInfo.Range = Range;
@@ -210,6 +211,7 @@ EventImplPtr QueueImpl::memcpy(void *Dest, const void *Src,
                                std::size_t NumBytes,
                                const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (NumBytes == 0)
     return submitWait(DepEvents);
@@ -233,6 +235,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
                              const std::vector<EventImplPtr> &DepEvents) {
   assert(PatternSize > 0 && "Pattern size has to be greater than zero");
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (Count == 0)
     return submitWait(DepEvents);
@@ -254,6 +257,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
 EventImplPtr QueueImpl::prefetch(const void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
 
   if (NumBytes == 0)

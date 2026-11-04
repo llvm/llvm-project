@@ -163,8 +163,7 @@ define double @larger_fp_scalar_256bit_vec(ptr align 32 dereferenceable(32) %p) 
 define <4 x float> @load_f32_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %s = load float, ptr %p, align 4
   %r = insertelement <4 x float> poison, float %s, i32 0
@@ -175,8 +174,7 @@ define <4 x float> @load_f32_insert_v4f32_may_free(ptr align 16 dereferenceable(
 ; CHECK-LABEL: @load_f32_insert_v4f32_may_free(
 ; CHECK-NEXT:    call void @may_free()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   call void @may_free()
   %s = load float, ptr %p, align 4
@@ -189,8 +187,7 @@ define <4 x float> @load_f32_insert_v4f32_may_free_prior_access(ptr %p) {
 ; CHECK-NEXT:    store <4 x float> zeroinitializer, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    call void @may_free()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   store <4 x float> zeroinitializer, ptr %p, align 16
   call void @may_free()
@@ -202,8 +199,7 @@ define <4 x float> @load_f32_insert_v4f32_may_free_prior_access(ptr %p) {
 define <4 x float> @casted_load_f32_insert_v4f32(ptr align 4 dereferenceable(16) %p) {
 ; CHECK-LABEL: @casted_load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %s = load float, ptr %p, align 4
   %r = insertelement <4 x float> poison, float %s, i32 0
@@ -215,8 +211,7 @@ define <4 x float> @casted_load_f32_insert_v4f32(ptr align 4 dereferenceable(16)
 define <4 x i32> @load_i32_insert_v4i32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_i32_insert_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %s = load i32, ptr %p, align 4
   %r = insertelement <4 x i32> poison, i32 %s, i32 0
@@ -228,8 +223,7 @@ define <4 x i32> @load_i32_insert_v4i32(ptr align 16 dereferenceable(16) %p) {
 define <4 x i32> @casted_load_i32_insert_v4i32(ptr align 4 dereferenceable(16) %p) {
 ; CHECK-LABEL: @casted_load_i32_insert_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %s = load i32, ptr %p, align 4
   %r = insertelement <4 x i32> poison, i32 %s, i32 0
@@ -241,8 +235,7 @@ define <4 x i32> @casted_load_i32_insert_v4i32(ptr align 4 dereferenceable(16) %
 define <4 x float> @gep00_load_f32_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @gep00_load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %s = load float, ptr %p, align 16
   %r = insertelement <4 x float> poison, float %s, i64 0
@@ -254,8 +247,7 @@ define <4 x float> @gep00_load_f32_insert_v4f32(ptr align 16 dereferenceable(16)
 define <4 x float> @gep00_load_f32_insert_v4f32_addrspace(ptr addrspace(44) align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @gep00_load_f32_insert_v4f32_addrspace(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(44) [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %s = load float, ptr addrspace(44) %p, align 16
   %r = insertelement <4 x float> poison, float %s, i64 0
@@ -267,8 +259,8 @@ define <4 x float> @gep00_load_f32_insert_v4f32_addrspace(ptr addrspace(44) alig
 define <4 x i32> @unsafe_load_i32_insert_v4i32_addrspace(ptr align 16 dereferenceable(16) %v3) {
 ; CHECK-LABEL: @unsafe_load_i32_insert_v4i32_addrspace(
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[V3:%.*]] to ptr addrspace(42)
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(42) [[TMP1]], align 16
-; CHECK-NEXT:    [[INSELT:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr addrspace(42) [[TMP1]], align 16
+; CHECK-NEXT:    [[INSELT:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[INSELT]]
 ;
   %t0 = getelementptr inbounds i32, ptr %v3, i32 1
@@ -285,8 +277,7 @@ define <8 x i16> @gep01_load_i16_insert_v8i16(ptr align 16 dereferenceable(18) %
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <8 x i16> [[R1]]
+; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
   %s = load i16, ptr %gep, align 2
@@ -298,8 +289,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16(ptr align 16 dereferenceable(18) %
 
 define <8 x i16> @gep01_load_i16_insert_v8i16_deref(ptr align 16 dereferenceable(17) %p) {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
@@ -311,8 +302,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref(ptr align 16 dereferenceable
 define <8 x i16> @gep01_load_i16_insert_v8i16_deref_may_free(ptr align 16 dereferenceable(17) %p) {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref_may_free(
 ; CHECK-NEXT:    call void @may_free()
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   call void @may_free()
@@ -326,8 +317,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref_may_free(ptr align 16 derefe
 
 define <8 x i16> @gep01_load_i16_insert_v8i16_deref_minalign(ptr align 2 dereferenceable(16) %p) {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref_minalign(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
@@ -404,8 +395,7 @@ define <8 x i16> @gep10_load_i16_insert_v8i16(ptr align 16 dereferenceable(32) %
 ; CHECK-LABEL: @gep10_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 1, i64 0
 ; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <8 x i16> [[R1]]
+; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 1, i64 0
   %s = load i16, ptr %gep, align 16
@@ -507,8 +497,7 @@ define <4 x float> @load_f32_insert_v4f32_volatile(ptr align 16 dereferenceable(
 define <4 x float> @load_f32_insert_v4f32_align(ptr align 1 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32_align(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %s = load float, ptr %p, align 4
   %r = insertelement <4 x float> poison, float %s, i32 0
@@ -530,8 +519,8 @@ define <4 x float> @load_f32_insert_v4f32_deref(ptr align 4 dereferenceable(15) 
 
 define <8 x i32> @load_i32_insert_v8i32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_i32_insert_v8i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %s = load i32, ptr %p, align 4
@@ -541,8 +530,8 @@ define <8 x i32> @load_i32_insert_v8i32(ptr align 16 dereferenceable(16) %p) {
 
 define <8 x i32> @casted_load_i32_insert_v8i32(ptr align 4 dereferenceable(16) %p) {
 ; CHECK-LABEL: @casted_load_i32_insert_v8i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %s = load i32, ptr %p, align 4
@@ -552,8 +541,8 @@ define <8 x i32> @casted_load_i32_insert_v8i32(ptr align 4 dereferenceable(16) %
 
 define <16 x float> @load_f32_insert_v16f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v16f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <1 x float> [[TMP1]], <1 x float> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <16 x float> [[R]]
 ;
   %s = load float, ptr %p, align 4
@@ -563,8 +552,7 @@ define <16 x float> @load_f32_insert_v16f32(ptr align 16 dereferenceable(16) %p)
 
 define <2 x float> @load_f32_insert_v2f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v2f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = load float, ptr %p, align 4
@@ -614,8 +602,7 @@ define void @PR47558_multiple_use_load(ptr nocapture nonnull %resultptr, ptr noc
 define <4 x float> @load_v2f32_extract_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v2f32_extract_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %l = load <2 x float>, ptr %p, align 4
   %s = extractelement <2 x float> %l, i32 0
@@ -627,8 +614,7 @@ define <4 x float> @load_v2f32_extract_insert_v4f32_may_free(ptr align 16 derefe
 ; CHECK-LABEL: @load_v2f32_extract_insert_v4f32_may_free(
 ; CHECK-NEXT:    call void @may_free()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   call void @may_free()
   %l = load <2 x float>, ptr %p, align 4
@@ -640,8 +626,7 @@ define <4 x float> @load_v2f32_extract_insert_v4f32_may_free(ptr align 16 derefe
 define <4 x float> @load_v8f32_extract_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v8f32_extract_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %l = load <8 x float>, ptr %p, align 4
   %s = extractelement <8 x float> %l, i32 0
@@ -719,8 +704,7 @@ define <4 x float> @load_v2f32_extract_insert_v4f32_tsan(ptr align 16 dereferenc
 
 define <2 x float> @load_f32_insert_v2f32_msan(ptr align 16 dereferenceable(16) %p) sanitize_memory  {
 ; CHECK-LABEL: @load_f32_insert_v2f32_msan(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = load float, ptr %p, align 4

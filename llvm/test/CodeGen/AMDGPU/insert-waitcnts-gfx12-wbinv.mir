@@ -7,6 +7,7 @@
 ---
 
 name:            wb_storecnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wb_storecnt
   ; CHECK: bb.0:
@@ -49,6 +50,7 @@ body:             |
 ---
 
 name:            wbinv_storecnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wbinv_storecnt
   ; CHECK: bb.0:
@@ -91,6 +93,7 @@ body:             |
 ---
 
 name:            inv_loadcnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: inv_loadcnt
   ; CHECK: bb.0:

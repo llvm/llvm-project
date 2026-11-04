@@ -106,8 +106,14 @@ llvm::Expected<std::string> LoadPythonRuntime() {
   if (IsPythonAlreadyLoaded())
     return std::string();
 
-  llvm::Error failures =
-      llvm::createStringError("could not locate the Python runtime library");
+  const char *override_path = std::getenv("LLDB_PYTHON_LIBRARY");
+  if (override_path && !*override_path)
+    override_path = nullptr;
+
+  llvm::Error failures = llvm::createStringError(
+      override_path ? "could not locate the Python runtime library"
+                    : "could not locate the Python runtime library, set "
+                      "LLDB_PYTHON_LIBRARY to its path");
   std::string loaded;
 
   auto try_path = [&](const char *path) -> bool {
@@ -119,12 +125,9 @@ llvm::Expected<std::string> LoadPythonRuntime() {
     return true;
   };
 
-  if (const char *override_path = std::getenv("LLDB_PYTHON_LIBRARY");
-      override_path && *override_path) {
-    if (try_path(override_path)) {
-      consumeError(std::move(failures));
-      return loaded;
-    }
+  if (override_path && try_path(override_path)) {
+    consumeError(std::move(failures));
+    return loaded;
   }
 
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH
