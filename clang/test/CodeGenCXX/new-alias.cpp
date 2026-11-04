@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - %s | FileCheck %s %}
 
 using size_t = decltype(sizeof(0));
 

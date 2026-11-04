@@ -416,7 +416,7 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with `nest`.
 
-    - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
+    - On RISC-V the callee preserves x8-x31 except the x28 register.
 
     - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
 
@@ -2296,6 +2296,15 @@ define void @f() "no-sse" { ... }
     a new pointer for the original function, which means that code that depends
     on function-pointer identity can break. So, any function annotated with
     `jumptable` must also be `unnamed_addr`.
+
+`likely_module_local`
+:   This attribute indicates that the function is likely not referenced from
+    outside of the current module, even though its linkage does not guarantee
+    that. It is only meaningful on functions with `linkonce_odr` linkage and is
+    ignored otherwise. Optimizations may use it as a profitability hint. It is
+    just a hint; it imposes no requirements on the inliner or other
+    optimizations, and furthermore it must not be relied upon for correctness,
+    as the function may still be referenced from another module.
 
 `memory(...)`
 :   This attribute specifies the possible memory effects of the call-site or
