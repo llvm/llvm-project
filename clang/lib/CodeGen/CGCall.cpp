@@ -4630,6 +4630,29 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty())
     return;
 
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (const AllocAlignAttr *AA = CurCodeDecl->getAttr<AllocAlignAttr>()) {
+      if (isa<FunctionDecl>(CurCodeDecl)) {
+        unsigned PI = AA->getParamIndex().getLLVMIndex();
+        llvm::Value *Alignment = CurFn->getArg(PI);
+        emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                           Alignment);
+      }
+    }
+    if (const AssumeAlignedAttr *AA =
+            CurCodeDecl->getAttr<AssumeAlignedAttr>()) {
+      llvm::Value *Alignment = EmitScalarExpr(AA->getAlignment());
+      llvm::ConstantInt *OffsetCI = nullptr;
+      if (Expr *Offset = AA->getOffset()) {
+        OffsetCI = cast<llvm::ConstantInt>(EmitScalarExpr(Offset));
+        if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+          OffsetCI = nullptr;
+      }
+      emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                         Alignment, OffsetCI);
+    }
+  }
+
   ReturnsNonNullAttr *RetNNAttr = nullptr;
   if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
     RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>();
