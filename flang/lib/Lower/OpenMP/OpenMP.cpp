@@ -3703,6 +3703,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     clauseOps.reductionByref.push_back(true);
     clauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!clauseOps.reductionMods.empty())
+      clauseOps.reductionMods.push_back(mlir::omp::ReductionModifierAttr::get(
+          builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
     reductionObjects.push_back(Object{{nullptr, std::nullopt}});
   }
 
@@ -5096,6 +5099,10 @@ static mlir::omp::WsloopOp genStandaloneDo(
     wsloopClauseOps.reductionByref.push_back(true);
     wsloopClauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!wsloopClauseOps.reductionMods.empty())
+      wsloopClauseOps.reductionMods.push_back(
+          mlir::omp::ReductionModifierAttr::get(
+              builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
 
     // Use a null-symbol Object as a sentinel — bindPrivateLike will skip it.
     wsloopReductionObjects.push_back(Object{{nullptr, std::nullopt}});
@@ -6826,8 +6833,7 @@ static void genOpenMPDeclareReductionImpl(
                           parser::CharBlock mangledOpName =
                               semantics::MakeNameFromOperator(
                                   ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp),
-                                  semaCtx);
+                                      intrOp));
                           redSymPtr = semantics::omp::FindUserReductionSymbol(
                               converter.getCurrentScope(), mangledOpName);
                         }
@@ -8136,11 +8142,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             prefValues.push_back(*constVal);
           } else if (auto str =
                          evaluate::GetScalarConstantValue<evaluate::Ascii>(
-                             pref)) {
+                             evaluate::AsciiKind, pref)) {
             // Map standard OpenMP foreign-runtime identifier strings to
             // their well-known integer values (OpenMP 5.1, Table 22.2).
             auto frId = llvm::StringSwitch<std::optional<int64_t>>(
-                            llvm::StringRef(*str).lower())
+                            str->AsStringRef()->lower())
                             .Case("cuda", 1)
                             .Case("cuda_driver", 2)
                             .Case("opencl", 3)
@@ -8430,8 +8436,9 @@ static void genErrorDirective(lower::AbstractConverter &converter,
   MaybeExpr messageExpr;
   if (args.message) {
     if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
-      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
-        message = *val;
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *expr))
+        message = val->AsStdString();
       else
         messageExpr = expr;
     }

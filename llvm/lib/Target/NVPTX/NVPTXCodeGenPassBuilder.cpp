@@ -182,6 +182,7 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // our pass pipeline didn't add it.
   flushFPMsToMPM(PMW);
   addModulePass(NVVMReflectPass(ST.getSmVersion()), PMW);
+  addModulePass(NVPTXCanonicalizeDynamicSharedPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(NVPTXImageOptimizerPass(), PMW);
@@ -319,6 +320,9 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // Before anything relies on alias analysis.
+        PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+
         // We do not want to fold out calls to nvvm.reflect early if the user
         // has not provided a target architecture just yet.
         if (Subtarget.hasTargetName())
@@ -332,6 +336,13 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
+
+  // Linking can bring in further declarations of the dynamic shared memory.
+  auto CanonicalizeAfterLink = [](ModulePassManager &PM, OptimizationLevel) {
+    PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+  };
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
+  PB.registerThinLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
 
   if (!NoKernelInfoEndLTO) {
     PB.registerFullLinkTimeOptimizationLastEPCallback(
