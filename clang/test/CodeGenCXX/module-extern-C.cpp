@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
-// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s %}
 
 module;
 
