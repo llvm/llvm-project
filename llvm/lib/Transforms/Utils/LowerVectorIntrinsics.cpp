@@ -49,19 +49,24 @@ bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
     ResultPhis[I]->addIncoming(PoisonValue::get(VecTy), PreLoopBB);
   }
 
-  SmallVector<Value *, 4> Args;
-  SmallVector<Type *, 4> ArgTys;
-  for (Value *Arg : CI->args()) {
+  unsigned NumArgs = CI->arg_size();
+  SmallVector<Value *, 4> Args(NumArgs);
+  SmallVector<Type *, 4> ArgTys(NumArgs);
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    Value *Arg = CI->getArgOperand(I);
     if (Arg->getType()->isVectorTy())
       Arg = LoopBuilder.CreateExtractElement(Arg, LoopIndex);
-    Args.push_back(Arg);
-    ArgTys.push_back(Arg->getType());
+    Args[I] = Arg;
+    ArgTys[I] = Arg->getType();
   }
   Type *ScalarRetTy = VecTy->getElementType();
   if (StructRetTy) {
-    SmallVector<Type *, 2> ScalarRetTys;
-    for (Type *EltTy : StructRetTy->elements())
-      ScalarRetTys.push_back(cast<VectorType>(EltTy)->getElementType());
+    unsigned NumElts = StructRetTy->getNumElements();
+    SmallVector<Type *, 2> ScalarRetTys(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      Type *EltTy = StructRetTy->getElementType(I);
+      ScalarRetTys[I] = cast<VectorType>(EltTy)->getElementType();
+    }
     ScalarRetTy = StructType::get(Ctx, ScalarRetTys);
   }
   Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
