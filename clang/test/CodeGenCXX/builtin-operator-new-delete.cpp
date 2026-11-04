@@ -47,7 +47,7 @@ extern "C" void test_basic() {
 
 // CHECK-LABEL: define{{.*}} void @test_aligned_alloc(
 extern "C" void test_aligned_alloc() {
-  // CHECK: call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 4, i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 4, i64 allocalign noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPvSt11align_val_t({{.*}}, i64 noundef 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
   __builtin_operator_delete(__builtin_operator_new(4, std::align_val_t(4)), std::align_val_t(4));
 }
