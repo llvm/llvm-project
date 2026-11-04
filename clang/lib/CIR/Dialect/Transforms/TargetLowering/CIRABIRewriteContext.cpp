@@ -262,7 +262,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
       // fields, so each field gets an empty dict.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
-    } else if (ac.kind == ArgKind::Extend && (isCallSite || !ac.conservative)) {
+    } else if (ac.kind == ArgKind::Extend) {
       // An extended value has no undefined bits.  This covers a transparent
       // union passed as its extended first member, which CIRGen does not
       // mark noundef because it is a record.
@@ -270,7 +270,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ? mlir::LLVM::LLVMDialect::getSExtAttrName()
                                : mlir::LLVM::LLVMDialect::getZExtAttrName();
       mlir::NamedAttrList attrs(existing);
-      attrs.set(attrName, builder.getUnitAttr());
+      // Conservative argument extends apply only at the call-site.
+      if (isCallSite || !ac.conservative)
+        attrs.set(attrName, builder.getUnitAttr());
       if (enableNoundefAttrs)
         attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                   builder.getUnitAttr());

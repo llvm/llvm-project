@@ -388,7 +388,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_widths(
-  // LLVM-SAME:    i17 signext %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
+  // LLVM-SAME:    i17 noundef %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
   // LLVM-SAME:    , i64 %[[A2:[0-9]+]], i64 %[[A3:[0-9]+]])
   // The fourth register holds the 33-bit value, materialized first.
   // LLVM-NEXT:    %[[W33SLOT:[0-9]+]] = alloca i64, align 8
