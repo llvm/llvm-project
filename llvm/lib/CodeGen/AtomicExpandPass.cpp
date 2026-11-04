@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -2254,31 +2253,12 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
-  Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+  const Align AllocaAlignment =
+      DL.getPrefTypeAlign(Type::getIntNTy(Ctx, Size * 8));
 
-  if (M->getTargetTriple().isOSWindowsOrUEFI() &&
-      M->getTargetTriple().isX86_64() && Size == 16) {
-    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
-    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
-    // rules handles this correctly if we pass it as a v2i64 rather than
-    // i128. This is what Clang does in the frontend for such types as well
-    // (see WinX86_64ABIInfo::classify in Clang).
-    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
-  }
-
-  const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
-
-  // TODO: Take the signature from RuntimeLibcallsInfo
-  IntegerType *OrderingTy =
-      Type::getIntNTy(Ctx, LibcallLowering->getRuntimeLibcallsInfo().getIntSize(
-                               M->getTargetTriple()));
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
-  Constant *OrderingVal = ConstantInt::get(OrderingTy, (int)toCABI(Ordering));
-  Constant *Ordering2Val = nullptr;
-  if (CASExpected) {
-    assert(Ordering2 != AtomicOrdering::NotAtomic && "expect atomic MO");
-    Ordering2Val = ConstantInt::get(OrderingTy, (int)toCABI(Ordering2));
-  }
+  assert((!CASExpected || Ordering2 != AtomicOrdering::NotAtomic) &&
+         "expect atomic MO");
   bool HasResult = I->getType() != Type::getVoidTy(Ctx);
 
   RTLIB::Libcall RTLibType;
@@ -2314,6 +2294,10 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     return false;
   }
 
+  auto [FnType, Attr] = LibcallLowering->getRuntimeLibcallsInfo().getFunctionTy(
+      Ctx, M->getTargetTriple(), DL, LibcallImpl);
+  assert(FnType && "missing signature for atomic libcall");
+
   // Build up the function call. There's two kinds. First, the sized
   // variants.  These calls are going to be one of the following (with
   // N=1,2,4,8,16):
@@ -2344,15 +2328,11 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   AllocaInst *AllocaValue = nullptr;
   AllocaInst *AllocaResult = nullptr;
 
-  Type *ResultTy;
   SmallVector<Value *, 6> Args;
-  AttributeList Attr;
 
   // 'size' argument.
-  if (!UseSizedLibcall) {
-    // Note, getIntPtrType is assumed equivalent to size_t.
-    Args.push_back(ConstantInt::get(DL.getIntPtrType(Ctx), Size));
-  }
+  if (!UseSizedLibcall)
+    Args.push_back(ConstantInt::get(FnType->getParamType(0), Size));
 
   // 'ptr' argument.
   // note: This assumes all address spaces share a common libfunc
@@ -2375,8 +2355,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   // 'val' argument ('desired' for cas), if present.
   if (ValueOperand) {
     if (UseSizedLibcall) {
-      Value *IntValue =
-          Builder.CreateBitPreservingCastChain(DL, ValueOperand, SizedIntTy);
+      Value *IntValue = Builder.CreateBitPreservingCastChain(
+          DL, ValueOperand, FnType->getParamType(Args.size()));
       Args.push_back(IntValue);
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
@@ -2395,36 +2375,19 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
-  // The ordering arguments are C ints, which may need to be extended.
-  // FIXME: Once runtime libcall attribute derivation is centralized in
-  // RuntimeLibcalls, TargetLibraryInfo should not be used here.
-  Attribute::AttrKind OrderingExt =
-      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
-
   // 'ordering' ('success_order' for cas) argument.
-  Args.push_back(OrderingVal);
-  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  Args.push_back(ConstantInt::get(FnType->getParamType(Args.size()),
+                                  (int)toCABI(Ordering)));
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val) {
-    Args.push_back(Ordering2Val);
-    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  if (CASExpected) {
+    Args.push_back(ConstantInt::get(FnType->getParamType(Args.size()),
+                                    (int)toCABI(Ordering2)));
   }
 
-  // Now, the return type.  FIXME: Properly add extension attributes.
-  if (CASExpected) {
-    ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
-  } else if (HasResult && UseSizedLibcall)
-    ResultTy = SizedIntTy;
-  else
-    ResultTy = Type::getVoidTy(Ctx);
+  assert(Args.size() == FnType->getNumParams() &&
+         "atomic libcall signature mismatch");
 
-  // Done with setting up arguments and return types, create the call:
-  SmallVector<Type *, 6> ArgTys;
-  for (Value *Arg : Args)
-    ArgTys.push_back(Arg->getType());
-  FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
   FunctionCallee LibcallFn = M->getOrInsertFunction(
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl), FnType,
       Attr);
