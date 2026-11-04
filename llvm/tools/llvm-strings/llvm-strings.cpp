@@ -50,8 +50,8 @@ using namespace llvm;
 using namespace llvm::object;
 
 namespace llvm::sys::unicode {
-extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
-extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
+LLVM_ABI extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
+LLVM_ABI extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
 } // namespace llvm::sys::unicode
 
 namespace {

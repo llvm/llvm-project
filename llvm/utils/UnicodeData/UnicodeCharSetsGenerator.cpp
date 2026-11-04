@@ -201,7 +201,8 @@ static void emitTable(raw_ostream &OS, StringRef Name, StringRef Description,
      << "Data[] = {\n";
   for (sys::UnicodeCharRange Range : Ranges)
     OS << formatv("    {{{0:X4}, {1:X4}},\n", Range.Lower, Range.Upper);
-  OS << "};\nextern const CharRanges " << Name << " = " << Name << "Data;\n";
+  OS << "};\nLLVM_ABI extern const CharRanges " << Name << " = " << Name
+     << "Data;\n";
 }
 
 static void writeFile(StringRef Path, StringRef Namespace, StringRef Version,
