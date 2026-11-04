@@ -15,12 +15,19 @@ define amdgpu_ps half @fsub_s16_uniform(half inreg %a, half inreg %b) {
 ; GFX11-TRUE16-NEXT:    v_sub_f16_e64 v0.l, s0, s1
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: fsub_s16_uniform:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_sub_f16 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-FAKE16-LABEL: fsub_s16_uniform:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_sub_f16 s0, s0, s1
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-TRUE16-LABEL: fsub_s16_uniform:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_sub_f16 s0, s0, s1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-TRUE16-NEXT:    ; return to shader part epilog
   %fsub = fsub half %a, %b
   ret half %fsub
 }

@@ -159,10 +159,10 @@ define half @test_half_add_mul(half %a, half %b, half %c, half %d, half %e) {
 ; GFX11-TRUE16-LABEL: test_half_add_mul:
 ; GFX11-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fma_f16 v2.l, v2.l, v3.l, v4.l
+; GFX11-TRUE16-NEXT:    v_fma_f16 v0.h, v2.l, v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v0.h, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: test_half_add_mul:
@@ -236,10 +236,10 @@ define half @test_half_add_mul_rhs(half %a, half %b, half %c, half %d, half %e) 
 ; GFX11-TRUE16-LABEL: test_half_add_mul_rhs:
 ; GFX11-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fma_f16 v2.l, v2.l, v3.l, v4.l
+; GFX11-TRUE16-NEXT:    v_fma_f16 v0.h, v2.l, v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v0.h, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: test_half_add_mul_rhs:

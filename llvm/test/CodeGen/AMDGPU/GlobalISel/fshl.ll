@@ -913,27 +913,25 @@ define i16 @v_fshl_v2i8(i16 %lhs.arg, i16 %rhs.arg, i16 %amt.arg) {
 ; GFX11-LABEL: v_fshl_v2i8:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 8, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 8, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX11-NEXT:    v_and_b16 v0.h, v1.l, 0xff
-; GFX11-NEXT:    v_xor_b16 v1.l, v2.l, -1
-; GFX11-NEXT:    v_and_b16 v1.h, v2.l, 7
-; GFX11-NEXT:    v_and_b16 v2.l, v3.l, 0xff
-; GFX11-NEXT:    v_xor_b16 v2.h, v5.l, -1
-; GFX11-NEXT:    v_lshrrev_b16 v0.h, 1, v0.h
-; GFX11-NEXT:    v_and_b16 v1.l, v1.l, 7
-; GFX11-NEXT:    v_and_b16 v3.l, v5.l, 7
-; GFX11-NEXT:    v_lshrrev_b16 v2.l, 1, v2.l
+; GFX11-NEXT:    v_lshrrev_b16 v0.h, 8, v2.l
+; GFX11-NEXT:    v_and_b16 v1.h, v1.l, 0xff
+; GFX11-NEXT:    v_xor_b16 v2.h, v2.l, -1
+; GFX11-NEXT:    v_lshrrev_b16 v3.l, 8, v0.l
+; GFX11-NEXT:    v_and_b16 v2.l, v2.l, 7
+; GFX11-NEXT:    v_xor_b16 v3.h, v0.h, -1
+; GFX11-NEXT:    v_lshrrev_b16 v1.h, 1, v1.h
 ; GFX11-NEXT:    v_and_b16 v2.h, v2.h, 7
-; GFX11-NEXT:    v_lshlrev_b16 v0.l, v1.h, v0.l
-; GFX11-NEXT:    v_lshrrev_b16 v0.h, v1.l, v0.h
-; GFX11-NEXT:    v_lshlrev_b16 v1.l, v3.l, v4.l
+; GFX11-NEXT:    v_and_b16 v0.h, v0.h, 7
+; GFX11-NEXT:    v_lshrrev_b16 v1.l, 9, v1.l
+; GFX11-NEXT:    v_and_b16 v3.h, v3.h, 7
+; GFX11-NEXT:    v_lshlrev_b16 v0.l, v2.l, v0.l
+; GFX11-NEXT:    v_lshrrev_b16 v1.h, v2.h, v1.h
+; GFX11-NEXT:    v_lshlrev_b16 v0.h, v0.h, v3.l
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_lshrrev_b16 v1.h, v2.h, v2.l
-; GFX11-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX11-NEXT:    v_lshrrev_b16 v1.l, v3.h, v1.l
+; GFX11-NEXT:    v_or_b16 v0.l, v0.l, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_or_b16 v0.h, v1.l, v1.h
+; GFX11-NEXT:    v_or_b16 v0.h, v0.h, v1.l
 ; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h

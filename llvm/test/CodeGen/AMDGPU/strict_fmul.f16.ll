@@ -596,7 +596,7 @@ define amdgpu_ps half @s_constained_fmul_f16_fpexcept_strict(half inreg %x, half
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_mul_f16 s0, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ; GFX1-GISEL-TRUE16-LABEL: s_constained_fmul_f16_fpexcept_strict:
 ; GFX1-GISEL-TRUE16:       ; %bb.0:

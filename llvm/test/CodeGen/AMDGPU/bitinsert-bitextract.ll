@@ -446,36 +446,38 @@ define b87 @test_bitinsert_b87_var(b87 %base, i16 %val, i32 %off) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_sub_nc_u32_e32 v12, 64, v4
-; GFX12-TRUE16-NEXT:    v_subrev_nc_u32_e32 v13, 64, v4
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    v_cvt_u32_u16_e32 v5, v3.l
+; GFX12-TRUE16-NEXT:    v_sub_nc_u32_e32 v3, 64, v4
 ; GFX12-TRUE16-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 64, v4
-; GFX12-TRUE16-NEXT:    v_lshrrev_b64 v[9:10], v12, 0xffff
-; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e64 v[10:11], v13, 0xffff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, s0
+; GFX12-TRUE16-NEXT:    v_subrev_nc_u32_e32 v13, 64, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e64 v[7:8], v4, 0xffff
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v4
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-TRUE16-NEXT:    v_lshrrev_b64 v[9:10], v3, v[5:6]
+; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e32 v[10:11], v13, v[5:6]
+; GFX12-TRUE16-NEXT:    v_lshrrev_b64 v[11:12], v3, 0xffff
+; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e64 v[12:13], v13, 0xffff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v10, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_lshrrev_b64 v[11:12], v12, v[5:6]
-; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e32 v[12:13], v13, v[5:6]
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_dual_cndmask_b32 v8, 0, v8 :: v_dual_cndmask_b32 v3, v10, v9
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v9, v12, v11, vcc_lo
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfi_b32 v1, v8, 0, v1
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v10, v3, 0, s0
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b64_e32 v[3:4], v4, v[5:6]
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc_lo
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v9, v12, v11, vcc_lo
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v1, v8, 0, v1
-; GFX12-TRUE16-NEXT:    v_not_b32_e32 v5, v10
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v9, v9, 0, s0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_dual_cndmask_b32 v7, 0, v7 :: v_dual_cndmask_b32 v4, 0, v4
+; GFX12-TRUE16-NEXT:    v_not_b32_e32 v5, v9
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_bfi_b32 v0, v7, 0, v0
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v1, v1, v4
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, v2, v5, v9
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, v2, v5, v10
 ; GFX12-TRUE16-NEXT:    v_dual_cndmask_b32 v3, 0, v3 :: v_dual_and_b32 v2, 0x7fffff, v2
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v0, v0, v3
@@ -884,14 +886,14 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.h, v2.l, 15
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.h, v1.l, 15
+; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v2.l, 15
+; GFX12-TRUE16-NEXT:    v_and_b16 v1.l, v1.l, 15
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_xor_b16 v1.l, v1.h, -1
-; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v2.l, v0.h
+; GFX12-TRUE16-NEXT:    v_xor_b16 v0.h, v0.h, -1
+; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v2.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v1.l
-; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_bitinsert_b8_var:
@@ -1170,15 +1172,25 @@ define b8 @test_bitinsert_val_b8_full(b8 %base, b8 %val) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: test_bitinsert_val_b8_full:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-TRUE16-LABEL: test_bitinsert_val_b8_full:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: test_bitinsert_val_b8_full:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b8 %base, b8 %val, i32 0
   ret b8 %result
 }
@@ -1283,14 +1295,14 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.h, v2.l, 1
+; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v2.l, 1
 ; GFX12-TRUE16-NEXT:    v_and_b16 v1.l, v1.l, 1
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_xor_b16 v1.h, v1.h, -1
-; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v2.l, v1.l
+; GFX12-TRUE16-NEXT:    v_xor_b16 v0.h, v0.h, -1
+; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v2.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_bitinsert_val_b1_into_b8:

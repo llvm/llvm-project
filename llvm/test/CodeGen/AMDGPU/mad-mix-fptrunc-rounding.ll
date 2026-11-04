@@ -169,8 +169,9 @@ define <2 x half> @fptrunc_fmul_to_f16_hi(float %a, float %b, half %lo) #0 {
 ; GFX1100-LABEL: fptrunc_fmul_to_f16_hi:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v1, neg(0)
-; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1100-NEXT:    v_fma_mixhi_f16 v2, v0, v1, neg(0)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %mul = fmul float %a, %b
@@ -206,8 +207,9 @@ define <2 x half> @fptrunc_fmul_to_f16_hi_contract(float %a, float %b, half %lo)
 ; GFX1100-LABEL: fptrunc_fmul_to_f16_hi_contract:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v1, neg(0)
-; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1100-NEXT:    v_fma_mixhi_f16 v2, v0, v1, neg(0)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %mul = fmul contract float %a, %b
@@ -276,8 +278,9 @@ define <2 x half> @fptrunc_fmul_narrow_to_f16_hi(half %a, half %b, half %lo) #0 
 ; GFX1100-LABEL: fptrunc_fmul_narrow_to_f16_hi:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v1, neg(0) op_sel_hi:[1,1,0]
-; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1100-NEXT:    v_fma_mixhi_f16 v2, v0, v1, neg(0) op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a.ext = fpext half %a to float
@@ -475,8 +478,9 @@ define <2 x half> @fptrunc_fma_to_f16_hi(float %a, float %b, float %c, half %lo)
 ; GFX1100-LABEL: fptrunc_fma_to_f16_hi:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2
-; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; GFX1100-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: fptrunc_fma_to_f16_hi:
@@ -522,8 +526,9 @@ define <2 x half> @fptrunc_fma_to_f16_hi_contract(float %a, float %b, float %c, 
 ; GFX1100-LABEL: fptrunc_fma_to_f16_hi_contract:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2
-; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; GFX1100-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: fptrunc_fma_to_f16_hi_contract:

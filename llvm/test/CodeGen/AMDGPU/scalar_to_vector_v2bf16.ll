@@ -14,6 +14,7 @@ define <2 x bfloat> @scalar_to_vector_v2bf16(bfloat %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
@@ -38,11 +39,12 @@ define <4 x bfloat> @scalar_to_vector_v4bf16(bfloat %x) {
 ;
 ; GFX1250-TRUE16-LABEL: scalar_to_vector_v4bf16:
 ; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
+; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2_lo16 killed $vgpr2_lo16 def $vgpr2 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
@@ -67,11 +69,13 @@ define bfloat @fadd_bf16(bfloat %x, bfloat %y) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_add_bf16 v0, v0, v1
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
@@ -92,11 +96,13 @@ define bfloat @fsub_bf16(bfloat %x, bfloat %y) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_add_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
@@ -117,11 +123,13 @@ define bfloat @fmul_bf16(bfloat %x, bfloat %y) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_mul_bf16 v0, v0, v1
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
@@ -142,11 +150,13 @@ define bfloat @fmaxnum_bf16(bfloat %x, bfloat %y) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v1
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
@@ -167,11 +177,13 @@ define bfloat @fminnum_bf16(bfloat %x, bfloat %y) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_min_num_bf16 v0, v0, v1
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
@@ -192,14 +204,17 @@ define bfloat @fma_bf16(bfloat %x, bfloat %y, bfloat %z) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2_lo16 killed $vgpr2_lo16 def $vgpr2 killed $exec
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 def $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr0
 ; GFX1250-TRUE16-NEXT:    ; implicit-def: $sgpr1
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
 ; GFX1250-TRUE16-NEXT:    v_pk_fma_bf16 v0, v0, v1, v2
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 killed $vgpr0 killed $exec
