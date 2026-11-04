@@ -356,6 +356,11 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
+  // promotion rules and resource types are not modeled yet.
+  if (T.isSPIRV())
+    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
       T.getArch() == llvm::Triple::aarch64_be)
@@ -447,6 +452,14 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
+
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    TheLLVMABITargetInfo = llvm::abi::createSPIRVTargetInfo(
+        TB, getContext().getTargetAddressSpace(LangAS::Default),
+        /*KernelPassAggregatesIndirect=*/getLangOpts().isTargetDevice());
+    return *TheLLVMABITargetInfo;
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
@@ -3327,6 +3340,21 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   // function attribute.
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
+
+  // An inline function or template instantiation defined in the main source
+  // file is (ignoring unusual setups like #include-ing a .cpp file) not
+  // referenced or emitted by any other translation unit.
+  if (CodeGenOpts.ModuleLocalHints) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    const SourceManager &SM = getContext().getSourceManager();
+    // D->getLocation(), for a template instantiation, is the location of the
+    // template's definition, not instantiation.
+    // TODO: Also consider template instantiations where a template argument is
+    // a class declared in the main file.
+    bool InMainFile = SM.isInMainFile(D->getLocation());
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
+      B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+  }
 
   F->addFnAttrs(B);
 

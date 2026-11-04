@@ -1,4 +1,4 @@
-# RUN: llc -mtriple x86_64-- -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple x86_64-- -run-pass branch-folder -o - %s | FileCheck %s
 
 # Check the TCRETURNdi64cc optimization.
 

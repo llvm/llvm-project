@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-cuda
 // Tests device math from libdevice
 // RUN: cat %s | clang-repl --cuda | FileCheck %s
 

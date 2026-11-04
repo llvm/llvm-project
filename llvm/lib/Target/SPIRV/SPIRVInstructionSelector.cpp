@@ -500,6 +500,8 @@ private:
   bool wrapIntoSpecConstantOp(MachineInstr &I,
                               SmallVector<Register> &CompositeArgs) const;
 
+  SPIRVTypeInst getUcharPtrType(MachineInstr &I,
+                                SPIRV::StorageClass::StorageClass SC) const;
   Register getUcharPtrTypeReg(MachineInstr &I,
                               SPIRV::StorageClass::StorageClass SC) const;
   MachineInstrBuilder buildSpecConstantOp(MachineInstr &I, Register Dest,
@@ -1623,10 +1625,9 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
       continue;
 
     MachineIRBuilder MIRBuilder(I);
-    SPIRVTypeInst MantissaTy = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
     // An unused exponent def has no SPIR-V type.
     SPIRVTypeInst PointeeTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    unsigned N = GR.getScalarOrVectorComponentCount(MantissaTy);
+    unsigned N = GR.getScalarOrVectorComponentCount(ResType);
     if (N > 1)
       PointeeTy = GR.getOrCreateSPIRVVectorType(PointeeTy, N, I, TII);
     const SPIRVTypeInst PointerType = GR.getOrCreateSPIRVPointerType(
@@ -1652,7 +1653,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
 
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(MantissaTy))
+        .addUse(GR.getSPIRVTypeID(ResType))
         .addImm(static_cast<uint32_t>(Ex.first))
         .addImm(Opcode)
         .add(I.getOperand(2))
@@ -2908,10 +2909,15 @@ static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
   return IsAllowedRefs && IsGRef;
 }
 
+SPIRVTypeInst SPIRVInstructionSelector::getUcharPtrType(
+    MachineInstr &I, SPIRV::StorageClass::StorageClass SC) const {
+  return GR.getOrCreateSPIRVPointerType(
+      Type::getInt8Ty(I.getMF()->getFunction().getContext()), I, SC);
+}
+
 Register SPIRVInstructionSelector::getUcharPtrTypeReg(
     MachineInstr &I, SPIRV::StorageClass::StorageClass SC) const {
-  return GR.getSPIRVTypeID(GR.getOrCreateSPIRVPointerType(
-      Type::getInt8Ty(I.getMF()->getFunction().getContext()), I, SC));
+  return GR.getSPIRVTypeID(getUcharPtrType(I, SC));
 }
 
 MachineInstrBuilder
@@ -2983,11 +2989,30 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     // correct value of ResType and use general i8* instead. Maybe this should
     // be addressed in the emit-intrinsic step to infer a correct
     // OpConstantComposite type.
+    // Generic casts require matching pointee types, so cast the source to i8*
+    // too, but only if a cast is emitted below.
+    bool ViaGeneric =
+        isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC);
+    if (SrcSC != SPIRV::StorageClass::CodeSectionINTEL &&
+        (SpecOpcode || ViaGeneric)) {
+      SPIRVTypeInst UcharSrcPtrTy = getUcharPtrType(I, SrcSC);
+      if (SrcPtrTy != UcharSrcPtrTy) {
+        Register Tmp =
+            createVirtualRegister(UcharSrcPtrTy, &GR, MRI, *I.getMF());
+        MachineInstrBuilder MIB = buildSpecConstantOp(
+            I, Tmp, SrcPtr, GR.getSPIRVTypeID(UcharSrcPtrTy),
+            static_cast<uint32_t>(SPIRV::Opcode::Bitcast));
+        GR.add(MIB.getInstr(), MIB);
+        MIB.constrainAllUses(TII, TRI, RBI);
+        SrcPtr = Tmp;
+        SrcPtrTy = UcharSrcPtrTy;
+      }
+    }
     if (SpecOpcode) {
       buildSpecConstantOp(I, ResVReg, SrcPtr, getUcharPtrTypeReg(I, DstSC),
                           SpecOpcode)
           .constrainAllUses(TII, TRI, RBI);
-    } else if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
+    } else if (ViaGeneric) {
       MachineInstrBuilder MIB = buildConstGenericPtr(I, SrcPtr, SrcPtrTy);
       MIB.constrainAllUses(TII, TRI, RBI);
       buildSpecConstantOp(
@@ -5926,13 +5951,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        SPIRVTypeInst ResType,
                                                        MachineInstr &I) const {
-  // The images need to be loaded in the same basic block as their use. We defer
-  // loading the image to the intrinsic that uses it.
-  if (ResType->getOpcode() == SPIRV::OpTypeImage)
-    return true;
-
-  return loadHandleBeforePosition(ResVReg, GR.getSPIRVTypeForVReg(ResVReg),
-                                  *cast<GIntrinsic>(&I), I);
+  // Image users reload the handle, so this load serves only other users.
+  return loadHandleBeforePosition(ResVReg, ResType, *cast<GIntrinsic>(&I), I);
 }
 
 bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
