@@ -1,8 +1,8 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
-!XFAIL: *
+
 subroutine f01
   !$omp metadirective &
-  !$omp& when(implementation={vendor(llvm)}: &
+  !$omp& when(implementation={vendor(amd)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
   !$omp& declare reduction(/ : integer : omp_out = omp_out + omp_in))
 end
@@ -29,7 +29,7 @@ end
 
 subroutine f04
   !$omp metadirective &
-  !$omp& when (implementation={vendor(llvm)}: &
+  !$omp& when (implementation={vendor(amd)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
   !$omp& declare reduction(/ : integer : omp_out = omp_out + omp_in)) &
   !$omp& otherwise(error at(compilation))
@@ -37,7 +37,7 @@ end
 
 subroutine f05
   !$omp metadirective &
-  !$omp& when (implementation={vendor(llvm)}: &
+  !$omp& when (implementation={vendor(amd)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
   !$omp& declare reduction(/ : integer : omp_out = omp_out + omp_in)) &
   !$omp& otherwise(error)
