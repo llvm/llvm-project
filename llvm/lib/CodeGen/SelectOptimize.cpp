@@ -227,6 +227,12 @@ private:
   struct SelectGroup {
     Value *Condition;
     SmallVector<SelectLike, 2> Selects;
+
+    bool isUnpredictable() const {
+      return any_of(Selects, [](const SelectLike &SI) {
+        return SI.getI()->getMetadata(LLVMContext::MD_unpredictable);
+      });
+    }
   };
   using SelectGroups = SmallVector<SelectGroup, 2>;
 
@@ -989,6 +995,18 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
   //     to its predicated version. The cost is in terms of latency and the cost
   //     of a select group is the cost of its most expensive select instruction
   //     (assuming infinite resources and thus fully leveraging available ILP).
+
+  // Unpredictable selects should never be converted to branches.
+  erase_if(SIGroups, [&](const SelectGroup &ASI) {
+    if (!ASI.isUnpredictable())
+      return false;
+    ++NumSelectUnPred;
+    OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti",
+                                    ASI.Selects.front().getI());
+    ORmiss << "Not converted to branch because of unpredictable branch. ";
+    EmitAndPrintRemark(ORE, ORmiss);
+    return true;
+  });
 
   DenseMap<const Instruction *, CostInfo> InstCostMap;
   CostInfo LoopCost[2] = {{Scaled64::getZero(), Scaled64::getZero()},

@@ -1010,18 +1010,13 @@ define double @loop_unpred(i32 %n, double %x, ptr nocapture %a) {
 ; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECKOO:       for.body:
-; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
-; CHECKOO-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[SELECT_END]] ]
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECKOO-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECKOO-NEXT:    [[LOAD:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECKOO-NEXT:    [[DIV:%.*]] = fdiv double [[X_ADDR]], 2.000000e+00
 ; CHECKOO-NEXT:    [[CMP:%.*]] = fcmp ogt double [[DIV]], [[LOAD]]
-; CHECKOO-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
-; CHECKOO-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]], !unpredictable [[META0:![0-9]+]]
-; CHECKOO:       select.false:
-; CHECKOO-NEXT:    br label [[SELECT_END]]
-; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[SEL:%.*]] = phi double [ [[LOAD]], [[FOR_BODY]] ], [ 0.000000e+00, [[SELECT_FALSE]] ]
+; CHECKOO-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[LOAD]], double 0.000000e+00, !unpredictable [[META0:![0-9]+]]
 ; CHECKOO-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL]]
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -1101,12 +1096,7 @@ define double @two_recurrences_one_unpred(i32 %n, double %x, double %y, ptr noca
 ; CHECKOO-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECKOO-NEXT:    [[LOAD_A:%.*]] = load double, ptr [[ARRAYIDX_A]], align 8
 ; CHECKOO-NEXT:    [[CMP_A:%.*]] = fcmp ogt double [[X_ADDR]], [[LOAD_A]]
-; CHECKOO-NEXT:    [[CMP_A_FROZEN:%.*]] = freeze i1 [[CMP_A]]
-; CHECKOO-NEXT:    br i1 [[CMP_A_FROZEN]], label [[SELECT_END1:%.*]], label [[SELECT_FALSE1:%.*]], !unpredictable [[META0]]
-; CHECKOO:       select.false:
-; CHECKOO-NEXT:    br label [[SELECT_END1]]
-; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[SEL_A:%.*]] = phi double [ [[LOAD_A]], [[FOR_BODY]] ], [ 0.000000e+00, [[SELECT_FALSE1]] ]
+; CHECKOO-NEXT:    [[SEL_A:%.*]] = select i1 [[CMP_A]], double [[LOAD_A]], double 0.000000e+00, !unpredictable [[META0]]
 ; CHECKOO-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL_A]]
 ; CHECKOO-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; CHECKOO-NEXT:    [[LOAD_B:%.*]] = load double, ptr [[ARRAYIDX_B]], align 8
@@ -1114,10 +1104,10 @@ define double @two_recurrences_one_unpred(i32 %n, double %x, double %y, ptr noca
 ; CHECKOO-NEXT:    [[CMP_B:%.*]] = fcmp ogt double [[Y_DIV]], [[LOAD_B]]
 ; CHECKOO-NEXT:    [[CMP_B_FROZEN:%.*]] = freeze i1 [[CMP_B]]
 ; CHECKOO-NEXT:    br i1 [[CMP_B_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
-; CHECKOO:       select.false2:
+; CHECKOO:       select.false:
 ; CHECKOO-NEXT:    br label [[SELECT_END]]
-; CHECKOO:       select.end1:
-; CHECKOO-NEXT:    [[SEL_B:%.*]] = phi double [ [[LOAD_B]], [[SELECT_END1]] ], [ 0.000000e+00, [[SELECT_FALSE]] ]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[SEL_B:%.*]] = phi double [ [[LOAD_B]], [[FOR_BODY]] ], [ 0.000000e+00, [[SELECT_FALSE]] ]
 ; CHECKOO-NEXT:    [[Y_NEXT]] = fsub double [[Y_ADDR]], [[SEL_B]]
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
