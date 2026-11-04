@@ -8839,8 +8839,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
               .first;
 
       Value *VrSrcPtr = IRB.CreateInBoundsPtrAdd(
-          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy,
-                                   IRB.getInt32(AArch64VrBegOffset)),
+          IRB.CreatePtrAddWithUnsignedOffset(VAArgTLSCopy, AArch64VrBegOffset,
+                                             "", GEPNoWrapFlags::inBounds()),
           VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
@@ -8853,8 +8853,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(16), /*isStore*/ true)
               .first;
 
-      Value *StackSrcPtr = IRB.CreateInBoundsPtrAdd(
-          VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
+      Value *StackSrcPtr = IRB.CreatePtrAddWithUnsignedOffset(
+          VAArgTLSCopy, AArch64VAEndOffset, "", GEPNoWrapFlags::inBounds());
 
       IRB.CreateMemCpy(StackSaveAreaShadowPtr, Align(16), StackSrcPtr,
                        Align(16), VAArgOverflowSize);

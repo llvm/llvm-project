@@ -1,3 +1,5 @@
+add_subdirectory(check)
+
 add_header_library(
   acos
   HDRS
@@ -692,6 +694,16 @@ add_header_library(
   DEPENDS
     libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizef80
+  HDRS
+    canonicalizef80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
     libc.src.__support.macros.config
 )
 
@@ -1779,6 +1791,16 @@ add_header_library(
 )
 
 add_header_library(
+  iscanonicalf80
+  HDRS
+    iscanonicalf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   iscanonicalf16
   HDRS
     iscanonicalf16.h
@@ -1821,6 +1843,16 @@ add_header_library(
     isnanf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf80
+  HDRS
+    isnanf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -1878,6 +1910,16 @@ add_header_library(
     issignalingf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf80
+  HDRS
+    issignalingf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -2714,7 +2756,7 @@ add_header_library(
     scalblnf128.h
   DEPENDS
     libc.hdr.float_macros
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -2777,7 +2819,7 @@ add_header_library(
     scalbnf128.h
   DEPENDS
     libc.hdr.float_macros
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -4281,9 +4323,9 @@ add_header_library(
   HDRS
     ldexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -6322,6 +6364,16 @@ add_header_library(
 )
 
 add_header_library(
+  totalorderf80
+  HDRS
+    totalorderf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   totalorderf16
   HDRS
     totalorderf16.h
@@ -6375,6 +6427,16 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.float128
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  totalordermagf80
+  HDRS
+    totalordermagf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
     libc.src.__support.macros.config
 )
 
