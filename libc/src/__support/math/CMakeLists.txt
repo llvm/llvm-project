@@ -2773,6 +2773,17 @@ add_header_library(
 )
 
 add_header_library(
+  scalblnf80
+  HDRS
+    scalblnf80.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
   scalblnl
   HDRS
     scalblnl.h
@@ -2833,6 +2844,17 @@ add_header_library(
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  scalbnf80
+  HDRS
+    scalbnf80.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_header_library(
@@ -4379,6 +4401,16 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ldexpf80
+  HDRS
+    ldexpf80.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_header_library(

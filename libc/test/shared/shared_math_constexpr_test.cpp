@@ -468,6 +468,12 @@ static_assert(Float80(0.0) == [] {
 static_assert(0 == LIBC_NAMESPACE::shared::ilogbf80(Float80(1.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::llogbf80(Float80(1.0)));
 static_assert(Float80(0.0) == LIBC_NAMESPACE::shared::logbf80(Float80(1.0)));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::ldexpf80(Float80(0.0), 0));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::scalbnf80(Float80(0.0), 0));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnf80(Float80(0.0), 0L));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==

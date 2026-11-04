@@ -1798,6 +1798,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ldexpf80
+  SRCS
+    ldexpf80.cpp
+  HDRS
+    ../ldexpf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.ldexpf80
+)
+
+add_entrypoint_object(
   ldexpf128
   SRCS
     ldexpf128.cpp
@@ -4366,6 +4377,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scalblnf80
+  SRCS
+    scalblnf80.cpp
+  HDRS
+    ../scalblnf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.scalblnf80
+)
+
+add_entrypoint_object(
   scalblnf128
   SRCS
     scalblnf128.cpp
@@ -4424,6 +4446,17 @@ add_entrypoint_object(
     ../scalbnf16.h
   DEPENDS
     libc.src.__support.math.scalbnf16
+)
+
+add_entrypoint_object(
+  scalbnf80
+  SRCS
+    scalbnf80.cpp
+  HDRS
+    ../scalbnf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.scalbnf80
 )
 
 add_entrypoint_object(
