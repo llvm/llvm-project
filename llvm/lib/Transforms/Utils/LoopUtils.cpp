@@ -1977,7 +1977,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, ExitingBlock);
         OperandExitValueList OperandExitValues;
         if (!SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue)) {
+            !Rewriter.isSafeToExpandAt(
+                ExitValue, L->getLoopPreheader()->getTerminator())) {
           if (!collectOperandExitValues(Inst, L, ExitingBlock, SE, Rewriter,
                                         OperandExitValues))
             continue;
@@ -2005,13 +2006,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.
-        Instruction *InsertPt =
-          (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
-          &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        // Place the clone outside the loop so the rewrite can make the loop
-        // deletable.
-        if (!OperandExitValues.empty())
-          InsertPt = L->getLoopPreheader()->getTerminator();
+        Instruction *InsertPt = L->getLoopPreheader()->getTerminator();
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
                                    std::move(OperandExitValues));
       }
