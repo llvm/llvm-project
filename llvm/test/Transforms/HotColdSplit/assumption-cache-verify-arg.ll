@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes='function(print<assumptions>),hotcoldsplit' -hotcoldsplit-threshold=-1 -debug-only=code-extractor -disable-output < %s 2>/dev/null
+; RUN: opt -passes='function(print<assumptions>),hotcoldsplit' -hotcoldsplit-threshold=-1 -disable-output < %s
 
 ; Check that the assumption cache can be verified when an assumption left in
 ; the original function has an argument as its condition.

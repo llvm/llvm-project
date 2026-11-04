@@ -1495,8 +1495,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   LLVM_DEBUG(newFunction->dump());
   LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - oldFunction:\n");
   LLVM_DEBUG(oldFunction->dump());
-  LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
-                 report_fatal_error("Stale Asumption cache for old Function!"));
+#ifndef NDEBUG
+  if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
+    report_fatal_error("Stale Asumption cache for old Function!");
+#endif
   return newFunction;
 }
 
