@@ -19,8 +19,8 @@ namespace orc {
 
 Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
-    DylibManager &DylibMgr, const char *LibraryPath,
-    SymbolPredicate Allow, AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
+    DylibManager &DylibMgr, const char *LibraryPath, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   auto Handle = DylibMgr.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
