@@ -625,3 +625,104 @@ func.func @unsupported_element_types() {
   memref.dealloc %supported : memref<8xi32>
   return
 }
+
+// -----
+
+// A dynamic allocation is in the entry block but cannot enter the arena.
+// Preserve both allocations and both releases when they share deallocs.
+// CHECK-LABEL: func.func @shared_dynamic_shape(
+// CHECK-NEXT: %[[A:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: %[[B:.*]] = memref.alloc(%{{.*}}) : memref<?xf32>
+// CHECK-NEXT: %[[AC:.*]] = memref.cast %[[A]] : memref<4xf32> to memref<?xf32>
+// CHECK-NEXT: %[[S0:.*]] = arith.select %{{.*}}, %[[AC]], %[[B]] : memref<?xf32>
+// CHECK-NEXT: %[[S1:.*]] = arith.select %{{.*}}, %[[B]], %[[AC]] : memref<?xf32>
+// CHECK-NEXT: memref.dealloc %[[S0]] : memref<?xf32>
+// CHECK-NEXT: memref.dealloc %[[S1]] : memref<?xf32>
+// CHECK-NEXT: return
+func.func @shared_dynamic_shape(%n: index, %cond: i1) {
+  %a = memref.alloc() : memref<4xf32>
+  %b = memref.alloc(%n) : memref<?xf32>
+  %ac = memref.cast %a : memref<4xf32> to memref<?xf32>
+  %s0 = arith.select %cond, %ac, %b : memref<?xf32>
+  %s1 = arith.select %cond, %b, %ac : memref<?xf32>
+  memref.dealloc %s0 : memref<?xf32>
+  memref.dealloc %s1 : memref<?xf32>
+  return
+}
+
+// -----
+
+// A shared-dealloc group can only be rewritten if all its allocations are
+// eligible; otherwise preserve its allocs and deallocs. Nested C excludes B
+// through dealloc(R), and excluding B must also exclude A through the
+// select deallocs.
+// CHECK-LABEL: func.func @shared_dealloc_skip_chain(
+// CHECK-NEXT: %[[A:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: %[[B:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: %[[R:.*]] = scf.if %{{.*}} -> (memref<4xf32>) {
+// CHECK-NEXT: %[[C:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: scf.yield %[[C]] : memref<4xf32>
+// CHECK-NEXT: } else {
+// CHECK-NEXT: scf.yield %[[B]] : memref<4xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: scf.if %{{.*}} {
+// CHECK-NEXT: %[[S0:.*]] = arith.select %{{.*}}, %[[A]], %[[B]] : memref<4xf32>
+// CHECK-NEXT: %[[S1:.*]] = arith.select %{{.*}}, %[[B]], %[[A]] : memref<4xf32>
+// CHECK-NEXT: memref.dealloc %[[S0]] : memref<4xf32>
+// CHECK-NEXT: memref.dealloc %[[S1]] : memref<4xf32>
+// CHECK-NEXT: memref.dealloc %[[R]] : memref<4xf32>
+// CHECK-NEXT: } else {
+// CHECK-NEXT: memref.dealloc %[[A]] : memref<4xf32>
+// CHECK-NEXT: memref.dealloc %[[R]] : memref<4xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @shared_dealloc_skip_chain(%cond: i1, %shuffle: i1) {
+  %a = memref.alloc() : memref<4xf32>
+  %b = memref.alloc() : memref<4xf32>
+  %r = scf.if %cond -> memref<4xf32> {
+    %c = memref.alloc() : memref<4xf32>
+    scf.yield %c : memref<4xf32>
+  } else {
+    scf.yield %b : memref<4xf32>
+  }
+  scf.if %cond {
+    %s0 = arith.select %shuffle, %a, %b : memref<4xf32>
+    %s1 = arith.select %shuffle, %b, %a : memref<4xf32>
+    memref.dealloc %s0 : memref<4xf32>
+    memref.dealloc %s1 : memref<4xf32>
+    memref.dealloc %r : memref<4xf32>
+  } else {
+    memref.dealloc %a : memref<4xf32>
+    memref.dealloc %r : memref<4xf32>
+  }
+  return
+}
+
+// -----
+
+// Pruning a shared-dealloc group must not prevent an independent allocation
+// from entering the arena.
+// CHECK-LABEL: func.func @independent_allocation(
+// CHECK-NEXT: %[[A:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: %[[B:.*]] = memref.alloc(%{{.*}}) : memref<?xf32>
+// CHECK-NEXT: %[[AC:.*]] = memref.cast %[[A]] : memref<4xf32> to memref<?xf32>
+// CHECK-NEXT: %[[S0:.*]] = arith.select %{{.*}}, %[[AC]], %[[B]] : memref<?xf32>
+// CHECK-NEXT: %[[S1:.*]] = arith.select %{{.*}}, %[[B]], %[[AC]] : memref<?xf32>
+// CHECK-NEXT: memref.dealloc %[[S0]] : memref<?xf32>
+// CHECK-NEXT: memref.dealloc %[[S1]] : memref<?xf32>
+// CHECK-NEXT: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<32xi8>
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<32xi8> to memref<8xi32>
+// CHECK-NEXT: return
+func.func @independent_allocation(%n: index, %cond: i1) {
+  %a = memref.alloc() : memref<4xf32>
+  %b = memref.alloc(%n) : memref<?xf32>
+  %ac = memref.cast %a : memref<4xf32> to memref<?xf32>
+  %s0 = arith.select %cond, %ac, %b : memref<?xf32>
+  %s1 = arith.select %cond, %b, %ac : memref<?xf32>
+  memref.dealloc %s0 : memref<?xf32>
+  memref.dealloc %s1 : memref<?xf32>
+  %independent = memref.alloc() : memref<8xi32>
+  memref.dealloc %independent : memref<8xi32>
+  return
+}
