@@ -722,12 +722,10 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
   }
 
   if (rnd == FPRoundingMode::RS) {
-    if (!hasRandomBits) {
+    if (!hasRandomBits)
       return op->emitOpError("random_bits is required for RS rounding mode.");
-    }
-    if (hasPzo) {
+    if (hasPzo)
       return op->emitOpError("pzo not supported for RS rounding mode.");
-    }
   } else {
     if (hasRandomBits) {
       return op->emitOpError(
