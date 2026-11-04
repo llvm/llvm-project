@@ -4085,11 +4085,24 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                    BuiltinID == Builtin::BI__builtin_reduce_or ||
                    BuiltinID == Builtin::BI__builtin_reduce_and;
 
-    if (ElTy.isNull() || (FloatOnly && !ElTy->isFloatingType()) ||
-        (IntOnly && !ElTy->isIntegerType())) {
+    if (FloatOnly) {
+      if (ElTy.isNull() || !ElTy->isFloatingType()) {
+        Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+            << 1 << /* vector of */ 4 << /* no int */ 0 << /* fp */ 1
+            << Arg->getType();
+        return ExprError();
+      }
+    } else if (IntOnly) {
+      if (ElTy.isNull() || !ElTy->isIntegerType()) {
+        Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+            << 1 << /* vector of */ 4 << /* int */ 1 << /* no fp */ 0
+            << Arg->getType();
+        return ExprError();
+      }
+    } else if (ElTy.isNull()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << (FloatOnly || IntOnly ? /* vector of */ 4 : /* vector ty */ 2)
-          << /* int */ IntOnly << /* fp */ FloatOnly << Arg->getType();
+          << 1 << /* vector ty */ 2 << /* no int */ 0 << /* no fp */ 0
+          << Arg->getType();
       return ExprError();
     }
 
