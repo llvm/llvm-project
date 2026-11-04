@@ -9,6 +9,9 @@
 
 #include "ScalbnTest.h"
 
+#include "src/__support/FPUtil/float80.h"
 #include "src/math/scalbnf80.h"
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_SCALBN_TESTS(Scalbnf80, Float80, int, LIBC_NAMESPACE::scalbnf80)

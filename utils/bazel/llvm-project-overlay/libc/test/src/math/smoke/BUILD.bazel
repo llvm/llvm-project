@@ -2236,6 +2236,17 @@ math_test(
 )
 
 math_test(
+    name = "scalbnf80",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "scalbnf128",
     hdrs = [
         "LdExpTest.h",
@@ -2294,6 +2305,17 @@ math_test(
     hdrs = [
         "LdExpTest.h",
         "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalblnf80",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 

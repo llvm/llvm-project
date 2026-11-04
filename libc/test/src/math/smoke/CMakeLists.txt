@@ -2514,6 +2514,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(
@@ -5551,6 +5552,7 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalblnf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(
@@ -5655,6 +5657,7 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalbnf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(

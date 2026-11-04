@@ -8,6 +8,9 @@
 
 #include "LdExpTest.h"
 
+#include "src/__support/FPUtil/float80.h"
 #include "src/math/ldexpf80.h"
+
+using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_LDEXP_TESTS(Ldexpf80, Float80, LIBC_NAMESPACE::ldexpf80);
