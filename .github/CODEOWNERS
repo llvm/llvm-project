@@ -54,6 +54,13 @@
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
+# MLIR core tablegen.
+/mlir/lib/TableGen @krzysz00
+/mlir/tools/mlir-tblgen @krzysz00
+
+# MLIR properties.
+/mlir/include/mlir/IR/Properties.td @krzysz00
+
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
