@@ -1,0 +1,18 @@
+// Corrupted indexed profiles must be rejected with a diagnostic instead of
+// crashing the reader with an out-of-bounds access.
+//
+// Regression tests for:
+//   https://github.com/llvm/llvm-project/issues/230017 (corrupted HashOffset)
+//   https://github.com/llvm/llvm-project/issues/230018 (corrupted summary size)
+
+// A corrupted 64-bit HashOffset field in the header used to be dereferenced
+// without bounds checking while creating the on-disk hash table index.
+RUN: not llvm-profdata show %S/Inputs/corrupt-indexed-hash-offset.profdata 2>&1 \
+RUN:   | FileCheck %s --check-prefix=HASH-OFFSET
+HASH-OFFSET: error: {{.*}}: malformed instrumentation profile data: corrupted profile hash table offset
+
+// An inflated NumSummaryFields/NumCutoffEntries used to drive a byte-swap copy
+// of an attacker-controlled size past the end of the profile buffer.
+RUN: not llvm-profdata show %S/Inputs/corrupt-indexed-summary.profdata 2>&1 \
+RUN:   | FileCheck %s --check-prefix=SUMMARY
+SUMMARY: error: {{.*}}: malformed instrumentation profile data: corrupted profile summary
