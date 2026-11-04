@@ -574,6 +574,8 @@ public:
   void set_enumeratorDefaultAccess(Attr a) { enumeratorDefaultAccess_ = a; }
   // Name of the hidden component created for an enumeration type to hold
   // the 1-based enumerator ordinal.
+  // Copy-initialized: MSVC 19.29 (VS 2019 16.11) rejects a braced string
+  // literal for an in-class static constexpr array.
   static constexpr char ordinalComponentName[] = "__ordinal";
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
