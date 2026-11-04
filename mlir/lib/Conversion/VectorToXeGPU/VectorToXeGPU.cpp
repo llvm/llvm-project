@@ -863,8 +863,8 @@ struct LegalizeBroadcastTransferRead
 // padding that matches load_nd's implicit zero padding, and a tile shape the
 // block load can access.
 static bool is2DBlockLoadable(vector::TransferReadOp readOp,
-                            ArrayRef<int64_t> tileShape,
-                            bool hasTranspose = false) {
+                              ArrayRef<int64_t> tileShape,
+                              bool hasTranspose = false) {
   auto readMemTy = cast<MemRefType>(readOp.getShapedType());
   if (!readMemTy.getElementType().isIntOrFloat())
     return false;
@@ -1006,7 +1006,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
         loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         is2DBlockLoadable(readOp, descShape,
-                        /*hasTranspose=*/needsTransposedBlockLoad);
+                          /*hasTranspose=*/needsTransposedBlockLoad);
 
     if (canLowerToLoadNd) {
       // The load produces the memory-ordered tile; the transpose below restores
@@ -1641,9 +1641,10 @@ struct ConvertVectorToXeGPUPass
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
-  patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-               ScatterLowering, GatherLowering, StoreLowering,
-               ContractionLowering>(ctx);
+  patterns
+      .add<TransferReadLowering, TransferWriteLowering, LoadLowering,
+           ScatterLowering, GatherLowering, StoreLowering, ContractionLowering>(
+          ctx);
   // Tried ahead of TransferReadLowering, which would otherwise take a 1D
   // transfer on the scattered path.
   patterns.add<PromoteTransferReadToUnitDim>(ctx, /*benefit=*/2);
