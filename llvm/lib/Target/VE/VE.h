@@ -16,7 +16,10 @@
 
 #include "MCTargetDesc/VEMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,7 +38,14 @@ public:
 };
 
 FunctionPass *createVEDAGToDAGISelLegacyPass(VETargetMachine &TM);
-FunctionPass *createLVLGenPass();
+
+class VELVLGenPass : public RequiredPassInfoMixin<VELVLGenPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createVELVLGenLegacyPass();
 void initializeVEAsmPrinterPass(PassRegistry &);
 void initializeVEDAGToDAGISelLegacyPass(PassRegistry &);
 
