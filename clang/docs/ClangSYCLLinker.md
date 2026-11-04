@@ -37,6 +37,7 @@ USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
   --arch <value>                Specify the name of the target architecture.
+  --device=<value>              An Intel GPU to compile ahead of time for. Can be repeated.
   --dry-run                     Print generated commands without running.
   -help-hidden                  Display all available options
   -help                         Display available options (--help-hidden for more)
@@ -106,6 +107,14 @@ generate the final executable.
 
 ```console
 clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
+```
+
+For an IGCA target, such as `igca_30r`, the device image is compiled ahead of
+time for the Intel GPUs given with `--device`, with a single ocloc call, or just
+in time if no `--device` is given:
+
+```console
+clang-sycl-linker --triple spirv64 --arch igca_30r --device=xe-mtl-u --device=xe-mtl-h input.bc
 ```
 
 ### Linking with Device Libraries
