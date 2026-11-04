@@ -3557,8 +3557,12 @@ void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
       --Level;
   }
 
-  if (!IsGotoLabel && !Style.IndentCaseBlocks &&
+  if (IsGotoLabel && !Style.BraceWrapping.AfterGotoLabel &&
       CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
+    parseBlock();
+    addUnwrappedLine();
+  } else if (!IsGotoLabel && !Style.IndentCaseBlocks &&
+             CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);

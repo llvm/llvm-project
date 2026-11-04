@@ -2528,6 +2528,19 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+  - `bool AfterGotoLabel` Wrap the opening brace after a goto label. Defaults to `true`.
+
+    ```c++
+    true:                     false:
+    void f() {        vs.     void f() {
+    label:                    label: {
+      {                         foo();
+        foo();                  bar();
+        bar();                }
+      }                       }
+    }
+    ```
+
   - `bool AfterNamespace` Wrap namespace definitions.
 
     ```c++

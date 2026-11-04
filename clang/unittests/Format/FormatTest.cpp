@@ -3473,6 +3473,33 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
+
+  Style = getGoogleStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterGotoLabel = false;
+  Style.BraceWrapping.AfterCaseLabel = true;
+  Style.IndentCaseBlocks = true;
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
+  Style.IndentWidth = 4;
+  verifyFormat("void f() {\n"
+               "    while (a) {\n"
+               "label: {\n"
+               "    foo();\n"
+               "    bar();\n"
+               "}\n"
+               "        break;\n"
+               "    }\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "label:\n"
+               "    // Comment\n"
+               "    {\n"
+               "        foo();\n"
+               "        bar();\n"
+               "    }\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, MultiLineControlStatements) {

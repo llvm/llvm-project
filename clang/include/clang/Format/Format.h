@@ -1480,6 +1480,18 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterFunction;
+    /// Wrap the opening brace after a goto label. Defaults to `true`.
+    /// \code
+    ///   true:                     false:
+    ///   void f() {        vs.     void f() {
+    ///   label:                    label: {
+    ///     {                         foo();
+    ///       foo();                  bar();
+    ///       bar();                }
+    ///     }                       }
+    ///   }
+    /// \endcode
+    bool AfterGotoLabel;
     /// Wrap namespace definitions.
     /// \code
     ///   true:

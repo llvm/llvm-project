@@ -1422,6 +1422,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Add `AfterGotoLabel` to `BraceWrapping` to allow attaching an opening brace to
+  a goto label when `BreakBeforeBraces` is `Custom`. It defaults to `true` to
+  preserve the existing wrapped layout.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
