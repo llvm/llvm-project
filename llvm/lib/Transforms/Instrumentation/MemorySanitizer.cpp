@@ -747,8 +747,6 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   IRBuilder<> IRB(M);
 
   // Create the callback.
-  // FIXME: this function should have "Cold" calling conv,
-  // which is not yet implemented.
   AttrBuilder WarnAttrs(*C);
   WarnAttrs.addAttribute(Attribute::NoUnwind);
   WarnAttrs.addAttribute(Attribute::Cold);
