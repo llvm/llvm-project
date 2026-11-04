@@ -2412,6 +2412,14 @@ math_test(
 )
 
 math_test(
+    name = "totalorderf80",
+    hdrs = ["TotalOrderTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "totalorderf16",
     hdrs = ["TotalOrderTest.h"],
 )
@@ -2444,6 +2452,14 @@ math_test(
     hdrs = ["TotalOrderMagTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "totalordermagf80",
+    hdrs = ["TotalOrderMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
