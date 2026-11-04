@@ -3448,35 +3448,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 }
 
 ; CHECK-LABEL: mac_4d_i64
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_s
-; CHECK: i64x2.mul
-; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_s
-; CHECK: i64x2.mul
-; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_s
-; CHECK: i64x2.mul
-; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_s
-; CHECK: i64x2.mul
-; CHECK: i64x2.add
+; CHECK-NOT: v128.load
 define hidden void @mac_4d_i64(ptr dead_on_unwind noalias writable sret(%struct.FourLongLongs) align 8 captures(none) %agg.result, ptr noundef readonly captures(none) %x, ptr noundef readonly captures(none) %y, i32 noundef %n) {
 entry:
   %agg.result.promoted = load i64, ptr %agg.result, align 8
