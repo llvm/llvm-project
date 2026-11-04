@@ -217,8 +217,8 @@ void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createAtomicExpandLegacyPass());
   if (getMipsTargetMachine().getCLOpts().os16)
-    addPass(createMipsOs16Pass());
-  addPass(createMips16HardFloatPass());
+    addPass(createMipsOs16LegacyPass());
+  addPass(createMips16HardFloatLegacyPass());
 }
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
@@ -229,7 +229,7 @@ bool MipsPassConfig::addInstSelector() {
 }
 
 void MipsPassConfig::addPreRegAlloc() {
-  addPass(createMipsOptimizePICCallPass());
+  addPass(createMipsOptimizePICCallLegacyPass());
 }
 
 TargetTransformInfo
@@ -248,7 +248,7 @@ MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
   // Expand pseudo instructions that are sensitive to register allocation.
-  addPass(createMipsExpandPseudoPass());
+  addPass(createMipsExpandPseudoLegacyPass());
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.

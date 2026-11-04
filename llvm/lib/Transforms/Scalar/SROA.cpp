@@ -3463,9 +3463,10 @@ private:
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
 
-    return getAdjustedPtr(IRB, DL, &NewAI,
-                          APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy, Twine(OldName) + ".");
+    return getAdjustedPtr(
+        IRB, DL, &NewAI,
+        APInt(DL.getIndexTypeSizeInBits(NewAI.getType()), Offset), PointerTy,
+        Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
