@@ -625,7 +625,7 @@ typedef unsigned long long __sanitizer_eventfd_t;
 
 #  if SANITIZER_LINUX
 #    if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
-        defined(__mips__) || defined(__hexagon__)
+        defined(__mips__) || defined(__hexagon__) || defined(__hppa__)
 typedef unsigned __sanitizer___kernel_uid_t;
 typedef unsigned __sanitizer___kernel_gid_t;
 #    else
@@ -638,7 +638,7 @@ typedef long long __sanitizer___kernel_off_t;
 typedef long __sanitizer___kernel_off_t;
 #    endif
 
-#    if defined(__powerpc__) || defined(__mips__)
+#    if defined(__powerpc__) || defined(__mips__) || defined(__hppa__)
 typedef unsigned int __sanitizer___kernel_old_uid_t;
 typedef unsigned int __sanitizer___kernel_old_gid_t;
 #    else
