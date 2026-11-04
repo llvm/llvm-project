@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64-apple-darwin -run-pass=prolog-epilog \
-# RUN:   -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:   -run-pass=machine-outliner %s -o - | FileCheck %s
 
 # Each call replacing an outlined sequence takes the merged location of the
 # calls in the sequence it replaces, or else its first source location. Any

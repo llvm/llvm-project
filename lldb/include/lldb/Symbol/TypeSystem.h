@@ -207,6 +207,13 @@ public:
     return false;
   }
 
+  /// Returns the target address space of \p type,
+  /// or std::nullopt if it lives in the default address space.
+  virtual std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const {
+    return std::nullopt;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
@@ -307,6 +314,10 @@ public:
 
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
+
+  virtual CompilerType
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          uint32_t address_space);
 
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.

@@ -18,6 +18,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,8 +66,7 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   Opt.DisableVerify = DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
-  const auto &LibraryOptions = M.getContext().getLibraryOptions();
-  PipelineTuningOptions PTOptions(&LibraryOptions);
+  PipelineTuningOptions PTOptions;
   PassBuilder PB(M.getContext(), &TM, PTOptions, std::nullopt, &PIC, VFS);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -74,6 +74,9 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+  StandardInstrumentations SI(M.getContext(), /*DebugLogging=*/false);
+  SI.registerCallbacks(PIC, &MAM);
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 

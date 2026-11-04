@@ -36,11 +36,10 @@ SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
-                                          int NumBytes,
+                                          const DebugLoc &dl, int NumBytes,
                                           unsigned ADDrr,
                                           unsigned ADDri) const {
 
-  DebugLoc dl;
   const SparcInstrInfo &TII =
       *static_cast<const SparcInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
@@ -129,13 +128,17 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
 
-  emitSPAdjustment(MF, MBB, MBBI, -NumBytes, SAVErr, SAVEri);
+  emitSPAdjustment(MF, MBB, MBBI, DebugLoc(), -NumBytes, SAVErr, SAVEri);
 
   if (MF.needsFrameMoves()) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
-    CFIBuilder.buildDefCFARegister(SP::I6);
-    CFIBuilder.buildWindowSave();
-    CFIBuilder.buildRegister(SP::O7, SP::I7);
+    if (FuncInfo->isLeafProc()) {
+      CFIBuilder.buildDefCFAOffset(NumBytes + Subtarget.getStackPointerBias());
+    } else {
+      CFIBuilder.buildDefCFARegister(SP::I6);
+      CFIBuilder.buildWindowSave();
+      CFIBuilder.buildRegister(SP::O7, SP::I7);
+    }
   }
 }
 
@@ -149,7 +152,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       Size = -Size;
 
     if (Size)
-      emitSPAdjustment(MF, MBB, I, Size, SP::ADDrr, SP::ADDri);
+      emitSPAdjustment(MF, MBB, I, DebugLoc(), Size, SP::ADDrr, SP::ADDri);
   }
   return MBB.erase(I);
 }
@@ -174,7 +177,7 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
 
   int NumBytes = (int) MFI.getStackSize();
   if (NumBytes != 0)
-    emitSPAdjustment(MF, MBB, MBBI, NumBytes, SP::ADDrr, SP::ADDri);
+    emitSPAdjustment(MF, MBB, MBBI, dl, NumBytes, SP::ADDrr, SP::ADDri);
 
   // Preserve return address in %o7
   if (MBBI->getOpcode() == SP::TAIL_CALL) {
@@ -272,12 +275,18 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  SmallVector<MCRegister, 2> UntrackedLiveIns;
+
   // Remap %i[0-7] to %o[0-7].
   for (unsigned reg = SP::I0; reg <= SP::I7; ++reg) {
     if (!MRI.isPhysRegUsed(reg))
       continue;
 
     unsigned mapped_reg = reg - SP::I0 + SP::O0;
+
+    // Reserved registers are not tracked by liveness
+    if (MRI.isReserved(reg) && !MRI.isReserved(mapped_reg))
+      UntrackedLiveIns.push_back(mapped_reg);
 
     // Replace I register with O register.
     MRI.replaceRegWith(reg, mapped_reg);
@@ -304,7 +313,12 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
       MBB.removeLiveIn(reg);
       MBB.addLiveIn(reg - SP::I0 + SP::O0);
     }
+    for (MCRegister Reg : UntrackedLiveIns)
+      if (!MBB.isLiveIn(Reg))
+        MBB.addLiveIn(Reg);
   }
+  for (MCRegister Reg : UntrackedLiveIns)
+    MRI.clearKillFlags(Reg);
 
   assert(verifyLeafProcRegUse(&MRI));
 #ifdef EXPENSIVE_CHECKS
