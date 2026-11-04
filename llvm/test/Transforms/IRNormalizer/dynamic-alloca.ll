@@ -15,8 +15,8 @@ define i32 @variable_size_alloca(i32 %n) {
 ; CHECK-LABEL: define i32 @variable_size_alloca(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[BB64766:.*:]]
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[N]], align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    store i32 42, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, i32 [[N]], align 4
@@ -40,8 +40,8 @@ define i32 @fixed_size_alloca_outside_entry() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    store i32 42, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -68,8 +68,8 @@ define i32 @inalloca_alloca() {
 ; CHECK-LABEL: define i32 @inalloca_alloca() {
 ; CHECK-NEXT:  [[BB32326:.*:]]
 ; CHECK-NEXT:    call void @use(ptr null)
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[A:%.*]] = alloca inalloca i32, align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    store i32 42, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
@@ -92,8 +92,8 @@ define i32 @user_in_successor(i32 %n) {
 ; CHECK-LABEL: define i32 @user_in_successor(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[N]], align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
@@ -119,10 +119,10 @@ define void @size_operand_stays_above_alloca(i32 %n) {
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[BB69501:.*:]]
 ; CHECK-NEXT:    call void @use(ptr null)
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
-; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[SIZE:%.*]] = mul i32 [[N]], 2
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[SIZE]], align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -145,8 +145,8 @@ define i64 @alloca_stays_above_stackrestore(i32 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
-; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[N]], align 4
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[P:%.*]] = ptrtoint ptr [[A]] to i64
@@ -177,9 +177,9 @@ define void @inalloca_stays_most_recent(i32 %n) {
 ; CHECK-LABEL: define void @inalloca_stays_most_recent(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[BB17390:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = alloca i32, i32 [[N]], align 4
 ; CHECK-NEXT:    [[ARGS:%.*]] = alloca inalloca i32, align 4
 ; CHECK-NEXT:    store i32 1, ptr [[ARGS]], align 4
-; CHECK-NEXT:    [[V:%.*]] = alloca i32, i32 [[N]], align 4
 ; CHECK-NEXT:    store i32 2, ptr [[V]], align 4
 ; CHECK-NEXT:    call void @inalloca_callee(ptr inalloca(i32) [[ARGS]])
 ; CHECK-NEXT:    ret void
@@ -199,8 +199,8 @@ define i32 @static_alloca_after_convergence_entry(i32 %n) convergent {
 ; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB64766:.*:]]
 ; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
-; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    store i32 42, ptr [[X]], align 4
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, i32 [[N]], align 4
@@ -227,9 +227,9 @@ define i32 @static_alloca_moves_up(i32 %n) {
 ; CHECK-NEXT:  [[BB10466:.*:]]
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @use(ptr null)
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[N]], align 4
 ; CHECK-NEXT:    [[SP:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    store i32 42, ptr [[X]], align 4
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 [[N]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[X]], align 4
