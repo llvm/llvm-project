@@ -10,7 +10,7 @@ define void @f() {
 }
 ;.
 ; CHECK: @llvm.used = appending global [1 x ptr] [ptr @msan.module_ctor], section "llvm.metadata"
-; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @msan.module_ctor, ptr null }]
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @msan.module_ctor, ptr @msan.module_ctor }]
 ; CHECK: @__msan_retval_tls = external thread_local(initialexec) global [100 x i64]
 ; CHECK: @__msan_retval_origin_tls = external thread_local(initialexec) global i32
 ; CHECK: @__msan_param_tls = external thread_local(initialexec) global [100 x i64]
@@ -35,7 +35,7 @@ define void @f() {
 ;
 ;
 ; CHECK-LABEL: define internal void @msan.module_ctor(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] comdat {
 ; CHECK-NEXT:    call void @__msan_init()
 ; CHECK-NEXT:    ret void
 ;
