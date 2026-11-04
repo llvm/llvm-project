@@ -15,8 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float80, frexpf80, (float80 x, int *exp)) {
-  return cpp::bit_cast<float80>(
-      math::frexpf80(cpp::bit_cast<Float80>(x), exp));
+  return cpp::bit_cast<float80>(math::frexpf80(cpp::bit_cast<Float80>(x), exp));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

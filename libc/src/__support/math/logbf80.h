@@ -18,9 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr Float80 logbf80(Float80 x) {
-  return fputil::logb(x);
-}
+LIBC_INLINE constexpr Float80 logbf80(Float80 x) { return fputil::logb(x); }
 
 } // namespace math
 
