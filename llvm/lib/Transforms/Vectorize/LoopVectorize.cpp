@@ -1530,9 +1530,7 @@ static bool isExplicitVecOuterLoop(const VectorizeOptions &Opts, Loop *OuterLp,
   if (Hints.getForce() == LoopVectorizeHints::FK_Undefined)
     return false;
 
-  Function *Fn = OuterLp->getHeader()->getParent();
-  if (!Hints.allowVectorization(Fn, OuterLp,
-                                true /*VectorizeOnlyWhenForced*/)) {
+  if (!Hints.allowVectorization(OuterLp, true /*VectorizeOnlyWhenForced*/)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent outer loop vectorization.\n");
     return false;
   }
@@ -7324,8 +7322,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // less verbose reporting vectorized loops and unvectorized loops that may
   // benefit from vectorization, respectively.
 
-  if (!Hints.allowVectorization(
-          F, L, VectorizeOnlyWhenForced || !Opts.vectorize_loops)) {
+  if (!Hints.allowVectorization(L, VectorizeOnlyWhenForced ||
+                                       !Opts.vectorize_loops)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
     return false;
   }
