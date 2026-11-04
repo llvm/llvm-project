@@ -46,7 +46,8 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
       prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
       compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
-      compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
+      compilerDirectiveSentinels_{that.compilerDirectiveSentinels_},
+      pluginDirectiveSentinels_{that.pluginDirectiveSentinels_} {}
 
 // Returns number of bytes to skip
 static inline int IsSpace(const char *p) {
@@ -175,11 +176,22 @@ void Prescanner::Statement() {
       // (ditto for !@cuf and !@acc).
       EmitChar(tokens, '!');
       ++at_, ++column_;
-      for (const char *sp{directiveSentinel_}; *sp != '\0';
-           ++sp, ++at_, ++column_) {
+      const char *sp{directiveSentinel_};
+      if (InPluginDirective()) {
+        // !$prefix is spelled !dir$ prefix, a directive the parser knows.
+        EmitInsertedChar(tokens, 'd');
+        EmitInsertedChar(tokens, 'i');
+        EmitInsertedChar(tokens, 'r');
+        EmitChar(tokens, *sp++); // '$'
+        ++at_, ++column_;
+        EmitInsertedChar(tokens, ' ');
+        tokens.CloseToken();
+      }
+      for (; *sp != '\0'; ++sp, ++at_, ++column_) {
         EmitChar(tokens, *sp);
       }
-      if (inFixedForm_) {
+      // Only a plugin directive sentinel can extend past column 5.
+      if (inFixedForm_ && column_ <= 6) {
         // We need to add the whitespace after the sentinel because otherwise
         // the line cannot be re-categorised as a compiler directive.
         while (column_ <= 6) {
@@ -1516,8 +1528,11 @@ const char *Prescanner::FixedFormContinuationLine(
     // !$ under -E is not continued, but deferred to later compilation
     if (IsFixedFormCommentChar(col1) &&
         !(InConditionalLine() && preprocessingOnly_)) {
+      // The sentinel and blanks up to column 5, or the end of a longer
+      // (plugin directive) sentinel; then the continuation column.
+      int fieldEnd{FixedFormSentinelFieldEnd(directiveSentinel_)};
       int j{1};
-      for (; j < 5; ++j) {
+      for (; j < fieldEnd; ++j) {
         char ch{directiveSentinel_[j - 1]};
         if (ch == '\0') {
           break;
@@ -1525,17 +1540,17 @@ const char *Prescanner::FixedFormContinuationLine(
           return nullptr;
         }
       }
-      for (; j < 5; ++j) {
+      for (; j < fieldEnd; ++j) {
         if (nextLine_[j] != ' ') {
           return nullptr;
         }
       }
-      const char *col6{nextLine_ + 5};
+      const char *col6{nextLine_ + fieldEnd};
       if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
-        if (atNewline && !IsSpace(nextLine_ + 6)) {
+        if (atNewline && !IsSpace(col6 + 1)) {
           brokenToken_ = true;
         }
-        return nextLine_ + 6;
+        return col6 + 1;
       }
     }
   } else { // Normal case: not in a compiler directive.
@@ -1733,7 +1748,9 @@ bool Prescanner::FixedFormContinuation(bool atNewline) {
             "unterminated C-style comment"_err_en_US);
       }
       BeginSourceLine(cont);
-      column_ = 7;
+      column_ = InCompilerDirective()
+          ? FixedFormSentinelFieldEnd(directiveSentinel_) + 2
+          : 7;
       NextLine();
       return true;
     }
@@ -1820,6 +1837,24 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     return std::nullopt;
   }
   *sp = '\0';
+  // A plugin directive sentinel ($prefix) may be longer than columns 2-5;
+  // the column after it then takes the place of column 6, and must be blank
+  // on an initial line.
+  if (column == 6 && sentinel[0] == '$' && IsLetter(*p) &&
+      !pluginDirectiveSentinels_.empty()) {
+    std::string longSentinel{sentinel};
+    const char *q{p};
+    for (; IsLetter(*q); ++q) {
+      longSentinel += ToLowerCaseLetter(*q);
+    }
+    if (const char *ss{IsCompilerDirectiveSentinel(
+            longSentinel.data(), longSentinel.size())};
+        ss && IsPluginDirectiveSentinel(ss) &&
+        (*q == '\n' || IsSpaceOrTab(q))) {
+      return {LineClassification{
+          LineClassification::Kind::CompilerDirective, 0, ss}};
+    }
+  }
   // A fixed form OpenMP conditional compilation sentinel must satisfy the
   // following criteria, for initial lines:
   // - Columns 3 through 5 must have only white space or numbers.
@@ -1913,6 +1948,12 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
   return *this;
 }
 
+Prescanner &Prescanner::AddPluginDirectiveSentinel(const std::string &dir) {
+  AddCompilerDirectiveSentinel(dir);
+  pluginDirectiveSentinels_.insert(dir);
+  return *this;
+}
+
 std::optional<CharBlock> Prescanner::GetKeywordMacroName(
     const char *start) const {
   if (IsLegalIdentifierStart(*start)) {
@@ -1978,7 +2019,7 @@ const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {
 
 std::optional<std::pair<const char *, const char *>>
 Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
-  char sentinel[8];
+  char sentinel[16]; // room for plugin directive sentinels ($prefix)
   for (std::size_t j{0}; j + 1 < sizeof sentinel; ++p, ++j) {
     if (int n{IsSpaceOrTab(p)};
         n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
