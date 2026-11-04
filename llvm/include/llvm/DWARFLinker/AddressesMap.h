@@ -10,6 +10,8 @@
 #define LLVM_DWARFLINKER_ADDRESSESMAP_H
 
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -22,6 +24,9 @@ namespace dwarf_linker {
 /// Mapped value in the address map is the offset to apply to the
 /// linked address.
 using RangesTy = AddressRangesMap;
+
+/// The debug sections holding relocations which the linker can save.
+enum class RelocSectionKind : uint8_t { DebugInfo, DebugAddr };
 
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
@@ -84,17 +89,62 @@ public:
   /// Check if the linker needs to gather and save relocation info.
   virtual bool needToSaveValidRelocs() = 0;
 
-  /// Update and save relocation values to be serialized
-  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
+  /// Save the valid relocations found in [\p StartOffset, \p EndOffset) of the
+  /// input \p InSection, moved by \p LinkedOffset into \p OutSection, for the
+  /// unit at \p OriginalUnitOffset in the input. The output offset is either
+  /// absolute, or relative to the unit's contribution to \p OutSection, which
+  /// the linker then reports through DWARFFile::UnitOffsetsFunc.
+  ///
+  /// \returns true if any relocation was saved.
+  virtual bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                        RelocSectionKind OutSection,
                                         uint64_t OriginalUnitOffset,
                                         int64_t LinkedOffset,
                                         uint64_t StartOffset,
                                         uint64_t EndOffset) = 0;
 
-  /// Update the valid relocations that used OriginalUnitOffset as the compile
-  /// unit offset, and update their values to reflect OutputUnitOffset.
-  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                               uint64_t OutputUnitOffset) = 0;
+  /// An input .debug_addr entry, cloned into an output .debug_addr entry.
+  struct DebugAddrEntryFixup {
+    /// Offset of the input entry in the input .debug_addr section.
+    uint64_t InputOffset;
+    /// Index of the output entry in the unit's output address table.
+    uint64_t OutputIndex;
+    /// Whether the entry is the DW_AT_low_pc of a DIE, which merging the
+    /// library reads to tell how far the code of the DIE moved.
+    bool IsLowPC;
+  };
+
+  /// Save the relocations of the input .debug_addr entries in \p Fixups, for
+  /// the unit at \p OriginalUnitOffset in the input, whose output address table
+  /// starts at \p OutputTableOffset.
+  void saveDebugAddrRelocs(ArrayRef<DebugAddrEntryFixup> Fixups,
+                           uint64_t OriginalUnitOffset,
+                           uint64_t OutputTableOffset, uint8_t AddrSize) {
+    // The linker merges the entries holding the same address, so input entries
+    // of different symbols can share an output entry. A DW_AT_call_return_pc
+    // which ends a function holds the low_pc of the next one, for example.
+    // Only one relocation may describe an entry, so prefer the low_pc's: it
+    // names the symbol the code of the DIE belongs to.
+    SmallVector<DebugAddrEntryFixup> Sorted(Fixups);
+    llvm::stable_sort(Sorted, [](const DebugAddrEntryFixup &LHS,
+                                 const DebugAddrEntryFixup &RHS) {
+      return std::make_pair(LHS.OutputIndex, !LHS.IsLowPC) <
+             std::make_pair(RHS.OutputIndex, !RHS.IsLowPC);
+    });
+
+    std::optional<uint64_t> SavedIndex;
+    for (const DebugAddrEntryFixup &Fixup : Sorted) {
+      if (SavedIndex == Fixup.OutputIndex)
+        continue;
+      uint64_t OutputOffset = OutputTableOffset + Fixup.OutputIndex * AddrSize;
+      if (updateAndSaveValidRelocs(
+              RelocSectionKind::DebugAddr, RelocSectionKind::DebugAddr,
+              OriginalUnitOffset,
+              int64_t(OutputOffset) - int64_t(Fixup.InputOffset),
+              Fixup.InputOffset, Fixup.InputOffset + AddrSize))
+        SavedIndex = Fixup.OutputIndex;
+    }
+  }
 
   /// Erases all data.
   virtual void clear() = 0;

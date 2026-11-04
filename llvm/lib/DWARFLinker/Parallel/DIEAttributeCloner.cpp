@@ -54,10 +54,16 @@ void DIEAttributeCloner::clone() {
     }
 
     DWARFFormValue Val = AttrSpec.getFormValue();
+    uint64_t InputAttrStartOffset = InputDieEntry->getOffset() + Offset;
     Val.extractValue(Data, &Offset, InUnit.getFormParams(),
                      &InUnit.getOrigUnit());
+    uint64_t InputAttrEndOffset = InputDieEntry->getOffset() + Offset;
+    uint64_t OutputAttrOffset = AttrOutOffset;
 
     // Clone current attribute.
+    // Only the address and block attributes can hold relocations against
+    // symbols, which are the ones to save.
+    bool MayHaveRelocs = false;
     switch (AttrSpec.Form) {
     case dwarf::DW_FORM_strp:
     case dwarf::DW_FORM_line_strp:
@@ -97,6 +103,7 @@ void DIEAttributeCloner::clone() {
     case dwarf::DW_FORM_block4:
     case dwarf::DW_FORM_exprloc:
       AttrOutOffset += cloneBlockAttr(Val, AttrSpec);
+      MayHaveRelocs = true;
       break;
     case dwarf::DW_FORM_addr:
     case dwarf::DW_FORM_addrx:
@@ -105,6 +112,7 @@ void DIEAttributeCloner::clone() {
     case dwarf::DW_FORM_addrx3:
     case dwarf::DW_FORM_addrx4:
       AttrOutOffset += cloneAddressAttr(Val, AttrSpec);
+      MayHaveRelocs = true;
       break;
     default:
       InUnit.warn("unsupported attribute form " +
@@ -112,6 +120,46 @@ void DIEAttributeCloner::clone() {
                       " in DieAttributeCloner::clone(). Dropping.",
                   InputDieEntry);
     }
+
+    if (SaveRelocs && MayHaveRelocs && AttrOutOffset != OutputAttrOffset) {
+      // The relocations of the attribute follow it into .debug_info.
+      RelocFixups.push_back({RelocSectionKind::DebugInfo, InputAttrStartOffset,
+                             InputAttrEndOffset, OutputAttrOffset});
+
+      // So do the address operands of an expression, which were .debug_addr
+      // entries in the input.
+      uint8_t AddrSize = InUnit.getOrigUnit().getAddressByteSize();
+      for (auto [InputOffset, OperandOffset] : DebugAddrOperands)
+        RelocFixups.push_back({RelocSectionKind::DebugAddr, InputOffset,
+                               InputOffset + AddrSize,
+                               OutputAttrOffset + OperandOffset});
+
+      // An address taken from a .debug_addr entry stays in one, in the table
+      // of the unit. The compile unit's low_pc is computed rather than taken
+      // from its entry, and a high_pc may end where the next symbol starts,
+      // sharing the next low_pc's entry, which its relocation would
+      // misdescribe.
+      bool IsUnitLowPC =
+          InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
+          AttrSpec.Attr == dwarf::DW_AT_low_pc;
+      if (DebugAddrEntry && !IsUnitLowPC &&
+          AttrSpec.Attr != dwarf::DW_AT_high_pc)
+        OutUnit.getAsCompileUnit()->noteDebugAddrFixup(
+            DebugAddrEntry->first, DebugAddrEntry->second,
+            AttrSpec.Attr == dwarf::DW_AT_low_pc);
+    }
+    DebugAddrOperands.clear();
+    DebugAddrEntry.reset();
+  }
+
+  // A unit merged out of a library tells which library it comes from.
+  if (InputDIEIdx == 0 && OutUnit.isCompileUnit() && !AttrInfo.HasAppleOrigin) {
+    std::optional<StringRef> InstallName =
+        InUnit.getContainingFile().Addresses->getLibraryInstallName();
+    if (InstallName)
+      AttrOutOffset += addStringAttr(
+          dwarf::DW_AT_APPLE_origin,
+          InUnit.getGlobalData().getStringPool().insert(*InstallName).first);
   }
 
   // We convert source strings into the indexed form for DWARFv5.
@@ -216,6 +264,15 @@ size_t DIEAttributeCloner::cloneStringAttr(
   else if (AttrSpec.Attr == dwarf::DW_AT_MIPS_linkage_name ||
            AttrSpec.Attr == dwarf::DW_AT_linkage_name)
     AttrInfo.MangledName = StringInPool;
+  else if (AttrSpec.Attr == dwarf::DW_AT_APPLE_origin) {
+    // The library being merged is where the unit now comes from.
+    AttrInfo.HasAppleOrigin = true;
+    std::optional<StringRef> InstallName =
+        InUnit.getContainingFile().Addresses->getLibraryInstallName();
+    if (InstallName)
+      StringInPool =
+          InUnit.getGlobalData().getStringPool().insert(*InstallName).first;
+  }
 
   if (AttrSpec.Form == dwarf::DW_FORM_line_strp) {
     if (OutUnit.isTypeUnit()) {
@@ -231,24 +288,27 @@ size_t DIEAttributeCloner::cloneStringAttr(
         .second;
   }
 
+  return addStringAttr(AttrSpec.Attr, StringInPool);
+}
+
+size_t DIEAttributeCloner::addStringAttr(dwarf::Attribute Attr,
+                                         StringEntry *String) {
   if (Use_DW_FORM_strp) {
     if (OutUnit.isTypeUnit()) {
-      DebugInfoOutputSection.notePatch(
-          DebugTypeStrPatch{AttrOutOffset, OutDIE,
-                            InUnit.getDieTypeEntry(InputDIEIdx), StringInPool});
+      DebugInfoOutputSection.notePatch(DebugTypeStrPatch{
+          AttrOutOffset, OutDIE, InUnit.getDieTypeEntry(InputDIEIdx), String});
     } else {
       DebugInfoOutputSection.notePatchWithOffsetUpdate(
-          DebugStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
+          DebugStrPatch{{AttrOutOffset}, String}, PatchesOffsets);
     }
 
-    return Generator
-        .addStringPlaceholderAttribute(AttrSpec.Attr, dwarf::DW_FORM_strp)
+    return Generator.addStringPlaceholderAttribute(Attr, dwarf::DW_FORM_strp)
         .second;
   }
 
   return Generator
-      .addIndexedStringAttribute(AttrSpec.Attr, dwarf::DW_FORM_strx,
-                                 OutUnit->getDebugStrIndex(StringInPool))
+      .addIndexedStringAttribute(Attr, dwarf::DW_FORM_strx,
+                                 OutUnit->getDebugStrIndex(String))
       .second;
 }
 
@@ -644,7 +704,8 @@ size_t DIEAttributeCloner::cloneBlockAttr(
       return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
-                                  VarAddressAdjustment, PatchesOffsets);
+                                  VarAddressAdjustment, PatchesOffsets,
+                                  SaveRelocs ? &DebugAddrOperands : nullptr);
     Bytes = Buffer;
   }
 
@@ -671,6 +732,10 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     *PatchesOffsets[Idx] +=
         (AttrOutOffset + (FinalAttributeSize - Bytes.size()));
   }
+
+  // The operands were located in Bytes, which follows the length of the block.
+  for (auto &[InputOffset, OperandOffset] : DebugAddrOperands)
+    OperandOffset += FinalAttributeSize - Bytes.size();
 
   if (HasLocationExpressionAddress)
     AttrInfo.HasLiveAddress =
@@ -743,9 +808,16 @@ size_t DIEAttributeCloner::cloneAddressAttr(
         .second;
   }
 
+  uint64_t AddrIndex = OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr);
+
+  // Tell which entry the address went to, for its relocation to follow it.
+  std::optional<uint64_t> InputOffset =
+      InUnit.getOrigUnit().getIndexedAddressOffset(Val.getRawUValue());
+  if (InputOffset)
+    DebugAddrEntry.emplace(*InputOffset, AddrIndex);
+
   return Generator
-      .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx,
-                          OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr))
+      .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx, AddrIndex)
       .second;
 }
 
@@ -764,8 +836,15 @@ uint64_t DIEAttributeCloner::constrainHighPC(uint64_t HighPC, bool IsLength) {
 
 unsigned DIEAttributeCloner::finalizeAbbreviations(bool HasChildrenToClone) {
   // Add the size of the abbreviation number to the output offset.
-  AttrOutOffset +=
+  size_t AbbrevNumberSize =
       Generator.finalizeAbbreviations(HasChildrenToClone, &PatchesOffsets);
+  AttrOutOffset += AbbrevNumberSize;
+
+  for (CompileUnit::DebugInfoRelocFixup &Fixup : RelocFixups)
+    Fixup.OutputOffset += AbbrevNumberSize;
+  if (!RelocFixups.empty())
+    OutUnit.getAsCompileUnit()->noteDebugInfoRelocFixups(RelocFixups);
+  RelocFixups.clear();
 
   return AttrOutOffset;
 }

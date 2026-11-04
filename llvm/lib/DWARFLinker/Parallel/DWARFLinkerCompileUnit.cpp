@@ -97,6 +97,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   Abbreviations.clear();
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
+  DebugInfoRelocFixups.clear();
+  DebugAddrFixups.clear();
   StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);
@@ -771,6 +773,7 @@ Error CompileUnit::emitDebugAddrSection() {
   OutAddrSection.emitIntVal(0, 1);
 
   // Emit addresses.
+  DebugAddrTableOffset = OutAddrSection.OS.tell();
   for (uint64_t AddrValue : DebugAddrIndexMap.getValues())
     OutAddrSection.emitIntVal(AddrValue, getFormParams().AddrSize);
 
@@ -782,6 +785,42 @@ Error CompileUnit::emitDebugAddrSection() {
       OutAddrSection.OS.tell() - OffsetAfterSectionLength);
 
   return Error::success();
+}
+
+void CompileUnit::saveRelocations() {
+  if (DebugInfoRelocFixups.empty() && DebugAddrFixups.empty())
+    return;
+
+  AddressesMap &Addresses = *getContainingFile().Addresses;
+  uint64_t UnitOffset = getOrigUnit().getOffset();
+  for (const DebugInfoRelocFixup &Fixup : DebugInfoRelocFixups)
+    Addresses.updateAndSaveValidRelocs(
+        Fixup.InputSection, RelocSectionKind::DebugInfo, UnitOffset,
+        int64_t(Fixup.OutputOffset) - int64_t(Fixup.InputStartOffset),
+        Fixup.InputStartOffset, Fixup.InputEndOffset);
+  Addresses.saveDebugAddrRelocs(DebugAddrFixups, UnitOffset,
+                                DebugAddrTableOffset, getFormParams().AddrSize);
+  // The input is about to be unloaded, so remember the offset now.
+  SavedRelocsUnitOffset = UnitOffset;
+
+  DebugInfoRelocFixups.clear();
+  DebugAddrFixups.clear();
+}
+
+void CompileUnit::reportUnitOffsets() {
+  const DWARFFile::UnitOffsetsCallbackTy &Report =
+      getContainingFile().UnitOffsetsFunc;
+  if (!SavedRelocsUnitOffset || !Report)
+    return;
+
+  uint64_t DebugAddrOffset = 0;
+  std::optional<SectionDescriptor *> DebugAddr =
+      tryGetSectionDescriptor(DebugSectionKind::DebugAddr);
+  if (DebugAddr)
+    DebugAddrOffset = (*DebugAddr)->StartOffset;
+  Report(*SavedRelocsUnitOffset,
+         getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset,
+         DebugAddrOffset);
 }
 
 Error CompileUnit::cloneAndEmitRanges() {
@@ -1207,11 +1246,23 @@ void CompileUnit::cloneDieAttrExpression(
     const DWARFExpression &InputExpression,
     SmallVectorImpl<uint8_t> &OutputExpression, SectionDescriptor &Section,
     std::optional<int64_t> VarAddressAdjustment,
-    OffsetsPtrVector &PatchesOffsets) {
+    OffsetsPtrVector &PatchesOffsets,
+    SmallVectorImpl<std::pair<uint64_t, uint64_t>> *DebugAddrOperands) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
   DWARFUnit &OrigUnit = getOrigUnit();
   uint8_t OrigAddressByteSize = OrigUnit.getAddressByteSize();
+
+  // Remember where the address operand about to be appended to
+  // OutputExpression comes from in .debug_addr, so its relocation can be saved.
+  auto NoteDebugAddrOperand = [&](const DWARFExpression::Operation &Op) {
+    if (!DebugAddrOperands)
+      return;
+    std::optional<uint64_t> AddrOffset =
+        OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (AddrOffset)
+      DebugAddrOperands->emplace_back(*AddrOffset, OutputExpression.size());
+  };
 
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
@@ -1305,6 +1356,7 @@ void CompileUnit::cloneDieAttrExpression(
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
             OrigAddressByteSize);
+        NoteDebugAddrOperand(Op);
         OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
       } else
         warn("cann't read DW_OP_addrx operand.");
@@ -1345,6 +1397,7 @@ void CompileUnit::cloneDieAttrExpression(
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
               OrigAddressByteSize);
+          NoteDebugAddrOperand(Op);
           OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
         }
       } else

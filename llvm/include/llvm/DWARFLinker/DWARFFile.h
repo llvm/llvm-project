@@ -26,6 +26,13 @@ class DWARFFile {
 public:
   using UnloadCallbackTy = std::function<void(StringRef FileName)>;
 
+  /// Callback receiving where the contributions of the unit at
+  /// \p OriginalUnitOffset in the input landed in the output .debug_info and
+  /// .debug_addr sections.
+  using UnitOffsetsCallbackTy =
+      std::function<void(uint64_t OriginalUnitOffset, uint64_t DebugInfoOffset,
+                         uint64_t DebugAddrOffset)>;
+
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
             std::unique_ptr<AddressesMap> Addresses,
             UnloadCallbackTy UnloadFunc = nullptr)
@@ -43,6 +50,12 @@ public:
 
   /// Callback to the module keeping object file to unload.
   UnloadCallbackTy UnloadFunc;
+
+  /// Called once the output offsets of a unit are final, for the units whose
+  /// relocations were saved at offsets relative to the unit (see
+  /// AddressesMap::updateAndSaveValidRelocs). It outlives unload(), unlike
+  /// Addresses, as a linker may only place the units after unloading them.
+  UnitOffsetsCallbackTy UnitOffsetsFunc;
 
   /// Unloads object file and corresponding AddressesMap and Dwarf Context.
   void unload() {
