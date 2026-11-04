@@ -85,6 +85,9 @@ public:
     defCls.writeDefTo(os);
   }
 
+  /// Returns the headers that need to be included for the class to parse.
+  ArrayRef<StringRef> getRequiredIncludes() const { return requiredIncludes; }
+
 private:
   /// Add traits from the TableGen definition to the class.
   void createParentWithTraits();
@@ -183,6 +186,9 @@ private:
 
   /// The set of using declarations for trait methods.
   llvm::StringSet<> interfaceUsingNames;
+
+  /// The headers required by the class.
+  SmallVector<StringRef> requiredIncludes;
 };
 } // namespace
 
@@ -255,6 +261,7 @@ void DefGen::createParentWithTraits() {
         isa<NativeTrait>(&trait)
             ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
             : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName());
+    llvm::append_range(requiredIncludes, trait.getCppIncludes());
   }
   for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
@@ -266,6 +273,12 @@ void DefGen::createParentWithTraits() {
   if (def.genMnemonicAlias() &&
       !llvm::is_contained(traitNames, opAsmInterfaceTraitName)) {
     defParent.addTemplateParam(opAsmInterfaceTraitName);
+    // `OpAsmAttrInterface` and `OpAsmTypeInterface` are declared in
+    // `BuiltinAttributeInterfaces.h` and `BuiltinTypeInterfaces.h`
+    // respectively.
+    requiredIncludes.push_back(isa<AttrDef>(def)
+                                   ? "mlir/IR/BuiltinAttributeInterfaces.h"
+                                   : "mlir/IR/BuiltinTypeInterfaces.h");
   }
   defCls.addParent(std::move(defParent));
 }
@@ -896,27 +909,39 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
   emitSourceFileHeader((defType + "Def Declarations").str(), os);
   llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
 
-  // Output the common "header".
-  os << typeDefDeclHeader;
-
   SmallVector<AttrOrTypeDef, 16> defs;
   collectAllDefs(selectedDialect, defRecords, defs);
-  if (defs.empty())
-    return false;
-  {
-    DialectNamespaceEmitter nsEmitter(os, defs.front().getDialect());
+
+  // The required includes are only known once all declarations were
+  // generated, so buffer the declarations until the includes are emitted.
+  SmallVector<StringRef> includes;
+  std::string declarations;
+  llvm::raw_string_ostream declOs(declarations);
+  if (!defs.empty()) {
+    includes.push_back(isAttrGenerator ? "mlir/IR/Attributes.h"
+                                       : "mlir/IR/Types.h");
+    DialectNamespaceEmitter nsEmitter(declOs, defs.front().getDialect());
 
     // Declare all the def classes first (in case they reference each other).
     for (const AttrOrTypeDef &def : defs) {
-      tblgen::emitSummaryAndDescComments(os, def.getSummary(),
+      tblgen::emitSummaryAndDescComments(declOs, def.getSummary(),
                                          def.getDescription());
-      os << "class " << def.getCppClassName() << ";\n";
+      declOs << "class " << def.getCppClassName() << ";\n";
     }
 
     // Emit the declarations.
-    for (const AttrOrTypeDef &def : defs)
-      DefGen(def).emitDecl(os);
+    for (const AttrOrTypeDef &def : defs) {
+      DefGen gen(def);
+      gen.emitDecl(declOs);
+      llvm::append_range(includes, gen.getRequiredIncludes());
+    }
   }
+  tblgen::emitIncludes(os, includes);
+
+  // Output the common "header".
+  os << typeDefDeclHeader;
+  os << declarations;
+
   // Emit the TypeID explicit specializations to have a single definition for
   // each of these.
   for (const AttrOrTypeDef &def : defs)
