@@ -270,8 +270,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   case CallingConv::AnyReg:
     if (HasAVX)
-      return CSR_64_AllRegs_AVX_SaveList;
-    return CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                     : CSR_64_AllRegs_AVX_SaveList;
+    return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
     if (IsWin64)
       return HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
@@ -341,12 +342,15 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_INTR:
     if (Is64Bit) {
       if (HasAVX512)
-        return CSR_64_AllRegs_AVX512_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX512_SaveList
+                       : CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
-        return CSR_64_AllRegs_AVX_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                       : CSR_64_AllRegs_AVX_SaveList;
       if (HasSSE)
-        return CSR_64_AllRegs_SaveList;
-      return CSR_64_AllRegs_NoSSE_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_NoSSE_SaveList
+                     : CSR_64_AllRegs_NoSSE_SaveList;
     }
     if (HasAVX512)
       return CSR_32_AllRegs_AVX512_SaveList;
@@ -410,6 +414,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::HiPE:
     return CSR_NoRegs_RegMask;
   case CallingConv::AnyReg:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (HasAVX)
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
@@ -480,6 +486,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (Is64Bit) {
       if (HasAVX512)
         return CSR_64_AllRegs_AVX512_RegMask;
