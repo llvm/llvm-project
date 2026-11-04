@@ -4658,7 +4658,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
       Src = std::move(Backup);
-      return {};
+      return std::make_pair(0, uint8_t(0));
     }
 
     // Recursion is naturally limited by the size of the operand vector.
@@ -4767,7 +4767,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     break;
   }
   default:
-    return {};
+    return std::make_pair(0, uint8_t(0));
   }
 
   uint8_t TTbl;
