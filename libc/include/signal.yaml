@@ -57,6 +57,13 @@ functions:
     arguments:
       - type: pid_t
       - type: int
+  - name: killpg
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: int
   - name: raise
     standards:
       - stdc
@@ -127,6 +134,12 @@ functions:
       - type: int
       - type: const sigset_t *__restrict
       - type: sigset_t *__restrict
+  - name: sigsuspend
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const sigset_t *
   - name: pthread_sigmask
     standards:
       - posix

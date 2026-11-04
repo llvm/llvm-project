@@ -3344,19 +3344,21 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     mlir::Value lhsValue = Visit(lhsExpr);
     mlir::Value rhsValue = Visit(rhsExpr);
 
-    mlir::Type vecTy = convertType(condType);
+    // Test the MSB with a signed compare, as classic codegen does.
+    mlir::Type vecTy =
+        convertType(cgf.getContext().getCorrespondingSignedType(condType));
+    condValue = builder.createBitcast(condValue, vecTy);
     mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
     auto testMSB = cir::VecCmpOp::create(
         builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
     mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
     mlir::Value tmp2 = builder.createNot(tmp);
 
-    // Cast float to int to perform ANDs if necessary.
+    // Bitcast float or differently signed operands to the condition type.
     mlir::Value rhsTmp = rhsValue;
     mlir::Value lhsTmp = lhsValue;
     bool wasCast = false;
-    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
-    if (cir::isAnyFloatingPointType(rhsVecTy.getElementType())) {
+    if (rhsValue.getType() != vecTy) {
       rhsTmp = builder.createBitcast(rhsValue, tmp2.getType());
       lhsTmp = builder.createBitcast(lhsValue, tmp.getType());
       wasCast = true;

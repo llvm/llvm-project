@@ -549,8 +549,8 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   return MSFI;
 }
 
-PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ShaderFlagsAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
   // Print description of combined shader flags for all module functions
   OS << "; Combined Shader Flags for Module\n";
