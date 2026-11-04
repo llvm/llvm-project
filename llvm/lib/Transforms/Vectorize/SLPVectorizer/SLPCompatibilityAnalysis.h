@@ -371,6 +371,17 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
 std::pair<Instruction *, SmallVector<Value *>>
 convertTo(Instruction *I, const InstructionsState &S);
 
+/// Checks if the compares \p VL with the state \p S are the eq bit tests,
+/// whose trunc X to i1 lanes can be inversed to and X, 1 == 0 by swapping the
+/// operands of their select users in case like select (trunc), B, A,
+/// select (icmp eq), A, B. \p IsInSingleNode checks that the select user of
+/// the lane is vectorized in a single node. Sets the trunc lanes in
+/// \p InversedCmpsIndices, sized to \p VL.
+bool matchesInversedBitTestSelect(const InstructionsState &S,
+                                  ArrayRef<Value *> VL,
+                                  function_ref<bool(Value *)> IsInSingleNode,
+                                  SmallBitVector &InversedCmpsIndices);
+
 /// Checks if the specified instruction \p I is an alternate operation for
 /// the given \p MainOp and \p AltOp instructions.
 bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
