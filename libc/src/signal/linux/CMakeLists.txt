@@ -94,6 +94,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.errno.errno
 )
+
 add_entrypoint_object(
   sigpending
   SRCS

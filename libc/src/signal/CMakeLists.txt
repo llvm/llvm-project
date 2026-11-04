@@ -22,6 +22,7 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
 )
+
 add_entrypoint_object(
   sigpending
   ALIAS

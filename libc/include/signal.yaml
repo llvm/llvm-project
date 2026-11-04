@@ -124,7 +124,7 @@ functions:
       - posix
     return_type: int
     arguments:
-      - type: sigset_t * 
+      - type: sigset_t *
   - name: sigprocmask
     standards:
       - posix

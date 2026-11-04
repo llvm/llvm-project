@@ -53,6 +53,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
 add_libc_test(
   sigpending_test
   SUITE
@@ -70,6 +71,7 @@ add_libc_test(
     libc.src.signal.sigprocmask
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
 add_libc_test(
   pthread_sigmask_test
   SUITE
