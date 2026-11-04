@@ -12,6 +12,7 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/half_positive.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -35,18 +36,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Compare, class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
 __upper_bound(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp, _Proj&& __proj) {
-  auto __len = _IterOps<_AlgPolicy>::distance(__first, __last);
+  auto __len    = _IterOps<_AlgPolicy>::distance(__first, __last);
+  auto __ufirst = std::__unwrap_bounded_iter(__first, __len);
   while (__len != 0) {
     auto __half_len = std::__half_positive(__len);
-    auto __mid      = _IterOps<_AlgPolicy>::next(__first, __half_len);
+    auto __mid      = _IterOps<_AlgPolicy>::next(__ufirst, __half_len);
     if (std::__invoke(__comp, __value, std::__invoke(__proj, *__mid)))
       __len = __half_len;
     else {
-      __first = ++__mid;
+      __ufirst = ++__mid;
       __len -= __half_len + 1;
     }
   }
-  return __first;
+  return std::__rewrap_bounded_iter(std::move(__first), std::move(__ufirst));
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>

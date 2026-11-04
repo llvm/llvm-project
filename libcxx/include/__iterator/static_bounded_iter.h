@@ -178,6 +178,25 @@ public:
     return __tmp;
   }
 
+  // Asserts that [*this, *this + __n) is a valid range within the bounds of this iterator. Algorithms use this to
+  // validate a whole range once before operating on the underlying iterators (see __unwrap_bounded_iter).
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __validate_range(difference_type __n) const _NOEXCEPT {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __n >= 0, "__static_bounded_iter::__validate_range: Attempt to use a range with a negative length");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __n <= __end() - __current(),
+        "__static_bounded_iter::__validate_range: Attempt to use a range that extends past the end");
+  }
+
+  // Returns *this advanced by __n, keeping the same bounds, without checking the result. Only for positions inside a
+  // range that was already validated with __validate_range (see __rewrap_bounded_iter).
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __static_bounded_iter
+  __unchecked_add(difference_type __n) const _NOEXCEPT {
+    __static_bounded_iter __tmp(*this);
+    __tmp.__current() += __n;
+    return __tmp;
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __static_bounded_iter& operator+=(difference_type __n) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __n >= __begin() - __current(),
@@ -300,6 +319,9 @@ __make_static_bounded_iter(_It __it, _It __begin) {
 template <class _Iterator, size_t _Size>
 struct __libcpp_is_contiguous_iterator<__static_bounded_iter<_Iterator, _Size> > : true_type {};
 #endif
+
+template <class _Iterator, size_t _Size>
+struct __is_bounded_iter<__static_bounded_iter<_Iterator, _Size> > : true_type {};
 
 template <class _Iterator, size_t _Size>
 struct pointer_traits<__static_bounded_iter<_Iterator, _Size> > {

@@ -14,6 +14,7 @@
 #include <__algorithm/half_positive.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -35,24 +36,29 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Compare, class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp, _Proj&& __proj) {
-  auto __len  = _IterOps<_AlgPolicy>::distance(__first, __last);
-  _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
+  auto __len    = _IterOps<_AlgPolicy>::distance(__first, __last);
+  _Iter __end   = _IterOps<_AlgPolicy>::next(__first, __last);
+  auto __ufirst = std::__unwrap_bounded_iter(__first, __len);
+  auto __uend   = std::__unwrap_bounded_iter(std::move(__end), 0);
   while (__len != 0) {
     auto __half_len = std::__half_positive(__len);
-    _Iter __mid     = _IterOps<_AlgPolicy>::next(__first, __half_len);
+    auto __mid      = _IterOps<_AlgPolicy>::next(__ufirst, __half_len);
     if (std::__invoke(__comp, std::__invoke(__proj, *__mid), __value)) {
-      __first = ++__mid;
+      __ufirst = ++__mid;
       __len -= __half_len + 1;
     } else if (std::__invoke(__comp, __value, std::__invoke(__proj, *__mid))) {
-      __end = __mid;
-      __len = __half_len;
+      __uend = __mid;
+      __len  = __half_len;
     } else {
-      _Iter __mp1 = __mid;
-      return pair<_Iter, _Iter>(std::__lower_bound<_AlgPolicy>(__first, __mid, __value, __comp, __proj),
-                                std::__upper_bound<_AlgPolicy>(++__mp1, __end, __value, __comp, __proj));
+      auto __mp1 = __mid;
+      return pair<_Iter, _Iter>(
+          std::__rewrap_bounded_iter(__first, std::__lower_bound<_AlgPolicy>(__ufirst, __mid, __value, __comp, __proj)),
+          std::__rewrap_bounded_iter(
+              __first, std::__upper_bound<_AlgPolicy>(++__mp1, __uend, __value, __comp, __proj)));
     }
   }
-  return pair<_Iter, _Iter>(__first, __first);
+  auto __res = std::__rewrap_bounded_iter(std::move(__first), std::move(__ufirst));
+  return pair<_Iter, _Iter>(__res, __res);
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>

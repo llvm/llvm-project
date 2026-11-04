@@ -162,6 +162,25 @@ public:
     return __tmp;
   }
 
+  // Asserts that [*this, *this + __n) is a valid range within the bounds of this iterator. Algorithms use this to
+  // validate a whole range once before operating on the underlying iterators (see __unwrap_bounded_iter).
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __validate_range(difference_type __n) const _NOEXCEPT {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __n >= 0, "__bounded_iter::__validate_range: Attempt to use a range with a negative length");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __n <= __end_ - __current_,
+        "__bounded_iter::__validate_range: Attempt to use a range that extends past the end");
+  }
+
+  // Returns *this advanced by __n, keeping the same bounds, without checking the result. Only for positions inside a
+  // range that was already validated with __validate_range (see __rewrap_bounded_iter).
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __bounded_iter
+  __unchecked_add(difference_type __n) const _NOEXCEPT {
+    __bounded_iter __tmp(*this);
+    __tmp.__current_ += __n;
+    return __tmp;
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __bounded_iter& operator+=(difference_type __n) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __n >= __begin_ - __current_, "__bounded_iter::operator+=: Attempt to rewind an iterator past the start");
@@ -271,6 +290,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter<_It> __make_bounded_iter(
 template <class _Iterator>
 struct __libcpp_is_contiguous_iterator<__bounded_iter<_Iterator> > : true_type {};
 #endif
+
+template <class _Iterator>
+struct __is_bounded_iter<__bounded_iter<_Iterator> > : true_type {};
 
 template <class _Iterator>
 struct pointer_traits<__bounded_iter<_Iterator> > {
