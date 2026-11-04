@@ -24,6 +24,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
+static cl::opt<bool> TrackPhysRegInGCNTrackers(
+    "amdgpu-track-physregs-in-gcn-trackers", cl::Hidden,
+    cl::desc("Track physical registers (e.g. from inline asm) in the GCN "
+             "Up/Down RP trackers. Enabled by default; acts as a global "
+             "safety switch to control physical register pressure tracking."),
+    cl::init(true));
+
+bool llvm::isPhysRegTrackingEnabled() { return TrackPhysRegInGCNTrackers; }
+
+bool GCNRPTracker::physRegTrackingEnabled() const {
+  return isPhysRegTrackingEnabled();
+}
+
 bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
                    const GCNRPTracker::LiveRegSet &S2) {
   if (S1.size() != S2.size())
@@ -49,10 +62,8 @@ unsigned GCNRegPressure::getRegKind(const TargetRegisterClass *RC,
                     : (STI->isVectorSuperClass(RC) ? AVGPR : VGPR));
 }
 
-void GCNRegPressure::inc(unsigned Reg,
-                         LaneBitmask PrevMask,
-                         LaneBitmask NewMask,
-                         const MachineRegisterInfo &MRI) {
+void GCNRegPressure::inc(unsigned Reg, LaneBitmask PrevMask,
+                         LaneBitmask NewMask, const MachineRegisterInfo &MRI) {
   unsigned NewNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(NewMask);
   unsigned PrevNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(PrevMask);
   if (NewNumCoveredRegs == PrevNumCoveredRegs)
@@ -98,6 +109,34 @@ void GCNRegPressure::inc(unsigned Reg,
     Sign *= NewNumCoveredRegs - PrevNumCoveredRegs;
   }
   Value[RegKind] += Sign;
+}
+
+unsigned GCNRegPressure::pressureSetToRegKind(unsigned PSetID) {
+  switch (PSetID) {
+  case AMDGPU::RegisterPressureSets::SReg_32:
+    return SGPR;
+  case AMDGPU::RegisterPressureSets::AGPR_32:
+    return AGPR;
+  case AMDGPU::RegisterPressureSets::VGPR_32:
+    return VGPR;
+  }
+  llvm_unreachable("unexpected pressure set");
+}
+
+// Adjusts both raw count and tuple weight per unit. Raw count and
+// tuple weight receive identical increments. This means 32-bit physical
+// registers contribute to tuple weight (unlike virtual registers where only
+// tuples > 32-bit contribute).
+void GCNRegPressure::adjustPhysUnitPressure(MCRegUnit Unit, bool IsAdd,
+                                            const SIRegisterInfo &SRI) {
+  const int *PSetIDs = SRI.getRegUnitPressureSets(Unit);
+  if (PSetIDs[0] == -1)
+    return;
+  assert(PSetIDs[1] == -1 && "expected single pressure set per unit");
+  unsigned Kind = pressureSetToRegKind(PSetIDs[0]);
+  int Delta = (IsAdd ? 1 : -1) * static_cast<int>(SRI.getRegUnitWeight(Unit));
+  Value[Kind] += Delta;
+  Value[TOTAL_KINDS + Kind] += Delta;
 }
 
 namespace {
@@ -370,6 +409,28 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
   return LastUseMask;
 }
 
+/// Physical register counterpart of findUseBetween(). Returns whether \p Unit
+/// is read by an instruction in [PriorUseIdx, NextUseIdx).
+static bool isUnitReadBetween(MCRegUnit Unit, SlotIndex PriorUseIdx,
+                              SlotIndex NextUseIdx,
+                              const MachineRegisterInfo &MRI,
+                              const SIRegisterInfo &TRI,
+                              const LiveIntervals &LIS) {
+  for (MCRegUnitRootIterator Root(Unit, &TRI); Root.isValid(); ++Root) {
+    for (MCPhysReg Reg : TRI.superregs_inclusive(*Root)) {
+      for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+        if (!MO.readsReg())
+          continue;
+        SlotIndex InstSlot =
+            LIS.getInstructionIndex(*MO.getParent()).getRegSlot();
+        if (InstSlot >= PriorUseIdx && InstSlot < NextUseIdx)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // GCNRPTarget
 
@@ -487,6 +548,64 @@ LaneBitmask llvm::getLiveLaneMask(unsigned Reg, SlotIndex SI,
   return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI, LaneMaskFilter);
 }
 
+bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
+  // Reserved units are not kept up to date, so only consult their cached range
+  // and conservatively assume they are live otherwise.
+  if (MRI->isReservedRegUnit(Unit)) {
+    const LiveRange *LR = LIS.getCachedRegUnit(Unit);
+    return !LR || LR->liveAt(SI);
+  }
+  return LIS.getRegUnit(Unit).liveAt(SI);
+}
+
+void GCNRPTracker::addUnitsAndIncPressure(MCRegister Reg,
+                                          GCNRegPressure &Pressure) {
+  assert(SRI && "SRI not initialized");
+  for (MCRegUnit Unit : SRI->regunits(Reg)) {
+    unsigned U = static_cast<unsigned>(Unit);
+    if (!PhysLiveRegUnits.test(U)) {
+      PhysLiveRegUnits.set(U);
+      Pressure.inc(Unit, *SRI);
+    }
+  }
+}
+
+void GCNRPTracker::removeUnitsAndDecPressure(MCRegister Reg,
+                                             GCNRegPressure &Pressure) {
+  assert(SRI && "SRI not initialized");
+  for (MCRegUnit Unit : SRI->regunits(Reg)) {
+    unsigned U = static_cast<unsigned>(Unit);
+    if (PhysLiveRegUnits.test(U)) {
+      PhysLiveRegUnits.reset(U);
+      Pressure.dec(Unit, *SRI);
+    }
+  }
+}
+
+void GCNRPTracker::removeKilledUnitsAndDecPressure(MCRegister Reg, SlotIndex SI,
+                                                   GCNRegPressure &Pressure) {
+  assert(SRI && "SRI not initialized");
+  for (MCRegUnit Unit : SRI->regunits(Reg)) {
+    unsigned U = static_cast<unsigned>(Unit);
+    if (PhysLiveRegUnits.test(U) && !isUnitLiveAt(Unit, SI)) {
+      PhysLiveRegUnits.reset(U);
+      Pressure.dec(Unit, *SRI);
+    }
+  }
+}
+
+void llvm::addPhysRegPressure(GCNRegPressure &RP, const SIRegisterInfo &SRI,
+                              const BitVector &PhysLiveUnits) {
+  for (unsigned U : PhysLiveUnits.set_bits())
+    RP.inc(static_cast<MCRegUnit>(U), SRI);
+}
+
+GCNRegPressure GCNRPTracker::constructPhysRegPressure() const {
+  GCNRegPressure Res;
+  addPhysRegPressure(Res, *SRI, PhysLiveRegUnits);
+  return Res;
+}
+
 LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                                   const MachineRegisterInfo &MRI,
                                   LaneBitmask LaneMaskFilter) {
@@ -559,18 +678,44 @@ void GCNRPTracker::reset(const MachineBasicBlock &MBB, bool End) {
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
   this->MRI = &MRI;
+  SRI = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
   LastTrackedMI = nullptr;
   VirtLiveRegs = llvm::getVirtLiveRegs(SI, LIS, MRI);
   MaxPressure = CurPressure = getVirtRegPressure(MRI, VirtLiveRegs);
+
+  // Always clear PhysLiveRegUnits even when physical tracking is disabled, to
+  // avoid stale data if physical tracking was previously enabled.
+  PhysLiveRegUnits.reset();
 }
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRI,
                          const LiveRegSet &VirtLiveRegs) {
   this->MRI = &MRI;
+  SRI = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
   LastTrackedMI = nullptr;
   if (&this->VirtLiveRegs != &VirtLiveRegs)
     this->VirtLiveRegs = VirtLiveRegs;
   MaxPressure = CurPressure = getVirtRegPressure(MRI, VirtLiveRegs);
+
+  // Always clear PhysLiveRegUnits even when physical tracking is disabled, to
+  // avoid stale data if physical tracking was previously enabled.
+  PhysLiveRegUnits.reset();
+}
+
+void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
+                         const LiveRegSet &VirtLiveRegsSet,
+                         const BitVector &PhysLiveUnits) {
+  reset(MRInfo, VirtLiveRegsSet);
+  initPhysLiveUnits(PhysLiveUnits);
+}
+
+void GCNRPTracker::initPhysLiveUnits(const BitVector &PhysLiveUnits) {
+  if (!physRegTrackingEnabled())
+    return;
+  PhysLiveRegUnits = PhysLiveUnits;
+  GCNRegPressure PhysPressure = constructPhysRegPressure();
+  CurPressure += PhysPressure;
+  MaxPressure = maxPerRegFile(MaxPressure, CurPressure);
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -597,30 +742,47 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   // Kill all defs.
   GCNRegPressure DefPressure, ECDefPressure;
   bool HasECDefs = false;
+  BitVector DefUnits;
   for (const MachineOperand &MO : MI.all_defs()) {
-    if (!MO.getReg().isVirtual())
-      continue;
-
     Register Reg = MO.getReg();
-    LaneBitmask DefMask = getDefRegMask(MO, *MRI);
 
-    // Treat a def as fully live at the moment of definition: keep a record.
-    if (MO.isEarlyClobber()) {
-      ECDefPressure.inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
-      HasECDefs = true;
-    } else
-      DefPressure.inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
+    if (Reg.isVirtual()) {
+      LaneBitmask DefMask = getDefRegMask(MO, *MRI);
 
-    auto I = VirtLiveRegs.find(Reg);
-    if (I == VirtLiveRegs.end())
-      continue;
+      // Treat a def as fully live at the moment of definition: keep a record.
+      if (MO.isEarlyClobber()) {
+        ECDefPressure.inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
+        HasECDefs = true;
+      } else
+        DefPressure.inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
 
-    LaneBitmask &LiveMask = I->second;
-    LaneBitmask PrevMask = LiveMask;
-    LiveMask &= ~DefMask;
-    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
-    if (LiveMask.none())
-      VirtLiveRegs.erase(I);
+      auto I = VirtLiveRegs.find(Reg);
+      if (I == VirtLiveRegs.end())
+        continue;
+
+      LaneBitmask &LiveMask = I->second;
+      LaneBitmask PrevMask = LiveMask;
+      LiveMask &= ~DefMask;
+      CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+      if (LiveMask.none())
+        VirtLiveRegs.erase(I);
+    } else if (shouldTrackPhysReg(Reg)) {
+      if (DefUnits.empty())
+        DefUnits.resize(SRI->getNumRegUnits());
+      for (MCRegUnit Unit : SRI->regunits(Reg.asMCReg())) {
+        unsigned U = static_cast<unsigned>(Unit);
+        if (DefUnits.test(U))
+          continue;
+        DefUnits.set(U);
+        if (MO.isEarlyClobber())
+          ECDefPressure.inc(Unit, *SRI);
+        else
+          DefPressure.inc(Unit, *SRI);
+      }
+      HasECDefs |= MO.isEarlyClobber();
+
+      removeUnitsAndDecPressure(Reg.asMCReg(), CurPressure);
+    }
   }
 
   // Update MaxPressure with defs pressure.
@@ -639,10 +801,30 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     CurPressure.inc(U.VRegOrUnit.asVirtualReg(), PrevMask, LiveMask, *MRI);
   }
 
+  if (physRegTrackingEnabled()) {
+    for (const MachineOperand &MO : MI.all_uses()) {
+      if (!MO.readsReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!shouldTrackPhysReg(Reg))
+        continue;
+      addUnitsAndIncPressure(Reg.asMCReg(), CurPressure);
+    }
+  }
+
   // Update MaxPressure with uses plus early-clobber defs pressure.
   updateMaxPressure(HasECDefs ? CurPressure + ECDefPressure : CurPressure);
 
-  assert(CurPressure == getVirtRegPressure(*MRI, VirtLiveRegs));
+#ifndef NDEBUG
+  auto VirtPressure = getVirtRegPressure(*MRI, VirtLiveRegs);
+  auto PhysPressure = constructPhysRegPressure();
+  assert(CurPressure == VirtPressure + PhysPressure ||
+         (dbgs() << "Pressure mismatch in recede()\nMI: " << MI
+                 << "Tracked: " << print(CurPressure) << "Expected: "
+                 << print(VirtPressure + PhysPressure) << "Virt: "
+                 << print(VirtPressure) << "Phys: " << print(PhysPressure),
+          false));
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -650,7 +832,8 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  MachineBasicBlock::const_iterator End,
-                                 const LiveRegSet *VirtLiveRegsCopy) {
+                                 const LiveRegSet *VirtLiveRegsCopy,
+                                 const MachineBasicBlock *SeedPhysMBB) {
   MBBEnd = MI.getParent()->end();
   assert((End == MBBEnd || End->getParent()->end() == MBBEnd) &&
          "end unrelated to MI block");
@@ -667,7 +850,20 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
     GCNRPTracker::reset(*NextMI, /*After=*/false);
   else
     GCNRPTracker::reset(*MI.getParent(), /*End=*/true);
+
+  if (SeedPhysMBB && physRegTrackingEnabled() &&
+      MI.getMF()->getProperties().hasTracksLiveness())
+    initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveins());
+
   return NextMI != End;
+}
+
+bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
+                                 const LiveRegSet &VirtLiveRegs,
+                                 const BitVector &PhysLiveUnits) {
+  bool Result = reset(MI, MI.getParent()->end(), &VirtLiveRegs);
+  initPhysLiveUnits(PhysLiveUnits);
+  return Result;
 }
 
 void GCNDownwardRPTrackerBase::retireVirtReg(Register Reg, SlotIndex SI) {
@@ -705,11 +901,26 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
 
   // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
   GCNRegPressure ECDefPressure;
+  BitVector ECDefUnits;
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
-    if (Reg.isVirtual() && MO.isEarlyClobber())
+    if (!MO.isEarlyClobber())
+      continue;
+    if (Reg.isVirtual()) {
       ECDefPressure.inc(Reg, LaneBitmask::getNone(), getDefRegMask(MO, *MRI),
                         *MRI);
+    } else if (shouldTrackPhysReg(Reg)) {
+      // Units that are already live are accounted in CurPressure.
+      if (ECDefUnits.empty())
+        ECDefUnits.resize(SRI->getNumRegUnits());
+      for (MCRegUnit Unit : SRI->regunits(Reg.asMCReg())) {
+        unsigned U = static_cast<unsigned>(Unit);
+        if (!PhysLiveRegUnits.test(U) && !ECDefUnits.test(U)) {
+          ECDefUnits.set(U);
+          ECDefPressure.inc(Unit, *SRI);
+        }
+      }
+    }
   }
 
   updateMaxPressure(CurPressure + ECDefPressure);
@@ -719,8 +930,12 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
   SmallSet<Register, 8> SeenRegs;
   for (const MachineOperand &MO : MI.all_uses()) {
     Register Reg = MO.getReg();
-    if (MO.readsReg() && Reg.isVirtual() && SeenRegs.insert(Reg).second)
-      retireVirtReg(Reg, SI);
+    if (Reg.isVirtual()) {
+      if (MO.readsReg() && SeenRegs.insert(Reg).second)
+        retireVirtReg(Reg, SI);
+    } else if (shouldTrackPhysReg(Reg) && SeenRegs.insert(Reg).second) {
+      removeKilledUnitsAndDecPressure(Reg.asMCReg(), SI, CurPressure);
+    }
   }
 }
 
@@ -731,8 +946,12 @@ void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
   SmallSet<Register, 8> SeenRegs;
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
-    if (Reg.isVirtual() && SeenRegs.insert(Reg).second)
-      retireVirtReg(Reg, SI);
+    if (Reg.isVirtual()) {
+      if (SeenRegs.insert(Reg).second)
+        retireVirtReg(Reg, SI);
+    } else if (shouldTrackPhysReg(Reg) && SeenRegs.insert(Reg).second) {
+      removeKilledUnitsAndDecPressure(Reg.asMCReg(), SI, CurPressure);
+    }
   }
 
   updateMaxPressure(CurPressure);
@@ -744,12 +963,17 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
   // Add new registers or mask bits.
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
-    if (!Reg.isVirtual())
-      continue;
-    auto &LiveMask = VirtLiveRegs[Reg];
-    auto PrevMask = LiveMask;
-    LiveMask |= getDefRegMask(MO, *MRI);
-    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+
+    if (Reg.isVirtual()) {
+      auto &LiveMask = VirtLiveRegs[Reg];
+      auto PrevMask = LiveMask;
+      LiveMask |= getDefRegMask(MO, *MRI);
+      CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+    } else if (shouldTrackPhysReg(Reg)) {
+      // Dead flags on physical register defs are unreliable. Add every def and
+      // let retireDeadDefs() drop the ones LIS reports dead.
+      addUnitsAndIncPressure(Reg.asMCReg(), CurPressure);
+    }
   }
   updateMaxPressure(CurPressure);
 }
@@ -793,10 +1017,13 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator End) {
 
 bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
                                    MachineBasicBlock::const_iterator End,
-                                   const LiveRegSet *VirtLiveRegsCopy) {
-  if (!reset(*Begin, End, VirtLiveRegsCopy))
-    return false;
-  return GCNDownwardRPTracker::advance(End);
+                                   const LiveRegSet *VirtLiveRegsCopy,
+                                   const BitVector *PhysLiveUnits) {
+  bool ResetStatus = reset(*Begin, End, VirtLiveRegsCopy);
+  // Restore the physical snapshot regardless of the above status.
+  if (PhysLiveUnits)
+    initPhysLiveUnits(*PhysLiveUnits);
+  return ResetStatus && GCNDownwardRPTracker::advance(End);
 }
 
 void GCNManualDownwardRPTracker::advance(const MachineInstr &MI) {
@@ -862,47 +1089,63 @@ GCNRegPressure GCNDownwardRPTrackerBase::bumpDownwardPressure(
   // Tracks the live mask reported by the use loop for redefined registers.
   SmallDenseMap<Register, LaneBitmask, 8> PostUseMask;
 
+  // Process uses: decrement pressure for last-use lanes (virtual) or
+  // killed units (physical).
   for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
-    if (!Use.VRegOrUnit.isVirtualReg())
-      continue;
-    Register Reg = Use.VRegOrUnit.asVirtualReg();
-    LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
-    if (LastUseMask.none())
-      continue;
-    // The LastUseMask is queried from the liveness information of instruction
-    // which may be further down the schedule. Some lanes may actually not be
-    // last uses for the current position.
-    // FIXME: allow the caller to pass in the list of vreg uses that remain
-    // to be bottom-scheduled to avoid searching uses at each query.
-    LastUseMask =
-        findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, TRI, &LIS);
-    if (LastUseMask.none())
-      continue;
+    if (Use.VRegOrUnit.isVirtualReg()) {
+      Register Reg = Use.VRegOrUnit.asVirtualReg();
+      LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
+      if (LastUseMask.none())
+        continue;
+      // The LastUseMask is queried from the liveness information of instruction
+      // which may be further down the schedule. Some lanes may actually not be
+      // last uses for the current position.
+      // FIXME: allow the caller to pass in the list of vreg uses that remain
+      // to be bottom-scheduled to avoid searching uses at each query.
+      LastUseMask =
+          findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, TRI, &LIS);
+      if (LastUseMask.none())
+        continue;
 
-    auto It = VirtLiveRegs.find(Reg);
-    LaneBitmask LiveMask =
-        It != VirtLiveRegs.end() ? It->second : LaneBitmask(0);
-    LaneBitmask NewMask = LiveMask & ~LastUseMask;
-    PostUseMask[Reg] = NewMask;
-    TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
+      auto It = VirtLiveRegs.find(Reg);
+      LaneBitmask LiveMask =
+          It != VirtLiveRegs.end() ? It->second : LaneBitmask(0);
+      LaneBitmask NewMask = LiveMask & ~LastUseMask;
+      PostUseMask[Reg] = NewMask;
+      TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
+    } else if (physRegTrackingEnabled()) {
+      MCRegUnit Unit = Use.VRegOrUnit.asMCRegUnit();
+      unsigned U = static_cast<unsigned>(Unit);
+      // As for virtual registers, a unit that LIS reports dead after MI is
+      // still live if an unscheduled instruction above MI reads it.
+      if (PhysLiveRegUnits.test(U) && !isUnitLiveAt(Unit, SlotIdx) &&
+          !isUnitReadBetween(Unit, CurrIdx, SlotIdx, *MRI, *SRI, LIS))
+        TempPressure.dec(Unit, *SRI);
+    }
   }
 
-  // Generate liveness for defs.
+  // Process defs: increment pressure for new lanes (virtual) or
+  // new units (physical).
   for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
-    if (!Def.VRegOrUnit.isVirtualReg())
-      continue;
-    Register Reg = Def.VRegOrUnit.asVirtualReg();
-    auto PostIt = PostUseMask.find(Reg);
-    LaneBitmask LiveMask;
-    if (PostIt != PostUseMask.end()) {
-      LiveMask = PostIt->second;
-    } else {
-      auto It = VirtLiveRegs.find(Reg);
-      LiveMask = It != VirtLiveRegs.end() ? It->second : LaneBitmask(0);
-    }
+    if (Def.VRegOrUnit.isVirtualReg()) {
+      Register Reg = Def.VRegOrUnit.asVirtualReg();
+      auto PostIt = PostUseMask.find(Reg);
+      LaneBitmask LiveMask;
+      if (PostIt != PostUseMask.end()) {
+        LiveMask = PostIt->second;
+      } else {
+        auto It = VirtLiveRegs.find(Reg);
+        LiveMask = It != VirtLiveRegs.end() ? It->second : LaneBitmask(0);
+      }
 
-    LaneBitmask NewMask = LiveMask | Def.LaneMask;
-    TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
+      LaneBitmask NewMask = LiveMask | Def.LaneMask;
+      TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
+    } else if (physRegTrackingEnabled()) {
+      MCRegUnit Unit = Def.VRegOrUnit.asMCRegUnit();
+      unsigned U = static_cast<unsigned>(Unit);
+      if (!PhysLiveRegUnits.test(U))
+        TempPressure.inc(Unit, *SRI);
+    }
   }
 
   return TempPressure;
@@ -917,14 +1160,15 @@ bool GCNUpwardRPTracker::isValid() const {
     dbgs() << "\nGCNUpwardRPTracker error: Tracked and"
               " LIS reported livesets mismatch:\n"
            << print(LISLR, *MRI);
-    reportMismatch(LISLR, TrackedLR, MRI->getTargetRegisterInfo());
+    reportMismatch(LISLR, TrackedLR, SRI);
     return false;
   }
 
-  auto LISPressure = getVirtRegPressure(*MRI, LISLR);
-  if (LISPressure != CurPressure) {
+  auto ComputedPressure =
+      getVirtRegPressure(*MRI, LISLR) + constructPhysRegPressure();
+  if (ComputedPressure != CurPressure) {
     dbgs() << "GCNUpwardRPTracker error: Pressure sets different\nTracked: "
-           << print(CurPressure) << "LIS rpt: " << print(LISPressure);
+           << print(CurPressure) << "Computed rpt: " << print(ComputedPressure);
     return false;
   }
   return true;
@@ -1032,9 +1276,18 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.empty()) {
         VirtLiveIn = VirtLiveOut = getVirtLiveRegs(MBBStartSlot, LIS, MRI);
         RPAtMBBEnd = getVirtRegPressure(MRI, VirtLiveIn);
+        const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
+        BitVector SeenUnits(SRI->getNumRegUnits());
+        for (const auto &LI : MBB.liveins())
+          if (MRI.isAllocatable(LI.PhysReg))
+            for (MCRegUnit Unit : SRI->regunits(LI.PhysReg))
+              if (!SeenUnits.test(static_cast<unsigned>(Unit))) {
+                SeenUnits.set(static_cast<unsigned>(Unit));
+                RPAtMBBEnd.inc(Unit, *SRI);
+              }
       } else {
-        GCNDownwardRPTracker RPT(LIS);
-        RPT.reset(MBB.front(), MBB.end());
+        GCNDownwardRPTracker RPT(LIS, MRI);
+        RPT.reset(MBB.front(), MBB.end(), /*VirtLiveRegs=*/nullptr, &MBB);
 
         VirtLiveIn = RPT.getVirtLiveRegs();
 
@@ -1049,8 +1302,8 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
         RPAtMBBEnd = RPT.getPressure();
       }
     } else {
-      GCNUpwardRPTracker RPT(LIS);
-      RPT.reset(MRI, MBBLastSlot);
+      GCNUpwardRPTracker RPT(LIS, MRI);
+      RPT.reset(MRI, MBBLastSlot, &MBB);
 
       VirtLiveOut = RPT.getVirtLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
@@ -1121,7 +1374,7 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
 
   unsigned MaxNumRegs = 0;
   const MachineInstr *MaxPressureMI = nullptr;
-  GCNUpwardRPTracker RPT(LIS);
+  GCNUpwardRPTracker RPT(LIS, MRI);
   // The maximum pressure of the tracker pairs the VGPR and AVGPR components,
   // so take the maximum of Kind alone from each point.
   unsigned NumRegs = 0;
@@ -1129,7 +1382,8 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
     NumRegs = std::max(NumRegs, RP.getNumRegs(Kind));
   });
   for (const MachineBasicBlock &MBB : MF) {
-    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot(),
+              &MBB);
     NumRegs = RPT.getPressure().getNumRegs(Kind);
     for (const MachineInstr &MI : reverse(MBB)) {
       RPT.recede(MI);

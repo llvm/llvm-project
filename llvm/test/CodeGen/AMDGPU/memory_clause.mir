@@ -424,9 +424,10 @@ body:             |
 # GCN-LABEL: {{^}}name: ptr_use_after_clause_subreg_multi{{$}}
 # GCN: dead %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 0, 0, implicit $exec
 # GCN-NEXT: dead %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub2_sub3, 16, 0, implicit $exec
+# GCN-NEXT: KILL %0.sub2{{$}}
 # GCN-NEXT: dead %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub3_sub4, 32, 0, implicit $exec
 # GCN-NEXT: dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub6_sub7, 48, 0, implicit $exec
-# GCN-NEXT: KILL %0.sub2_sub3_sub4, %0.sub7{{$}}
+# GCN-NEXT: KILL %0.sub3_sub4, %0.sub7{{$}}
 # GCN-NEXT: S_NOP 0, implicit %0.sub0_sub1, implicit %0.sub5_sub6
 ---
 name:            ptr_use_after_clause_subreg_multi
