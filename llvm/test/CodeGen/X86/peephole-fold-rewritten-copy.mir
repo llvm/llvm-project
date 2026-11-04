@@ -17,8 +17,7 @@ body: |
     ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s64))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[MOV64rm]].sub_16bit
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV64rm]].sub_32bit
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr16 = COPY [[MOV64rm]].sub_16bit
-    ; CHECK-NEXT: [[ADD16rr:%[0-9]+]]:gr16 = ADD16rr [[COPY1]], [[COPY3]], implicit-def dead $eflags
+    ; CHECK-NEXT: [[ADD16rr:%[0-9]+]]:gr16 = ADD16rr [[COPY1]], [[COPY1]], implicit-def dead $eflags
     ; CHECK-NEXT: $ax = COPY [[ADD16rr]]
     ; CHECK-NEXT: RET 0, $ax
     %0:gr64 = COPY $rdi
@@ -44,8 +43,7 @@ body: |
     ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s64))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY [[MOV64rm]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV64rm]].sub_32bit
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr32 = COPY [[MOV64rm]].sub_32bit
-    ; CHECK-NEXT: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY2]], [[COPY3]], implicit-def dead $eflags
+    ; CHECK-NEXT: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY2]], [[COPY2]], implicit-def dead $eflags
     ; CHECK-NEXT: $eax = COPY [[ADD32rr]]
     ; CHECK-NEXT: RET 0, $eax
     %0:gr64 = COPY $rdi

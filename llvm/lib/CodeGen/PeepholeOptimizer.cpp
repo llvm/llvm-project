@@ -1883,9 +1883,11 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (isCoalescableCopy(*MI) && optimizeCoalescableCopy(*MI)) {
-        // MI is just rewritten.
+        // MI is just rewritten. A rewritten COPY may now duplicate an earlier
+        // copy of the same source, so still give it to foldRedundantCopy.
         Changed = true;
-        continue;
+        if (!MI->isCopy())
+          continue;
       }
 
       if (MI->isCopy() && (foldRedundantCopy(*MI) ||
