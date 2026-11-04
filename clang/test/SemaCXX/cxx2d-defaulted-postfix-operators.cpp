@@ -81,15 +81,32 @@ void use_deleted(Deleted d) {
 }
 
 #if __cplusplus >= 201402L
-// Before C++23, an explicitly-defaulted function may only be declared
-// constexpr if it is constexpr-compatible.
+// Unlike other defaulted functions before C++23, a defaulted postfix operator
+// may be declared constexpr even if it invokes a non-constexpr function.
 struct NotConstexprCompatible {
-  NotConstexprCompatible &operator++(); // pre23-note {{non-constexpr prefix 'operator++' declared here}}
+  NotConstexprCompatible &operator++(); // expected-note {{declared here}}
   constexpr NotConstexprCompatible operator++(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
+  // expected-note@-1 {{non-constexpr function 'operator++' cannot be used in a constant expression}}
   // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
   // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
 };
+
+struct NotConstexprNonMember {
+  NotConstexprNonMember &operator++();
+};
+constexpr NotConstexprNonMember operator++(NotConstexprNonMember &, int) = default;
+// pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
+// compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
+
+// Such a function is not usable in constant expressions.
+constexpr bool use_not_constexpr_compatible() {
+  NotConstexprCompatible n{};
+  n++; // expected-note {{in call to 'n.operator++(0)'}}
+  return true;
+}
+static_assert(use_not_constexpr_compatible(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+// expected-note@-2 {{in call to 'use_not_constexpr_compatible()'}}
 
 // A defaulted postfix operator is implicitly constexpr when it can be.
 struct Constexpr {
@@ -105,65 +122,14 @@ constexpr int use_constexpr() {
   return a.v * 10 + c.v;
 }
 static_assert(use_constexpr() == 12, "");
-
-// Each function invoked by the implicit definition is checked.
-struct NotConstexprCopy {
-  int v;
-  constexpr NotConstexprCopy(int v) : v(v) {}
-  NotConstexprCopy(const NotConstexprCopy &); // pre23-note {{non-constexpr constructor declared here}}
-  constexpr NotConstexprCopy &operator++();
-  constexpr NotConstexprCopy operator++(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
-  // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-  // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-};
-struct NotConstexprDecrement {
-  NotConstexprDecrement &operator--(); // pre23-note {{non-constexpr prefix 'operator--' declared here}}
-  constexpr NotConstexprDecrement operator--(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix decrement operator cannot be declared constexpr because it invokes a non-constexpr function}}
-  // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-  // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-};
-struct NotConstexprConversion {
-  int v;
-  operator int &(); // pre23-note {{non-constexpr conversion function declared here}}
-  constexpr NotConstexprConversion operator++(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
-  // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-  // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-};
-struct NotConstexprSeveral {
-  int v;
-  constexpr NotConstexprSeveral(int v) : v(v) {}
-  NotConstexprSeveral(const NotConstexprSeveral &); // pre23-note {{non-constexpr constructor declared here}}
-  NotConstexprSeveral &operator++(); // pre23-note {{non-constexpr prefix 'operator++' declared here}}
-  constexpr NotConstexprSeveral operator++(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
-  // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-  // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-};
-struct NotConstexprNonMember {
-  NotConstexprNonMember &operator++(); // pre23-note {{non-constexpr prefix 'operator++' declared here}}
-};
-constexpr NotConstexprNonMember operator++(NotConstexprNonMember &, int) = default;
-// pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
-// pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-// compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-enum NotConstexprEnum { nce };
-NotConstexprEnum &operator++(NotConstexprEnum &); // pre23-note {{non-constexpr prefix 'operator++' declared here}}
-constexpr NotConstexprEnum operator++(NotConstexprEnum &, int) = default;
-// pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared constexpr because it invokes a non-constexpr function}}
-// pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-// compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
 #endif
 
 #if __cplusplus >= 202002L
 struct NotConstevalCompatible {
-  NotConstevalCompatible &operator++(); // pre23-note {{non-constexpr prefix 'operator++' declared here}}
+  NotConstevalCompatible &operator++();
   consteval NotConstevalCompatible operator++(int) = default;
-  // pre23-error@-1 {{defaulted definition of postfix increment operator cannot be declared consteval because it invokes a non-constexpr function}}
-  // pre2d-warning@-2 {{defaulted postfix increment and decrement operators are a C++2d extension}}
-  // compat-warning@-3 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
+  // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
+  // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
 };
 struct Consteval {
   int v;

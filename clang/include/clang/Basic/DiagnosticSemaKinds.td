@@ -10735,21 +10735,12 @@ def note_defaulted_postfix_operator_no_viable : Note<
 def note_defaulted_postfix_operator_ambiguous : Note<
   "defaulted %0 is implicitly deleted because prefix "
   "%select{'operator++'|'operator--'}1 for an lvalue of type %2 is ambiguous">;
-// The %select indices of the operations in the following note are given by
-// diag::DefaultedPostfixOperatorStep.
 def note_defaulted_postfix_operator_inaccessible : Note<
   "defaulted %0 is implicitly deleted because it would invoke a "
-  "%select{private|protected}2 %select{constructor|destructor|"
-  "prefix 'operator++'|prefix 'operator--'}1 of %5">;
-def err_defaulted_postfix_operator_constexpr_mismatch : Error<
-  "defaulted definition of %sub{select_defaulted_postfix_operator_kind}0 "
-  "cannot be declared %select{constexpr|consteval}1 because it invokes a "
-  "non-constexpr function">;
-def note_defaulted_postfix_operator_not_constexpr_here : Note<
-  "non-constexpr %enum_select<DefaultedPostfixOperatorStep>{"
+  "%select{private|protected}2 %enum_select<DefaultedPostfixOperatorStep>{"
   "%Constructor{constructor}|%Destructor{destructor}|"
-  "%PrefixIncrement{prefix 'operator++'}|%PrefixDecrement{prefix 'operator--'}|"
-  "%ConversionFunction{conversion function}}0 declared here">;
+  "%PrefixIncrement{prefix 'operator++'}|"
+  "%PrefixDecrement{prefix 'operator--'}}1 of %5">;
 def err_ovl_deleted_postfix_operator : Error<
   "object of type %0 cannot be %select{<ERROR>|incremented|decremented}1 "
   "because its defaulted %sub{select_defaulted_postfix_operator_kind}1 is "

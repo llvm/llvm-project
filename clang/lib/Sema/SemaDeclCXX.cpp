@@ -9554,7 +9554,7 @@ static QualType getPostfixOperatorFirstParamType(const FunctionDecl *FD) {
 static bool canCopyAndDestroyForDefaultedPostfixOperator(
     Sema &S, FunctionDecl *FD, CXXRecordDecl *RD, QualType C, Expr *Obj,
     bool Diagnose,
-    llvm::function_ref<void(const FunctionDecl *, unsigned)> CheckConstexpr) {
+    llvm::function_ref<void(const FunctionDecl *)> CheckConstexpr) {
   SourceLocation Loc = FD->getLocation();
   auto InaccessibleDiag = [&](unsigned Step) {
     return Diagnose
@@ -9580,8 +9580,7 @@ static bool canCopyAndDestroyForDefaultedPostfixOperator(
             RD, Step.Function.FoundDecl, C, Loc,
             InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Constructor)))
       return false;
-    CheckConstexpr(Step.Function.Function,
-                   diag::DefaultedPostfixOperatorStep::Constructor);
+    CheckConstexpr(Step.Function.Function);
   }
 
   CXXDestructorDecl *Dtor = S.LookupDestructor(RD);
@@ -9606,8 +9605,7 @@ static bool canCopyAndDestroyForDefaultedPostfixOperator(
 /// [over.inc.default]p2, and whether every function it would invoke is
 /// constexpr.
 ///
-/// If \p Diagnose is true, explain why the function is defined as deleted or,
-/// if it is not, which of the functions it invokes are not constexpr.
+/// If \p Diagnose is true, explain why the function is defined as deleted.
 static DefaultedPostfixOperatorInfo
 analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
                                 PostfixOperatorKind Kind, QualType C,
@@ -9645,14 +9643,9 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     if (Callee)
       S.NoteDeletedFunction(Callee);
   };
-  // The non-constexpr functions are only worth explaining if the function is
-  // not deleted, which isn't known until the end of the analysis.
-  SmallVector<std::pair<const FunctionDecl *, unsigned>, 2> NonConstexpr;
-  auto CheckConstexpr = [&](const FunctionDecl *Callee, unsigned Step) {
-    if (Callee->isConstexpr())
-      return;
-    Info.Constexpr = false;
-    NonConstexpr.push_back({Callee, Step});
+  auto CheckConstexpr = [&](const FunctionDecl *Callee) {
+    if (!Callee->isConstexpr())
+      Info.Constexpr = false;
   };
 
   // C++2d [over.inc.default]p2:
@@ -9694,12 +9687,11 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
           !S.isMemberAccessibleForDeletion(RD, Best->FoundDecl, C, Loc,
                                            InaccessibleDiag(PrefixStep)))
         return Deleted();
-      CheckConstexpr(Prefix, PrefixStep);
+      CheckConstexpr(Prefix);
     } else if (!Best->Conversions.empty() &&
                Best->Conversions[0].isUserDefined()) {
       // A built-in candidate, reached through a conversion function.
-      CheckConstexpr(Best->Conversions[0].UserDefined.ConversionFunction,
-                     diag::DefaultedPostfixOperatorStep::ConversionFunction);
+      CheckConstexpr(Best->Conversions[0].UserDefined.ConversionFunction);
     }
     break;
 
@@ -9726,11 +9718,6 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     return Deleted();
   }
 
-  if (Diagnose)
-    for (auto [Callee, Step] : NonConstexpr)
-      S.Diag(Callee->getLocation(),
-             diag::note_defaulted_postfix_operator_not_constexpr_here)
-          << Step;
   return Info;
 }
 
@@ -9887,27 +9874,10 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
     return false;
   }
 
-  // C++2a [dcl.fct.def.default]p3 [P2002R0]:
-  //   An explicitly-defaulted function that is not defined as deleted may be
-  //   declared constexpr or consteval only if it is constexpr-compatible.
-  // By analogy with C++2a [class.compare.default]p3, we consider a defaulted
-  // postfix operator to be constexpr-compatible if its parameter and return
-  // types are literal types and no overload resolution performed when
-  // determining whether to delete it results in a non-constexpr function.
-  //
-  // C++23 [dcl.fct.def.default]p3 [P2448R2] removed this restriction: a
-  // defaulted function may always be declared constexpr.
-  if (FD->isConstexpr() && !getLangOpts().CPlusPlus23 &&
-      !FD->isTemplateInstantiation() &&
-      CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
-      CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
-      !Info.Constexpr) {
-    Diag(FD->getBeginLoc(),
-         diag::err_defaulted_postfix_operator_constexpr_mismatch)
-        << (int)Kind << FD->isConsteval();
-    analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/true);
-    return true;
-  }
+  // C++23 [dcl.fct.def.default]p3 [P2448R2] allows any defaulted function to
+  // be declared constexpr or consteval. Before C++23, it could only be declared
+  // so if it was constexpr-compatible; we don't apply that restriction to
+  // defaulted postfix operators, which are an extension before C++2d.
 
   if (First) {
     // C++11 [dcl.fct.def.default]p5:
