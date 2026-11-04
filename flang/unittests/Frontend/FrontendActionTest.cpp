@@ -241,7 +241,7 @@ TEST_F(FrontendActionTest, RecoverOpenACCDeclarePreservesDirectives) {
                  << "!dir$ ivdep\n"
                  << "!$acc declare create(z)\n"
                  << "!$acc declare create(w)\n"
-                 << "subroutine s()\n"
+                 << "!dir$ ivdep; subroutine s()\n"
                  << "end subroutine\n";
   inputFileOs.reset();
 
@@ -259,7 +259,7 @@ TEST_F(FrontendActionTest, RecoverOpenACCDeclarePreservesDirectives) {
   // Consecutive DECLAREs share a recovery node. Other directives and the
   // following procedure retain their positions and their actual node types.
   const auto &units = parsing.parseTree()->v;
-  ASSERT_EQ(units.size(), 5u);
+  ASSERT_EQ(units.size(), 6u);
   auto unit = units.begin();
   EXPECT_TRUE(
       std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
@@ -271,6 +271,9 @@ TEST_F(FrontendActionTest, RecoverOpenACCDeclarePreservesDirectives) {
       unit++->u));
   EXPECT_TRUE(
       std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::CompilerDirective>>(
+      unit++->u));
   EXPECT_TRUE(std::holds_alternative<
       Fortran::common::Indirection<Fortran::parser::SubroutineSubprogram>>(
       unit->u));
@@ -301,8 +304,9 @@ TEST_F(FrontendActionTest, RecoveryNodesSupportTreeConsumers) {
   Fortran::parser::Unparse(
       unparseStream, constProgram, compInst.getInvocation().getLangOpts());
   EXPECT_FALSE(llvm::StringRef(unparsed).contains("DECLARE"));
-  for (const char *name : {"outer", "iface", "inner", "child"})
+  for (const char *name : {"outer", "iface", "inner", "child"}) {
     EXPECT_TRUE(llvm::StringRef(unparsed).contains(name));
+  }
 }
 
 TEST_F(FrontendActionTest, RecoveryNodesStopBeforeSemanticConsumers) {

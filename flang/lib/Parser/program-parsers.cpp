@@ -46,26 +46,14 @@ TYPE_PARSER(validFunctionStmt ||
 // R1535 subroutine-stmt ->
 //         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
 //         [proc-language-binding-spec]]
-// Lookahead needs complete headers, without repairing an argument list or
-// trailing text, so keyword-shaped assignments aren't mistaken for headers.
-static constexpr auto validSubroutineStmt{
-    construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-        parenthesized(optionalList(dummyArg)), maybe(languageBindingSpec)) /
-        atEndOfStmt ||
-    construct<SubroutineStmt>(many(prefixSpec),
-        "SUBROUTINE" >> name / atEndOfStmt, pure<std::list<DummyArg>>(),
-        pure<std::optional<LanguageBindingSpec>>())};
-
-// Normal parsing also repairs malformed argument lists and trailing text.
-// Keep that recovery out of the strict header parser used by lookahead.
-TYPE_PARSER(validSubroutineStmt ||
+TYPE_PARSER(
     (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
          !"("_tok >> pure<std::list<DummyArg>>(),
          pure<std::optional<LanguageBindingSpec>>()) ||
         construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
             defaulted(parenthesized(optionalList(dummyArg))),
             maybe(languageBindingSpec))) /
-        checkEndOfKnownStmt)
+    checkEndOfKnownStmt)
 
 // R502 program-unit ->
 //        main-program | external-subprogram | module | submodule | block-data
@@ -114,34 +102,35 @@ static constexpr auto globalDirective{
 static constexpr auto misplacedOpenACCDeclareRun{construct<ProgramUnit>(
     misplacedOpenACCDeclareRecovery / skipMany(misplacedOpenACCDeclare))};
 
-// Classification needs only the next Fortran statement, not the grammar or
-// parse-tree nodes of the intervening compiler directives.
-static constexpr auto skipDirectiveLines{
-    skipMany(skipStuffBeforeStatement >> "!"_ch >> skipToNextLineIfAny)};
+// Use the consuming parser's directive grammar during classification too.
+// A compiler directive can end at a semicolon before the procedure header.
+static constexpr auto skipFileScopeDirectives{
+    skipMany(skipStuffBeforeStatement >>
+        (globalDirective >> ok || misplacedOpenACCDeclare))};
 
 // At file scope, DECLARE may start an unnamed main program. Complete
-// specification statements therefore take precedence over procedure headers,
-// including CUDA ATTRIBUTES statements with keyword-shaped object names.
-// After fixed-form blank removal, REAL FUNCTION F can be a scalar declaration
-// and REAL FUNCTION F(N) can be an array declaration. A CUDA header without
-// arguments can be an ATTRIBUTES statement; these cases retain normal parser
-// diagnostics.
-// In fixed form, MODULE SUBROUTINE S can also start module SUBROUTINES. The
-// lookahead recognizes a prefixed header, but program-unit parsing gives the
-// module interpretation priority.
+// specification statements and assignments take precedence over procedure
+// headers, including CUDA ATTRIBUTES statements with keyword-shaped object
+// names. After fixed-form blank removal, REAL FUNCTION F can be a scalar
+// declaration and REAL FUNCTION F(N) can be an array declaration. A CUDA header
+// without arguments can be an ATTRIBUTES statement; these cases retain normal
+// parser diagnostics. In fixed form, MODULE SUBROUTINE S can also start module
+// SUBROUTINES. The lookahead recognizes a prefixed header, but program-unit
+// parsing gives the module interpretation priority.
 static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
     !statement(Parser<OtherSpecificationStmt>{}) >>
-    !statement(typeDeclarationStmt) >> maybe(label) >>
-    (validFunctionStmt >> ok || validSubroutineStmt >> ok)};
+    !statement(typeDeclarationStmt) >> !statement(assignmentStmt) >>
+    maybe(label) >> (validFunctionStmt >> ok || subroutineStmt >> ok)};
 
-// A leading DECLARE is misplaced only before a complete procedure header.
+// Recognize procedure headers using the ordinary SUBROUTINE parser, including
+// its recovery, so a malformed header still gets a DECLARE placement error.
+// A leading DECLARE is misplaced before a recognized procedure header.
 // Classify the whole prefix without consuming it, then parse it once while
-// retaining ordinary directive nodes. The final check ensures the real parsers
-// reach that header: directives skipped by generic lookahead but unsupported
-// here must retain their normal parsing and diagnostics.
+// retaining ordinary directive nodes. Both passes must reach the same header;
+// unsupported directives retain their normal parsing and diagnostics.
 static constexpr auto misplacedOpenACCDeclareAtFileScope{
     lookAhead(MisplacedOpenACCDeclare{}) >>
-    lookAhead(skipDirectiveLines >> externalSubprogramStmt) >>
+    lookAhead(skipFileScopeDirectives >> externalSubprogramStmt) >>
     some(skipStuffBeforeStatement >>
         (globalDirective || misplacedOpenACCDeclareRun)) /
         lookAhead(externalSubprogramStmt)};

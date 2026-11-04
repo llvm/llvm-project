@@ -1,7 +1,9 @@
 ! RUN: split-file %s %t
 ! RUN: %flang_fc1 -fsyntax-only %t/headers.f90
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/assignment.f90
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/statement-function.f90
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/main.f90
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/semicolon-main.f90
 ! RUN: %flang_fc1 -fsyntax-only %t/interposed.f90
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external-malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=external-malformed.f90 -DLINE=1 -DCOL=1 --implicit-check-not="error:"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=module-malformed.f90 -DLINE=3 -DCOL=1 --implicit-check-not="error:"
@@ -14,11 +16,16 @@
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-ambiguous.f 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -ffixed-form -fsyntax-only %t/fixed-cuda-ambiguous.cuf 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fsyntax-only %t/malformed-header.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=HEADER --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fsyntax-only %t/malformed-args.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ARGS --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/declare-malformed-args.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=RECOVERED -DFILE=declare-malformed-args.f90 -DCOL=13 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/declare-malformed-header.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=RECOVERED -DFILE=declare-malformed-header.f90 -DCOL=14 --implicit-check-not="error:"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/unsupported-wait.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-wait.f90 --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/unsupported-routine.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-routine.f90 --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -fopenmp -fsyntax-only %t/unsupported-omp.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-omp.f90 --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external-body-error.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=BODY -DFILE=external-body-error.f90 -DDECLARE=1 -DBODYLINE=3 --implicit-check-not="error:"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-body-error.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=BODY -DFILE=module-body-error.f90 -DDECLARE=3 -DBODYLINE=5 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/semicolon-subroutine.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=SEMICOLON -DFILE=semicolon-subroutine.f90 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/semicolon-function.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=SEMICOLON -DFILE=semicolon-function.f90 --implicit-check-not="error:"
 
 ! Check filenames and exact locations, as well as the diagnostic text. The
 ! malformed directives have balanced parentheses and reach parser recovery.
@@ -45,18 +52,23 @@
 ! declaration, and a CUDA header without arguments is also a possible
 ! ATTRIBUTES statement. Preserve declaration precedence and
 ! document this remaining diagnostic limitation rather than rejecting arrays.
-! AMBIGUOUS-NOT: OpenACC DECLARE directive
 ! AMBIGUOUS: error: Could not parse
 ! AMBIGUOUS: in the context: END PROGRAM statement
-! AMBIGUOUS-NOT: OpenACC DECLARE directive
 
 ! Normal SUBROUTINE parsing must retain its malformed-header recovery.
 ! HEADER: error: Could not parse
 ! HEADER: malformed-header.f90:1:14: error: expected end of statement
+! ARGS: error: Could not parse
+! ARGS: malformed-args.f90:1:13: error: expected end of statement
 
-! Lexical lookahead can cross directives that the file-scope grammar cannot
-! consume. Keep the normal diagnostic path instead of recovering a partial
-! prefix and diagnosing its DECLARE in isolation.
+! Recovered SUBROUTINE headers also identify misplaced DECLAREs. Keep the
+! normal header diagnostic as well as the placement diagnostic.
+! RECOVERED: error: Could not parse
+! RECOVERED: [[FILE]]:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
+! RECOVERED: [[FILE]]:2:[[COL]]: error: expected end of statement
+
+! Unsupported directives retain the normal diagnostic path instead of
+! recovering a partial prefix and diagnosing its DECLARE in isolation.
 ! FALLBACK: error: Could not parse
 ! FALLBACK: [[FILE]]:3:12: error: expected '('
 
@@ -66,6 +78,11 @@
 ! BODY: [[FILE]]:[[BODYLINE]]:8: error: expected ':'
 ! BODY-NEXT: return ,
 ! BODY-NEXT: {{^         \^$}}
+
+! A compiler directive may share a line with the following header. Lookahead
+! and consumption must agree on where the directive ends.
+! SEMICOLON: error: Could not parse
+! SEMICOLON: [[FILE]]:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 
 !--- headers.f90
 recursive subroutine rec(a)
@@ -84,6 +101,12 @@ end subroutine
 !--- assignment.f90
 !$acc declare create(subroutinex)
 subroutinex = 1.0
+end
+
+!--- statement-function.f90
+!$acc declare create(x)
+subroutinex(a) = a
+x = subroutinex(1.0)
 end
 
 !--- main.f90
@@ -182,6 +205,20 @@ c$acc declare create(x)
       real :: x
       end subroutine
 
+!--- malformed-args.f90
+subroutine s(a,)
+end subroutine
+
+!--- declare-malformed-args.f90
+!$acc declare create(x)
+subroutine s(a,)
+end subroutine
+
+!--- declare-malformed-header.f90
+!$acc declare create(x)
+subroutine s bind(c)
+end subroutine
+
 !--- unsupported-wait.f90
 !$acc declare create(x)
 !$acc wait
@@ -214,3 +251,19 @@ subroutine s()
 return ,
 end subroutine
 end module
+
+!--- semicolon-subroutine.f90
+!$acc declare create(x)
+!dir$ ivdep; subroutine s()
+end subroutine
+
+!--- semicolon-function.f90
+!$acc declare create(x)
+!dir$ ivdep; function f()
+end function
+
+!--- semicolon-main.f90
+!$acc declare create(x)
+!dir$ ivdep; real :: x
+x = 1.0
+end
