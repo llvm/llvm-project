@@ -163,6 +163,10 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
       break;
     }
 
+    // Debug instructions are not executed and are agnostic of streaming mode.
+    if (MI.isDebugInstr())
+      continue;
+
     // Test if the instructions in between the start/stop sequence are agnostic
     // of streaming mode. If not, the algorithm should reset.
     switch (MI.getOpcode()) {
