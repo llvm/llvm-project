@@ -29,6 +29,7 @@ TEST(AllocatorTest, Basics) {
   EXPECT_EQ(2, b[9]);
   EXPECT_EQ(3, *c);
   EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(16384U, Alloc.getTotalMemory());
 
   BumpPtrAllocator Alloc2 = std::move(Alloc);
   EXPECT_EQ(0U, Alloc.GetNumSlabs());
@@ -48,7 +49,7 @@ TEST(AllocatorTest, Basics) {
 
 // Allocate enough bytes to create three slabs.
 TEST(AllocatorTest, ThreeSlabs) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
   Alloc.Allocate(3000, 1);
   EXPECT_EQ(1U, Alloc.GetNumSlabs());
   Alloc.Allocate(3000, 1);
@@ -60,7 +61,7 @@ TEST(AllocatorTest, ThreeSlabs) {
 // Allocate enough bytes to create two slabs, reset the allocator, and do it
 // again.
 TEST(AllocatorTest, TestReset) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
 
   // Allocate something larger than the SizeThreshold=4096.
   (void)Alloc.Allocate(5000, 1);
@@ -156,7 +157,7 @@ TEST(AllocatorTest, TestZero) {
 // Test allocating just over the slab size.  This tests a bug where before the
 // allocator incorrectly calculated the buffer end pointer.
 TEST(AllocatorTest, TestOverflow) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
 
   // Fill the slab right up until the end pointer.
   Alloc.Allocate(4096, 1);
@@ -169,7 +170,7 @@ TEST(AllocatorTest, TestOverflow) {
 
 // Test allocating with a size larger than the initial slab size.
 TEST(AllocatorTest, TestSmallSlabSize) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
 
   Alloc.Allocate(8000, 1);
   EXPECT_EQ(1U, Alloc.GetNumSlabs());
@@ -177,7 +178,7 @@ TEST(AllocatorTest, TestSmallSlabSize) {
 
 // Test requesting alignment that goes past the end of the current slab.
 TEST(AllocatorTest, TestAlignmentPastSlab) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
   Alloc.Allocate(4095, 1);
 
   // Aligning the current slab pointer is likely to move it past the end of the
@@ -237,7 +238,7 @@ TEST(AllocatorTest, TestSlowerSlabGrowthDelay) {
 }
 
 TEST(AllocatorTest, TestIdentifyObject) {
-  BumpPtrAllocator Alloc;
+  SmallBumpPtrAllocator Alloc;
 
   uint64_t *a = (uint64_t *)Alloc.Allocate(sizeof(uint64_t), alignof(uint64_t));
   std::optional<int64_t> maybe_a_belongs = Alloc.identifyObject(a);
@@ -248,7 +249,7 @@ TEST(AllocatorTest, TestIdentifyObject) {
   std::optional<int64_t> maybe_b_belongs = Alloc.identifyObject(b);
   EXPECT_FALSE(maybe_b_belongs);
 
-  // The default slab size is 4096 (or 512 uint64_t values). Custom slabs are
+  // The test slab size is 4096 (or 512 uint64_t values). Custom slabs are
   // allocated when the requested size is larger than the slab size.
   uint64_t *c =
       (uint64_t *)Alloc.Allocate(sizeof(uint64_t) * 1024, alignof(uint64_t));

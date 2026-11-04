@@ -418,7 +418,7 @@ private:
   /// yet.
   llvm::DenseMap<StringRef, GlobalDecl> DeferredDecls;
 
-  llvm::StringSet<llvm::BumpPtrAllocator> DeferredResolversToEmit;
+  llvm::StringSet<llvm::SmallBumpPtrAllocator> DeferredResolversToEmit;
 
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.

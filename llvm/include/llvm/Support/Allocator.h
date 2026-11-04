@@ -386,9 +386,10 @@ private:
   template <typename T> friend class SpecificBumpPtrAllocator;
 };
 
-/// The standard BumpPtrAllocator which just uses the default template
-/// parameters.
-using BumpPtrAllocator = BumpPtrAllocatorImpl<>;
+using SmallBumpPtrAllocator = BumpPtrAllocatorImpl<MallocAllocator, 4096>;
+
+/// The standard BumpPtrAllocator uses 16 KiB slabs to amortize allocations.
+using BumpPtrAllocator = BumpPtrAllocatorImpl<MallocAllocator, 16384>;
 
 /// A BumpPtrAllocator that allows only elements of a specific type to be
 /// allocated.
