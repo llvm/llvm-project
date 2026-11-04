@@ -1091,21 +1091,21 @@ uqshl	v0.8h, v1.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.4h, v1.8b
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.4s, v1.8h
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.8h, v1.16b
-# CHECK-NEXT:  1      2     1.00                        addv	h0, v1.4h
-# CHECK-NEXT:  1      2     1.00                        addv	s0, v1.4s
-# CHECK-NEXT:  1      2     1.00                        saddlv	s0, v1.4h
-# CHECK-NEXT:  1      2     1.00                        saddlv	d0, v1.4s
-# CHECK-NEXT:  1      2     1.00                        uaddlv	s0, v1.4h
-# CHECK-NEXT:  1      2     1.00                        uaddlv	d0, v1.4s
-# CHECK-NEXT:  2      4     1.00                        addv	b0, v1.8b
-# CHECK-NEXT:  2      4     1.00                        addv	h0, v1.8h
-# CHECK-NEXT:  2      4     1.00                        saddlv	h0, v1.8b
-# CHECK-NEXT:  2      4     1.00                        saddlv	s0, v1.8h
-# CHECK-NEXT:  2      4     1.00                        uaddlv	h0, v1.8b
-# CHECK-NEXT:  2      4     1.00                        uaddlv	s0, v1.8h
-# CHECK-NEXT:  1      4     1.00                        addv	b0, v1.16b
-# CHECK-NEXT:  1      4     1.00                        saddlv	h0, v1.16b
-# CHECK-NEXT:  1      4     1.00                        uaddlv	h0, v1.16b
+# CHECK-NEXT:  1      3     1.00                        addv	h0, v1.4h
+# CHECK-NEXT:  1      3     1.00                        addv	s0, v1.4s
+# CHECK-NEXT:  1      3     1.00                        saddlv	s0, v1.4h
+# CHECK-NEXT:  1      3     1.00                        saddlv	d0, v1.4s
+# CHECK-NEXT:  1      3     1.00                        uaddlv	s0, v1.4h
+# CHECK-NEXT:  1      3     1.00                        uaddlv	d0, v1.4s
+# CHECK-NEXT:  2      5     1.00                        addv	b0, v1.8b
+# CHECK-NEXT:  2      5     1.00                        addv	h0, v1.8h
+# CHECK-NEXT:  2      5     1.00                        saddlv	h0, v1.8b
+# CHECK-NEXT:  2      5     1.00                        saddlv	s0, v1.8h
+# CHECK-NEXT:  2      5     1.00                        uaddlv	h0, v1.8b
+# CHECK-NEXT:  2      5     1.00                        uaddlv	s0, v1.8h
+# CHECK-NEXT:  2      6     2.00                        addv	b0, v1.16b
+# CHECK-NEXT:  2      6     2.00                        saddlv	h0, v1.16b
+# CHECK-NEXT:  2      6     2.00                        uaddlv	h0, v1.16b
 # CHECK-NEXT:  1      2     0.50                        cmeq	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      2     0.50                        cmeq	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      2     0.50                        cmeq	v0.8h, v1.8h, v2.8h
@@ -1599,7 +1599,7 @@ uqshl	v0.8h, v1.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     272.00 434.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     272.00 437.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -1822,9 +1822,9 @@ uqshl	v0.8h, v1.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   saddlv	s0, v1.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   uaddlv	h0, v1.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   uaddlv	s0, v1.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   addv	b0, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   saddlv	h0, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   uaddlv	h0, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   addv	b0, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   saddlv	h0, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   uaddlv	h0, v1.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmeq	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmeq	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmeq	v0.8h, v1.8h, v2.8h

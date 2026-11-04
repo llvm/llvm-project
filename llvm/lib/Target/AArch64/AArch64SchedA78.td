@@ -196,6 +196,11 @@ def A78Write_4c_2V0 : SchedWriteRes<[A78UnitV0, A78UnitV0]> {
   let NumMicroOps = 2;
 }
 
+def A78Write_5c_1V1_1V : SchedWriteRes<[A78UnitV1, A78UnitV]> {
+  let Latency     = 5;
+  let NumMicroOps = 2;
+}
+
 def A78Write_10c_2V0 : SchedWriteRes<[A78UnitV0, A78UnitV0]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -1258,14 +1263,14 @@ def : InstRW<[A78Wr_VA, A78Rd_VA],
              (instregex "^SABAv", "^UABAv", "^SABALv", "^UABALv")>;
 
 // ASIMD arith, reduce, 4H/4S
-def : InstRW<[A78Write_2c_1V1], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
+def : InstRW<[A78Write_3c_1V1], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
 
 // ASIMD arith, reduce, 8B/8H
-def : InstRW<[A78Write_4c_1V1_1V],
+def : InstRW<[A78Write_5c_1V1_1V],
              (instregex "^(ADDV|[SU]ADDLV)v8(i8|i16)v$")>;
 
 // ASIMD arith, reduce, 16B
-def : InstRW<[A78Write_4c_1V1], (instrs ADDVv16i8v, SADDLVv16i8v,
+def : InstRW<[A78Write_6c_2V1], (instrs ADDVv16i8v, SADDLVv16i8v,
                                        UADDLVv16i8v)>;
 
 // ASIMD dot product

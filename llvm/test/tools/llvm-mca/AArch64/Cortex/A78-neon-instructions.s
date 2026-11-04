@@ -30,11 +30,11 @@
 # CHECK-NEXT:  1      2     0.50                        addp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      2     0.50                        addp	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        addp	d1, v14.2d
-# CHECK-NEXT:  1      2     1.00                        addv	s0, v0.4s
-# CHECK-NEXT:  1      2     1.00                        addv	h0, v0.4h
-# CHECK-NEXT:  2      4     1.00                        addv	h0, v0.8h
-# CHECK-NEXT:  2      4     1.00                        addv	b0, v0.8b
-# CHECK-NEXT:  1      4     1.00                        addv	b0, v0.16b
+# CHECK-NEXT:  1      3     1.00                        addv	s0, v0.4s
+# CHECK-NEXT:  1      3     1.00                        addv	h0, v0.4h
+# CHECK-NEXT:  2      5     1.00                        addv	h0, v0.8h
+# CHECK-NEXT:  2      5     1.00                        addv	b0, v0.8b
+# CHECK-NEXT:  2      6     2.00                        addv	b0, v0.16b
 # CHECK-NEXT:  1      2     0.50                        aesd	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        aese	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        aesimc	v0.16b, v0.16b
@@ -740,11 +740,11 @@
 # CHECK-NEXT:  1      2     0.50                        saddlp	v0.4h, v0.8b
 # CHECK-NEXT:  1      2     0.50                        saddlp	v0.4s, v0.8h
 # CHECK-NEXT:  1      2     0.50                        saddlp	v0.8h, v0.16b
-# CHECK-NEXT:  1      2     1.00                        saddlv	d0, v0.4s
-# CHECK-NEXT:  1      2     1.00                        saddlv	s0, v0.4h
-# CHECK-NEXT:  2      4     1.00                        saddlv	s0, v0.8h
-# CHECK-NEXT:  2      4     1.00                        saddlv	h0, v0.8b
-# CHECK-NEXT:  1      4     1.00                        saddlv	h0, v0.16b
+# CHECK-NEXT:  1      3     1.00                        saddlv	d0, v0.4s
+# CHECK-NEXT:  1      3     1.00                        saddlv	s0, v0.4h
+# CHECK-NEXT:  2      5     1.00                        saddlv	s0, v0.8h
+# CHECK-NEXT:  2      5     1.00                        saddlv	h0, v0.8b
+# CHECK-NEXT:  2      6     2.00                        saddlv	h0, v0.16b
 # CHECK-NEXT:  1      2     0.50                        saddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  1      2     0.50                        saddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  1      2     0.50                        saddw	v0.8h, v0.8h, v0.8b
@@ -1290,11 +1290,11 @@
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.4h, v0.8b
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.4s, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uaddlp	v0.8h, v0.16b
-# CHECK-NEXT:  1      2     1.00                        uaddlv	d0, v0.4s
-# CHECK-NEXT:  1      2     1.00                        uaddlv	s0, v0.4h
-# CHECK-NEXT:  2      4     1.00                        uaddlv	s0, v0.8h
-# CHECK-NEXT:  2      4     1.00                        uaddlv	h0, v0.8b
-# CHECK-NEXT:  1      4     1.00                        uaddlv	h0, v0.16b
+# CHECK-NEXT:  1      3     1.00                        uaddlv	d0, v0.4s
+# CHECK-NEXT:  1      3     1.00                        uaddlv	s0, v0.4h
+# CHECK-NEXT:  2      5     1.00                        uaddlv	s0, v0.8h
+# CHECK-NEXT:  2      5     1.00                        uaddlv	h0, v0.8b
+# CHECK-NEXT:  2      6     2.00                        uaddlv	h0, v0.16b
 # CHECK-NEXT:  1      2     0.50                        uaddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  1      2     0.50                        uaddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  1      2     0.50                        uaddw	v0.8h, v0.8h, v0.8b
@@ -1592,7 +1592,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -     102.67 199.67 199.67 25.25  12.25  12.25  12.25  1118.00 935.00
+# CHECK-NEXT:  -      -      -      -      -      -      -     102.67 199.67 199.67 25.25  12.25  12.25  12.25  1118.00 938.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -1620,7 +1620,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   addv	h0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   addv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   addv	b0, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   addv	b0, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   addv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesd	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aese	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesimc	v0.16b, v0.16b
@@ -2330,7 +2330,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   saddlv	s0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   saddlv	s0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   saddlv	h0, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   saddlv	h0, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   saddlv	h0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   saddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   saddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   saddw	v0.8h, v0.8h, v0.8b
@@ -2880,7 +2880,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   uaddlv	s0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   uaddlv	s0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   uaddlv	h0, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   uaddlv	h0, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   uaddlv	h0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw	v0.8h, v0.8h, v0.8b
