@@ -20,6 +20,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
@@ -483,6 +484,8 @@ private:
                          SValListTy> LazyBindingsMapTy;
   LazyBindingsMapTy LazyBindingsMap;
 
+  const Expr *getOrImportInitializer(const VarDecl *VD);
+
   /// The largest number of fields a struct can have and still be
   /// considered "small".
   ///
@@ -532,6 +535,15 @@ public:
             return std::nullopt;
           return FanOut + 1 /*for the default binding*/;
         }()) {}
+
+  Loc getLValueVar(const VarDecl *VD, const StackFrame *SF) override {
+    // Consider importing from another translation unit before creating the
+    // region: the definition can complete an array type and becomes the
+    // declaration used to identify the region.
+    if (VD->getType().isConstQualified())
+      getOrImportInitializer(VD);
+    return StoreManager::getLValueVar(VD, SF);
+  }
 
   /// setImplicitDefaultValue - Set the default binding for the provided
   ///  MemRegion to the value implicitly defined for compound literals when
@@ -1861,6 +1873,34 @@ convertOffsetsFromSvalToUnsigneds(const SmallVector<SVal, 2> &SrcOffsets,
   return std::nullopt;
 }
 
+const Expr *RegionStoreManager::getOrImportInitializer(const VarDecl *VD) {
+  const Expr *Init = VD->getAnyInitializer(VD);
+  const AnalyzerOptions &Opts = getOptions();
+  if (!Opts.IsNaiveCTUEnabled || !VD->hasGlobalStorage())
+    return Init;
+
+  auto &CTU = *StateMgr.getOwningEngine().getCrossTranslationUnitContext();
+  if (!Init && (VD->hasExternalStorage() || VD->isStaticDataMember()) &&
+      cross_tu::shouldImport(VD, Ctx)) {
+    auto Imported = CTU.getCrossTUDefinition(VD, Opts.CTUDir, Opts.CTUIndexName,
+                                             Opts.DisplayCTUProgress);
+    if (!Imported) {
+      llvm::handleAllErrors(Imported.takeError(),
+                            [&](const cross_tu::IndexError &IE) {
+                              CTU.emitCrossTUDiagnostics(IE, VD->getLocation());
+                            });
+      return nullptr;
+    }
+    VD = *Imported;
+    Init = VD->getAnyInitializer(VD);
+  }
+  // Constant evaluation reads dependencies directly from the AST.
+  if (Init)
+    CTU.importReferencedInitializers(Init, Opts.CTUDir, Opts.CTUIndexName,
+                                     Opts.DisplayCTUProgress);
+  return Init;
+}
+
 std::optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
     RegionBindingsConstRef B, const ElementRegion *R) {
   assert(R && "ElementRegion should not be null");
@@ -1884,24 +1924,15 @@ std::optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
       (!B.isMainAnalysis() || !VD->hasGlobalStorage()))
     return std::nullopt;
 
-  // Array's declaration should have `ConstantArrayType` type, because only this
-  // type contains an array extent. It may happen that array type can be of
-  // `IncompleteArrayType` type. To get the declaration of `ConstantArrayType`
-  // type, we should find the declaration in the redeclarations chain that has
-  // the initialization expression.
-  // NOTE: `getAnyInitializer` has an out-parameter, which returns a new `VD`
-  // from which an initializer is obtained. We replace current `VD` with the new
-  // `VD`. If the return value of the function is null than `VD` won't be
-  // replaced.
-  const Expr *Init = VD->getAnyInitializer(VD);
-  // NOTE: If `Init` is non-null, then a new `VD` is non-null for sure. So check
-  // `Init` for null only and don't worry about the replaced `VD`.
+  const Expr *Init = getOrImportInitializer(VD);
   if (!Init)
     return std::nullopt;
 
-  // Array's declaration should have ConstantArrayType type, because only this
-  // type contains an array extent.
-  const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(VD->getType());
+  // The initializing declaration may have completed an incomplete array type.
+  const VarDecl *InitializingVD;
+  VD->getAnyInitializer(InitializingVD);
+  const ConstantArrayType *CAT =
+      Ctx.getAsConstantArrayType(InitializingVD->getType());
   if (!CAT)
     return std::nullopt;
 
@@ -2135,7 +2166,7 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
   if (!TrustInit)
     return std::nullopt;
 
-  const Expr *Init = VD->getAnyInitializer();
+  const Expr *Init = getOrImportInitializer(VD);
   if (!Init)
     return std::nullopt;
 
@@ -2416,7 +2447,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
   // from its initializer.
   if (VD->getType().isConstQualified() ||
       VD->getType()->isFunctionReferenceType()) {
-    if (const Expr *Init = VD->getAnyInitializer()) {
+    if (const Expr *Init = getOrImportInitializer(VD)) {
       if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
 
@@ -2436,7 +2467,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
     // If we're in main(), then global initializers have not become stale yet.
     if (B.isMainAnalysis())
-      if (const Expr *Init = VD->getAnyInitializer())
+      if (const Expr *Init = getOrImportInitializer(VD))
         if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
           return *V;
 

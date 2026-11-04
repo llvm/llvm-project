@@ -21,6 +21,7 @@ class fun {
 };
 class DeclContextLookupResult {
   static int *const SingleElementDummyList;
+  static int *get() { return SingleElementDummyList; }
 };
 } // namespace clang
 using namespace clang;
