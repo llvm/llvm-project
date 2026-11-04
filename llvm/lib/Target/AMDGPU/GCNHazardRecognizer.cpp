@@ -574,24 +574,17 @@ static bool isSALUReadsNonVCCSGPR(const MachineInstr &MI,
   return false;
 }
 
-/// Check if \p MI is a SALU or SMEM instruction that reads an SGPR operand.
-static bool isNonVALUReadsWritesSGPR(const MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI,
-                                     const SIRegisterInfo &TRI) {
+/// Check if \p MI is a SALU/SMEM/Tex/LDS/Export instruction that reads an SGPR
+/// operand.
+static bool isNonVALUReadsSGPR(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI,
+                               const SIRegisterInfo &TRI) {
   if (!SIInstrInfo::isSALU(MI) && !SIInstrInfo::isSMRD(MI) &&
       !SIInstrInfo::isDS(MI) && !SIInstrInfo::isEXP(MI) &&
       !SIInstrInfo::isVMEM(MI))
     return false;
 
   for (const MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isReg())
-      continue;
-
-    if (TRI.isSGPRReg(MRI, Op.getReg()))
-      return true;
-  }
-
-  for (const MachineOperand &Op : MI.defs()) {
     if (!Op.isReg())
       continue;
 
@@ -615,6 +608,7 @@ static bool isCBranchReadEXECZ(const MachineInstr &MI) {
 
 unsigned
 GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
+  // Model the scheduling va_ssrc and va_sdst hazard on gfx1250 chips.
   // These are only relevant when not using SCHED_MODE 0.
   if (!ST.hasGFX1250Insts())
     return 0;
@@ -645,18 +639,15 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
       !IsVMEM && !IsDS && !IsEXP)
     return StallsNeeded;
 
-  // VALU writes SGPR, and SALU/SMEM reads any SGPR
+  // VALU writes SGPR, and SALU/SMEM/Tex/LDS/Export reads any SGPR
   // Note: VALU writes to VCC are handled separately below.
   const int VASdstWaitStates = ST.isWave64() ? 17 : 16;
-  if (isNonVALUReadsWritesSGPR(MI, MRI, TRI) || IsSALUCopy) {
+  if (isNonVALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy) {
     auto IsVALUDefsSGPRHazardFn = [&MRI, this](const MachineInstr &MI) {
       if (!SIInstrInfo::isVALU(MI, false))
         return false;
 
       for (const MachineOperand &Op : MI.defs()) {
-        if (!Op.isReg())
-          continue;
-
         Register Reg = Op.getReg();
         if (Reg == AMDGPU::EXEC || Reg == AMDGPU::MODE)
           continue;
@@ -700,9 +691,6 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
         return false;
 
       for (const MachineOperand &Op : I.all_defs()) {
-        if (!Op.isReg())
-          continue;
-
         Register Reg = Op.getReg();
         // Check if VALU writes VCC and CBRANCH reads VCCZ
         if (IsCBranchVCCZ) {
@@ -785,9 +773,6 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
         return false;
 
       for (const MachineOperand &Op : MI.all_defs()) {
-        if (!Op.isReg())
-          continue;
-
         Register Reg = Op.getReg();
         if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
             Reg == AMDGPU::VCC_HI)
