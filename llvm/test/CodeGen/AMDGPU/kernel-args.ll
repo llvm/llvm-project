@@ -894,40 +894,40 @@ define amdgpu_kernel void @v3i8_arg(ptr addrspace(1) nocapture %out, <3 x i8> %i
 ; EG-NEXT:    MEM_RAT MSKOR T5.XW, T6.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_8 T5.X, T4.X, 41, #3
-; EG-NEXT:     VTX_READ_8 T6.X, T4.X, 42, #3
-; EG-NEXT:     VTX_READ_8 T4.X, T4.X, 40, #3
+; EG-NEXT:     VTX_READ_8 T5.X, T4.X, 40, #3
+; EG-NEXT:     VTX_READ_8 T6.X, T4.X, 41, #3
+; EG-NEXT:     VTX_READ_8 T4.X, T4.X, 42, #3
 ; EG-NEXT:    ALU clause starting at 12:
 ; EG-NEXT:     MOV * T4.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 13:
-; EG-NEXT:     LSHL T0.W, T5.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T4.X, literal.y,
-; EG-NEXT:    8(1.121039e-44), 255(3.573311e-43)
-; EG-NEXT:     AND_INT T2.W, KC0[2].Y, literal.x,
-; EG-NEXT:     OR_INT * T0.W, PV.W, PS,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, PS, literal.x,
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.y,
-; EG-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
-; EG-NEXT:     LSHL T4.X, PV.W, PS,
-; EG-NEXT:     LSHL * T4.W, literal.x, PS,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV T4.Y, 0.0,
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T6.X, literal.y,
+; EG-NEXT:     AND_INT * T2.W, T4.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 255(3.573311e-43)
 ; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T5.X, T2.W, PV.W,
-; EG-NEXT:     LSHL * T5.W, literal.x, PV.W,
+; EG-NEXT:     LSHL T4.X, T2.W, PV.W,
+; EG-NEXT:     LSHL * T4.W, literal.x, PV.W,
 ; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)
+; EG-NEXT:     MOV T4.Y, 0.0,
+; EG-NEXT:     LSHL T1.W, T6.X, literal.x,
+; EG-NEXT:     AND_INT * T2.W, T5.X, literal.y,
+; EG-NEXT:    8(1.121039e-44), 255(3.573311e-43)
+; EG-NEXT:     AND_INT T3.W, KC0[2].Y, literal.x,
+; EG-NEXT:     OR_INT * T1.W, PV.W, PS,
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     AND_INT T1.W, PS, literal.x,
+; EG-NEXT:     LSHL * T2.W, PV.W, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
+; EG-NEXT:     LSHL T5.X, PV.W, PS,
+; EG-NEXT:     LSHL * T5.W, literal.x, PS,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     MOV T5.Y, 0.0,
 ; EG-NEXT:     MOV T4.Z, 0.0,
 ; EG-NEXT:     MOV * T5.Z, 0.0,
-; EG-NEXT:     LSHR T6.X, T0.W, literal.x,
-; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T6.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR * T7.X, T0.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: v3i8_arg:
@@ -939,41 +939,41 @@ define amdgpu_kernel void @v3i8_arg(ptr addrspace(1) nocapture %out, <3 x i8> %i
 ; CM-NEXT:    MEM_RAT MSKOR T5.XW, T6.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    Fetch clause starting at 6:
-; CM-NEXT:     VTX_READ_8 T5.X, T4.X, 41, #3
-; CM-NEXT:     VTX_READ_8 T6.X, T4.X, 42, #3
-; CM-NEXT:     VTX_READ_8 T4.X, T4.X, 40, #3
+; CM-NEXT:     VTX_READ_8 T5.X, T4.X, 40, #3
+; CM-NEXT:     VTX_READ_8 T6.X, T4.X, 41, #3
+; CM-NEXT:     VTX_READ_8 T4.X, T4.X, 42, #3
 ; CM-NEXT:    ALU clause starting at 12:
 ; CM-NEXT:     MOV * T4.X, 0.0,
 ; CM-NEXT:    ALU clause starting at 13:
-; CM-NEXT:     LSHL T0.Z, T5.X, literal.x,
-; CM-NEXT:     AND_INT * T0.W, T4.X, literal.y, BS:VEC_120/SCL_212
-; CM-NEXT:    8(1.121039e-44), 255(3.573311e-43)
-; CM-NEXT:     AND_INT T1.Z, KC0[2].Y, literal.x,
-; CM-NEXT:     OR_INT * T0.W, PV.Z, PV.W,
-; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; CM-NEXT:     AND_INT T0.Z, PV.W, literal.x,
-; CM-NEXT:     LSHL * T0.W, PV.Z, literal.y,
-; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
-; CM-NEXT:     LSHL T4.X, PV.Z, PV.W,
-; CM-NEXT:     LSHL * T4.W, literal.x, PV.W,
-; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; CM-NEXT:     MOV T4.Y, 0.0,
 ; CM-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; CM-NEXT:     AND_INT T0.Z, T6.X, literal.x,
+; CM-NEXT:     AND_INT T0.Z, T4.X, literal.x,
 ; CM-NEXT:     LSHL * T1.W, PV.W, literal.y,
 ; CM-NEXT:    255(3.573311e-43), 3(4.203895e-45)
+; CM-NEXT:     LSHL T4.X, PV.Z, PV.W,
+; CM-NEXT:     LSHL * T4.W, literal.x, PV.W,
+; CM-NEXT:    255(3.573311e-43), 0(0.000000e+00)
+; CM-NEXT:     MOV T4.Y, 0.0,
+; CM-NEXT:     LSHL T0.Z, T6.X, literal.x,
+; CM-NEXT:     AND_INT * T1.W, T5.X, literal.y, BS:VEC_120/SCL_212
+; CM-NEXT:    8(1.121039e-44), 255(3.573311e-43)
+; CM-NEXT:     AND_INT T1.Z, KC0[2].Y, literal.x,
+; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
+; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; CM-NEXT:     AND_INT T0.Z, PV.W, literal.x,
+; CM-NEXT:     LSHL * T1.W, PV.Z, literal.y,
+; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
 ; CM-NEXT:     LSHL T5.X, PV.Z, PV.W,
 ; CM-NEXT:     LSHL * T5.W, literal.x, PV.W,
-; CM-NEXT:    255(3.573311e-43), 0(0.000000e+00)
+; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T5.Y, 0.0,
 ; CM-NEXT:     MOV * T4.Z, 0.0,
 ; CM-NEXT:     MOV * T5.Z, 0.0,
-; CM-NEXT:     LSHR * T6.X, T0.W, literal.x,
+; CM-NEXT:     LSHR * T6.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T7.X, T0.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   store <3 x i8> %in, ptr addrspace(1) %out, align 4
@@ -1060,9 +1060,9 @@ define amdgpu_kernel void @v3i16_arg(ptr addrspace(1) nocapture %out, <3 x i16> 
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 0, @12, KC0[], KC1[]
 ; CM-NEXT:    TEX 2 @6
-; CM-NEXT:    ALU 17, @13, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT MSKOR T3.XW, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
+; CM-NEXT:    ALU 16, @13, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T2.X
+; CM-NEXT:    MEM_RAT MSKOR T3.XW, T0.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    Fetch clause starting at 6:
 ; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 44, #3
@@ -1081,13 +1081,12 @@ define amdgpu_kernel void @v3i16_arg(ptr addrspace(1) nocapture %out, <3 x i16> 
 ; CM-NEXT:     LSHL * T3.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T3.Y, 0.0,
-; CM-NEXT:     MOV T3.Z, 0.0,
-; CM-NEXT:     LSHL * T1.W, T2.X, literal.x,
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     OR_INT * T0.X, T1.X, PV.W,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T2.X, T0.W, literal.x,
+; CM-NEXT:     MOV * T3.Z, 0.0,
+; CM-NEXT:     LSHR T0.X, T0.W, literal.x,
+; CM-NEXT:     LSHL * T0.W, T2.X, literal.y,
+; CM-NEXT:    2(2.802597e-45), 16(2.242078e-44)
+; CM-NEXT:     OR_INT * T1.X, T1.X, PV.W,
+; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   store <3 x i16> %in, ptr addrspace(1) %out, align 4
@@ -1153,17 +1152,17 @@ define amdgpu_kernel void @v3i32_arg(ptr addrspace(1) nocapture %out, <3 x i32> 
 ; CM-LABEL: v3i32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3, T0.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2.X, T1.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3.X, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T0.Y, KC0[3].Z,
+; CM-NEXT:     MOV * T0.X, KC0[3].Y,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT * T1.X, PV.X, literal.x,
+; CM-NEXT:     ADD_INT * T2.X, PV.X, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T2.X, KC0[3].W,
-; CM-NEXT:     MOV * T3.Y, KC0[3].Z,
-; CM-NEXT:     MOV * T3.X, KC0[3].Y,
+; CM-NEXT:     MOV * T3.X, KC0[3].W,
 entry:
   store <3 x i32> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -1228,17 +1227,17 @@ define amdgpu_kernel void @v3f32_arg(ptr addrspace(1) nocapture %out, <3 x float
 ; CM-LABEL: v3f32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3, T0.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2.X, T1.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3.X, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T0.Y, KC0[3].Z,
+; CM-NEXT:     MOV * T0.X, KC0[3].Y,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT * T1.X, PV.X, literal.x,
+; CM-NEXT:     ADD_INT * T2.X, PV.X, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T2.X, KC0[3].W,
-; CM-NEXT:     MOV * T3.Y, KC0[3].Z,
-; CM-NEXT:     MOV * T3.X, KC0[3].Y,
+; CM-NEXT:     MOV * T3.X, KC0[3].W,
 entry:
   store <3 x float> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -1603,9 +1602,9 @@ define amdgpu_kernel void @v5i8_arg(ptr addrspace(1) nocapture %out, <5 x i8> %i
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 4, @16, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    TEX 4 @6
-; CM-NEXT:    ALU 18, @21, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T2.X
-; CM-NEXT:    MEM_RAT MSKOR T5.XW, T0.X
+; CM-NEXT:    ALU 19, @21, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT MSKOR T5.XW, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    Fetch clause starting at 6:
 ; CM-NEXT:     VTX_READ_8 T1.X, T0.X, 47, #3
@@ -1632,12 +1631,13 @@ define amdgpu_kernel void @v5i8_arg(ptr addrspace(1) nocapture %out, <5 x i8> %i
 ; CM-NEXT:     OR_INT T0.Z, T3.X, PV.W,
 ; CM-NEXT:     LSHL * T1.W, T2.X, literal.x, BS:VEC_120/SCL_212
 ; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     LSHR T0.X, T0.W, literal.x,
 ; CM-NEXT:     OR_INT T0.Z, PV.Z, PV.W,
-; CM-NEXT:     LSHL * T0.W, T1.X, literal.y,
-; CM-NEXT:    2(2.802597e-45), 24(3.363116e-44)
-; CM-NEXT:     OR_INT * T1.X, PV.Z, PV.W,
-; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHL * T1.W, T1.X, literal.x,
+; CM-NEXT:    24(3.363116e-44), 0(0.000000e+00)
+; CM-NEXT:     OR_INT * T0.X, PV.Z, PV.W,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     LSHR * T2.X, T0.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   store <5 x i8> %in, ptr addrspace(1) %out, align 4
@@ -1698,55 +1698,55 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; EG-NEXT:    ALU 0, @20, KC0[], KC1[]
 ; EG-NEXT:    TEX 4 @10
 ; EG-NEXT:    ALU 65, @21, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT MSKOR T5.XW, T9.X
+; EG-NEXT:    MEM_RAT MSKOR T0.XW, T9.X
 ; EG-NEXT:    MEM_RAT MSKOR T4.XW, T7.X
-; EG-NEXT:    MEM_RAT MSKOR T3.XW, T2.X
-; EG-NEXT:    MEM_RAT MSKOR T6.XW, T1.X
-; EG-NEXT:    MEM_RAT MSKOR T8.XW, T0.X
+; EG-NEXT:    MEM_RAT MSKOR T3.XW, T5.X
+; EG-NEXT:    MEM_RAT MSKOR T6.XW, T2.X
+; EG-NEXT:    MEM_RAT MSKOR T8.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 10:
-; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 58, #3
-; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 56, #3
-; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 54, #3
-; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 52, #3
-; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 60, #3
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 60, #3
+; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 58, #3
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 56, #3
+; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 54, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 52, #3
 ; EG-NEXT:    ALU clause starting at 20:
 ; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 21:
-; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.y,
+; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T5.X, T2.W, PV.W,
-; EG-NEXT:     LSHL * T5.W, literal.x, PV.W,
+; EG-NEXT:     LSHL T0.X, T1.W, PV.W,
+; EG-NEXT:     LSHL * T0.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV T5.Y, 0.0,
-; EG-NEXT:     AND_INT T1.W, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T4.X, literal.y,
-; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T4.X, T2.W, PV.W,
-; EG-NEXT:     LSHL * T4.W, literal.x, PV.W,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV T4.Y, 0.0,
+; EG-NEXT:     MOV T0.Y, 0.0,
 ; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T2.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T3.W, T3.X, literal.y,
+; EG-NEXT:     AND_INT * T3.W, T4.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
 ; EG-NEXT:     LSHL * T2.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T3.X, T3.W, PV.W,
+; EG-NEXT:     LSHL T4.X, T3.W, PV.W,
+; EG-NEXT:     LSHL * T4.W, literal.x, PV.W,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     MOV T4.Y, 0.0,
+; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     AND_INT T3.W, PV.W, literal.x,
+; EG-NEXT:     AND_INT * T5.W, T3.X, literal.y,
+; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T3.W, PV.W, literal.x,
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     LSHL T3.X, T5.W, PV.W,
 ; EG-NEXT:     LSHL * T3.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     MOV T3.Y, 0.0,
-; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
-; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT * T5.W, KC0[2].Y, literal.x,
+; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T6.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T7.W, T2.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
@@ -1757,7 +1757,7 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     MOV T6.Y, 0.0,
 ; EG-NEXT:     ADD_INT * T7.W, KC0[2].Y, literal.x,
-; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T8.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T9.W, T1.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
@@ -1767,18 +1767,18 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; EG-NEXT:     LSHL * T8.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     MOV T8.Y, 0.0,
-; EG-NEXT:     MOV T5.Z, 0.0,
+; EG-NEXT:     MOV T0.Z, 0.0,
 ; EG-NEXT:     MOV * T4.Z, 0.0,
 ; EG-NEXT:     MOV T3.Z, 0.0,
 ; EG-NEXT:     MOV * T6.Z, 0.0,
 ; EG-NEXT:     MOV * T8.Z, 0.0,
-; EG-NEXT:     LSHR T0.X, T7.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, T2.W, literal.x,
+; EG-NEXT:     LSHR T1.X, T7.W, literal.x,
+; EG-NEXT:     LSHR * T2.X, T5.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHR T2.X, T1.W, literal.x,
-; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T5.X, T2.W, literal.x,
+; EG-NEXT:     LSHR * T7.X, T1.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T9.X, T0.W, literal.x,
+; EG-NEXT:     LSHR * T9.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: v5i16_arg:
@@ -1786,55 +1786,55 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; CM-NEXT:    ALU 0, @20, KC0[], KC1[]
 ; CM-NEXT:    TEX 4 @10
 ; CM-NEXT:    ALU 67, @21, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT MSKOR T5.XW, T9.X
+; CM-NEXT:    MEM_RAT MSKOR T0.XW, T9.X
 ; CM-NEXT:    MEM_RAT MSKOR T4.XW, T7.X
-; CM-NEXT:    MEM_RAT MSKOR T3.XW, T2.X
-; CM-NEXT:    MEM_RAT MSKOR T6.XW, T1.X
-; CM-NEXT:    MEM_RAT MSKOR T8.XW, T0.X
+; CM-NEXT:    MEM_RAT MSKOR T3.XW, T5.X
+; CM-NEXT:    MEM_RAT MSKOR T6.XW, T2.X
+; CM-NEXT:    MEM_RAT MSKOR T8.XW, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    Fetch clause starting at 10:
-; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 58, #3
-; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 56, #3
-; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 54, #3
-; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 52, #3
-; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 60, #3
+; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 60, #3
+; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 58, #3
+; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 56, #3
+; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 54, #3
+; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 52, #3
 ; CM-NEXT:    ALU clause starting at 20:
 ; CM-NEXT:     MOV * T0.X, 0.0,
 ; CM-NEXT:    ALU clause starting at 21:
-; CM-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     AND_INT * T1.W, PV.W, literal.x,
+; CM-NEXT:     AND_INT * T0.W, KC0[2].Y, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, T0.X, literal.x,
-; CM-NEXT:     LSHL * T1.W, PV.W, literal.y,
+; CM-NEXT:     LSHL * T0.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
-; CM-NEXT:     LSHL T5.X, PV.Z, PV.W,
-; CM-NEXT:     LSHL * T5.W, literal.x, PV.W,
+; CM-NEXT:     LSHL T0.X, PV.Z, PV.W,
+; CM-NEXT:     LSHL * T0.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; CM-NEXT:     MOV T5.Y, 0.0,
-; CM-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV T0.Y, 0.0,
+; CM-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     AND_INT * T2.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, T4.X, literal.x,
-; CM-NEXT:     LSHL * T1.W, PV.W, literal.y,
+; CM-NEXT:     LSHL * T2.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
 ; CM-NEXT:     LSHL T4.X, PV.Z, PV.W,
 ; CM-NEXT:     LSHL * T4.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T4.Y, 0.0,
-; CM-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     AND_INT * T2.W, PV.W, literal.x,
+; CM-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
+; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; CM-NEXT:     AND_INT * T3.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, T3.X, literal.x,
-; CM-NEXT:     LSHL * T2.W, PV.W, literal.y,
+; CM-NEXT:     LSHL * T3.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
 ; CM-NEXT:     LSHL T3.X, PV.Z, PV.W,
 ; CM-NEXT:     LSHL * T3.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T3.Y, 0.0,
-; CM-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
-; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; CM-NEXT:     ADD_INT * T5.W, KC0[2].Y, literal.x,
+; CM-NEXT:    6(8.407791e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT * T6.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, T2.X, literal.x,
@@ -1845,7 +1845,7 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T6.Y, 0.0,
 ; CM-NEXT:     ADD_INT * T7.W, KC0[2].Y, literal.x,
-; CM-NEXT:    6(8.407791e-45), 0(0.000000e+00)
+; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT * T8.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, T1.X, literal.x,
@@ -1855,20 +1855,20 @@ define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> 
 ; CM-NEXT:     LSHL * T8.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; CM-NEXT:     MOV T8.Y, 0.0,
-; CM-NEXT:     MOV * T5.Z, 0.0,
+; CM-NEXT:     MOV * T0.Z, 0.0,
 ; CM-NEXT:     MOV * T4.Z, 0.0,
 ; CM-NEXT:     MOV * T3.Z, 0.0,
 ; CM-NEXT:     MOV * T6.Z, 0.0,
 ; CM-NEXT:     MOV * T8.Z, 0.0,
-; CM-NEXT:     LSHR * T0.X, T7.W, literal.x,
+; CM-NEXT:     LSHR * T1.X, T7.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T1.X, T2.W, literal.x,
+; CM-NEXT:     LSHR * T2.X, T5.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T2.X, T1.W, literal.x,
+; CM-NEXT:     LSHR * T5.X, T2.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T7.X, T1.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T9.X, T0.W, literal.x,
+; CM-NEXT:     LSHR * T9.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   store <5 x i16> %in, ptr addrspace(1) %out, align 4
@@ -1951,19 +1951,19 @@ define amdgpu_kernel void @v5i32_arg(ptr addrspace(1) nocapture %out, <5 x i32> 
 ; CM-LABEL: v5i32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T0.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3.X, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.W, KC0[5].X,
+; CM-NEXT:     MOV * T0.W, KC0[5].X,
+; CM-NEXT:     MOV * T0.Z, KC0[4].W,
+; CM-NEXT:     MOV * T0.Y, KC0[4].Z,
+; CM-NEXT:     MOV * T0.X, KC0[4].Y,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T2.X, PV.X, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[4].W,
+; CM-NEXT:     ADD_INT * T2.X, PV.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T3.X, KC0[5].Y,
-; CM-NEXT:     MOV * T1.Y, KC0[4].Z,
-; CM-NEXT:     MOV * T1.X, KC0[4].Y,
+; CM-NEXT:     MOV * T3.X, KC0[5].Y,
 entry:
   store <5 x i32> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -2046,19 +2046,19 @@ define amdgpu_kernel void @v5f32_arg(ptr addrspace(1) nocapture %out, <5 x float
 ; CM-LABEL: v5f32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T0.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3.X, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.W, KC0[5].X,
+; CM-NEXT:     MOV * T0.W, KC0[5].X,
+; CM-NEXT:     MOV * T0.Z, KC0[4].W,
+; CM-NEXT:     MOV * T0.Y, KC0[4].Z,
+; CM-NEXT:     MOV * T0.X, KC0[4].Y,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T2.X, PV.X, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[4].W,
+; CM-NEXT:     ADD_INT * T2.X, PV.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T3.X, KC0[5].Y,
-; CM-NEXT:     MOV * T1.Y, KC0[4].Z,
-; CM-NEXT:     MOV * T1.X, KC0[4].Y,
+; CM-NEXT:     MOV * T3.X, KC0[5].Y,
 entry:
   store <5 x float> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -2172,28 +2172,28 @@ define amdgpu_kernel void @v5i64_arg(ptr addrspace(1) nocapture %out, <5 x i64> 
 ; CM-LABEL: v5i64_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 15, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T5.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2, T5.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    ALU clause starting at 6:
-; CM-NEXT:     MOV * T0.Y, KC0[8].Z,
-; CM-NEXT:     MOV T0.X, KC0[8].Y,
-; CM-NEXT:     MOV * T1.W, KC0[8].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[7].W,
+; CM-NEXT:     MOV * T0.W, KC0[7].X,
+; CM-NEXT:     MOV * T0.Z, KC0[6].W,
+; CM-NEXT:     MOV * T0.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T0.X, KC0[6].Y,
+; CM-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T2.W, KC0[8].X,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV T1.Y, KC0[7].Z,
-; CM-NEXT:     MOV * T4.W, KC0[7].X,
+; CM-NEXT:     MOV T4.Y, KC0[8].Z,
+; CM-NEXT:     MOV * T2.Z, KC0[7].W,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T1.X, KC0[7].Y,
-; CM-NEXT:     MOV * T4.Z, KC0[6].W,
-; CM-NEXT:     ADD_INT T5.X, T2.X, literal.x,
-; CM-NEXT:     MOV * T4.Y, KC0[6].Z,
+; CM-NEXT:     MOV T4.X, KC0[8].Y,
+; CM-NEXT:     MOV * T2.Y, KC0[7].Z,
+; CM-NEXT:     MOV * T2.X, KC0[7].Y,
+; CM-NEXT:     ADD_INT * T5.X, T1.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T4.X, KC0[6].Y,
 entry:
   store <5 x i64> %in, ptr addrspace(1) %out, align 8
   ret void
@@ -2307,28 +2307,28 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; CM-LABEL: v5f64_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 15, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T5.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2, T5.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    ALU clause starting at 6:
-; CM-NEXT:     MOV * T0.Y, KC0[8].Z,
-; CM-NEXT:     MOV T0.X, KC0[8].Y,
-; CM-NEXT:     MOV * T1.W, KC0[8].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[7].W,
+; CM-NEXT:     MOV * T0.W, KC0[7].X,
+; CM-NEXT:     MOV * T0.Z, KC0[6].W,
+; CM-NEXT:     MOV * T0.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T0.X, KC0[6].Y,
+; CM-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T2.W, KC0[8].X,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV T1.Y, KC0[7].Z,
-; CM-NEXT:     MOV * T4.W, KC0[7].X,
+; CM-NEXT:     MOV T4.Y, KC0[8].Z,
+; CM-NEXT:     MOV * T2.Z, KC0[7].W,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T1.X, KC0[7].Y,
-; CM-NEXT:     MOV * T4.Z, KC0[6].W,
-; CM-NEXT:     ADD_INT T5.X, T2.X, literal.x,
-; CM-NEXT:     MOV * T4.Y, KC0[6].Z,
+; CM-NEXT:     MOV T4.X, KC0[8].Y,
+; CM-NEXT:     MOV * T2.Y, KC0[7].Z,
+; CM-NEXT:     MOV * T2.X, KC0[7].Y,
+; CM-NEXT:     ADD_INT * T5.X, T1.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T4.X, KC0[6].Y,
 entry:
   store <5 x double> %in, ptr addrspace(1) %out, align 8
   ret void
@@ -2668,22 +2668,22 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; CM-LABEL: v8i32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T2.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     MOV * T0.W, KC0[6].X,
-; CM-NEXT:     MOV * T0.Z, KC0[5].W,
-; CM-NEXT:     MOV * T0.Y, KC0[5].Z,
-; CM-NEXT:     MOV T0.X, KC0[5].Y,
-; CM-NEXT:     MOV * T1.W, KC0[5].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[4].W,
+; CM-NEXT:     MOV * T0.W, KC0[5].X,
+; CM-NEXT:     MOV T0.Z, KC0[4].W,
+; CM-NEXT:     MOV * T1.W, KC0[6].X,
+; CM-NEXT:     MOV T0.Y, KC0[4].Z,
+; CM-NEXT:     MOV * T1.Z, KC0[5].W,
+; CM-NEXT:     MOV T0.X, KC0[4].Y,
+; CM-NEXT:     MOV * T1.Y, KC0[5].Z,
+; CM-NEXT:     MOV * T1.X, KC0[5].Y,
+; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV * T1.Y, KC0[4].Z,
+; CM-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T1.X, KC0[4].Y,
 entry:
   store <8 x i32> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -2775,22 +2775,22 @@ define amdgpu_kernel void @v8f32_arg(ptr addrspace(1) nocapture %out, <8 x float
 ; CM-LABEL: v8f32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T2.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     MOV * T0.W, KC0[6].X,
-; CM-NEXT:     MOV * T0.Z, KC0[5].W,
-; CM-NEXT:     MOV * T0.Y, KC0[5].Z,
-; CM-NEXT:     MOV T0.X, KC0[5].Y,
-; CM-NEXT:     MOV * T1.W, KC0[5].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[4].W,
+; CM-NEXT:     MOV * T0.W, KC0[5].X,
+; CM-NEXT:     MOV T0.Z, KC0[4].W,
+; CM-NEXT:     MOV * T1.W, KC0[6].X,
+; CM-NEXT:     MOV T0.Y, KC0[4].Z,
+; CM-NEXT:     MOV * T1.Z, KC0[5].W,
+; CM-NEXT:     MOV T0.X, KC0[4].Y,
+; CM-NEXT:     MOV * T1.Y, KC0[5].Z,
+; CM-NEXT:     MOV * T1.X, KC0[5].Y,
+; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV * T1.Y, KC0[4].Z,
+; CM-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T1.X, KC0[4].Y,
 entry:
   store <8 x float> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -3126,68 +3126,68 @@ define amdgpu_kernel void @v16i16_arg(ptr addrspace(1) %out, <16 x i16> %in) {
 ; CM-NEXT:    TEX 2 @18
 ; CM-NEXT:    ALU 3, @49, KC0[], KC1[]
 ; CM-NEXT:    TEX 2 @24
-; CM-NEXT:    ALU 4, @53, KC0[], KC1[]
+; CM-NEXT:    ALU 3, @53, KC0[], KC1[]
 ; CM-NEXT:    TEX 2 @30
-; CM-NEXT:    ALU 5, @58, KC0[], KC1[]
+; CM-NEXT:    ALU 3, @57, KC0[], KC1[]
 ; CM-NEXT:    TEX 4 @36
-; CM-NEXT:    ALU 8, @64, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T6.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T5.X
+; CM-NEXT:    ALU 11, @61, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    Fetch clause starting at 14:
-; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 98, #3
-; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 94, #3
+; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 82, #3
+; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 90, #3
 ; CM-NEXT:    Fetch clause starting at 18:
-; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 90, #3
-; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 92, #3
-; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 96, #3
-; CM-NEXT:    Fetch clause starting at 24:
-; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 86, #3
-; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 82, #3
-; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 88, #3
-; CM-NEXT:    Fetch clause starting at 30:
+; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 98, #3
 ; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 80, #3
 ; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 78, #3
-; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 84, #3
+; CM-NEXT:    Fetch clause starting at 24:
+; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 72, #3
+; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 74, #3
+; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 76, #3
+; CM-NEXT:    Fetch clause starting at 30:
+; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 92, #3
+; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 96, #3
+; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 94, #3
 ; CM-NEXT:    Fetch clause starting at 36:
-; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 68, #3
-; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 70, #3
-; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 72, #3
-; CM-NEXT:     VTX_READ_16 T5.X, T0.X, 74, #3
-; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 76, #3
+; CM-NEXT:     VTX_READ_16 T2.X, T0.X, 84, #3
+; CM-NEXT:     VTX_READ_16 T3.X, T0.X, 86, #3
+; CM-NEXT:     VTX_READ_16 T4.X, T0.X, 88, #3
+; CM-NEXT:     VTX_READ_16 T5.X, T0.X, 68, #3
+; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 70, #3
 ; CM-NEXT:    ALU clause starting at 46:
 ; CM-NEXT:     MOV * T0.X, 0.0,
 ; CM-NEXT:    ALU clause starting at 47:
 ; CM-NEXT:     LSHL * T0.W, T1.X, literal.x,
 ; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; CM-NEXT:    ALU clause starting at 49:
-; CM-NEXT:     LSHL T0.Z, T2.X, literal.x,
-; CM-NEXT:     OR_INT * T1.W, T4.X, T0.W, BS:VEC_120/SCL_212
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     OR_INT * T1.Z, T3.X, PV.Z,
-; CM-NEXT:    ALU clause starting at 53:
-; CM-NEXT:     LSHL * T0.W, T1.X, literal.x,
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     OR_INT T1.Y, T4.X, PV.W,
-; CM-NEXT:     LSHL * T0.W, T3.X, literal.x, BS:VEC_120/SCL_212
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:    ALU clause starting at 58:
-; CM-NEXT:     LSHL * T2.W, T2.X, literal.x,
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     OR_INT T1.X, T1.X, PV.W,
+; CM-NEXT:     LSHL T0.Y, T2.X, literal.x,
 ; CM-NEXT:     LSHL T0.Z, T4.X, literal.x, BS:VEC_120/SCL_212
-; CM-NEXT:     OR_INT * T0.W, T3.X, T0.W, BS:VEC_201
+; CM-NEXT:     OR_INT * T1.W, T3.X, T0.W, BS:VEC_201
 ; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:    ALU clause starting at 64:
-; CM-NEXT:     LSHR T6.X, KC0[2].Y, literal.x,
-; CM-NEXT:     OR_INT T0.Z, T0.X, T0.Z,
-; CM-NEXT:     LSHL * T2.W, T5.X, literal.y, BS:VEC_120/SCL_212
-; CM-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-; CM-NEXT:     ADD_INT T5.X, PV.X, literal.x,
-; CM-NEXT:     OR_INT T0.Y, T4.X, PV.W,
-; CM-NEXT:     LSHL * T2.W, T3.X, literal.y, BS:VEC_120/SCL_212
-; CM-NEXT:    4(5.605194e-45), 16(2.242078e-44)
+; CM-NEXT:    ALU clause starting at 53:
+; CM-NEXT:     LSHL T2.Y, T1.X, literal.x,
+; CM-NEXT:     OR_INT T1.Z, T4.X, T0.Z, BS:VEC_120/SCL_212
+; CM-NEXT:     LSHL * T0.W, T3.X, literal.x, BS:VEC_201
+; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; CM-NEXT:    ALU clause starting at 57:
+; CM-NEXT:     OR_INT T1.Y, T2.X, T0.W,
+; CM-NEXT:     LSHL T0.Z, T4.X, literal.x, BS:VEC_120/SCL_212
+; CM-NEXT:     OR_INT * T0.W, T3.X, T2.Y, BS:VEC_201
+; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; CM-NEXT:    ALU clause starting at 61:
+; CM-NEXT:     OR_INT T0.Z, T1.X, T0.Z,
+; CM-NEXT:     LSHL * T2.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; CM-NEXT:     OR_INT T1.X, T5.X, PV.W,
+; CM-NEXT:     OR_INT T0.Y, T4.X, T0.Y, BS:VEC_120/SCL_212
+; CM-NEXT:     LSHL * T2.W, T3.X, literal.x, BS:VEC_201
+; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; CM-NEXT:     OR_INT * T0.X, T2.X, PV.W,
+; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
+; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 entry:
   store <16 x i16> %in, ptr addrspace(1) %out
   ret void
@@ -3335,36 +3335,36 @@ define amdgpu_kernel void @v16i32_arg(ptr addrspace(1) nocapture %out, <16 x i32
 ; CM-LABEL: v16i32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 23, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T6, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T7.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T5.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T5, T7.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2, T6.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T4.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 6:
-; CM-NEXT:     MOV * T0.W, KC0[10].X,
-; CM-NEXT:     MOV * T0.Z, KC0[9].W,
-; CM-NEXT:     MOV * T0.Y, KC0[9].Z,
-; CM-NEXT:     MOV T0.X, KC0[9].Y,
-; CM-NEXT:     MOV * T1.W, KC0[9].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[8].W,
+; CM-NEXT:     MOV * T0.W, KC0[7].X,
+; CM-NEXT:     MOV T0.Z, KC0[6].W,
+; CM-NEXT:     MOV * T1.W, KC0[10].X,
+; CM-NEXT:     MOV T0.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T1.Z, KC0[9].W,
+; CM-NEXT:     MOV T0.X, KC0[6].Y,
+; CM-NEXT:     MOV * T1.Y, KC0[9].Z,
+; CM-NEXT:     MOV T1.X, KC0[9].Y,
+; CM-NEXT:     MOV * T2.W, KC0[9].X,
+; CM-NEXT:     LSHR T3.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T2.Z, KC0[8].W,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV T1.Y, KC0[8].Z,
-; CM-NEXT:     MOV * T4.W, KC0[8].X,
+; CM-NEXT:     ADD_INT T4.X, PV.X, literal.x,
+; CM-NEXT:     MOV T2.Y, KC0[8].Z,
+; CM-NEXT:     MOV * T5.W, KC0[8].X,
 ; CM-NEXT:    12(1.681558e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T1.X, KC0[8].Y,
-; CM-NEXT:     MOV * T4.Z, KC0[7].W,
-; CM-NEXT:     ADD_INT T5.X, T2.X, literal.x,
-; CM-NEXT:     MOV T4.Y, KC0[7].Z,
-; CM-NEXT:     MOV * T6.W, KC0[7].X,
+; CM-NEXT:     MOV T2.X, KC0[8].Y,
+; CM-NEXT:     MOV * T5.Z, KC0[7].W,
+; CM-NEXT:     ADD_INT T6.X, T3.X, literal.x,
+; CM-NEXT:     MOV * T5.Y, KC0[7].Z,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T4.X, KC0[7].Y,
-; CM-NEXT:     MOV * T6.Z, KC0[6].W,
-; CM-NEXT:     ADD_INT T7.X, T2.X, literal.x,
-; CM-NEXT:     MOV * T6.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T5.X, KC0[7].Y,
+; CM-NEXT:     ADD_INT * T7.X, T3.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T6.X, KC0[6].Y,
 entry:
   store <16 x i32> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -3512,36 +3512,36 @@ define amdgpu_kernel void @v16f32_arg(ptr addrspace(1) nocapture %out, <16 x flo
 ; CM-LABEL: v16f32_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 23, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T6, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4, T7.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T5.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T5, T7.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2, T6.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T4.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 6:
-; CM-NEXT:     MOV * T0.W, KC0[10].X,
-; CM-NEXT:     MOV * T0.Z, KC0[9].W,
-; CM-NEXT:     MOV * T0.Y, KC0[9].Z,
-; CM-NEXT:     MOV T0.X, KC0[9].Y,
-; CM-NEXT:     MOV * T1.W, KC0[9].X,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     MOV * T1.Z, KC0[8].W,
+; CM-NEXT:     MOV * T0.W, KC0[7].X,
+; CM-NEXT:     MOV T0.Z, KC0[6].W,
+; CM-NEXT:     MOV * T1.W, KC0[10].X,
+; CM-NEXT:     MOV T0.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T1.Z, KC0[9].W,
+; CM-NEXT:     MOV T0.X, KC0[6].Y,
+; CM-NEXT:     MOV * T1.Y, KC0[9].Z,
+; CM-NEXT:     MOV T1.X, KC0[9].Y,
+; CM-NEXT:     MOV * T2.W, KC0[9].X,
+; CM-NEXT:     LSHR T3.X, KC0[2].Y, literal.x,
+; CM-NEXT:     MOV * T2.Z, KC0[8].W,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
-; CM-NEXT:     MOV T1.Y, KC0[8].Z,
-; CM-NEXT:     MOV * T4.W, KC0[8].X,
+; CM-NEXT:     ADD_INT T4.X, PV.X, literal.x,
+; CM-NEXT:     MOV T2.Y, KC0[8].Z,
+; CM-NEXT:     MOV * T5.W, KC0[8].X,
 ; CM-NEXT:    12(1.681558e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T1.X, KC0[8].Y,
-; CM-NEXT:     MOV * T4.Z, KC0[7].W,
-; CM-NEXT:     ADD_INT T5.X, T2.X, literal.x,
-; CM-NEXT:     MOV T4.Y, KC0[7].Z,
-; CM-NEXT:     MOV * T6.W, KC0[7].X,
+; CM-NEXT:     MOV T2.X, KC0[8].Y,
+; CM-NEXT:     MOV * T5.Z, KC0[7].W,
+; CM-NEXT:     ADD_INT T6.X, T3.X, literal.x,
+; CM-NEXT:     MOV * T5.Y, KC0[7].Z,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T4.X, KC0[7].Y,
-; CM-NEXT:     MOV * T6.Z, KC0[6].W,
-; CM-NEXT:     ADD_INT T7.X, T2.X, literal.x,
-; CM-NEXT:     MOV * T6.Y, KC0[6].Z,
+; CM-NEXT:     MOV * T5.X, KC0[7].Y,
+; CM-NEXT:     ADD_INT * T7.X, T3.X, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T6.X, KC0[6].Y,
 entry:
   store <16 x float> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -3767,9 +3767,9 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; CM-LABEL: i65_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 21, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT MSKOR T1.XW, T5.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4.X, T3.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T2.X, T0.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T5.X, T4.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3.X, T2.X
+; CM-NEXT:    MEM_RAT MSKOR T1.XW, T0.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    ALU clause starting at 6:
@@ -3785,16 +3785,16 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; CM-NEXT:    255(3.573311e-43), 0(0.000000e+00)
 ; CM-NEXT:     MOV T1.Y, 0.0,
 ; CM-NEXT:     MOV * T1.Z, 0.0,
-; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T0.X, T0.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T2.X, KC0[2].W,
-; CM-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     MOV T3.X, KC0[2].W,
+; CM-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T3.X, PV.W, literal.x,
+; CM-NEXT:     LSHR * T4.X, PV.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T4.X, KC0[3].X,
-; CM-NEXT:     LSHR * T5.X, T0.W, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     MOV * T5.X, KC0[3].X,
 entry:
   store i65 %in, ptr addrspace(1) %out, align 4
   ret void

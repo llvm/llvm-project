@@ -100,9 +100,9 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sb t5, 11(s4)
 ; RV32-NEXT:    or s5, a2, a3
 ; RV32-NEXT:    sb a1, 12(s4)
-; RV32-NEXT:    sb s3, 13(s4)
 ; RV32-NEXT:    sb s2, 14(s4)
 ; RV32-NEXT:    sb s1, 15(s4)
+; RV32-NEXT:    sb s3, 13(s4)
 ; RV32-NEXT:    beqz s5, .LBB1_1
 ; RV32-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
@@ -145,14 +145,14 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sb t2, 1(a0)
 ; RV64-NEXT:    sb t1, 2(a0)
 ; RV64-NEXT:    sb t0, 3(a0)
-; RV64-NEXT:    sb t6, 12(a0)
 ; RV64-NEXT:    sb t5, 13(a0)
 ; RV64-NEXT:    sb t4, 14(a0)
 ; RV64-NEXT:    sb t3, 15(a0)
 ; RV64-NEXT:    sb a2, 8(a0)
-; RV64-NEXT:    sb s2, 9(a0)
 ; RV64-NEXT:    sb s1, 10(a0)
 ; RV64-NEXT:    sb s0, 11(a0)
+; RV64-NEXT:    sb t6, 12(a0)
+; RV64-NEXT:    sb s2, 9(a0)
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    bne a0, a4, .LBB1_1
 ; RV64-NEXT:  # %bb.2: # %memset.pattern-post-expansion
@@ -285,8 +285,8 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV64-BOTH-NEXT:    li a4, 0
 ; RV64-BOTH-NEXT:  .LBB3_2: # %memset.pattern-expansion-main-body
 ; RV64-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-BOTH-NEXT:    addi a4, a4, 1
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
+; RV64-BOTH-NEXT:    addi a4, a4, 1
 ; RV64-BOTH-NEXT:    sd a2, 8(a0)
 ; RV64-BOTH-NEXT:    addi a0, a0, 16
 ; RV64-BOTH-NEXT:    bltu a4, a3, .LBB3_2

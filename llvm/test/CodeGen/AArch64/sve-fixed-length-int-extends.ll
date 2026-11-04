@@ -81,8 +81,8 @@ define void @sext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v32i8_v32i16:
@@ -164,8 +164,8 @@ define void @sext_v16i8_v16i32(<16 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v16i8_v16i32:
@@ -250,8 +250,8 @@ define void @sext_v8i8_v8i64(<8 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v8i8_v8i64:
@@ -331,8 +331,8 @@ define void @sext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v16i16_v16i32:
@@ -414,8 +414,8 @@ define void @sext_v8i16_v8i64(<8 x i16> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v8i16_v8i64:
@@ -496,8 +496,8 @@ define void @sext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sext_v8i32_v8i64:
@@ -580,8 +580,8 @@ define void @zext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v32i8_v32i16:
@@ -663,8 +663,8 @@ define void @zext_v16i8_v16i32(<16 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v16i8_v16i32:
@@ -749,8 +749,8 @@ define void @zext_v8i8_v8i64(<8 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v8i8_v8i64:
@@ -830,8 +830,8 @@ define void @zext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v16i16_v16i32:
@@ -913,8 +913,8 @@ define void @zext_v8i16_v8i64(<8 x i16> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v8i16_v8i64:
@@ -995,8 +995,8 @@ define void @zext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: zext_v8i32_v8i64:

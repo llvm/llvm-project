@@ -83606,8 +83606,7 @@ define inreg <64 x i8> @bitcast_v32bf16_to_v64i8_scalar(<32 x bfloat> inreg %a, 
 ; GFX9-NEXT:    v_or_b32_e32 v4, v4, v7
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:52
-; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:60
-; GFX9-NEXT:    s_waitcnt vmcnt(4)
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v59, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; GFX9-NEXT:    v_or_b32_e32 v17, v17, v18
@@ -83642,6 +83641,7 @@ define inreg <64 x i8> @bitcast_v32bf16_to_v64i8_scalar(<32 x bfloat> inreg %a, 
 ; GFX9-NEXT:    v_perm_b32 v13, v49, v40, s4
 ; GFX9-NEXT:    v_or_b32_e32 v10, v13, v10
 ; GFX9-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:44
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:60
 ; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload

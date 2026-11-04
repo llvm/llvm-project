@@ -530,11 +530,11 @@ define {<2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    stp q4, q5, [sp, #64]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp q4, q5, [sp, #64]
+; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    ld3 { v5.2d, v6.2d, v7.2d }, [x8]
 ; CHECK-NEXT:    ld3 { v16.2d, v17.2d, v18.2d }, [x9]
 ; CHECK-NEXT:    zip1 v0.2d, v16.2d, v5.2d
@@ -560,11 +560,11 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @deint
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    stp q4, q5, [sp, #64]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp q4, q5, [sp, #64]
+; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    ld3 { v5.4s, v6.4s, v7.4s }, [x8]
 ; CHECK-NEXT:    ld3 { v16.4s, v17.4s, v18.4s }, [x9]
 ; CHECK-NEXT:    uzp1 v0.4s, v16.4s, v5.4s
@@ -620,11 +620,11 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    stp q4, q5, [sp, #64]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp q4, q5, [sp, #64]
+; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    ld3 { v5.8h, v6.8h, v7.8h }, [x8]
 ; CHECK-NEXT:    ld3 { v16.8h, v17.8h, v18.8h }, [x9]
 ; CHECK-NEXT:    uzp1 v0.8h, v16.8h, v5.8h
@@ -680,11 +680,11 @@ define {<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>} @deint
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    stp q4, q5, [sp, #64]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp q4, q5, [sp, #64]
+; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    ld3 { v5.16b, v6.16b, v7.16b }, [x8]
 ; CHECK-NEXT:    ld3 { v16.16b, v17.16b, v18.16b }, [x9]
 ; CHECK-NEXT:    uzp1 v0.16b, v16.16b, v5.16b

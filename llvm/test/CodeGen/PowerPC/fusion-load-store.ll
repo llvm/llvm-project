@@ -4,6 +4,7 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
 ; RUN:   -mattr=-paired-vector-memops,-pcrelative-memops -verify-misched \
+; RUN:   -enable-store-sequencing=false \
 ; RUN:   -debug-only=machine-scheduler 2>&1 | FileCheck %s
 
 define i64 @store_i64(ptr nocapture %P, i64 %v) {

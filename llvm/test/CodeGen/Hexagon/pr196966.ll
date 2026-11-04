@@ -63,7 +63,8 @@ define void @pr196966(ptr %base) {
 ; CHECK-NEXT:     p1 = !tstbit(r0,#13)
 ; CHECK-NEXT:     r17:16 = memd(r30+#-8)
 ; CHECK-NEXT:     if (!p0.new) memh(r5+#0) = r4.h
-; CHECK-NEXT:    } // 8-byte Folded Reload
+; CHECK-EMPTY:
+; CHECK-NEXT:    } :mem_noshuf // 8-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p2 = !tstbit(r0,#15)
 ; CHECK-NEXT:     if (!p1) memh(r1+#0) = r2.h

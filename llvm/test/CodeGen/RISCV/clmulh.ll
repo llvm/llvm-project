@@ -4540,15 +4540,15 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32I-NEXT:    srli a4, a4, 1
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    lw a2, 224(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    sw a4, 4(a2)
 ; RV32I-NEXT:    sw a0, 8(a2)
 ; RV32I-NEXT:    sw a1, 12(a2)
+; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    lw a2, 228(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    sw a4, 4(a2)
 ; RV32I-NEXT:    sw a0, 8(a2)
 ; RV32I-NEXT:    sw a1, 12(a2)
+; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    lw ra, 284(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 280(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 276(sp) # 4-byte Folded Reload
@@ -5699,11 +5699,11 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64I-NEXT:    srli a1, a1, 1
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    ld a2, 184(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    sd a1, 0(a2)
 ; RV64I-NEXT:    sd a0, 8(a2)
+; RV64I-NEXT:    sd a1, 0(a2)
 ; RV64I-NEXT:    ld a2, 192(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    sd a1, 0(a2)
 ; RV64I-NEXT:    sd a0, 8(a2)
+; RV64I-NEXT:    sd a1, 0(a2)
 ; RV64I-NEXT:    ld ra, 296(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 288(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 280(sp) # 8-byte Folded Reload
@@ -6624,15 +6624,15 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IM-NEXT:    srli a2, a2, 1
 ; RV32IM-NEXT:    srli a1, a1, 1
 ; RV32IM-NEXT:    lw a3, 60(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    sw a4, 0(a3)
 ; RV32IM-NEXT:    sw a2, 4(a3)
 ; RV32IM-NEXT:    sw a0, 8(a3)
 ; RV32IM-NEXT:    sw a1, 12(a3)
+; RV32IM-NEXT:    sw a4, 0(a3)
 ; RV32IM-NEXT:    lw a3, 64(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    sw a4, 0(a3)
 ; RV32IM-NEXT:    sw a2, 4(a3)
 ; RV32IM-NEXT:    sw a0, 8(a3)
 ; RV32IM-NEXT:    sw a1, 12(a3)
+; RV32IM-NEXT:    sw a4, 0(a3)
 ; RV32IM-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
@@ -7009,11 +7009,11 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IM-NEXT:    srli a1, a1, 1
 ; RV64IM-NEXT:    srli a0, a0, 1
 ; RV64IM-NEXT:    ld a2, 8(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    sd a1, 0(a2)
 ; RV64IM-NEXT:    sd a0, 8(a2)
+; RV64IM-NEXT:    sd a1, 0(a2)
 ; RV64IM-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    sd a1, 0(a2)
 ; RV64IM-NEXT:    sd a0, 8(a2)
+; RV64IM-NEXT:    sd a1, 0(a2)
 ; RV64IM-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
@@ -7934,15 +7934,15 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IMZBS-NEXT:    srli a2, a2, 1
 ; RV32IMZBS-NEXT:    srli a1, a1, 1
 ; RV32IMZBS-NEXT:    lw a3, 60(sp) # 4-byte Folded Reload
-; RV32IMZBS-NEXT:    sw a4, 0(a3)
 ; RV32IMZBS-NEXT:    sw a2, 4(a3)
 ; RV32IMZBS-NEXT:    sw a0, 8(a3)
 ; RV32IMZBS-NEXT:    sw a1, 12(a3)
+; RV32IMZBS-NEXT:    sw a4, 0(a3)
 ; RV32IMZBS-NEXT:    lw a3, 64(sp) # 4-byte Folded Reload
-; RV32IMZBS-NEXT:    sw a4, 0(a3)
 ; RV32IMZBS-NEXT:    sw a2, 4(a3)
 ; RV32IMZBS-NEXT:    sw a0, 8(a3)
 ; RV32IMZBS-NEXT:    sw a1, 12(a3)
+; RV32IMZBS-NEXT:    sw a4, 0(a3)
 ; RV32IMZBS-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
@@ -8319,11 +8319,11 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IMZBS-NEXT:    srli a1, a1, 1
 ; RV64IMZBS-NEXT:    srli a0, a0, 1
 ; RV64IMZBS-NEXT:    ld a2, 8(sp) # 8-byte Folded Reload
-; RV64IMZBS-NEXT:    sd a1, 0(a2)
 ; RV64IMZBS-NEXT:    sd a0, 8(a2)
+; RV64IMZBS-NEXT:    sd a1, 0(a2)
 ; RV64IMZBS-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
-; RV64IMZBS-NEXT:    sd a1, 0(a2)
 ; RV64IMZBS-NEXT:    sd a0, 8(a2)
+; RV64IMZBS-NEXT:    sd a1, 0(a2)
 ; RV64IMZBS-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
@@ -8624,14 +8624,14 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IMZBC-NEXT:    clmulh a4, a6, a4
 ; RV32IMZBC-NEXT:    or a1, a1, a7
 ; RV32IMZBC-NEXT:    clmulh a0, a0, a5
-; RV32IMZBC-NEXT:    sw t0, 0(a2)
 ; RV32IMZBC-NEXT:    sw a4, 4(a2)
 ; RV32IMZBC-NEXT:    sw a1, 8(a2)
 ; RV32IMZBC-NEXT:    sw a0, 12(a2)
-; RV32IMZBC-NEXT:    sw t0, 0(a3)
+; RV32IMZBC-NEXT:    sw t0, 0(a2)
 ; RV32IMZBC-NEXT:    sw a4, 4(a3)
 ; RV32IMZBC-NEXT:    sw a1, 8(a3)
 ; RV32IMZBC-NEXT:    sw a0, 12(a3)
+; RV32IMZBC-NEXT:    sw t0, 0(a3)
 ; RV32IMZBC-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32IMZBC-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32IMZBC-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
@@ -8641,12 +8641,12 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ;
 ; RV64IMZBC-LABEL: commutative_clmulh_v2i64:
 ; RV64IMZBC:       # %bb.0:
-; RV64IMZBC-NEXT:    clmulh a0, a2, a0
 ; RV64IMZBC-NEXT:    clmulh a1, a3, a1
-; RV64IMZBC-NEXT:    sd a0, 0(a4)
+; RV64IMZBC-NEXT:    clmulh a0, a2, a0
 ; RV64IMZBC-NEXT:    sd a1, 8(a4)
-; RV64IMZBC-NEXT:    sd a0, 0(a5)
+; RV64IMZBC-NEXT:    sd a0, 0(a4)
 ; RV64IMZBC-NEXT:    sd a1, 8(a5)
+; RV64IMZBC-NEXT:    sd a0, 0(a5)
 ; RV64IMZBC-NEXT:    ret
 ;
 ; CHECK-ZVBC-LABEL: commutative_clmulh_v2i64:

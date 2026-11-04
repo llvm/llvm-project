@@ -40,8 +40,8 @@ define void @factor2_v8i8(ptr %src) {
 ; CHECK-NEXT:    vmov.u8 r1, q1[6]
 ; CHECK-NEXT:    vmov.16 q2[6], r1
 ; CHECK-NEXT:    vmov.u8 r1, q1[7]
-; CHECK-NEXT:    vmov.16 q2[7], r1
 ; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECK-NEXT:    vmov.16 q2[7], r1
 ; CHECK-NEXT:    add r1, sp, #16
 ; CHECK-NEXT:    vshr.u32 q0, q0, #16
 ; CHECK-NEXT:    vstrh.32 q2, [r0]

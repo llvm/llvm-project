@@ -162,8 +162,8 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
@@ -328,11 +328,11 @@ define void @select_v8f32(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #28]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp s1, s2, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #28]
 ; NONEON-NOSVE-NEXT:    fcsel s3, s0, s2, ne
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    fcsel s0, s0, s1, ne
@@ -435,11 +435,11 @@ define void @select_v4f64(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp d1, d2, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    fcsel d3, d0, d2, ne
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    fcsel d0, d0, d1, ne

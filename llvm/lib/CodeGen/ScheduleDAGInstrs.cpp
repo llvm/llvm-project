@@ -93,7 +93,7 @@ static cl::opt<unsigned>
                         "store-sequencing is enabled."));
 
 static cl::opt<bool> EnableStoreSequencing(
-    "enable-store-sequencing", cl::Hidden, cl::init(false),
+    "enable-store-sequencing", cl::Hidden, cl::init(true),
     cl::desc("Enable the store-sequencing DAG construction algorithm. This can "
              "eliminate a large number of redundant control dependencies and "
              "spurious alias analysis queries at the cost of some unnecessary "

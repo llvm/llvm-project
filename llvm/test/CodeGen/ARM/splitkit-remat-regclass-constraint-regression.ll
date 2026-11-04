@@ -12,15 +12,15 @@ define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       @ %bb.0: @ %bb14
 ; CHECK-NEXT:    str lr, [sp, #-4]!
-; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r1, #4
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    movs r1, #8
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    str r0, [r0]
 ; CHECK-NEXT:    bl __Znwm
-; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    movs r0, #8
 ; CHECK-NEXT:    str r1, [r0]

@@ -233,16 +233,17 @@ define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vse32.v v12, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
@@ -256,15 +257,16 @@ define {<3 x i32>, <3 x i32>, <3 x i32>} @vector_deinterleave3_v3i32_v9i32(<9 x 
 ; CHECK-NEXT:    addi sp, sp, -48
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 8
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    addi a1, sp, 32
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v12, (a1)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
@@ -989,16 +991,17 @@ define {<2 x float>, <2 x float>, <2 x float>} @vector_deinterleave3_v6f32_v2f32
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vse32.v v12, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

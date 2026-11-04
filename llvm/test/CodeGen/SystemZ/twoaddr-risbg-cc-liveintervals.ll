@@ -20,9 +20,9 @@ define i16 @and_to_risbmux_issue229045(ptr %out, ptr %in, i8 %c) {
 ; CHECK-NEXT:    stc %r1, 0(%r2)
 ; CHECK-NEXT:    mvc 0(1), 1(%r3)
 ; CHECK-NEXT:    risblg %r1, %r0, 31, 159, 0
+; CHECK-NEXT:    stc %r1, 0
 ; CHECK-NEXT:    stc %r0, 0(%r2)
 ; CHECK-NEXT:    lhi %r2, 0
-; CHECK-NEXT:    stc %r1, 0
 ; CHECK-NEXT:    br %r14
   %cmp = icmp eq i8 %c, 0
   %sel0 = select i1 %cmp, i16 0, i16 82

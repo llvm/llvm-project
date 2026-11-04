@@ -440,8 +440,8 @@ define void @vnsrl_0_i64(ptr %in, ptr %out) {
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    ld a2, 0(a0)
 ; ZVE32F-NEXT:    ld a0, 16(a0)
-; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
+; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vnsrl_0_i64:
@@ -475,8 +475,8 @@ define void @vnsrl_64_i64(ptr %in, ptr %out) {
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    ld a2, 8(a0)
 ; ZVE32F-NEXT:    ld a0, 24(a0)
-; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
+; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vnsrl_64_i64:
@@ -509,8 +509,8 @@ define void @vnsrl_0_double(ptr %in, ptr %out) {
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    ld a2, 0(a0)
 ; ZVE32F-NEXT:    ld a0, 16(a0)
-; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
+; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vnsrl_0_double:
@@ -544,8 +544,8 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    ld a2, 8(a0)
 ; ZVE32F-NEXT:    ld a0, 24(a0)
-; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
+; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vnsrl_64_double:
@@ -1493,8 +1493,8 @@ define void @vnsrl_0_double_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVE32F-LABEL: vnsrl_0_double_two_source:
 ; ZVE32F:       # %bb.0: # %entry
-; ZVE32F-NEXT:    ld a1, 0(a1)
 ; ZVE32F-NEXT:    ld a0, 0(a0)
+; ZVE32F-NEXT:    ld a1, 0(a1)
 ; ZVE32F-NEXT:    sd a1, 8(a2)
 ; ZVE32F-NEXT:    sd a0, 0(a2)
 ; ZVE32F-NEXT:    ret
@@ -1528,8 +1528,8 @@ define void @vnsrl_64_double_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVE32F-LABEL: vnsrl_64_double_two_source:
 ; ZVE32F:       # %bb.0: # %entry
-; ZVE32F-NEXT:    ld a1, 8(a1)
 ; ZVE32F-NEXT:    ld a0, 8(a0)
+; ZVE32F-NEXT:    ld a1, 8(a1)
 ; ZVE32F-NEXT:    sd a1, 8(a2)
 ; ZVE32F-NEXT:    sd a0, 0(a2)
 ; ZVE32F-NEXT:    ret
@@ -1651,78 +1651,80 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
 ; ZVE32F-NEXT:    sd s2, 224(sp) # 8-byte Folded Spill
 ; ZVE32F-NEXT:    sd s3, 216(sp) # 8-byte Folded Spill
+; ZVE32F-NEXT:    sd s4, 208(sp) # 8-byte Folded Spill
 ; ZVE32F-NEXT:    .cfi_offset ra, -8
 ; ZVE32F-NEXT:    .cfi_offset s0, -16
 ; ZVE32F-NEXT:    .cfi_offset s1, -24
 ; ZVE32F-NEXT:    .cfi_offset s2, -32
 ; ZVE32F-NEXT:    .cfi_offset s3, -40
+; ZVE32F-NEXT:    .cfi_offset s4, -48
 ; ZVE32F-NEXT:    addi s0, sp, 256
 ; ZVE32F-NEXT:    .cfi_def_cfa s0, 0
 ; ZVE32F-NEXT:    andi sp, sp, -128
-; ZVE32F-NEXT:    ld a4, 0(a1)
-; ZVE32F-NEXT:    ld a3, 16(a1)
-; ZVE32F-NEXT:    ld a6, 32(a1)
-; ZVE32F-NEXT:    ld a5, 48(a1)
-; ZVE32F-NEXT:    ld t0, 64(a1)
-; ZVE32F-NEXT:    ld a7, 80(a1)
-; ZVE32F-NEXT:    ld t1, 96(a1)
+; ZVE32F-NEXT:    ld a3, 0(a1)
+; ZVE32F-NEXT:    ld a4, 16(a1)
+; ZVE32F-NEXT:    ld a5, 32(a1)
+; ZVE32F-NEXT:    ld a6, 48(a1)
+; ZVE32F-NEXT:    ld a7, 64(a1)
+; ZVE32F-NEXT:    ld t1, 80(a1)
+; ZVE32F-NEXT:    ld t0, 96(a1)
 ; ZVE32F-NEXT:    ld a1, 112(a1)
-; ZVE32F-NEXT:    ld t2, 64(a2)
-; ZVE32F-NEXT:    ld t3, 96(a2)
-; ZVE32F-NEXT:    ld t4, 80(a2)
-; ZVE32F-NEXT:    ld t5, 112(a2)
-; ZVE32F-NEXT:    ld t6, 0(a2)
+; ZVE32F-NEXT:    ld t3, 64(a2)
+; ZVE32F-NEXT:    ld t4, 96(a2)
+; ZVE32F-NEXT:    ld t5, 80(a2)
+; ZVE32F-NEXT:    ld t6, 112(a2)
+; ZVE32F-NEXT:    ld t2, 0(a2)
 ; ZVE32F-NEXT:    ld s1, 16(a2)
 ; ZVE32F-NEXT:    ld s2, 32(a2)
 ; ZVE32F-NEXT:    ld a2, 48(a2)
 ; ZVE32F-NEXT:    srli s3, t3, 32
-; ZVE32F-NEXT:    sw t3, 112(sp)
-; ZVE32F-NEXT:    sw s3, 116(sp)
-; ZVE32F-NEXT:    srli t3, t5, 32
-; ZVE32F-NEXT:    sw t5, 120(sp)
-; ZVE32F-NEXT:    sw t3, 124(sp)
-; ZVE32F-NEXT:    srli t3, t2, 32
-; ZVE32F-NEXT:    sw t2, 96(sp)
-; ZVE32F-NEXT:    sw t3, 100(sp)
-; ZVE32F-NEXT:    srli t2, t4, 32
-; ZVE32F-NEXT:    sw t4, 104(sp)
-; ZVE32F-NEXT:    sw t2, 108(sp)
-; ZVE32F-NEXT:    srli t2, s2, 32
-; ZVE32F-NEXT:    sw s2, 80(sp)
-; ZVE32F-NEXT:    sw t2, 84(sp)
-; ZVE32F-NEXT:    srli t2, a2, 32
+; ZVE32F-NEXT:    srli s4, t4, 32
+; ZVE32F-NEXT:    sw s4, 116(sp)
+; ZVE32F-NEXT:    srli s4, t6, 32
+; ZVE32F-NEXT:    sw t6, 120(sp)
+; ZVE32F-NEXT:    sw s3, 100(sp)
+; ZVE32F-NEXT:    srli t6, t5, 32
+; ZVE32F-NEXT:    sw t5, 104(sp)
+; ZVE32F-NEXT:    sw t6, 108(sp)
+; ZVE32F-NEXT:    srli t5, s2, 32
+; ZVE32F-NEXT:    sw t4, 112(sp)
+; ZVE32F-NEXT:    sw t5, 84(sp)
+; ZVE32F-NEXT:    srli t4, a2, 32
 ; ZVE32F-NEXT:    sw a2, 88(sp)
-; ZVE32F-NEXT:    sw t2, 92(sp)
-; ZVE32F-NEXT:    srli a2, t6, 32
-; ZVE32F-NEXT:    sw t6, 64(sp)
+; ZVE32F-NEXT:    sw t4, 92(sp)
+; ZVE32F-NEXT:    srli a2, t2, 32
+; ZVE32F-NEXT:    sw t3, 96(sp)
 ; ZVE32F-NEXT:    sw a2, 68(sp)
 ; ZVE32F-NEXT:    srli a2, s1, 32
 ; ZVE32F-NEXT:    sw s1, 72(sp)
 ; ZVE32F-NEXT:    sw a2, 76(sp)
-; ZVE32F-NEXT:    srli a2, t1, 32
-; ZVE32F-NEXT:    sw t1, 48(sp)
+; ZVE32F-NEXT:    srli a2, t0, 32
+; ZVE32F-NEXT:    sw s2, 80(sp)
 ; ZVE32F-NEXT:    sw a2, 52(sp)
 ; ZVE32F-NEXT:    srli a2, a1, 32
 ; ZVE32F-NEXT:    sw a1, 56(sp)
 ; ZVE32F-NEXT:    sw a2, 60(sp)
-; ZVE32F-NEXT:    srli a1, t0, 32
-; ZVE32F-NEXT:    sw t0, 32(sp)
-; ZVE32F-NEXT:    sw a1, 36(sp)
 ; ZVE32F-NEXT:    srli a1, a7, 32
-; ZVE32F-NEXT:    sw a7, 40(sp)
+; ZVE32F-NEXT:    sw t2, 64(sp)
+; ZVE32F-NEXT:    sw a1, 36(sp)
+; ZVE32F-NEXT:    srli a1, t1, 32
+; ZVE32F-NEXT:    sw t1, 40(sp)
 ; ZVE32F-NEXT:    sw a1, 44(sp)
-; ZVE32F-NEXT:    srli a1, a6, 32
-; ZVE32F-NEXT:    sw a6, 16(sp)
-; ZVE32F-NEXT:    sw a1, 20(sp)
 ; ZVE32F-NEXT:    srli a1, a5, 32
-; ZVE32F-NEXT:    sw a5, 24(sp)
+; ZVE32F-NEXT:    sw t0, 48(sp)
+; ZVE32F-NEXT:    sw a1, 20(sp)
+; ZVE32F-NEXT:    srli a1, a6, 32
+; ZVE32F-NEXT:    sw a6, 24(sp)
 ; ZVE32F-NEXT:    sw a1, 28(sp)
+; ZVE32F-NEXT:    sw a7, 32(sp)
 ; ZVE32F-NEXT:    srli a1, a4, 32
-; ZVE32F-NEXT:    sw a4, 0(sp)
-; ZVE32F-NEXT:    sw a1, 4(sp)
-; ZVE32F-NEXT:    srli a1, a3, 32
-; ZVE32F-NEXT:    sw a3, 8(sp)
+; ZVE32F-NEXT:    sw a4, 8(sp)
 ; ZVE32F-NEXT:    sw a1, 12(sp)
+; ZVE32F-NEXT:    sw a5, 16(sp)
+; ZVE32F-NEXT:    sw a3, 0(sp)
+; ZVE32F-NEXT:    srli a3, a3, 32
+; ZVE32F-NEXT:    sw s4, 124(sp)
+; ZVE32F-NEXT:    sw a3, 4(sp)
 ; ZVE32F-NEXT:    li a1, 32
 ; ZVE32F-NEXT:    mv a2, sp
 ; ZVE32F-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
@@ -1735,11 +1737,13 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
 ; ZVE32F-NEXT:    ld s2, 224(sp) # 8-byte Folded Reload
 ; ZVE32F-NEXT:    ld s3, 216(sp) # 8-byte Folded Reload
+; ZVE32F-NEXT:    ld s4, 208(sp) # 8-byte Folded Reload
 ; ZVE32F-NEXT:    .cfi_restore ra
 ; ZVE32F-NEXT:    .cfi_restore s0
 ; ZVE32F-NEXT:    .cfi_restore s1
 ; ZVE32F-NEXT:    .cfi_restore s2
 ; ZVE32F-NEXT:    .cfi_restore s3
+; ZVE32F-NEXT:    .cfi_restore s4
 ; ZVE32F-NEXT:    addi sp, sp, 256
 ; ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; ZVE32F-NEXT:    ret

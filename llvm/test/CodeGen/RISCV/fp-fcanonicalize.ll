@@ -720,17 +720,11 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s3, -40
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s4, -48
 ; CHECK-SOFT-RV64-NEXT:    lhu a2, 0(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s1, 8(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s2, 16(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s3, 24(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s2, 8(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s3, 16(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s4, 24(a1)
 ; CHECK-SOFT-RV64-NEXT:    mv s0, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, a2
-; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
-; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
-; CHECK-SOFT-RV64-NEXT:    call __mulsf3
-; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    mv s4, a0
-; CHECK-SOFT-RV64-NEXT:    mv a0, s1
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
@@ -747,10 +741,16 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    sh s4, 0(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s1, 2(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s2, 4(s0)
+; CHECK-SOFT-RV64-NEXT:    mv s3, a0
+; CHECK-SOFT-RV64-NEXT:    mv a0, s4
+; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
+; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
+; CHECK-SOFT-RV64-NEXT:    call __mulsf3
+; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
+; CHECK-SOFT-RV64-NEXT:    sh s2, 2(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 6(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -773,10 +773,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa1, fa1
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV64-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa4, 2(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_v4f16:
@@ -826,11 +826,11 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w s3, fs1
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
+; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 6(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -868,17 +868,11 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s3, -20
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s4, -24
 ; CHECK-SOFT-RV32-NEXT:    lhu a2, 0(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s1, 4(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s2, 8(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s3, 12(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s2, 4(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s3, 8(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s4, 12(a1)
 ; CHECK-SOFT-RV32-NEXT:    mv s0, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, a2
-; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
-; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
-; CHECK-SOFT-RV32-NEXT:    call __mulsf3
-; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    mv s4, a0
-; CHECK-SOFT-RV32-NEXT:    mv a0, s1
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
@@ -895,10 +889,16 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    sh s4, 0(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s1, 2(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s2, 4(s0)
+; CHECK-SOFT-RV32-NEXT:    mv s3, a0
+; CHECK-SOFT-RV32-NEXT:    mv a0, s4
+; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
+; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
+; CHECK-SOFT-RV32-NEXT:    call __mulsf3
+; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
+; CHECK-SOFT-RV32-NEXT:    sh s2, 2(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 6(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -921,10 +921,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa1, fa1
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV32-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa4, 2(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_v4f16:
@@ -979,11 +979,11 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w s3, fs2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fs3, fs3
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
+; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 6(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
@@ -1023,15 +1023,20 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    .cfi_offset s3, -20
 ; RV32ZFINX-NEXT:    .cfi_offset s4, -24
 ; RV32ZFINX-NEXT:    lhu a2, 0(a1)
-; RV32ZFINX-NEXT:    lhu s1, 4(a1)
-; RV32ZFINX-NEXT:    lhu s2, 8(a1)
-; RV32ZFINX-NEXT:    lhu s3, 12(a1)
-; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    lhu s0, 4(a1)
+; RV32ZFINX-NEXT:    lhu s1, 8(a1)
+; RV32ZFINX-NEXT:    lhu s2, 12(a1)
+; RV32ZFINX-NEXT:    mv s3, a0
 ; RV32ZFINX-NEXT:    mv a0, a2
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s0, a0
 ; RV32ZFINX-NEXT:    mv a0, s1
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -1041,16 +1046,11 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
-; RV32ZFINX-NEXT:    mv s2, a0
-; RV32ZFINX-NEXT:    mv a0, s3
-; RV32ZFINX-NEXT:    call __extendhfsf2
-; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
-; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV32ZFINX-NEXT:    sh s4, 0(s0)
-; RV32ZFINX-NEXT:    sh s1, 2(s0)
-; RV32ZFINX-NEXT:    sh s2, 4(s0)
-; RV32ZFINX-NEXT:    sh a0, 6(s0)
+; RV32ZFINX-NEXT:    sh s0, 2(s3)
+; RV32ZFINX-NEXT:    sh s1, 4(s3)
+; RV32ZFINX-NEXT:    sh a0, 6(s3)
+; RV32ZFINX-NEXT:    sh s4, 0(s3)
 ; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1108,10 +1108,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZFINX-NEXT:    sh s4, 0(s0)
 ; RV64ZFINX-NEXT:    sh s1, 2(s0)
 ; RV64ZFINX-NEXT:    sh s2, 4(s0)
 ; RV64ZFINX-NEXT:    sh a0, 6(s0)
+; RV64ZFINX-NEXT:    sh s4, 0(s0)
 ; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1169,10 +1169,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZDINX-NEXT:    sh s4, 0(s0)
 ; RV64ZDINX-NEXT:    sh s1, 2(s0)
 ; RV64ZDINX-NEXT:    sh s2, 4(s0)
 ; RV64ZDINX-NEXT:    sh a0, 6(s0)
+; RV64ZDINX-NEXT:    sh s4, 0(s0)
 ; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1195,10 +1195,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
 ; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    sh a2, 2(a0)
 ; RV32ZHINX-NEXT:    sh a3, 4(a0)
 ; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v4f16:
@@ -1207,10 +1207,10 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
 ; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    sh a2, 2(a0)
 ; RV64ZHINX-NEXT:    sh a3, 4(a0)
 ; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    ret
   %z = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
@@ -1234,17 +1234,11 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s3, -40
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s4, -48
 ; CHECK-SOFT-RV64-NEXT:    lhu a2, 0(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s1, 8(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s2, 16(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s3, 24(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s2, 8(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s3, 16(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s4, 24(a1)
 ; CHECK-SOFT-RV64-NEXT:    mv s0, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, a2
-; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
-; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
-; CHECK-SOFT-RV64-NEXT:    call __mulsf3
-; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    mv s4, a0
-; CHECK-SOFT-RV64-NEXT:    mv a0, s1
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
@@ -1261,10 +1255,16 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    sh s4, 0(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s1, 2(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s2, 4(s0)
+; CHECK-SOFT-RV64-NEXT:    mv s3, a0
+; CHECK-SOFT-RV64-NEXT:    mv a0, s4
+; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
+; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
+; CHECK-SOFT-RV64-NEXT:    call __mulsf3
+; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
+; CHECK-SOFT-RV64-NEXT:    sh s2, 2(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 6(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1287,10 +1287,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa1, fa1
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV64-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa4, 2(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_v4f16_nnan:
@@ -1340,11 +1340,11 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w s3, fs1
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
+; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 6(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -1382,17 +1382,11 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s3, -20
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s4, -24
 ; CHECK-SOFT-RV32-NEXT:    lhu a2, 0(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s1, 4(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s2, 8(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s3, 12(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s2, 4(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s3, 8(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s4, 12(a1)
 ; CHECK-SOFT-RV32-NEXT:    mv s0, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, a2
-; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
-; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
-; CHECK-SOFT-RV32-NEXT:    call __mulsf3
-; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    mv s4, a0
-; CHECK-SOFT-RV32-NEXT:    mv a0, s1
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
@@ -1409,10 +1403,16 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    sh s4, 0(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s1, 2(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s2, 4(s0)
+; CHECK-SOFT-RV32-NEXT:    mv s3, a0
+; CHECK-SOFT-RV32-NEXT:    mv a0, s4
+; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
+; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
+; CHECK-SOFT-RV32-NEXT:    call __mulsf3
+; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
+; CHECK-SOFT-RV32-NEXT:    sh s2, 2(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 6(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1435,10 +1435,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa1, fa1
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV32-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa4, 2(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_v4f16_nnan:
@@ -1493,11 +1493,11 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w s3, fs2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fs3, fs3
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
+; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 6(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
@@ -1537,15 +1537,20 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    .cfi_offset s3, -20
 ; RV32ZFINX-NEXT:    .cfi_offset s4, -24
 ; RV32ZFINX-NEXT:    lhu a2, 0(a1)
-; RV32ZFINX-NEXT:    lhu s1, 4(a1)
-; RV32ZFINX-NEXT:    lhu s2, 8(a1)
-; RV32ZFINX-NEXT:    lhu s3, 12(a1)
-; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    lhu s0, 4(a1)
+; RV32ZFINX-NEXT:    lhu s1, 8(a1)
+; RV32ZFINX-NEXT:    lhu s2, 12(a1)
+; RV32ZFINX-NEXT:    mv s3, a0
 ; RV32ZFINX-NEXT:    mv a0, a2
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s0, a0
 ; RV32ZFINX-NEXT:    mv a0, s1
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -1555,16 +1560,11 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
-; RV32ZFINX-NEXT:    mv s2, a0
-; RV32ZFINX-NEXT:    mv a0, s3
-; RV32ZFINX-NEXT:    call __extendhfsf2
-; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
-; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV32ZFINX-NEXT:    sh s4, 0(s0)
-; RV32ZFINX-NEXT:    sh s1, 2(s0)
-; RV32ZFINX-NEXT:    sh s2, 4(s0)
-; RV32ZFINX-NEXT:    sh a0, 6(s0)
+; RV32ZFINX-NEXT:    sh s0, 2(s3)
+; RV32ZFINX-NEXT:    sh s1, 4(s3)
+; RV32ZFINX-NEXT:    sh a0, 6(s3)
+; RV32ZFINX-NEXT:    sh s4, 0(s3)
 ; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1622,10 +1622,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZFINX-NEXT:    sh s4, 0(s0)
 ; RV64ZFINX-NEXT:    sh s1, 2(s0)
 ; RV64ZFINX-NEXT:    sh s2, 4(s0)
 ; RV64ZFINX-NEXT:    sh a0, 6(s0)
+; RV64ZFINX-NEXT:    sh s4, 0(s0)
 ; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1683,10 +1683,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZDINX-NEXT:    sh s4, 0(s0)
 ; RV64ZDINX-NEXT:    sh s1, 2(s0)
 ; RV64ZDINX-NEXT:    sh s2, 4(s0)
 ; RV64ZDINX-NEXT:    sh a0, 6(s0)
+; RV64ZDINX-NEXT:    sh s4, 0(s0)
 ; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1709,10 +1709,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
 ; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    sh a2, 2(a0)
 ; RV32ZHINX-NEXT:    sh a3, 4(a0)
 ; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v4f16_nnan:
@@ -1721,10 +1721,10 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
 ; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    sh a2, 2(a0)
 ; RV64ZHINX-NEXT:    sh a3, 4(a0)
 ; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    ret
   %z = call nnan <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
@@ -1758,7 +1758,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lhu s7, 32(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s5, 40(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s3, 48(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s1, 56(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s2, 56(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu a2, 0(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s4, 8(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s6, 16(a1)
@@ -1769,7 +1769,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    mv s2, a0
+; CHECK-SOFT-RV64-NEXT:    mv s1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s4
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
@@ -1806,19 +1806,19 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV64-NEXT:    mv s3, a0
-; CHECK-SOFT-RV64-NEXT:    mv a0, s1
+; CHECK-SOFT-RV64-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    sh s7, 8(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s5, 10(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s3, 12(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 14(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s2, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s8, 6(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s7, 8(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -1847,20 +1847,20 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-FP16-RV64:       # %bb.0:
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa0, fa0, fa0
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa1, fa1, fa1
-; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa4, fa4
+; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa5, fa5, fa5
 ; CHECK-FP16-RV64-NEXT:    fmin.h ft0, fa6, fa6
 ; CHECK-FP16-RV64-NEXT:    fmin.h ft1, fa7, fa7
-; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV64-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa4, fa4
 ; CHECK-FP16-RV64-NEXT:    fsh fa5, 10(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh ft0, 12(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh ft1, 14(a0)
-; CHECK-FP16-RV64-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa1, 2(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_v8f16:
@@ -1954,15 +1954,15 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w s7, fs1
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV64-NEXT:    sh s5, 8(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s6, 10(s0)
+; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV64-NEXT:    sh s7, 12(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 14(s0)
-; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s4, 6(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s5, 8(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
@@ -2026,7 +2026,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lhu s7, 16(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s5, 20(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s3, 24(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s1, 28(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s2, 28(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu a2, 0(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s4, 4(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s6, 8(a1)
@@ -2037,7 +2037,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    mv s2, a0
+; CHECK-SOFT-RV32-NEXT:    mv s1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s4
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
@@ -2074,19 +2074,19 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV32-NEXT:    mv s3, a0
-; CHECK-SOFT-RV32-NEXT:    mv a0, s1
+; CHECK-SOFT-RV32-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    sh s7, 8(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s5, 10(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s3, 12(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 14(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s2, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s8, 6(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s7, 8(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -2115,20 +2115,20 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-FP16-RV32:       # %bb.0:
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa0, fa0, fa0
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa1, fa1, fa1
-; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa4, fa4
+; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa5, fa5, fa5
 ; CHECK-FP16-RV32-NEXT:    fmin.h ft0, fa6, fa6
 ; CHECK-FP16-RV32-NEXT:    fmin.h ft1, fa7, fa7
-; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV32-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa4, fa4
 ; CHECK-FP16-RV32-NEXT:    fsh fa5, 10(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh ft0, 12(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh ft1, 14(a0)
-; CHECK-FP16-RV32-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa1, 2(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_v8f16:
@@ -2231,15 +2231,15 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w s7, fs2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV32-NEXT:    sh s5, 8(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s6, 10(s0)
+; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    sh s7, 12(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 14(s0)
-; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s4, 6(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s5, 8(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Folded Reload
@@ -2351,14 +2351,14 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV32ZFINX-NEXT:    sh s7, 8(s0)
 ; RV32ZFINX-NEXT:    sh s5, 10(s0)
 ; RV32ZFINX-NEXT:    sh s3, 12(s0)
 ; RV32ZFINX-NEXT:    sh a0, 14(s0)
-; RV32ZFINX-NEXT:    sh s2, 0(s0)
 ; RV32ZFINX-NEXT:    sh s4, 2(s0)
 ; RV32ZFINX-NEXT:    sh s6, 4(s0)
 ; RV32ZFINX-NEXT:    sh s8, 6(s0)
+; RV32ZFINX-NEXT:    sh s7, 8(s0)
+; RV32ZFINX-NEXT:    sh s2, 0(s0)
 ; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -2410,7 +2410,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    lhu s7, 32(a1)
 ; RV64ZFINX-NEXT:    lhu s5, 40(a1)
 ; RV64ZFINX-NEXT:    lhu s3, 48(a1)
-; RV64ZFINX-NEXT:    lhu s1, 56(a1)
+; RV64ZFINX-NEXT:    lhu s2, 56(a1)
 ; RV64ZFINX-NEXT:    lhu a2, 0(a1)
 ; RV64ZFINX-NEXT:    lhu s4, 8(a1)
 ; RV64ZFINX-NEXT:    lhu s6, 16(a1)
@@ -2420,7 +2420,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
-; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv s1, a0
 ; RV64ZFINX-NEXT:    mv a0, s4
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -2451,19 +2451,19 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    mv s3, a0
-; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    mv a0, s2
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZFINX-NEXT:    sh s7, 8(s0)
 ; RV64ZFINX-NEXT:    sh s5, 10(s0)
 ; RV64ZFINX-NEXT:    sh s3, 12(s0)
 ; RV64ZFINX-NEXT:    sh a0, 14(s0)
-; RV64ZFINX-NEXT:    sh s2, 0(s0)
 ; RV64ZFINX-NEXT:    sh s4, 2(s0)
 ; RV64ZFINX-NEXT:    sh s6, 4(s0)
 ; RV64ZFINX-NEXT:    sh s8, 6(s0)
+; RV64ZFINX-NEXT:    sh s7, 8(s0)
+; RV64ZFINX-NEXT:    sh s1, 0(s0)
 ; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -2515,7 +2515,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    lhu s7, 32(a1)
 ; RV64ZDINX-NEXT:    lhu s5, 40(a1)
 ; RV64ZDINX-NEXT:    lhu s3, 48(a1)
-; RV64ZDINX-NEXT:    lhu s1, 56(a1)
+; RV64ZDINX-NEXT:    lhu s2, 56(a1)
 ; RV64ZDINX-NEXT:    lhu a2, 0(a1)
 ; RV64ZDINX-NEXT:    lhu s4, 8(a1)
 ; RV64ZDINX-NEXT:    lhu s6, 16(a1)
@@ -2525,7 +2525,7 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
-; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv s1, a0
 ; RV64ZDINX-NEXT:    mv a0, s4
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
@@ -2556,19 +2556,19 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    mv s3, a0
-; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    mv a0, s2
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZDINX-NEXT:    sh s7, 8(s0)
 ; RV64ZDINX-NEXT:    sh s5, 10(s0)
 ; RV64ZDINX-NEXT:    sh s3, 12(s0)
 ; RV64ZDINX-NEXT:    sh a0, 14(s0)
-; RV64ZDINX-NEXT:    sh s2, 0(s0)
 ; RV64ZDINX-NEXT:    sh s4, 2(s0)
 ; RV64ZDINX-NEXT:    sh s6, 4(s0)
 ; RV64ZDINX-NEXT:    sh s8, 6(s0)
+; RV64ZDINX-NEXT:    sh s7, 8(s0)
+; RV64ZDINX-NEXT:    sh s1, 0(s0)
 ; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -2598,20 +2598,20 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
 ; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
-; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV32ZHINX-NEXT:    sh a6, 10(a0)
 ; RV32ZHINX-NEXT:    sh a7, 12(a0)
 ; RV32ZHINX-NEXT:    sh t0, 14(a0)
-; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    sh a2, 2(a0)
 ; RV32ZHINX-NEXT:    sh a3, 4(a0)
 ; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v8f16:
@@ -2619,20 +2619,20 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
 ; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
-; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV64ZHINX-NEXT:    sh a6, 10(a0)
 ; RV64ZHINX-NEXT:    sh a7, 12(a0)
 ; RV64ZHINX-NEXT:    sh t0, 14(a0)
-; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    sh a2, 2(a0)
 ; RV64ZHINX-NEXT:    sh a3, 4(a0)
 ; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    ret
   %z = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
@@ -2666,7 +2666,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lhu s7, 32(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s5, 40(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s3, 48(a1)
-; CHECK-SOFT-RV64-NEXT:    lhu s1, 56(a1)
+; CHECK-SOFT-RV64-NEXT:    lhu s2, 56(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu a2, 0(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s4, 8(a1)
 ; CHECK-SOFT-RV64-NEXT:    lhu s6, 16(a1)
@@ -2677,7 +2677,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    mv s2, a0
+; CHECK-SOFT-RV64-NEXT:    mv s1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s4
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
@@ -2714,19 +2714,19 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV64-NEXT:    mv s3, a0
-; CHECK-SOFT-RV64-NEXT:    mv a0, s1
+; CHECK-SOFT-RV64-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV64-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    sh s7, 8(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s5, 10(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s3, 12(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 14(s0)
-; CHECK-SOFT-RV64-NEXT:    sh s2, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s8, 6(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s7, 8(s0)
+; CHECK-SOFT-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -2755,20 +2755,20 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-FP16-RV64:       # %bb.0:
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa0, fa0, fa0
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa1, fa1, fa1
-; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa4, fa4
+; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa5, fa5, fa5
 ; CHECK-FP16-RV64-NEXT:    fmin.h ft0, fa6, fa6
 ; CHECK-FP16-RV64-NEXT:    fmin.h ft1, fa7, fa7
-; CHECK-FP16-RV64-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV64-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV64-NEXT:    fmin.h fa4, fa4, fa4
 ; CHECK-FP16-RV64-NEXT:    fsh fa5, 10(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh ft0, 12(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh ft1, 14(a0)
-; CHECK-FP16-RV64-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa1, 2(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV64-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV64-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_v8f16_nnan:
@@ -2862,15 +2862,15 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w s7, fs1
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV64-NEXT:    sh s5, 8(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s6, 10(s0)
+; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV64-NEXT:    sh s7, 12(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 14(s0)
-; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s4, 6(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s5, 8(s0)
+; CHECK-NOFP16-RV64-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
@@ -2934,7 +2934,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lhu s7, 16(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s5, 20(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s3, 24(a1)
-; CHECK-SOFT-RV32-NEXT:    lhu s1, 28(a1)
+; CHECK-SOFT-RV32-NEXT:    lhu s2, 28(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu a2, 0(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s4, 4(a1)
 ; CHECK-SOFT-RV32-NEXT:    lhu s6, 8(a1)
@@ -2945,7 +2945,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    mv s2, a0
+; CHECK-SOFT-RV32-NEXT:    mv s1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s4
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
@@ -2982,19 +2982,19 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV32-NEXT:    mv s3, a0
-; CHECK-SOFT-RV32-NEXT:    mv a0, s1
+; CHECK-SOFT-RV32-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV32-NEXT:    call __extendhfsf2
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    sh s7, 8(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s5, 10(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s3, 12(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 14(s0)
-; CHECK-SOFT-RV32-NEXT:    sh s2, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s8, 6(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s7, 8(s0)
+; CHECK-SOFT-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -3023,20 +3023,20 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-FP16-RV32:       # %bb.0:
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa0, fa0, fa0
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa1, fa1, fa1
-; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa4, fa4
+; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa5, fa5, fa5
 ; CHECK-FP16-RV32-NEXT:    fmin.h ft0, fa6, fa6
 ; CHECK-FP16-RV32-NEXT:    fmin.h ft1, fa7, fa7
-; CHECK-FP16-RV32-NEXT:    fmin.h fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.h fa3, fa3, fa3
-; CHECK-FP16-RV32-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV32-NEXT:    fmin.h fa4, fa4, fa4
 ; CHECK-FP16-RV32-NEXT:    fsh fa5, 10(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh ft0, 12(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh ft1, 14(a0)
-; CHECK-FP16-RV32-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa1, 2(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa2, 4(a0)
 ; CHECK-FP16-RV32-NEXT:    fsh fa3, 6(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa4, 8(a0)
+; CHECK-FP16-RV32-NEXT:    fsh fa0, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_v8f16_nnan:
@@ -3139,15 +3139,15 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w s7, fs2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fs0, fs0
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
-; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
-; CHECK-NOFP16-RV32-NEXT:    sh s5, 8(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s6, 10(s0)
+; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    sh s7, 12(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 14(s0)
-; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s4, 6(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s5, 8(s0)
+; CHECK-NOFP16-RV32-NEXT:    sh s1, 0(s0)
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Folded Reload
@@ -3259,14 +3259,14 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV32ZFINX-NEXT:    sh s7, 8(s0)
 ; RV32ZFINX-NEXT:    sh s5, 10(s0)
 ; RV32ZFINX-NEXT:    sh s3, 12(s0)
 ; RV32ZFINX-NEXT:    sh a0, 14(s0)
-; RV32ZFINX-NEXT:    sh s2, 0(s0)
 ; RV32ZFINX-NEXT:    sh s4, 2(s0)
 ; RV32ZFINX-NEXT:    sh s6, 4(s0)
 ; RV32ZFINX-NEXT:    sh s8, 6(s0)
+; RV32ZFINX-NEXT:    sh s7, 8(s0)
+; RV32ZFINX-NEXT:    sh s2, 0(s0)
 ; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -3318,7 +3318,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    lhu s7, 32(a1)
 ; RV64ZFINX-NEXT:    lhu s5, 40(a1)
 ; RV64ZFINX-NEXT:    lhu s3, 48(a1)
-; RV64ZFINX-NEXT:    lhu s1, 56(a1)
+; RV64ZFINX-NEXT:    lhu s2, 56(a1)
 ; RV64ZFINX-NEXT:    lhu a2, 0(a1)
 ; RV64ZFINX-NEXT:    lhu s4, 8(a1)
 ; RV64ZFINX-NEXT:    lhu s6, 16(a1)
@@ -3328,7 +3328,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
-; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv s1, a0
 ; RV64ZFINX-NEXT:    mv a0, s4
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -3359,19 +3359,19 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    mv s3, a0
-; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    mv a0, s2
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZFINX-NEXT:    sh s7, 8(s0)
 ; RV64ZFINX-NEXT:    sh s5, 10(s0)
 ; RV64ZFINX-NEXT:    sh s3, 12(s0)
 ; RV64ZFINX-NEXT:    sh a0, 14(s0)
-; RV64ZFINX-NEXT:    sh s2, 0(s0)
 ; RV64ZFINX-NEXT:    sh s4, 2(s0)
 ; RV64ZFINX-NEXT:    sh s6, 4(s0)
 ; RV64ZFINX-NEXT:    sh s8, 6(s0)
+; RV64ZFINX-NEXT:    sh s7, 8(s0)
+; RV64ZFINX-NEXT:    sh s1, 0(s0)
 ; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -3423,7 +3423,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    lhu s7, 32(a1)
 ; RV64ZDINX-NEXT:    lhu s5, 40(a1)
 ; RV64ZDINX-NEXT:    lhu s3, 48(a1)
-; RV64ZDINX-NEXT:    lhu s1, 56(a1)
+; RV64ZDINX-NEXT:    lhu s2, 56(a1)
 ; RV64ZDINX-NEXT:    lhu a2, 0(a1)
 ; RV64ZDINX-NEXT:    lhu s4, 8(a1)
 ; RV64ZDINX-NEXT:    lhu s6, 16(a1)
@@ -3433,7 +3433,7 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
-; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv s1, a0
 ; RV64ZDINX-NEXT:    mv a0, s4
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
@@ -3464,19 +3464,19 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    mv s3, a0
-; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    mv a0, s2
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
-; RV64ZDINX-NEXT:    sh s7, 8(s0)
 ; RV64ZDINX-NEXT:    sh s5, 10(s0)
 ; RV64ZDINX-NEXT:    sh s3, 12(s0)
 ; RV64ZDINX-NEXT:    sh a0, 14(s0)
-; RV64ZDINX-NEXT:    sh s2, 0(s0)
 ; RV64ZDINX-NEXT:    sh s4, 2(s0)
 ; RV64ZDINX-NEXT:    sh s6, 4(s0)
 ; RV64ZDINX-NEXT:    sh s8, 6(s0)
+; RV64ZDINX-NEXT:    sh s7, 8(s0)
+; RV64ZDINX-NEXT:    sh s1, 0(s0)
 ; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -3506,20 +3506,20 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
 ; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
-; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV32ZHINX-NEXT:    sh a6, 10(a0)
 ; RV32ZHINX-NEXT:    sh a7, 12(a0)
 ; RV32ZHINX-NEXT:    sh t0, 14(a0)
-; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    sh a2, 2(a0)
 ; RV32ZHINX-NEXT:    sh a3, 4(a0)
 ; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v8f16_nnan:
@@ -3527,20 +3527,20 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
 ; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
-; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
-; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV64ZHINX-NEXT:    sh a6, 10(a0)
 ; RV64ZHINX-NEXT:    sh a7, 12(a0)
 ; RV64ZHINX-NEXT:    sh t0, 14(a0)
-; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    sh a2, 2(a0)
 ; RV64ZHINX-NEXT:    sh a3, 4(a0)
 ; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
 ; RV64ZHINX-NEXT:    ret
   %z = call nnan <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
@@ -3892,10 +3892,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
-; CHECK-SOFT-RV64-NEXT:    sw s4, 0(s3)
 ; CHECK-SOFT-RV64-NEXT:    sw s0, 4(s3)
 ; CHECK-SOFT-RV64-NEXT:    sw s1, 8(s3)
 ; CHECK-SOFT-RV64-NEXT:    sw a0, 12(s3)
+; CHECK-SOFT-RV64-NEXT:    sw s4, 0(s3)
 ; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -3918,10 +3918,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-FP16-RV64-NEXT:    fmin.s fa4, fa1, fa1
 ; CHECK-FP16-RV64-NEXT:    fmin.s fa2, fa2, fa2
 ; CHECK-FP16-RV64-NEXT:    fmin.s fa3, fa3, fa3
-; CHECK-FP16-RV64-NEXT:    fsw fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    fsw fa4, 4(a0)
 ; CHECK-FP16-RV64-NEXT:    fsw fa2, 8(a0)
 ; CHECK-FP16-RV64-NEXT:    fsw fa3, 12(a0)
+; CHECK-FP16-RV64-NEXT:    fsw fa5, 0(a0)
 ; CHECK-FP16-RV64-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_v4f32:
@@ -3930,10 +3930,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa4, fa1, fa1
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa2, fa2, fa2
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa3, fa3, fa3
-; CHECK-NOFP16-RV64-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NOFP16-RV64-NEXT:    fsw fa4, 4(a0)
 ; CHECK-NOFP16-RV64-NEXT:    fsw fa2, 8(a0)
 ; CHECK-NOFP16-RV64-NEXT:    fsw fa3, 12(a0)
+; CHECK-NOFP16-RV64-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-SOFT-RV32-LABEL: fcanonicalize_v4f32:
@@ -3972,10 +3972,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s2
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
-; CHECK-SOFT-RV32-NEXT:    sw s4, 0(s3)
 ; CHECK-SOFT-RV32-NEXT:    sw s0, 4(s3)
 ; CHECK-SOFT-RV32-NEXT:    sw s1, 8(s3)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 12(s3)
+; CHECK-SOFT-RV32-NEXT:    sw s4, 0(s3)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -3998,10 +3998,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-FP16-RV32-NEXT:    fmin.s fa4, fa1, fa1
 ; CHECK-FP16-RV32-NEXT:    fmin.s fa2, fa2, fa2
 ; CHECK-FP16-RV32-NEXT:    fmin.s fa3, fa3, fa3
-; CHECK-FP16-RV32-NEXT:    fsw fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    fsw fa4, 4(a0)
 ; CHECK-FP16-RV32-NEXT:    fsw fa2, 8(a0)
 ; CHECK-FP16-RV32-NEXT:    fsw fa3, 12(a0)
+; CHECK-FP16-RV32-NEXT:    fsw fa5, 0(a0)
 ; CHECK-FP16-RV32-NEXT:    ret
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_v4f32:
@@ -4010,10 +4010,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa4, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa2, fa2, fa2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa3, fa3, fa3
-; CHECK-NOFP16-RV32-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NOFP16-RV32-NEXT:    fsw fa4, 4(a0)
 ; CHECK-NOFP16-RV32-NEXT:    fsw fa2, 8(a0)
 ; CHECK-NOFP16-RV32-NEXT:    fsw fa3, 12(a0)
+; CHECK-NOFP16-RV32-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NOFP16-RV32-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: fcanonicalize_v4f32:
@@ -4022,10 +4022,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; RV32ZFINX-NEXT:    fmin.s a2, a2, a2
 ; RV32ZFINX-NEXT:    fmin.s a3, a3, a3
 ; RV32ZFINX-NEXT:    fmin.s a4, a4, a4
-; RV32ZFINX-NEXT:    sw a1, 0(a0)
 ; RV32ZFINX-NEXT:    sw a2, 4(a0)
 ; RV32ZFINX-NEXT:    sw a3, 8(a0)
 ; RV32ZFINX-NEXT:    sw a4, 12(a0)
+; RV32ZFINX-NEXT:    sw a1, 0(a0)
 ; RV32ZFINX-NEXT:    ret
 ;
 ; RV64ZFINX-LABEL: fcanonicalize_v4f32:
@@ -4034,10 +4034,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; RV64ZFINX-NEXT:    fmin.s a2, a2, a2
 ; RV64ZFINX-NEXT:    fmin.s a3, a3, a3
 ; RV64ZFINX-NEXT:    fmin.s a4, a4, a4
-; RV64ZFINX-NEXT:    sw a1, 0(a0)
 ; RV64ZFINX-NEXT:    sw a2, 4(a0)
 ; RV64ZFINX-NEXT:    sw a3, 8(a0)
 ; RV64ZFINX-NEXT:    sw a4, 12(a0)
+; RV64ZFINX-NEXT:    sw a1, 0(a0)
 ; RV64ZFINX-NEXT:    ret
 ;
 ; RV64ZDINX-LABEL: fcanonicalize_v4f32:
@@ -4046,10 +4046,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; RV64ZDINX-NEXT:    fmin.s a2, a2, a2
 ; RV64ZDINX-NEXT:    fmin.s a3, a3, a3
 ; RV64ZDINX-NEXT:    fmin.s a4, a4, a4
-; RV64ZDINX-NEXT:    sw a1, 0(a0)
 ; RV64ZDINX-NEXT:    sw a2, 4(a0)
 ; RV64ZDINX-NEXT:    sw a3, 8(a0)
 ; RV64ZDINX-NEXT:    sw a4, 12(a0)
+; RV64ZDINX-NEXT:    sw a1, 0(a0)
 ; RV64ZDINX-NEXT:    ret
 ;
 ; RV32ZHINX-LABEL: fcanonicalize_v4f32:
@@ -4058,10 +4058,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; RV32ZHINX-NEXT:    fmin.s a2, a2, a2
 ; RV32ZHINX-NEXT:    fmin.s a3, a3, a3
 ; RV32ZHINX-NEXT:    fmin.s a4, a4, a4
-; RV32ZHINX-NEXT:    sw a1, 0(a0)
 ; RV32ZHINX-NEXT:    sw a2, 4(a0)
 ; RV32ZHINX-NEXT:    sw a3, 8(a0)
 ; RV32ZHINX-NEXT:    sw a4, 12(a0)
+; RV32ZHINX-NEXT:    sw a1, 0(a0)
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v4f32:
@@ -4070,10 +4070,10 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; RV64ZHINX-NEXT:    fmin.s a2, a2, a2
 ; RV64ZHINX-NEXT:    fmin.s a3, a3, a3
 ; RV64ZHINX-NEXT:    fmin.s a4, a4, a4
-; RV64ZHINX-NEXT:    sw a1, 0(a0)
 ; RV64ZHINX-NEXT:    sw a2, 4(a0)
 ; RV64ZHINX-NEXT:    sw a3, 8(a0)
 ; RV64ZHINX-NEXT:    sw a4, 12(a0)
+; RV64ZHINX-NEXT:    sw a1, 0(a0)
 ; RV64ZHINX-NEXT:    ret
   %z = call nnan <4 x float> @llvm.canonicalize.v4f32(<4 x float> %x)
   ret <4 x float> %z
@@ -4398,10 +4398,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-SOFT-RV32-NEXT:    mv a1, s1
 ; CHECK-SOFT-RV32-NEXT:    li a2, 0
 ; CHECK-SOFT-RV32-NEXT:    call __muldf3
-; CHECK-SOFT-RV32-NEXT:    sw s3, 0(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw s4, 4(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 8(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a1, 12(s2)
+; CHECK-SOFT-RV32-NEXT:    sw s3, 0(s2)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -4463,10 +4463,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZFINX-NEXT:    mv a1, s1
 ; RV32ZFINX-NEXT:    li a2, 0
 ; RV32ZFINX-NEXT:    call __muldf3
-; RV32ZFINX-NEXT:    sw s3, 0(s2)
 ; RV32ZFINX-NEXT:    sw s4, 4(s2)
 ; RV32ZFINX-NEXT:    sw a0, 8(s2)
 ; RV32ZFINX-NEXT:    sw a1, 12(s2)
+; RV32ZFINX-NEXT:    sw s3, 0(s2)
 ; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -4557,10 +4557,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZHINX-NEXT:    mv a1, s1
 ; RV32ZHINX-NEXT:    li a2, 0
 ; RV32ZHINX-NEXT:    call __muldf3
-; RV32ZHINX-NEXT:    sw s3, 0(s2)
 ; RV32ZHINX-NEXT:    sw s4, 4(s2)
 ; RV32ZHINX-NEXT:    sw a0, 8(s2)
 ; RV32ZHINX-NEXT:    sw a1, 12(s2)
+; RV32ZHINX-NEXT:    sw s3, 0(s2)
 ; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -4696,10 +4696,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-SOFT-RV32-NEXT:    mv a1, s1
 ; CHECK-SOFT-RV32-NEXT:    li a2, 0
 ; CHECK-SOFT-RV32-NEXT:    call __muldf3
-; CHECK-SOFT-RV32-NEXT:    sw s3, 0(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw s4, 4(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 8(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a1, 12(s2)
+; CHECK-SOFT-RV32-NEXT:    sw s3, 0(s2)
 ; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -4761,10 +4761,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZFINX-NEXT:    mv a1, s1
 ; RV32ZFINX-NEXT:    li a2, 0
 ; RV32ZFINX-NEXT:    call __muldf3
-; RV32ZFINX-NEXT:    sw s3, 0(s2)
 ; RV32ZFINX-NEXT:    sw s4, 4(s2)
 ; RV32ZFINX-NEXT:    sw a0, 8(s2)
 ; RV32ZFINX-NEXT:    sw a1, 12(s2)
+; RV32ZFINX-NEXT:    sw s3, 0(s2)
 ; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -4855,10 +4855,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZHINX-NEXT:    mv a1, s1
 ; RV32ZHINX-NEXT:    li a2, 0
 ; RV32ZHINX-NEXT:    call __muldf3
-; RV32ZHINX-NEXT:    sw s3, 0(s2)
 ; RV32ZHINX-NEXT:    sw s4, 4(s2)
 ; RV32ZHINX-NEXT:    sw a0, 8(s2)
 ; RV32ZHINX-NEXT:    sw a1, 12(s2)
+; RV32ZHINX-NEXT:    sw s3, 0(s2)
 ; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

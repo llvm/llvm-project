@@ -151,21 +151,21 @@ define fastcc <128 x i32> @test_zext_split(<128 x i8> %a) {
 ; CHECK-NEXT:     v1:0.uh = vunpack(v0.ub)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3:2.uw = vunpack(v0.uh)
+; CHECK-NEXT:     v3:2.uw = vunpack(v1.uh)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v31:30.uw = vunpack(v1.uh)
-; CHECK-NEXT:     vmem(r0+#1) = v3
+; CHECK-NEXT:     v31:30.uw = vunpack(v0.uh)
+; CHECK-NEXT:     vmem(r0+#3) = v3
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r0+#3) = v31
+; CHECK-NEXT:     vmem(r0+#1) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r0+#2) = v30
+; CHECK-NEXT:     vmem(r0+#2) = v2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r0+#0) = v2
+; CHECK-NEXT:     vmem(r0+#0) = v30
 ; CHECK-NEXT:    }
 entry:
   %ext = zext <128 x i8> %a to <128 x i32>
@@ -181,21 +181,21 @@ define fastcc <128 x i32> @test_sext_split(<128 x i8> %a) {
 ; CHECK-NEXT:     v1:0.h = vunpack(v0.b)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3:2.w = vunpack(v0.h)
+; CHECK-NEXT:     v3:2.w = vunpack(v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v31:30.w = vunpack(v1.h)
-; CHECK-NEXT:     vmem(r0+#1) = v3
+; CHECK-NEXT:     v31:30.w = vunpack(v0.h)
+; CHECK-NEXT:     vmem(r0+#3) = v3
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r0+#3) = v31
+; CHECK-NEXT:     vmem(r0+#1) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r0+#2) = v30
+; CHECK-NEXT:     vmem(r0+#2) = v2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r0+#0) = v2
+; CHECK-NEXT:     vmem(r0+#0) = v30
 ; CHECK-NEXT:    }
 entry:
   %ext = sext <128 x i8> %a to <128 x i32>

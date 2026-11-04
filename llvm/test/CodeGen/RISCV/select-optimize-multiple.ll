@@ -47,14 +47,14 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    mv a3, a4
 ; RV32I-NEXT:  .LBB1_2: # %entry
-; RV32I-NEXT:    lw a1, 0(a3)
-; RV32I-NEXT:    lw a2, 4(a3)
-; RV32I-NEXT:    lw a4, 8(a3)
+; RV32I-NEXT:    lw a1, 4(a3)
+; RV32I-NEXT:    lw a2, 8(a3)
+; RV32I-NEXT:    lw a4, 0(a3)
 ; RV32I-NEXT:    lw a3, 12(a3)
-; RV32I-NEXT:    sw a1, 0(a0)
-; RV32I-NEXT:    sw a2, 4(a0)
-; RV32I-NEXT:    sw a4, 8(a0)
+; RV32I-NEXT:    sw a1, 4(a0)
+; RV32I-NEXT:    sw a2, 8(a0)
 ; RV32I-NEXT:    sw a3, 12(a0)
+; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmovcc128:
@@ -110,14 +110,14 @@ define i128 @cmov128(i1 %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    mv a2, a3
 ; RV32I-NEXT:  .LBB3_2: # %entry
-; RV32I-NEXT:    lw a1, 0(a2)
-; RV32I-NEXT:    lw a3, 4(a2)
-; RV32I-NEXT:    lw a4, 8(a2)
+; RV32I-NEXT:    lw a1, 4(a2)
+; RV32I-NEXT:    lw a3, 8(a2)
+; RV32I-NEXT:    lw a4, 0(a2)
 ; RV32I-NEXT:    lw a2, 12(a2)
-; RV32I-NEXT:    sw a1, 0(a0)
-; RV32I-NEXT:    sw a3, 4(a0)
-; RV32I-NEXT:    sw a4, 8(a0)
+; RV32I-NEXT:    sw a1, 4(a0)
+; RV32I-NEXT:    sw a3, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
+; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmov128:

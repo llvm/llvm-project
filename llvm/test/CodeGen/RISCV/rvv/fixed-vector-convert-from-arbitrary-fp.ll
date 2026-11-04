@@ -585,14 +585,14 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    fmv.x.w s7, fs0
 ; CHECK-NEXT:    flw fa0, 32(sp)
 ; CHECK-NEXT:    call __truncsfbf2
-; CHECK-NEXT:    sh s6, 2(s0)
 ; CHECK-NEXT:    fmv.x.w a0, fa0
-; CHECK-NEXT:    sh a0, 0(s0)
-; CHECK-NEXT:    sh s4, 4(s0)
-; CHECK-NEXT:    sh s2, 6(s0)
 ; CHECK-NEXT:    sh s7, 8(s0)
 ; CHECK-NEXT:    sh s5, 10(s0)
 ; CHECK-NEXT:    sh s3, 12(s0)
+; CHECK-NEXT:    sh a0, 0(s0)
+; CHECK-NEXT:    sh s6, 2(s0)
+; CHECK-NEXT:    sh s4, 4(s0)
+; CHECK-NEXT:    sh s2, 6(s0)
 ; CHECK-NEXT:    sh s1, 14(s0)
 ; CHECK-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 144(sp) # 8-byte Folded Reload

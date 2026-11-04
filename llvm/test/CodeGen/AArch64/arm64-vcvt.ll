@@ -871,8 +871,8 @@ define void @autogen_SD19225(ptr %addr.f64, ptr %addr.f32) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldp q1, q0, [x1]
 ; CHECK-SD-NEXT:    fcvtl2 v2.2d, v0.4s
-; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtl2 v3.2d, v1.4s
+; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtl v1.2d, v1.2s
 ; CHECK-SD-NEXT:    stp q0, q2, [x0, #32]
 ; CHECK-SD-NEXT:    stp q1, q3, [x0]

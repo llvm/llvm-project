@@ -723,9 +723,9 @@ define void @call_test_vararg() {
 ; ASM32PWR4-NEXT:    stfd 1, 64(1)
 ; ASM32PWR4-NEXT:    lfd 2, 0(3)
 ; ASM32PWR4-NEXT:    li 3, 42
-; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 4, 64(1)
 ; ASM32PWR4-NEXT:    lwz 5, 68(1)
+; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 6, 72(1)
 ; ASM32PWR4-NEXT:    lwz 7, 76(1)
 ; ASM32PWR4-NEXT:    bl .test_vararg[PR]
@@ -746,8 +746,8 @@ define void @call_test_vararg() {
 ; ASM64PWR4-NEXT:    stfd 1, 112(1)
 ; ASM64PWR4-NEXT:    lfd 2, 0(3)
 ; ASM64PWR4-NEXT:    li 3, 42
-; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 4, 112(1)
+; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 5, 120(1)
 ; ASM64PWR4-NEXT:    bl .test_vararg[PR]
 ; ASM64PWR4-NEXT:    nop
@@ -778,9 +778,9 @@ define void @call_test_vararg2() {
 ; ASM32PWR4-NEXT:    stfd 1, 64(1)
 ; ASM32PWR4-NEXT:    lfd 2, 0(3)
 ; ASM32PWR4-NEXT:    li 3, 42
-; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 4, 64(1)
 ; ASM32PWR4-NEXT:    lwz 5, 68(1)
+; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 7, 72(1)
 ; ASM32PWR4-NEXT:    lwz 8, 76(1)
 ; ASM32PWR4-NEXT:    bl .test_vararg[PR]
@@ -802,8 +802,8 @@ define void @call_test_vararg2() {
 ; ASM64PWR4-NEXT:    stfd 1, 112(1)
 ; ASM64PWR4-NEXT:    lfd 2, 0(3)
 ; ASM64PWR4-NEXT:    li 3, 42
-; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 4, 112(1)
+; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 6, 120(1)
 ; ASM64PWR4-NEXT:    bl .test_vararg[PR]
 ; ASM64PWR4-NEXT:    nop
@@ -833,9 +833,9 @@ define void @call_test_vararg3() {
 ; ASM32PWR4-NEXT:    stfd 1, 64(1)
 ; ASM32PWR4-NEXT:    lfd 2, 0(3)
 ; ASM32PWR4-NEXT:    li 3, 42
-; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 4, 64(1)
 ; ASM32PWR4-NEXT:    lwz 5, 68(1)
+; ASM32PWR4-NEXT:    stfd 2, 72(1)
 ; ASM32PWR4-NEXT:    lwz 8, 72(1)
 ; ASM32PWR4-NEXT:    lwz 9, 76(1)
 ; ASM32PWR4-NEXT:    bl .test_vararg[PR]
@@ -857,8 +857,8 @@ define void @call_test_vararg3() {
 ; ASM64PWR4-NEXT:    stfd 1, 112(1)
 ; ASM64PWR4-NEXT:    lfd 2, 0(3)
 ; ASM64PWR4-NEXT:    li 3, 42
-; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 4, 112(1)
+; ASM64PWR4-NEXT:    stfd 2, 120(1)
 ; ASM64PWR4-NEXT:    ld 6, 120(1)
 ; ASM64PWR4-NEXT:    bl .test_vararg[PR]
 ; ASM64PWR4-NEXT:    nop

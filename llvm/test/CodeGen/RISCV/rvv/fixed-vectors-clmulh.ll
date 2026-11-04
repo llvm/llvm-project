@@ -2626,12 +2626,12 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; RV32-NEXT:    vsrl.vx v10, v9, a1
 ; RV32-NEXT:    lui a2, 16
 ; RV32-NEXT:    vsrl.vi v12, v9, 24
-; RV32-NEXT:    lui a3, 1044480
-; RV32-NEXT:    addi a2, a2, -256
-; RV32-NEXT:    addi a4, sp, 8
-; RV32-NEXT:    vand.vx v13, v10, a2
-; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    addi a2, a2, -256
+; RV32-NEXT:    lui a3, 1044480
+; RV32-NEXT:    vand.vx v13, v10, a2
+; RV32-NEXT:    addi a4, sp, 8
+; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    vsrl.vi v14, v9, 8
 ; RV32-NEXT:    vlse64.v v10, (a4), zero
 ; RV32-NEXT:    lui a3, 4080
@@ -3029,12 +3029,12 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; RV32ZVBC32E-NEXT:    vsrl.vx v10, v8, a1
 ; RV32ZVBC32E-NEXT:    lui a2, 16
 ; RV32ZVBC32E-NEXT:    vsrl.vi v12, v8, 24
-; RV32ZVBC32E-NEXT:    lui a3, 1044480
-; RV32ZVBC32E-NEXT:    addi a2, a2, -256
-; RV32ZVBC32E-NEXT:    addi a4, sp, 8
-; RV32ZVBC32E-NEXT:    vand.vx v13, v10, a2
-; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    sw zero, 12(sp)
+; RV32ZVBC32E-NEXT:    addi a2, a2, -256
+; RV32ZVBC32E-NEXT:    lui a3, 1044480
+; RV32ZVBC32E-NEXT:    vand.vx v13, v10, a2
+; RV32ZVBC32E-NEXT:    addi a4, sp, 8
+; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    vsrl.vi v14, v8, 8
 ; RV32ZVBC32E-NEXT:    vlse64.v v10, (a4), zero
 ; RV32ZVBC32E-NEXT:    lui a3, 4080
@@ -3359,8 +3359,8 @@ define <4 x i64> @clmulh_v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; RV32-NEXT:    vor.vv v14, v14, v12
 ; RV32-NEXT:    vsrl.vi v12, v10, 24
 ; RV32-NEXT:    lui a3, 1044480
-; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    lui a3, 4080
 ; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vand.vx v16, v12, a3
@@ -3794,8 +3794,8 @@ define <4 x i64> @clmulh_v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; RV32ZVBC32E-NEXT:    vor.vv v14, v14, v12
 ; RV32ZVBC32E-NEXT:    vsrl.vi v12, v8, 24
 ; RV32ZVBC32E-NEXT:    lui a3, 1044480
-; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    sw zero, 12(sp)
+; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    lui a3, 4080
 ; RV32ZVBC32E-NEXT:    addi a4, sp, 8
 ; RV32ZVBC32E-NEXT:    vand.vx v16, v12, a3
@@ -4124,8 +4124,8 @@ define <8 x i64> @clmulh_v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; RV32-NEXT:    vor.vv v16, v20, v16
 ; RV32-NEXT:    vsrl.vi v20, v12, 24
 ; RV32-NEXT:    lui a3, 1044480
-; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    lui a3, 4080
 ; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vand.vx v20, v20, a3
@@ -5007,8 +5007,8 @@ define <8 x i64> @clmulh_v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; RV32ZVBC32E-NEXT:    vor.vv v20, v20, v16
 ; RV32ZVBC32E-NEXT:    vsrl.vi v16, v8, 24
 ; RV32ZVBC32E-NEXT:    lui a3, 1044480
-; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    sw zero, 12(sp)
+; RV32ZVBC32E-NEXT:    sw a3, 8(sp)
 ; RV32ZVBC32E-NEXT:    lui a3, 4080
 ; RV32ZVBC32E-NEXT:    addi a4, sp, 8
 ; RV32ZVBC32E-NEXT:    vand.vx v24, v16, a3

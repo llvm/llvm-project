@@ -41,8 +41,8 @@ define void @f_undef_15(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_undef_15:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
 ; CHECK-IADISABLED-NEXT:    stp q2, q3, [x0, #32]
+; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:
   %S = shufflevector <8 x i64> %a, <8 x i64> %a, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,i32 undef, i32 undef, i32 undef, i32 undef,i32 undef, i32 undef, i32 undef, i32 undef,i32 undef, i32 undef, i32 undef, i32 undef>

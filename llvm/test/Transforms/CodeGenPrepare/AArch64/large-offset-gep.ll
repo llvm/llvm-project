@@ -6,17 +6,18 @@
 define void @test1(ptr %s, i32 %n) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    add x8, x8, #9, lsl #12 // =36864
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    add x9, x9, #9, lsl #12 // =36864
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.ge .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #3140]
-; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8, #3136]
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    str w10, [x9, #3136]
+; CHECK-NEXT:    str w8, [x9, #3140]
+; CHECK-NEXT:    mov w8, w10
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: // %while_end
 ; CHECK-NEXT:    ret
@@ -52,9 +53,10 @@ define void @test2(ptr %struct, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add w10, w9, #1
+; CHECK-NEXT:    str w10, [x8, #3136]
 ; CHECK-NEXT:    str w9, [x8, #3140]
-; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8, #3136]
+; CHECK-NEXT:    mov w9, w10
 ; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.lt .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: // %while_end
@@ -93,9 +95,10 @@ define void @test3(ptr %s1, ptr %s2, i1 %cond, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add w10, w9, #1
+; CHECK-NEXT:    str w10, [x8, #3136]
 ; CHECK-NEXT:    str w9, [x8, #3140]
-; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8, #3136]
+; CHECK-NEXT:    mov w9, w10
 ; CHECK-NEXT:    cmp w9, w3
 ; CHECK-NEXT:    b.lt .LBB2_2
 ; CHECK-NEXT:  .LBB2_3: // %while_end
@@ -149,9 +152,9 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-NEXT:    mov w20, wzr
 ; CHECK-NEXT:  .LBB3_1: // %while_cond
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: // EH_LABEL
 ; CHECK-NEXT:  // %bb.2: // %while_cond_x.split
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    add x8, x0, #9, lsl #12 // =36864
@@ -160,9 +163,10 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-NEXT:    b.ge .LBB3_4
 ; CHECK-NEXT:  // %bb.3: // %while_body
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:    add w9, w20, #1
+; CHECK-NEXT:    str w9, [x8, #3136]
 ; CHECK-NEXT:    str w20, [x8, #3140]
-; CHECK-NEXT:    add w20, w20, #1
-; CHECK-NEXT:    str w20, [x8, #3136]
+; CHECK-NEXT:    mov w20, w9
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: // %while_end
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -174,7 +178,7 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_5: // %cleanup
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    bl foo2
 ; CHECK-NEXT:    mov x0, x19
@@ -214,17 +218,18 @@ declare i32 @__FrameHandler(...)
 define void @test5(ptr %s, i32 %n) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    add x8, x8, #19, lsl #12 // =77824
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    add x9, x9, #19, lsl #12 // =77824
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #2180]
-; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8, #2176]
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    str w10, [x9, #2176]
+; CHECK-NEXT:    str w8, [x9, #2180]
+; CHECK-NEXT:    mov w8, w10
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB4_1
 ; CHECK-NEXT:  .LBB4_2: // %while_end
 ; CHECK-NEXT:    ret

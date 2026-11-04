@@ -265,28 +265,28 @@ define i32 @test_bitextract_b231(b231 %src, i32 %off) {
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v10, s1 :: v_dual_and_b32 v7, 0x7f, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v9, s0
-; GFX12-NEXT:    s_clause 0x3
-; GFX12-NEXT:    scratch_store_b64 off, v[4:5], s32 offset:16
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s32 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s32
-; GFX12-NEXT:    scratch_store_b64 off, v[6:7], s32 offset:24
-; GFX12-NEXT:    v_and_b32_e32 v3, 63, v8
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    v_and_b32_e32 v11, 24, v11
+; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:56
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:40
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:32
-; GFX12-NEXT:    v_and_b32_e32 v9, 24, v11
-; GFX12-NEXT:    v_xor_b32_e32 v3, 63, v3
+; GFX12-NEXT:    scratch_store_b64 off, v[4:5], s32 offset:16
+; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s32 offset:8
+; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s32
+; GFX12-NEXT:    scratch_store_b64 off, v[6:7], s32 offset:24
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b32 v2, v9, s32 offset:8
-; GFX12-NEXT:    scratch_load_b64 v[0:1], v9, s32
+; GFX12-NEXT:    scratch_load_b32 v2, v11, s32 offset:8
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v11, s32
+; GFX12-NEXT:    v_and_b32_e32 v3, 63, v8
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_xor_b32_e32 v3, 63, v3
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 1, v2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_lshrrev_b64 v[0:1], v8, v[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], v3, v[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitextract i32, b231 %src, i32 %off
@@ -740,38 +740,38 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
-; GFX12-NEXT:    v_mov_b32_e32 v14, 0
+; GFX12-NEXT:    v_mov_b32_e32 v13, -1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v10, v9 :: v_dual_mov_b32 v11, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v12, s1 :: v_dual_mov_b32 v13, -1
+; GFX12-NEXT:    v_mov_b32_e32 v12, s1
 ; GFX12-NEXT:    s_add_co_i32 s0, s32, 32
 ; GFX12-NEXT:    s_add_co_i32 s1, s32, 0x60
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 3, v10
+; GFX12-NEXT:    v_mov_b32_e32 v14, 0
+; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:56
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:40
+; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
+; GFX12-NEXT:    s_clause 0x4
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:32
-; GFX12-NEXT:    v_lshrrev_b32_e32 v13, 3, v10
-; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:24
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:16
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:8
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32
-; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:88
-; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:80
-; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:72
-; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:64
-; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
-; GFX12-NEXT:    v_and_b32_e32 v13, 24, v13
+; GFX12-NEXT:    v_and_b32_e32 v13, 24, v9
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v14
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:120
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:112
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:104
 ; GFX12-NEXT:    scratch_store_b64 off, v[8:9], s32 offset:96
-; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
+; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:88
+; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:80
+; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:72
+; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:64
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v19, s0, v13
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v23, s1, v13
@@ -787,6 +787,7 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    scratch_load_b64 v[21:22], v23, off offset:8
 ; GFX12-NEXT:    scratch_load_b64 v[23:24], v23, off
+; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
 ; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], v10, v[8:9]
 ; GFX12-NEXT:    s_wait_loadcnt 0x6
@@ -1592,33 +1593,33 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:36
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:40
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v13, 0
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:60
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:52
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:28
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:20
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:12
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:56
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:48
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:24
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:16
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:8
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32
 ; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:104
-; GFX9-NEXT:    v_mov_b32_e32 v10, 0
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:60
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:52
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:28
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:20
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:12
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:56
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:48
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:24
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:16
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:120
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:112
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:88
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:80
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:72
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:64
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:120
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:112
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:88
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:80
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:72
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:64
 ; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:96
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:124
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:116
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:92
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:84
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:76
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:68
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:124
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:116
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:92
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:84
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:76
+; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:68
 ; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:100
 ; GFX9-NEXT:    v_and_b32_e32 v8, 0x7ffffff, v11
 ; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:108
@@ -1709,41 +1710,40 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v13, -1 :: v_dual_mov_b32 v14, 0x7ffffff
+; GFX12-NEXT:    s_mov_b32 s0, 0
+; GFX12-NEXT:    v_lshrrev_b32_e32 v17, 3, v12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v15, s0 :: v_dual_mov_b32 v16, s1
-; GFX12-NEXT:    s_add_co_i32 s0, s32, 32
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:40
 ; GFX12-NEXT:    v_mov_b32_e32 v14, v13
-; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    s_clause 0x6
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:56
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:32
-; GFX12-NEXT:    v_lshrrev_b32_e32 v13, 3, v12
-; GFX12-NEXT:    s_add_co_i32 s1, s32, 0x60
-; GFX12-NEXT:    v_and_b32_e32 v11, 0x7ffffff, v11
-; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:24
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:16
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:8
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32
+; GFX12-NEXT:    v_and_b32_e32 v13, 24, v17
+; GFX12-NEXT:    s_add_co_i32 s0, s32, 32
+; GFX12-NEXT:    s_add_co_i32 s1, s32, 0x60
+; GFX12-NEXT:    v_and_b32_e32 v11, 0x7ffffff, v11
+; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:120
+; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:112
+; GFX12-NEXT:    scratch_store_b64 off, v[8:9], s32 offset:96
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_sub_nc_u32_e32 v19, s0, v13
+; GFX12-NEXT:    v_sub_nc_u32_e32 v23, s1, v13
+; GFX12-NEXT:    s_clause 0x4
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:88
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:80
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:72
 ; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:64
-; GFX12-NEXT:    v_and_b32_e32 v13, 24, v13
-; GFX12-NEXT:    s_clause 0x3
-; GFX12-NEXT:    scratch_store_b64 off, v[8:9], s32 offset:96
-; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:120
-; GFX12-NEXT:    scratch_store_b64 off, v[15:16], s32 offset:112
 ; GFX12-NEXT:    scratch_store_b64 off, v[10:11], s32 offset:104
-; GFX12-NEXT:    v_and_b32_e32 v25, 63, v12
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_sub_nc_u32_e32 v19, s0, v13
-; GFX12-NEXT:    v_sub_nc_u32_e32 v23, s1, v13
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    scratch_load_b64 v[8:9], v19, off offset:24
 ; GFX12-NEXT:    scratch_load_b64 v[10:11], v19, off offset:16
@@ -1756,6 +1756,8 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    scratch_load_b64 v[21:22], v23, off offset:8
 ; GFX12-NEXT:    scratch_load_b64 v[23:24], v23, off
+; GFX12-NEXT:    v_and_b32_e32 v25, 63, v12
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
 ; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], v12, v[8:9]

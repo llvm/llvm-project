@@ -79,9 +79,9 @@ define void @vst2_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]!
 ; CHECK-NEXT:    vst20.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst20.32 {q2, q3}, [r2]
-; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vst21.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst21.32 {q2, q3}, [r2]
+; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vst21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
@@ -343,11 +343,11 @@ define void @vst2_v4i64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov.f64 d0, d9
 ; CHECK-NEXT:    vstrw.32 q2, [r1]
 ; CHECK-NEXT:    vmov.f64 d9, d2
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f64 d8, d6
 ; CHECK-NEXT:    vmov.f64 d2, d7
 ; CHECK-NEXT:    vstrw.32 q4, [r1, #32]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
+; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -437,9 +437,9 @@ define void @vst2_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]!
 ; CHECK-NEXT:    vst20.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst20.32 {q2, q3}, [r2]
-; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vst21.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst21.32 {q2, q3}, [r2]
+; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vst21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
@@ -650,11 +650,11 @@ define void @vst2_v4f64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov.f64 d0, d9
 ; CHECK-NEXT:    vstrw.32 q2, [r1]
 ; CHECK-NEXT:    vmov.f64 d9, d2
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f64 d8, d6
 ; CHECK-NEXT:    vmov.f64 d2, d7
 ; CHECK-NEXT:    vstrw.32 q4, [r1, #32]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
+; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:

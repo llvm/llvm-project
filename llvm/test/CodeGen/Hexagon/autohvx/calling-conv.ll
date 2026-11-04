@@ -241,7 +241,7 @@ define void @f8(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3, 
 ; CHECK-LABEL: f8:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r0,#1024)
+; CHECK-NEXT:     r2 = add(r0,#1024)
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -267,7 +267,7 @@ define void @f8(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3, 
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r1+#0) = v8
+; CHECK-NEXT:     vmem(r2+#0) = v8
 ; CHECK-NEXT:    }
 b0:
   store <128 x i8> %a0, ptr %a9, align 128
@@ -355,8 +355,11 @@ define void @f10(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
-; CHECK-NEXT:     r3 = add(r0,#1280)
 ; CHECK-NEXT:     vmem(r0+#0) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = add(r0,#1280)
+; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
@@ -383,11 +386,8 @@ define void @f10(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v9
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r3+#0) = v10
+; CHECK-NEXT:     vmem(r2+#0) = v10
 ; CHECK-NEXT:    }
 b0:
   store <128 x i8> %a0, ptr %a11, align 128
@@ -421,10 +421,11 @@ define void @f11(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r0+#0) = v0
+; CHECK-NEXT:     r2 = add(r0,#1408)
+; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
@@ -451,14 +452,11 @@ define void @f11(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v9
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r3+#0) = v10
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:     vmem(r2+#0) = v11
 ; CHECK-NEXT:    }
 b0:
   store <128 x i8> %a0, ptr %a12, align 128
@@ -497,7 +495,10 @@ define void @f12(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r2 = add(r0,#1536)
+; CHECK-NEXT:     vmem(r2+#0) = v9
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -525,9 +526,6 @@ define void @f12(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v9
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r3+#0) = v10
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -535,7 +533,7 @@ define void @f12(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:     vmem(r2+#0) = v12
 ; CHECK-NEXT:    }
 b0:
   store <128 x i8> %a0, ptr %a13, align 128
@@ -570,27 +568,21 @@ define void @f13(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-LABEL: f13:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = add(r0,#1536)
 ; CHECK-NEXT:     r2 = add(r0,#1664)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = add(r0,#1536)
-; CHECK-NEXT:     vmem(r3+#0) = v10
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -608,13 +600,19 @@ define void @f13(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v11
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v12
+; CHECK-NEXT:     vmem(r1+#0) = v8
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v10
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -655,28 +653,19 @@ define void @f14(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-LABEL: f14:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
 ; CHECK-NEXT:     r4 = add(r0,#1408)
-; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
 ; CHECK-NEXT:     r2 = add(r0,#1792)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = add(r0,#1664)
-; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1536)
-; CHECK-NEXT:     vmem(r4+#0) = v11
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
@@ -697,13 +686,22 @@ define void @f14(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v13
+; CHECK-NEXT:     vmem(r1+#0) = v8
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v10
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -746,29 +744,23 @@ define void @f15(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-LABEL: f15:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r1 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1408)
+; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 = add(r0,#1536)
-; CHECK-NEXT:     r4 = add(r0,#1664)
-; CHECK-NEXT:     r2 = add(r0,#1920)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = add(r0,#1792)
-; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = add(r0,#1920)
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -780,25 +772,31 @@ define void @f15(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v11
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v12
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v13
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v14
+; CHECK-NEXT:     vmem(r1+#0) = v8
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v10
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -843,37 +841,33 @@ define void @f16(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-LABEL: f16:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r30,#8)
-; CHECK-NEXT:     r7 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1536)
+; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r8 = add(r0,#1920)
+; CHECK-NEXT:     r2 = add(r30,#8)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1664)
-; CHECK-NEXT:     r3 = add(r0,#1920)
-; CHECK-NEXT:     r2 = add(r0,#2048)
+; CHECK-NEXT:     r3 = add(r0,#2048)
+; CHECK-NEXT:     v31 = vmem(r2+#0)
 ; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1792)
-; CHECK-NEXT:     r29 = and(r29,#-128)
-; CHECK-NEXT:     v16 = vmem(r1+#0)
-; CHECK-NEXT:     vmem(r4+#0) = v11
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r7+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -885,28 +879,34 @@ define void @f16(<128 x i8> %a0, <128 x i8> %a1, <128 x i8> %a2, <128 x i8> %a3,
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v14
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v15
+; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v16
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r8+#0) = v15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
@@ -952,37 +952,33 @@ define void @f17(<64 x i16> %a0, <64 x i16> %a1, <64 x i16> %a2, <64 x i16> %a3,
 ; CHECK-LABEL: f17:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r30,#8)
-; CHECK-NEXT:     r7 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1536)
+; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r8 = add(r0,#1920)
+; CHECK-NEXT:     r2 = add(r30,#8)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1664)
-; CHECK-NEXT:     r3 = add(r0,#1920)
-; CHECK-NEXT:     r2 = add(r0,#2048)
+; CHECK-NEXT:     r3 = add(r0,#2048)
+; CHECK-NEXT:     v31 = vmem(r2+#0)
 ; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1792)
-; CHECK-NEXT:     r29 = and(r29,#-128)
-; CHECK-NEXT:     v16 = vmem(r1+#0)
-; CHECK-NEXT:     vmem(r4+#0) = v11
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r7+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -994,28 +990,34 @@ define void @f17(<64 x i16> %a0, <64 x i16> %a1, <64 x i16> %a2, <64 x i16> %a3,
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v14
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v15
+; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v16
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r8+#0) = v15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
@@ -1061,37 +1063,33 @@ define void @f18(<32 x i32> %a0, <32 x i32> %a1, <32 x i32> %a2, <32 x i32> %a3,
 ; CHECK-LABEL: f18:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r30,#8)
-; CHECK-NEXT:     r7 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1536)
+; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r8 = add(r0,#1920)
+; CHECK-NEXT:     r2 = add(r30,#8)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1664)
-; CHECK-NEXT:     r3 = add(r0,#1920)
-; CHECK-NEXT:     r2 = add(r0,#2048)
+; CHECK-NEXT:     r3 = add(r0,#2048)
+; CHECK-NEXT:     v31 = vmem(r2+#0)
 ; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1792)
-; CHECK-NEXT:     r29 = and(r29,#-128)
-; CHECK-NEXT:     v16 = vmem(r1+#0)
-; CHECK-NEXT:     vmem(r4+#0) = v11
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r7+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -1103,28 +1101,34 @@ define void @f18(<32 x i32> %a0, <32 x i32> %a1, <32 x i32> %a2, <32 x i32> %a3,
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v14
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v15
+; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v16
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r8+#0) = v15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
@@ -1170,37 +1174,33 @@ define void @f19(<64 x half> %a0, <64 x half> %a1, <64 x half> %a2, <64 x half> 
 ; CHECK-LABEL: f19:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r30,#8)
-; CHECK-NEXT:     r7 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1536)
+; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r8 = add(r0,#1920)
+; CHECK-NEXT:     r2 = add(r30,#8)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1664)
-; CHECK-NEXT:     r3 = add(r0,#1920)
-; CHECK-NEXT:     r2 = add(r0,#2048)
+; CHECK-NEXT:     r3 = add(r0,#2048)
+; CHECK-NEXT:     v31 = vmem(r2+#0)
 ; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1792)
-; CHECK-NEXT:     r29 = and(r29,#-128)
-; CHECK-NEXT:     v16 = vmem(r1+#0)
-; CHECK-NEXT:     vmem(r4+#0) = v11
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r7+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -1212,28 +1212,34 @@ define void @f19(<64 x half> %a0, <64 x half> %a1, <64 x half> %a2, <64 x half> 
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v14
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v15
+; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v16
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r8+#0) = v15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
@@ -1279,37 +1285,33 @@ define void @f20(<32 x float> %a0, <32 x float> %a1, <32 x float> %a2, <32 x flo
 ; CHECK-LABEL: f20:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r0,#1024)
 ; CHECK-NEXT:     r2 = add(r0,#1152)
 ; CHECK-NEXT:     r3 = add(r0,#1280)
-; CHECK-NEXT:     r4 = add(r0,#1408)
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r30,#8)
-; CHECK-NEXT:     r7 = add(r0,#1024)
-; CHECK-NEXT:     r6 = add(r0,#1536)
+; CHECK-NEXT:     r4 = add(r0,#1408)
+; CHECK-NEXT:     r5 = add(r0,#1536)
+; CHECK-NEXT:     r6 = add(r0,#1664)
+; CHECK-NEXT:     r7 = add(r0,#1792)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r8 = add(r0,#1920)
+; CHECK-NEXT:     r2 = add(r30,#8)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     vmem(r2+#0) = v9
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = add(r0,#1664)
-; CHECK-NEXT:     r3 = add(r0,#1920)
-; CHECK-NEXT:     r2 = add(r0,#2048)
+; CHECK-NEXT:     r3 = add(r0,#2048)
+; CHECK-NEXT:     v31 = vmem(r2+#0)
 ; CHECK-NEXT:     vmem(r3+#0) = v10
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = add(r0,#1792)
-; CHECK-NEXT:     r29 = and(r29,#-128)
-; CHECK-NEXT:     v16 = vmem(r1+#0)
-; CHECK-NEXT:     vmem(r4+#0) = v11
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#1) = v1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r7+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#2) = v2
@@ -1321,28 +1323,34 @@ define void @f20(<32 x float> %a0, <32 x float> %a1, <32 x float> %a2, <32 x flo
 ; CHECK-NEXT:     vmem(r0+#4) = v4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r6+#0) = v12
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#5) = v5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r5+#0) = v13
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#6) = v6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r4+#0) = v14
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r0+#7) = v7
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r3+#0) = v15
+; CHECK-NEXT:     vmem(r1+#0) = v8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r2+#0) = v16
+; CHECK-NEXT:     vmem(r4+#0) = v11
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r5+#0) = v12
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r6+#0) = v13
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r7+#0) = v14
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r8+#0) = v15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmem(r3+#0) = v31
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw

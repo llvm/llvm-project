@@ -43,9 +43,9 @@ define void @add_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    add a1, a1, a5
 ; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    sw a6, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_v2i64:
@@ -56,8 +56,8 @@ define void @add_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    ld a1, 8(a1)
 ; RV64-NEXT:    add a2, a2, a4
 ; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    sd a1, 8(a0)
+; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    ret
   %a = load <2 x i64>, ptr %x
   %b = load <2 x i64>, ptr %y
@@ -140,8 +140,8 @@ define void @fadd_v2f64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    fld fa2, 8(a1)
 ; CHECK-NEXT:    fadd.d fa5, fa4, fa5
 ; CHECK-NEXT:    fadd.d fa4, fa3, fa2
-; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    fsd fa4, 8(a0)
+; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
   %b = load <2 x double>, ptr %y

@@ -49,8 +49,8 @@ define void @foo(ptr %param) #0 {
 ; CHECK-NEXT:  .LBB0_6: // %cold2
 ; CHECK-NEXT:    adrp x8, :got:Func
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:Func]
-; CHECK-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    ldr x8, [x8]
+; CHECK-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    blr x8
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    ldr x0, [sp, #8] // 8-byte Reload

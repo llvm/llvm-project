@@ -205,31 +205,31 @@ define <64 x i16> @test3(<64 x i16> %m) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r11:10 = vaslh(r11:10,#8)
-; CHECK-NEXT:     r3:2 = vasrh(r3:2,#8)
+; CHECK-NEXT:     r9:8 = vasrh(r9:8,#8)
 ; CHECK-NEXT:     r13:12 = memd(r29+#8)
 ; CHECK-NEXT:     memd(r0+#56) = r13:12
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r13:12 = vaslh(r13:12,#8)
-; CHECK-NEXT:     r9:8 = vasrh(r9:8,#8)
-; CHECK-NEXT:     memd(r0+#48) = r7:6
-; CHECK-NEXT:     memd(r0+#0) = r3:2
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r11:10 = vasrh(r11:10,#8)
-; CHECK-NEXT:     r7:6 = vasrh(r15:14,#8)
+; CHECK-NEXT:     memd(r0+#48) = r7:6
 ; CHECK-NEXT:     memd(r0+#32) = r9:8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r7:6 = vasrh(r15:14,#8)
 ; CHECK-NEXT:     r13:12 = vasrh(r13:12,#8)
-; CHECK-NEXT:     r5:4 = vasrh(r5:4,#8)
 ; CHECK-NEXT:     memd(r0+#40) = r11:10
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5:4 = vasrh(r5:4,#8)
+; CHECK-NEXT:     r3:2 = vasrh(r3:2,#8)
+; CHECK-NEXT:     memd(r0+#24) = r13:12
 ; CHECK-NEXT:     memd(r0+#16) = r7:6
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     memd(r0+#24) = r13:12
 ; CHECK-NEXT:     memd(r0+#8) = r5:4
+; CHECK-NEXT:     memd(r0+#0) = r3:2
 ; CHECK-NEXT:    }
 ;
 ; CHECK-64B-LABEL: test3:

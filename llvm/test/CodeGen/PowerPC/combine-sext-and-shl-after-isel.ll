@@ -242,8 +242,8 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld r5, 0(r3)
 ; CHECK-NEXT:    sldi r4, r4, 2
-; CHECK-NEXT:    stw r3, 0(r3)
 ; CHECK-NEXT:    stwx r30, r5, r4
+; CHECK-NEXT:    stw r3, 0(r3)
 ; CHECK-NEXT:    b .LBB3_1
 ;
 ; CHECK-BE-LABEL: testCaller:
@@ -286,8 +286,8 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    ld r5, 0(r3)
 ; CHECK-BE-NEXT:    sldi r4, r4, 2
-; CHECK-BE-NEXT:    stw r3, 0(r3)
 ; CHECK-BE-NEXT:    stwx r30, r5, r4
+; CHECK-BE-NEXT:    stw r3, 0(r3)
 ; CHECK-BE-NEXT:    b .LBB3_1
 ;
 ; CHECK-P9-LABEL: testCaller:
@@ -329,8 +329,8 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    ld r4, 0(r3)
 ; CHECK-P9-NEXT:    extswsli r5, r29, 2
-; CHECK-P9-NEXT:    stw r3, 0(r3)
 ; CHECK-P9-NEXT:    stwx r30, r4, r5
+; CHECK-P9-NEXT:    stw r3, 0(r3)
 ; CHECK-P9-NEXT:    b .LBB3_1
 ;
 ; CHECK-P9-BE-LABEL: testCaller:
@@ -372,8 +372,8 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-BE-NEXT:    #
 ; CHECK-P9-BE-NEXT:    ld r4, 0(r3)
 ; CHECK-P9-BE-NEXT:    extswsli r5, r29, 2
-; CHECK-P9-BE-NEXT:    stw r3, 0(r3)
 ; CHECK-P9-BE-NEXT:    stwx r30, r4, r5
+; CHECK-P9-BE-NEXT:    stw r3, 0(r3)
 ; CHECK-P9-BE-NEXT:    b .LBB3_1
 entry:
   br label %exit

@@ -2108,10 +2108,10 @@ define { double, double } @test_modf_f64(double %a) nounwind {
 ; RV32I-NEXT:    call modf
 ; RV32I-NEXT:    lw a2, 0(sp)
 ; RV32I-NEXT:    lw a3, 4(sp)
-; RV32I-NEXT:    sw a0, 0(s0)
 ; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a2, 8(s0)
 ; RV32I-NEXT:    sw a3, 12(s0)
+; RV32I-NEXT:    sw a0, 0(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16

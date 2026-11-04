@@ -7308,8 +7308,8 @@ define dso_local void @st_reversed_double_from_i8(ptr %ptr) {
 ; CHECK-P9-NEXT:    xscvuxddp f1, f1
 ; CHECK-P9-NEXT:    xsadddp f0, f0, f2
 ; CHECK-P9-NEXT:    xsadddp f1, f1, f2
-; CHECK-P9-NEXT:    stfd f0, 8(r3)
 ; CHECK-P9-NEXT:    stfd f1, 0(r3)
+; CHECK-P9-NEXT:    stfd f0, 8(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: st_reversed_double_from_i8:
