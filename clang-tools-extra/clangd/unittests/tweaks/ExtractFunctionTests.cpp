@@ -1618,6 +1618,98 @@ TEST_F(ExtractFunctionTest, RejectPureForwardingStructuredBinding) {
             "unavailable");
 }
 
+TEST_F(ExtractFunctionTest, RejectLocalTypeConstructedInline) {
+  Context = File;
+  // The extracted function always ends up placed before the enclosing
+  // function, where a type declared inside it isn't visible -- so this
+  // can't be extracted at all, not even as a pure rename.
+  EXPECT_EQ(apply(R"cpp(
+    void f() {
+      struct S { int A; };
+      [[S X = S{1};]]
+    })cpp"),
+            "fail: Cannot extract code that uses a type local to the "
+            "enclosing function.");
+}
+
+TEST_F(ExtractFunctionTest, RejectLocalTypeThroughCapturedVariable) {
+  Context = File;
+  // Same hazard, but reached through a captured variable's type rather
+  // than a type written out directly in the zone: `S` never appears as
+  // its own TypeLoc within the selection at all. Caught by checking the
+  // extracted function's own generated parameter type instead (`X`
+  // becomes a parameter of type `S`), in getExtractedFunction.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    void f() {
+      struct S { int A; };
+      S X;
+      [[foo(X.A);]]
+    })cpp"),
+            "fail: Cannot extract code that uses a type local to the "
+            "enclosing function.");
+}
+
+TEST_F(ExtractFunctionTest, RejectLocalTypeNamedOnly) {
+  Context = File;
+  // sizeof(S)'s operand is a bare type name, not an expression: caught
+  // by VisitTypeLoc, same as the declarator in
+  // RejectLocalTypeConstructedInline.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(unsigned long);
+    void f() {
+      struct S { int A; };
+      [[foo(sizeof(S));]]
+    })cpp"),
+            "fail: Cannot extract code that uses a type local to the "
+            "enclosing function.");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespiteEnclosingClassType) {
+  Context = File;
+  // A method's own enclosing class isn't function-local (its
+  // DeclContext is the namespace/TU, not a function), so referencing it
+  // -- unlike a type declared inside the method's own body -- is fine.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {
+      int A;
+      void f() { [[S X = S{1};]] }
+    };
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectLocalTypeInFunctionPointerSignature) {
+  Context = File;
+  // S never appears as its own TypeLoc anywhere in the zone -- it's only
+  // reachable through captured fp's own declared type (a pointer to a
+  // function returning S). The literal argument keeps this from being
+  // suppressed as a pure forwarding wrapper instead (see
+  // RejectPureForwarding* above), which would otherwise mask this check.
+  EXPECT_EQ(apply(R"cpp(
+    void f() {
+      struct S { int A; };
+      S (*fp)(int);
+      [[fp(1);]]
+    })cpp"),
+            "fail: Cannot extract code that uses a type local to the "
+            "enclosing function.");
+}
+
+TEST_F(ExtractFunctionTest, RejectLocalTypeThroughMemberPointer) {
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+    void use(int);
+    void f() {
+      struct S { int A; };
+      S s;
+      int S::*pm = &S::A;
+      [[use(s.*pm);]]
+    })cpp"),
+            "fail: Cannot extract code that uses a type local to the "
+            "enclosing function.");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
