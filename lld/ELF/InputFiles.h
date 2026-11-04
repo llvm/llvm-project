@@ -257,7 +257,7 @@ public:
   void parseLazy();
 
   // Intern global symbol names on a worker thread and then set `interned`.
-  void intern();
+  void internSymbols();
   std::atomic<bool> interned = false;
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
@@ -297,8 +297,8 @@ public:
 private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
-  void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   Symbol *insertGlobal(size_t i);
+  void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initDynDbgSymbols();
   void initializeJustSymbols();
 

@@ -345,10 +345,11 @@ template <class ELFT>
 static void
 doParseFiles(Ctx &ctx,
              const SmallVector<std::unique_ptr<InputFile>, 0> &files) {
-  // Intern global symbol names on other threads while the loop below parses
-  // files. The loop may add files, so the workers use a copy. A Fatal in the
-  // loop longjmps out of this frame while the workers still run, so their state
-  // is on the heap and leaks with ctx.
+  // Use worker threads to intern global symbol names while the doParseFile loop
+  // below parses files. The workers use a copy of files as doParseFile may add
+  // additional files. If there is a Fatal error in doParseFile then control
+  // flow longjmps out of this frame while the worker threads are still running,
+  // so their state remains on the heap and leaks along with ctx.
   struct InternQueue {
     SmallVector<ObjFile<ELFT> *, 0> files;
     std::atomic<size_t> next = 0;
@@ -367,7 +368,7 @@ doParseFiles(Ctx &ctx,
       size_t j;
       while ((j = q->next.fetch_add(1, std::memory_order_relaxed)) <
              q->files.size())
-        q->files[j]->intern();
+        q->files[j]->internSymbols();
     });
 
   // Add all files to the symbol table. This will add almost all symbols that we
@@ -564,7 +565,8 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
-template <class ELFT> void ObjFile<ELFT>::intern() {
+template <class ELFT> void ObjFile<ELFT>::internSymbols() {
+  assert(!interned);
   // Leave names with '@' and errors to the serial parse loop.
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
@@ -576,13 +578,6 @@ template <class ELFT> void ObjFile<ELFT>::intern() {
       symbols[i] = ctx.symtab->intern(CachedHashStringRef(*name));
   }
   interned = true;
-}
-
-template <class ELFT> Symbol *ObjFile<ELFT>::insertGlobal(size_t i) {
-  if (symbols[i])
-    return ctx.symtab->insert(symbols[i]);
-  return ctx.symtab->insert(
-      CHECK2(this->getELFSyms<ELFT>()[i].getName(stringTable), this));
 }
 
 template <class ELFT>
@@ -1254,6 +1249,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
     return makeThreadLocal<MergeInputSection>(*this, sec, name);
   return makeThreadLocal<InputSection>(*this, sec, name);
+}
+
+template <class ELFT> Symbol *ObjFile<ELFT>::insertGlobal(size_t i) {
+  if (symbols[i])
+    return ctx.symtab->insert(symbols[i]);
+  return ctx.symtab->insert(
+      CHECK2(this->getELFSyms<ELFT>()[i].getName(stringTable), this));
 }
 
 // Initialize symbols. symbols is a parallel array to the corresponding ELF

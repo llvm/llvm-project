@@ -121,10 +121,9 @@ Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
 }
 
 Symbol *SymbolTable::find(StringRef name) {
+  assert(!concurrent && "find() must not run while workers intern symbols");
   CachedHashStringRef key(name);
-  Shard &shard = getShard(key);
-  auto l = lock(shard);
-  Symbol *sym = shard.map.lookup(key);
+  Symbol *sym = getShard(key).map.lookup(key);
   return sym && sym->inserted ? sym : nullptr;
 }
 
