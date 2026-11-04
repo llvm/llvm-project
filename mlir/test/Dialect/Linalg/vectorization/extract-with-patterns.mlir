@@ -756,3 +756,66 @@ func.func @gather_from_encoded_source(
 // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
 // CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<3x2xf32, {{.*}}> into tensor<6xf32>
 // CHECK: vector.gather %[[COLLAPSED]][%[[ZERO]]] {{.*}} : tensor<6xf32>,
+
+// -----
+
+// Reject an overflowing gather before expanding affine.apply: the failed
+// pattern must leave the original IR unchanged.
+func.func @negative_gather_from_overflowing_source_with_affine_apply(
+    %src: tensor<3037000500x3037000500xf32>, %out: tensor<2xf32>,
+    %offset: index) -> tensor<2xf32> {
+  %c0 = arith.constant 0 : index
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  } outs(%out : tensor<2xf32>) {
+  ^bb0(%unused: f32):
+    %i = linalg.index 0 : index
+    %row = affine.apply affine_map<(i)[s] -> (i + s)>(%i)[%offset]
+    %value = tensor.extract %src[%row, %c0]
+      : tensor<3037000500x3037000500xf32>
+    linalg.yield %value : f32
+  } -> tensor<2xf32>
+  return %result : tensor<2xf32>
+}
+
+// CHECK-LABEL: func.func @negative_gather_from_overflowing_source_with_affine_apply(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>, %{{.*}}: tensor<2xf32>, %[[OFFSET:.*]]: index
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
+// CHECK-NEXT: ^bb0(%{{.*}}: f32):
+// CHECK-NEXT: %[[I:.*]] = linalg.index 0 : index
+// CHECK-NEXT: %[[ROW:.*]] = affine.apply {{.*}}(%[[I]])[%[[OFFSET]]]
+// CHECK-NEXT: %[[VALUE:.*]] = tensor.extract %[[SRC]][%[[ROW]], %[[ZERO]]]
+// CHECK-NEXT: linalg.yield %[[VALUE]] : f32
+// CHECK-NEXT: } -> tensor<2xf32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2xf32>
+
+// -----
+
+// Classify the access after affine expansion: contiguous reads do not need
+// a flattened source even when its element count overflows.
+func.func @contiguous_extract_from_overflowing_source_with_affine_apply(
+    %src: tensor<3037000500x3037000500xf32>, %out: tensor<2xf32>,
+    %offset: index) -> tensor<2xf32> {
+  %c0 = arith.constant 0 : index
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  } outs(%out : tensor<2xf32>) {
+  ^bb0(%unused: f32):
+    %i = linalg.index 0 : index
+    %col = affine.apply affine_map<(i)[s] -> (i + s)>(%i)[%offset]
+    %value = tensor.extract %src[%c0, %col]
+      : tensor<3037000500x3037000500xf32>
+    linalg.yield %value : f32
+  } -> tensor<2xf32>
+  return %result : tensor<2xf32>
+}
+
+// CHECK-LABEL: func.func @contiguous_extract_from_overflowing_source_with_affine_apply(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>,
+// CHECK-NOT: tensor.collapse_shape
+// CHECK: vector.transfer_read %[[SRC]]{{.*}} : tensor<3037000500x3037000500xf32>, vector<2xf32>
+// CHECK-NOT: tensor.collapse_shape
+// CHECK: return
