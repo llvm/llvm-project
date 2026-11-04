@@ -795,6 +795,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_struct_utsname",
+    hdrs = ["include/llvm-libc-types/struct_utsname.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_wchar_t",
     hdrs = ["include/llvm-libc-types/wchar_t.h"],
 )
@@ -1500,6 +1505,15 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sysinfo",
     hdrs = ["hdr/types/struct_sysinfo.h"],
+)
+
+libc_support_library(
+    name = "types_struct_utsname",
+    hdrs = ["hdr/types/struct_utsname.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_struct_utsname"],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(
@@ -2404,6 +2418,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_null_check",
         ":__support_macros_optimization",
+        ":__support_math_extras",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
@@ -3196,6 +3211,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sendfile",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendfile.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_sendmsg",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendmsg.h"],
     target_compatible_with = select({
@@ -3276,6 +3309,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_uname",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/uname.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_struct_utsname",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_unlink",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/unlink.h"],
     target_compatible_with = select({
@@ -3352,6 +3401,24 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":hdr_stdint_proxy",
         ":types_off_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_poll",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/poll.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_nfds_t",
+        ":types_struct_pollfd",
+        ":types_struct_timespec",
     ],
 )
 
@@ -4232,6 +4299,22 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
+        ":types_mode_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_openat",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/openat.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
         ":types_mode_t",
     ],
 )
@@ -8945,10 +9028,10 @@ libc_support_library(
     name = "__support_math_scalblnf128",
     hdrs = ["src/__support/math/scalblnf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
         ":hdr_float_macros",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -9008,10 +9091,10 @@ libc_support_library(
     name = "__support_math_scalbnf128",
     hdrs = ["src/__support/math/scalbnf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
         ":hdr_float_macros",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -10645,11 +10728,9 @@ libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
-        ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":__support_macros_properties_types",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -15063,6 +15144,8 @@ libc_math_function(
 libc_math_function(
     name = "ldexpf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_ldexpf128",
     ],
 )
@@ -15996,6 +16079,8 @@ libc_math_function(
 libc_math_function(
     name = "scalblnf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_scalblnf128",
     ],
 )
@@ -16038,6 +16123,8 @@ libc_math_function(
 libc_math_function(
     name = "scalbnf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_scalbnf128",
     ],
 )
@@ -16518,54 +16605,24 @@ libc_math_function(
 
 ############################## inttypes targets ##############################
 
-libc_function(
+alias(
     name = "strtoimax",
-    srcs = ["src/inttypes/strtoimax.cpp"],
-    hdrs = ["src/inttypes/strtoimax.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
-        ":hdr_stdint_proxy",
-    ],
+    actual = "//libc/src/inttypes:strtoimax",
 )
 
-libc_function(
+alias(
     name = "strtoumax",
-    srcs = ["src/inttypes/strtoumax.cpp"],
-    hdrs = ["src/inttypes/strtoumax.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
-        ":hdr_stdint_proxy",
-    ],
+    actual = "//libc/src/inttypes:strtoumax",
 )
 
-libc_function(
+alias(
     name = "imaxabs",
-    srcs = ["src/inttypes/imaxabs.cpp"],
-    hdrs = ["src/inttypes/imaxabs.h"],
-    deps = [
-        ":__support_common",
-        ":__support_integer_operations",
-        ":__support_macros_config",
-    ],
+    actual = "//libc/src/inttypes:imaxabs",
 )
 
-libc_function(
+alias(
     name = "imaxdiv",
-    srcs = ["src/inttypes/imaxdiv.cpp"],
-    hdrs = ["src/inttypes/imaxdiv.h"],
-    deps = [
-        ":__support_common",
-        ":__support_integer_operations",
-        ":__support_macros_config",
-    ],
+    actual = "//libc/src/inttypes:imaxdiv",
 )
 
 ############################### stdbit targets ###############################
@@ -17827,7 +17884,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_openat",
         ":errno",
         ":hdr_fcntl_macros",
         ":types_mode_t",
@@ -18273,10 +18330,10 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_poll",
+        ":errno",
         ":types_nfds_t",
         ":types_struct_pollfd",
-        ":types_struct_timespec",
     ],
 )
 
@@ -19829,6 +19886,28 @@ libc_function(
     ],
 )
 
+############################# sys/sendfile targets #############################
+
+libc_function(
+    name = "sendfile",
+    srcs = ["src/sys/sendfile/linux/sendfile.cpp"],
+    hdrs = ["src/sys/sendfile/sendfile.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendfile",
+        ":errno",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
+    ],
+)
+
 ############################### sys/stat targets ###############################
 
 libc_function(
@@ -20233,6 +20312,26 @@ libc_function(
         ":errno",
         ":types_ssize_t",
         ":types_struct_iovec",
+    ],
+)
+
+############################# sys/utsname targets ##############################
+
+libc_function(
+    name = "uname",
+    srcs = ["src/sys/utsname/linux/uname.cpp"],
+    hdrs = ["src/sys/utsname/uname.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_uname",
+        ":errno",
+        ":types_struct_utsname",
     ],
 )
 

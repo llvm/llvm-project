@@ -5210,7 +5210,7 @@ static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   SDValue K1 = Op.getOperand(1);
   SDValue TrueVal1 = Op.getOperand(2);
   SDValue FalseVal1 = Op.getOperand(3);
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC1 = Op.getOperandCondCode(4);
 
   const SDValue Op2 = isa<ConstantSDNode>(TrueVal1) ? FalseVal1 : TrueVal1;
   if (Op2.getOpcode() != ISD::SELECT_CC)
@@ -5220,7 +5220,7 @@ static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   SDValue K2 = Op2.getOperand(1);
   SDValue TrueVal2 = Op2.getOperand(2);
   SDValue FalseVal2 = Op2.getOperand(3);
-  ISD::CondCode CC2 = cast<CondCodeSDNode>(Op2.getOperand(4))->get();
+  ISD::CondCode CC2 = Op2.getOperandCondCode(4);
 
   SDValue V1Tmp = V1;
   SDValue V2Tmp = V2;
@@ -5275,7 +5275,7 @@ static bool isLowerSaturatingConditional(const SDValue &Op, SDValue &V,
 {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
 
@@ -5393,7 +5393,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
@@ -5585,7 +5585,7 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
 SDValue
 ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -5686,7 +5686,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -10211,7 +10211,7 @@ SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(3);
   bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
 
   // If we don't have instructions of this float type then soften to a libcall
@@ -13081,13 +13081,13 @@ static SDValue PerformSELECTCombine(SDNode *N,
     SetCC = N->getOperand(0);
     LHS = SetCC->getOperand(0);
     RHS = SetCC->getOperand(1);
-    CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
+    CC = SetCC->getOperandCondCode(2);
     TrueVal = N->getOperand(1);
     FalseVal = N->getOperand(2);
   } else if (N->getOpcode() == ISD::SELECT_CC) {
     LHS = N->getOperand(0);
     RHS = N->getOperand(1);
-    CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    CC = N->getOperandCondCode(4);
     TrueVal = N->getOperand(2);
     FalseVal = N->getOperand(3);
   } else {
@@ -13188,7 +13188,7 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
     // Detect a SMIN, which for an i64 node will be a vselect/setcc, not a smin.
     SDValue Cmp = N->getOperand(0);
     if (Cmp.getOpcode() != ISD::SETCC ||
-        cast<CondCodeSDNode>(Cmp.getOperand(2))->get() != ISD::SETLT ||
+        Cmp.getOperandCondCode(2) != ISD::SETLT ||
         Cmp.getOperand(0) != N->getOperand(1) ||
         Cmp.getOperand(1) != N->getOperand(2))
       return SDValue();
@@ -13337,7 +13337,7 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
                                           const ARMSubtarget *Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   EVT VT = N->getValueType(0);
 
   if (!Subtarget->hasMVEIntegerOps() ||
@@ -18714,7 +18714,7 @@ static SDValue SearchLoopIntrinsic(SDValue N, ISD::CondCode &CC, int &Imm,
       Imm = 1;
     else
       return SDValue();
-    CC = cast<CondCodeSDNode>(N.getOperand(2))->get();
+    CC = N.getOperandCondCode(2);
     return SearchLoopIntrinsic(N->getOperand(0), CC, Imm, Negate);
   }
   case ISD::INTRINSIC_W_CHAIN: {
@@ -18756,7 +18756,7 @@ static SDValue PerformHWLoopCombine(SDNode *N,
     Dest = N->getOperand(2);
   } else {
     assert(N->getOpcode() == ISD::BR_CC && "Expected BRCOND or BR_CC!");
-    CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    CC = N->getOperandCondCode(1);
     Cond = N->getOperand(2);
     Dest = N->getOperand(4);
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(3))) {

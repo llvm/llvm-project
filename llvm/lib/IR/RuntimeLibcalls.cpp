@@ -201,6 +201,10 @@ static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
 }
 
+static unsigned getIntSize(const Triple &TT) {
+  return RuntimeLibcallsInfo::getIntSize(TT);
+}
+
 static unsigned getLongSize(const Triple &TT, const DataLayout &DL) {
   if (TT.isOSWindowsOrUEFI() && !TT.isWindowsCygwinEnvironment())
     return 32;
@@ -229,97 +233,96 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
   llvm_unreachable("unhandled long double format");
 }
 
-static std::pair<Type *, Attribute>
-convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const Triple &TT,
-                       const DataLayout &DL, unsigned IntBits,
-                       LongDoubleFormat LdblFormat) {
+static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
+                             const Triple &TT, const DataLayout &DL,
+                             LongDoubleFormat LdblFormat) {
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
-    return {Type::getVoidTy(Ctx), Attribute()};
+    return Type::getVoidTy(Ctx);
   case Bool:
-    return {IntegerType::get(Ctx, 1), Attribute()};
+    return IntegerType::get(Ctx, 1);
   case Int8:
   case UInt8:
-    return {IntegerType::get(Ctx, 8), Attribute()};
+    return IntegerType::get(Ctx, 8);
   case Int16:
   case UInt16:
-    return {IntegerType::get(Ctx, 16), Attribute()};
+    return IntegerType::get(Ctx, 16);
   case Int32:
   case UInt32:
-    return {IntegerType::get(Ctx, 32), Attribute()};
+    return IntegerType::get(Ctx, 32);
   case Int:
   case UInt:
   case IntPlus:
   case UIntPlus:
   case IntX:
   case UIntX:
-    return {IntegerType::get(Ctx, IntBits), Attribute()};
+    return IntegerType::get(Ctx, getIntSize(TT));
   case Long:
   case ULong:
-    return {IntegerType::get(Ctx, getLongSize(TT, DL)), Attribute()};
+    return IntegerType::get(Ctx, getLongSize(TT, DL));
   case Int64:
   case UInt64:
   case LLong:
   case ULLong:
-    return {IntegerType::get(Ctx, 64), Attribute()};
+    return IntegerType::get(Ctx, 64);
   case Int128:
   case UInt128:
-    return {IntegerType::get(Ctx, 128), Attribute()};
+    return IntegerType::get(Ctx, 128);
   case SizeT:
   case SSizeT:
-    return {getSizeTType(Ctx, DL), Attribute()};
+    return getSizeTType(Ctx, DL);
   case Flt:
   case Floating:
-    return {Type::getFloatTy(Ctx), Attribute()};
+    return Type::getFloatTy(Ctx);
   case Dbl:
-    return {Type::getDoubleTy(Ctx), Attribute()};
+    return Type::getDoubleTy(Ctx);
   case LDbl:
-    return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
+    return getLongDoubleType(Ctx, LdblFormat);
   case X86FP80:
-    return {Type::getX86_FP80Ty(Ctx), Attribute()};
+    return Type::getX86_FP80Ty(Ctx);
   case FP128:
-    return {Type::getFP128Ty(Ctx), Attribute()};
+    return Type::getFP128Ty(Ctx);
   case PPCFP128:
-    return {Type::getPPC_FP128Ty(Ctx), Attribute()};
+    return Type::getPPC_FP128Ty(Ctx);
   case Ptr:
-    return {PointerType::get(Ctx, 0), Attribute()};
+    return PointerType::get(Ctx, 0);
   case V2F32:
-    return {FixedVectorType::get(Type::getFloatTy(Ctx), 2), Attribute()};
+    return FixedVectorType::get(Type::getFloatTy(Ctx), 2);
   case V4F32:
-    return {FixedVectorType::get(Type::getFloatTy(Ctx), 4), Attribute()};
+    return FixedVectorType::get(Type::getFloatTy(Ctx), 4);
   case V8F32:
-    return {FixedVectorType::get(Type::getFloatTy(Ctx), 8), Attribute()};
+    return FixedVectorType::get(Type::getFloatTy(Ctx), 8);
   case V16F32:
-    return {FixedVectorType::get(Type::getFloatTy(Ctx), 16), Attribute()};
+    return FixedVectorType::get(Type::getFloatTy(Ctx), 16);
   case NXV4F32:
-    return {ScalableVectorType::get(Type::getFloatTy(Ctx), 4), Attribute()};
+    return ScalableVectorType::get(Type::getFloatTy(Ctx), 4);
   case V2F64:
-    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 2), Attribute()};
+    return FixedVectorType::get(Type::getDoubleTy(Ctx), 2);
   case V4F64:
-    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 4), Attribute()};
+    return FixedVectorType::get(Type::getDoubleTy(Ctx), 4);
   case V8F64:
-    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 8), Attribute()};
+    return FixedVectorType::get(Type::getDoubleTy(Ctx), 8);
   case NXV2F64:
-    return {ScalableVectorType::get(Type::getDoubleTy(Ctx), 2), Attribute()};
+    return ScalableVectorType::get(Type::getDoubleTy(Ctx), 2);
   case NXV2I1:
-    return {ScalableVectorType::get(Type::getInt1Ty(Ctx), 2), Attribute()};
+    return ScalableVectorType::get(Type::getInt1Ty(Ctx), 2);
   case NXV4I1:
-    return {ScalableVectorType::get(Type::getInt1Ty(Ctx), 4), Attribute()};
+    return ScalableVectorType::get(Type::getInt1Ty(Ctx), 4);
   case V2I32:
-    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 2), Attribute()};
+    return FixedVectorType::get(Type::getInt32Ty(Ctx), 2);
   case V4I32:
-    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 4), Attribute()};
+    return FixedVectorType::get(Type::getInt32Ty(Ctx), 4);
   case V8I32:
-    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 8), Attribute()};
+    return FixedVectorType::get(Type::getInt32Ty(Ctx), 8);
   case V16I32:
-    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 16), Attribute()};
+    return FixedVectorType::get(Type::getInt32Ty(Ctx), 16);
   case NXV2I32:
-    return {ScalableVectorType::get(Type::getInt32Ty(Ctx), 2), Attribute()};
+    return ScalableVectorType::get(Type::getInt32Ty(Ctx), 2);
   case NXV4I32:
-    return {ScalableVectorType::get(Type::getInt32Ty(Ctx), 4), Attribute()};
+    return ScalableVectorType::get(Type::getInt32Ty(Ctx), 4);
   default:
-    return {};
+    return nullptr;
   }
 }
 
@@ -354,8 +357,7 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
 }
 
 static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
-                                         const Triple &TT, unsigned IntBits,
-                                         bool IsReturn) {
+                                         const Triple &TT, bool IsReturn) {
   if (ID == Bool)
     return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
 
@@ -366,6 +368,8 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   // All targets currently extend types narrower than int according to their
   // signedness, but this could become target dependent if a target needs it.
   unsigned Bits = Ty->getIntegerBitWidth();
+  unsigned IntBits = getIntSize(TT);
+
   if (Bits < IntBits)
     return *Signed ? Attribute::SExt : Attribute::ZExt;
   if (Bits != 32 || IntBits != 32)
@@ -387,16 +391,12 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   if (ProtoTypes[0] == NoFuncArgType)
     return {};
 
-  unsigned IntBits = getIntSize(TT);
   AttributeList Attrs;
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(LastID, Ctx, TT, DL, IntBits, LongDoubleFmt);
-  if (RetAttr.isValid())
-    Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
   if (Attribute::AttrKind AK =
-          getIntExtAttr(LastID, RetTy, TT, IntBits, /*IsReturn=*/true))
+          getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
     Attrs = Attrs.addRetAttribute(Ctx, AK);
 
   SmallVector<Type *, 4> ArgTys;
@@ -417,13 +417,10 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     else
       LastID = TyID;
 
-    auto [ArgTy, ArgAttr] =
-        convertToIRTypeAndAttr(TyID, Ctx, TT, DL, IntBits, LongDoubleFmt);
+    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
-    if (ArgAttr.isValid())
-      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
     if (Attribute::AttrKind AK =
-            getIntExtAttr(TyID, ArgTy, TT, IntBits, /*IsReturn=*/false))
+            getIntExtAttr(TyID, ArgTy, TT, /*IsReturn=*/false))
       Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, AK);
   }
 
@@ -642,10 +639,24 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FuncTy, Attrs};
 
   Type *VecTy = FuncTy->getParamType(0);
+  Align PtrAlign = DL.getABITypeAlign(VecTy->getScalarType());
+  switch (LibcallImpl) {
+  case RTLIB::impl_amd_vrd2_sincos:
+  case RTLIB::impl_amd_vrd4_sincos:
+  case RTLIB::impl_amd_vrd8_sincos:
+  case RTLIB::impl_amd_vrs4_sincosf:
+  case RTLIB::impl_amd_vrs8_sincosf:
+  case RTLIB::impl_amd_vrs16_sincosf:
+    PtrAlign = DL.getABITypeAlign(VecTy);
+    break;
+  default:
+    break;
+  }
+
   AttrBuilder ArgAttrBuilder(Ctx);
   for (Attribute::AttrKind AK : CommonPtrArgAttrs)
     ArgAttrBuilder.addAttribute(AK);
-  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+  ArgAttrBuilder.addAlignmentAttr(PtrAlign);
 
   bool HasPtrArg = false;
   for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {
