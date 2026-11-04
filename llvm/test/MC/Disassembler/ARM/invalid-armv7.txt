@@ -539,3 +539,184 @@
 [0x00,0x03,0x4f,0xe1]
 # CHECK: invalid instruction encoding
 # CHECK-NEXT: [0x00,0x03,0x4f,0xe1]
+
+# NEON load/store register lists must not extend past d31.
+# vld1.8 {d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xe6 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xe6 0x60 0xf4]
+
+# vld1.8 {d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xe6 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xe6 0x60 0xf4]
+
+# vld1.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd2 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd2 0x60 0xf4]
+
+# vld1.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd2 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd2 0x60 0xf4]
+
+# vld2.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd3 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd3 0x60 0xf4]
+
+# vld2.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd3 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd3 0x60 0xf4]
+
+# vld3.8 {d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xe4 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xe4 0x60 0xf4]
+
+# vld3.8 {d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xe4 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xe4 0x60 0xf4]
+
+# vld3.8 {d28, d30, d32} extends past d31, without writeback.
+[0x0f 0xc5 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xc5 0x60 0xf4]
+
+# vld3.8 {d28, d30, d32} extends past d31, with writeback.
+[0x0d 0xc5 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xc5 0x60 0xf4]
+
+# vld4.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd0 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd0 0x60 0xf4]
+
+# vld4.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd0 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd0 0x60 0xf4]
+
+# vld4.8 {d26, d28, d30, d32} extends past d31, without writeback.
+[0x0f 0xa1 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xa1 0x60 0xf4]
+
+# vld4.8 {d26, d28, d30, d32} extends past d31, with writeback.
+[0x0d 0xa1 0x60 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xa1 0x60 0xf4]
+
+# vst1.8 {d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xe6 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xe6 0x40 0xf4]
+
+# vst1.8 {d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xe6 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xe6 0x40 0xf4]
+
+# vst1.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd2 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd2 0x40 0xf4]
+
+# vst1.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd2 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd2 0x40 0xf4]
+
+# vst2.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd3 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd3 0x40 0xf4]
+
+# vst2.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd3 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd3 0x40 0xf4]
+
+# vst3.8 {d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xe4 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xe4 0x40 0xf4]
+
+# vst3.8 {d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xe4 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xe4 0x40 0xf4]
+
+# vst3.8 {d28, d30, d32} extends past d31, without writeback.
+[0x0f 0xc5 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xc5 0x40 0xf4]
+
+# vst3.8 {d28, d30, d32} extends past d31, with writeback.
+[0x0d 0xc5 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xc5 0x40 0xf4]
+
+# vst4.8 {d29, d30, d31, d32} extends past d31, without writeback.
+[0x0f 0xd0 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xd0 0x40 0xf4]
+
+# vst4.8 {d29, d30, d31, d32} extends past d31, with writeback.
+[0x0d 0xd0 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xd0 0x40 0xf4]
+
+# vst4.8 {d26, d28, d30, d32} extends past d31, without writeback.
+[0x0f 0xa1 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xa1 0x40 0xf4]
+
+# vst4.8 {d26, d28, d30, d32} extends past d31, with writeback.
+[0x0d 0xa1 0x40 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xa1 0x40 0xf4]
+
+# vld3.8 {d30[], d31[], d32[]} extends past d31, without writeback.
+[0x0f 0xee 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xee 0xe0 0xf4]
+
+# vld3.8 {d30[], d31[], d32[]} extends past d31, with writeback.
+[0x0d 0xee 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xee 0xe0 0xf4]
+
+# vld3.8 {d28[], d30[], d32[]} extends past d31, without writeback.
+[0x2f 0xce 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x2f 0xce 0xe0 0xf4]
+
+# vld3.8 {d28[], d30[], d32[]} extends past d31, with writeback.
+[0x2d 0xce 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x2d 0xce 0xe0 0xf4]
+
+# vld4.8 {d29[], d30[], d31[], d32[]} extends past d31, without writeback.
+[0x0f 0xdf 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xdf 0xe0 0xf4]
+
+# vld4.8 {d29[], d30[], d31[], d32[]} extends past d31, with writeback.
+[0x0d 0xdf 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x0d 0xdf 0xe0 0xf4]
+
+# vld4.8 {d26[], d28[], d30[], d32[]} extends past d31, without writeback.
+[0x2f 0xaf 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x2f 0xaf 0xe0 0xf4]
+
+# vld4.8 {d26[], d28[], d30[], d32[]} extends past d31, with writeback.
+[0x2d 0xaf 0xe0 0xf4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x2d 0xaf 0xe0 0xf4]
