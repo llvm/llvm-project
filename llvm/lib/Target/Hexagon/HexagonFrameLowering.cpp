@@ -379,6 +379,8 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
     return true;
 
   for (const MachineInstr &MI : MBB) {
+    if (MI.isDebugInstr())
+      continue;
     if (MI.isCall())
       return true;
     unsigned Opc = MI.getOpcode();
