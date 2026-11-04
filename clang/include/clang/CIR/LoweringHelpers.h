@@ -16,6 +16,14 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/StringMap.h"
+
+// CIR type of each symbol before lowering, keyed by symbol name. Built once
+// before conversion: lookups after a replacement find the LLVM symbol, whose
+// type may have been adjusted during lowering (split rows, flexible array),
+// and use this instead. Symbols absent from the map were never CIR and keep
+// the converted-type view.
+using CIRPreConversionTypeMap = llvm::StringMap<mlir::Type>;
 
 mlir::DenseElementsAttr
 convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr, mlir::Type type);
@@ -34,13 +42,19 @@ convertToDenseElementsAttr(cir::ConstArrayAttr attr,
                            const llvm::SmallVectorImpl<int64_t> &dims,
                            mlir::Type type);
 
-std::optional<mlir::Attribute> lowerConstArrayAttr(
-    cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
-    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
+std::optional<mlir::Attribute>
+lowerConstArrayAttr(cir::ConstArrayAttr constArr,
+                    mlir::SymbolTableCollection &symbolTables,
+                    const mlir::TypeConverter *converter,
+                    const CIRPreConversionTypeMap &preConversionTypes,
+                    mlir::ModuleOp moduleOp = {});
 
-std::optional<mlir::Attribute> lowerConstRecordAttr(
-    cir::ConstRecordAttr constRecord, mlir::SymbolTableCollection &symbolTables,
-    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
+std::optional<mlir::Attribute>
+lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
+                     mlir::SymbolTableCollection &symbolTables,
+                     const mlir::TypeConverter *converter,
+                     const CIRPreConversionTypeMap &preConversionTypes,
+                     mlir::ModuleOp moduleOp = {});
 
 /// Return \p attr with the trailing zeros of any array that
 /// adjustGlobalTypeForInit would split off written out as explicit zero
@@ -101,17 +115,4 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
                                      cir::IntAttr attr,
                                      const mlir::DataLayout &dataLayout);
 
-// Transient attribute holding a symbol's CIR type before lowering. Lookups
-// mid-conversion can find the already-lowered LLVM symbol instead of the
-// CIR op. Its type may have been adjusted during lowering (split rows,
-// flexible array), so readers that need the unadjusted CIR view use this
-// stash. The pass strips it at the end, so it never reaches the output.
-inline constexpr const char *kPreConversionSymType =
-    "cir.preconversion_sym_type";
-
-inline mlir::Type getPreConversionSymType(mlir::Operation *op) {
-  if (auto typeAttr = op->getAttrOfType<mlir::TypeAttr>(kPreConversionSymType))
-    return typeAttr.getValue();
-  return {};
-}
 #endif
