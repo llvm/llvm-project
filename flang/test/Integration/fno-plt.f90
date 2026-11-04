@@ -12,7 +12,9 @@
 ! and requests GOT for compiler-rt. A procedure defined in this file, and an
 ! intrinsic, are left unchanged. The default does neither.
 
-! RUN: %flang_fc1 -emit-llvm -fno-plt -o - %s | FileCheck %s --check-prefix=NOPLT
+! RUN: %flang_fc1 -emit-llvm -fno-plt -o %t.no-plt.ll %s
+! RUN: grep -qE 'define void @test_\(.*\) #[0-9]+ {' %t.no-plt.ll || FileCheck <%t.no-plt.ll %s --check-prefix=NOPLT,NOPLT-NO-TESTATTR
+! RUN: grep -qE 'define void @test_\(.*\) {' %t.no-plt.ll || FileCheck <%t.no-plt.ll %s --check-prefix=NOPLT,NOPLT-TESTATTR
 ! RUN: %flang_fc1 -emit-llvm -o - %s | FileCheck %s --check-prefix=PLT
 
 subroutine test(x)
@@ -23,11 +25,13 @@ subroutine test(x)
 end subroutine
 
 ! The '{' on the define line rejects nonlazybind on @test_ itself.
-! NOPLT: define void @test_({{.*}}) {
-! NOPLT: declare void @ext_() #[[ATTR:[0-9]+]]
-! NOPLT: declare ptr @_FortranAioBeginExternalListOutput({{.*}}) #[[ATTR]]
+! NOPLT-NO-TESTATTR: define void @test_({{.*}}) {
+! NOPLT-TESTATTR: define void @test_({{.*}}) #[[TESTATTR:[0-9]+]] {
+! NOPLT: declare void @ext_() #[[EXTATTR:[0-9]+]]
+! NOPLT: declare ptr @_FortranAioBeginExternalListOutput({{.*}}) #[[EXTATTR]]
 ! NOPLT: declare float @llvm.sin.f32(float) #[[INTR:[0-9]+]]
-! NOPLT: attributes #[[ATTR]] = { {{.*}}nonlazybind
+! NOPLT-TESTATTR-NOT: attributes #[[TESTATTR]] = {{.*}}nonlazybind
+! NOPLT: attributes #[[EXTATTR]] = { {{.*}}nonlazybind
 ! NOPLT-NOT: attributes #[[INTR]] = {{.*}}nonlazybind
 ! NOPLT: !{i32 7, !"RtLibUseGOT", i32 1}
 ! PLT-NOT: nonlazybind
