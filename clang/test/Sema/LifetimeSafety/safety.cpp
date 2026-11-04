@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -verify=expected,function %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wlifetime-safety-annotation-placement -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify=expected,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wno-dangling -fcxx-exceptions -verify=expected,function %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -4915,3 +4915,67 @@ struct CaptureByThis {
     store(local);
   }
 };
+
+// A destructor or cleanup callback run at scope exit may read the borrows the
+// object holds.
+namespace ScopeExitUse {
+struct [[gsl::Pointer]] Ref {
+  std::string_view sv;
+  Ref() = default;
+  Ref &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+  ~Ref();
+};
+
+void dtor_reverse_order() {
+  Ref r;
+  std::string backing;
+  r = backing; // expected-warning {{local variable 'backing' does not live long enough}}
+} // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void dtor_safe_order() {
+  std::string backing;
+  Ref r;
+  r = backing;
+}
+
+struct [[gsl::Pointer]] TrivialRef {
+  std::string_view sv;
+  TrivialRef &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+};
+void trivial_dtor_no_use() {
+  TrivialRef r;
+  std::string backing;
+  r = backing;
+}
+
+void cleanup_ref(Ref *r);
+void cleanup_reverse_order() {
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  std::string backing;
+  g = backing; // expected-warning {{local variable 'backing' does not live long enough}}
+} // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the cleanup function of 'g' at scope exit}}
+
+void cleanup_safe_order() {
+  std::string backing;
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  g = backing;
+}
+
+// The closure is not a gsl::Pointer, but destroying it runs ~Ref().
+void closure_dtor_reads_captured_borrow() {
+  std::function<void()> fn = [] {};
+  std::string backing;
+  Ref r;
+  r = backing; // expected-warning {{local variable 'backing' does not live long enough}}
+  fn = [r] {};
+} // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the destructor of 'fn' at scope exit}}
+
+// The explicit use and the destructor use of `r` meet after the if.
+void explicit_or_destructor_use(bool b) {
+  Ref r;
+  std::string backing;
+  r = backing; // expected-warning {{local variable 'backing' does not live long enough}}
+  if (b)
+    use(r);
+} // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the destructor of 'r' at scope exit}}
+} // namespace ScopeExitUse
