@@ -12,27 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
-#include "DXILCBufferAccess.h"
-#include "DXILDataScalarization.h"
-#include "DXILFinalizeLinkage.h"
-#include "DXILFlattenArrays.h"
-#include "DXILForwardHandleAccesses.h"
-#include "DXILIntrinsicExpansion.h"
-#include "DXILLegalizePass.h"
-#include "DXILMemIntrinsics.h"
-#include "DXILOpLowering.h"
-#include "DXILPostOptimizationValidation.h"
-#include "DXILPrettyPrinter.h"
-#include "DXILRemoveUnusedResources.h"
-#include "DXILResourceAccess.h"
-#include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILSignatureAnalysis.h"
-#include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -71,10 +55,10 @@ LLVMInitializeDirectXTarget() {
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
   initializeDXILLegalizeLegacyPass(*PR);
-  initializeDXILPrepareModulePass(*PR);
+  initializeDXILPrepareModuleLegacyPass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
-  initializeDXContainerGlobalsPass(*PR);
+  initializeDXILContainerGlobalsLegacyPass(*PR);
   initializeDXContainerPDBPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
@@ -150,7 +134,7 @@ public:
     addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILPrepareModulePass());
+    addPass(createDXILPrepareModuleLegacyPass());
     addPass(createDXILDebugInfoLegacyPass());
   }
 };
@@ -198,7 +182,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       PM.add(createDXILEmbedderPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
-      PM.add(createDXContainerGlobalsPass());
+      PM.add(createDXILContainerGlobalsLegacyPass());
       PM.add(createDXContainerPDBPass());
 
       if (addAsmPrinter(PM, Out, DwoOut, FileType,

@@ -1088,7 +1088,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   MVT ResTy = ty(Op);
   MVT OpTy = ty(LHS);
 
