@@ -122,6 +122,7 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // character.
 #if defined(_WIN32)
 using char_t = wchar_t;
+
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
   size_t Result = std::mbrtowc(Ch, S, N, MBState);
@@ -129,6 +130,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     Result = (size_t)-3;
   return Result;
 }
+
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::wcrtomb(S, Ch, MBState);
 }
@@ -148,6 +150,7 @@ private:
 };
 
 using char_t = char32_t;
+
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
   static IconvHandle CD("UCS-4-INTERNAL", nl_langinfo(CODESET));
@@ -162,6 +165,10 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     size_t NIn = BytesWritten;
     char *POut = reinterpret_cast<char *>(Ch);
     size_t NOut = sizeof(char_t);
+    // This is not generally correct for all systems, but this is limited to
+    // Apple and FreeBSD. Neither supports stateful encodings in its locales, so
+    // we do not need to worry about them in the call to iconv(). Beware if this
+    // needs to be adapted to run on other systems.
     const size_t NumErrors = iconv(CD.value(), &PIn, &NIn, &POut, &NOut);
     // mbrtowc() may be lenient and accept invalid characters that iconv()
     // rejects.
@@ -170,6 +177,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
   }
   return BytesRead;
 }
+
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   static IconvHandle CD(nl_langinfo(CODESET), "UCS-4-INTERNAL");
 
@@ -191,6 +199,7 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
 }
 #else
 using char_t = char32_t;
+
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
   size_t Result = std::mbrtoc32(Ch, S, N, MBState);
@@ -198,6 +207,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     Result = (size_t)-3;
   return Result;
 }
+
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::c32rtomb(S, Ch, MBState);
 }
@@ -363,8 +373,8 @@ struct CharSet {
         const size_t BytesRead = mbrtoc(&UCh, Cur, End - Cur, &StrMBState);
         assert(BytesRead != 0 && BytesRead != (size_t)-1 &&
                BytesRead != (size_t)-2 &&
-               "If a string was initially valid, it cannot to become invalid "
-               "when re-reading");
+               "If a string was initially valid, it cannot become invalid when "
+               "re-reading");
         if (BytesRead != (size_t)-3)
           Cur += BytesRead;
 
