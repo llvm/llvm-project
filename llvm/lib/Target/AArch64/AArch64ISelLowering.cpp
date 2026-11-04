@@ -1560,7 +1560,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
-      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Custom);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
@@ -7375,6 +7375,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
     return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
   }
+  case Intrinsic::aarch64_sve_brkb_z:
+    return DAG.getNode(AArch64ISD::BRKB_Z, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
 }
 
@@ -28441,11 +28444,28 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SmallVector<SDValue, 4> ValueInterleaveOps;
   if (isSequentialConcatOfVectorInterleave(WideValue.getNode(),
                                            ValueInterleaveOps)) {
-    // Bail out if the stored value has an unexpected number of uses, since
-    // we'll have to perform manual interleaving and may as well just use normal
-    // masked stores.
-    if (!WideValue.hasOneUse())
-      return SDValue();
+    // Multiple ordinary stores can each fold the interleave if no other user
+    // needs the wide value.
+    if (!WideValue.hasOneUse()) {
+      // Single Zip pair + multiple stp is often preferable to multiple st2
+      if ((WideValue.getValueType().isFixedLengthVector() &&
+           ValueInterleaveOps.size() == 2 && !DAG.shouldOptForSize()) ||
+          !llvm::all_of(WideValue->users(), [&](SDNode *User) {
+            auto *Store = dyn_cast<StoreSDNode>(User);
+            return Store && ISD::isNormalStore(Store) && Store->isSimple() &&
+                   Store->getValue() == WideValue;
+          }))
+        return SDValue();
+
+      // Reusing the wide vector is cheaper than duplicating structured stores
+      // when every fixed-length input is already a splat.
+      if (WideValue.getValueType().isFixedLengthVector() &&
+          ValueInterleaveOps.size() == 4 &&
+          llvm::all_of(ValueInterleaveOps, [&](SDValue Op) {
+            return DAG.isSplatValue(Op, /*AllowUndefs=*/true);
+          }))
+        return SDValue();
+    }
   } else if (!isSplatVectorInterleaveOps(DAG, DL, WideValue,
                                          ValueInterleaveOps)) {
     return SDValue();
@@ -35983,13 +36003,27 @@ SDValue AArch64TargetLowering::LowerMASK_BEFOREFIRST(SDValue Op,
 
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-  EVT PredVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
 
-  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
-  SDValue Brk = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, PredVT, Mask);
-  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Brk);
+  SDValue Mask = Op.getOperand(0);
+  if (VT.isFixedLengthVector())
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  EVT PredVT = Mask.getValueType();
+
+  // mask_beforefirst(mask) -> brkb_z(ptrue(VT.ElementCount), mask)
+  // NOTE: brkb_z only supports the "byte" predicate type.
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
+
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+  Mask = DAG.getNode(AArch64ISD::BRKB_Z, DL, MVT::nxv16i1, Pg, Mask);
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PredVT, Mask);
+
+  if (VT.isScalableVector())
+    return Mask;
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return convertFromScalableVector(DAG, VT, MaskAsInt);
 }
 
