@@ -2992,13 +2992,13 @@ static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
                                             raw_ostream *Errs) {
   LibraryOptionsContext &C = getCAPILibraryOptions();
   size_t Begin = C.args().size();
-  bool ok = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
+  bool Res = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
 
   // Code without a context, such as a target machine created through the C
   // API, reads the global values.
   replayLibraryArgs(C.args().drop_front(Begin), nullptr);
 
-  return ok;
+  return Res;
 }
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
