@@ -292,6 +292,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.malloc
     libc.src.stdlib.posix_memalign
     libc.src.stdlib.realloc
+    libc.src.stdlib.reallocarray
 
     # stdio.h entrypoints
     libc.src.stdio.fprintf
@@ -505,6 +506,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chown
     libc.src.unistd.chroot
     libc.src.unistd.close
+    libc.src.unistd.close_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
@@ -630,6 +632,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+    libc.src.sys.uio.process_vm_readv
+    libc.src.sys.uio.process_vm_writev
 
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
@@ -840,14 +844,17 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.iscanonical
     libc.src.math.iscanonicalf
     libc.src.math.iscanonicalf128
+    libc.src.math.iscanonicalf80
     libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanf128
+    libc.src.math.isnanf80
     libc.src.math.isnanl
     libc.src.math.issignaling
     libc.src.math.issignalingf
     libc.src.math.issignalingf128
+    libc.src.math.issignalingf80
     libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
@@ -964,10 +971,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderf128
+    libc.src.math.totalorderf80
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagf128
+    libc.src.math.totalordermagf80
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
@@ -1134,6 +1143,7 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
+    libc.src.math.canonicalizef80
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
@@ -1231,6 +1241,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16
@@ -1614,6 +1625,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigfillset
     libc.src.signal.sigismember
     libc.src.signal.signal
+    libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
 

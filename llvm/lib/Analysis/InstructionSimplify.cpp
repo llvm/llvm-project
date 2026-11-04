@@ -5788,10 +5788,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   // provenance.
   Value *Ptr, *X;
   if (CastOpc == Instruction::PtrToAddr &&
-      match(Op,
-            m_PtrAdd(m_Value(Ptr),
-                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
-      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+      match(Op, m_PtrAdd(Q.DL, m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))))
     return X;
 
   // Fold a value-preserving zext/sext of a trunc back to the original value.

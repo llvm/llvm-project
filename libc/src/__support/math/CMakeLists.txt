@@ -698,6 +698,16 @@ add_header_library(
 )
 
 add_header_library(
+  canonicalizef80
+  HDRS
+    canonicalizef80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   canonicalizef16
   HDRS
     canonicalizef16.h
@@ -1781,6 +1791,16 @@ add_header_library(
 )
 
 add_header_library(
+  iscanonicalf80
+  HDRS
+    iscanonicalf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   iscanonicalf16
   HDRS
     iscanonicalf16.h
@@ -1823,6 +1843,16 @@ add_header_library(
     isnanf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf80
+  HDRS
+    isnanf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -1880,6 +1910,16 @@ add_header_library(
     issignalingf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf80
+  HDRS
+    issignalingf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -5335,6 +5375,20 @@ add_header_library(
 )
 
 add_header_library(
+  sinhcoshbf16_utils
+  HDRS
+    sinhcoshbf16_utils.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   sinhfcoshf_utils
   HDRS
     sinhfcoshf_utils.h
@@ -5873,6 +5927,24 @@ add_header_library(
 )
 
 add_header_library(
+  sinhbf16
+  HDRS
+    sinhbf16.h
+  DEPENDS
+    .sinhcoshbf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   sinhcosh_accurate_128
   HDRS
     sinhcosh_accurate_128.h
@@ -6324,6 +6396,16 @@ add_header_library(
 )
 
 add_header_library(
+  totalorderf80
+  HDRS
+    totalorderf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   totalorderf16
   HDRS
     totalorderf16.h
@@ -6377,6 +6459,16 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.float128
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  totalordermagf80
+  HDRS
+    totalordermagf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
     libc.src.__support.macros.config
 )
 
