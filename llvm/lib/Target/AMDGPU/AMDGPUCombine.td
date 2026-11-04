@@ -76,29 +76,30 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
          [{ return matchFDivSqrtToRsqF16(*${root}); }]),
   (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
-// Packed FP8/BF8 conversions write one half of their result and copy the
-// other half from their old operand.
+// Packed FP8/BF8 conversions write one half of their result and keep the
+// other half from their tied destination input (vdst_in, the intrinsic's old
+// operand).
 defvar CvtPkF8Intrinsics = [int_amdgcn_cvt_pk_fp8_f32,
                             int_amdgcn_cvt_pk_bf8_f32,
                             int_amdgcn_cvt_pk_fp8_f32_e5m3];
 
-// A conversion $dst whose old operand $prev is another conversion, with old
-// operand $prev_old.
+// A conversion $dst whose vdst_in $prev is another conversion, with vdst_in
+// $prev_vdst_in.
 def cvt_pk_f8_chain_frags : GICombinePatFrag<
-  (outs root:$dst, $prev), (ins $prev_old),
+  (outs root:$dst, $prev), (ins $prev_vdst_in),
   !foldl([]<dag>, CvtPkF8Intrinsics, acc, op,
          !listconcat(acc, !foreach(prev_op, CvtPkF8Intrinsics,
            (pattern (op $dst, $src0, $src1, $prev, $sel),
-                    (prev_op $prev, $prev_src0, $prev_src1, $prev_old,
+                    (prev_op $prev, $prev_src0, $prev_src1, $prev_vdst_in,
                              $prev_sel)))))>;
 
-// $dst only reads the half of $prev that it copies. If $prev wrote that half
-// itself, $prev_old is not observed.
+// $dst only reads the half of $prev that it keeps. If $prev wrote that half
+// itself, $prev_vdst_in is not observed.
 def cvt_pk_f8_demanded_bits : GICombineRule<
   (defs root:$dst),
-  (match (cvt_pk_f8_chain_frags $dst, $prev, $prev_old):$root,
-         [{ return matchCvtPkF8DemandedBits(*${root}, ${prev_old}); }]),
-  (apply [{ applyCvtPkF8DemandedBits(${prev_old}); }])>;
+  (match (cvt_pk_f8_chain_frags $dst, $prev, $prev_vdst_in):$root,
+         [{ return matchCvtPkF8DemandedBits(*${root}, ${prev_vdst_in}); }]),
+  (apply [{ applyCvtPkF8DemandedBits(${prev_vdst_in}); }])>;
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 

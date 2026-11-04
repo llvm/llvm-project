@@ -15,7 +15,8 @@ declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1 immarg)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 ; The second conversion only reads the half that the first conversion writes,
-; so the old operand of the first conversion needs no initialization.
+; so the tied destination input (vdst_in) of the first conversion needs no
+; initialization.
 define i32 @pack_fp8(float %a, float %b, float %c, float %d) {
 ; GFX950-LABEL: pack_fp8:
 ; GFX950:       ; %bb.0:
@@ -150,9 +151,9 @@ define i32 @pack_fp8_bf8(float %a, float %b, float %c, float %d) {
   ret i32 %lo
 }
 
-; Every user overwrites the half that the shared conversion copies from its old
-; operand. Demanded bits are not propagated through values with multiple users,
-; so the old operand is still initialized.
+; Every user overwrites the half that the shared conversion keeps from its
+; vdst_in. Demanded bits are not propagated through values with multiple users,
+; so vdst_in is still initialized.
 define <2 x i32> @shared(float %a, float %b, float %c, float %d) {
 ; GFX950-LABEL: shared:
 ; GFX950:       ; %bb.0:
@@ -568,9 +569,9 @@ define i32 @trunc(float %a, float %b) {
   ret i32 %z
 }
 
-; Different kinds of users all discard the high half copied from the old
-; operand. As in @shared, the intermediate has multiple users, so the old
-; operand is still initialized.
+; Different kinds of users all discard the high half kept from vdst_in. As in
+; @shared, the intermediate has multiple users, so vdst_in is still
+; initialized.
 define <2 x i32> @mixed_users(float %a, float %b) {
 ; GFX950-LABEL: mixed_users:
 ; GFX950:       ; %bb.0:
@@ -633,8 +634,7 @@ define <2 x i32> @mixed_users(float %a, float %b) {
   ret <2 x i32> %w
 }
 
-; An unknown full-width consumer observes the high half copied from the old
-; operand.
+; An unknown full-width consumer observes the high half kept from vdst_in.
 define i32 @full_width(float %a, float %b) {
 ; GFX950-LABEL: full_width:
 ; GFX950:       ; %bb.0:

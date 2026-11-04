@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.50 -run-pass=amdgpu-postlegalizer-combiner %s -o - | FileCheck %s
 
 # The second conversion only reads the low half of %5, which %5 writes itself,
-# so the old operand of %5 is not observed.
+# so the tied destination input (vdst_in) of %5 is not observed.
 ---
 name: single_use
 legalized: true
@@ -33,7 +33,7 @@ body: |
     SI_RETURN implicit $vgpr0
 ...
 
-# The old operand of %5 is already undefined.
+# The vdst_in of %5 is already undefined.
 ---
 name: already_undef
 legalized: true
@@ -65,7 +65,7 @@ body: |
 ...
 
 # %5 has two users. Demanded bits are only propagated through single-use
-# values, so its old operand is kept.
+# values, so its vdst_in is kept.
 ---
 name: multiple_uses
 legalized: true

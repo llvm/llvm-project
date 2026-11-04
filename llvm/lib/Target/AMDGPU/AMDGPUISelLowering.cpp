@@ -4251,13 +4251,14 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
 
 // Packed FP8/BF8 conversions (llvm.amdgcn.cvt.pk.{fp8,bf8}.f32 and
 // llvm.amdgcn.cvt.pk.fp8.f32.e5m3) write one 16-bit half of their result and
-// copy the other half from their "old" operand.
-// Operands: intrinsic ID, src0, src1, old, word select.
-static constexpr unsigned CvtPkF8OldIdx = 3;
+// keep the other half from their tied destination input (vdst_in, the
+// intrinsic's old operand).
+// Operands: intrinsic ID, src0, src1, vdst_in, word select.
+static constexpr unsigned CvtPkF8VDstInIdx = 3;
 static constexpr unsigned CvtPkF8WordSelIdx = 4;
 
-/// Return the bits of the result that are copied from the old operand.
-static APInt getCvtPkF8CopiedBits(const SDNode *N) {
+/// Return the bits of the result that are kept from vdst_in.
+static APInt getCvtPkF8VDstInBits(const SDNode *N) {
   return N->getConstantOperandVal(CvtPkF8WordSelIdx)
              ? APInt::getLowBitsSet(32, 16)
              : APInt::getHighBitsSet(32, 16);
@@ -4275,9 +4276,9 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_cvt_pk_fp8_f32:
   case Intrinsic::amdgcn_cvt_pk_bf8_f32:
   case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
-    // Only the half copied into the result is read from the old operand.
-    if (SimplifyDemandedBits(N->getOperand(CvtPkF8OldIdx),
-                             getCvtPkF8CopiedBits(N), DCI))
+    // Only the half kept in the result is read from vdst_in.
+    if (SimplifyDemandedBits(N->getOperand(CvtPkF8VDstInIdx),
+                             getCvtPkF8VDstInBits(N), DCI))
       return SDValue(N, 0);
     return SDValue();
   }
@@ -5853,19 +5854,20 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     case Intrinsic::amdgcn_cvt_pk_fp8_f32:
     case Intrinsic::amdgcn_cvt_pk_bf8_f32:
     case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
-      // Old is only observed through the half copied into the result.
-      SDValue Old = Op.getOperand(CvtPkF8OldIdx);
-      APInt OldDemandedBits =
-          OriginalDemandedBits & getCvtPkF8CopiedBits(Op.getNode());
-      if (!OldDemandedBits.isZero()) {
-        KnownBits KnownOld;
-        return SimplifyDemandedBits(Old, OldDemandedBits, OriginalDemandedElts,
-                                    KnownOld, TLO, Depth + 1);
+      // vdst_in is only observed through the half kept in the result.
+      SDValue VDstIn = Op.getOperand(CvtPkF8VDstInIdx);
+      APInt VDstInDemandedBits =
+          OriginalDemandedBits & getCvtPkF8VDstInBits(Op.getNode());
+      if (!VDstInDemandedBits.isZero()) {
+        KnownBits KnownVDstIn;
+        return SimplifyDemandedBits(VDstIn, VDstInDemandedBits,
+                                    OriginalDemandedElts, KnownVDstIn, TLO,
+                                    Depth + 1);
       }
-      if (Old.isUndef())
+      if (VDstIn.isUndef())
         return false;
       SmallVector<SDValue, 5> Ops(Op->op_values());
-      Ops[CvtPkF8OldIdx] = TLO.DAG.getPOISON(MVT::i32);
+      Ops[CvtPkF8VDstInIdx] = TLO.DAG.getPOISON(MVT::i32);
       return TLO.CombineTo(Op, TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
                                                MVT::i32, Ops, Op->getFlags()));
     }
