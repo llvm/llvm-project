@@ -1170,6 +1170,7 @@ getPredefinedUnsafeLibcFuncFamily(const FunctionDecl &Node) {
     Add(F::NumericConversion,
         {"atof", "atoi", "atol", "atoll", "strtol", "strtoll", "strtoul",
          "strtoull", "strtof", "strtod", "strtold", "strtoimax", "strtoumax"});
+    // "strfromf",  "strfromd", "strfroml", // C23?
     // string manipulation:
     Add(F::StringManipulation,
         {"strcpy", "strncpy", "strlcpy", "strcat", "strncat", "strlcat",
