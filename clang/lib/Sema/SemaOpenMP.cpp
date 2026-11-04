@@ -23188,7 +23188,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     // Read the initial value through the list item itself for every modifier;
     // a 'uval' item is a reference whose referenced value is linear, exactly as
     // for 'val', and need not have an initializer (e.g. a reference parameter).
-    Expr *InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
+    Expr *InitExpr = Ref ? Ref : SimpleRefExpr;
     SemaRef.AddInitializerToDecl(
         Init, SemaRef.DefaultLvalueConversion(InitExpr).get(),
         /*DirectInit=*/false);
