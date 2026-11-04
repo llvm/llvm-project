@@ -596,7 +596,8 @@ primary value. Here are the possible suffixes for some primary *value*.
 *value*`.`*field*
 
 : The final value is the value of the specified *field* in the specified
-  record *value*.
+  record *value*. If *value* is uninitialized (`?`), the result is `?` as
+  well.
 
 ### The paste operator
 

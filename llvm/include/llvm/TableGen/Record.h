@@ -2391,7 +2391,8 @@ protected:
   void clearCachedResults() override { ResultCache.clear(); }
 };
 
-/// Resolve all variables from a record except for unset variables.
+/// Resolve all variables from a record. In the final resolve, a reference to an
+/// unset field resolves to `?`; otherwise, it is kept.
 class RecordResolver final : public Resolver {
   DenseMap<const Init *, const Init *> Cache;
   DenseMap<const Init *, std::pair<const Init *, bool>> ResultCache;

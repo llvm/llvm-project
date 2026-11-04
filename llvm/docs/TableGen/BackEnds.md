@@ -498,12 +498,16 @@ in `-print-records`.
 
 - A reference to another variable in the same record has
   `kind=="var"`, and has an extra field `var` giving the name of
-  the variable referred to.
+  the variable referred to. Once the record is complete, a reference
+  to a variable that is still uninitialized (`?`) is replaced by `?`,
+  which is emitted as `null`.
 
 - A reference to a specific bit of a `bits`-typed variable in the
   same record has `kind=="varbit"`, and has two extra fields:
   `var` gives the name of the variable referred to, and `index`
-  gives the index of the bit.
+  gives the index of the bit. A reference to a bit that is still
+  uninitialized when the record is complete is kept, as such
+  references describe the operand fields of instruction encodings.
 
 - A value of type `dag` has `kind=="dag"`, and has two extra
   fields. `operator` gives the initial value after the opening
