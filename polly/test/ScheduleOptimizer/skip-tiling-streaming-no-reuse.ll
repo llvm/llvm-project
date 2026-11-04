@@ -7,18 +7,6 @@
 ; RUN:   | FileCheck %s --check-prefix=DEBUG
 ; REQUIRES: asserts
 ;
-; Verify that tiling is skipped when no read access depends on multiple band
-; dimensions (pure streaming pattern -- no cross-dimension reuse to exploit).
-;
-; This loop writes A[i][j] but only reads B[j] (inner dim only).
-; The band is 2D and permutable, so it is a candidate for tiling, but tiling
-; would not improve cache behavior since B[j] is the same stream for every
-; outer iteration i -- already in L1 from the previous i iteration.
-;
-;   for (i = 0; i < 1024; i++)
-;     for (j = 0; j < 512; j++)
-;       A[i][j] = B[j];
-;
 ; The AST should show a simple two-level loop without tiling:
 ; CHECK:      for (int c0 = 0; c0 <= 1023; c0 += 1)
 ; CHECK-NEXT:   for (int c1 = 0; c1 <= 511; c1 += 1)
