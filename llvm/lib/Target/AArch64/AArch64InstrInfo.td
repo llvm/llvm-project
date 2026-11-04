@@ -1381,9 +1381,6 @@ def fminnum_nnan : PatFrag<(ops node:$Rn, node:$Rm),
 let RecomputePerFunction = 1 in {
   def ForCodeSize   : Predicate<"shouldOptForSize(MF)">;
   def NotForCodeSize   : Predicate<"!shouldOptForSize(MF)">;
-  def ForOptNone : Predicate<
-      "MF->getTarget().getOptLevel() == CodeGenOptLevel::None || " #
-      "MF->getFunction().hasOptNone()">;
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
   def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || shouldOptForSize(MF)">;
 
@@ -4116,9 +4113,9 @@ defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                    [(set GPR32z:$Rt,
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
 
-// Give direct frame-index loads higher priority at O0 to reduce GlobalISel
+// Give direct frame-index loads higher priority to reduce GlobalISel
 // compile time by avoiding probes of more complex addressing modes.
-let Predicates = [ForOptNone], AddedComplexity = 30 in {
+let AddedComplexity = 30 in {
 def : Pat<(i64 (load frameindex:$fi)),
           (LDRXui (to_tframeindex $fi), 0)>;
 def : Pat<(i32 (load frameindex:$fi)),
@@ -5048,9 +5045,10 @@ defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                     [(store GPR32z:$Rt,
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
 
-// Give direct frame-index stores higher priority at O0 to reduce GlobalISel
-// compile time by avoiding probes of more complex addressing modes.
-let Predicates = [ForOptNone], AddedComplexity = 30 in {
+// Give direct frame-index stores higher priority to reduce GlobalISel
+// compile time by avoiding probes of more complex addressing modes. Keep them
+// below lane-store patterns to preserve folding of vector extracts.
+let AddedComplexity = 22 in {
 def : Pat<(store GPR64z:$Rt, frameindex:$fi),
           (STRXui GPR64z:$Rt, (to_tframeindex $fi), 0)>;
 def : Pat<(store GPR32z:$Rt, frameindex:$fi),
