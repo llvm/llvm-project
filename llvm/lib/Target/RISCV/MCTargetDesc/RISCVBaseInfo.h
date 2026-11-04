@@ -715,7 +715,6 @@ struct RISCVOpcode {
 namespace RISCVABI {
 
 enum ABI {
-  ABI_Unknown,
   ABI_ILP32,
   ABI_ILP32F,
   ABI_ILP32D,
@@ -732,9 +731,10 @@ enum ABI {
   ABI_L64PC128F,
   ABI_L64PC128D,
   ABI_CHERIOT,
+  ABI_Unknown,
 };
 
-// Returns true for the ABIs that pass floating point values in integer
+// Returns true for the ABIs that pass all floating point values in integer
 // registers.
 inline bool isSoftFP(ABI TargetABI) {
   switch (TargetABI) {
@@ -753,27 +753,29 @@ inline bool isSoftFP(ABI TargetABI) {
 }
 
 // Returns true for the ABIs that pass half, bfloat, or single precision
-// floating point values in FP registers.
+// floating point values in FP registers. Double and quad precision FP values
+// are passed in integer registers.
 inline bool isSingleFP(ABI TargetABI) {
   return TargetABI == ABI_ILP32F || TargetABI == ABI_IL32PC64F ||
          TargetABI == ABI_LP64F || TargetABI == ABI_L64PC128F;
 }
 
 // Returns true for the ABIs that pass half, bfloat, single, or double precision
-// floating point values in FP registers.
+// floating point values in FP registers. Quad precision FP values are passed
+// in integer registers.
 inline bool isDoubleFP(ABI TargetABI) {
   return TargetABI == ABI_ILP32D || TargetABI == ABI_IL32PC64D ||
          TargetABI == ABI_LP64D || TargetABI == ABI_L64PC128D;
 }
 
-// Returns true for the ABIs that use the reduced 16 register integer file.
+// Returns true for the ABIs that only use the reduced 16 register integer file.
 inline bool isRVE(ABI TargetABI) {
   return TargetABI == ABI_ILP32E || TargetABI == ABI_IL32PC64E ||
          TargetABI == ABI_LP64E || TargetABI == ABI_CHERIOT;
 }
 
 // Returns true for the ABIs in which pointers are capabilities.
-inline bool isPureCap(ABI TargetABI) {
+inline bool isPurecap(ABI TargetABI) {
   switch (TargetABI) {
   case ABI_IL32PC64:
   case ABI_IL32PC64F:

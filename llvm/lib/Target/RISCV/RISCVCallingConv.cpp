@@ -440,7 +440,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPureCap(ABI) &&
+  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
          "Unexpected ABI");
   bool IsDoubleFPABI = RISCVABI::isDoubleFP(ABI);
   if (IsDoubleFPABI || RISCVABI::isSingleFP(ABI))
