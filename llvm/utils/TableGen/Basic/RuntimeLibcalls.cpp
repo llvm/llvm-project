@@ -93,6 +93,8 @@ void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,
   for (const Record *LibcallImplDef : TmpElts) {
     const RuntimeLibcallImpl *LibcallImpl =
         Libcalls.getRuntimeLibcallImpl(LibcallImplDef);
+    if (!LibcallImpl)
+      continue;
     if (!AP.isAlwaysAvailable() || CCClass) {
       auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {{}, CCClass}});
       if (!Inserted) {
