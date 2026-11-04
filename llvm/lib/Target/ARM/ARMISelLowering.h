@@ -313,11 +313,11 @@ class VectorType;
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    /// isFPImmLegal - Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize = false) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize = false) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                               bool ForCodeSize = false) const override;
 
     void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                             const CallBase &I, MachineFunction &MF,
@@ -441,6 +441,8 @@ class VectorType;
     preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                        unsigned ExpansionFactor) const override;
 
+    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
+                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 
@@ -541,8 +543,6 @@ class VectorType;
                                  SDValue &Root, SelectionDAG &DAG,
                                  const SDLoc &dl) const;
 
-    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
-                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForNode(CallingConv::ID CC, bool Return,
                                   bool isVarArg) const;
     std::pair<SDValue, MachinePointerInfo>

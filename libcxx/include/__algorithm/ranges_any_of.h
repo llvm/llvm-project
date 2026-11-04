@@ -35,16 +35,14 @@ struct __any_of {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
+  [[nodiscard]] constexpr bool operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
     return std::__any_of(std::move(__first), std::move(__last), __pred, __proj);
   }
 
   template <input_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
+  [[nodiscard]] constexpr bool operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return std::__any_of(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };

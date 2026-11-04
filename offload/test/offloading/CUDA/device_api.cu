@@ -41,5 +41,5 @@ int main(int argc, char **argv) {
 
   cudaError_t Err = cudaSetDevice(-1);
   printf("set invalid device: %u\n", Err);
-  // CHECK: set invalid device: 1
+  // CHECK: set invalid device: 2
 }

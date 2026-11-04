@@ -39,7 +39,7 @@
 
 // This gets promoted to a constant, so it is up here.
 // CIR-AFTER-DAG: cir.global "private" constant cir_private @__const._Z1fv.inner_a2 = #cir.const_record<{#cir.int<12> : !s32i}> : !rec_inner_aggregate2
-// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] undef }
+// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] {{.*}} }
 
 struct S { int x; };
 int S::* p = nullptr;
@@ -47,14 +47,9 @@ int S::* p = nullptr;
 // CIR-AFTER-LABEL: cir.global external @p = #cir.int<-1> : !s64i
 // LLVM-DAG: @p = global i64 -1, align 8
 
-// LLVMCIR gets this different because by the time we see how to do a 'zero'
-// field, we've already lost the member-pointer type, because LowerToLLVM is
-// doing the 'zeroing'.  We could be more clever here, but this is only in cases
-// where it gets initialized anyway.
-// LLVMCIR-DAG: @outer_a1 = global %union.outer_aggregate zeroinitializer
-// OGCG-DAG:    @outer_a1 = global %union.outer_aggregate { i64 -1 }
+// LLVM-DAG:    @outer_a1 = global %union.outer_aggregate { i64 -1 }
 
-// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] undef }
+// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] {{.*}} }
 // LLVM-DAG: @outer_a3 = global %union.outer_aggregate3 { i64 -1 }
 
 struct HasPtrToMember { int S::*p; };  // not zero-initializable
@@ -65,13 +60,13 @@ union U {
 U u{};
 // CIR-DAG: cir.global external @u = #cir.zero : !rec_U
 // LLVMCIR-DAG: @u = global %union.U zeroinitializer
-// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] {{.*}} }
 auto use() {
   return u;
 }
 
 union outer_aggregate{int S::*m; int i; } outer_a1 = { p };
-// CIR-BEFORE-LABEL:   cir.global external @outer_a1 = ctor : !rec_outer_aggregate {
+// CIR-BEFORE-LABEL:   cir.global external @outer_a1 = #cir.const_record<{#cir.data_member<null> : !cir.data_member<!s32i in !rec_S>}> : !rec_outer_aggregate ctor {
 // CIR-BEFORE:     %[[GET_GLOB:.*]] = cir.get_global @outer_a1 : !cir.ptr<!rec_outer_aggregate>
 // CIR-BEFORE:     %[[GET_MEM:.*]] = cir.get_member %[[GET_GLOB]][0] {name = "m"} : !cir.ptr<!rec_outer_aggregate> -> !cir.ptr<!cir.data_member<!s32i in !rec_S>>
 // CIR-BEFORE:     %[[GET_P:.*]] = cir.get_global @p : !cir.ptr<!cir.data_member<!s32i in !rec_S>>
@@ -79,7 +74,7 @@ union outer_aggregate{int S::*m; int i; } outer_a1 = { p };
 // CIR-BEFORE:     cir.store {{.*}}%[[LOAD_P]], %[[GET_MEM]] : !cir.data_member<!s32i in !rec_S>, !cir.ptr<!cir.data_member<!s32i in !rec_S>>
 // CIR-BEFORE:   }
 
-// CIR-AFTER-LABEL: cir.global external @outer_a1 = #cir.zero : !rec_outer_aggregate
+// CIR-AFTER-LABEL: cir.global external @outer_a1 = #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_outer_aggregate
 // CIR-AFTER-LABEL: cir.func internal private @__cxx_global_var_init() {
 // CIR-AFTER:   %[[GET_GLOB:.*]] = cir.get_global @outer_a1 : !cir.ptr<!rec_outer_aggregate>
 // CIR-AFTER:   %[[GET_MEM:.*]] = cir.get_member %[[GET_GLOB]][0] {name = "m"} : !cir.ptr<!rec_outer_aggregate> -> !cir.ptr<!s64i>

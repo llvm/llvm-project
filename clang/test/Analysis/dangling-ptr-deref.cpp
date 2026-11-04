@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.DanglingPtrDeref \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.DanglingPtrDeref \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void test_case_one() {
@@ -72,9 +72,9 @@ void test_case_six() {
 
 void test_case_seven() {
   int *ptr = nullptr;
-  // expected-note@+3 {{Loop condition is true.  Entering loop body}}
+  // expected-note@+3 {{Loop condition is true; entering loop body}}
   // expected-note@+2 {{Assuming 'i' is >= 10}}
-  // expected-note@+1 {{Loop condition is false. Execution continues on line}}
+  // expected-note@+1 {{Loop condition is false; execution continues on line}}
   for (int i = 0; i < 10; ++i) { // expected-note {{'i' initialized to 0}}
     ptr = &i; // expected-note {{Value assigned to 'ptr'}}
     escape(ptr);
@@ -330,4 +330,17 @@ void dangling_through_calls() {
   *ptr = 6;
   // expected-warning@-1 {{Use of 'local' after its lifetime ended}}
   // expected-note@-2    {{Use of 'local' after its lifetime ended}}
+}
+
+// If the same variable is dereferenced multiple times then only
+// report for the first dereference.
+void multiple_deref() {
+  int *ptr = nullptr;
+  {
+    int a = 5; // expected-note {{'a' initialized to 5}}
+    ptr = &a; // expected-note  {{Value assigned to 'ptr'}}
+  } // expected-note            {{'a' is destroyed here}}
+  *ptr = 6; // expected-note    {{Use of 'a' after its lifetime ended}}
+  // expected-warning@-1        {{Use of 'a' after its lifetime ended}}
+  *ptr = 7; // no-warning: Already reported this base region.
 }

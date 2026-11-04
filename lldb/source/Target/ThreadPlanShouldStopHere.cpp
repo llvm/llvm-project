@@ -97,12 +97,13 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
       }
     }
   }
-  // Always avoid code with line number 0.
+  // Source line stepping plans should always avoid code with line number 0.
+  // But trampoline plans should not; it's easier to reason about if they
+  // leave that up to the source line plan that's driving them.
   // FIXME: At present the ShouldStop and the StepFromHere calculate this
-  // independently.  If this ever
-  // becomes expensive (this one isn't) we can try to have this set a state
-  // that the StepFromHere can use.
-  if (frame) {
+  // independently.  If this ever becomes expensive (this one isn't) we can
+  // try to have this set a state that the StepFromHere can use.
+  if (frame && flags.Test(ThreadPlanShouldStopHere::eStepPastLine0)) {
     SymbolContext sc;
     sc = frame->GetSymbolContext(eSymbolContextLineEntry);
     if (sc.line_entry.line == 0)

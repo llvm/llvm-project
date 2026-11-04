@@ -19,7 +19,6 @@
 //    CC_AAPCS,       // __attribute__((pcs("aapcs")))
 //    CC_AAPCS_VFP,   // __attribute__((pcs("aapcs-vfp")))
 //    CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
-//    CC_SpirFunction, // default for OpenCL functions on SPIR target
 //    CC_OpenCLKernel, // inferred for OpenCL kernels
 //    CC_Swift,        // __attribute__((swiftcall))
 //    CC_SwiftAsync,   // __attribute__((swiftasynccall))

@@ -241,7 +241,8 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
 void JSONNodeDumper::Visit(const ConceptReference *CR) {
   JOS.attribute("kind", "ConceptReference");
-  JOS.attribute("id", createPointerRepresentation(CR->getNamedConcept()));
+  JOS.attribute("id", createPointerRepresentation(
+                          CR->getNamedConcept().getAsTemplateDecl()));
   if (const auto *Args = CR->getTemplateArgsAsWritten()) {
     JOS.attributeArray("templateArgsAsWritten", [Args, this] {
       for (const TemplateArgumentLoc &TAL : Args->arguments())
@@ -1151,6 +1152,20 @@ void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 
+void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(FD);
+    return;
+  }
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", Str);
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
+}
+
 void JSONNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
   VisitNamedDecl(D);
   JOS.attribute("type", createQualType(D->getType()));
@@ -1735,7 +1750,7 @@ void JSONNodeDumper::VisitLabelStmt(const LabelStmt *LS) {
 }
 
 void JSONNodeDumper::VisitLoopControlStmt(const LoopControlStmt *LS) {
-  if (LS->hasLabelTarget())
+  if (LS->isNamed())
     JOS.attribute("targetLabelDeclId",
                   createPointerRepresentation(LS->getLabelDecl()));
 }

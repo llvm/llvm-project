@@ -5,9 +5,9 @@ Test lldb-dap memory support
 from base64 import b64decode
 
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
-from lldbsuite.test.tools.lldb_dap.types import *
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_memory(DAPTestCaseBase):
@@ -23,7 +23,6 @@ class TestDAP_memory(DAPTestCaseBase):
         thread_ctx = session.thread_context_from(stop_event)
         return thread_ctx.top_frame()
 
-    @skipIfWindows
     def test_memory_refs_variables(self):
         """Tests memory references on local variables."""
         session = self.build_and_create_session()
@@ -35,7 +34,6 @@ class TestDAP_memory(DAPTestCaseBase):
         # Non-pointers should also have memory references.
         self.assertIsNotNone(locals["not_a_ptr"].memoryReference)
 
-    @skipIfWindows
     def test_memory_refs_evaluate(self):
         """Tests memory references on `evaluate` responses."""
         session = self.build_and_create_session()
@@ -44,7 +42,6 @@ class TestDAP_memory(DAPTestCaseBase):
         eval_body = session.evaluate("rawptr", frameId=top_frame.id)
         self.assertIsNotNone(eval_body.memoryReference)
 
-    @skipIfWindows
     def test_memory_refs_set_variable(self):
         """Tests memory references on `setVariable` responses."""
         session = self.build_and_create_session()
@@ -56,7 +53,6 @@ class TestDAP_memory(DAPTestCaseBase):
         response = self.expect_success(response)
         self.assertIsNotNone(response.body.memoryReference)
 
-    @skipIfWindows
     @requireExpressionEvaluation
     def test_readMemory(self):
         """Tests the `readMemory` request."""

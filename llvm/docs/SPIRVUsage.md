@@ -139,6 +139,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_long_vector``
+     - Adds support for any vector rank.
    * - ``SPV_EXT_optnone``
      - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
@@ -209,6 +211,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``
      - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
+   * - ``SPV_KHR_storage_buffer_storage_class``
+     - Adds the StorageBuffer storage class for SPIR-V versions before 1.3.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``

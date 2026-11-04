@@ -178,9 +178,7 @@ define <4 x i32> @load_v8i32_v4i32_ofs4_freeze(ptr %val) nounwind {
 ;
 ; X64-AVX-LABEL: load_v8i32_v4i32_ofs4_freeze:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm0
 ; X64-AVX-NEXT:    retq
   %ld = load <8 x i32>, ptr %val
   %fr = freeze <8 x i32> %ld
@@ -202,21 +200,10 @@ define <4 x double> @load_v8f64_v4f64_ofs0_freeze(ptr %val) nounwind {
 ; X64-SSE-NEXT:    movaps 16(%rdi), %xmm1
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX1-LABEL: load_v8f64_v4f64_ofs0_freeze:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: load_v8f64_v4f64_ofs0_freeze:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512-LABEL: load_v8f64_v4f64_ofs0_freeze:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovaps (%rdi), %zmm0
-; X64-AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX-LABEL: load_v8f64_v4f64_ofs0_freeze:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX-NEXT:    retq
   %ld = load <8 x double>, ptr %val
   %fr = freeze <8 x double> %ld
   %sub = shufflevector <8 x double> %fr, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

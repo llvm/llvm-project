@@ -41,6 +41,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  canonicalizef80
+  SRCS
+    canonicalizef80.cpp
+  HDRS
+    ../canonicalizef80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.canonicalizef80
+)
+
+add_entrypoint_object(
   canonicalizel
   SRCS
     canonicalizel.cpp
@@ -101,7 +112,19 @@ add_entrypoint_object(
   HDRS
     ../iscanonicalf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.iscanonicalf128
+)
+
+add_entrypoint_object(
+  iscanonicalf80
+  SRCS
+    iscanonicalf80.cpp
+  HDRS
+    ../iscanonicalf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.iscanonicalf80
 )
 
 add_entrypoint_object(
@@ -161,6 +184,7 @@ add_entrypoint_object(
   HDRS
     ../ceilf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ceilf128
 )
 
@@ -347,7 +371,6 @@ add_entrypoint_object(
     ../sinf.h
   DEPENDS
     libc.src.__support.math.sinf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -358,8 +381,6 @@ add_entrypoint_object(
     ../sinf16.h
   DEPENDS
     libc.src.__support.math.sinf16
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
@@ -370,7 +391,6 @@ add_entrypoint_object(
     ../sincos.h
   DEPENDS
     libc.src.__support.math.sincos
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -391,7 +411,6 @@ add_entrypoint_object(
     ../sincosf.h
   DEPENDS
     libc.src.__support.math.sincosf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -412,7 +431,6 @@ add_entrypoint_object(
     ../tan.h
   DEPENDS
     libc.src.__support.math.tan
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -433,7 +451,6 @@ add_entrypoint_object(
     ../tanf.h
   DEPENDS
     libc.src.__support.math.tanf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -513,7 +530,19 @@ add_entrypoint_object(
   HDRS
     ../fabsf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fabsf128
+)
+
+add_entrypoint_object(
+  fabsf80
+  SRCS
+    fabsf80.cpp
+  HDRS
+    ../fabsf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fabsf80
 )
 
 add_entrypoint_object(
@@ -603,6 +632,7 @@ add_entrypoint_object(
   HDRS
     ../truncf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.truncf128
 )
 
@@ -663,6 +693,7 @@ add_entrypoint_object(
   HDRS
     ../floorf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.floorf128
 )
 
@@ -723,6 +754,7 @@ add_entrypoint_object(
   HDRS
     ../roundf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.roundf128
 )
 
@@ -783,6 +815,7 @@ add_entrypoint_object(
   HDRS
     ../roundevenf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.roundevenf128
 )
 
@@ -814,7 +847,6 @@ add_entrypoint_object(
     ../rsqrtf16.h
   DEPENDS
     libc.src.__support.math.rsqrtf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -864,6 +896,7 @@ add_entrypoint_object(
   HDRS
     ../lroundf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.lroundf128
 )
 
@@ -924,6 +957,7 @@ add_entrypoint_object(
   HDRS
     ../llroundf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llroundf128
 )
 
@@ -984,6 +1018,7 @@ add_entrypoint_object(
   HDRS
     ../rintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.rintf128
 )
 
@@ -1044,6 +1079,7 @@ add_entrypoint_object(
   HDRS
     ../lrintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.lrintf128
 )
 
@@ -1104,6 +1140,7 @@ add_entrypoint_object(
   HDRS
     ../llrintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llrintf128
 )
 
@@ -1164,6 +1201,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.nearbyintf128
 )
 
@@ -1185,7 +1223,6 @@ add_entrypoint_object(
     ../erff.h
   DEPENDS
     libc.src.__support.math.erff
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1216,7 +1253,6 @@ add_entrypoint_object(
     ../exp.h
   DEPENDS
     libc.src.__support.math.exp
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1227,7 +1263,6 @@ add_entrypoint_object(
     ../expf.h
   DEPENDS
     libc.src.__support.math.expf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1238,7 +1273,6 @@ add_entrypoint_object(
     ../expf16.h
   DEPENDS
     libc.src.__support.math.expf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1269,6 +1303,16 @@ add_entrypoint_object(
     ../exp2f.h
   DEPENDS
     libc.src.__support.math.exp2f
+)
+
+add_entrypoint_object(
+  exp2bf16
+  SRCS
+    exp2bf16.cpp
+  HDRS
+    ../exp2bf16.h
+  DEPENDS
+    libc.src.__support.math.exp2bf16
 )
 
 add_entrypoint_object(
@@ -1309,7 +1353,6 @@ add_entrypoint_object(
     ../exp10.h
   DEPENDS
     libc.src.__support.math.exp10
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1320,7 +1363,6 @@ add_entrypoint_object(
     ../exp10f.h
   DEPENDS
     libc.src.__support.math.exp10f
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1331,7 +1373,6 @@ add_entrypoint_object(
     ../exp10f16.h
   DEPENDS
     libc.src.__support.math.exp10f16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1392,7 +1433,6 @@ add_entrypoint_object(
     ../powf.h
   DEPENDS
     libc.src.__support.math.powf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1403,7 +1443,6 @@ add_entrypoint_object(
     ../pow.h
   DEPENDS
     libc.src.__support.math.pow
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1453,7 +1492,19 @@ add_entrypoint_object(
   HDRS
     ../copysignf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.copysignf128
+)
+
+add_entrypoint_object(
+  copysignf80
+  SRCS
+    copysignf80.cpp
+  HDRS
+    ../copysignf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.copysignf80
 )
 
 add_entrypoint_object(
@@ -1513,6 +1564,7 @@ add_entrypoint_object(
   HDRS
     ../frexpf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.frexpf128
 )
 
@@ -1554,7 +1606,6 @@ add_entrypoint_object(
     ../ilogbl.h
   DEPENDS
     libc.src.__support.math.ilogbl
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1574,6 +1625,7 @@ add_entrypoint_object(
   HDRS
     ../ilogbf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ilogbf128
 )
 
@@ -1588,6 +1640,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lgammaf
+  SRCS
+    lgammaf.cpp
+  HDRS
+    ../lgammaf.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.lgammaf
+)
+
+add_entrypoint_object(
   lgammaf16
   SRCS
     lgammaf16.cpp
@@ -1597,7 +1661,6 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.math.lgammaf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1618,7 +1681,6 @@ add_entrypoint_object(
     ../llogbf.h
   DEPENDS
     libc.src.__support.math.llogbf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1648,6 +1710,7 @@ add_entrypoint_object(
   HDRS
     ../llogbf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llogbf128
 )
 
@@ -1708,6 +1771,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ldexpf128
 )
 
@@ -1739,7 +1803,6 @@ add_entrypoint_object(
     ../log10f.h
   DEPENDS
     libc.src.__support.math.log10f
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1750,7 +1813,6 @@ add_entrypoint_object(
     ../log10f16.h
   DEPENDS
     libc.src.__support.math.log10f16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1761,7 +1823,6 @@ add_entrypoint_object(
     ../log10p1f16.h
   DEPENDS
     libc.src.__support.math.log10p1f16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1772,7 +1833,6 @@ add_entrypoint_object(
     ../log2p1f16.h
   DEPENDS
     libc.src.__support.math.log2p1f16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1793,7 +1853,6 @@ add_entrypoint_object(
     ../log1pf.h
   DEPENDS
     libc.src.__support.math.log1pf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1884,7 +1943,6 @@ add_entrypoint_object(
     ../logbf.h
   DEPENDS
     libc.src.__support.math.logbf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1905,7 +1963,6 @@ add_entrypoint_object(
     ../logbf16.h
   DEPENDS
     libc.src.__support.math.logbf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1915,8 +1972,8 @@ add_entrypoint_object(
   HDRS
     ../logbf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.logbf128
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -2026,6 +2083,7 @@ add_entrypoint_object(
   HDRS
     ../fminf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminf128
 )
 
@@ -2037,6 +2095,17 @@ add_entrypoint_object(
     ../fminf16.h
   DEPENDS
     libc.src.__support.math.fminf16
+)
+
+add_entrypoint_object(
+  fminf80
+  SRCS
+    fminf80.cpp
+  HDRS
+    ../fminf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminf80
 )
 
 add_entrypoint_object(
@@ -2086,6 +2155,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaxf128
 )
 
@@ -2097,6 +2167,17 @@ add_entrypoint_object(
     ../fmaxf16.h
   DEPENDS
     libc.src.__support.math.fmaxf16
+)
+
+add_entrypoint_object(
+  fmaxf80
+  SRCS
+    fmaxf80.cpp
+  HDRS
+    ../fmaxf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaxf80
 )
 
 add_entrypoint_object(
@@ -2156,7 +2237,19 @@ add_entrypoint_object(
   HDRS
     ../fmaximumf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximumf128
+)
+
+add_entrypoint_object(
+  fmaximumf80
+  SRCS
+    fmaximumf80.cpp
+  HDRS
+    ../fmaximumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximumf80
 )
 
 add_entrypoint_object(
@@ -2216,7 +2309,19 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximum_numf128
+)
+
+add_entrypoint_object(
+  fmaximum_numf80
+  SRCS
+    fmaximum_numf80.cpp
+  HDRS
+    ../fmaximum_numf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximum_numf80
 )
 
 add_entrypoint_object(
@@ -2276,7 +2381,19 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximum_magf128
+)
+
+add_entrypoint_object(
+  fmaximum_magf80
+  SRCS
+    fmaximum_magf80.cpp
+  HDRS
+    ../fmaximum_magf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximum_magf80
 )
 
 add_entrypoint_object(
@@ -2336,7 +2453,19 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_mag_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximum_mag_numf128
+)
+
+add_entrypoint_object(
+  fmaximum_mag_numf80
+  SRCS
+    fmaximum_mag_numf80.cpp
+  HDRS
+    ../fmaximum_mag_numf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximum_mag_numf80
 )
 
 add_entrypoint_object(
@@ -2396,7 +2525,19 @@ add_entrypoint_object(
   HDRS
     ../fminimumf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimumf128
+)
+
+add_entrypoint_object(
+  fminimumf80
+  SRCS
+    fminimumf80.cpp
+  HDRS
+    ../fminimumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimumf80
 )
 
 add_entrypoint_object(
@@ -2456,7 +2597,19 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_numf128
+)
+
+add_entrypoint_object(
+  fminimum_numf80
+  SRCS
+    fminimum_numf80.cpp
+  HDRS
+    ../fminimum_numf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimum_numf80
 )
 
 add_entrypoint_object(
@@ -2516,7 +2669,19 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_magf128
+)
+
+add_entrypoint_object(
+  fminimum_magf80
+  SRCS
+    fminimum_magf80.cpp
+  HDRS
+    ../fminimum_magf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimum_magf80
 )
 
 add_entrypoint_object(
@@ -2576,7 +2741,19 @@ add_entrypoint_object(
   HDRS
     ../fminimum_mag_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_mag_numf128
+)
+
+add_entrypoint_object(
+  fminimum_mag_numf80
+  SRCS
+    fminimum_mag_numf80.cpp
+  HDRS
+    ../fminimum_mag_numf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimum_mag_numf80
 )
 
 add_entrypoint_object(
@@ -2696,6 +2873,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.sqrtf128
 )
 
@@ -2847,7 +3025,6 @@ add_entrypoint_object(
     ../hypotf.h
   DEPENDS
     libc.src.__support.math.hypotf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -2907,7 +3084,19 @@ add_entrypoint_object(
   HDRS
     ../fdimf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fdimf128
+)
+
+add_entrypoint_object(
+  fdimf80
+  SRCS
+    fdimf80.cpp
+  HDRS
+    ../fdimf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fdimf80
 )
 
 add_entrypoint_object(
@@ -3031,7 +3220,19 @@ add_entrypoint_object(
   HDRS
     ../issignalingf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.issignalingf128
+)
+
+add_entrypoint_object(
+  issignalingf80
+  SRCS
+    issignalingf80.cpp
+  HDRS
+    ../issignalingf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.issignalingf80
 )
 
 add_entrypoint_object(
@@ -3071,7 +3272,19 @@ add_entrypoint_object(
   HDRS
     ../isnanf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.isnanf128
+)
+
+add_entrypoint_object(
+  isnanf80
+  SRCS
+    isnanf80.cpp
+  HDRS
+    ../isnanf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.isnanf80
 )
 
 add_entrypoint_object(
@@ -3141,6 +3354,7 @@ add_entrypoint_object(
   HDRS
     ../nanf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.nanf128
 )
 
@@ -3685,6 +3899,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cosh
+  SRCS
+    cosh.cpp
+  HDRS
+    ../cosh.h
+  DEPENDS
+    libc.src.__support.math.cosh
+)
+
+add_entrypoint_object(
   coshf
   SRCS
     coshf.cpp
@@ -3705,6 +3929,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinh
+  SRCS
+    sinh.cpp
+  HDRS
+    ../sinh.h
+  DEPENDS
+    libc.src.__support.math.sinh
+)
+
+add_entrypoint_object(
   sinhf
   SRCS
     sinhf.cpp
@@ -3715,6 +3949,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinhbf16
+  SRCS
+    sinhbf16.cpp
+  HDRS
+    ../sinhbf16.h
+  DEPENDS
+    libc.src.__support.math.sinhbf16
+)
+
+add_entrypoint_object(
   sinhf16
   SRCS
     sinhf16.cpp
@@ -3722,6 +3966,16 @@ add_entrypoint_object(
     ../sinhf16.h
   DEPENDS
     libc.src.__support.math.sinhf16
+)
+
+add_entrypoint_object(
+  tanh
+  SRCS
+    tanh.cpp
+  HDRS
+    ../tanh.h
+  DEPENDS
+    libc.src.__support.math.tanh
 )
 
 add_entrypoint_object(
@@ -3762,7 +4016,6 @@ add_entrypoint_object(
     ../acoshf16.h
   DEPENDS
     libc.src.__support.math.acoshf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -3822,7 +4075,6 @@ add_entrypoint_object(
   HDRS
     ../asinpif16.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.math.asinpif16
 )
 
@@ -3924,7 +4176,6 @@ add_entrypoint_object(
     ../acosf16.h
   DEPENDS
     libc.src.__support.math.acosf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -3945,7 +4196,6 @@ add_entrypoint_object(
     ../acospif16.h
   DEPENDS
     libc.src.__support.math.acospif16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -4038,6 +4288,7 @@ add_entrypoint_object(
     ../atan2f128.h
   DEPENDS
     libc.src.__support.math.atan2f128
+    libc.src.__support.CPP.bit
 )
 
 add_entrypoint_object(
@@ -4087,6 +4338,7 @@ add_entrypoint_object(
   HDRS
     ../scalblnf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.scalblnf128
 )
 
@@ -4147,6 +4399,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.scalbnf128
 )
 
@@ -4247,7 +4500,19 @@ add_entrypoint_object(
   HDRS
     ../totalorderf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.totalorderf128
+)
+
+add_entrypoint_object(
+  totalorderf80
+  SRCS
+    totalorderf80.cpp
+  HDRS
+    ../totalorderf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.totalorderf80
 )
 
 add_entrypoint_object(
@@ -4307,7 +4572,19 @@ add_entrypoint_object(
   HDRS
     ../totalordermagf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.totalordermagf128
+)
+
+add_entrypoint_object(
+  totalordermagf80
+  SRCS
+    totalordermagf80.cpp
+  HDRS
+    ../totalordermagf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.totalordermagf80
 )
 
 add_entrypoint_object(
@@ -4367,6 +4644,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.getpayloadf128
 )
 
@@ -4427,6 +4705,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.setpayloadf128
 )
 
@@ -4487,6 +4766,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadsigf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.setpayloadsigf128
 )
 
@@ -4688,7 +4968,6 @@ add_entrypoint_object(
     ../f16sqrtl.h
   DEPENDS
     libc.src.__support.math.f16sqrtl
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -4729,7 +5008,6 @@ add_entrypoint_object(
     ../fsqrtf128.h
   DEPENDS
     libc.src.__support.math.fsqrtf128
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

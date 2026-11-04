@@ -12,7 +12,10 @@ add_mlir_unittest(MLIRIRTests
   IRMapping.cpp
   InterfaceAttachmentTest.cpp
   LocationTest.cpp
+  MLIRContextResetTest.cpp
+  MLIRContextTest.cpp
   MemrefLayoutTest.cpp
+  OpImplementationTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   RemarkTest.cpp  
@@ -28,7 +31,6 @@ add_mlir_unittest(MLIRIRTests
   DEPENDS
   MLIRTestInterfaceIncGen
 )
-target_include_directories(MLIRIRTests PRIVATE "${MLIR_BINARY_DIR}/test/lib/Dialect/Test")
 mlir_target_link_libraries(MLIRIRTests PRIVATE MLIRIR)
 target_link_libraries(MLIRIRTests PRIVATE MLIRBytecodeWriter)
 target_link_libraries(MLIRIRTests PRIVATE MLIRTestDialect)

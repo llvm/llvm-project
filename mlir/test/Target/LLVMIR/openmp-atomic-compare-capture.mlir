@@ -72,7 +72,7 @@ llvm.func @compare_capture_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.p
       omp.yield(%sel : i32)
     }
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
-  } {fail_only}
+  } fail_only
   llvm.return
 }
 
@@ -100,9 +100,9 @@ llvm.func @compare_capture_failonly_fail(%x : !llvm.ptr, %e : !llvm.ptr, %d : !l
       %cmp = llvm.icmp "eq" %xval, %eval : i32
       %sel = llvm.select %cmp, %dval, %xval : i1, i32
       omp.yield(%sel : i32)
-    } {fail_memory_order = #omp<memoryorderkind acquire>}
+    } fail_memory_order(acquire)
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
-  } {fail_only}
+  } fail_only
   llvm.return
 }
 
@@ -124,7 +124,7 @@ llvm.func @compare_capture_weak(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, 
       %cmp = llvm.icmp "eq" %xval, %eval : i32
       %sel = llvm.select %cmp, %dval, %xval : i1, i32
       omp.yield(%sel : i32)
-    } {weak}
+    } weak
   }
   llvm.return
 }
@@ -195,7 +195,7 @@ llvm.func @compare_capture_float_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d : !
       omp.yield(%sel : f32)
     }
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, f32
-  } {fail_only}
+  } fail_only
   llvm.return
 }
 
@@ -275,7 +275,7 @@ llvm.func @compare_capture_complex_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d :
       omp.yield(%sel : !llvm.struct<(f32, f32)>)
     }
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
-  } {fail_only}
+  } fail_only
   llvm.return
 }
 
@@ -350,7 +350,7 @@ llvm.func @compare_capture_float_weak(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm
       %cmp = llvm.fcmp "oeq" %xval, %eval : f32
       %sel = llvm.select %cmp, %dval, %xval : i1, f32
       omp.yield(%sel : f32)
-    } {weak}
+    } weak
   }
   llvm.return
 }
@@ -466,7 +466,7 @@ llvm.func @compare_capture_min_fail_only(%x : !llvm.ptr, %v : !llvm.ptr, %e : i3
       omp.yield(%sel : i32)
     }
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
-  } {fail_only}
+  } fail_only
   llvm.return
 }
 
@@ -487,6 +487,6 @@ llvm.func @compare_capture_max_fail_only(%x : !llvm.ptr, %v : !llvm.ptr, %e : i3
       omp.yield(%sel : i32)
     }
     omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
-  } {fail_only}
+  } fail_only
   llvm.return
 }

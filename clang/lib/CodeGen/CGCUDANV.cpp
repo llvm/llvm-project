@@ -31,7 +31,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -81,6 +80,8 @@ private:
   /// __hipRegisterVar (non-RDC) or an offloading entry (RDC) so the runtime
   /// can locate the device-side table by name.
   llvm::GlobalVariable *OffloadProfShadow = nullptr;
+  /// Windows needs a registered handle for the device raw-version symbol.
+  llvm::GlobalVariable *OffloadProfVersionShadow = nullptr;
   struct OffloadProfSectionShadowInfo {
     llvm::GlobalVariable *Shadow;
     std::string DeviceName;
@@ -335,6 +336,7 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
           dyn_cast<llvm::GlobalVariable>(KernelHandles[CGF.CurFn->getName()])) {
     GV->setLinkage(CGF.CurFn->getLinkage());
     GV->setInitializer(CGF.CurFn);
+    CGM.setDSOLocal(GV);
   }
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
@@ -599,9 +601,9 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
     }
     if (auto *I = dyn_cast<llvm::Instruction>(U)) {
       llvm::Value *OldV = Var;
-      llvm::Instruction *NewV = new llvm::LoadInst(
-          Var->getType(), ManagedVar, "ld.managed", false,
-          llvm::Align(Var->getAlignment()), I->getIterator());
+      llvm::Instruction *NewV =
+          new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed", false,
+                             Var->getAlign().valueOrOne(), I->getIterator());
       WorkItem.pop_back();
       // Replace constant expressions directly or indirectly using the managed
       // variable with instructions.
@@ -731,7 +733,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             Var,
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
-            llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+            llvm::ConstantInt::get(IntTy,
+                                   Var->getAlign().valueOrOne().value())};
         if (!Var->isDeclaration())
           Builder.CreateCall(RegisterManagedVar, Args);
       } else {
@@ -766,6 +769,23 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     }
   }
 
+  auto RegisterProfileShadow = [&](llvm::GlobalVariable *Shadow,
+                                   StringRef DeviceName) {
+    llvm::Constant *Name = makeConstantString(DeviceName.str());
+    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
+    uint64_t Size =
+        CGM.getDataLayout().getTypeAllocSize(Shadow->getValueType());
+    llvm::Value *Args[] = {&GpuBinaryHandlePtr,
+                           Shadow,
+                           Name,
+                           Name,
+                           IntZero,
+                           llvm::ConstantInt::get(VarSizeTy, Size),
+                           IntZero,
+                           IntZero};
+    Builder.CreateCall(RegisterVar, Args);
+  };
+
   // Register the per-TU offload-profiling shadow so the host runtime can
   // locate the matching device-side __llvm_profile_sections_<CUID>. We
   // emit both __hipRegisterVar (so the HIP runtime can map the host
@@ -773,20 +793,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   // __llvm_profile_offload_register_shadow_variable (so the profile
   // runtime adds the shadow to its drain list).
   if (OffloadProfShadow) {
-    llvm::Constant *Name =
-        makeConstantString(std::string(OffloadProfShadow->getName()));
-    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
-    llvm::Value *RegisterVarArgs[] = {
-        &GpuBinaryHandlePtr,
-        OffloadProfShadow,
-        Name,
-        Name,
-        IntZero,
-        llvm::ConstantInt::get(VarSizeTy,
-                               CGM.getDataLayout().getPointerSize(/*AS=*/0)),
-        IntZero,
-        IntZero};
-    Builder.CreateCall(RegisterVar, RegisterVarArgs);
+    RegisterProfileShadow(OffloadProfShadow, OffloadProfShadow->getName());
 
     llvm::FunctionCallee RegisterShadow = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(VoidTy, {PtrTy}, false),
@@ -794,24 +801,21 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     Builder.CreateCall(RegisterShadow, {OffloadProfShadow});
   }
 
+  if (OffloadProfVersionShadow) {
+    RegisterProfileShadow(OffloadProfVersionShadow,
+                          "__llvm_profile_raw_version");
+    llvm::FunctionCallee RegisterVersionShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_version_shadow_variable");
+    Builder.CreateCall(RegisterVersionShadow, {OffloadProfVersionShadow});
+  }
+
   if (!OffloadProfSectionShadows.empty()) {
     llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(VoidTy, {PtrTy}, false),
         "__llvm_profile_offload_register_section_shadow_variable");
-    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
     for (const auto &Info : OffloadProfSectionShadows) {
-      llvm::Constant *Name = makeConstantString(Info.DeviceName);
-      llvm::Value *RegisterVarArgs[] = {
-          &GpuBinaryHandlePtr,
-          Info.Shadow,
-          Name,
-          Name,
-          IntZero,
-          llvm::ConstantInt::get(VarSizeTy,
-                                 CGM.getDataLayout().getPointerSize(/*AS=*/0)),
-          IntZero,
-          IntZero};
-      Builder.CreateCall(RegisterVar, RegisterVarArgs);
+      RegisterProfileShadow(Info.Shadow, Info.DeviceName);
       Builder.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
   }
@@ -843,7 +847,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   bool IsHIP = CGM.getLangOpts().HIP;
   bool IsCUDA = CGM.getLangOpts().CUDA;
   // No need to generate ctors/dtors if there is no GPU binary.
-  StringRef CudaGpuBinaryFileName = CGM.getCodeGenOpts().CudaGpuBinaryFileName;
+  StringRef CudaGpuBinaryFileName =
+      CGM.getCodeGenOpts().OffloadBinaryToEmbedFile;
   if (CudaGpuBinaryFileName.empty() && !IsHIP)
     return nullptr;
   if ((IsHIP || (IsCUDA && !RelocatableDeviceCode)) && EmittedKernels.empty() &&
@@ -1002,7 +1007,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       GpuBinaryHandle->setVisibility(llvm::GlobalValue::HiddenVisibility);
     Address GpuBinaryAddr(
         GpuBinaryHandle, PtrTy,
-        CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+        CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
     {
       auto *HandleValue = CtorBuilder.CreateLoad(GpuBinaryAddr);
       llvm::Constant *Zero =
@@ -1145,7 +1150,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 
   Address GpuBinaryAddr(
       GpuBinaryHandle, GpuBinaryHandle->getValueType(),
-      CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+      CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
   auto *HandleValue = DtorBuilder.CreateLoad(GpuBinaryAddr);
   // There is only one HIP fat binary per linked module, however there are
   // multiple destructor functions. Make sure the fat binary is unregistered
@@ -1325,7 +1330,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/I.Var->getAlignment(), ManagedVar);
+            /*Data=*/I.Var->getAlign().valueOrOne().value(), ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
@@ -1370,6 +1375,21 @@ void CGNVCUDARuntime::createOffloadingEntries() {
     auto *Entry = llvm::BasicBlock::Create(Ctx, "entry", CtorFn);
     llvm::IRBuilder<> B(Entry);
     B.CreateCall(RegisterShadow, {OffloadProfShadow});
+    if (OffloadProfVersionShadow) {
+      uint64_t VersionSize = CGM.getDataLayout().getTypeAllocSize(
+          OffloadProfVersionShadow->getValueType());
+      auto *VersionEntry = llvm::offloading::emitOffloadingEntry(
+          M, Kind, OffloadProfVersionShadow, "__llvm_profile_raw_version",
+          VersionSize, llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
+      // The device symbol is shared, but each TU needs its own host handle.
+      // Keep the weak offloading entries from coalescing at the host link.
+      VersionEntry->setName(VersionEntry->getName() + "." +
+                            CGM.getContext().getCUIDHash());
+      llvm::FunctionCallee RegisterVersionShadow = CGM.CreateRuntimeFunction(
+          llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+          "__llvm_profile_offload_register_version_shadow_variable");
+      B.CreateCall(RegisterVersionShadow, {OffloadProfVersionShadow});
+    }
     for (const auto &Info : OffloadProfSectionShadows) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, Info.Shadow, Info.DeviceName,
@@ -1378,7 +1398,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
       B.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
     B.CreateRetVoid();
-    llvm::appendToGlobalCtors(M, CtorFn, /*Priority=*/65535);
+    CGM.AddGlobalCtor(CtorFn);
   }
 }
 
@@ -1436,6 +1456,17 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
       llvm::ConstantPointerNull::get(PtrTy), Name);
   CGM.addCompilerUsedGlobal(OffloadProfShadow);
 
+  // Linux collects the raw version through HSA. Windows resolves it through
+  // HIP's registered-symbol API, using a distinct handle for each TU.
+  if (CGM.getTriple().isOSWindows()) {
+    auto *VersionTy = llvm::Type::getInt64Ty(Ctx);
+    OffloadProfVersionShadow = new llvm::GlobalVariable(
+        M, VersionTy, /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
+        llvm::ConstantInt::get(VersionTy, 0),
+        ("__llvm_profile_shadow_version_" + CUIDHash).str());
+    CGM.addCompilerUsedGlobal(OffloadProfVersionShadow);
+  }
+
   auto AddSectionShadow = [&](StringRef Kind, const Twine &DeviceName) {
     std::string ShadowName =
         (Twine("__llvm_profile_shadow_") + Kind + "_" + CUIDHash + "_" +
@@ -1489,8 +1520,7 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (!CGM.getLangOpts().CUDANVCCABI &&
-      (CGM.getLangOpts().OffloadViaLLVM ||
-       (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode)))
+      (CGM.getLangOpts().OffloadViaLLVM || RelocatableDeviceCode))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();
@@ -1531,8 +1561,8 @@ llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
       CGM.getMangledName(
           GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel)));
   Var->setAlignment(CGM.getPointerAlign().getAsAlign());
-  Var->setDSOLocal(F->isDSOLocal());
   Var->setVisibility(F->getVisibility());
+  CGM.setDSOLocal(Var);
   auto *FD = cast<FunctionDecl>(GD.getDecl());
   auto *FT = FD->getPrimaryTemplate();
   if (!FT || FT->isThisDeclarationADefinition())

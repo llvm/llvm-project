@@ -11,8 +11,8 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/time/asctime_utils.h"
 #include "src/time/time_constants.h"
-#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

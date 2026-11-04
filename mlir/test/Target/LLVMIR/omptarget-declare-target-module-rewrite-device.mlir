@@ -10,7 +10,7 @@
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
     llvm.return %0 : i32
   }
@@ -18,7 +18,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK-LABEL: define {{.*}} @_QMtest_0Puse_global
   // CHECK: %[[REF:.*]] = load ptr, ptr @_QMtest_0Esp_decl_tgt_ref_ptr, align 8
   // CHECK: store i32 2, ptr %[[REF]], align 4
-  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr
     %1 = llvm.mlir.constant(2 : i32) : i32
     llvm.store %1, %0 : i32, !llvm.ptr
@@ -32,7 +32,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: %[[V:.*]] = load ptr, ptr @_QMtest_0Esp_decl_tgt_ref_ptr, align 8
     // CHECK-DAG: store i32 1, ptr %[[V]], align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map -> %arg0 : !llvm.ptr) {
       %1 = llvm.mlir.constant(1 : i32) : i32
       llvm.store %1, %arg0 : i32, !llvm.ptr
@@ -52,7 +52,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
     llvm.return %0 : i32
   }
@@ -70,7 +70,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK: [[MERGE]]:
   // CHECK: %[[PHI:.*]] = phi ptr [ %[[PHI_B]], %[[BB_B]] ], [ %[[PHI_A]], %[[BB_A]] ]
   // CHECK: store i32 2, ptr %[[PHI]], align 4
-  llvm.func @_QMtest_0Puse_global(%cond : i1) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @_QMtest_0Puse_global(%cond : i1) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr
     llvm.cond_br %cond, ^bb1(%0 : !llvm.ptr), ^bb2(%0 : !llvm.ptr)
   ^bb1(%arg1 : !llvm.ptr):
@@ -93,7 +93,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 2 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 2 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
     llvm.return %0 : i32
   }
@@ -122,7 +122,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK: [[M2]]:
   // CHECK: %[[PHI2:.*]] = phi ptr [ %[[PD]], %[[D]] ], [ %[[PC]], %[[C]] ]
   // CHECK: store i32 3, ptr %[[PHI2]], align 4
-  llvm.func @_QMtest_0Puse_global_nested(%cond1 : i1, %cond2 : i1) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @_QMtest_0Puse_global_nested(%cond1 : i1, %cond2 : i1) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %g = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr<2>
     %gc = llvm.addrspacecast %g : !llvm.ptr<2> to !llvm.ptr
     llvm.cond_br %cond1, ^bb1(%gc : !llvm.ptr), ^bb2(%gc : !llvm.ptr)
@@ -160,13 +160,13 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK-NOT: @_QMtest_0Evar_to_decl_tgt_ref_ptr
   // CHECK-NOT: @_QMtest_0Evar_enter_decl_tgt_ref_ptr
   // CHECK-DAG: @_QMtest_0Evar_to = global i32
-  llvm.mlir.global external @_QMtest_0Evar_to() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Evar_to() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : i32 {
     %0 = llvm.mlir.constant(1 : i32) : i32
     llvm.return %0 : i32
   }
 
   // CHECK-DAG: @_QMtest_0Evar_enter = global i32
-  llvm.mlir.global external @_QMtest_0Evar_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Evar_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : i32 {
     %0 = llvm.mlir.constant(2 : i32) : i32
     llvm.return %0 : i32
   }
@@ -176,7 +176,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK-NOT: load ptr, ptr @_QMtest_0Evar_enter_decl_tgt_ref_ptr
   // CHECK-DAG: store i32 100, ptr @_QMtest_0Evar_to, align 4
   // CHECK-DAG: store i32 200, ptr @_QMtest_0Evar_enter, align 4
-  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = llvm.mlir.addressof @_QMtest_0Evar_to : !llvm.ptr
     %1 = llvm.mlir.addressof @_QMtest_0Evar_enter : !llvm.ptr
     %c100 = llvm.mlir.constant(100 : i32) : i32
@@ -192,8 +192,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: store i32 10, ptr @_QMtest_0Evar_to, align 4
     // CHECK-DAG: store i32 20, ptr @_QMtest_0Evar_enter, align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map0 -> %arg0, %map1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %c10 = llvm.mlir.constant(10 : i32) : i32
       %c20 = llvm.mlir.constant(20 : i32) : i32
@@ -219,15 +219,15 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // region and indirectly inside of a declare target function invoked from that
 // region, and both use-sites must be rewritten.
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.requires = #omp<clause_requires unified_shared_memory>} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.requires = #omp.clause_requires<unified_shared_memory>} {
   // CHECK-DAG: @_QMtest_0Evar_to_usm_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @_QMtest_0Evar_to_usm() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Evar_to_usm() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : i32 {
     %0 = llvm.mlir.constant(1 : i32) : i32
     llvm.return %0 : i32
   }
 
   // CHECK-DAG: @_QMtest_0Evar_enter_usm_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @_QMtest_0Evar_enter_usm() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Evar_enter_usm() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : i32 {
     %0 = llvm.mlir.constant(2 : i32) : i32
     llvm.return %0 : i32
   }
@@ -237,7 +237,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK-DAG: store i32 100, ptr %[[TO_REF]], align 4
   // CHECK-DAG: %[[ENTER_REF:.*]] = load ptr, ptr @_QMtest_0Evar_enter_usm_decl_tgt_ref_ptr, align 8
   // CHECK-DAG: store i32 200, ptr %[[ENTER_REF]], align 4
-  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @_QMtest_0Puse_global() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = llvm.mlir.addressof @_QMtest_0Evar_to_usm : !llvm.ptr
     %1 = llvm.mlir.addressof @_QMtest_0Evar_enter_usm : !llvm.ptr
     %c100 = llvm.mlir.constant(100 : i32) : i32
@@ -255,8 +255,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: %[[ENTER_VAR:.*]] = load ptr, ptr @_QMtest_0Evar_enter_usm_decl_tgt_ref_ptr, align 8
     // CHECK-DAG: store i32 20, ptr %[[ENTER_VAR]], align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map0 -> %arg0, %map1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %c10 = llvm.mlir.constant(10 : i32) : i32
       %c20 = llvm.mlir.constant(20 : i32) : i32

@@ -38,7 +38,7 @@ struct TestLivenessAnalysisPass
     raw_ostream &os = llvm::outs();
 
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>("tag");
+      auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
       if (!tag)
         return;
       os << "test_tag: " << tag.getValue() << ":\n";

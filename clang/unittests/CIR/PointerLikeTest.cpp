@@ -140,8 +140,9 @@ protected:
 
     // Create an element access.
     mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-    mlir::Value index =
+    OwningOpRef<cir::ConstantOp> indexOp =
         cir::ConstantOp::create(b, loc, cir::IntAttr::get(i32Ty, 2));
+    mlir::Value index = indexOp.get();
     OwningOpRef<cir::PtrStrideOp> accessPtr =
         cir::PtrStrideOp::create(b, loc, ptrToElemTy, decayVal, index);
     mlir::Value accessVal = accessPtr.get();
@@ -170,8 +171,7 @@ protected:
       structTy = cir::StructType::get(&context, getUniqueRecordName("S"),
                                       /*is_class=*/false);
     mlir::Type members[] = {ty1, ty2};
-    structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                      /*padding=*/{},
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
                       cir::RecordType::getAllDataKinds(members));
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
@@ -255,8 +255,7 @@ protected:
         cir::StructType::get(&context, getUniqueRecordName("S"),
                              /*is_class=*/false);
     mlir::Type members[] = {ptrTy, ptrTy};
-    structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                      /*padding=*/{},
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
                       cir::RecordType::getAllDataKinds(members));
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
@@ -342,7 +341,7 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToFunction) {
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToVector) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  mlir::Type vecTy = cir::VectorType::get(i32Ty, 4);
+  mlir::Type vecTy = cir::VectorType::getFixed(i32Ty, 4);
   testNonScalarType(vecTy);
 }
 
@@ -368,7 +367,7 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
       cir::StructType::get(&context, getUniqueRecordName("S"),
                            /*is_class=*/false);
   mlir::Type members[] = {i32Ty, i32Ty};
-  structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                    /*padding=*/{}, cir::RecordType::getAllDataKinds(members));
+  structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                    cir::RecordType::getAllDataKinds(members));
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }

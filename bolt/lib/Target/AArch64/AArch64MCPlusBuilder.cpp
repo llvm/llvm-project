@@ -45,7 +45,7 @@ static cl::opt<bool> NoLSEAtomics(
     "no-lse-atomics",
     cl::desc("generate instrumentation code sequence without using LSE atomic "
              "instruction"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 } // namespace opts
 
 namespace {
@@ -158,16 +158,16 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
     case AArch64::ORRXri:
     case AArch64::ANDXri:
     case AArch64::EORXri:
-      if (I->Op1 == 0)
+      if (*I->Op1 == 0)
         Insts.emplace_back(
             MCInstBuilder(I->Opcode)
                 .addReg(DstReg)
                 .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                .addImm(I->Op2));
+                .addImm(*I->Op2));
       else
         Insts.emplace_back(
             MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
-                I->Op2));
+                *I->Op2));
       break;
     case AArch64::EORXrs:
     case AArch64::EONXrs:
@@ -177,23 +177,23 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
                              .addReg(DstReg)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op2));
       break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi:
       Insts.emplace_back(
-          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
-              I->Op2));
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(*I->Op1).addImm(
+              *I->Op2));
       break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi:
       Insts.emplace_back(MCInstBuilder(I->Opcode)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op1)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op1)
+                             .addImm(*I->Op2));
       break;
     default:
       llvm_unreachable("Unhandled! Please refer to expandMOVImm in llvm");
@@ -766,7 +766,7 @@ public:
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
-      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     default:
       llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
@@ -774,13 +774,14 @@ public:
 
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
+    const int64_t Addend = getTargetAddend(LDRInst, 1);
 
     InstructionListType Insts(2);
     Insts[0].setOpcode(AArch64::ADRP);
     Insts[0].clear();
     Insts[0].addOperand(MCOperand::createReg(AddrReg));
     Insts[0].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, Addend, Ctx,
                           ELF::R_AARCH64_NONE);
     Insts[1].setOpcode(OpCode);
     Insts[1].clear();
@@ -788,7 +789,8 @@ public:
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
+                          RelType);
     return Insts;
   }
 
@@ -2658,7 +2660,7 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::EORXrs:
     case AArch64::EORWrs:
@@ -3665,20 +3667,58 @@ public:
     return Insts;
   }
 
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    // Size in bytes that Inst loads from memory.
+    uint8_t DataSize = 0;
+    switch (Inst.getOpcode()) {
+    case AArch64::LDRWl:
+      DataSize = 4;
+      break;
+    case AArch64::LDRXl:
+      DataSize = 8;
+      break;
+    default:
+      return InstructionListType{};
+    }
+
+    if (Offset + DataSize > ConstantData.size())
+      return InstructionListType{};
+
+    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian());
+    const uint64_t Imm = DE.getUnsigned(&Offset, DataSize);
+
+    const MCPhysReg Dest = Inst.getOperand(0).getReg();
+
+    return createLoadImmediate(Dest, Imm);
+  }
+
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKind FKind = Fixup.getKind();
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(FKind);
 
-    assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
-    const uint64_t RelOffset = Fixup.getOffset();
+    switch (FKind) {
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19):
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14):
+      assert(FKI.TargetOffset == 5 && "5-bit relocation offset expected");
+      break;
+    default:
+      assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
+      break;
+    }
 
     uint32_t RelType;
-    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
+    if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
-    else if (Fixup.getKind() ==
-             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19))
+      RelType = ELF::R_AARCH64_CONDBR19;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14))
+      RelType = ELF::R_AARCH64_TSTBR14;
     else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
@@ -3708,7 +3748,7 @@ public:
         break;
       }
     }
-
+    const uint64_t RelOffset = Fixup.getOffset();
     auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});

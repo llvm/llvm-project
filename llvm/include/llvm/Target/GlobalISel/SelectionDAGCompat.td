@@ -73,6 +73,8 @@ def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
 def : GINodeEquiv<G_CLMUL, clmul>;
+def : GINodeEquiv<G_CLMULH, clmulh>;
+def : GINodeEquiv<G_CLMULR, clmulr>;
 def : GINodeEquiv<G_UMULH, mulhu>;
 def : GINodeEquiv<G_SMULH, mulhs>;
 def : GINodeEquiv<G_SDIV, sdiv>;
@@ -152,6 +154,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BRCOND, brcond>;
+def : GINodeEquiv<G_BRINDIRECT, brind>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
@@ -215,6 +218,8 @@ def : GINodeEquiv<G_VECREDUCE_FMAX, vecreduce_fmax>;
 def : GINodeEquiv<G_VECREDUCE_FMIN, vecreduce_fmin>;
 def : GINodeEquiv<G_VECREDUCE_FMAXIMUM, vecreduce_fmaximum>;
 def : GINodeEquiv<G_VECREDUCE_FMINIMUM, vecreduce_fminimum>;
+def : GINodeEquiv<G_VECREDUCE_FMAXIMUMNUM, vecreduce_fmaximumnum>;
+def : GINodeEquiv<G_VECREDUCE_FMINIMUMNUM, vecreduce_fminimumnum>;
 def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
 def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
 def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;

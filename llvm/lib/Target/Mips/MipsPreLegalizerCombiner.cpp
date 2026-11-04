@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 
 #define DEBUG_TYPE "mips-prelegalizer-combiner"
 

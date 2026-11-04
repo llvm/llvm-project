@@ -41,5 +41,5 @@ int main(int argc, char **argv) {
 
   hipError_t Err = hipSetDevice(-1);
   printf("set invalid device: %u\n", Err);
-  // CHECK: set invalid device: 1
+  // CHECK: set invalid device: 2
 }

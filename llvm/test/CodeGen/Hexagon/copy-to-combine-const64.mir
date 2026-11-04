@@ -25,5 +25,5 @@ body: |
     $r1 = A2_tfrsi 32768
     $r2 = A2_tfrsi 1
     J2_call @f1, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit-def $r29
-    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey, implicit-def dead $pc
+    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey
 ...

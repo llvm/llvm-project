@@ -12,22 +12,8 @@ define void @test(i8 %s, ptr %out) {
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <16 x i8> poison, i8 [[S]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <16 x i8> [[I0]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[V:%.*]] = add <16 x i8> [[SPLAT]], <i8 poison, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
-; CHECK-NEXT:    store i8 [[S]], ptr [[OUT]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[P1]], align 1
-; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 9
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <4 x i32> <i32 9, i32 10, i32 11, i32 12>
-; CHECK-NEXT:    store <4 x i8> [[TMP2]], ptr [[P9]], align 1
-; CHECK-NEXT:    [[E13:%.*]] = extractelement <16 x i8> [[V]], i64 13
-; CHECK-NEXT:    [[P13:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 13
-; CHECK-NEXT:    store i8 [[E13]], ptr [[P13]], align 1
-; CHECK-NEXT:    [[E14:%.*]] = extractelement <16 x i8> [[V]], i64 14
-; CHECK-NEXT:    [[P14:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 14
-; CHECK-NEXT:    store i8 [[E14]], ptr [[P14]], align 1
-; CHECK-NEXT:    [[E15:%.*]] = extractelement <16 x i8> [[V]], i64 15
-; CHECK-NEXT:    [[P15:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 15
-; CHECK-NEXT:    store i8 [[E15]], ptr [[P15]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> [[I0]], <16 x i32> <i32 16, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x i8> [[TMP1]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %i0 = insertelement <16 x i8> poison, i8 %s, i64 0

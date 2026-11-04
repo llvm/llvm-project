@@ -1,23 +1,21 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx2 -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
@@ -176,6 +174,30 @@ __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   // OGCG: mul <4 x i64> %{{.*}}, %{{.*}}
 
   return _mm256_mul_epi32(a, b);
+}
+
+__m256i test_mm256_mulhi_epi16(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<16 x !s16i>, !cir.vector<16 x !s16i>) -> !cir.vector<16 x !s16i>
+
+  // LLVM-LABEL: test_mm256_mulhi_epi16
+  // LLVM: call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_mulhi_epi16
+  // OGCG: call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  return _mm256_mulhi_epi16(a, b);
+}
+
+__m256i test_mm256_mulhi_epu16(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<16 x !u16i>, !cir.vector<16 x !u16i>) -> !cir.vector<16 x !u16i>
+
+  // LLVM-LABEL: test_mm256_mulhi_epu16
+  // LLVM: call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_mulhi_epu16
+  // OGCG: call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  return _mm256_mulhi_epu16(a, b);
 }
 
 __m256i test_mm256_alignr_epi8(__m256i a, __m256i b) {

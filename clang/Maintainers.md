@@ -5,9 +5,6 @@ This file is a list of the
 for Clang. The list of current Clang Area Team members can be found
 [here](https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt).
 
-```{contents} Table of Contents
-:depth: 2
-```
 
 # Active Maintainers
 
@@ -302,6 +299,12 @@ serebrennikov.vladislav@gmail.com (email), [Endilll](https://github.com/Endilll)
 
 Akira Hatanaka \
 ahatanak@gmail.com, [ahatanak](https://github.com/ahatanak) (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
+
+### Swift conformance
+
+John McCall \
+rjmccall@apple.com (email), [rjmccall](https://github.com/rjmccall) (GitHub)
+
 
 ### OpenMP conformance
 
