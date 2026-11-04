@@ -1266,6 +1266,12 @@ def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
   let ParserMatchClass = ZPRAsmOperand<"Vector_20to23or28to31", 0, "_K">;
 }
 
+def ZK_b : RegisterOperand<ZPR_K, "printSVERegOp<'b'>">{
+  let EncoderMethod = "EncodeZK";
+  let DecoderMethod = "DecodeZK";
+  let ParserMatchClass = ZPRAsmOperand<"Vector_b_20to23or28to31", 8, "_K">;
+}
+
 def ZPR8Mul2_Lo  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Lo,   0, 14, ElementSizeB, ZPRMul2_Lo>;
 def ZPR8Mul2_Hi  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Hi,  16, 30, ElementSizeB, ZPRMul2_Hi>;
 def ZPR16Mul2_Lo : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Lo,  0, 14, ElementSizeH, ZPRMul2_Lo>;

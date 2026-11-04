@@ -1115,6 +1115,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
                                     GlobalObject::VCallVisibilityPublic)
       return false;
 
+    // A local vtable without live uses cannot be loaded from, so it does not
+    // provide a call target.
+    if (TM.Bits->GV->hasLocalLinkage() && TM.Bits->GV->hasZeroLiveUses())
+      continue;
+
     Function *Fn = nullptr;
     Constant *C = nullptr;
     std::tie(Fn, C) =
@@ -1864,7 +1869,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       continue;
     auto *RetType = cast<IntegerType>(Call.CB.getType());
     IRBuilder<> B(&Call.CB);
-    Value *Addr = B.CreatePtrAdd(Call.VTable, Byte);
+    Value *Addr = B.CreatePtrAddWithSExtOrTrunc(Call.VTable, Byte);
     if (RetType->getBitWidth() == 1) {
       Value *Bits = B.CreateLoad(Int8Ty, Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
@@ -2257,7 +2262,7 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
           &M, Intrinsic::load_relative, {Int32Ty});
       LoadedValue = LoadB.CreateCall(LoadRelFunc, {Ptr, Offset});
     } else {
-      Value *GEP = LoadB.CreatePtrAdd(Ptr, Offset);
+      Value *GEP = LoadB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
       LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEP);
     }
 

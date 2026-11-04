@@ -1156,6 +1156,9 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     // Catch the exception if this isn't a catch-all.
     const CXXCatchStmt *C = S.getHandler(I-1);
 
+    ApplyDebugLocation DebugLoc = ApplyDebugLocation::CreateDefaultArtificial(
+        *this, C->getHandlerBlock()->getBeginLoc());
+
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
     RunCleanupsScope CatchScope(*this);
@@ -1263,14 +1266,13 @@ namespace {
 
         CGF.EmitBlock(RethrowBB);
         if (SavedExnVar) {
-          CGF.EmitRuntimeCallOrInvoke(RethrowFn, CGF.Builder.CreateAlignedLoad(
-                                                     CGF.Int8PtrTy, SavedExnVar,
-                                                     CGF.getPointerAlign()));
-
+          CGF.EmitNoreturnRuntimeCallOrInvoke(
+              RethrowFn,
+              {CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
+                                             CGF.getPointerAlign())});
         } else {
-          CGF.EmitRuntimeCallOrInvoke(RethrowFn);
+          CGF.EmitNoreturnRuntimeCallOrInvoke(RethrowFn, {});
         }
-        CGF.Builder.CreateUnreachable();
 
         CGF.EmitBlock(ContBB);
 
@@ -1356,14 +1358,33 @@ void CodeGenFunction::FinallyInfo::exit(CodeGenFunction &CGF) {
   EHCatchScope &catchScope = cast<EHCatchScope>(*CGF.EHStack.begin());
   llvm::BasicBlock *catchBB = catchScope.getHandler(0).Block;
 
+  llvm::BasicBlock *DispatchBlock = nullptr;
+  if (catchScope.hasEHBranches())
+    DispatchBlock = catchScope.getCachedEHDispatchBlock();
   CGF.popCatchScope();
+
+  llvm::CatchPadInst *CPI = nullptr;
 
   // If there are any references to the catch-all block, emit it.
   if (catchBB->use_empty()) {
     delete catchBB;
   } else {
+    SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
+    if (getEHPersonality(CGF).isWasmPersonality() && DispatchBlock) {
+      auto *CatchSwitch =
+          cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
+      llvm::BasicBlock *CatchStartBlock = CatchSwitch->hasUnwindDest()
+                                              ? CatchSwitch->getSuccessor(1)
+                                              : CatchSwitch->getSuccessor(0);
+      CPI = cast<llvm::CatchPadInst>(CatchStartBlock->getFirstNonPHIIt());
+      CGF.CurrentFuncletPad = CPI;
+    }
+
     CGBuilderTy::InsertPoint savedIP = CGF.Builder.saveAndClearIP();
     CGF.EmitBlock(catchBB);
+
+    if (CPI)
+      CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
 
     llvm::Value *exn = nullptr;
 
@@ -1384,6 +1405,11 @@ void CodeGenFunction::FinallyInfo::exit(CodeGenFunction &CGF) {
 
     // Thread a jump through the finally cleanup.
     CGF.EmitBranchThroughCleanup(RethrowDest);
+
+    // The catchret must be emitted while the catchpad is active. The branch
+    // through the finally cleanup is then resolved after leaving the catchpad.
+    if (CPI)
+      CGF.PopCleanupBlock();
 
     CGF.Builder.restoreIP(savedIP);
   }

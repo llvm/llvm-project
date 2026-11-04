@@ -1296,7 +1296,7 @@ def SPIRV_CLSincosOp : SPIRV_CLOp<"sincos", 58, [
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
-    SPIRV_AnyPtr:$cosval
+    Arg<SPIRV_AnyPtr, "", [MemWrite]>:$cosval
   );
 
   let results = (outs
@@ -1487,12 +1487,15 @@ def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$format,
+    Type<And<[SPIRV_IsPtrType,
+              CPred<"::llvm::cast<::mlir::spirv::PointerType>($_self)"
+                    ".getPointeeType().isInteger(8)">]>,
+         "pointer to 8-bit integer">:$format,
     Variadic<SPIRV_Type>:$arguments
   );
   
    let results = (outs
-    SPIRV_Integer:$result
+    SPIRV_Int32:$result
   );
 
   let assemblyFormat = [{

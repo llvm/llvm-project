@@ -30,9 +30,11 @@
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1999,6 +2001,25 @@ void CGOpenMPRuntime::emitParallelCall(
     OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
+
+  // The caller waits for the parallel region to finish, so its captured stack
+  // variables remain alive until the region completes. Global variables also
+  // remain alive. Record this lifetime guarantee on the outlined function's
+  // parameters, even if other code has access to the same storage.
+  // The storage may still be modified or accessed through other pointers.
+  // For a captured pointer variable, this guarantees the lifetime of the
+  // variable itself, not the object it points to.
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice) {
+    assert(OutlinedFn->arg_size() == CapturedVars.size() + 2 &&
+           "Expected tid and bound tid before the captured arguments");
+    for (auto [I, Captured] : llvm::enumerate(CapturedVars)) {
+      if (Captured->getType()->isPointerTy() &&
+          llvm::isa<llvm::AllocaInst, llvm::GlobalVariable>(
+              llvm::getUnderlyingObject(Captured)))
+        OutlinedFn->addParamAttr(I + 2, llvm::Attribute::NoFreeObj);
+    }
+  }
+
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
   auto &M = CGM.getModule();
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
@@ -11546,6 +11567,13 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");
     }
+    return;
+  }
+
+  // A metadirective has no associated statement; look into its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(S)) {
+    for (const Stmt *V : MD->variants())
+      scanForTargetRegionsFunctions(V, ParentName);
     return;
   }
 

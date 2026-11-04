@@ -7730,7 +7730,8 @@ INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
         ctx, src, Min(internal_strnlen(src, size), size - 1) + 1);
   }
   res = REAL(strlcpy)(dst, src, size);
-  COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, internal_strlen(dst) + 1);
+  if (size > 0)
+    COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, Min(res, size - 1));
   return res;
 }
 

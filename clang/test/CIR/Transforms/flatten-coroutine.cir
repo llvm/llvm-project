@@ -1,0 +1,200 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o - | FileCheck %s \
+// RUN:   --implicit-check-not=cir.coroutine --implicit-check-not=cir.await \
+// RUN:   --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit \
+// RUN:   --implicit-check-not=cir.coro.suspend_point --implicit-check-not=cir.coro.cleanup
+
+// FlattenCFG lowers a cir.coroutine as follows:
+//   - initialSuspend, body, finalSuspend, destroy and exit are inlined in
+//     that order. finalSuspend falls into destroy, which falls into exit.
+//   - Each cir.await becomes ready -> brcond(resume, suspend). The suspend
+//     block calls cir.coro.intrinsic.save/suspend and switches on the result:
+//     0 resumes, 1 destroys (runs the destroy region), and the default (-1,
+//     the coroutine stays suspended) jumps straight to the exit region.
+//   - cir.co_return becomes a branch to the final suspend.
+
+module {
+  cir.func private @prelude()
+  cir.func private @await_suspend()
+  cir.func private @await_resume()
+  cir.func private @user_code()
+  cir.func private @return_void()
+  cir.func private @free_frame()
+  cir.func private @coro_end()
+
+  cir.func coroutine @minimal_coroutine(%ready : !cir.bool) {
+    cir.coroutine initialSuspend : {
+      cir.call @prelude() nothrow : () -> ()
+      cir.await(init, ready : {
+        cir.condition(%ready)
+      }, suspend : {
+        cir.call @await_suspend() nothrow : () -> ()
+        cir.coro.suspend_point
+      }, resume : {
+        cir.call @await_resume() nothrow : () -> ()
+        cir.yield
+      },)
+      cir.yield
+    }, body : {
+      cir.call @user_code() nothrow : () -> ()
+      cir.yield
+    }, finalSuspend : {
+      cir.await(final, ready : {
+        cir.condition(%ready)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+      cir.yield
+    }, destroy : {
+      cir.call @free_frame() nothrow : () -> ()
+      cir.yield
+    }, exit : {
+      cir.call @coro_end() nothrow : () -> ()
+      cir.return
+    }
+    cir.trap
+  }
+
+// CHECK-LABEL: cir.func flattened_coroutine @minimal_coroutine(%arg0: !cir.bool)
+
+// initialSuspend: the prelude, then the init await.
+// CHECK:   cir.call @prelude()
+// CHECK-NEXT:   cir.br ^[[INIT_READY:bb[0-9]+]]
+// CHECK: ^[[INIT_READY]]:
+// CHECK-NEXT:   cir.brcond %arg0 ^[[INIT_RESUME:bb[0-9]+]], ^[[INIT_SUSPEND:bb[0-9]+]]
+// CHECK: ^[[INIT_SUSPEND]]:
+// CHECK-NEXT:   %[[NULL:.*]] = cir.const #cir.ptr<null>
+// CHECK-NEXT:   %[[SAVE:.*]] = cir.coro.intrinsic.save(%[[NULL]])
+// CHECK-NEXT:   cir.call @await_suspend()
+// CHECK-NEXT:   %[[NOT_FINAL:.*]] = cir.const #false
+// CHECK-NEXT:   %[[RES:.*]] = cir.coro.intrinsic.suspend(%[[SAVE]], %[[NOT_FINAL]])
+// CHECK-NEXT:   cir.switch.flat %[[RES]] : !s8i, ^[[INIT_SUSPENDED:bb[0-9]+]] [
+// CHECK-NEXT:     0: ^[[INIT_RESUME]],
+// CHECK-NEXT:     1: ^[[INIT_DESTROY:bb[0-9]+]]
+// CHECK-NEXT:   ]
+
+// Destroy: run the destroy region.
+// CHECK: ^[[INIT_DESTROY]]:
+// CHECK-NEXT:   cir.br ^[[DESTROY:bb[0-9]+]]
+
+// Suspended: leave through the exit region without running the destroy region.
+// CHECK: ^[[INIT_SUSPENDED]]:
+// CHECK-NEXT:   cir.br ^[[EXIT:bb[0-9]+]]
+
+// Resume, then fall through into the body.
+// CHECK: ^[[INIT_RESUME]]:
+// CHECK-NEXT:   cir.call @await_resume()
+// CHECK:   cir.call @user_code()
+
+// The body falls off the end (cir.yield) into the final suspend.
+// CHECK:   cir.brcond %arg0 ^[[FINAL_RESUME:bb[0-9]+]], ^[[FINAL_SUSPEND:bb[0-9]+]]
+// CHECK: ^[[FINAL_SUSPEND]]:
+// CHECK:   %[[IS_FINAL:.*]] = cir.const #true
+// CHECK-NEXT:   %[[FINAL_RES:.*]] = cir.coro.intrinsic.suspend(%{{.*}}, %[[IS_FINAL]])
+// CHECK-NEXT:   cir.switch.flat %[[FINAL_RES]] : !s8i, ^[[FINAL_SUSPENDED:bb[0-9]+]] [
+// CHECK-NEXT:     0: ^[[FINAL_RESUME]],
+// CHECK-NEXT:     1: ^[[FINAL_DESTROY:bb[0-9]+]]
+// CHECK-NEXT:   ]
+// CHECK: ^[[FINAL_DESTROY]]:
+// CHECK-NEXT:   cir.br ^[[DESTROY]]
+// CHECK: ^[[FINAL_SUSPENDED]]:
+// CHECK-NEXT:   cir.br ^[[EXIT]]
+
+// Leaving the final suspend normally falls into the destroy region.
+// CHECK: ^[[FINAL_RESUME]]:
+// CHECK-NEXT:   cir.br ^[[FINAL_DONE:bb[0-9]+]]
+// CHECK: ^[[FINAL_DONE]]:
+// CHECK-NEXT:   cir.br ^[[DESTROY]]
+
+// The destroy region frees the frame and always continues to the exit region,
+// with no dispatch after the frame is freed.
+// CHECK: ^[[DESTROY]]:
+// CHECK-NEXT:   cir.call @free_frame()
+// CHECK-NEXT:   cir.br ^[[EXIT]]
+
+// The exit region.
+// CHECK: ^[[EXIT]]:
+// CHECK-NEXT:   cir.call @coro_end()
+// CHECK-NEXT:   cir.return
+// CHECK: }
+
+  cir.func coroutine @co_return_in_if(%ready : !cir.bool, %cond : !cir.bool) {
+    cir.coroutine initialSuspend : {
+      cir.await(init, ready : {
+        cir.condition(%ready)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+      cir.yield
+    }, body : {
+      cir.await(user, ready : {
+        cir.condition(%ready)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+      cir.if %cond {
+        cir.call @return_void() nothrow : () -> ()
+        cir.co_return
+      }
+      cir.call @user_code() nothrow : () -> ()
+      cir.co_return
+    }, finalSuspend : {
+      cir.await(final, ready : {
+        cir.condition(%ready)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+      cir.yield
+    }, destroy : {
+      cir.call @free_frame() nothrow : () -> ()
+      cir.yield
+    }, exit : {
+      cir.return
+    }
+    cir.trap
+  }
+
+// Both cir.co_return ops, including the one nested in the cir.if, branch to
+// the same final suspend.
+
+// CHECK-LABEL: cir.func flattened_coroutine @co_return_in_if(%arg0: !cir.bool, %arg1: !cir.bool)
+// The user await. Its destroy case goes to the destroy region like the init
+// one.
+// CHECK:   cir.coro.intrinsic.suspend
+// CHECK:   cir.coro.intrinsic.suspend
+// CHECK-NEXT:   cir.switch.flat %{{.*}} : !s8i, ^{{.*}} [
+// CHECK-NEXT:     0: ^[[USER_RESUME:bb[0-9]+]],
+// CHECK-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
+// CHECK-NEXT:   ]
+// CHECK: ^[[USER_DESTROY]]:
+// CHECK-NEXT:   cir.br ^[[DESTROY:bb[0-9]+]]
+
+// CHECK:   cir.brcond %arg1 ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+// CHECK: ^[[THEN]]:
+// CHECK-NEXT:   cir.call @return_void()
+// CHECK-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
+// CHECK: ^[[ELSE]]:
+// CHECK-NEXT:   cir.call @user_code()
+// CHECK-NEXT:   cir.br ^[[FINAL]]
+// CHECK: ^[[FINAL]]:
+// CHECK-NEXT:   cir.br ^[[FINAL_READY:bb[0-9]+]]
+// CHECK: ^[[FINAL_READY]]:
+// CHECK-NEXT:   cir.brcond %arg0 ^{{.*}}, ^[[FINAL_SUSPEND:bb[0-9]+]]
+// CHECK: ^[[FINAL_SUSPEND]]:
+// CHECK:   %[[IS_FINAL:.*]] = cir.const #true
+// CHECK-NEXT:   cir.coro.intrinsic.suspend(%{{.*}}, %[[IS_FINAL]])
+
+// CHECK: ^[[DESTROY]]:
+// CHECK-NEXT:   cir.call @free_frame()
+// CHECK-NEXT:   cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK: ^[[EXIT]]:
+// CHECK-NEXT:   cir.return
+// CHECK: }
+}

@@ -454,7 +454,7 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
                                    const std::string &Before,
                                    const std::string &After, IRUnitRef) {
   // Report the IR before the changes when requested.
-  if (PassesOptions::Global.print_before_changed)
+  if (Opts.print_before_changed)
     Out << "*** IR Dump Before " << PassID << " on " << Name << " ***\n"
         << Before;
 
@@ -471,12 +471,11 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
 IRChangedTester::~IRChangedTester() = default;
 
 void IRChangedTester::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (PassesOptions::Global.exec_on_ir_change != "")
+  if (Opts.exec_on_ir_change != "")
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
 }
 
 void IRChangedTester::handleIR(const std::string &S, StringRef PassID) {
-  const PassesOptions &Opts = PassesOptions::Global;
   // Store the body into a temporary file
   static SmallVector<int> FD{-1};
   SmallVector<StringRef> SR{S};
@@ -748,7 +747,6 @@ StringRef PrintIRInstrumentation::getFileSuffix(IRDumpFileSuffixType Type) {
 std::string PrintIRInstrumentation::fetchDumpFilename(
     StringRef PassName, StringRef IRFileDisplayName, unsigned PassNumber,
     IRDumpFileSuffixType SuffixType) {
-  const PassesOptions &Opts = PassesOptions::Global;
   assert(!Opts.ir_dump_directory.empty() &&
          "The flag -ir-dump-directory must be passed to dump IR to files");
 
@@ -833,7 +831,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, IRUnitRef IR) {
     unwrapAndPrint(Stream, IR);
   };
 
-  if (!PassesOptions::Global.ir_dump_directory.empty()) {
+  if (!Opts.ir_dump_directory.empty()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, getIRFileDisplayName(IR), CurrentPassNumber,
                           IRDumpFileSuffixType::Before);
@@ -868,7 +866,7 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, IRUnitRef IR) {
     unwrapAndPrint(Stream, IR);
   };
 
-  if (!PassesOptions::Global.ir_dump_directory.empty()) {
+  if (!Opts.ir_dump_directory.empty()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, getIRFileDisplayName(IR), CurrentPassNumber,
                           IRDumpFileSuffixType::After);
@@ -906,7 +904,7 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
     printIR(Stream, M);
   };
 
-  if (!PassesOptions::Global.ir_dump_directory.empty()) {
+  if (!Opts.ir_dump_directory.empty()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, IRFileDisplayName, PassNumber,
                           IRDumpFileSuffixType::Invalidated);
@@ -946,7 +944,7 @@ bool PrintIRInstrumentation::shouldPrintAfterCurrentPassNumber() {
 }
 
 bool PrintIRInstrumentation::shouldPrintPassNumbers() {
-  return PassesOptions::Global.print_pass_numbers;
+  return Opts.print_pass_numbers;
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforeSomePassNumber() {
@@ -1007,12 +1005,19 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, IRUnitRef IR) {
 }
 
 bool OptPassGateInstrumentation::shouldRun(StringRef PassName, IRUnitRef IR) {
-  const PassesOptions &Opts = PassesOptions::Global;
   if (isIgnored(PassName))
     return true;
 
+  StringRef FuncName;
+  if (const auto *F = dyn_cast<Function>(IR))
+    FuncName = F->getName();
+  else if (const auto *L = dyn_cast<Loop>(IR))
+    FuncName = L->getHeader()->getParent()->getName();
+  else if (const auto *MF = dyn_cast<MachineFunction>(IR))
+    FuncName = MF->getName();
+
   bool ShouldRun = Context.getOptPassGate().shouldRunPass(
-      PassName, getIRName(IR, IRContext));
+      PassName, getIRName(IR, IRContext), FuncName);
   if (!ShouldRun && !this->HasWrittenIR &&
       !Opts.opt_bisect_print_ir_path.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
@@ -1320,8 +1325,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 #else
   constexpr bool VerifyByDefault = false;
 #endif
-  if (!valueOr(PassesOptions::Global.verify_analysis_invalidation,
-               VerifyByDefault))
+  if (!valueOr(Opts.verify_analysis_invalidation, VerifyByDefault))
     return;
 
   bool Registered = false;
@@ -1760,11 +1764,11 @@ public:
 
   // Create a node in Dot difference graph \p G representing the basic block
   // represented by \p BD with colour \p Colour (where it exists).
-  DotCfgDiffNode(DotCfgDiff &G, unsigned N, const BlockDataT<DCData> &BD,
-                 StringRef Colour)
-      : Graph(G), N(N), Data{&BD, nullptr}, Colour(Colour) {}
+  DotCfgDiffNode(const PassesOptions &Opts, DotCfgDiff &G, unsigned N,
+                 const BlockDataT<DCData> &BD, StringRef Colour)
+      : Opts(Opts), Graph(G), N(N), Data{&BD, nullptr}, Colour(Colour) {}
   DotCfgDiffNode(const DotCfgDiffNode &DN)
-      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]},
+      : Opts(DN.Opts), Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]},
         Colour(DN.Colour), EdgesMap(DN.EdgesMap), Children(DN.Children),
         Edges(DN.Edges) {}
 
@@ -1782,13 +1786,12 @@ public:
   void setCommon(const BlockDataT<DCData> &Other) {
     assert(!Data[1] && "Expected only one block datum");
     Data[1] = &Other;
-    Colour = PassesOptions::Global.dot_cfg_common_color;
+    Colour = Opts.dot_cfg_common_color;
   }
   // Add an edge to \p E of colour {\p Value, \p Colour}.
   void addEdge(unsigned E, StringRef Value, StringRef Colour) {
     // This is a new edge or it is an edge being made common.
-    assert((EdgesMap.count(E) == 0 ||
-            Colour == PassesOptions::Global.dot_cfg_common_color) &&
+    assert((EdgesMap.count(E) == 0 || Colour == Opts.dot_cfg_common_color) &&
            "Unexpected edge count and color.");
     EdgesMap[E] = {Value.str(), Colour};
   }
@@ -1808,6 +1811,7 @@ public:
                           std::map<const unsigned, unsigned> &NodeMap) const;
 
 protected:
+  const PassesOptions &Opts;
   DotCfgDiff &Graph;
   const unsigned N;
   const BlockDataT<DCData> *Data[2];
@@ -1824,8 +1828,8 @@ public:
   // entry node for the function.  \p Before and \p After are the before
   // after versions of the function, respectively.  \p Dir is the directory
   // in which to store the results.
-  DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
-             const FuncDataT<DCData> &After);
+  DotCfgDiff(const PassesOptions &Opts, StringRef Title,
+             const FuncDataT<DCData> &Before, const FuncDataT<DCData> &After);
 
   DotCfgDiff(const DotCfgDiff &) = delete;
   DotCfgDiff &operator=(const DotCfgDiff &) = delete;
@@ -1859,10 +1863,11 @@ protected:
 
   void createNode(StringRef Label, const BlockDataT<DCData> &BD, StringRef C) {
     unsigned Pos = Nodes.size();
-    Nodes.emplace_back(*this, Pos, BD, C);
+    Nodes.emplace_back(Opts, *this, Pos, BD, C);
     NodePosition.insert({Label, Pos});
   }
 
+  const PassesOptions &Opts;
   // TODO Nodes should probably be a StringMap<DotCfgDiffNode> after the
   // display graph is separated out, which would remove the need for
   // NodePosition.
@@ -1874,7 +1879,6 @@ protected:
 };
 
 std::string DotCfgDiffNode::getBodyContent() const {
-  const PassesOptions &Opts = PassesOptions::Global;
   if (Colour == Opts.dot_cfg_common_color) {
     assert(Data[1] && "Expected Data[1] to be set.");
 
@@ -1949,10 +1953,10 @@ std::string DotCfgDiff::colourize(std::string S, StringRef Colour) const {
   return "<FONT COLOR=\"" + Colour.str() + "\">" + S + "</FONT>";
 }
 
-DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
+DotCfgDiff::DotCfgDiff(const PassesOptions &Opts, StringRef Title,
+                       const FuncDataT<DCData> &Before,
                        const FuncDataT<DCData> &After)
-    : GraphName(Title.str()) {
-  const PassesOptions &Opts = PassesOptions::Global;
+    : Opts(Opts), GraphName(Title.str()) {
   StringMap<StringRef> EdgesMap;
 
   // Handle each basic block in the before IR.
@@ -2189,8 +2193,9 @@ DCData::DCData(const MachineBasicBlock &B) {
     addSuccessorLabel(Succ->getName().str(), "");
 }
 
-DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
-    : ChangeReporter<IRDataT<DCData>>(Verbose) {}
+DotCfgChangeReporter::DotCfgChangeReporter(const PassesOptions &Opts,
+                                           bool Verbose)
+    : ChangeReporter<IRDataT<DCData>>(Verbose), Opts(Opts) {}
 
 void DotCfgChangeReporter::handleFunctionCompare(
     StringRef Name, StringRef Prefix, StringRef PassID, StringRef Divider,
@@ -2218,7 +2223,7 @@ void DotCfgChangeReporter::handleFunctionCompare(
   Text = formatv("{0}.{1}{2}{3}{4}", Number, Prefix, makeHTMLReady(PassID),
                  Divider, Name);
 
-  DotCfgDiff Diff(Text, Before, After);
+  DotCfgDiff Diff(Opts, Text, Before, After);
   std::string EntryBlockName = After.getEntryBlockName();
   // Use the before entry block if the after entry block was removed.
   if (EntryBlockName == "")
@@ -2236,7 +2241,6 @@ void DotCfgChangeReporter::handleFunctionCompare(
 
 std::string DotCfgChangeReporter::genHTML(StringRef Text, StringRef DotFile,
                                           StringRef PDFFileName) const {
-  const PassesOptions &Opts = PassesOptions::Global;
   SmallString<20> PDFFile = formatv("{0}/{1}", OutputDir, PDFFileName);
   // Create the PDF file.
   static ErrorOr<std::string> DotExe =
@@ -2403,7 +2407,7 @@ void DotCfgChangeReporter::registerCallbacks(
   if (PrintChanged == ChangePrinter::DotCfgVerbose ||
        PrintChanged == ChangePrinter::DotCfgQuiet) {
     SmallString<128> Dir;
-    sys::fs::expand_tilde(PassesOptions::Global.dot_cfg_dir, Dir);
+    sys::fs::expand_tilde(Opts.dot_cfg_dir, Dir);
     sys::fs::make_absolute(Dir);
     assert(!Dir.empty() && "expected output dir to be non-empty");
     OutputDir = Dir.str();
@@ -2418,23 +2422,22 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
-      OptPassGate(Context),
-      PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
+    : Opts(getPassesOptions(Context)), PrintIR(Opts),
+      PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
+      OptPassGate(Opts, Context), PreservedCFGChecker(Opts),
+      PrintChangedIR(Opts, PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
-      WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging),
-      DroppedStatsIR(PassesOptions::Global.dropped_variable_stats),
-      VerifyEach(VerifyEach) {}
+      WebsiteChangeReporter(Opts, PrintChanged == ChangePrinter::DotCfgVerbose),
+      PrintCrashIR(Opts), ChangeTester(Opts), Verify(DebugLogging),
+      DroppedStatsIR(Opts.dropped_variable_stats), VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
 
 void PrintCrashIRInstrumentation::reportCrashIR() {
-  const PassesOptions &Opts = PassesOptions::Global;
   if (!Opts.print_on_crash_path.empty()) {
     std::error_code EC;
     raw_fd_ostream Out(Opts.print_on_crash_path, EC);
@@ -2452,8 +2455,8 @@ void PrintCrashIRInstrumentation::SignalHandler(void *) {
   if (!CrashReporter)
     return;
 
-  assert((PassesOptions::Global.print_on_crash ||
-          !PassesOptions::Global.print_on_crash_path.empty()) &&
+  assert((CrashReporter->Opts.print_on_crash ||
+          !CrashReporter->Opts.print_on_crash_path.empty()) &&
          "Did not expect to get here without option set.");
   CrashReporter->reportCrashIR();
 }
@@ -2462,15 +2465,14 @@ PrintCrashIRInstrumentation::~PrintCrashIRInstrumentation() {
   if (!CrashReporter)
     return;
 
-  assert((PassesOptions::Global.print_on_crash ||
-          !PassesOptions::Global.print_on_crash_path.empty()) &&
+  assert((CrashReporter->Opts.print_on_crash ||
+          !CrashReporter->Opts.print_on_crash_path.empty()) &&
          "Did not expect to get here without option set.");
   CrashReporter = nullptr;
 }
 
 void PrintCrashIRInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  const PassesOptions &Opts = PassesOptions::Global;
   if ((!Opts.print_on_crash && Opts.print_on_crash_path.empty()) ||
       CrashReporter)
     return;
@@ -2496,7 +2498,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
     ExtendedIRContext *IRContext) {
-  if (PassesOptions::Global.instnamer_after_each_pass)
+  if (Opts.instnamer_after_each_pass)
     InstructionNamerPass::registerCallbacks(PIC, InstNamerNextID);
   PrintIR.registerCallbacks(PIC, IRContext);
   PrintPass.registerCallbacks(PIC, IRContext);
