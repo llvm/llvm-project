@@ -630,7 +630,12 @@ Error LinuxKernelRewriter::readORCTables() {
       continue;
 
     BinaryFunction *&BF = Entry.BF;
-    BF = BC.getBinaryFunctionContainingAddress(IP);
+    BF = BC.getBinaryFunctionContainingAddress(IP, /*CheckPastEnd*/ true);
+
+    // If the entry immediately pointing past the end of the function is not
+    // the terminator entry, then it does not belong to this function.
+    if (BF && BF->getAddress() + BF->getSize() == IP)
+      BF = 0;
 
     if (!BF) {
       if (opts::Verbosity)
@@ -1951,6 +1956,7 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
 
     BinaryFunction *BF =
         BC.getBinaryFunctionContainingAddress(JumpAddress,
+                                              /*CheckPastEnd*/ false,
                                               /*UseMaxSize*/ true);
     assert(BF && "Cannot get function for modified static key.");
 

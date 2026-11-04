@@ -1043,7 +1043,8 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
   if (!BC->containsAddress(Address))
     return nullptr;
 
-  return BC->getBinaryFunctionContainingAddress(Address, /*UseMaxSize=*/true);
+  return BC->getBinaryFunctionContainingAddress(Address, /*CheckPastEnd=*/false,
+                                                /*UseMaxSize=*/true);
 }
 
 BinaryFunction *
