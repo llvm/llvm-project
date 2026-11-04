@@ -462,7 +462,6 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
   SmallVector<Constant*, 16> Result;
   Result.reserve(NumElts);
-  auto *Ty = Type::getInt32Ty(Val->getContext());
   uint64_t IdxVal = CIdx->getZExtValue();
   for (unsigned i = 0; i != NumElts; ++i) {
     if (i == IdxVal) {
@@ -471,8 +470,6 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
     }
 
     Constant *C = Val->getAggregateElement(i);
-    if (!C)
-      C = ConstantFoldExtractElementInstruction(Val, ConstantInt::get(Ty, i));
     if (!C)
       return nullptr;
     Result.push_back(C);
