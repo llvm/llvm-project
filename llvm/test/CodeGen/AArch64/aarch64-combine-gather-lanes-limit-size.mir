@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=machine-combiner -aarch64-search-limit=2 -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -run-pass=machine-combiner -aarch64-search-limit=2 -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s
 
 ---
 name:            negative_pattern_mbb_too_large

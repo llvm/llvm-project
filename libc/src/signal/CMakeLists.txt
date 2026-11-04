@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.killpg
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS
@@ -42,6 +49,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigprocmask
+)
+
+add_entrypoint_object(
+  sigsuspend
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigsuspend
 )
 
 add_entrypoint_object(
