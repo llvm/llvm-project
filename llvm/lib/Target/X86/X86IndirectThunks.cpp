@@ -31,10 +31,13 @@
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -52,7 +55,6 @@ static const char EDIRetpolineName[] = "__llvm_retpoline_edi";
 static const char LVIThunkNamePrefix[] = "__llvm_lvi_thunk_";
 static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 
-namespace {
 struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   const char *getThunkPrefix() { return RetpolineNamePrefix; }
   bool mayUseThunk(const MachineFunction &MF) {
@@ -98,12 +100,14 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   }
 };
 
-class X86IndirectThunks
+namespace {
+
+class X86IndirectThunksLegacy
     : public ThunkInserterPass<RetpolineThunkInserter, LVIThunkInserter> {
 public:
   static char ID;
 
-  X86IndirectThunks() : ThunkInserterPass(ID) {}
+  X86IndirectThunksLegacy() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Indirect Thunks"; }
 };
@@ -234,8 +238,37 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   BuildMI(CallTarget, DebugLoc(), TII->get(RetOpc));
 }
 
-FunctionPass *llvm::createX86IndirectThunksPass() {
-  return new X86IndirectThunks();
+FunctionPass *llvm::createX86IndirectThunksLegacyPass() {
+  return new X86IndirectThunksLegacy();
 }
 
-char X86IndirectThunks::ID = 0;
+char X86IndirectThunksLegacy::ID = 0;
+
+X86IndirectThunksPass::X86IndirectThunksPass() = default;
+X86IndirectThunksPass::X86IndirectThunksPass(X86IndirectThunksPass &&) =
+    default;
+X86IndirectThunksPass::~X86IndirectThunksPass() = default;
+
+PreservedAnalyses
+X86IndirectThunksPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MachineModuleAnalysis::Result *MMI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MachineModuleAnalysis>(
+              *MF.getFunction().getParent());
+  assert(MMI && "MachineModuleAnalysis must be available");
+
+  if (!RetpolineInserter || !LVIInserter) {
+    Module &M = *MF.getFunction().getParent();
+    RetpolineInserter = std::make_unique<RetpolineThunkInserter>();
+    RetpolineInserter->init(M);
+    LVIInserter = std::make_unique<LVIThunkInserter>();
+    LVIInserter->init(M);
+  }
+
+  bool Changed = RetpolineInserter->run(MMI->getMMI(), MF);
+  Changed |= LVIInserter->run(MMI->getMMI(), MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}
