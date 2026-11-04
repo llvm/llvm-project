@@ -464,16 +464,9 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
-                                          bool &ShouldZExtBoolReturn,
-                                          const Triple &T) {
-    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
-
-    if (!T.isAArch64() && !T.isOSDarwin()) {
-      ShouldZExtBoolParam = true;
-      ShouldZExtBoolReturn = true;
-    }
-  }
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
   LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
                                                bool &ShouldExtI32Return,

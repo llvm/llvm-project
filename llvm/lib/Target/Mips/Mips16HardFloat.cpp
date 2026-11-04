@@ -24,7 +24,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mips-16-hard-float"
+#define DEBUG_TYPE "mips-mips16-hard-float"
 
 namespace {
 
