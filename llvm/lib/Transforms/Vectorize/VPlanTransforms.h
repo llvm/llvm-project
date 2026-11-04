@@ -265,16 +265,16 @@ struct VPlanTransforms {
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
 
-  /// Handles compressing memory loads/stores. Loads/stores where the pointer
-  /// is derived from a conditional induction PHI are replaced with expandloads
-  /// or compressstores respectively. The backedge value of the conditional
+  /// Widens compressing memory loads/stores. Loads/stores where the pointer is
+  /// derived from a conditional induction PHI are replaced with expandloads or
+  /// compressstores respectively. The backedge value of the conditional
   /// induction PHI is updated to increment by the number of active lanes of
   /// the block mask.
   /// Returns false if any memory operation could not be updated (e.g., due to
   /// having a mask that does not match the PHI).
-  static bool handleCompressingPatterns(VPlan &Plan,
-                                        VPRecipeBuilder &RecipeBuilder,
-                                        ScalarEvolution &SE);
+  static bool widenCompressingPatterns(VPlan &Plan,
+                                       VPRecipeBuilder &RecipeBuilder,
+                                       ScalarEvolution &SE);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);

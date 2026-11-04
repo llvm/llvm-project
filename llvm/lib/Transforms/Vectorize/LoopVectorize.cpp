@@ -3057,6 +3057,12 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
                 });
 }
 
+/// Returns true if the VPlan contains a VPConditionalInductionPHIRecipe.
+static bool hasConditionalInductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                IsaPred<VPConditionalInductionPHIRecipe>);
+}
+
 /// Determine how to lower the epilogue for the vector epilogue loop.
 /// Check if there are any conflicts that prevent tail-folding the epilogue.
 /// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
@@ -3414,8 +3420,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (Plan.hasEarlyExit())
     return 1;
 
-  // Conditional inductions don't support interleaving.
-  if (Legal->hasConditionalInductions())
+  // TODO: Conditional inductions don't support interleaving yet.
+  if (hasConditionalInductionPhi(Plan))
     return 1;
 
   const bool HasReductions =
@@ -5911,7 +5917,7 @@ VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
 }
 
 VPWidenMemIntrinsicRecipe *
-VPRecipeBuilder::handleCompressedLoadOrStore(VPInstruction *VPI) {
+VPRecipeBuilder::widenCompressedLoadOrStore(VPInstruction *VPI) {
   assert(getCompressedPtrInfo(VPI) && "Expected a compressed load/store");
 
   VPBuilder::InsertPointGuard Guard(Builder);
@@ -6401,7 +6407,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, Legal, PlanCM, Builder);
 
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleCompressingPatterns, *Plan,
+  if (!RUN_VPLAN_PASS(VPlanTransforms::widenCompressingPatterns, *Plan,
                       RecipeBuilder, *PSE.getSE()))
     return nullptr;
 

@@ -81,7 +81,7 @@ public:
 
   /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
   /// \p VPI. \p VPI must be a compressed memory operation.
-  VPWidenMemIntrinsicRecipe *handleCompressedLoadOrStore(VPInstruction *VPI);
+  VPWidenMemIntrinsicRecipe *widenCompressedLoadOrStore(VPInstruction *VPI);
 
   /// If \p VPI is a store of a reduction into an invariant address, delete it.
   /// If it is the final store of a reduction result, a uniform store recipe
