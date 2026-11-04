@@ -676,9 +676,14 @@ ScheduleTreeOptimizer::applyPrevectBandOpt(isl::schedule_node Node) {
 }
 
 /// Check whether tiling is likely beneficial.  Tiling improves cache reuse
-/// only when a read access depends on multiple band dimensions (e.g. b[k][j]
+/// only when a read access depends on multiple loop dimensions (e.g. b[k][j]
 /// in matmul depends on both k and j).  If every read depends on at most one
-/// dimension, pure streaming along a single loop tiling just adds overhead.
+/// dimension pure streaming along a single loop tiling just adds overhead.
+///
+/// We check the original iteration-domain -> array-element access relations
+/// (not the rescheduled ones) because the scheduler may combine domain
+/// dimensions into composite schedule dimensions (e.g. A[i+j] becomes
+/// schedule dim 0 = i+j), hiding multi-dimensional dependencies.
 static bool hasTilingBeneficialReuse(isl::schedule_node Node, const Scop *S) {
   if (!S)
     return true;
@@ -693,32 +698,37 @@ static bool hasTilingBeneficialReuse(isl::schedule_node Node, const Scop *S) {
   if (NumDims < 2)
     return true;
 
-  isl::union_map Reads = isl::union_map::empty(S->getIslCtx());
-  for (auto &Stmt : *S)
-    for (auto *MA : Stmt)
-      if (MA->isRead())
-        Reads = Reads.unite(MA->getLatestAccessRelation());
-  if (Reads.is_empty())
-    return true;
-
-  auto SchedToArray =
-      Reads.apply_domain(isl::union_map::from(Band.get_partial_schedule()));
-  if (SchedToArray.is_empty())
-    return true;
-
-  // For each read, count how many schedule dimensions the access involves.
-  // If any read involves 2+, tiling can create cross-dimension reuse.
-  for (auto Map : SchedToArray.get_map_list()) {
-    unsigned InDims = unsignedFromIslSize(Map.domain().dim(isl::dim::set));
-    if (InDims < 2)
+  // Check read access relations in the original iteration domain.
+  // If any read involves 2+ domain dimensions, tiling can help.
+  bool HasReads = false;
+  for (auto &Stmt : *S) {
+    unsigned StmtDims =
+        unsignedFromIslSize(Stmt.getDomainSpace().dim(isl::dim::set));
+    if (StmtDims < 2)
       continue;
-    unsigned DepCount = 0;
-    for (unsigned d = 0; d < InDims && DepCount < 2; d++)
-      if (Map.involves_dims(isl::dim::in, d, 1).is_true())
-        DepCount++;
-    if (DepCount >= 2)
-      return true;
+    for (auto *MA : Stmt) {
+      if (!MA->isRead())
+        continue;
+      HasReads = true;
+      isl::map AccRel = MA->getLatestAccessRelation();
+      if (AccRel.is_null())
+        continue;
+      // Count how many domain dimensions this access depends on.
+      unsigned InDims =
+          unsignedFromIslSize(AccRel.domain().dim(isl::dim::set));
+      unsigned DepCount = 0;
+      for (unsigned d = 0; d < InDims && DepCount < 2; d++)
+        if (AccRel.involves_dims(isl::dim::in, d, 1).is_true())
+          DepCount++;
+      if (DepCount >= 2)
+        return true;
+    }
   }
+
+  // If there are no reads at all (store-only loops), conservatively allow
+  // tiling there is nothing to analyze for reuse.
+  if (!HasReads)
+    return true;
 
   POLLY_DEBUG(dbgs() << "Tiling skipped: no read access depends on multiple "
                         "band dimensions\n");
