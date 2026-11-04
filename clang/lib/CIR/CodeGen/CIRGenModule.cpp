@@ -1279,15 +1279,15 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
 /// mangled name but some other type.
 cir::GlobalOp
 CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
-                                   LangAS langAS, const VarDecl *d,
+                                   LangAS langAS, mlir::Location loc,
+                                   const VarDecl *d,
                                    ForDefinition_t isForDefinition) {
 
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
     if (!isa<cir::GlobalOp>(v))
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: global with non-GlobalOp type");
+      errorNYI(loc, "getOrCreateCIRGlobal: global with non-GlobalOp type");
     entry = cast<cir::GlobalOp>(v);
   }
 
@@ -1313,8 +1313,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // recognizing the global as a declaration, for now only check if
     // initializer is present.
     if (isForDefinition && !entry.isDeclaration()) {
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: global with conflicting type");
+      errorNYI(loc, "getOrCreateCIRGlobal: global with conflicting type");
     }
 
     // Address space check removed because it is unnecessary because CIR records
@@ -1325,8 +1324,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     if (!isForDefinition)
       return entry;
   }
-
-  mlir::Location loc = d ? getLoc(d->getSourceRange()) : theModule->getLoc();
 
   // Calculate constant storage flag before creating the global. This was moved
   // from after the global creation to ensure the constant flag is set correctly
@@ -1448,7 +1445,8 @@ mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *vd) {
   } else {
     cir::GlobalOp gv = getOrCreateCIRGlobal(
         aa->getAliasee(), getTypes().convertTypeForMem(vd->getType()),
-        LangAS::Default, /*d=*/nullptr, NotForDefinition);
+        LangAS::Default, getLoc(vd->getSourceRange()), /*d=*/nullptr,
+        NotForDefinition);
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
     aliasee = gv;
   }
@@ -1466,8 +1464,8 @@ CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
     ty = getTypes().convertTypeForMem(astTy);
 
   StringRef mangledName = getMangledName(d);
-  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d), d,
-                              isForDefinition);
+  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d),
+                              getLoc(d->getSourceRange()), d, isForDefinition);
 }
 
 /// Return the mlir::Value for the address of the given global variable. If

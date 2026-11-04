@@ -294,7 +294,8 @@ public:
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
   cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
-                                     LangAS langAS, const VarDecl *d,
+                                     LangAS langAS, mlir::Location loc,
+                                     const VarDecl *d,
                                      ForDefinition_t isForDefinition);
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
