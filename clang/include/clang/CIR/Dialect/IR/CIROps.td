@@ -4679,9 +4679,6 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
         $_state.addTypes(resType);
     }]>,
   ];
-
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//

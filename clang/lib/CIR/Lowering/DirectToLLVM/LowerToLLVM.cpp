@@ -5003,8 +5003,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
       >(converter, patterns.getContext(), dl, symbolTables);
   // Patterns reading replaced symbols take the pre-conversion type map.
   patterns
-      .add<CIRToLLVMLLVMIntrinsicCallOpLowering,
-           CIRToLLVMVTableAddrPointOpLowering, CIRToLLVMVTTAddrPointOpLowering>(
+      .add<CIRToLLVMVTableAddrPointOpLowering, CIRToLLVMVTTAddrPointOpLowering>(
           converter, patterns.getContext(), dl, symbolTables,
           preConversionTypes);
 
