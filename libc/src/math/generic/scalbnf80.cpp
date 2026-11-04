@@ -15,8 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float80, scalbnf80, (float80 x, int n)) {
-  return cpp::bit_cast<float80>(
-      math::scalbnf80(cpp::bit_cast<Float80>(x), n));
+  return cpp::bit_cast<float80>(math::scalbnf80(cpp::bit_cast<Float80>(x), n));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -729,7 +729,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf80(Float80(1.0)));
   EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::logbf80(Float80(1.0)));
   EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::ldexpf80(Float80(0.0), 0));
-  EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::scalbnf80(Float80(0.0), 0));
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::scalbnf80(Float80(0.0), 0));
   EXPECT_FP_EQ(Float80(0.0),
                LIBC_NAMESPACE::shared::scalblnf80(Float80(0.0), 0L));
 }
