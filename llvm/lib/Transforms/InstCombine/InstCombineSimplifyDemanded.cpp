@@ -2997,6 +2997,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
+      // Keep in mind that fma can rule out NaN in places that fmuladd cannot.
+
       // We can't do any simplification on the source besides stripping out
       // unneeded nans.
       FPClassTest SrcDemandedMask = DemandedMask | ~fcNan;
@@ -3004,6 +3006,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SrcDemandedMask |= fcNan;
 
       KnownFPClass KnownSrc[3];
+
+      const bool IsFMA = IID == Intrinsic::fma;
 
       Type *EltTy = VTy->getScalarType();
       if (CI->getArgOperand(0) == CI->getArgOperand(1) &&
@@ -3017,7 +3021,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
         KnownSrc[1] = KnownSrc[0];
         DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
-        Known = KnownFPClass::fma_square(KnownSrc[0], KnownSrc[2], Mode);
+        Known = IsFMA ? KnownFPClass::fma_square(KnownSrc[0], KnownSrc[2], Mode)
+                      : KnownFPClass::fmuladd_square(KnownSrc[0], KnownSrc[2],
+                                                     Mode);
       } else {
         for (int OpIdx = 0; OpIdx != 3; ++OpIdx) {
           if (SimplifyDemandedFPClass(CI, OpIdx, SrcDemandedMask,
@@ -3026,7 +3032,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         }
 
         DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
-        Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+        Known = IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                          Mode)
+                      : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1],
+                                              KnownSrc[2], Mode);
       }
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,

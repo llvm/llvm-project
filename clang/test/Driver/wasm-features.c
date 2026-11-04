@@ -11,6 +11,12 @@
 // GENERIC: "-target-cpu" "generic"
 // BLEEDING-EDGE: "-target-cpu" "bleeding-edge"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -macquire-release-atomics 2>&1 | FileCheck %s -check-prefix=ACQUIRE-RELEASE-ATOMICS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-acquire-release-atomics 2>&1 | FileCheck %s -check-prefix=NO-ACQUIRE-RELEASE-ATOMICS
+
+// ACQUIRE-RELEASE-ATOMICS: "-target-feature" "+acquire-release-atomics"
+// NO-ACQUIRE-RELEASE-ATOMICS: "-target-feature" "-acquire-release-atomics"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -matomics 2>&1 | FileCheck %s -check-prefix=ATOMICS
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-atomics 2>&1 | FileCheck %s -check-prefix=NO-ATOMICS
 
@@ -76,12 +82,6 @@
 
 // REFERENCE-TYPES: "-target-feature" "+reference-types"
 // NO-REFERENCE-TYPES: "-target-feature" "-reference-types"
-
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-atomics 2>&1 | FileCheck %s -check-prefix=RELAXED-ATOMICS
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-atomics 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-ATOMICS
-
-// RELAXED-ATOMICS: "-target-feature" "+relaxed-atomics"
-// NO-RELAXED-ATOMICS: "-target-feature" "-relaxed-atomics"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-simd 2>&1 | FileCheck %s -check-prefix=RELAXED-SIMD
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-simd 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-SIMD
