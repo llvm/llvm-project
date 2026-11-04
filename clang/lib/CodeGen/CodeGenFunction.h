@@ -307,6 +307,12 @@ public:
   // trivial-auto-var-init at a jump that re-enters their scope.
   llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
 
+  // Addresses of C block-scoped compound literals pre-allocated at the entry
+  // of their enclosing CompoundStmt because a backward goto jumps across them
+  // within that block.
+  llvm::SmallDenseMap<const CompoundLiteralExpr *, Address, 4>
+      PreAllocatedCompoundLiterals;
+
   // Jumps, like gotos or switches, that may bypass a declaration that has not
   // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
   // once the alloca exists.
@@ -434,13 +440,6 @@ public:
   /// If a return statement is being visited, this holds the return statment's
   /// result expression.
   const Expr *RetExpr = nullptr;
-
-  /// Return true if a label was seen in the current scope.
-  bool hasLabelBeenSeenInCurrentScope() const {
-    if (CurLexicalScope)
-      return CurLexicalScope->hasLabels();
-    return !LabelMap.empty();
-  }
 
   /// AllocaInsertPoint - This is an instruction in the entry block before which
   /// we prefer to insert allocas.
@@ -1167,8 +1166,6 @@ public:
       if (!Labels.empty())
         rescopeLabels();
     }
-
-    bool hasLabels() const { return !Labels.empty(); }
 
     void rescopeLabels();
   };

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-llvm-passes %s      | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK,O2
 // RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-lifetime-markers %s | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
-// RUN: %clang_cc1 -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK 
+// RUN: %clang_cc1 -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
 
 extern int bar(char *A, int n);
 
@@ -103,4 +103,29 @@ label1:
   }
   return -1;
 // O2: call void @llvm.lifetime.end.p0(
+}
+
+// CHECK-LABEL: @stmt_expr_label
+void stmt_expr_label(void) {
+  // O2: call void @llvm.lifetime.start.p0(
+  int x = ({
+    __label__ l;
+  l:
+    42;
+  });
+  foo2(x);
+  // O2: call void @llvm.lifetime.start.p0(
+  char y[5];
+  bar(y, 5);
+  // O2: call void @llvm.lifetime.end.p0(
+  // O2: call void @llvm.lifetime.end.p0(
+}
+
+// CHECK-LABEL: @label_without_backward_jump
+void label_without_backward_jump(void) {
+l1:
+  // O2: call void @llvm.lifetime.start.p0(
+  char x;
+  bar(&x, 1);
+  // O2: call void @llvm.lifetime.end.p0(
 }

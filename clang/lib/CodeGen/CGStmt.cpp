@@ -584,6 +584,18 @@ Address
 CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
+  if (!getLangOpts().CPlusPlus && !Bypasses.isAlwaysBypassed() &&
+      !Bypasses.IsStmtBypassed(&S)) {
+    if (const auto *CLs = Bypasses.getBackwardBypassedCompoundLiterals(&S)) {
+      for (const CompoundLiteralExpr *CLE : *CLs) {
+        Address DeclPtr =
+            CreateMemTempWithoutCast(CLE->getType(), ".compoundliteral");
+        PreAllocatedCompoundLiterals.try_emplace(CLE, DeclPtr);
+        if (HaveInsertPoint() && EmitLifetimeStart(DeclPtr.getBasePointer()))
+          EHStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, DeclPtr);
+      }
+    }
+  }
 
   for (CompoundStmt::const_body_iterator I = S.body_begin(),
                                          E = S.body_end() - GetLast;
