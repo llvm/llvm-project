@@ -591,19 +591,23 @@ TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
 #endif // NDEBUG
 
 //===----------------------------------------------------------------------===//
-// Builder::getZeroAttr
+// Builder::getZeroAttr and Builder::getOneAttr
 //===----------------------------------------------------------------------===//
 
-TEST(GetZeroAttrTest, NestedShapedElementType) {
+TEST(GetZeroOneAttrTest, NestedShapedElementType) {
   MLIRContext context;
   Builder builder(&context);
   IntegerType i8 = builder.getI8Type();
 
-  EXPECT_TRUE(builder.getZeroAttr(RankedTensorType::get({2}, i8)));
+  RankedTensorType tensorTy = RankedTensorType::get({2}, i8);
+  EXPECT_TRUE(builder.getZeroAttr(tensorTy));
+  EXPECT_TRUE(builder.getOneAttr(tensorTy));
 
   // A shaped element type has no DenseElementsAttr form, so expect null.
   // See https://github.com/llvm/llvm-project/issues/205060.
   VectorType vecTy = VectorType::get({4}, i8);
-  EXPECT_FALSE(builder.getZeroAttr(RankedTensorType::get({2}, vecTy)));
+  RankedTensorType nestedTy = RankedTensorType::get({2}, vecTy);
+  EXPECT_FALSE(builder.getZeroAttr(nestedTy));
+  EXPECT_FALSE(builder.getOneAttr(nestedTy));
 }
 } // namespace
