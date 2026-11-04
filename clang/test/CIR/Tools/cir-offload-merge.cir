@@ -1,0 +1,101 @@
+// RUN: rm -rf %t && split-file %s %t
+
+// RUN: cir-offload-merge -combine \
+// RUN:   -input=%t/host.cir \
+// RUN:   -input=%t/device-sm80.cir \
+// RUN:   -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 \
+// RUN:   -output=%t/combined.cir
+// RUN: FileCheck %s --check-prefix=COMBINE --input-file=%t/combined.cir
+// RUN: cir-opt %t/combined.cir --verify-roundtrip -o /dev/null
+
+// COMBINE:      module attributes {cir.offload.container} {
+// COMBINE-NEXT:   module @host attributes {cir.offload.bundle_id = "host-x86_64-unknown-linux-gnu", cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// COMBINE-NEXT:     cir.func{{.*}} @host_fn
+// COMBINE:        module @device_cuda_nvptx64_nvidia_cuda__sm_80 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_80", cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// COMBINE-NEXT:     cir.func{{.*}} @device_fn
+
+// The host module goes first whatever the input order; device modules keep
+// their relative order.
+// RUN: cir-offload-merge -combine \
+// RUN:   -input=%t/device-sm90.cir \
+// RUN:   -input=%t/host.cir \
+// RUN:   -input=%t/device-sm80.cir \
+// RUN:   -targets=cuda-nvptx64-nvidia-cuda--sm_90,host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 \
+// RUN:   -output=%t/reordered.cir
+// RUN: FileCheck %s --check-prefix=REORDER --input-file=%t/reordered.cir
+
+// REORDER:      module attributes {cir.offload.container} {
+// REORDER-NEXT:   module @host
+// REORDER:        module @device_cuda_nvptx64_nvidia_cuda__sm_90
+// REORDER:        module @device_cuda_nvptx64_nvidia_cuda__sm_80
+
+// Device modules sharing a triple are told apart by their target ID.
+// RUN: cir-offload-merge -combine \
+// RUN:   -input=%t/host.cir \
+// RUN:   -input=%t/device-gfx90a.cir \
+// RUN:   -input=%t/device-gfx90a.cir \
+// RUN:   -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a:xnack+,hip-amdgcn-amd-amdhsa--gfx90a:xnack- \
+// RUN:   -output=%t/multi-arch.cir
+// RUN: FileCheck %s --check-prefix=MULTI-ARCH --input-file=%t/multi-arch.cir
+
+// MULTI-ARCH: module @device_hip_amdgcn_amd_amdhsa__gfx90a_xnack_ attributes {cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack+"
+// MULTI-ARCH: module @device_hip_amdgcn_amd_amdhsa__gfx90a_xnack__1 attributes {cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack-"
+
+// RUN: not cir-offload-merge -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
+// ERR-NO-MODE: error: expected -combine
+
+// RUN: not cir-offload-merge -combine -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-INPUT
+// ERR-NO-INPUT: error: missing required -input
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-TARGETS
+// ERR-NO-TARGETS: error: missing required -targets
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu 2>&1 | FileCheck %s --check-prefix=ERR-NO-OUTPUT
+// ERR-NO-OUTPUT: error: missing required -output
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/a.cir -output=%t/b.cir 2>&1 | FileCheck %s --check-prefix=ERR-MULTI-OUTPUT
+// ERR-MULTI-OUTPUT: error: combine mode expects exactly one output
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-COUNT
+// ERR-COUNT: error: number of input files and targets should match in combine mode
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=not-a-target -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-BAD-TARGET
+// ERR-BAD-TARGET: error: invalid target 'not-a-target'
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=cuda-nvptx64-nvidia-cuda--sm_80,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-DUP-TARGET
+// ERR-DUP-TARGET: error: duplicate target 'cuda-nvptx64-nvidia-cuda--sm_80'
+
+// RUN: not cir-offload-merge -combine -input=%t/device-sm80.cir -targets=cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-HOST
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu,host-aarch64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-HOST
+// ERR-NO-HOST: error: expected exactly one host target
+
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-DEVICE
+// ERR-NO-DEVICE: error: expected at least one device target
+
+// RUN: not cir-offload-merge -combine -input=%t/invalid.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-PARSE
+// ERR-PARSE: error: failed to parse input file
+
+//--- host.cir
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @host_fn() {
+    cir.return
+  }
+}
+
+//--- device-sm80.cir
+module attributes {cir.triple = "nvptx64-nvidia-cuda"} {
+  cir.func @device_fn() {
+    cir.return
+  }
+}
+
+//--- device-sm90.cir
+module {
+}
+
+//--- device-gfx90a.cir
+module {
+}
+
+//--- invalid.cir
+module {

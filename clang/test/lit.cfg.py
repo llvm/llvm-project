@@ -138,6 +138,7 @@ tools = [
 ]
 
 if config.clang_enable_cir:
+    tools.append("cir-offload-merge")
     tools.append("cir-opt")
 
 if config.clang_examples:
