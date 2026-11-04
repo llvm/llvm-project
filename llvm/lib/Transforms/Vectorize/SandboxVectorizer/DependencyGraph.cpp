@@ -473,6 +473,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   auto *N = getOrCreateNode(I);
   auto *MemN = dyn_cast<MemDGNode>(N);
 
+  if (Sched)
+    Sched->notifyCreateInstrBeforeDAGUpdates(N);
+
   // Update the MemDGNode chain if this is a memory node.
   if (MemN != nullptr) {
     if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
@@ -498,6 +501,10 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
            MemDGNodeIntervalBuilder::make(BelowIntvl, *this))
         scanAndAddDeps(BelowN, Interval<MemDGNode>(MemN, MemN));
     }
+  }
+
+  if (Sched != nullptr) {
+    Sched->notifyCreateInstrAfterDAGUpdates(N);
   }
 }
 
@@ -573,7 +580,7 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
 
 void DependencyGraph::notifyEraseInstr(Instruction *I) {
   if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
-    // We don't maintain the DAG while reverting.
+    // We don't maintain the DAG while reverting.otifyea
     return;
   auto *N = getNode(I);
   if (N == nullptr)
