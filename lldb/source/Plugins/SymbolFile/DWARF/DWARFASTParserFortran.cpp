@@ -203,7 +203,7 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
 
     llvm::SmallVector<CompilerType, 4> param_types;
     llvm::SmallVector<llvm::StringRef, 4> param_names;
-    ParseChildParameters(die, param_types, param_names);
+    ParseFunctionParameters(die, param_types, param_names);
 
     compiler_type = m_ast.CreateFortranFunction(type_name, param_types,
                                                 param_names, return_type);
