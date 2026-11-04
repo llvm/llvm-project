@@ -8917,13 +8917,50 @@ void SIInstrInfo::moveToVALUImpl(
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
         bool IsUndef = Inst.getOperand(1).isUndef();
-        for (MachineOperand &UseMO :
-             make_early_inc_range(MRI.use_operands(DstReg))) {
-          UseMO.setSubReg(
-              RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
-          UseMO.setReg(NewDstReg);
-          if (IsUndef)
-            UseMO.setIsUndef();
+
+        // True16 copies a 16-bit VGPR value into the low half of a 32-bit SGPR.
+        // composeSubRegIndices doesn't model this size change, so map each use
+        // explicitly: 16-bit reads and %dst.lo16 take %src.sub, 32-bit reads
+        // take the value widened to 32 bits.
+        if (SrcSubReg && !IsUndef && RI.isVGPRClass(SrcRC) &&
+            RI.isSGPRReg(MRI, DstReg) && RI.getSubRegIdxSize(SrcSubReg) == 16 &&
+            RI.getRegSizeInBits(*NewDstRC) == 32) {
+          // Number of bits read by a use that has no subregister index.
+          auto UseBits = [&](const MachineOperand &MO) -> unsigned {
+            const MachineInstr &UseMI = *MO.getParent();
+            // A copy or PHI reads as many bits as it writes.
+            return UseMI.isCopy() || UseMI.isPHI()
+                       ? RI.getRegSizeInBits(UseMI.getOperand(0).getReg(), MRI)
+                       : getOpSize(UseMI, UseMI.getOperandNo(&MO)) * 8;
+          };
+          // 32-bit VGPR (undef, value16) for uses reading all 32 bits of %dst.
+          Register NewDstReg32;
+          for (MachineOperand &UseMO :
+               make_early_inc_range(MRI.use_operands(DstReg))) {
+            unsigned UseSubReg = UseMO.getSubReg();
+            assert((!UseSubReg || UseSubReg == AMDGPU::lo16) &&
+                   "an SGPR has no 16-bit subregister other than lo16");
+            if (UseSubReg == AMDGPU::lo16 || UseBits(UseMO) <= 16) {
+              UseMO.setReg(NewDstReg);
+              UseMO.setSubReg(SrcSubReg);
+            } else { // The whole 32-bit word is read.
+              if (!NewDstReg32)
+                // Built at the copy, which dominates all uses of %dst.
+                NewDstReg32 = buildVGPR32FromLo16(*Inst.getParent(), Inst,
+                                                  Inst.getDebugLoc(), NewDstReg,
+                                                  SrcSubReg);
+              UseMO.setReg(NewDstReg32);
+            }
+          }
+        } else {
+          for (MachineOperand &UseMO :
+               make_early_inc_range(MRI.use_operands(DstReg))) {
+            UseMO.setSubReg(
+                RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
+            UseMO.setReg(NewDstReg);
+            if (IsUndef)
+              UseMO.setIsUndef();
+          }
         }
         MRI.clearKillFlags(NewDstReg);
 

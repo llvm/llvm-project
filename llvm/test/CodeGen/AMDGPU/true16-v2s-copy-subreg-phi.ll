@@ -28,7 +28,9 @@ define amdgpu_kernel void @cond_f16_load_phi(ptr addrspace(1) %p, half %h, i1 %c
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    s_branch .LBB0_3
 ; GFX1250-NEXT:  .LBB0_2: ; %ld
-; GFX1250-NEXT:    ; implicit-def: $vgpr1
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX1250-NEXT:  .LBB0_3: ; %join
 ; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX1250-NEXT:    global_load_u16 v0, v2, s[0:1] scale_offset
