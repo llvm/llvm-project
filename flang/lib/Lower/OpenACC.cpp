@@ -1993,9 +1993,9 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
     llvm::SmallVector<mlir::Value> &reductionOperands,
     llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
-    llvm::SmallVector<
-        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
-        &localSymPairs, bool hasDirective) {
+    llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
+                                Fortran::semantics::SymbolRef>> &localSymPairs,
+    bool hasDirective) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
 
