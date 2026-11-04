@@ -168,8 +168,9 @@ std::string GetMetadata(json::Object *Event) {
   return M;
 }
 
-// Returns pretty-printed trace graph.
-std::string buildTraceGraph(StringRef Json, StringRef ExpectedGraph) {
+// Checks the trace against the expected graph. Returns the expected graph,
+// with any line the trace contradicts marked.
+std::string checkTraceGraph(StringRef Json, StringRef ExpectedGraph) {
   struct EventRecord {
     int64_t TimestampBegin;
     int64_t TimestampEnd;
@@ -208,10 +209,19 @@ std::string buildTraceGraph(StringRef Json, StringRef ExpectedGraph) {
         EventRecord{TimestampBegin, TimestampEnd, Name, Metadata, IsInstant});
   }
 
+  auto Label = [](const EventRecord &E) {
+    return E.Metadata.empty() ? E.Name : E.Name + " (" + E.Metadata + ")";
+  };
+  StringSet<> InstantLabels;
+  for (const EventRecord &Event : Events)
+    if (Event.IsInstant)
+      InstantLabels.insert(Label(Event));
+
   // Parse the expected graph: each line is indented one "| " per level.
   struct ExpectedNode {
     unsigned Depth;
     std::string Label;
+    bool IsInstant;
     int Parent;
     SmallVector<int, 4> Children;
   };
@@ -231,7 +241,8 @@ std::string buildTraceGraph(StringRef Json, StringRef ExpectedGraph) {
     LastAtDepth.push_back(Index);
     if (Parent >= 0)
       Nodes[Parent].Children.push_back(Index);
-    Nodes.push_back({Depth, Line.str(), Parent, {}});
+    Nodes.push_back(
+        {Depth, Line.str(), InstantLabels.contains(Line), Parent, {}});
   }
 
   // Timestamps are truncated to microseconds, so two sibling events that fit
@@ -241,25 +252,14 @@ std::string buildTraceGraph(StringRef Json, StringRef ExpectedGraph) {
   // after their parent. Check the expected graph's end order against it, then
   // that each parent contains its children and that siblings do not overlap,
   // and print the graph with any violation marked.
-  StringSet<> InstantLabels;
-  auto Label = [](const EventRecord &E) {
-    return E.Metadata.empty() ? E.Name : E.Name + " (" + E.Metadata + ")";
-  };
-  for (const EventRecord &Event : Events)
-    if (Event.IsInstant)
-      InstantLabels.insert(Label(Event));
-  auto IsInstant = [&](int N) {
-    return InstantLabels.contains(Nodes[N].Label);
-  };
-
   std::vector<int> EndOrder;
   auto Visit = [&](auto &Self, int N) -> void {
     for (int C : Nodes[N].Children)
-      if (!IsInstant(C))
+      if (!Nodes[C].IsInstant)
         Self(Self, C);
     EndOrder.push_back(N);
     for (int C : Nodes[N].Children)
-      if (IsInstant(C))
+      if (Nodes[C].IsInstant)
         EndOrder.push_back(C);
   };
   for (auto [N, Node] : enumerate(Nodes))
@@ -366,7 +366,7 @@ ExecuteCompiler
 | | | EvaluateAsMandatedConstantInitializer (slow_init_list)
 | | PerformPendingInstantiations
 )";
-  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
+  ASSERT_EQ(ExpectedGraph, checkTraceGraph(Json, ExpectedGraph));
 }
 
 TEST(TimeProfilerTest, ClassTemplateInstantiations) {
@@ -407,7 +407,7 @@ ExecuteCompiler
 | | PerformPendingInstantiations
 | | | InstantiateFunction (S<float>::foo, test.cc:5)
 )";
-  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
+  ASSERT_EQ(ExpectedGraph, checkTraceGraph(Json, ExpectedGraph));
 }
 
 TEST(TimeProfilerTest, TemplateInstantiations) {
@@ -462,7 +462,7 @@ ExecuteCompiler
 | | | | | BuildCFG
 | | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )";
-  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
+  ASSERT_EQ(ExpectedGraph, checkTraceGraph(Json, ExpectedGraph));
 }
 
 static SpecializationCounts
@@ -650,5 +650,5 @@ ExecuteCompiler
 | | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | | PerformPendingInstantiations
 )";
-  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
+  ASSERT_EQ(ExpectedGraph, checkTraceGraph(Json, ExpectedGraph));
 }
