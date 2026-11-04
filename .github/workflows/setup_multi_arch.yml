@@ -113,6 +113,8 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       BASE_REF: '0efc7532e43c16b532fdd2887e00aec8eb69e10f'
+      BUILD_RELEASE_TYPE: ${{ inputs.release_type }}
+      PRERELEASE_VERSION: ${{ inputs.prerelease_version }}
     outputs:
       enable_build_jobs: true
       linux_build_config: ${{ steps.convergence_config.outputs.linux_build_config }}
@@ -162,6 +164,30 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
         run: |
           echo "PR_LABELS=$(gh pr view ${PR_NUMBER} --repo ROCm/llvm-project --json labels)" >> $GITHUB_ENV
+
+      # Note: Other scripts treat "dev releases" and "CI builds" differently.
+      # Here we set to a "dev" package version even for CI builds:
+      #
+      # release_type | package version | version example
+      # ------------ | --------------- | ------------------
+      # ci           | dev             | 7.10.0.dev0+f689a8
+      # dev          | dev             | 7.10.0.dev0+f689a8
+      # nightly      | nightly         | 7.10.0a20251021
+      # prerelease   | prerelease      | 7.10.0rc2
+      #
+      # Other scripts upload "ci" and "dev release" packages to different
+      # buckets, use different ccache namespaces, etc.
+      - name: Compute package version
+        id: rocm_package_version
+        env:
+          CHECKOUT_COMMIT: ${{ steps.checkout.outputs.commit }}
+          BUILD_VARIANT: ${{ inputs.build_variant }}
+        run: |
+          python ./build_tools/compute_rocm_package_version.py \
+            --release-type="${BUILD_RELEASE_TYPE}" \
+            --prerelease-version="${PRERELEASE_VERSION}" \
+            --override-git-sha="${CHECKOUT_COMMIT}" \
+            --build-variant="${BUILD_VARIANT}"
  
       # Note: the script reads PR labels, the base ref, etc. from the event
       # payload (GITHUB_EVENT_PATH). That is the original event that started
@@ -170,6 +196,7 @@ jobs:
       - name: Configuring CI options
         id: configure
         env:
+          ROCM_PACKAGE_VERSION: ${{ steps.rocm_package_version.outputs.rocm_package_version }}
           BUILD_VARIANT: ${{ inputs.build_variant }}
           RELEASE_TYPE: ${{ inputs.release_type }}
           BUILD_PYTORCH: ${{ inputs.build_pytorch }}
@@ -197,26 +224,6 @@ jobs:
           ci_config_path: ci-config
           prebuilt_stages: ${{ inputs.prebuilt_stages }}
           baseline_run_id: ${{ inputs.baseline_run_id }}
-
-      # Note: Other scripts treat "dev releases" and "CI builds" differently.
-      # Here we set to a "dev" package version even for CI builds:
-      #
-      # release_type | package version | version example
-      # ------------ | --------------- | ------------------
-      # ci           | dev             | 7.10.0.dev0+f689a8
-      # dev          | dev             | 7.10.0.dev0+f689a8
-      # nightly      | nightly         | 7.10.0a20251021
-      # prerelease   | prerelease      | 7.10.0rc2
-      #
-      # Other scripts upload "ci" and "dev release" packages to different
-      # buckets, use different ccache namespaces, etc.
-      - name: Compute package version
-        id: rocm_package_version
-        run: |
-          python ./build_tools/compute_rocm_package_version.py \
-            --release-type=${{ inputs.release_type }} \
-            --prerelease-version=${{ inputs.prerelease_version }} \
-            --override-git-sha=${{ steps.checkout.outputs.commit }}
 
       - name: Detect external repo config
         id: external_repo_config

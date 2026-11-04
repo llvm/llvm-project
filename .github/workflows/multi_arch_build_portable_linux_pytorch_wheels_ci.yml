@@ -34,6 +34,10 @@ on:
         description: URL for pip --find-links to install ROCm packages
         type: string
         required: true
+      rocm_package_index_url:
+        description: URL for pip --index-url to install ROCm packages (PEP 503 index, e.g. repo.amd.com; use this OR rocm_package_find_links_url)
+        type: string
+        default: ""
       rocm_version:
         description: ROCm package version to install and build against (e.g. 7.10.0.dev0)
         type: string
@@ -81,6 +85,10 @@ on:
         description: URL for pip --find-links to install ROCm packages
         type: string
         required: true
+      rocm_package_index_url:
+        description: URL for pip --index-url to install ROCm packages (PEP 503 index, e.g. repo.amd.com; use this OR rocm_package_find_links_url)
+        type: string
+        default: ""
       rocm_version:
         description: ROCm package version to install and build against (e.g. 7.10.0.dev0)
         type: string
@@ -110,6 +118,7 @@ jobs:
       AWS_SHARED_CREDENTIALS_FILE: /home/awsconfig/credentials.ini
       PACKAGE_DIST_DIR: ${{ github.workspace }}/output/packages/dist
       RELEASE_TYPE: ci
+      ROCM_PACKAGE_INDEX_URL: ${{ inputs.rocm_package_index_url }}
       optional_build_prod_arguments: ""
       SCCACHE_BUCKET: therock-pytorch-sccache-ci
       SCCACHE_REGION: us-east-1
@@ -304,9 +313,8 @@ jobs:
         with:
           release_type: ci
 
-      # Appends to the same therock-ci-artifacts/<run>-linux/python/ prefix
-      # that the ROCm python job already populated — one find-links URL
-      # covers the whole SDK + PyTorch stack.
+      # When ROCm was built in this run, its wheels share this prefix;
+      # otherwise only the new PyTorch wheels are uploaded.
       - name: Upload PyTorch wheels
         run: |
           python build_tools/github_actions/upload_python_packages.py \

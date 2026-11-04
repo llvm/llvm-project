@@ -14,6 +14,7 @@ on:
           build_variant_label, build_variant_cmake_preset,
           build_variant_suffix, build_pytorch,
           build_native_linux, test_python_packages_matrix,
+          build_rocm, rocm_package_find_links_url, rocm_package_index_url,
           prebuilt_stages, baseline_run_id.
       test_labels:
         type: string
@@ -54,7 +55,12 @@ permissions:
 jobs:
   copy_prebuilt_stages:
     name: Copy Prebuilt Stages
-    if: ${{ fromJSON(inputs.build_config).prebuilt_stages != '' && fromJSON(inputs.build_config).baseline_run_id != '' }}
+    if: >-
+      ${{
+        fromJSON(inputs.build_config).build_rocm == true &&
+        fromJSON(inputs.build_config).prebuilt_stages != '' &&
+        fromJSON(inputs.build_config).baseline_run_id != ''
+      }}
     runs-on: aws-linux-scale-rocm-large
     permissions:
       contents: read
@@ -94,7 +100,13 @@ jobs:
   build_multi_arch_stages:
     name: Build Multi-Arch Stages
     needs: copy_prebuilt_stages
-    if: ${{ !cancelled() && !failure() }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_rocm == true
+      }}
     uses: ./.github/workflows/multi_arch_build_portable_linux.yml
     with:
       matrix_per_family_json: ${{ toJSON(fromJSON(inputs.build_config).per_family_info) }}
@@ -118,7 +130,13 @@ jobs:
   validate_artifact_structure:
     needs: [build_multi_arch_stages]
     name: Validate Artifact Structure
-    if: ${{ !failure() && !cancelled() }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_rocm == true
+      }}
     uses: ./.github/workflows/test_artifacts_structure.yml
     with:
       amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
@@ -130,7 +148,13 @@ jobs:
   test_artifacts_per_family:
     needs: [copy_prebuilt_stages, build_multi_arch_stages]
     name: Test ${{ matrix.family_info.amdgpu_family }}
-    if: ${{ !failure() && !cancelled() }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_rocm == true
+      }}
     strategy:
       fail-fast: false
       matrix:
@@ -153,7 +177,13 @@ jobs:
   build_native_deb_packages:
     needs: [build_multi_arch_stages]
     name: Build DEB Packages
-    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).build_native_linux == true }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_native_linux == true
+      }}
     uses: ./.github/workflows/multi_arch_build_native_linux_packages.yml
     with:
       dist_amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
@@ -168,7 +198,13 @@ jobs:
   build_native_rpm_packages:
     needs: [build_multi_arch_stages]
     name: Build RPM Packages
-    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).build_native_linux == true }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_native_linux == true
+      }}
     uses: ./.github/workflows/multi_arch_build_native_linux_packages.yml
     with:
       dist_amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
@@ -183,7 +219,13 @@ jobs:
   test_native_packages_ubuntu2404:
     needs: [build_native_deb_packages]
     name: Test DEB Install - ubuntu2404
-    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).build_native_linux == true }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_native_linux == true
+      }}
     uses: ./.github/workflows/test_native_linux_packages_install.yml
     with:
       package_install_url: ${{ needs.build_native_deb_packages.outputs.package_repository_url }}
@@ -200,7 +242,13 @@ jobs:
   test_native_packages_rhel10:
     needs: [build_native_rpm_packages]
     name: Test RPM Install - rhel10
-    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).build_native_linux == true }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_native_linux == true
+      }}
     uses: ./.github/workflows/test_native_linux_packages_install.yml
     with:
       package_install_url: ${{ needs.build_native_rpm_packages.outputs.package_repository_url }}
@@ -217,7 +265,13 @@ jobs:
   test_native_packages_sles16:
     needs: [build_native_rpm_packages]
     name: Test RPM Install - sles16
-    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).build_native_linux == true }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_native_linux == true
+      }}
     uses: ./.github/workflows/test_native_linux_packages_install.yml
     with:
       package_install_url: ${{ needs.build_native_rpm_packages.outputs.package_repository_url }}
@@ -234,7 +288,13 @@ jobs:
   build_python_packages:
     needs: [build_multi_arch_stages]
     name: Build Python Packages
-    if: ${{ !failure() && !cancelled() }}
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        !contains(needs.*.result, 'cancelled') &&
+        fromJSON(inputs.build_config).build_python_packages == true
+      }}
     uses: ./.github/workflows/build_portable_linux_python_packages.yml
     with:
       artifact_group: ${{ fromJSON(inputs.build_config).artifact_group }}
@@ -253,7 +313,13 @@ jobs:
   test_python_packages_per_family:
     needs: [build_python_packages]
     name: Test Python
-    #if: ${{ !failure() && !cancelled() && toJSON(fromJSON(inputs.build_config).test_python_packages_matrix) != '[]' }}
+      #if: >-
+      #${{
+      #  !failure() &&
+      #  !cancelled() &&
+      #  !contains(needs.*.result, 'cancelled') &&
+      #  toJSON(fromJSON(inputs.build_config).test_python_packages_matrix) != '[]'
+      #}}
     if: ${{ false }}
     strategy:
       fail-fast: false
@@ -305,9 +371,11 @@ jobs:
       # The reusable workflow expands this to gfx targets via
       # cmake/therock_amdgpu_targets.cmake.
       amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
-      kpack_split: ${{ needs.build_python_packages.outputs.kpack_split }}
-      rocm_package_find_links_url: ${{ needs.build_python_packages.outputs.package_find_links_url }}
-      rocm_version: ${{ inputs.rocm_package_version }}
+      # Multi-arch CI and nightly whl-next packages both use the split layout.
+      kpack_split: ${{ 'true' }}
+      rocm_package_find_links_url: ${{ fromJSON(inputs.build_config).rocm_package_find_links_url }}
+      rocm_package_index_url: ${{ fromJSON(inputs.build_config).rocm_package_index_url }}
+      rocm_version: ${{ fromJSON(inputs.build_config).framework_rocm_version }}
       repository: ${{ inputs.repository }}
       ref: ${{ inputs.ref }}
     permissions:

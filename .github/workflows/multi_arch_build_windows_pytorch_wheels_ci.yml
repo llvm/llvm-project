@@ -39,9 +39,9 @@ on:
         type: string
         default: ""
       rocm_version:
-        description: ROCm package version to install and build against (e.g. 7.10.0.dev0)
+        description: ROCm package version to install and build against (empty = latest from the selected package source)
         type: string
-        required: true
+        default: ""
       cache_type:
         description: "Compiler cache type (sccache, ccache, or none)"
         required: false
@@ -94,9 +94,9 @@ on:
         type: string
         default: ""
       rocm_version:
-        description: ROCm package version to install and build against (e.g. 7.10.0.dev0)
+        description: ROCm package version to install and build against (empty = latest from the selected package source)
         type: string
-        required: true
+        default: ""
       cache_type:
         description: "Compiler cache type"
         type: choice
@@ -374,9 +374,8 @@ jobs:
         with:
           release_type: ci
 
-      # Appends to the same therock-ci-artifacts/<run>-windows/python/ prefix
-      # that the ROCm python job already populated — one find-links URL
-      # covers the whole SDK + PyTorch stack.
+      # When ROCm was built in this run, its wheels share this prefix;
+      # otherwise only the new PyTorch wheels are uploaded.
       - name: Upload PyTorch wheels
         run: |
           python build_tools/github_actions/upload_python_packages.py \
