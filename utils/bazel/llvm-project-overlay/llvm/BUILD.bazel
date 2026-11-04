@@ -63,6 +63,7 @@ exports_files([
     "include/llvm/Frontend/Directive/DirectiveBase.td",
     "include/llvm/Frontend/OpenACC/ACC.td",
     "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Attributes.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
@@ -1695,7 +1696,7 @@ filegroup(
         "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/IR/*.td",
         "include/llvm/TableGen/*.td",
         "include/llvm/Target/*.td",
         "include/llvm/Target/GlobalISel/*.td",
