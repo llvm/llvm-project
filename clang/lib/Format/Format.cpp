@@ -2751,10 +2751,15 @@ private:
         std::string Brace;
         if (BraceCount < 0) {
           assert(BraceCount == -1);
+          // Keep the marker so that the parser doesn't mark the token again in
+          // a later run.
+          if (Token->LBraceInserted)
+            continue;
           if (!Line->Affected)
             break;
           Brace = Token->is(tok::comment) ? "\n{" : "{";
           ++OpeningBraceSurplus;
+          Token->LBraceInserted = true;
         } else {
           if (OpeningBraceSurplus == 0)
             break;
@@ -2762,8 +2767,8 @@ private:
             BraceCount = OpeningBraceSurplus;
           Brace = '\n' + std::string(BraceCount, '}');
           OpeningBraceSurplus -= BraceCount;
+          Token->BraceCount = 0;
         }
-        Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
       }
@@ -3032,7 +3037,7 @@ public:
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
-    unsigned Penalty =
+    uint64_t Penalty =
         UnwrappedLineFormatter(&Indenter, &Whitespaces, Style,
                                Tokens.getKeywords(), Env.getSourceManager(),
                                Status)
@@ -3045,7 +3050,8 @@ public:
     for (const auto &R : Whitespaces.generateReplacements())
       if (Result.add(R))
         return std::make_pair(Result, 0);
-    return std::make_pair(Result, Penalty);
+    return std::make_pair(
+        Result, static_cast<unsigned>(std::min<uint64_t>(Penalty, UINT_MAX)));
   }
 
 private:

@@ -17,6 +17,7 @@ mlir_target_link_libraries(MLIRInterfacesTests
   MLIRDataLayoutInterfaces
   MLIRDLTIDialect
   MLIRFuncDialect
+  MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRMemorySlotUtils

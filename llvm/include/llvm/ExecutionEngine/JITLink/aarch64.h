@@ -457,7 +457,7 @@ inline bool isLDRLiteral(uint32_t Instr) {
 // should be shifted right by.
 //
 // The shift value varies by the data size of LD/ST instruction.
-// For instance, LDH instructoin needs the address to be shifted
+// For instance, LDH instruction needs the address to be shifted
 // right by 1.
 inline unsigned getPageOffset12Shift(uint32_t Instr) {
   constexpr uint32_t Vec128Mask = 0x04800000;
