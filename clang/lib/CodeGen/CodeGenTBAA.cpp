@@ -25,6 +25,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -455,7 +456,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
          i != e; ++i, ++idx) {
-      if (isEmptyFieldForLayout(Context, *i))
+      if (CodeGenUtils::isEmptyFieldForLayout(Context, *i))
         continue;
 
       uint64_t Offset =
@@ -489,6 +490,18 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
                          MayAlias || TypeHasMayAlias(FieldQTy)))
         return false;
     }
+    return true;
+  }
+
+  if (const auto *CTy = QTy->getAsCanonical<ComplexType>()) {
+    QualType ElemQTy = CTy->getElementType();
+    uint64_t Size = Context.getTypeSizeInChars(ElemQTy).getQuantity();
+    llvm::MDNode *TBAAType = MayAlias ? getChar() : getTypeInfo(ElemQTy);
+    llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+    Fields.push_back(
+        llvm::MDBuilder::TBAAStructField(BaseOffset, Size, TBAATag));
+    Fields.push_back(
+        llvm::MDBuilder::TBAAStructField(BaseOffset + Size, Size, TBAATag));
     return true;
   }
 

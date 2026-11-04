@@ -566,7 +566,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (StackGuardSlot) {
     unsigned Offset = SSL.getObjectOffset(StackGuardSlot);
     Value *Off =
-        IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
+        IRB.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
     Value *NewAI =
         IRB.CreateBitCast(Off, StackGuardSlot->getType(), "StackGuardSlot");
 
@@ -585,7 +585,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     Value *Off =
-        IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
+        IRB.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
     Value *NewArg = IRB.CreateBitCast(Off, Arg->getType(),
                                       Arg->getName() + ".unsafe-byval");
 
@@ -627,7 +627,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
       IRBuilder<> IRBUser(InsertBefore);
       Value *Off =
-          IRBUser.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
+          IRBUser.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
       Value *Replacement =
           IRBUser.CreateAddrSpaceCast(Off, AI->getType(), Name);
 
@@ -657,9 +657,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // Update shadow stack pointer in the function epilogue.
   IRB.SetInsertPoint(BasePointer->getNextNode());
 
-  Value *StaticTop =
-      IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -FrameSize),
-                       "unsafe_stack_static_top");
+  Value *StaticTop = IRB.CreatePtrAddWithSignedOffset(
+      BasePointer, -(int64_t)FrameSize, "unsafe_stack_static_top");
   IRB.CreateStore(StaticTop, UnsafeStackPtr);
   return StaticTop;
 }
@@ -791,7 +790,7 @@ bool SafeStack::run() {
   if (!StackRestorePoints.empty())
     ++NumUnsafeStackRestorePointsFunctions;
 
-  IRBuilder<> IRB(&F.front(), F.begin()->getFirstInsertionPt());
+  IRBuilder<> IRB(F.begin()->getFirstInsertionPt());
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())

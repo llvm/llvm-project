@@ -15,6 +15,27 @@
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -emit-llvm %s -o %t-elf.ll
 // RUN: FileCheck --input-file=%t-elf.ll %s -check-prefix=LLVM-OGCG-ELF
 
+// On AMDGPU and NVPTX, the kernel caller entry point uses the target's device
+// kernel calling convention.
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -emit-cir %s -o %t-amdgcn.cir
+// RUN: FileCheck --input-file=%t-amdgcn.cir %s -check-prefix=CIR-AMDGCN
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -emit-llvm %s -o %t-amdgcn-cir.ll
+// RUN: FileCheck --input-file=%t-amdgcn-cir.ll %s -check-prefix=LLVM-OGCG-AMDGCN
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -emit-llvm %s -o %t-amdgcn.ll
+// RUN: FileCheck --input-file=%t-amdgcn.ll %s -check-prefix=LLVM-OGCG-AMDGCN
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx-nvidia-cuda -fclangir -emit-cir %s -o %t-nvptx.cir
+// RUN: FileCheck --input-file=%t-nvptx.cir %s -check-prefix=CIR-NVPTX
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx-nvidia-cuda -fclangir -emit-llvm %s -o %t-nvptx-cir.ll
+// RUN: FileCheck --input-file=%t-nvptx-cir.ll %s -check-prefix=LLVM-OGCG-NVPTX
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx-nvidia-cuda -emit-llvm %s -o %t-nvptx.ll
+// RUN: FileCheck --input-file=%t-nvptx.ll %s -check-prefix=LLVM-OGCG-NVPTX
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx64-nvidia-cuda -fclangir -emit-cir %s -o %t-nvptx64.cir
+// RUN: FileCheck --input-file=%t-nvptx64.cir %s -check-prefix=CIR-NVPTX
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx64-nvidia-cuda -fclangir -emit-llvm %s -o %t-nvptx64-cir.ll
+// RUN: FileCheck --input-file=%t-nvptx64-cir.ll %s -check-prefix=LLVM-OGCG-NVPTX
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple nvptx64-nvidia-cuda -emit-llvm %s -o %t-nvptx64.ll
+// RUN: FileCheck --input-file=%t-nvptx64.ll %s -check-prefix=LLVM-OGCG-NVPTX
+
 // During device compilation, an offload kernel caller entry point is emitted
 // in place of each sycl_kernel_entry_point attributed function. The entry
 // point is named after the kernel name type and its body is the transformed
@@ -76,3 +97,15 @@ void test() {
 // CIR-lowered LLVM IR, and classic CodeGen alike.
 // CIR-ELF:          cir.func {{.*}}dso_local {{.*}}@_ZTS2KN
 // LLVM-OGCG-ELF:    define {{.*}}dso_local {{.*}}void @_ZTS2KN
+
+// On AMDGPU and NVPTX, both entry points use the device kernel calling
+// convention. Kernel arguments are not checked: classic CodeGen passes the
+// kernel object byref (AMDGPU) or byval (NVPTX), while CIR passes it by value.
+// CIR-AMDGCN:       cir.func {{.*}}@_ZTS2KN{{.*}}cc(amdgpu_kernel)
+// CIR-AMDGCN:       cir.func {{.*}}@_ZTS8MemberKN{{.*}}cc(amdgpu_kernel)
+// LLVM-OGCG-AMDGCN: define dso_local amdgpu_kernel void @_ZTS2KN(
+// LLVM-OGCG-AMDGCN: define dso_local amdgpu_kernel void @_ZTS8MemberKN(
+// CIR-NVPTX:        cir.func {{.*}}@_ZTS2KN{{.*}}cc(ptx_kernel)
+// CIR-NVPTX:        cir.func {{.*}}@_ZTS8MemberKN{{.*}}cc(ptx_kernel)
+// LLVM-OGCG-NVPTX:  define dso_local ptx_kernel void @_ZTS2KN(
+// LLVM-OGCG-NVPTX:  define dso_local ptx_kernel void @_ZTS8MemberKN(

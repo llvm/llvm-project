@@ -354,11 +354,17 @@ struct OperationFormat {
     std::optional<StringRef> variableTransformer;
   };
 
-  /// The context in which an element is generated.
+  /// The context used to generate an element's parser. This controls whether
+  /// attribute variables are parsed optionally; it does not change the parsing
+  /// of other element kinds.
   enum class GenContext {
-    /// The element is generated at the top-level or with the same behaviour.
+    /// Use the default parsing behaviour: an ODS optional attribute may be
+    /// absent. Used at the top level and by callers using the default context.
     Normal,
-    /// The element is generated inside an optional group.
+    /// Generate an element in a selected branch of an optional group. Attribute
+    /// variables must be present, even if they are optional in ODS. The group
+    /// is optional, but its contents are required once the branch is selected.
+    /// The group's first element is parsed separately to select the branch.
     Optional
   };
 
@@ -384,6 +390,8 @@ struct OperationFormat {
   /// Generate the operation parser from this format.
   void genParser(Operator &op, OpClass &opClass);
   /// Generate the parser code for a specific format element.
+  /// `genCtx`, together with ODS optionality, determines whether attribute
+  /// variables may be absent at this position.
   void genElementParser(FormatElement *element, MethodBody &body,
                         FmtContext &attrTypeCtx,
                         GenContext genCtx = GenContext::Normal);
@@ -501,8 +509,8 @@ static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
   if (!shouldStripEnumAttrInPropDict(attr))
     return false;
   EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
-  return enumInfo.isBitEnum() &&
-         enumInfo.getDef().getValueAsString("separator").trim() == ",";
+  return enumInfo.isBitEnum() && enumInfo.getBitEnumSeparatorKind() ==
+                                     EnumInfo::BitEnumSeparatorKind::Comma;
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -1303,11 +1311,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
 
   if (formatAsEnumDirective && enumInfo.isBitEnum() &&
       (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
-    StringRef separator = enumInfo.getDef().getValueAsString("separator");
-    StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
-                                     .Case("|", "parseOptionalVerticalBar")
-                                     .Case(",", "parseOptionalComma")
-                                     .Default("invalid bit enum separator");
+    StringRef parseSeparatorFn = enumInfo.getBitEnumSeparatorParser();
     std::string enumType =
         (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
     body << formatv(unquotedBitEnumAttrParserCode, var->name,
@@ -1904,8 +1908,9 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         }
       }
 
-      // Generate the rest of the elements inside an optional group. Elements in
-      // an optional group after the guard are parsed as required.
+      // Generate the remaining then-elements or all else-elements after the
+      // guard has selected a branch. Optional attributes must be parsed as
+      // required here so that an incomplete group is rejected.
       for (FormatElement *childElement : elements)
         if (childElement != elidedAnchorElement)
           genElementParser(childElement, body, attrTypeCtx,
@@ -2032,7 +2037,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         }
       } else {
         for (FormatElement *el : pelement)
-          genElementParser(el, body, attrTypeCtx);
+          genElementParser(el, body, attrTypeCtx, GenContext::Optional);
       }
       body << "    } else ";
     }
@@ -3981,7 +3986,7 @@ OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
 
     Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
     EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-    if (!enumInfo.isBitEnum() || enumInfo.printBitEnumQuoted())
+    if (!enumInfo.isNewStyleBitEnum())
       continue;
 
     auto remaining = elements.drop_front(index + 1);
@@ -3993,8 +3998,7 @@ OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
     if (!literal)
       continue;
 
-    StringRef separator =
-        enumInfo.getDef().getValueAsString("separator").trim();
+    StringRef separator = enumInfo.getBitEnumSeparator().trim();
     if (literal->getSpelling() == separator) {
       return emitError(loc, "unquoted bit enum cannot be followed by its '" +
                                 separator + "' separator literal");

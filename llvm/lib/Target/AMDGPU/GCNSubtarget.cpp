@@ -93,9 +93,10 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
   }
 }
 
-GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
-                                                            StringRef GPU,
-                                                            StringRef FS) {
+GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(
+    const Triple &TT, StringRef GPU, StringRef FS,
+    AMDGPU::TargetIDSetting XnackSetting,
+    AMDGPU::TargetIDSetting SramEccSetting) {
   // Determine default and user-specified characteristics
   //
   // We want to be able to turn these off, but making this a subtarget feature
@@ -201,6 +202,17 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
 
+  // Apply the module flag's xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support have xnack always on and ignore module
+  // flags.
+  if (hasXNACKOnOffModes())
+    TargetID.setXnackSetting(XnackSetting);
+
+  // Apply the module flag's sramecc setting if the target supports on/off
+  // modes. Targets with sramecc hardwired on ignore module flags.
+  if (hasSRAMECCOnOffModes())
+    TargetID.setSramEccSetting(SramEccSetting);
+
   return *this;
 }
 
@@ -227,24 +239,14 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
-    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
+    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS, XnackSetting,
+                                              SramEccSetting)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
 
   // clang-format on
-
-  // Apply the module flag's xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support have xnack always on and ignore module
-  // flags.
-  if (hasXNACKOnOffModes())
-    TargetID.setXnackSetting(XnackSetting);
-
-  // Apply the module flag's sramecc setting if the target supports on/off
-  // modes. Targets with sramecc hardwired on ignore module flags.
-  if (hasSRAMECCOnOffModes())
-    TargetID.setSramEccSetting(SramEccSetting);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
                     << TargetID.getXnackSetting() << '\n');
@@ -545,8 +547,8 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  unsigned Requested = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs));
 
   if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
@@ -626,7 +628,8 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
 
-  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  unsigned Requested = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max));
   if (Requested != Max && hasGFX90AInsts())
     Requested *= 2;
 
@@ -719,8 +722,8 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 static const MachineOperand *
 getVOP3PSourceModifierFromOpIdx(const MachineInstr &UseI, int UseOpIdx,
                                 const SIInstrInfo &InstrInfo) {
-  AMDGPU::OpName UseName =
-      AMDGPU::getOperandIdxName(UseI.getOpcode(), UseOpIdx);
+  AMDGPU::OpName UseName = AMDGPU::getOperandIdxName(
+      UseI.getOpcode(), static_cast<int16_t>(UseOpIdx));
   switch (UseName) {
   case AMDGPU::OpName::src0:
     return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src0_modifiers);
@@ -896,8 +899,8 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 
-  int Value = MF.getFunction().getFnAttributeAsParsedInteger(
-      "amdgpu-nsa-threshold", -1);
+  int Value = static_cast<int>(MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-nsa-threshold", -1));
   if (Value > 0)
     return std::max(Value, 2);
 
@@ -917,8 +920,8 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
   if (IsAmdHsaOrMesa && !ST.hasFlatScratchEnabled())
     PrivateSegmentBuffer = true;
-  else if (ST.isMesaGfxShader(F))
-    ImplicitBufferPtr = true;
+  else if (!ST.hasArchitectedFlatScratch() && ST.isMesaGfxShader(F))
+    ImplicitBufferPtr = true; // Only needed to set up scratch.
 
   if (!AMDGPU::isGraphics(CC)) {
     if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))

@@ -10,7 +10,7 @@
 
 func.func @_QPtest_null_user_var() {
   %abs = fir.absent !fir.ref<f32>
-  %0 = fir.declare %abs {uniq_name = "_QFtest_null_user_varEx", test.ptr = "x"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %0 = fir.declare %abs uniq_name("_QFtest_null_user_varEx") {test.ptr = "x"} : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.call @_QPother() {test.ptr = "other"} : () -> ()
   fir.call @_QPtakes_x(%0) {test.ptr = "takes_x"} : (!fir.ref<f32>) -> ()
   return

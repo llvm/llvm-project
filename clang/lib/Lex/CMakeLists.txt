@@ -32,6 +32,7 @@ add_clang_library(clangLex
   TextEncoding.cpp
   TokenConcatenation.cpp
   TokenLexer.cpp
+  UnicodeCharSetsGenerated.cpp
 
   LINK_LIBS
   clangBasic

@@ -1154,7 +1154,7 @@ namespace NewNegSizeNothrow {
 
   constexpr bool test_nothrow_neg_size() {
     int x = get_neg_size();
-    int* p = new (std::nothrow) int[x]; 
+    int* p = new (std::nothrow) int[x];
     return p == nullptr;
   }
 
@@ -1291,13 +1291,13 @@ namespace FreeNonBlockPointer {
   extern int f();
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-  constexpr int foo() {
+  constexpr int foo() { // expected-error {{constexpr function never produces a constant expression}}
     int *p;
     p = fold((int*)(void*)f);
-    delete p;
+    delete p; // expected-note 2 {{delete of pointer '&f' that does not point to a heap-allocated object}}
     return 10;
   }
-  static_assert(foo() == 10); // both-error {{not an integral constant expression}}
+  static_assert(foo() == 10); // both-error {{not an integral constant expression}} expected-note {{in call to 'foo()'}}
 }
 
 namespace NonPrimitiveImplicitValueInitExpr {
@@ -1320,6 +1320,17 @@ namespace ZeroSizeElems {
     return true;
   }
   static_assert(foo());
+}
+
+namespace NonNumber {
+  constexpr int m() { // both-error {{never produces a constant expression}}
+    int baz;
+    int *p = new int [(__UINTPTR_TYPE__)&baz]; // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}} \
+                                               // both-note {{subexpression not valid in a constant expression}}
+    return 0;
+  }
+  static_assert(m() == 0); // both-error {{not an integral constant expression}} \
+                           // both-note {{in call to}}
 }
 
 #else
