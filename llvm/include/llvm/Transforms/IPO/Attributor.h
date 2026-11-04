@@ -2435,6 +2435,12 @@ public:
     return CGModifiedFunctions;
   }
 
+  /// Return the functions whose attributes, or whose call site attributes,
+  /// were changed.
+  const SmallSetVector<Function *, 8> &getAttrModifiedFunctions() {
+    return AttrModifiedFunctions;
+  }
+
 private:
   /// This method will do fixpoint iteration until fixpoint or the
   /// maximum iteration count is reached.
@@ -2503,6 +2509,10 @@ private:
   /// Set of functions for which we modified the content such that it might
   /// impact the call graph.
   SmallSetVector<Function *, 8> CGModifiedFunctions;
+
+  /// Set of functions whose attributes, or whose call site attributes, were
+  /// changed during manifest.
+  SmallSetVector<Function *, 8> AttrModifiedFunctions;
 
   /// Information about a dependence. If FromAA is changed ToAA needs to be
   /// updated as well.
