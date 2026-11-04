@@ -10,7 +10,6 @@
 // MERGE-LABEL: define dso_local noundef range(i32 0, 3) i32 @two_checks(
 // MERGE-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], ptr nofree noundef readonly captures(none) [[Q:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // MERGE:    call void @__msan_warning_noreturn() #[[ATTR2:[0-9]+]]
-// MERGE:    call void @__msan_warning_noreturn() #[[ATTR2]]
 //
 int two_checks(int *p, int *q) {
   if (*p)
