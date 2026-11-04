@@ -2,7 +2,8 @@
 ; RUN: opt -S -passes=nvptx-canonicalize-dynamic-shared < %s | FileCheck %s
 
 ; A declaration that a used list names keeps its symbol, but its uses still
-; move to the common declaration.
+; move to the common declaration. One that only a used list names (@e) still
+; contributes its alignment.
 
 target triple = "nvptx64-nvidia-cuda"
 
@@ -10,14 +11,16 @@ target triple = "nvptx64-nvidia-cuda"
 @b = external addrspace(3) global [0 x i32], align 4
 @c = external addrspace(3) global [0 x i32], align 4
 @d = external addrspace(3) global [0 x i32], align 4
-@llvm.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @b to ptr)], section "llvm.metadata"
+@e = external addrspace(3) global [0 x i32], align 16
+@llvm.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(3) @b to ptr), ptr addrspacecast (ptr addrspace(3) @e to ptr)], section "llvm.metadata"
 @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @c to ptr)], section "llvm.metadata"
 
 ;.
-; CHECK: @a = external addrspace(3) global [0 x i32], align 4
+; CHECK: @a = external addrspace(3) global [0 x i32], align 16
 ; CHECK: @b = external addrspace(3) global [0 x i32], align 4
 ; CHECK: @c = external addrspace(3) global [0 x i32], align 4
-; CHECK: @llvm.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @b to ptr)], section "llvm.metadata"
+; CHECK: @e = external addrspace(3) global [0 x i32], align 16
+; CHECK: @llvm.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(3) @b to ptr), ptr addrspacecast (ptr addrspace(3) @e to ptr)], section "llvm.metadata"
 ; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @c to ptr)], section "llvm.metadata"
 ;.
 define void @uses() {
