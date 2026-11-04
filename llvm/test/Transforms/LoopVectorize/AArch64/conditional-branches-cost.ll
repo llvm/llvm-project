@@ -579,61 +579,16 @@ exit:
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
 ; COMMON-SAME: ptr [[DST:%.*]]) {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
-; COMMON:       [[VECTOR_PH]]:
-; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
-; COMMON:       [[VECTOR_BODY]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; COMMON:       [[PRED_STORE_IF]]:
-; COMMON-NEXT:    store i8 0, ptr [[DST]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; COMMON:       [[PRED_STORE_CONTINUE]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; COMMON:       [[PRED_STORE_IF1]]:
-; COMMON-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 1
-; COMMON-NEXT:    store i8 1, ptr [[TMP0]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; COMMON:       [[PRED_STORE_CONTINUE2]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; COMMON:       [[PRED_STORE_IF3]]:
-; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 2
-; COMMON-NEXT:    store i8 2, ptr [[TMP1]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; COMMON:       [[PRED_STORE_CONTINUE4]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; COMMON:       [[PRED_STORE_IF5]]:
-; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; COMMON-NEXT:    store i8 3, ptr [[TMP2]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; COMMON:       [[PRED_STORE_CONTINUE6]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; COMMON:       [[PRED_STORE_IF7]]:
-; COMMON-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; COMMON-NEXT:    store i8 4, ptr [[TMP3]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; COMMON:       [[PRED_STORE_CONTINUE8]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; COMMON:       [[PRED_STORE_IF9]]:
-; COMMON-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 5
-; COMMON-NEXT:    store i8 5, ptr [[TMP4]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; COMMON:       [[PRED_STORE_CONTINUE10]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; COMMON:       [[PRED_STORE_IF11]]:
-; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 6
-; COMMON-NEXT:    store i8 6, ptr [[TMP5]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; COMMON:       [[PRED_STORE_CONTINUE12]]:
-; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; COMMON:       [[PRED_STORE_IF13]]:
-; COMMON-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 7
-; COMMON-NEXT:    store i8 7, ptr [[TMP6]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; COMMON:       [[PRED_STORE_CONTINUE14]]:
+; COMMON-NEXT:  [[PRED_STORE_CONTINUE14:.*]]:
 ; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
-; COMMON-NEXT:    br label %[[EXIT:.*]]
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_STORE_CONTINUE14]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK]] ]
+; COMMON-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
+; COMMON-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
+; COMMON-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
+; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
+; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[MIDDLE_BLOCK]]
 ; COMMON:       [[EXIT]]:
 ; COMMON-NEXT:    ret void
 ;
@@ -1431,37 +1386,58 @@ define void @predicate_store_user(ptr noalias %a, ptr noalias %b, ptr noalias %e
 ; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; DEFAULT-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; DEFAULT-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[WIDE_LOAD2]], [[WIDE_LOAD3]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP5]], [[TMP6]]
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; DEFAULT:       [[PRED_STORE_IF]]:
+; DEFAULT-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[WIDE_LOAD2]], i64 0
+; DEFAULT-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[WIDE_LOAD3]], i64 0
+; DEFAULT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], [[TMP6]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
+; DEFAULT-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[WIDE_LOAD1]], i64 0
+; DEFAULT-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP9]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP7]], i64 0
+; DEFAULT-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP7]]
 ; DEFAULT-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; DEFAULT:       [[PRED_STORE_IF4]]:
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
+; DEFAULT-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[WIDE_LOAD2]], i64 1
+; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[WIDE_LOAD3]], i64 1
+; DEFAULT-NEXT:    [[TMP16:%.*]] = add i32 [[TMP14]], [[TMP15]]
+; DEFAULT-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
+; DEFAULT-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[WIDE_LOAD1]], i64 1
+; DEFAULT-NEXT:    [[TMP19:%.*]] = add i32 [[TMP17]], [[TMP18]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP13]]
-; DEFAULT-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP7]], i64 1
+; DEFAULT-NEXT:    [[TMP21:%.*]] = add i32 [[TMP19]], [[TMP16]]
 ; DEFAULT-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE5]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; DEFAULT:       [[PRED_STORE_IF6]]:
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 2
+; DEFAULT-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[WIDE_LOAD2]], i64 2
+; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[WIDE_LOAD3]], i64 2
+; DEFAULT-NEXT:    [[TMP25:%.*]] = add i32 [[TMP23]], [[TMP24]]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
+; DEFAULT-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[WIDE_LOAD1]], i64 2
+; DEFAULT-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 ; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP22]]
-; DEFAULT-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP7]], i64 2
+; DEFAULT-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP25]]
 ; DEFAULT-NEXT:    store i32 [[TMP30]], ptr [[TMP29]], align 4
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE7]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9]]
 ; DEFAULT:       [[PRED_STORE_IF8]]:
 ; DEFAULT-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 3
+; DEFAULT-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[WIDE_LOAD2]], i64 3
+; DEFAULT-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[WIDE_LOAD3]], i64 3
+; DEFAULT-NEXT:    [[TMP34:%.*]] = add i32 [[TMP32]], [[TMP33]]
+; DEFAULT-NEXT:    [[TMP35:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
+; DEFAULT-NEXT:    [[TMP36:%.*]] = extractelement <4 x i32> [[WIDE_LOAD1]], i64 3
+; DEFAULT-NEXT:    [[TMP37:%.*]] = add i32 [[TMP35]], [[TMP36]]
 ; DEFAULT-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP31]]
-; DEFAULT-NEXT:    [[TMP39:%.*]] = extractelement <4 x i32> [[TMP7]], i64 3
+; DEFAULT-NEXT:    [[TMP39:%.*]] = add i32 [[TMP37]], [[TMP34]]
 ; DEFAULT-NEXT:    store i32 [[TMP39]], ptr [[TMP38]], align 4
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE9]]:
