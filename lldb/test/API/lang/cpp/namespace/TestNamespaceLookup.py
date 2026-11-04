@@ -98,6 +98,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate ::func() - should call ::func()
         self.expect_expr("::func()", result_type="int", result_value="1")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     @requireExpressionEvaluation
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
