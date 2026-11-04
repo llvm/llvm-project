@@ -29,6 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <string>
 
 /// TableGen will produce 2 enums, RTLIB::Libcall and
 /// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
@@ -84,6 +85,15 @@ private:
   LibcallImplBitset AvailableLibcallImpls;
 
   LongDoubleFormat LongDoubleFmt;
+
+  std::string ABIName;
+
+  /// Lower a returned C struct of two \p EltTy values for the target ABI.
+  /// \returns the IR return type, and the struct type if the struct is
+  /// returned through an sret argument (in which case the IR return type is
+  /// void), or nullptr if it is returned in registers.
+  std::pair<Type *, Type *> lowerCPairReturn(const Triple &TT,
+                                             Type *EltTy) const;
 
 public:
   friend class llvm::LibcallLoweringInfo;
