@@ -28,7 +28,9 @@ struct LLVMBlockAddressInfo;
 /// May use the datalayout for lowering attributes to-be-stored in memory. When
 /// the attribute may contain block address attributes, `blockInfoAddr` is used
 /// to resolve them.
-mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
+mlir::Value lowerCirAttrAsValue(mlir::Location parentLoc,
+                                mlir::ModuleOp parentModule,
+                                mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 const mlir::TypeConverter *converter,

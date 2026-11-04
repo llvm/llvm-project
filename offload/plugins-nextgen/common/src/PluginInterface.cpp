@@ -12,7 +12,6 @@
 
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
 #include "GenericProfiler.h"

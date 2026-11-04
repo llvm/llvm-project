@@ -1041,6 +1041,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NOOUTLINE;
   case Attribute::NoIPA:
     return bitc::ATTR_KIND_NOIPA;
+  case Attribute::LikelyModuleLocal:
+    return bitc::ATTR_KIND_LIKELY_MODULE_LOCAL;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

@@ -167,9 +167,6 @@ private:
   // Mapping of device handles to the OpenMP device identifier.
   llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
 
-  // Set of all device images currently in use.
-  llvm::DenseSet<const __tgt_device_image *> UsedImages;
-
   /// Executable images and information extracted from the input images passed
   /// to the runtime.
   llvm::SmallVector<std::unique_ptr<DeviceImageTy>> DeviceImages;
