@@ -36,7 +36,7 @@ class Instruction;
 class Type;
 class Constant;
 
-/// Reinterprets the bits of a constant as another type of the same size, e.g.,
+/// Reinterprets the bits of a value as another type of the same size, e.g.,
 /// float to i32, ptr to i64, or double to <2 x i32>.
 class Reinterpret {
   /// A single cast in the chain built by getCastChain().
@@ -60,6 +60,14 @@ public:
     return !VecUtils::isNonIntegralPtr(SrcTy, DL) &&
            !VecUtils::isNonIntegralPtr(DestTy, DL);
   }
+
+  /// Reinterprets \p V as \p DestTy, which must have the same size in \p DL,
+  /// inserting casts before \p WhereIt. Casts of constants fold, so nothing is
+  /// inserted for those. \returns nullptr if a non-integral pointer is
+  /// involved.
+  LLVM_ABI static Value *reinterpretValue(Value *V, Type *DestTy,
+                                          BasicBlock::iterator WhereIt,
+                                          Context &Ctx, const DataLayout &DL);
 
   /// Reinterprets \p C as \p DestTy, e.g., float 1.0 to i32 0x3f800000, or a
   /// null pointer to i64 0. \returns nullptr if a non-integral pointer is
@@ -91,8 +99,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// nullopt otherwise.
   std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
-  /// Builds a single vector load out of \p Loads. \returns the new load,
-  /// or nullptr if \p Loads are not a vectorizable.
+  /// Builds a single vector load out of \p Loads. A chain of mixed types is
+  /// loaded as a vector of integers. \returns the new load, or nullptr if
+  /// \p Loads are not vectorizable.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
   /// Packs \p Constants into one constant vector. The element type is chosen
@@ -108,7 +117,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// loads. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
-  /// Vectorizes \p Loads into a single load. \return the packed load.
+  /// Vectorizes \p Loads into a single load and unpacks each original load
+  /// from it, casting the lanes back to the load's type if needed.
+  /// \return the packed load.
   LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:

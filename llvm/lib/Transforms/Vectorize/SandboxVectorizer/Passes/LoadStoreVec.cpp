@@ -63,6 +63,13 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
+/// \returns the type of the lanes of \p LaneTy that hold a value of type \p Ty
+/// in a packed vector: \p LaneTy itself, or <N x LaneTy> if \p Ty is wider.
+static Type *getLanesTypeFor(Type *Ty, Type *LaneTy, const DataLayout &DL) {
+  unsigned NumLanes = Utils::getNumBits(Ty, DL) / Utils::getNumBits(LaneTy, DL);
+  return NumLanes > 1 ? VecUtils::getWideType(LaneTy, NumLanes) : LaneTy;
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   if (!canVectorize(Loads))
     return nullptr;
@@ -111,6 +118,17 @@ Reinterpret::getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
   // pointers and a scalar pointer of the same width need all three.
   assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
   return Chain;
+}
+
+Value *Reinterpret::reinterpretValue(Value *V, Type *DestTy,
+                                     BasicBlock::iterator WhereIt, Context &Ctx,
+                                     const DataLayout &DL) {
+  if (!canReinterpret(V->getType(), DestTy, DL))
+    return nullptr;
+  Value *NewV = V;
+  for (auto [Opc, Ty] : getCastChain(V->getType(), DestTy, DL))
+    NewV = CastInst::create(Ty, Opc, NewV, WhereIt, Ctx, "VCast");
+  return NewV;
 }
 
 Constant *Reinterpret::reinterpretConstant(Constant *C, Type *DestTy,
@@ -321,10 +339,12 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   if (!VecTy)
     return nullptr;
 
-  // TODO: Support mixed-type top-level load chains.
+  // Each load is unpacked from the lanes it occupies in the vector and, for a
+  // chain of mixed types, reinterpreted back as the type of the load.
   Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (!all_of(Loads, [VecElemTy](Instruction *I) {
-        return VecUtils::getElementType(I->getType()) == VecElemTy;
+  if (any_of(Loads, [this, VecElemTy](Instruction *I) {
+        return !Reinterpret::canReinterpret(
+            getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
       }))
     return nullptr;
 
@@ -336,14 +356,21 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
     return nullptr;
   }
 
+  // Lanes are counted in units of LaneTy, so a load wider than LaneTy spans
+  // several lanes.
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
-    auto *OrigLoad = cast<LoadInst>(OrigV);
-    if (OrigLoad->hasNUses(0))
-      continue;
-    Value *Unpacked =
-        VecUtils::unpack(VecLoad, OrigLoad->getType(), Lane, WhereIt);
-    OrigLoad->replaceAllUsesWith(Unpacked);
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    auto *OrigLoad = cast<LoadInst>(I);
+    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
+    unsigned NumLanes = VecUtils::getNumLanes(VecTy);
+    if (!OrigLoad->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
+      Unpacked = Reinterpret::reinterpretValue(Unpacked, OrigLoad->getType(),
+                                               WhereIt, *Ctx, *DL);
+      OrigLoad->replaceAllUsesWith(Unpacked);
+    }
+    Lane += NumLanes;
   }
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
