@@ -11,6 +11,7 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -34,10 +35,16 @@ void initializeWriteDXILPassPass(PassRegistry &);
 void initializeEmbedDXILPassPass(PassRegistry &);
 
 /// Initializer for DXIL-prepare
-void initializeDXILPrepareModulePass(PassRegistry &);
+void initializeDXILPrepareModuleLegacyPass(PassRegistry &);
 
 /// Pass to convert modules into DXIL-compatable modules
-ModulePass *createDXILPrepareModulePass();
+class DXILPrepareModulePass
+    : public RequiredPassInfoMixin<DXILPrepareModulePass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createDXILPrepareModuleLegacyPass();
 
 /// Pass to downgrade debug information to forms supported by DXIL.
 class DXILDebugInfoPass : public OptionalPassInfoMixin<DXILDebugInfoPass> {

@@ -55,7 +55,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
   initializeDXILLegalizeLegacyPass(*PR);
-  initializeDXILPrepareModulePass(*PR);
+  initializeDXILPrepareModuleLegacyPass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
@@ -134,7 +134,7 @@ public:
     addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILPrepareModulePass());
+    addPass(createDXILPrepareModuleLegacyPass());
     addPass(createDXILDebugInfoLegacyPass());
   }
 };
