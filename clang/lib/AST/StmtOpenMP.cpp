@@ -331,6 +331,54 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   llvm::copy(A, getFinalsConditions().begin());
 }
 
+void OMPLoopDirective::setHelperExprs(const HelperExprs &Exprs) {
+  setIterationVariable(Exprs.IterationVarRef);
+  setLastIteration(Exprs.LastIteration);
+  setCalcLastIteration(Exprs.CalcLastIteration);
+  setPreCond(Exprs.PreCond);
+  setCond(Exprs.Cond);
+  setInit(Exprs.Init);
+  setInc(Exprs.Inc);
+  setCounters(Exprs.Counters);
+  setPrivateCounters(Exprs.PrivateCounters);
+  setInits(Exprs.Inits);
+  setUpdates(Exprs.Updates);
+  setFinals(Exprs.Finals);
+  setDependentCounters(Exprs.DependentCounters);
+  setDependentInits(Exprs.DependentInits);
+  setFinalsConditions(Exprs.FinalsConditions);
+  setPreInits(Exprs.PreInits);
+
+  const OpenMPDirectiveKind Kind = getDirectiveKind();
+  // Simd directives have no worksharing helpers.
+  if (getArraysOffset(Kind) == DefaultEnd)
+    return;
+  setIsLastIterVariable(Exprs.IL);
+  setLowerBoundVariable(Exprs.LB);
+  setUpperBoundVariable(Exprs.UB);
+  setStrideVariable(Exprs.ST);
+  setEnsureUpperBound(Exprs.EUB);
+  setNextLowerBound(Exprs.NLB);
+  setNextUpperBound(Exprs.NUB);
+  setNumIterations(Exprs.NumIterations);
+
+  if (!isOpenMPLoopBoundSharingDirective(Kind))
+    return;
+  setPrevLowerBoundVariable(Exprs.PrevLB);
+  setPrevUpperBoundVariable(Exprs.PrevUB);
+  setDistInc(Exprs.DistInc);
+  setPrevEnsureUpperBound(Exprs.PrevEUB);
+  setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
+  setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
+  setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
+  setCombinedInit(Exprs.DistCombinedFields.Init);
+  setCombinedCond(Exprs.DistCombinedFields.Cond);
+  setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
+  setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
+  setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
+  setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+}
+
 OMPMetaDirective *OMPMetaDirective::allocate(const ASTContext &C,
                                              unsigned NumVariants,
                                              SourceLocation StartLoc,
@@ -395,22 +443,7 @@ OMPSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   auto *Dir = createDirective<OMPSimdDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -430,30 +463,7 @@ OMPForDirective *OMPForDirective::Create(
   auto *Dir = createDirective<OMPForDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_for) + 1,
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -711,30 +721,7 @@ OMPForSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   auto *Dir = createDirective<OMPForSimdDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_for_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -858,30 +845,7 @@ OMPParallelForDirective *OMPParallelForDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_for) + 1, StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -903,30 +867,7 @@ OMPParallelForSimdDirective *OMPParallelForSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_for_simd), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1263,30 +1204,7 @@ OMPTargetParallelForDirective *OMPTargetParallelForDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_parallel_for) + 1, StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -1367,30 +1285,7 @@ OMPTaskLoopDirective *OMPTaskLoopDirective::Create(
   auto *Dir = createDirective<OMPTaskLoopDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_taskloop),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -1412,30 +1307,7 @@ OMPTaskLoopSimdDirective *OMPTaskLoopSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_taskloop_simd), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1455,30 +1327,7 @@ OMPMasterTaskLoopDirective *OMPMasterTaskLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_master_taskloop), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -1500,30 +1349,7 @@ OMPMaskedTaskLoopDirective *OMPMaskedTaskLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_masked_taskloop), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -1545,30 +1371,7 @@ OMPMasterTaskLoopSimdDirective *OMPMasterTaskLoopSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_master_taskloop_simd), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1589,30 +1392,7 @@ OMPMaskedTaskLoopSimdDirective *OMPMaskedTaskLoopSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_masked_taskloop_simd), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1633,30 +1413,7 @@ OMPParallelMasterTaskLoopDirective *OMPParallelMasterTaskLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_master_taskloop), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -1680,30 +1437,7 @@ OMPParallelMaskedTaskLoopDirective *OMPParallelMaskedTaskLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_masked_taskloop), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -1728,30 +1462,7 @@ OMPParallelMasterTaskLoopSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_master_taskloop_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1775,30 +1486,7 @@ OMPParallelMaskedTaskLoopSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_masked_taskloop_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1822,30 +1510,7 @@ OMPDistributeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -1880,43 +1545,7 @@ OMPDistributeParallelForDirective *OMPDistributeParallelForDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute_parallel_for) + 1, StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->HasCancel = HasCancel;
   return Dir;
@@ -1942,43 +1571,7 @@ OMPDistributeParallelForSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute_parallel_for_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2001,30 +1594,7 @@ OMPDistributeSimdDirective *OMPDistributeSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute_simd), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2045,30 +1615,7 @@ OMPTargetParallelForSimdDirective *OMPTargetParallelForSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_parallel_for_simd), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2092,22 +1639,7 @@ OMPTargetSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_simd), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2127,30 +1659,7 @@ OMPTeamsDistributeDirective *OMPTeamsDistributeDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_teams_distribute), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2171,30 +1680,7 @@ OMPTeamsDistributeSimdDirective *OMPTeamsDistributeSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_teams_distribute_simd), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2215,43 +1701,7 @@ OMPTeamsDistributeParallelForSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_teams_distribute_parallel_for_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2275,43 +1725,7 @@ OMPTeamsDistributeParallelForDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_teams_distribute_parallel_for) + 1,
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->HasCancel = HasCancel;
   return Dir;
@@ -2351,30 +1765,7 @@ OMPTargetTeamsDistributeDirective *OMPTargetTeamsDistributeDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_teams_distribute), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2399,43 +1790,7 @@ OMPTargetTeamsDistributeParallelForDirective::Create(
       numLoopChildren(CollapsedNum, OMPD_target_teams_distribute_parallel_for) +
           1,
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->HasCancel = HasCancel;
   return Dir;
@@ -2463,43 +1818,7 @@ OMPTargetTeamsDistributeParallelForSimdDirective::Create(
       numLoopChildren(CollapsedNum,
                       OMPD_target_teams_distribute_parallel_for_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2523,30 +1842,7 @@ OMPTargetTeamsDistributeSimdDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_teams_distribute_simd),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2618,30 +1914,7 @@ OMPGenericLoopDirective *OMPGenericLoopDirective::Create(
   auto *Dir = createDirective<OMPGenericLoopDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_loop),
       StartLoc, EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2661,43 +1934,7 @@ OMPTeamsGenericLoopDirective *OMPTeamsGenericLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_teams_loop), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2718,43 +1955,7 @@ OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_teams_loop), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
-  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
-  Dir->setDistInc(Exprs.DistInc);
-  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
-  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
-  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
-  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
-  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
-  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
-  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
-  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
-  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
-  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setHelperExprs(Exprs);
   Dir->setCanBeParallelFor(CanBeParallelFor);
   return Dir;
 }
@@ -2777,30 +1978,7 @@ OMPParallelGenericLoopDirective *OMPParallelGenericLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_parallel_loop), StartLoc, EndLoc,
       CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 
@@ -2821,30 +1999,7 @@ OMPTargetParallelGenericLoopDirective::Create(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_parallel_loop), StartLoc,
       EndLoc, CollapsedNum);
-  Dir->setIterationVariable(Exprs.IterationVarRef);
-  Dir->setLastIteration(Exprs.LastIteration);
-  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
-  Dir->setPreCond(Exprs.PreCond);
-  Dir->setCond(Exprs.Cond);
-  Dir->setInit(Exprs.Init);
-  Dir->setInc(Exprs.Inc);
-  Dir->setIsLastIterVariable(Exprs.IL);
-  Dir->setLowerBoundVariable(Exprs.LB);
-  Dir->setUpperBoundVariable(Exprs.UB);
-  Dir->setStrideVariable(Exprs.ST);
-  Dir->setEnsureUpperBound(Exprs.EUB);
-  Dir->setNextLowerBound(Exprs.NLB);
-  Dir->setNextUpperBound(Exprs.NUB);
-  Dir->setNumIterations(Exprs.NumIterations);
-  Dir->setCounters(Exprs.Counters);
-  Dir->setPrivateCounters(Exprs.PrivateCounters);
-  Dir->setInits(Exprs.Inits);
-  Dir->setUpdates(Exprs.Updates);
-  Dir->setFinals(Exprs.Finals);
-  Dir->setDependentCounters(Exprs.DependentCounters);
-  Dir->setDependentInits(Exprs.DependentInits);
-  Dir->setFinalsConditions(Exprs.FinalsConditions);
-  Dir->setPreInits(Exprs.PreInits);
+  Dir->setHelperExprs(Exprs);
   return Dir;
 }
 

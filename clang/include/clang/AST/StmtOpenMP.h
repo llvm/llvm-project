@@ -1412,6 +1412,8 @@ protected:
   void setDependentCounters(ArrayRef<Expr *> A);
   void setDependentInits(ArrayRef<Expr *> A);
   void setFinalsConditions(ArrayRef<Expr *> A);
+  /// Set the helper expressions used by this directive kind.
+  void setHelperExprs(const HelperExprs &Exprs);
 
 public:
   Expr *getIterationVariable() const {
