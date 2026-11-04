@@ -7023,7 +7023,7 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
   return SDValue();
 }
 
-SDValue SelectionDAG::FoldConcatVectors(const SDLoc &DL, EVT VT,
+SDValue SelectionDAG::foldConcatVectors(const SDLoc &DL, EVT VT,
                                         ArrayRef<SDValue> Ops,
                                         bool LegalOperations) {
   assert(!Ops.empty() && "Can't concatenate an empty list of vectors!");
@@ -7083,13 +7083,13 @@ SDValue SelectionDAG::FoldConcatVectors(const SDLoc &DL, EVT VT,
   SmallVector<SDValue, 16> Elts;
   for (SDValue Op : Ops) {
     EVT OpVT = Op.getValueType();
-    if (Op.getOpcode() == ISD::POISON)
+    if (Op.getOpcode() == ISD::POISON) {
       Elts.append(OpVT.getVectorNumElements(), getPOISON(SVT));
-    else if (Op.getOpcode() == ISD::UNDEF)
+    } else if (Op.getOpcode() == ISD::UNDEF) {
       Elts.append(OpVT.getVectorNumElements(), getUNDEF(SVT));
-    else if (Op.getOpcode() == ISD::BUILD_VECTOR)
+    } else if (Op.getOpcode() == ISD::BUILD_VECTOR) {
       Elts.append(Op->op_begin(), Op->op_end());
-    else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+    } else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
       // Custom lowering may create concats after BUILD_VECTOR legalization.
       if (LegalOperations &&
           !getTargetLoweringInfo().isOperationLegal(ISD::BUILD_VECTOR, VT))
@@ -7098,10 +7098,11 @@ SDValue SelectionDAG::FoldConcatVectors(const SDLoc &DL, EVT VT,
       Elts.append(OpVT.getVectorNumElements() - 1, getPOISON(SVT));
     } else if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
                OpVT.getVectorNumElements() == 1 &&
-               isNullConstant(Op.getOperand(2)))
+               isNullConstant(Op.getOperand(2))) {
       Elts.push_back(Op.getOperand(1));
-    else
+    } else {
       return SDValue();
+    }
   }
 
   // BUILD_VECTOR requires all inputs to be of the same type, find the
@@ -7731,7 +7732,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // bail early.
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
-  // FoldConcatVectors in getNode before this is called.
+  // foldConcatVectors in getNode before this is called.
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
@@ -8616,7 +8617,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::CONCAT_VECTORS: {
     SDValue Ops[] = {N1, N2};
-    if (SDValue V = FoldConcatVectors(DL, VT, Ops))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   }
@@ -9185,7 +9186,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::CONCAT_VECTORS: {
     SDValue Ops[] = {N1, N2, N3};
-    if (SDValue V = FoldConcatVectors(DL, VT, Ops))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   }
@@ -12048,7 +12049,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V = FoldConcatVectors(DL, VT, Ops))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   case ISD::SELECT_CC:

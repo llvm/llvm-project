@@ -1379,7 +1379,7 @@ public:
   /// vector. Scalar-to-vector operands may only introduce an illegal build
   /// vector when LegalOperations is false. Return an empty SDValue if no
   /// simplification is possible.
-  LLVM_ABI SDValue FoldConcatVectors(const SDLoc &DL, EVT VT,
+  LLVM_ABI SDValue foldConcatVectors(const SDLoc &DL, EVT VT,
                                      ArrayRef<SDValue> Ops,
                                      bool LegalOperations = true);
 
