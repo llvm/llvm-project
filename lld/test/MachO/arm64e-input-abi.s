@@ -58,6 +58,7 @@ _main:
 #--- helper.yaml
 ## An object defining _helper; SUBTYPE varies only its arm64e ABI marker.
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
