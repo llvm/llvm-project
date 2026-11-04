@@ -202,10 +202,22 @@ protected:
   UniqueFunctionBase(UniqueFunctionBase &&RHS) noexcept {
     CallPtr = RHS.CallPtr;
     DestroyMovePtr = RHS.DestroyMovePtr;
-    if (DestroyMovePtr)
+    if (DestroyMovePtr) {
       DestroyMovePtr(this, &RHS);
-    else // Trivial callable stored inline => memcpy.
+    } else { // Trivial callable stored inline => memcpy.
+      // An empty callable or an empty unique_function never writes the inline
+      // buffer, so GCC may warn that it is (maybe) used uninitialized here.
+      // Copying indeterminate bytes is fine, so silence that false positive.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
       memcpy(&Storage.Inline, &RHS.Storage.Inline, InlineStorageSize);
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+    }
 
     RHS.CallPtr = nullptr;
     RHS.DestroyMovePtr = nullptr; // Moved everything out of RHS.
