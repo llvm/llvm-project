@@ -3708,8 +3708,8 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [
   Pure,
   TypesMatchWith<
-      "result is a vptr pointer in the address space of 'src'", "src",
-      "result",
+      "result is a vptr pointer in the address space of 'src'",
+      "src", "result",
       "cir::PointerType::get(cir::VPtrType::get($_self.getContext()), "
       "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
 ]> {
