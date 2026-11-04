@@ -941,7 +941,6 @@ LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
   cir::CastKind kind = getKind();
-
   if (getFenvAttr() && !isFloatingPointCastKind(kind))
     return emitOpError()
            << "'fenv' is only valid for floating-point cast kinds";
@@ -959,13 +958,12 @@ LogicalResult cir::CastOp::verify() {
   auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
   auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
   if (srcVTy && resVTy) {
-    if ((kind == cir::CastKind::int_to_float ||
-         kind == cir::CastKind::float_to_int) &&
+    if (kind != cir::CastKind::bitcast &&
         srcVTy.getSize() != resVTy.getSize()) {
-      return emitOpError()
-             << "vector float-to-int and int-to-float casts require "
-                "source and destination vectors to have the same number of "
-                "elements";
+      return emitOpError() << "vector " << cir::stringifyCastKind(kind)
+                           << " cast require source and destination vectors to "
+                              "have the same number of "
+                              "elements";
     }
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
@@ -976,14 +974,13 @@ LogicalResult cir::CastOp::verify() {
   auto srcMatTy = mlir::dyn_cast<cir::MatrixType>(srcType);
   auto resMatTy = mlir::dyn_cast<cir::MatrixType>(resType);
   if (srcMatTy && resMatTy) {
-    if ((kind == cir::CastKind::int_to_float ||
-         kind == cir::CastKind::float_to_int) &&
+    if (kind != cir::CastKind::bitcast &&
         (srcMatTy.getNumRows() != resMatTy.getNumRows() ||
          srcMatTy.getNumColumns() != resMatTy.getNumColumns())) {
-      return emitOpError()
-             << "matrix float-to-int and int-to-float casts require "
-                "source and destination matrices to have the same number of "
-                "rows and columns";
+      return emitOpError() << "matrix " << cir::stringifyCastKind(kind)
+                           << " cast require source and destination matrices "
+                              "to have the same number of "
+                              "rows and columns";
     }
 
     srcType = srcMatTy.getElementType();
