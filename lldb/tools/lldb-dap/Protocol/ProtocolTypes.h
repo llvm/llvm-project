@@ -28,6 +28,8 @@
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <variant>
+#include <vector>
 
 #define LLDB_DAP_INVALID_SRC_REF int32_t(0)
 #define LLDB_DAP_INVALID_VALUE_LOC 0
@@ -698,6 +700,27 @@ struct SourceBreakpoint {
 bool fromJSON(const llvm::json::Value &, SourceBreakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceBreakpoint &);
 
+/// A module identified by its name (file name or path).
+struct ModuleByName {
+  String name;
+};
+bool fromJSON(const llvm::json::Value &, ModuleByName &, llvm::json::Path);
+llvm::json::Value toJSON(const ModuleByName &);
+
+/// A module identified by its id (`Module.id`).
+struct ModuleById {
+  String id;
+};
+bool fromJSON(const llvm::json::Value &, ModuleById &, llvm::json::Path);
+llvm::json::Value toJSON(const ModuleById &);
+
+/// A module a function breakpoint can be restricted to: either `{ name }` or
+/// `{ id }`.
+using FunctionBreakpointModule = std::variant<ModuleByName, ModuleById>;
+bool fromJSON(const llvm::json::Value &, FunctionBreakpointModule &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const FunctionBreakpointModule &);
+
 /// Properties of a breakpoint passed to the `setFunctionBreakpoints` request.
 struct FunctionBreakpoint {
   /// The name of the function.
@@ -713,6 +736,15 @@ struct FunctionBreakpoint {
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
   String hitCondition;
+
+  /// lldb-dap Extensions
+  /// @{
+
+  /// The modules to restrict the function lookup to, identified by name or by
+  /// id. Empty means the lookup is not restricted.
+  std::vector<FunctionBreakpointModule> modules;
+
+  /// @}
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);

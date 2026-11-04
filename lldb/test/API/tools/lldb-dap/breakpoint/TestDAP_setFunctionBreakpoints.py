@@ -2,12 +2,17 @@
 Test lldb-dap setFunctionBreakpoints request
 """
 
+import os
+
 from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     DAPTestGetTargetBreakpointsArgs,
     FunctionBreakpoint,
     LaunchArgs,
+    ModuleById,
+    ModuleByName,
 )
 
 
@@ -108,6 +113,152 @@ class TestDAP_setFunctionBreakpoints(DAPTestCaseBase):
                 len(functions),
                 f"expect {len(functions)} source breakpoints",
             )
+
+    @skipIfWindows
+    def test_modules(self):
+        """Tests that a function breakpoint is identified by its function name
+        and its set of modules (in any order), and that the modules, identified
+        by name or by id, restrict the lookup."""
+        session = self.build_and_create_session()
+        # The binary is built from a copy of main.cpp.
+        main_path = os.path.realpath(self.getBuildArtifact("main-copy.cpp"))
+        with session.configure(LaunchArgs(self.getBuildArtifact("a.out"))) as ctx:
+            bp_ids = session.resolve_source_breakpoints(
+                main_path, [line_number("main.cpp", "// break loop")]
+            )
+        session.verify_stopped_on_breakpoint(bp_ids, after=ctx.process_event)
+
+        # `twelve` is defined in a.out and `foo` in libother, which is loaded
+        # by now.
+        modules = session.get_modules()
+        a_out = modules["a.out"]
+        other = next(m for name, m in modules.items() if name.startswith("libother"))
+
+        a_out_name = ModuleByName(a_out.name)
+        other_name = ModuleByName(other.name)
+        a_out_id = ModuleById(a_out.id)
+        other_id = ModuleById(other.id)
+
+        def set_breakpoints(*breakpoints):
+            response = session.set_function_breakpoints(list(breakpoints))
+            self.assertEqual(len(response.body.breakpoints), len(breakpoints))
+            return response.body.breakpoints
+
+        def target_breakpoint_ids():
+            # Ignore the source breakpoint that stopped the process.
+            response = session.send_request(DAPTestGetTargetBreakpointsArgs()).result()
+            return [bp.id for bp in response.body.breakpoints if bp.id not in bp_ids]
+
+        # The order of the modules and duplicates don't matter.
+        [bp1, bp2, bp3] = set_breakpoints(
+            FunctionBreakpoint(name="twelve", modules=[a_out_name, other_name]),
+            FunctionBreakpoint(
+                name="twelve", modules=[other_name, a_out_name, a_out_name]
+            ),
+            FunctionBreakpoint(name="twelve", modules=[a_out_name]),
+        )
+        self.assertTrue(bp1.verified)
+        self.assertEqual(bp1.id, bp2.id)
+        # A different set of modules is a different breakpoint.
+        self.assertNotEqual(bp1.id, bp3.id)
+        self.assertTrue(bp3.verified)
+        self.assertCountEqual(target_breakpoint_ids(), [bp1.id, bp3.id])
+
+        # Dropping a breakpoint only removes that one.
+        [bp] = set_breakpoints(
+            FunctionBreakpoint(name="twelve", modules=[other_name, a_out_name])
+        )
+        self.assertEqual(bp.id, bp1.id)
+        self.assertEqual(target_breakpoint_ids(), [bp1.id])
+
+        # No (non-empty) module is the same as no restriction.
+        [bp1, bp2, bp3, bp4] = set_breakpoints(
+            FunctionBreakpoint(name="foo"),
+            FunctionBreakpoint(name="foo", modules=[]),
+            FunctionBreakpoint(name="foo", modules=[ModuleByName("")]),
+            FunctionBreakpoint(name="foo", modules=[ModuleById("")]),
+        )
+        self.assertTrue(bp1.verified)
+        self.assertEqual({bp1.id, bp2.id, bp3.id, bp4.id}, {bp1.id})
+        self.assertEqual(target_breakpoint_ids(), [bp1.id])
+
+        # The module names restrict the lookup.
+        [in_a_out, in_other, nowhere] = set_breakpoints(
+            FunctionBreakpoint(name="foo", modules=[a_out_name]),
+            FunctionBreakpoint(name="foo", modules=[other_name]),
+            FunctionBreakpoint(name="foo", modules=[ModuleByName("does-not-exist")]),
+        )
+        self.assertFalse(in_a_out.verified)
+        self.assertTrue(in_other.verified)
+        self.assertFalse(nowhere.verified)
+        self.assertEqual(len({in_a_out.id, in_other.id, nowhere.id}), 3)
+
+        # The module ids restrict the lookup, and they are case insensitive.
+        [in_a_out, in_other, in_other_lower, in_both, in_both_reversed] = (
+            set_breakpoints(
+                FunctionBreakpoint(name="foo", modules=[a_out_id]),
+                FunctionBreakpoint(name="foo", modules=[other_id]),
+                FunctionBreakpoint(
+                    name="foo", modules=[ModuleById(other.id.lower())]
+                ),
+                FunctionBreakpoint(name="foo", modules=[a_out_id, other_id]),
+                FunctionBreakpoint(name="foo", modules=[other_id, a_out_id]),
+            )
+        )
+        self.assertFalse(in_a_out.verified)
+        self.assertTrue(in_other.verified)
+        self.assertEqual(in_other.id, in_other_lower.id)
+        self.assertTrue(in_both.verified)
+        self.assertEqual(in_both.id, in_both_reversed.id)
+        self.assertEqual(len({in_a_out.id, in_other.id, in_both.id}), 3)
+
+        # An id that doesn't match a module must not leave the breakpoint
+        # unrestricted.
+        unknown_id = "00000000-0000-0000-0000-000000000001"
+        [unknown, invalid] = set_breakpoints(
+            FunctionBreakpoint(name="twelve", modules=[ModuleById(unknown_id)]),
+            FunctionBreakpoint(name="twelve", modules=[ModuleById("not-a-uuid")]),
+        )
+        for bp in (unknown, invalid):
+            self.assertFalse(bp.verified)
+            self.assertIn("module id not found", bp.message)
+        # No breakpoint was created in the target.
+        self.assertEqual(target_breakpoint_ids(), [])
+
+        # Names and ids can be mixed: the lookup is restricted to all of them.
+        # An id that isn't found doesn't make the others fail.
+        [mixed, mixed_reversed, mixed_unknown, same_modules] = set_breakpoints(
+            FunctionBreakpoint(name="foo", modules=[a_out_id, other_name]),
+            FunctionBreakpoint(name="foo", modules=[other_name, a_out_id]),
+            FunctionBreakpoint(
+                name="foo", modules=[ModuleById(unknown_id), other_name]
+            ),
+            FunctionBreakpoint(name="foo", modules=[a_out_name, other_name]),
+        )
+        self.assertTrue(mixed.verified)
+        self.assertEqual(mixed.id, mixed_reversed.id)
+        self.assertTrue(mixed_unknown.verified)
+        self.assertTrue(same_modules.verified)
+        # The identity depends on how the modules are identified.
+        self.assertEqual(
+            len({mixed.id, mixed_unknown.id, same_modules.id}),
+            3,
+        )
+        self.assertCountEqual(
+            target_breakpoint_ids(), [mixed.id, mixed_unknown.id, same_modules.id]
+        )
+
+        # Mixed with `twelve`, which is only defined in a.out: it is found
+        # through the id.
+        [twelve] = set_breakpoints(
+            FunctionBreakpoint(name="twelve", modules=[a_out_id, other_name])
+        )
+        self.assertTrue(twelve.verified)
+
+        # Remove all the breakpoints so the process runs to the end.
+        session.set_function_breakpoints([])
+        session.set_source_breakpoints(main_path, [])
+        session.continue_to_exit()
 
     @skipIfWindows
     def test_functionality(self):

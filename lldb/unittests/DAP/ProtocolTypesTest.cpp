@@ -197,6 +197,9 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
   function_breakpoint.name = "myFunction";
   function_breakpoint.condition = "x == 0";
   function_breakpoint.hitCondition = "3";
+  function_breakpoint.modules = {
+      ModuleByName{"a.out"},
+      ModuleById{String("08463405-8539-46C3-B48F-0A5931BB0017")}};
 
   llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
       roundtripJSON(function_breakpoint);
@@ -207,6 +210,59 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
             deserialized_function_breakpoint->condition);
   EXPECT_EQ(function_breakpoint.hitCondition,
             deserialized_function_breakpoint->hitCondition);
+  ASSERT_EQ(deserialized_function_breakpoint->modules.size(), 2u);
+  EXPECT_EQ(Value(function_breakpoint.modules),
+            Value(deserialized_function_breakpoint->modules));
+  EXPECT_TRUE(std::holds_alternative<ModuleByName>(
+      deserialized_function_breakpoint->modules[0]));
+  EXPECT_TRUE(std::holds_alternative<ModuleById>(
+      deserialized_function_breakpoint->modules[1]));
+}
+
+TEST(ProtocolTypesTest, FunctionBreakpointModules) {
+  // No modules.
+  Expected<FunctionBreakpoint> no_modules =
+      parse<FunctionBreakpoint>(R"({"name": "main"})");
+  ASSERT_THAT_EXPECTED(no_modules, Succeeded());
+  EXPECT_TRUE(no_modules->modules.empty());
+  EXPECT_FALSE(toJSON(*no_modules).getAsObject()->get("$__lldb_modules"));
+
+  // An empty list is the same as an absent one.
+  Expected<FunctionBreakpoint> empty_modules =
+      parse<FunctionBreakpoint>(R"({"name": "main", "$__lldb_modules": []})");
+  ASSERT_THAT_EXPECTED(empty_modules, Succeeded());
+  EXPECT_TRUE(empty_modules->modules.empty());
+  EXPECT_FALSE(toJSON(*empty_modules).getAsObject()->get("$__lldb_modules"));
+
+  // Names and ids (string or number) can be mixed, and the order is kept.
+  Expected<FunctionBreakpoint> with_modules = parse<FunctionBreakpoint>(
+      R"({"name": "main", "$__lldb_modules": [
+            {"name": "a.out"}, {"id": "08463405-8539-46C3-B48F-0A5931BB0017"}, {"name": "libother"}
+          ]})");
+  ASSERT_THAT_EXPECTED(with_modules, Succeeded());
+  EXPECT_EQ(with_modules->modules.size(), 3u);
+  const Value expected_modules =
+      json::Array{json::Object{{"name", "a.out"}},
+                  json::Object{{"id", "08463405-8539-46C3-B48F-0A5931BB0017"}},
+                  json::Object{{"name", "libother"}}};
+  EXPECT_EQ(*toJSON(*with_modules).getAsObject()->get("$__lldb_modules"),
+            expected_modules);
+
+  // Each entry has exactly one of `name` and `id`, and the lists are not
+  // nullable, like `hitCondition`.
+  for (StringRef modules :
+       {"null", R"("a.out")", "{}", "[null]", R"(["a.out"])", "[{}]",
+        R"([{"name": "a", "id": "b"}])", R"([{"name": 1}])",
+        R"([{"name": null}])", R"([{"id": true}])", R"([{"id": 1.5}])",
+        R"([{"id": null}])", R"([{"id": []}])"}) {
+    EXPECT_THAT_EXPECTED(
+        parse<FunctionBreakpoint>(
+            llvm::formatv(R"({{"name": "main", "$__lldb_modules": {0}})",
+                          modules)
+                .str()),
+        Failed())
+        << modules;
+  }
 }
 
 TEST(ProtocolTypesTest, FunctionBreakpointOptionalHitCondition) {

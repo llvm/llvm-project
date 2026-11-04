@@ -58,7 +58,8 @@ namespace lldb_dap {
 
 typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
     SourceBreakpointMap;
-typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
+typedef std::map<FunctionBreakpoint::Key, FunctionBreakpoint>
+    FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, Watchpoint> WatchpointMap;
