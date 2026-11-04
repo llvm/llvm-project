@@ -238,3 +238,14 @@ branch_relax_uncompressed:
 # CHECK-INST-C-RELAX-NEXT:  R_RISCV_JAL branch_relax_uncompressed
 # CHECK-INST-C-RELAX-NEXT:  R_RISCV_RELAX *ABS*
 # CHECK-INST-C-RELAX:       {{0*}}10 <[[UNCOMPRESSED_SKIP]]>:
+
+## Do not swap the operands when the nonzero register cannot be compressed.
+.globl branch_relax_zero_a6
+branch_relax_zero_a6:
+   bne zero, a6, branch_relax_zero_a6
+   ret
+
+# CHECK-INST-RELAX:         beq zero, a6, {{.*}}
+# CHECK-INST-RELAX-NEXT:    R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
+# CHECK-INST-C-RELAX:       beq zero, a6, {{.*}}
+# CHECK-INST-C-RELAX-NEXT:  R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}

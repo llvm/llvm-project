@@ -64,18 +64,9 @@ public:
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
 
-  void expandLongCondBr(const MCInst &MI, SmallVectorImpl<char> &CB,
-                        SmallVectorImpl<MCFixup> &Fixups,
-                        const MCSubtargetInfo &STI) const;
-
   void expandFunctionCallLpad(const MCInst &MI, SmallVectorImpl<char> &CB,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
-
-  void expandQCLongCondBrImm(const MCInst &MI, SmallVectorImpl<char> &CB,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI,
-                             unsigned BranchSize) const;
 
   void expandPseudoQCAccess(const MCInst &MI, SmallVectorImpl<char> &CB,
                             SmallVectorImpl<MCFixup> &Fixups,
@@ -327,184 +318,6 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
-static unsigned getInvertedBranchOp(unsigned BrOp) {
-  switch (BrOp) {
-  default:
-    llvm_unreachable("Unexpected branch opcode!");
-  case RISCV::PseudoLongBEQ:
-    return RISCV::BNE;
-  case RISCV::PseudoLongBNE:
-    return RISCV::BEQ;
-  case RISCV::PseudoLongBEQI:
-    return RISCV::BNEI;
-  case RISCV::PseudoLongBNEI:
-    return RISCV::BEQI;
-  case RISCV::PseudoLongBLT:
-    return RISCV::BGE;
-  case RISCV::PseudoLongBGE:
-    return RISCV::BLT;
-  case RISCV::PseudoLongBLTU:
-    return RISCV::BGEU;
-  case RISCV::PseudoLongBGEU:
-    return RISCV::BLTU;
-  case RISCV::PseudoLongQC_BEQI:
-    return RISCV::QC_BNEI;
-  case RISCV::PseudoLongQC_BNEI:
-    return RISCV::QC_BEQI;
-  case RISCV::PseudoLongQC_BLTI:
-    return RISCV::QC_BGEI;
-  case RISCV::PseudoLongQC_BGEI:
-    return RISCV::QC_BLTI;
-  case RISCV::PseudoLongQC_BLTUI:
-    return RISCV::QC_BGEUI;
-  case RISCV::PseudoLongQC_BGEUI:
-    return RISCV::QC_BLTUI;
-  case RISCV::PseudoLongQC_E_BEQI:
-    return RISCV::QC_E_BNEI;
-  case RISCV::PseudoLongQC_E_BNEI:
-    return RISCV::QC_E_BEQI;
-  case RISCV::PseudoLongQC_E_BLTI:
-    return RISCV::QC_E_BGEI;
-  case RISCV::PseudoLongQC_E_BGEI:
-    return RISCV::QC_E_BLTI;
-  case RISCV::PseudoLongQC_E_BLTUI:
-    return RISCV::QC_E_BGEUI;
-  case RISCV::PseudoLongQC_E_BGEUI:
-    return RISCV::QC_E_BLTUI;
-  case RISCV::PseudoLongCV_BEQIMM:
-    return RISCV::CV_BNEIMM;
-  case RISCV::PseudoLongCV_BNEIMM:
-    return RISCV::CV_BEQIMM;
-  }
-}
-
-// Expand PseudoLongBxx to an inverted conditional branch and an unconditional
-// jump.
-void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
-                                          SmallVectorImpl<char> &CB,
-                                          SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const {
-  MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  const MCOperand &Src2 = MI.getOperand(1);
-  const MCOperand &SrcSymbol = MI.getOperand(2);
-  unsigned Opcode = MI.getOpcode();
-  bool IsEqTest =
-      Opcode == RISCV::PseudoLongBNE || Opcode == RISCV::PseudoLongBEQ;
-
-  bool UseCompressedBr = false;
-  if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
-    MCRegister SrcReg2 = Src2.getReg();
-    if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
-        SrcReg2.id() == RISCV::X0) {
-      UseCompressedBr = true;
-    } else if (RISCV::X8 <= SrcReg2.id() && SrcReg2.id() <= RISCV::X15 &&
-               SrcReg1.id() == RISCV::X0) {
-      std::swap(SrcReg1, SrcReg2);
-      UseCompressedBr = true;
-    }
-  }
-
-  unsigned Offset = UseCompressedBr ? 2 : 4;
-  size_t SkipFixupIndex = Fixups.size();
-  MCSymbol *Skip = Ctx.createNamedTempSymbol("branch_skip");
-  const MCExpr *SkipExpr =
-      MCSpecifierExpr::create(Skip, RISCV::S_BRANCH_SKIP, Ctx);
-
-  if (UseCompressedBr) {
-    unsigned InvOpc =
-        Opcode == RISCV::PseudoLongBNE ? RISCV::C_BEQZ : RISCV::C_BNEZ;
-    MCInst TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addExpr(SkipExpr);
-    uint16_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write<uint16_t>(CB, Binary, llvm::endianness::little);
-  } else {
-    unsigned InvOpc = getInvertedBranchOp(Opcode);
-    MCInst TmpInst =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addExpr(
-            SkipExpr);
-    uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write(CB, Binary, llvm::endianness::little);
-  }
-
-  // Save the number fixups.
-  size_t FixupStartIndex = Fixups.size();
-
-  // Emit an unconditional jump to the destination.
-  MCInst TmpInst =
-      MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(SrcSymbol);
-  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, llvm::endianness::little);
-
-  // Drop any fixup added so we can add the correct one.
-  Fixups.resize(FixupStartIndex);
-
-  if (SrcSymbol.isExpr()) {
-    addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
-    if (STI.hasFeature(RISCV::FeatureRelax) &&
-        STI.getTargetTriple().isOSBinFormatELF()) {
-      Fixups[SkipFixupIndex].setLinkerRelaxable();
-      Fixups.back().setLinkerRelaxable();
-    }
-  }
-}
-
-// Expand PseudoLongQC_(E_)Bxxx to an inverted conditional branch and an
-// unconditional jump.
-void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
-                                               SmallVectorImpl<char> &CB,
-                                               SmallVectorImpl<MCFixup> &Fixups,
-                                               const MCSubtargetInfo &STI,
-                                               unsigned BranchSize) const {
-  MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  auto BrImm = MI.getOperand(1).getImm();
-  MCOperand SrcSymbol = MI.getOperand(2);
-  unsigned Opcode = MI.getOpcode();
-  uint32_t Offset;
-  unsigned InvOpc = getInvertedBranchOp(Opcode);
-  size_t SkipFixupIndex = Fixups.size();
-  MCSymbol *Skip = Ctx.createNamedTempSymbol("branch_skip");
-  const MCExpr *SkipExpr =
-      MCSpecifierExpr::create(Skip, RISCV::S_BRANCH_SKIP, Ctx);
-
-  // Emit an inverted conditional branch targeting the symbol after the JAL.
-  if (BranchSize == 4) {
-    MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addExpr(SkipExpr);
-    uint32_t BrBinary = getBinaryCodeForInstr(TmpBr, Fixups, STI);
-    support::endian::write(CB, BrBinary, llvm::endianness::little);
-  } else {
-    MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addExpr(SkipExpr);
-    uint64_t BrBinary =
-        getBinaryCodeForInstr(TmpBr, Fixups, STI) & 0xffff'ffff'ffffu;
-    SmallVector<char, 8> Encoding;
-    support::endian::write(Encoding, BrBinary, llvm::endianness::little);
-    assert(Encoding[6] == 0 && Encoding[7] == 0 &&
-           "Unexpected encoding for 48-bit instruction");
-    Encoding.truncate(6);
-    CB.append(Encoding);
-  }
-  Offset = BranchSize;
-  // Save the number fixups.
-  size_t FixupStartIndex = Fixups.size();
-  // Emit an unconditional jump to the destination.
-  MCInst TmpJ =
-      MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(SrcSymbol);
-  uint32_t JBinary = getBinaryCodeForInstr(TmpJ, Fixups, STI);
-  support::endian::write(CB, JBinary, llvm::endianness::little);
-  // Drop any fixup added so we can add the correct one.
-  Fixups.resize(FixupStartIndex);
-  if (SrcSymbol.isExpr()) {
-    addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
-    // The JAL is always 4 bytes. Keep it fixed-size after a 6-byte QC.E branch,
-    // whose skip target would require an unsupported vendor relocation.
-    if (BranchSize == 4 && STI.hasFeature(RISCV::FeatureRelax) &&
-        STI.getTargetTriple().isOSBinFormatELF()) {
-      Fixups[SkipFixupIndex].setLinkerRelaxable();
-      Fixups.back().setLinkerRelaxable();
-    }
-  }
-}
-
 void RISCVMCCodeEmitter::expandPseudoQCAccess(
     const MCInst &MI, SmallVectorImpl<char> &CB,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
@@ -609,37 +422,6 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case RISCV::PseudoAddTPRel:
     expandAddTPRel(MI, CB, Fixups, STI);
     MCNumEmitted += 1;
-    return;
-  case RISCV::PseudoLongBEQ:
-  case RISCV::PseudoLongBNE:
-  case RISCV::PseudoLongBEQI:
-  case RISCV::PseudoLongBNEI:
-  case RISCV::PseudoLongBLT:
-  case RISCV::PseudoLongBGE:
-  case RISCV::PseudoLongBLTU:
-  case RISCV::PseudoLongBGEU:
-    expandLongCondBr(MI, CB, Fixups, STI);
-    MCNumEmitted += 2;
-    return;
-  case RISCV::PseudoLongQC_BEQI:
-  case RISCV::PseudoLongQC_BNEI:
-  case RISCV::PseudoLongQC_BLTI:
-  case RISCV::PseudoLongQC_BGEI:
-  case RISCV::PseudoLongQC_BLTUI:
-  case RISCV::PseudoLongQC_BGEUI:
-  case RISCV::PseudoLongCV_BEQIMM:
-  case RISCV::PseudoLongCV_BNEIMM:
-    expandQCLongCondBrImm(MI, CB, Fixups, STI, 4);
-    MCNumEmitted += 2;
-    return;
-  case RISCV::PseudoLongQC_E_BEQI:
-  case RISCV::PseudoLongQC_E_BNEI:
-  case RISCV::PseudoLongQC_E_BLTI:
-  case RISCV::PseudoLongQC_E_BGEI:
-  case RISCV::PseudoLongQC_E_BLTUI:
-  case RISCV::PseudoLongQC_E_BGEUI:
-    expandQCLongCondBrImm(MI, CB, Fixups, STI, 6);
-    MCNumEmitted += 2;
     return;
   case RISCV::PseudoTLSDESCCall:
     expandTLSDESCCall(MI, CB, Fixups, STI);
@@ -803,11 +585,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   assert(MO.isExpr() &&
          "getImmOpValue expects only expressions or immediates");
   const MCExpr *Expr = MO.getExpr();
-  const auto *SpecifierExpr = dyn_cast<MCSpecifierExpr>(Expr);
-  bool IsBranchSkip =
-      SpecifierExpr && SpecifierExpr->getSpecifier() == RISCV::S_BRANCH_SKIP;
-  if (IsBranchSkip)
-    Expr = SpecifierExpr->getSubExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
 
   // `RelaxCandidate` must be set to `true` in two cases:
@@ -943,13 +720,11 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
 
   assert(FixupKind != RISCV::fixup_riscv_invalid && "Unhandled expression!");
 
-  // Preserve the marker for the backend, while using the ordinary branch
-  // encoder to choose the fixup kind.
-  addFixup(Fixups, 0, MO.getExpr(), FixupKind);
+  addFixup(Fixups, 0, Expr, FixupKind);
   // If linker relaxation is enabled and supported by this relocation, set a bit
   // so that the assembler knows the size of the instruction is not fixed/known,
   // and the relocation will need a R_RISCV_RELAX relocation.
-  if (EnableRelax && RelaxCandidate && !IsBranchSkip)
+  if (EnableRelax && RelaxCandidate)
     Fixups.back().setLinkerRelaxable();
   ++MCNumFixups;
 

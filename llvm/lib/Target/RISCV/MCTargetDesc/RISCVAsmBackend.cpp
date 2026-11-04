@@ -8,10 +8,10 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVFixupKinds.h"
-#include "RISCVMCAsmInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -25,11 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-static bool isBranchSkipFixup(const MCFixup &Fixup) {
-  const auto *Expr = dyn_cast<MCSpecifierExpr>(Fixup.getValue());
-  return Expr && Expr->getSpecifier() == RISCV::S_BRANCH_SKIP;
-}
 
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, bool IsLittleEndian,
@@ -317,6 +312,120 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
     break;
   }
   Inst = std::move(Res);
+}
+
+static unsigned getInvertedBranchOp(unsigned BrOp) {
+  switch (BrOp) {
+  default:
+    return 0;
+  case RISCV::PseudoLongBEQ:
+    return RISCV::BNE;
+  case RISCV::PseudoLongBNE:
+    return RISCV::BEQ;
+  case RISCV::PseudoLongBEQI:
+    return RISCV::BNEI;
+  case RISCV::PseudoLongBNEI:
+    return RISCV::BEQI;
+  case RISCV::PseudoLongBLT:
+    return RISCV::BGE;
+  case RISCV::PseudoLongBGE:
+    return RISCV::BLT;
+  case RISCV::PseudoLongBLTU:
+    return RISCV::BGEU;
+  case RISCV::PseudoLongBGEU:
+    return RISCV::BLTU;
+  case RISCV::PseudoLongQC_BEQI:
+    return RISCV::QC_BNEI;
+  case RISCV::PseudoLongQC_BNEI:
+    return RISCV::QC_BEQI;
+  case RISCV::PseudoLongQC_BLTI:
+    return RISCV::QC_BGEI;
+  case RISCV::PseudoLongQC_BGEI:
+    return RISCV::QC_BLTI;
+  case RISCV::PseudoLongQC_BLTUI:
+    return RISCV::QC_BGEUI;
+  case RISCV::PseudoLongQC_BGEUI:
+    return RISCV::QC_BLTUI;
+  case RISCV::PseudoLongQC_E_BEQI:
+    return RISCV::QC_E_BNEI;
+  case RISCV::PseudoLongQC_E_BNEI:
+    return RISCV::QC_E_BEQI;
+  case RISCV::PseudoLongQC_E_BLTI:
+    return RISCV::QC_E_BGEI;
+  case RISCV::PseudoLongQC_E_BGEI:
+    return RISCV::QC_E_BLTI;
+  case RISCV::PseudoLongQC_E_BLTUI:
+    return RISCV::QC_E_BGEUI;
+  case RISCV::PseudoLongQC_E_BGEUI:
+    return RISCV::QC_E_BLTUI;
+  case RISCV::PseudoLongCV_BEQIMM:
+    return RISCV::CV_BNEIMM;
+  case RISCV::PseudoLongCV_BNEIMM:
+    return RISCV::CV_BEQIMM;
+  }
+}
+
+bool RISCVAsmBackend::expandInstruction(const MCInst &Inst,
+                                        SmallVectorImpl<char> &Data,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI,
+                                        MCSymbol *&EndLabel) const {
+  unsigned Opcode = getInvertedBranchOp(Inst.getOpcode());
+  if (!Opcode)
+    return false;
+
+  MCRegister Src1 = Inst.getOperand(0).getReg();
+  MCOperand Src2 = Inst.getOperand(1);
+  bool IsEqTest = Opcode == RISCV::BEQ || Opcode == RISCV::BNE;
+  if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
+    MCRegister Src2Reg = Src2.getReg();
+    if (Src1 == RISCV::X0 && Src2Reg >= RISCV::X8 && Src2Reg <= RISCV::X15)
+      std::swap(Src1, Src2Reg);
+    if (Src2Reg == RISCV::X0 && Src1 >= RISCV::X8 && Src1 <= RISCV::X15)
+      Opcode = Opcode == RISCV::BEQ ? RISCV::C_BEQZ : RISCV::C_BNEZ;
+  }
+
+  bool Compressed = Opcode == RISCV::C_BEQZ || Opcode == RISCV::C_BNEZ;
+  bool Extended = Opcode == RISCV::QC_E_BEQI || Opcode == RISCV::QC_E_BNEI ||
+                  Opcode == RISCV::QC_E_BLTI || Opcode == RISCV::QC_E_BGEI ||
+                  Opcode == RISCV::QC_E_BLTUI || Opcode == RISCV::QC_E_BGEUI;
+  unsigned BranchSize = Compressed ? 2 : Extended ? 6 : 4;
+  const MCOperand &Target = Inst.getOperand(2);
+  bool RelaxJump = STI.getTargetTriple().isOSBinFormatELF() &&
+                   STI.hasFeature(RISCV::FeatureRelax) && Target.isExpr() &&
+                   !Extended;
+
+  EndLabel = getContext().createNamedTempSymbol("branch_skip");
+  MCInst Branch;
+  Branch.setOpcode(Opcode);
+  Branch.addOperand(MCOperand::createReg(Src1));
+  if (!Compressed)
+    Branch.addOperand(Src2);
+  // A QC.E branch would need a vendor relocation for its skip target.
+  // Keep its JAL fixed-size, and resolve the skip distance locally.
+  if (Extended) {
+    Branch.addOperand(MCOperand::createImm(BranchSize + 4));
+  } else {
+    Branch.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(EndLabel, getContext())));
+  }
+  Asm->getEmitter().encodeInstruction(Branch, Data, Fixups, STI);
+
+  MCInst Jump;
+  Jump.setOpcode(RISCV::JAL);
+  Jump.addOperand(MCOperand::createReg(RISCV::X0));
+  Jump.addOperand(Target);
+  size_t JumpFixupStart = Fixups.size();
+  Asm->getEmitter().encodeInstruction(Jump, Data, Fixups, STI);
+  for (size_t I = JumpFixupStart; I != Fixups.size(); ++I) {
+    MCFixup &Fixup = Fixups[I];
+    Fixup.setOffset(Fixup.getOffset() + BranchSize);
+    // Rebuild the fixup to clear its relaxation flag when JAL must stay fixed.
+    if (!RelaxJump)
+      Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
+                              Fixup.getKind(), Fixup.isPCRel());
+  }
+  return true;
 }
 
 // Check if an R_RISCV_ALIGN relocation is needed for an alignment directive.
@@ -732,26 +841,10 @@ const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   return nullptr;
 }
 
-std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &F,
+std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
                                                    MCFixup &Fixup,
                                                    MCValue &Target,
                                                    uint64_t &Value) {
-  if (Target.getSpecifier() == RISCV::S_BRANCH_SKIP) {
-    // The fragment and fixup offset are only available after encoding. Bind
-    // the generated symbol here, resolving the displacement unless the JAL
-    // can be relaxed by the linker.
-    auto *Skip = const_cast<MCSymbol *>(Target.getAddSym());
-    assert(Skip && !Target.getSubSym() && !Target.getConstant());
-    Target.setSpecifier(RISCV::S_None);
-    unsigned SkipSize = getFixupKindInfo(Fixup.getKind()).TargetSize / 8 + 4;
-    assert(Fixup.getOffset() + SkipSize <= F.getSize() &&
-           "Branch skip label is outside its fragment");
-    Skip->setFragment(const_cast<MCFragment *>(&F));
-    Skip->setOffset(Fixup.getOffset() + SkipSize);
-    Asm->registerSymbol(*Skip);
-    Value = Fixup.isLinkerRelaxable() ? 0 : SkipSize;
-    return !Fixup.isLinkerRelaxable();
-  }
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -869,11 +962,6 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
-  // A resolved skip fixup spans only the fixed-size branch and JAL. Other
-  // linker-relaxable instructions in the fragment do not affect its value.
-  if (IsResolved && isBranchSkipFixup(Fixup))
-    return true;
-
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
     assert(Target.getSpecifier() == 0 &&
@@ -1018,8 +1106,6 @@ public:
     const MCFixup *AUIPCFixup;
     const MCFragment *AUIPCDF;
     const MCFixupKind FKind = Fixup.getKind();
-    if (isBranchSkipFixup(Fixup))
-      return RISCVAsmBackend::evaluateFixup(F, Fixup, Target, Value);
     if ((FKind == RISCV::fixup_riscv_pcrel_lo12_i) ||
         (FKind == RISCV::fixup_riscv_pcrel_lo12_s)) {
       AUIPCFixup =

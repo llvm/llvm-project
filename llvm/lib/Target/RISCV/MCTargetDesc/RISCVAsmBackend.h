@@ -66,6 +66,10 @@ public:
                          const MCSubtargetInfo &STI) const override;
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
+  bool expandInstruction(const MCInst &Inst, SmallVectorImpl<char> &Data,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI,
+                         MCSymbol *&EndLabel) const override;
 
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
   bool relaxDwarfLineAddr(MCFragment &) const override;
