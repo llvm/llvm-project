@@ -53,6 +53,10 @@ struct ARM64e final : ARM64 {
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                             uint64_t &stubOffset, uint64_t selrefVA,
                             Symbol *objcMsgSend) const override;
+  void writeObjCMsgSendClassStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                 uint64_t &stubOffset, uint64_t selrefVA,
+                                 Symbol *classSym,
+                                 Symbol *objcMsgSend) const override;
 };
 } // namespace
 
@@ -188,10 +192,13 @@ void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
   stubOffset += objcStubSize;
 }
 
-void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
-                                      uint64_t stubsAddr, uint64_t &stubOffset,
-                                      uint64_t selrefVA, Symbol *classSym,
-                                      Symbol *objcMsgSend) const {
+// Shared with ARM64e, which differs only in how a fast stub reaches
+// _objc_msgSend: fastCode supplies the instructions and msgSendSlotVA the GOT
+// slot they load it from.
+static void writeObjCMsgSendClassStubImpl(
+    uint8_t *buf, Symbol *stubSym, uint64_t stubsAddr, uint64_t &stubOffset,
+    uint64_t selrefVA, Symbol *classSym, Symbol *objcMsgSend,
+    const uint32_t fastCode[8], uint64_t msgSendSlotVA) {
   SymbolDiagnostic d = {stubSym, stubSym->getName()};
   auto *buf32 = reinterpret_cast<uint32_t *>(buf);
 
@@ -212,17 +219,14 @@ void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
   };
 
   if (config->objcStubsMode == ObjCStubsMode::fast) {
-    writeClassLoad(objcClassStubsFastCode);
-    encodePage21(&buf32[2], d, objcClassStubsFastCode[2],
-                 pageBits(selrefVA) - pcPageBits(2));
-    encodePageOff12(&buf32[3], d, objcClassStubsFastCode[3], selrefVA);
-    uint64_t msgSendStubVA =
-        in.got->addr + objcMsgSend->gotIndex * LP64::wordSize;
-    encodePage21(&buf32[4], d, objcClassStubsFastCode[4],
-                 pageBits(msgSendStubVA) - pcPageBits(4));
-    encodePageOff12(&buf32[5], d, objcClassStubsFastCode[5], msgSendStubVA);
-    buf32[6] = objcClassStubsFastCode[6];
-    buf32[7] = objcClassStubsFastCode[7];
+    writeClassLoad(fastCode);
+    encodePage21(&buf32[2], d, fastCode[2], pageBits(selrefVA) - pcPageBits(2));
+    encodePageOff12(&buf32[3], d, fastCode[3], selrefVA);
+    encodePage21(&buf32[4], d, fastCode[4],
+                 pageBits(msgSendSlotVA) - pcPageBits(4));
+    encodePageOff12(&buf32[5], d, fastCode[5], msgSendSlotVA);
+    buf32[6] = fastCode[6];
+    buf32[7] = fastCode[7];
     assert(target->objcClassStubsFastSize == 8 * sizeof(uint32_t));
     stubOffset += target->objcClassStubsFastSize;
     return;
@@ -243,6 +247,19 @@ void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
                  objcClassStubsSmallCode[4], msgSendStubVA - pcVA);
   assert(target->objcClassStubsSmallSize == 5 * sizeof(uint32_t));
   stubOffset += target->objcClassStubsSmallSize;
+}
+
+void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
+                                      uint64_t stubsAddr, uint64_t &stubOffset,
+                                      uint64_t selrefVA, Symbol *classSym,
+                                      Symbol *objcMsgSend) const {
+  uint64_t msgSendSlotVA =
+      config->objcStubsMode == ObjCStubsMode::fast
+          ? in.got->addr + objcMsgSend->gotIndex * LP64::wordSize
+          : 0;
+  writeObjCMsgSendClassStubImpl(buf, stubSym, stubsAddr, stubOffset, selrefVA,
+                                classSym, objcMsgSend, objcClassStubsFastCode,
+                                msgSendSlotVA);
 }
 
 // A thunk is the relaxed variation of stubCode. We don't need the
@@ -377,6 +394,36 @@ void ARM64e::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                                    in.authGot->getVA(objcMsgSend),
                                    /*msgSendIndex=*/0);
   stubOffset += objcStubsFastSize;
+}
+
+// Fast class stubs reach _objc_msgSend in the same way. The class pointer they
+// load is the receiver and stays unsigned, as on arm64.
+static constexpr uint32_t authObjcClassStubsFastCode[] = {
+    // A locally defined class uses adrp @page and add @pageoff instead.
+    0x90000000, // adrp  x0, _OBJC_CLASS_$_Foo@gotpage
+    0xf9400000, // ldr   x0, [x0, _OBJC_CLASS_$_Foo@gotpageoff]
+    0x90000001, // adrp  x1, @selector("foo")@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x90000011, // adrp  x17, __auth_got@page
+    0x91000231, // add   x17, x17, _objc_msgSend@pageoff
+    0xf9400230, // ldr   x16, [x17]
+    0xd71f0a11, // braa  x16, x17
+};
+static_assert(sizeof(authObjcClassStubsFastCode) ==
+                  sizeof(objcClassStubsFastCode),
+              "objcClassStubsFastSize is shared with arm64");
+
+void ARM64e::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
+                                       uint64_t stubsAddr, uint64_t &stubOffset,
+                                       uint64_t selrefVA, Symbol *classSym,
+                                       Symbol *objcMsgSend) const {
+  // In small mode, _objc_msgSend may have no __auth_got slot.
+  uint64_t msgSendSlotVA = config->objcStubsMode == ObjCStubsMode::fast
+                               ? in.authGot->getVA(objcMsgSend)
+                               : 0;
+  writeObjCMsgSendClassStubImpl(buf, stubSym, stubsAddr, stubOffset, selrefVA,
+                                classSym, objcMsgSend,
+                                authObjcClassStubsFastCode, msgSendSlotVA);
 }
 
 ARM64e::ARM64e() {
