@@ -122,8 +122,8 @@ The bit-size encoded in the name can be 8, 32, 64 or 128.
 #### Cluster Multicast Loads
 
 The `.cluster` variant is a *multicast load* that allows workgroups in a
-{ref}`cluster <amdgpu-clusters>` to share a load of the same data from global
-memory into their respective LDS. Each lane in a wave supplies its own global
+{ref}`cluster <amdgpu-clusters>` to reuse data from the same global load and
+write it into their respective LDS. Each lane in a wave supplies its own global
 source address and LDS destination address.
 
 The mask is wave-uniform and passed in the `M0` register:
@@ -131,12 +131,12 @@ The mask is wave-uniform and passed in the `M0` register:
 - Bits `[15:0]` are the *workgroup multicast mask*: bit `i` indicates the
   workgroup with cluster index `i`. Each workgroup that wants to participate in
   the multicast must set its own bit and all participating workgroups must
-  supply an identical mask (and the same address). If the mask is all-zero, the
-  operation is performed as an ordinary load.
+  supply an identical mask. If the mask is all-zero, the operation is performed
+  as an ordinary load.
 - Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
-  is used: loads may be combined if they arrive within that window. When set,
-  an *early timeout* is used: outstanding loads are completed as soon as data is
-  available.
+  is used: operations arriving within that window may return data from the same
+  global load. When set, an *early timeout* is used: outstanding loads are
+  completed as soon as data is available.
 
 Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`. Each
 participating thread receives a copy of the loaded data into its own workgroup's
@@ -147,31 +147,24 @@ Completion of a multicast load operation does not establish any synchronization
 with the participating workgroups. The application must separately synchronize
 across the participating workgroups if required.
 
-**Combining Load Operations**
+##### Reuse of Global Load Data
 
-[This section is informational]
-
-When two threads execute a multicast instruction, the resulting load operations
-are candidates for combining into a multicast load only if they satisfy the
-following conditions:
-- Both specify the same global source location.
+Two multicast load operations are candidates for returning data from the same
+global load if they satisfy the following necessary conditions:
+- The bytes in global memory accessed by the two operations fall within the
+  same naturally aligned range of 256 bytes.
 - Either both loads originate from converged dynamic instances in the same wave,
   or they originate from different participating workgroups.
 
-Convergence implies that within a wave, the multicast does not combine two
-operations performed by the same thread, or two operations performed by
-different threads but at different points in the execution.
+Convergence implies that within a wave, the global load is not reused across two
+multicast loads performed by the same thread, or two multicast loads performed
+by different threads but at different points in the execution.
 
-The actual combining of these load operations depends on implementation details
-such as target-defined matching criteria, timeout, availability of tracking
-slots, etc.
+Whether the global load is reused for two operations depends on implementation
+details such as target-defined matching criteria, timeout, availability of
+tracking slots, etc.
 
-A load operation that is not combined into a multicast load eventually
-completes, either as part of a subsequent multicast load or by itself.
-
-**Target-specific notes**
-
-[This section is informational]
+##### Target Support
 
 The `cluster` variants are only available on targets that have the
 `mcast-load-insts` subtarget feature (e.g., GFX1250). Using them on any other
@@ -181,6 +174,24 @@ multicast load instructions.
 
 On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
 multicast occurs, regardless of the value supplied.
+
+##### False Sharing on GFX1250 and GFX1251
+
+On `gfx1250` and `gfx1251`, multicast loads are tracked in naturally aligned
+blocks of 256 bytes, and the tracking itself is not managed by the usual cache
+invalidation mechanisms. It is possible for a multicast load to return stale
+data that was originally loaded by a different multicast load accessing the same
+block of bytes. This can happen even in a program with no data race, and the
+usual release/acquire synchronization may not be sufficient to prevent it. This
+behaviour is specific to gfx1250 and gfx1251 architectures.
+
+These stale reads cannot happen in a program that satisfies at least one of the
+following sufficient conditions:
+
+1. Memory locations accessed by multicast loads are not modified during the
+   lifetime of the dispatch that is executing those loads.
+2. The program is race free when assuming that every multicast load accesses an
+   entire naturally aligned block of 256 bytes.
 
 #### Tensor Addressing
 
