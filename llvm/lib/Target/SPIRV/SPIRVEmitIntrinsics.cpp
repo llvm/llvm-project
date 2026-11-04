@@ -903,8 +903,10 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
   walkLogicalAccessChain(
       GEP,
       [&Indices, &B](Type *EltType, uint64_t Index) {
-        Indices.push_back(
-            ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
+        // Use i64 only for an index past the signed 32-bit range. An i64 index
+        // forces the module to declare Int64, which the device may not support.
+        Type *IdxTy = isUInt<31>(Index) ? B.getInt32Ty() : B.getInt64Ty();
+        Indices.push_back(ConstantInt::get(IdxTy, Index, /* Signed= */ false));
       },
       [&Indices, &B, &DL, this](Type *EltType, Value *Offset,
                                 uint64_t Multiplier) {
