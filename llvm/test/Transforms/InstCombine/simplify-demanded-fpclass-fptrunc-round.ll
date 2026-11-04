@@ -27,7 +27,6 @@ declare nofpclass(nan inf sub zero) float @returns_norm_f32()
 declare nofpclass(nan inf nnorm sub zero) float @returns_pnorm_f32()
 declare nofpclass(nan inf pnorm sub zero) float @returns_nnorm_f32()
 
-
 define nofpclass(inf norm sub zero qnan) half @ret_only_snan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) half @ret_only_snan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -630,3 +629,55 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
   %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
   ret half %result
 }
+
+; Test class rounding boundaries.
+
+@ret__ninf_nzero__select__fptrunc_rne_f32_bf16__nnorm__ninf_nzero
+@ret__ninf_nzero__select__fptrunc_rna_f32_bf16__nnorm__ninf_nzero
+@ret__ninf_nzero__select__fptrunc_rtz_f32_bf16__nnorm__ninf_nzero
+@ret__ninf_nzero__select__fptrunc_rtp_f32_bf16__nnorm__ninf_nzero
+@ret__ninf_nzero__select__fptrunc_rtn_f32_bf16__nnorm__ninf_nzero
+
+@ret__pinf_nnorm__select__fptrunc_rne_f32_bf16__nsub__pinf_nnorm
+@ret__pinf_nnorm__select__fptrunc_rna_f32_bf16__nsub__pinf_nnorm
+@ret__pinf_nnorm__select__fptrunc_rtz_f32_bf16__nsub__pinf_nnorm
+@ret__pinf_nnorm__select__fptrunc_rtp_f32_bf16__nsub__pinf_nnorm
+@ret__pinf_nnorm__select__fptrunc_rtn_f32_bf16__nsub__pinf_nnorm
+
+@ret__pinf_nsub__select__fptrunc_rne_f32_bf16__nnorm__pinf_nsub
+@ret__pinf_nsub__select__fptrunc_rna_f32_bf16__nnorm__pinf_nsub
+@ret__pinf_nsub__select__fptrunc_rtz_f32_bf16__nnorm__pinf_nsub
+@ret__pinf_nsub__select__fptrunc_rtp_f32_bf16__nnorm__pinf_nsub
+@ret__pinf_nsub__select__fptrunc_rtn_f32_bf16__nnorm__pinf_nsub
+
+@ret__pinf_nzero__select__fptrunc_rne_f32_bf16__nsub__pinf_nzero
+@ret__pinf_nzero__select__fptrunc_rna_f32_bf16__nsub__pinf_nzero
+@ret__pinf_nzero__select__fptrunc_rtz_f32_bf16__nsub__pinf_nzero
+@ret__pinf_nzero__select__fptrunc_rtp_f32_bf16__nsub__pinf_nzero
+@ret__pinf_nzero__select__fptrunc_rtn_f32_bf16__nsub__pinf_nzero
+
+; Test underflow.
+
+@ret__inf_pzero__select__fptrunc_rne_f32_f16__psub__unknown
+@ret__inf_pzero__select__fptrunc_rna_f32_f16__psub__unknown
+@ret__inf_pzero__select__fptrunc_rtz_f32_f16__psub__unknown
+@ret__inf_pzero__select__fptrunc_rtp_f32_f16__psub__unknown
+@ret__inf_pzero__select__fptrunc_rtn_f32_f16__psub__unknown
+
+@ret__inf_psub__select__fptrunc_rne_f32_f16__psub__unknown
+@ret__inf_psub__select__fptrunc_rna_f32_f16__psub__unknown
+@ret__inf_psub__select__fptrunc_rtz_f32_f16__psub__unknown
+@ret__inf_psub__select__fptrunc_rtp_f32_f16__psub__unknown
+@ret__inf_psub__select__fptrunc_rtn_f32_f16__psub__unknown
+
+@ret__inf_nzero__select__fptrunc_rne_f32_f16__nsub__unknown
+@ret__inf_nzero__select__fptrunc_rna_f32_f16__nsub__unknown
+@ret__inf_nzero__select__fptrunc_rtz_f32_f16__nsub__unknown
+@ret__inf_nzero__select__fptrunc_rtp_f32_f16__nsub__unknown
+@ret__inf_nzero__select__fptrunc_rtn_f32_f16__nsub__unknown
+
+@ret__inf_nsub__select__fptrunc_rne_f32_f16__nsub__unknown
+@ret__inf_nsub__select__fptrunc_rna_f32_f16__nsub__unknown
+@ret__inf_nsub__select__fptrunc_rtz_f32_f16__nsub__unknown
+@ret__inf_nsub__select__fptrunc_rtp_f32_f16__nsub__unknown
+@ret__inf_nsub__select__fptrunc_rtn_f32_f16__nsub__unknown
