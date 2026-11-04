@@ -1163,9 +1163,13 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
 void ObjCStubsSection::setUp() {
   objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
                                      /*isWeakRef=*/false);
-  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend))
+  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend)) {
     treatUndefinedSymbol(*undefined,
                          "lazy binding (normally in libobjc.dylib)");
+    // treatUndefinedSymbol() can replace its arg with a DylibSymbol; re-check.
+    if (isa<Undefined>(objcMsgSend))
+      return;
+  }
   objcMsgSend->used = true;
   if (config->objcStubsMode == ObjCStubsMode::fast) {
     if (config->arch() == AK_arm64e) {
