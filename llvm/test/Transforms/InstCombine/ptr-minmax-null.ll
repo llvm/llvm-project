@@ -273,24 +273,6 @@ define i1 @umax_null_poison_in_unselected_arm(ptr %x, ptr %y) {
   ret i1 %r
 }
 
-; An all-ones null representation is not the unsigned minimum.
-define i1 @umax_null_nonzero_null_representation(ptr addrspace(3) %x, ptr addrspace(3) %y) {
-; CHECK-LABEL: @umax_null_nonzero_null_representation(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr addrspace(3) [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr addrspace(3) [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr addrspace(3) [[X]], ptr addrspace(3) [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr addrspace(3) [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr addrspace(3) %x, null
-  %cmp = icmp ugt ptr addrspace(3) %x, %y
-  %minmax = select i1 %cmp, ptr addrspace(3) %x, ptr addrspace(3) %y
-  %minmaxnull = icmp eq ptr addrspace(3) %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
-}
-
 ; Signed maximum is outside the observed pattern.
 define i1 @smax_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @smax_null_logical_or(

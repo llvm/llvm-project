@@ -4504,8 +4504,9 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
         !match(RHSC, m_Isa<ConstantPointerNull>()))
       break;
 
-    unsigned AS = RHSC->getType()->getPointerAddressSpace();
-    if (!DL.getNullPtrValue(AS).isZero())
+    Constant *RHSIndexBits = ConstantFoldCastOperand(
+        Instruction::PtrToAddr, RHSC, DL.getIndexType(RHSC->getType()), DL);
+    if (!RHSIndexBits || !RHSIndexBits->isNullValue())
       break;
 
     auto *SI = cast<SelectInst>(LHSI);
