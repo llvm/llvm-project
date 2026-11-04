@@ -35,9 +35,11 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
@@ -47,6 +49,12 @@ STATISTIC(NumInstrsReduced,
           "Number of instructions whose bit width was reduced");
 STATISTIC(NumICmpsReduced,
           "Number of icmp users whose bit width was reduced with a graph");
+STATISTIC(NumGraphRangesComputed,
+          "Number of expression graphs whose value ranges were computed");
+
+/// Maximum number of rounds when computing the ranges of a graph. A graph
+/// without phi cycles needs two rounds.
+static constexpr unsigned MaxRangeRounds = 8;
 
 /// Return whether operand \p OpNo of \p I is reducible.
 static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
@@ -290,14 +298,133 @@ unsigned TruncInstCombine::getMinBitWidth() {
   return MinBitWidth;
 }
 
-bool TruncInstCombine::canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) const {
+/// Return the range that the branch from \p From to \p To implies for \p V,
+/// or a full range. Like the edge values of LazyValueInfo, this does not
+/// require \p V to be noundef.
+static ConstantRange getEdgeRange(Value *V, BasicBlock *From, BasicBlock *To) {
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  auto *BI = dyn_cast<CondBrInst>(From->getTerminator());
+  CmpPredicate Pred;
+  const APInt *C;
+  if (!BI || BI->getSuccessor(0) == BI->getSuccessor(1) ||
+      !match(BI->getCondition(), m_ICmp(Pred, m_Specific(V), m_APInt(C))))
+    return ConstantRange::getFull(BitWidth);
+  if (BI->getSuccessor(1) == To)
+    Pred = CmpInst::getInversePredicate(Pred);
+  return ConstantRange::makeExactICmpRegion(Pred, *C);
+}
+
+ConstantRange TruncInstCombine::getOperandRange(Value *V,
+                                                const Instruction *CtxI) {
+  if (auto *I = dyn_cast<Instruction>(V); I && InstInfoMap.count(I)) {
+    // A graph instruction without a range yet is only reachable through a phi
+    // back edge. Start from an empty range. The fixed point check makes sure
+    // that the final ranges hold.
+    auto It = GraphRanges.find(I);
+    if (It == GraphRanges.end())
+      return ConstantRange::getEmpty(V->getType()->getScalarSizeInBits());
+    return It->second;
+  }
+  auto Key = std::make_pair(V, CtxI);
+  if (auto It = LeafRanges.find(Key); It != LeafRanges.end())
+    return It->second;
+  ConstantRange CR = computeConstantRangeIncludingKnownBits(
+      V, /*ForSigned=*/false, SimplifyQuery(DL, &DT, &AC, CtxI));
+  LeafRanges.try_emplace(Key, CR);
+  return CR;
+}
+
+ConstantRange TruncInstCombine::computeInstRange(Instruction *I) {
+  unsigned BitWidth = I->getType()->getScalarSizeInBits();
+  auto OpRange = [&](unsigned OpNo) {
+    return getOperandRange(I->getOperand(OpNo), I);
+  };
+  switch (I->getOpcode()) {
+  case Instruction::Trunc:
+    return OpRange(0).truncate(BitWidth);
+  case Instruction::ZExt:
+    return OpRange(0).zeroExtend(BitWidth);
+  case Instruction::SExt:
+    return OpRange(0).signExtend(BitWidth);
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::UDiv:
+  case Instruction::URem:
+    return OpRange(0).binaryOp(*cast<BinaryOperator>(I), OpRange(1));
+  case Instruction::Select:
+    return OpRange(1).unionWith(OpRange(2));
+  case Instruction::PHI: {
+    auto *PN = cast<PHINode>(I);
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (auto [V, BB] : zip(PN->incoming_values(), PN->blocks()))
+      CR = CR.unionWith(
+          getOperandRange(V, BB->getTerminator())
+              .intersectWith(getEdgeRange(V, BB, PN->getParent())));
+    return CR;
+  }
+  case Instruction::Call: {
+    Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+    if (IID == Intrinsic::umin || IID == Intrinsic::umax)
+      return ConstantRange::intrinsic(IID, {OpRange(0), OpRange(1)});
+    break;
+  }
+  default:
+    break;
+  }
+  return ConstantRange::getFull(BitWidth);
+}
+
+void TruncInstCombine::computeGraphRanges() {
+  RangesComputed = true;
+  GraphRanges.clear();
+  if (CurrentTruncInst->getType()->isVectorTy())
+    return;
+  ++NumGraphRangesComputed;
+
+  // InstInfoMap lists operands before their users, except for values that
+  // reach a phi through a back edge. Iterate until no range changes. Any
+  // such fixed point is a sound over-approximation of the values, because
+  // each range contains the result of its instruction for every combination
+  // of values in its operand ranges.
+  for (unsigned Round = 0; Round < MaxRangeRounds; ++Round) {
+    bool Changed = false;
+    for (auto &Itr : InstInfoMap) {
+      Instruction *I = Itr.first;
+      ConstantRange CR = computeInstRange(I);
+      auto [It, Inserted] = GraphRanges.try_emplace(I, CR);
+      if (!Inserted && It->second == CR)
+        continue;
+      It->second = CR;
+      Changed = true;
+    }
+    if (!Changed)
+      return;
+  }
+  GraphRanges.clear();
+}
+
+ConstantRange TruncInstCombine::getGraphRange(Value *V,
+                                              const Instruction *CtxI) {
+  if (!RangesComputed)
+    computeGraphRanges();
+  if (GraphRanges.empty())
+    return computeConstantRangeIncludingKnownBits(
+        V, /*ForSigned=*/false, SimplifyQuery(DL, &DT, &AC, CtxI));
+  return getOperandRange(V, CtxI);
+}
+
+bool TruncInstCombine::canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) {
   if (Cmp->getOperand(0)->getType()->isVectorTy())
     return false;
-  SimplifyQuery SQ(DL, &DT, &AC, Cmp);
-  ConstantRange LHS = computeConstantRangeIncludingKnownBits(
-      Cmp->getOperand(0), /*ForSigned=*/false, SQ);
-  ConstantRange RHS = computeConstantRangeIncludingKnownBits(
-      Cmp->getOperand(1), /*ForSigned=*/false, SQ);
+  ConstantRange LHS = getGraphRange(Cmp->getOperand(0), Cmp);
+  ConstantRange RHS = getGraphRange(Cmp->getOperand(1), Cmp);
   // Truncation keeps the order of values that fit in BitWidth bits as
   // unsigned, or as signed values for signed predicates.
   bool FitUnsigned =
@@ -310,6 +437,8 @@ bool TruncInstCombine::canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) const {
 }
 
 Type *TruncInstCombine::getBestTruncatedType() {
+  RangesComputed = false;
+  LeafRanges.clear();
   ICmpUsers.clear();
   if (!buildTruncExpressionGraph())
     return nullptr;
@@ -351,6 +480,17 @@ Type *TruncInstCombine::getBestTruncatedType() {
 
   unsigned OrigBitWidth =
       CurrentTruncInst->getOperand(0)->getType()->getScalarSizeInBits();
+  unsigned TruncBitWidth = CurrentTruncInst->getType()->getScalarSizeInBits();
+
+  // Return the number of active bits of the operand \p Op of \p I. Fall back
+  // to the ranges of the graph only if known bits do not fit in the trunc
+  // type, because computing the ranges is more expensive.
+  auto GetMaxActiveBits = [&](Value *Op, Instruction *I) {
+    unsigned Bits = computeKnownBits(Op).countMaxActiveBits();
+    if (Bits > TruncBitWidth)
+      Bits = std::min(Bits, getGraphRange(Op, I).getActiveBits());
+    return Bits;
+  };
 
   // Initialize MinBitWidth for shift instructions with the minimum number
   // that is greater than shift amount (i.e. shift amount + 1).
@@ -370,12 +510,17 @@ Type *TruncInstCombine::getBestTruncatedType() {
       if (MinBitWidth == OrigBitWidth)
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
-        KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
-        MinBitWidth = std::max(MinBitWidth, KnownLHS.countMaxActiveBits());
+        MinBitWidth =
+            std::max(MinBitWidth, GetMaxActiveBits(I->getOperand(0), I));
       }
       if (I->getOpcode() == Instruction::AShr) {
-        unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
-        MinBitWidth = std::max(MinBitWidth, OrigBitWidth - NumSignBits + 1);
+        unsigned SignedBits =
+            OrigBitWidth - ComputeNumSignBits(I->getOperand(0)) + 1;
+        if (SignedBits > TruncBitWidth)
+          SignedBits =
+              std::min(SignedBits,
+                       getGraphRange(I->getOperand(0), I).getMinSignedBits());
+        MinBitWidth = std::max(MinBitWidth, SignedBits);
       }
       if (MinBitWidth >= OrigBitWidth)
         return nullptr;
@@ -383,9 +528,8 @@ Type *TruncInstCombine::getBestTruncatedType() {
     } else if (I->getOpcode() == Instruction::UDiv ||
                I->getOpcode() == Instruction::URem) {
       unsigned MinBitWidth = 0;
-      for (const auto &Op : I->operands()) {
-        KnownBits Known = computeKnownBits(Op);
-        MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
+      for (Value *Op : I->operands()) {
+        MinBitWidth = std::max(GetMaxActiveBits(Op, I), MinBitWidth);
         if (MinBitWidth >= OrigBitWidth)
           return nullptr;
       }
@@ -395,9 +539,8 @@ Type *TruncInstCombine::getBestTruncatedType() {
       case Intrinsic::umin:
       case Intrinsic::umax: {
         unsigned MinBitWidth = 0;
-        for (const auto &Op : II->args()) {
-          KnownBits Known = computeKnownBits(Op);
-          MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
+        for (Value *Op : II->args()) {
+          MinBitWidth = std::max(GetMaxActiveBits(Op, I), MinBitWidth);
           if (MinBitWidth >= OrigBitWidth)
             return nullptr;
         }

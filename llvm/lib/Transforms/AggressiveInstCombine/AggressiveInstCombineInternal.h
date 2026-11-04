@@ -15,9 +15,11 @@
 #ifndef LLVM_LIB_TRANSFORMS_AGGRESSIVEINSTCOMBINE_COMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_AGGRESSIVEINSTCOMBINE_COMBINEINTERNAL_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/Support/KnownBits.h"
 
 //===----------------------------------------------------------------------===//
@@ -77,6 +79,16 @@ class TruncInstCombine {
   /// all other instructions in the graph that uses it.
   MapVector<Instruction *, Info> InstInfoMap;
 
+  /// Ranges of the original values of the instructions in the expression
+  /// graph. Valid only if RangesComputed is set. Empty if no fixed point was
+  /// found.
+  DenseMap<Instruction *, ConstantRange> GraphRanges;
+  bool RangesComputed = false;
+
+  /// Ranges of values outside the expression graph at their users. They do not
+  /// change while the graph ranges are computed.
+  DenseMap<std::pair<Value *, const Instruction *>, ConstantRange> LeafRanges;
+
   /// ICmp users outside the expression graph, which are narrowed together
   /// with it.
   SmallVector<ICmpInst *, 2> ICmpUsers;
@@ -111,9 +123,26 @@ private:
   ///         eligible to be reduced.
   Type *getBestTruncatedType();
 
+  /// Compute the ranges of the original values of all instructions in the
+  /// expression graph and store them in GraphRanges. Phi cycles are solved by
+  /// iterating from empty ranges until a fixed point is reached, using the
+  /// conditions of the branches into each phi.
+  void computeGraphRanges();
+
+  /// Return the range of \p V when used by \p CtxI.
+  ConstantRange getOperandRange(Value *V, const Instruction *CtxI);
+
+  /// Return the range of \p I given the current ranges of its operands.
+  ConstantRange computeInstRange(Instruction *I);
+
+  /// Return the range of \p V, a value in or used by the expression graph,
+  /// when used by \p CtxI. Without a fixed point, use known bits and the
+  /// cheap range analysis of the value itself.
+  ConstantRange getGraphRange(Value *V, const Instruction *CtxI);
+
   /// Return true if the outside icmp user \p Cmp gives the same result when
   /// its operands are truncated to \p BitWidth bits.
-  bool canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) const;
+  bool canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth);
 
   KnownBits computeKnownBits(const Value *V) const {
     return llvm::computeKnownBits(V, DL, &AC,

@@ -18,23 +18,21 @@ define i64 @iota_lower_bound(ptr %data, i64 %first, i64 %last, i64 %value) {
 ; CHECK-NEXT:    br i1 [[NONEMPTY]], label [[PH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ph:
 ; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i64 [[LAST]], [[FIRST]]
-; CHECK-NEXT:    [[LEN0:%.*]] = zext nneg i64 [[D]] to i128
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LEN:%.*]] = phi i128 [ [[LEN0]], [[PH]] ], [ [[LEN_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LEN:%.*]] = phi i64 [ [[D]], [[PH]] ], [ [[LEN_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LO:%.*]] = phi i64 [ [[FIRST]], [[PH]] ], [ [[LO_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[HALF:%.*]] = lshr i128 [[LEN]], 1
-; CHECK-NEXT:    [[HALF64:%.*]] = trunc i128 [[HALF]] to i64
+; CHECK-NEXT:    [[HALF64:%.*]] = lshr i64 [[LEN]], 1
 ; CHECK-NEXT:    [[MID:%.*]] = add i64 [[LO]], [[HALF64]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i64, ptr [[DATA:%.*]], i64 [[MID]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[LT:%.*]] = icmp ult i64 [[V]], [[VALUE:%.*]]
 ; CHECK-NEXT:    [[MID1:%.*]] = add i64 [[MID]], 1
-; CHECK-NEXT:    [[NHALF:%.*]] = xor i128 [[HALF]], -1
-; CHECK-NEXT:    [[REST:%.*]] = add nsw i128 [[LEN]], [[NHALF]]
+; CHECK-NEXT:    [[NHALF:%.*]] = xor i64 [[HALF64]], -1
+; CHECK-NEXT:    [[REST:%.*]] = add i64 [[LEN]], [[NHALF]]
 ; CHECK-NEXT:    [[LO_NEXT]] = select i1 [[LT]], i64 [[MID1]], i64 [[LO]]
-; CHECK-NEXT:    [[LEN_NEXT]] = select i1 [[LT]], i128 [[REST]], i128 [[HALF]]
-; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i128 [[LEN_NEXT]], 0
+; CHECK-NEXT:    [[LEN_NEXT]] = select i1 [[LT]], i64 [[REST]], i64 [[HALF64]]
+; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i64 [[LEN_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[FIRST]], [[ENTRY:%.*]] ], [ [[LO_NEXT]], [[LOOP]] ]
@@ -145,16 +143,14 @@ define i64 @countdown_loop(i64 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMALL:%.*]] = icmp ult i64 [[N:%.*]], 1000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[SMALL]])
-; CHECK-NEXT:    [[I0:%.*]] = zext i64 [[N]] to i128
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i128 [ [[I0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[N]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[HALF:%.*]] = lshr i128 [[I]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[HALF]] to i64
+; CHECK-NEXT:    [[T:%.*]] = lshr i64 [[I]], 1
 ; CHECK-NEXT:    [[ACC_NEXT]] = add i64 [[ACC]], [[T]]
-; CHECK-NEXT:    [[I_NEXT]] = add nsw i128 [[I]], -1
-; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i128 [[I_NEXT]], 0
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], -1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i64 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 [[ACC_NEXT]]
