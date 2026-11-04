@@ -561,6 +561,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
 
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT}).lower();
+
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
       .legalForCartesianProduct(allFloatScalarsAndVectors);
