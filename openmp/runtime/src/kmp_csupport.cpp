@@ -809,21 +809,31 @@ void __kmpc_flush(ident_t *loc) {
 Perform memory fence with explicit memory semantics.
 */
 void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order, kmp_int32 scope) {
-  // `scope` is not used on the initial device.
+  KC_TRACE(10, ("__kmpc_flush_explicit: called\n"));
+
+  // `scope` is not used on the initial device: a host fence orders memory for
+  // all threads whatever the scope.
   switch (order) {
-  case std::memory_order_relaxed:
-    [[fallthrough]];
-  case std::memory_order_acquire:
-    [[fallthrough]];
-  case std::memory_order_release:
-    [[fallthrough]];
-  case std::memory_order_acq_rel:
-    [[fallthrough]];
-  case std::memory_order_seq_cst:
-    std::atomic_thread_fence(static_cast<std::memory_order>(order));
+  case kmp_flush_order_relaxed:
+    std::atomic_thread_fence(std::memory_order_relaxed);
     break;
+  case kmp_flush_order_consume:
+    [[fallthrough]];
+  case kmp_flush_order_acquire:
+    std::atomic_thread_fence(std::memory_order_acquire);
+    break;
+  case kmp_flush_order_release:
+    std::atomic_thread_fence(std::memory_order_release);
+    break;
+  case kmp_flush_order_acq_rel:
+    std::atomic_thread_fence(std::memory_order_acq_rel);
+    break;
+  case kmp_flush_order_seq_cst:
+    [[fallthrough]];
   default:
-    KMP_BUILTIN_UNREACHABLE;
+    // An order this runtime does not know gets the strongest fence.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    break;
   }
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
