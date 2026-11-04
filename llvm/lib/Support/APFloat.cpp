@@ -80,6 +80,8 @@ unsigned int IEEEFloat::partCountForSemantic() {
     return 2;
   else if constexpr (&S == &APFloatBase::semX87DoubleExtended)
     return 2;
+  else if constexpr (&S == &APFloatBase::semPPCDoubleDoubleLegacy)
+      return 2;
   else
     return 1;
 }
