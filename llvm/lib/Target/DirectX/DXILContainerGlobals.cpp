@@ -1,4 +1,4 @@
-//===- DXContainerGlobals.cpp - DXContainer global generator pass ---------===//
+//===- DXILContainerGlobals.cpp - DXContainer global generator pass -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// DXContainerGlobalsPass implementation.
+// DXILContainerGlobalsPass implementation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,8 +23,10 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
@@ -49,29 +51,10 @@ cl::opt<bool> dxil::PdbInPrivate("dx-pdb-in-private",
                                  cl::desc("Store PDB in private user data"));
 
 namespace {
-class DXContainerGlobals : public llvm::ModulePass {
-
-  GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
-                                       StringRef Name, StringRef SectionName);
-  void addSection(Module &M, SmallVector<GlobalValue *> &Globals,
-                  StringRef SectionData, StringRef MetadataName,
-                  StringRef SectionName);
-  GlobalVariable *getFeatureFlags(Module &M);
-  void computeShaderHashAndDebugName(Module &M,
-                                     SmallVector<GlobalValue *> &Globals);
-  GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
-                                 StringRef SectionName);
-  void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
-  void addRootSignature(Module &M, SmallVector<GlobalValue *> &Globals);
-  void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
-  void addPipelineStateValidationInfo(Module &M,
-                                      SmallVector<GlobalValue *> &Globals);
-  void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
-  void addSourceInfo(Module &M, SmallVector<GlobalValue *> &Globals);
-
+class DXILContainerGlobalsLegacy : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  DXContainerGlobals() : ModulePass(ID) {}
+  DXILContainerGlobalsLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
     return "DXContainer Global Emitter";
@@ -92,43 +75,38 @@ public:
 
 } // namespace
 
-bool DXContainerGlobals::runOnModule(Module &M) {
-  llvm::SmallVector<GlobalValue *> Globals;
-  Globals.push_back(getFeatureFlags(M));
-  computeShaderHashAndDebugName(M, Globals);
-  addSignature(M, Globals);
-  addRootSignature(M, Globals);
-  addPipelineStateValidationInfo(M, Globals);
-  addCompilerVersion(M, Globals);
-  addSourceInfo(M, Globals);
-  appendToCompilerUsed(M, Globals);
-  return true;
+static GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
+                                            StringRef Name,
+                                            StringRef SectionName) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Content->getType(), true, GlobalValue::PrivateLinkage, Content, Name);
+  GV->setSection(SectionName);
+  GV->setAlignment(Align(4));
+  return GV;
 }
 
-GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
-  uint64_t CombinedFeatureFlags = getAnalysis<ShaderFlagsAnalysisWrapper>()
-                                      .getShaderFlags()
-                                      .getCombinedFlags()
-                                      .getFeatureFlags();
+static GlobalVariable *
+getFeatureFlags(Module &M,
+                function_ref<const ModuleShaderFlags &()> GetShaderFlags) {
+  uint64_t CombinedFeatureFlags =
+      GetShaderFlags().getCombinedFlags().getFeatureFlags();
 
   Constant *FeatureFlagsConstant =
       ConstantInt::get(M.getContext(), APInt(64, CombinedFeatureFlags));
   return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
-void DXContainerGlobals::addSection(Module &M,
-                                    SmallVector<GlobalValue *> &Globals,
-                                    StringRef SectionData,
-                                    StringRef MetadataName,
-                                    StringRef SectionName) {
+static void addSection(Module &M, SmallVector<GlobalValue *> &Globals,
+                       StringRef SectionData, StringRef MetadataName,
+                       StringRef SectionName) {
   Constant *SectionConstant = ConstantDataArray::getString(
       M.getContext(), SectionData, /*AddNull*/ false);
   Globals.emplace_back(
       buildContainerGlobal(M, SectionConstant, MetadataName, SectionName));
 }
 
-void DXContainerGlobals::computeShaderHashAndDebugName(
-    Module &M, SmallVector<GlobalValue *> &Globals) {
+static void computeShaderHashAndDebugName(Module &M,
+                                          SmallVector<GlobalValue *> &Globals) {
   ConstantDataArray *DXILConstant;
   MD5 Digest;
   dxbc::ShaderHash HashData = {0, {0}};
@@ -199,23 +177,12 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   addSection(M, Globals, ILDNData, "dx.ildn", "ILDN");
 }
 
-GlobalVariable *DXContainerGlobals::buildContainerGlobal(
-    Module &M, Constant *Content, StringRef Name, StringRef SectionName) {
-  auto *GV = new llvm::GlobalVariable(
-      M, Content->getType(), true, GlobalValue::PrivateLinkage, Content, Name);
-  GV->setSection(SectionName);
-  GV->setAlignment(Align(4));
-  return GV;
-}
-
-GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
-                                                   StringRef Name,
-                                                   StringRef SectionName) {
+static GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
+                                      StringRef SectionName,
+                                      const dxil::ModuleMetadataInfo &MMI) {
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
-  VersionTuple V = getAnalysis<DXILMetadataAnalysisWrapperPass>()
-                       .getModuleMetadata()
-                       .ValidatorVersion;
+  VersionTuple V = MMI.ValidatorVersion;
   bool Legacy = !V.empty() && V != VersionTuple(0, 0) && V < VersionTuple(1, 7);
   Sig.write(OS, /*PadToDword=*/!Legacy);
   Constant *Constant =
@@ -223,32 +190,33 @@ GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
   return buildContainerGlobal(M, Constant, Name, SectionName);
 }
 
-void DXContainerGlobals::addSignature(Module &M,
-                                      SmallVector<GlobalValue *> &Globals) {
-  const auto &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-  const auto &Signatures =
-      getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+static void
+addSignature(Module &M, SmallVector<GlobalValue *> &Globals,
+             function_ref<dxil::ModuleMetadataInfo &()> GetModuleMetadataInfo,
+             function_ref<const ModuleSignatureInfo &()> GetSignatureInfo) {
+  const ModuleMetadataInfo &MMI = GetModuleMetadataInfo();
+  const ModuleSignatureInfo &Signatures = GetSignatureInfo();
   Signature InputSig, OutputSig;
   if (MMI.ShaderProfile != Triple::Library && MMI.EntryPropertyVec.size() == 1)
     if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry))
       Sig->buildSignatures(InputSig, OutputSig, MMI.ValidatorVersion);
 
-  Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1"));
-  Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
+  Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1", MMI));
+  Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1", MMI));
 }
 
-void DXContainerGlobals::addRootSignature(Module &M,
-                                          SmallVector<GlobalValue *> &Globals) {
+static void addRootSignature(
+    Module &M, SmallVector<GlobalValue *> &Globals,
+    function_ref<dxil::ModuleMetadataInfo &()> GetModuleMetadataInfo,
+    function_ref<RootSignatureBindingInfo &()> GetRootSignatureBindingInfo) {
 
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  dxil::ModuleMetadataInfo &MMI = GetModuleMetadataInfo();
 
   // Root Signature in Library don't compile to DXContainer.
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+  RootSignatureBindingInfo &RSA = GetRootSignatureBindingInfo();
   const Function *EntryFunction = nullptr;
 
   if (MMI.ShaderProfile != llvm::Triple::RootSignature) {
@@ -268,31 +236,32 @@ void DXContainerGlobals::addRootSignature(Module &M,
   addSection(M, Globals, Data, "dx.rts0", "RTS0");
 }
 
-void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
-  const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
-  DXILResourceTypeMap &DRTM =
-      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+static void
+addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV,
+                   function_ref<DXILResourceMap &()> GetResourceMap,
+                   function_ref<DXILResourceTypeMap &()> GetResourceTypeMap) {
+  const DXILResourceMap &DRM = GetResourceMap();
+  DXILResourceTypeMap &DRTM = GetResourceTypeMap();
 
-  auto MakeBinding =
-      [](const dxil::ResourceInfo::ResourceBinding &Binding,
-         const dxbc::PSV::ResourceType Type, const dxil::ResourceKind Kind,
-         const dxbc::PSV::ResourceFlags Flags = dxbc::PSV::ResourceFlags()) {
-        dxbc::PSV::v2::ResourceBindInfo BindInfo;
-        BindInfo.Type = Type;
-        BindInfo.LowerBound = Binding.LowerBound;
-        assert(
-            (Binding.Size == 0 ||
-             (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX) &&
-            "Resource range is too large");
-        BindInfo.UpperBound = (Binding.Size == 0)
-                                  ? UINT32_MAX
-                                  : Binding.LowerBound + Binding.Size - 1;
-        BindInfo.Space = Binding.Space;
-        BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
-        BindInfo.Flags = Flags;
-        return BindInfo;
-      };
+  auto MakeBinding = [](const dxil::ResourceInfo::ResourceBinding &Binding,
+                        const dxbc::PSV::ResourceType Type,
+                        const dxil::ResourceKind Kind,
+                        const dxbc::PSV::ResourceFlags Flags =
+                            dxbc::PSV::ResourceFlags()) {
+    dxbc::PSV::v2::ResourceBindInfo BindInfo;
+    BindInfo.Type = Type;
+    BindInfo.LowerBound = Binding.LowerBound;
+    assert((Binding.Size == 0 ||
+            (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX) &&
+           "Resource range is too large");
+    BindInfo.UpperBound = (Binding.Size == 0)
+                              ? UINT32_MAX
+                              : Binding.LowerBound + Binding.Size - 1;
+    BindInfo.Space = Binding.Space;
+    BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
+    BindInfo.Flags = Flags;
+    return BindInfo;
+  };
 
   for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
     if (!RI.hasBinding())
@@ -350,34 +319,34 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   }
 }
 
-void DXContainerGlobals::addPipelineStateValidationInfo(
-    Module &M, SmallVector<GlobalValue *> &Globals) {
+static void addPipelineStateValidationInfo(
+    Module &M, SmallVector<GlobalValue *> &Globals,
+    function_ref<dxil::ModuleMetadataInfo &()> GetModuleMetadataInfo,
+    function_ref<DXILResourceMap &()> GetResourceMap,
+    function_ref<DXILResourceTypeMap &()> GetResourceTypeMap,
+    function_ref<const ModuleShaderFlags &()> GetModuleShaderFlags,
+    function_ref<const ModuleSignatureInfo &()> GetModuleSignatureInfo) {
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
   PSVRuntimeInfo PSV;
   PSV.BaseData.MinimumWaveLaneCount = 0;
   PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
 
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  dxil::ModuleMetadataInfo &MMI = GetModuleMetadataInfo();
   assert(MMI.EntryPropertyVec.size() == 1 ||
          MMI.ShaderProfile == Triple::Library ||
          MMI.ShaderProfile == Triple::RootSignature);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
-  addResourcesForPSV(M, PSV);
+  addResourcesForPSV(M, PSV, GetResourceMap, GetResourceTypeMap);
   unsigned PSVVersion = 3;
   if (MMI.ShaderProfile != Triple::Library &&
       MMI.EntryPropertyVec.size() == 1) {
     const Function *Entry = MMI.EntryPropertyVec[0].Entry;
-    bool UsesViewID = getAnalysis<ShaderFlagsAnalysisWrapper>()
-                          .getShaderFlags()
-                          .getFunctionFlags(Entry)
-                          .ViewID;
+    bool UsesViewID = GetModuleShaderFlags().getFunctionFlags(Entry).ViewID;
     PSV.BaseData.UsesViewID = UsesViewID;
-    const auto &Signatures =
-        getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+    const ModuleSignatureInfo &Signatures = GetModuleSignatureInfo();
     if (const auto *Sig = Signatures.get(Entry)) {
       Sig->updatePSV(PSV, MMI.ValidatorVersion, UsesViewID);
       // Preserve the existing empty-signature path, and select an ABI version
@@ -423,8 +392,7 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
 }
 
-void DXContainerGlobals::addCompilerVersion(
-    Module &M, SmallVector<GlobalValue *> &Globals) {
+static void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals) {
   if (M.debug_compile_units().empty())
     return;
 
@@ -435,10 +403,10 @@ void DXContainerGlobals::addCompilerVersion(
   addSection(M, Globals, Data, "dx.vers", "VERS");
 }
 
-void DXContainerGlobals::addSourceInfo(Module &M,
-                                       SmallVector<GlobalValue *> &Globals) {
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+static void addSourceInfo(
+    Module &M, SmallVector<GlobalValue *> &Globals,
+    function_ref<dxil::ModuleMetadataInfo &()> GetModuleMetadataInfo) {
+  dxil::ModuleMetadataInfo &MMI = GetModuleMetadataInfo();
 
   if (!MMI.SourceInfo || SourceInDebugModule)
     return;
@@ -451,17 +419,88 @@ void DXContainerGlobals::addSourceInfo(Module &M,
   addSection(M, Globals, Data, "dx.srci", "SRCI");
 }
 
-char DXContainerGlobals::ID = 0;
-INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
+static bool runContainerGlobalsOnModule(
+    Module &M, function_ref<dxil::ModuleMetadataInfo &()> GetModuleMetadataInfo,
+    function_ref<DXILResourceMap &()> GetResourceMap,
+    function_ref<DXILResourceTypeMap &()> GetResourceTypeMap,
+    function_ref<const ModuleShaderFlags &()> GetModuleShaderFlags,
+    function_ref<const ModuleSignatureInfo &()> GetModuleSignatureInfo,
+    function_ref<RootSignatureBindingInfo &()> GetRootSignatureBindingInfo) {
+  llvm::SmallVector<GlobalValue *> Globals;
+  Globals.push_back(getFeatureFlags(M, GetModuleShaderFlags));
+  computeShaderHashAndDebugName(M, Globals);
+  addSignature(M, Globals, GetModuleMetadataInfo, GetModuleSignatureInfo);
+  addRootSignature(M, Globals, GetModuleMetadataInfo,
+                   GetRootSignatureBindingInfo);
+  addPipelineStateValidationInfo(M, Globals, GetModuleMetadataInfo,
+                                 GetResourceMap, GetResourceTypeMap,
+                                 GetModuleShaderFlags, GetModuleSignatureInfo);
+  addCompilerVersion(M, Globals);
+  addSourceInfo(M, Globals, GetModuleMetadataInfo);
+  appendToCompilerUsed(M, Globals);
+  return true;
+}
+
+bool DXILContainerGlobalsLegacy::runOnModule(Module &M) {
+  return runContainerGlobalsOnModule(
+      M,
+      [&]() -> ModuleMetadataInfo & {
+        return getAnalysis<DXILMetadataAnalysisWrapperPass>()
+            .getModuleMetadata();
+      },
+      [&]() -> DXILResourceMap & {
+        return getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+      },
+      [&]() -> DXILResourceTypeMap & {
+        return getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+      },
+      [&]() -> const ModuleShaderFlags & {
+        return getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
+      },
+      [&]() -> const ModuleSignatureInfo & {
+        return getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+      },
+      [&]() -> RootSignatureBindingInfo & {
+        return getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+      });
+}
+
+PreservedAnalyses DXILContainerGlobalsPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  runContainerGlobalsOnModule(
+      M,
+      [&]() -> ModuleMetadataInfo & {
+        return MAM.getResult<DXILMetadataAnalysis>(M);
+      },
+      [&]() -> DXILResourceMap & {
+        return MAM.getResult<DXILResourceAnalysis>(M);
+      },
+      [&]() -> DXILResourceTypeMap & {
+        return MAM.getResult<DXILResourceTypeAnalysis>(M);
+      },
+      [&]() -> const ModuleShaderFlags & {
+        return MAM.getResult<ShaderFlagsAnalysis>(M);
+      },
+      [&]() -> const ModuleSignatureInfo & {
+        return MAM.getResult<SignatureAnalysis>(M);
+      },
+      [&]() -> RootSignatureBindingInfo & {
+        return MAM.getResult<RootSignatureAnalysis>(M);
+      });
+  return PreservedAnalyses::all();
+}
+
+char DXILContainerGlobalsLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(DXILContainerGlobalsLegacy, "dxil-container-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
-INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
+INITIALIZE_PASS_END(DXILContainerGlobalsLegacy, "dxil-container-globals",
                     "DXContainer Global Emitter", false, true)
 
-ModulePass *llvm::createDXContainerGlobalsPass() {
-  return new DXContainerGlobals();
+ModulePass *llvm::createDXILContainerGlobalsLegacyPass() {
+  return new DXILContainerGlobalsLegacy();
 }

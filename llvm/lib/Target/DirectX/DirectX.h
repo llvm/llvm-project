@@ -245,11 +245,17 @@ void initializeRootSignatureAnalysisWrapperPass(PassRegistry &);
 /// Initializer for dxil::SignatureAnalysisWrapper pass.
 void initializeSignatureAnalysisWrapperPass(PassRegistry &);
 
-/// Initializer for DXContainerGlobals pass.
-void initializeDXContainerGlobalsPass(PassRegistry &);
+/// Initializer for DXILContainerGlobals pass.
+void initializeDXILContainerGlobalsLegacyPass(PassRegistry &);
 
 /// Pass for generating DXContainer part globals.
-ModulePass *createDXContainerGlobalsPass();
+class DXILContainerGlobalsPass
+    : public RequiredPassInfoMixin<DXILContainerGlobalsPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createDXILContainerGlobalsLegacyPass();
 
 /// Initializer for DXContainerPDB pass.
 void initializeDXContainerPDBPass(PassRegistry &);

@@ -58,7 +58,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILPrepareModuleLegacyPass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
-  initializeDXContainerGlobalsPass(*PR);
+  initializeDXILContainerGlobalsLegacyPass(*PR);
   initializeDXContainerPDBPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
@@ -182,7 +182,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       PM.add(createDXILEmbedderPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
-      PM.add(createDXContainerGlobalsPass());
+      PM.add(createDXILContainerGlobalsLegacyPass());
       PM.add(createDXContainerPDBPass());
 
       if (addAsmPrinter(PM, Out, DwoOut, FileType,
