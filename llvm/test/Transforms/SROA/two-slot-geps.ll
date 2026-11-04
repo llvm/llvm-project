@@ -158,40 +158,21 @@ define i32 @alloca_extra_uses(i1 %c, i64 %idx, i32 %a, i32 %b) {
   ret i32 %r
 }
 
-define i32 @different_access_sizes(i64 %idx, i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @different_access_sizes(
+; The GEP is used with different sized loads/stores. We could unfold the GEP,
+; but to keep things simple we currently don't.
+; See the next test for an test for a case where unfolding the GEP with the
+; largest access size when access sizes differ would be a miscompile.
+define i32 @different_access_sizes_simple(i64 %idx, i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @different_access_sizes_simple(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A]] to i16
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[A]], 16
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[ALLOCA_SROA_0_SROA_3_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[B]] to i16
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[B]], 16
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[ALLOCA_SROA_2_SROA_3_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
-; CHECK-NEXT:    br i1 [[GEP_SROA_IDX]], label %[[DOTTHEN:.*]], label %[[DOTELSE:.*]]
-; CHECK:       [[DOTTHEN]]:
-; CHECK-NEXT:    br label %[[DOTCONT:.*]]
-; CHECK:       [[DOTELSE]]:
-; CHECK-NEXT:    br label %[[DOTCONT]]
-; CHECK:       [[DOTCONT]]:
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0:%.*]] = phi i16 [ [[ALLOCA_SROA_0_SROA_0_0_EXTRACT_TRUNC]], %[[DOTTHEN]] ], [ 0, %[[DOTELSE]] ]
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_0_0:%.*]] = phi i16 [ 0, %[[DOTTHEN]] ], [ [[ALLOCA_SROA_2_SROA_0_0_EXTRACT_TRUNC]], %[[DOTELSE]] ]
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_INSERT_EXT:%.*]] = zext i16 [[ALLOCA_SROA_2_SROA_3_0_EXTRACT_TRUNC]] to i32
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_INSERT_SHIFT:%.*]] = shl i32 [[ALLOCA_SROA_2_SROA_3_0_INSERT_EXT]], 16
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_INSERT_MASK:%.*]] = and i32 undef, 65535
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_3_0_INSERT_INSERT:%.*]] = or i32 [[ALLOCA_SROA_2_SROA_3_0_INSERT_MASK]], [[ALLOCA_SROA_2_SROA_3_0_INSERT_SHIFT]]
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_0_0_INSERT_EXT:%.*]] = zext i16 [[ALLOCA_SROA_2_SROA_0_0]] to i32
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[ALLOCA_SROA_2_SROA_3_0_INSERT_INSERT]], -65536
-; CHECK-NEXT:    [[ALLOCA_SROA_2_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[ALLOCA_SROA_2_SROA_0_0_INSERT_MASK]], [[ALLOCA_SROA_2_SROA_0_0_INSERT_EXT]]
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_INSERT_EXT:%.*]] = zext i16 [[ALLOCA_SROA_0_SROA_3_0_EXTRACT_TRUNC]] to i32
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_INSERT_SHIFT:%.*]] = shl i32 [[ALLOCA_SROA_0_SROA_3_0_INSERT_EXT]], 16
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_INSERT_MASK:%.*]] = and i32 undef, 65535
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_3_0_INSERT_INSERT:%.*]] = or i32 [[ALLOCA_SROA_0_SROA_3_0_INSERT_MASK]], [[ALLOCA_SROA_0_SROA_3_0_INSERT_SHIFT]]
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_INSERT_EXT:%.*]] = zext i16 [[ALLOCA_SROA_0_SROA_0_0]] to i32
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[ALLOCA_SROA_0_SROA_3_0_INSERT_INSERT]], -65536
-; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[ALLOCA_SROA_0_SROA_0_0_INSERT_MASK]], [[ALLOCA_SROA_0_SROA_0_0_INSERT_EXT]]
-; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[ALLOCA_SROA_2_SROA_0_0_INSERT_INSERT]], i32 [[ALLOCA_SROA_0_SROA_0_0_INSERT_INSERT]]
-; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[ALLOCA_1:%.*]] = getelementptr nusw i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[ALLOCA]], i64 0, i64 [[IDX]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %alloca = alloca [2 x i32]
 
@@ -206,6 +187,52 @@ define i32 @different_access_sizes(i64 %idx, i32 %a, i32 %b) {
 
   ret i32 %v
 }
+
+; Similar to the test above, but the access sizes are different in different
+; code paths.
+; We could sink the GEPs to the using blocks, or duplicate them at the current
+; block, but for now we keep it simple and just don't unfold a GEP if it's used
+; with different sized loads and stores.
+define i64 @different_access_sizes_tricky(i64 %idx, i1 %wide) {
+; CHECK-LABEL: define i64 @different_access_sizes_tricky(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[WIDE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca [3 x i32], align 8
+; CHECK-NEXT:    store i32 11, ptr [[A]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    store i32 22, ptr [[A1]], align 4
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    store i32 33, ptr [[A2]], align 4
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDX]]
+; CHECK-NEXT:    br i1 [[WIDE]], label %[[W:.*]], label %[[N:.*]]
+; CHECK:       [[W]]:
+; CHECK-NEXT:    [[V64:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    ret i64 [[V64]]
+; CHECK:       [[N]]:
+; CHECK-NEXT:    [[V32:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[V32]] to i64
+; CHECK-NEXT:    ret i64 [[Z]]
+;
+entry:
+  %a = alloca [3 x i32], align 8
+  store i32 11, ptr %a
+  %a1 = getelementptr inbounds i32, ptr %a, i64 1
+  store i32 22, ptr %a1
+  %a2 = getelementptr inbounds i32, ptr %a, i64 2
+  store i32 33, ptr %a2
+  %p = getelementptr inbounds i32, ptr %a, i64 %idx
+  br i1 %wide, label %w, label %n
+w:
+  %v64 = load i64, ptr %p, align 4
+  ret i64 %v64
+n:
+  %v32 = load i32, ptr %p, align 4
+  %z = zext i32 %v32 to i64
+  ret i64 %z
+}
+
+
+
 
 ; This could be handled, but for now we keep it simple.
 define i32 @non_zero_offset_base(i64 %idx, i32 %a, i32 %b) {
