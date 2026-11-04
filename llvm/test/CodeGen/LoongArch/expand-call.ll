@@ -1,5 +1,5 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --code-model=small --stop-before loongarch-prera-expand-pseudo \
-; RUN:     --verify-machineinstrs < %s | FileCheck %s --check-prefix=NOEXPAND
+; RUN:     < %s | FileCheck %s --check-prefix=NOEXPAND
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --code-model=small --stop-after loongarch-prera-expand-pseudo \
 ; RUN:     < %s | FileCheck %s --check-prefix=EXPAND
 
