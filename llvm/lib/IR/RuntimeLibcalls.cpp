@@ -272,6 +272,16 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
   case SizeT:
   case SSizeT:
     return getSizeTType(Ctx, DL);
+  case CmpResult:
+    if (TT.isAArch64() || TT.isAMDGPU() || TT.isWasm())
+      return Type::getInt32Ty(Ctx);
+    if (TT.isAVR())
+      return Type::getInt8Ty(Ctx);
+    return IntegerType::get(Ctx, TT.getArchPointerBitWidth());
+  case Half:
+    return Type::getHalfTy(Ctx);
+  case BFloat:
+    return Type::getBFloatTy(Ctx);
   case Flt:
   case Floating:
     return Type::getFloatTy(Ctx);

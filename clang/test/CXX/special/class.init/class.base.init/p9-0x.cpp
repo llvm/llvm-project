@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++11 %s -O1 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux-gnu -std=c++11 %s -O1 -emit-llvm -o - | FileCheck %s %}
 
 struct S {
   int n = 10;

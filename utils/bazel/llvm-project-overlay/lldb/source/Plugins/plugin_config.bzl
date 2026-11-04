@@ -88,6 +88,7 @@ DEFAULT_PLUGINS = [
     "ProcessMinidump",
     "ProtocolServerMCP",
     "RegisterTypeBuilderClang",
+    "RustLanguage",
     "ScriptedFrameProvider",
     "ScriptedProcess",
     "StructuredDataDarwinLog",

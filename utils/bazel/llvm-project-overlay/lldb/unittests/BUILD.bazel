@@ -479,6 +479,23 @@ cc_test(
 )
 
 cc_test(
+    name = "LanguageRustLanguageTests",
+    srcs = glob(["Language/Rust/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginRustLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LLDBBreakpointTests",
     srcs = glob(["Breakpoint/*.cpp"]),
     deps = [
@@ -533,6 +550,7 @@ cc_test(
         "//lldb/source/Plugins:PluginObjectFileMachO",
         "//lldb/source/Plugins:PluginObjectFilePECOFF",
         "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginRustLanguage",
         "//lldb/source/Plugins:PluginSymbolFileSymtab",
         "//llvm:Option",
         "//llvm:Support",
