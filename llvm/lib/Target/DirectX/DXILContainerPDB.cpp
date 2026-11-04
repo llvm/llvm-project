@@ -1,4 +1,4 @@
-//===- DXContainerPDB.cpp - DirectX PDB writer pass -----------------------===//
+//===- DXILContainerPDB.cpp - DirectX PDB writer pass ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,10 @@
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,7 +31,7 @@ using namespace llvm;
 
 namespace {
 
-class DXContainerPDB : public ModulePass, MCDXContainerBaseWriter {
+class DXILContainerPDBImpl : MCDXContainerBaseWriter {
   Module *M = nullptr;
   SmallVector<MCDXContainerPart> Parts;
 
@@ -39,8 +41,15 @@ class DXContainerPDB : public ModulePass, MCDXContainerBaseWriter {
   }
 
 public:
+  bool shouldSkipSection(StringRef SectionName, size_t SectionSize) override;
+  ArrayRef<MCDXContainerPart> collectParts() override;
+  bool runOnModule(Module &M);
+};
+
+class DXILContainerPDBLegacy : public ModulePass {
+public:
   static char ID;
-  DXContainerPDB() : ModulePass(ID) {}
+  DXILContainerPDBLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "DirectX PDB Emitter"; }
 
@@ -49,15 +58,12 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
-
-  bool shouldSkipSection(StringRef SectionName, size_t SectionSize) override;
-  ArrayRef<MCDXContainerPart> collectParts() override;
 };
 
 } // namespace
 
-bool DXContainerPDB::shouldSkipSection(StringRef SectionName,
-                                       size_t SectionSize) {
+bool DXILContainerPDBImpl::shouldSkipSection(StringRef SectionName,
+                                             size_t SectionSize) {
   if (MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize))
     return true;
   if (dxil::SlimDebug && SectionName == "ILDB")
@@ -77,7 +83,7 @@ static StringRef getGlobalData(const GlobalVariable &GV) {
   return {};
 }
 
-ArrayRef<MCDXContainerPart> DXContainerPDB::collectParts() {
+ArrayRef<MCDXContainerPart> DXILContainerPDBImpl::collectParts() {
   Parts.clear();
   for (const GlobalVariable &GV : M->globals()) {
     StringRef Name = GV.getSection();
@@ -104,7 +110,7 @@ static GlobalVariable *createPrivateDataGlobal(Module &M, StringRef Data) {
   return GV;
 }
 
-bool DXContainerPDB::runOnModule(Module &M) {
+bool DXILContainerPDBImpl::runOnModule(Module &M) {
   llvm::scope_exit Cleanup([&]() { reset(); });
   this->M = &M;
 
@@ -200,7 +206,22 @@ bool DXContainerPDB::runOnModule(Module &M) {
   return true;
 }
 
-char DXContainerPDB::ID = 0;
-INITIALIZE_PASS(DXContainerPDB, "dxil-pdb", "DirectX PDB Emitter", false, true)
+char DXILContainerPDBLegacy::ID = 0;
+INITIALIZE_PASS(DXILContainerPDBLegacy, "dxil-container-pdb",
+                "DirectX PDB Emitter", false, true)
 
-ModulePass *llvm::createDXContainerPDBPass() { return new DXContainerPDB(); }
+ModulePass *llvm::createDXILContainerPDBLegacyPass() {
+  return new DXILContainerPDBLegacy();
+}
+
+bool DXILContainerPDBLegacy::runOnModule(Module &M) {
+  DXILContainerPDBImpl Impl;
+  return Impl.runOnModule(M);
+}
+
+PreservedAnalyses DXILContainerPDBPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  DXILContainerPDBImpl Impl;
+  Impl.runOnModule(M);
+  return PreservedAnalyses::all();
+}

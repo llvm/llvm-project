@@ -1010,7 +1010,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     // If (1) we only need the sign-bit, (2) the setcc operands are the same
     // width as the setcc result, and (3) the result of a setcc conforms to 0 or
     // -1, we may be able to bypass the setcc.
@@ -2061,7 +2061,7 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     // If we're testing X < 0, X >= 0, X <= -1 or X > -1
     // (X is of integer type) then we only need the sign mask of the previous
     // result
@@ -5289,12 +5289,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           if (!Inverse)
             return TopSetCC;
 
-          ISD::CondCode InvCond = ISD::getSetCCInverse(
-              cast<CondCodeSDNode>(TopSetCC.getOperand(2))->get(),
-              TopSetCC.getOperand(0).getValueType());
+          ISD::CondCode InvCond =
+              ISD::getSetCCInverse(TopSetCC.getOperandCondCode(2),
+                                   TopSetCC.getOperand(0).getValueType());
           return DAG.getSetCC(dl, VT, TopSetCC.getOperand(0),
-                                      TopSetCC.getOperand(1),
-                                      InvCond);
+                              TopSetCC.getOperand(1), InvCond);
         }
       }
     }
@@ -5468,7 +5467,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
         // Invert the condition.
         if (N0.getOpcode() == ISD::SETCC) {
-          ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+          ISD::CondCode CC = N0.getOperandCondCode(2);
           CC = ISD::getSetCCInverse(CC, N0.getOperand(0).getValueType());
           if (DCI.isBeforeLegalizeOps() ||
               isCondCodeLegal(CC, N0.getOperand(0).getSimpleValueType()))
@@ -12721,7 +12720,7 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   assert((Op->getOpcode() == ISD::SETCC) && "Input has to be a SETCC node.");
   if (!isCtlzFast())
     return SDValue();
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDLoc dl(Op);
   if (isNullConstant(Op.getOperand(1)) && CC == ISD::SETEQ) {
     EVT VT = Op.getOperand(0).getValueType();

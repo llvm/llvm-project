@@ -9,13 +9,6 @@
 # CHECK: PHI
 ---
 name:            waterfall_clears_nophis
-tracksRegLiveness: true
-liveins:
-  - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$vgpr1', virtual-reg: '%1' }
-  - { reg: '$vgpr2', virtual-reg: '%2' }
-  - { reg: '$vgpr3', virtual-reg: '%3' }
-  - { reg: '$vgpr4', virtual-reg: '%4' }
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
