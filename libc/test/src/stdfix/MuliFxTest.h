@@ -21,7 +21,6 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 template <typename IntType, typename FXType>
 class MuliFxTest : public LIBC_NAMESPACE::testing::Test {
-
   using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<FXType>;
 
   static constexpr FXType max = FXRep::MAX();
