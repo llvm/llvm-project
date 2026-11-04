@@ -171,8 +171,7 @@ private:
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
-      assert(Scope == SIAtomicScope::NONE &&
-             !any(OrderingAddrSpace) &&
+      assert(Scope == SIAtomicScope::NONE && !any(OrderingAddrSpace) &&
              !IsCrossAddressSpaceOrdering &&
              FailureOrdering == AtomicOrdering::NotAtomic);
       return;
