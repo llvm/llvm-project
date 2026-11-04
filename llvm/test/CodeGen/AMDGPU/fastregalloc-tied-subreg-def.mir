@@ -6,7 +6,6 @@
 
 ---
 name: tied_subreg_interpolation
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
