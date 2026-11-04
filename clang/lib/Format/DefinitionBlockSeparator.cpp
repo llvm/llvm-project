@@ -79,7 +79,8 @@ void DefinitionBlockSeparator::separateBlocks(
           : Style.LineEnding == FormatStyle::LE_CRLF);
   for (unsigned I = 0; I < Lines.size(); ++I) {
     const auto &CurrentLine = Lines[I];
-    if (CurrentLine->InPPDirective)
+    // Block indices refer to the unexpanded lines.
+    if (CurrentLine->InPPDirective || CurrentLine->InMacroExpansion)
       continue;
     FormatToken *TargetToken = nullptr;
     AnnotatedLine *TargetLine;

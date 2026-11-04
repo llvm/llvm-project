@@ -1422,6 +1422,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Fix spurious empty lines with `SeparateDefinitionBlocks: Always` when
+  expanding configured `Macros`. (#GH237253)
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
