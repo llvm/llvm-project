@@ -41,6 +41,9 @@ private:
   const std::vector<StringRef> TupleTypes;
   const std::vector<StringRef> TupleMakeFunctions;
   const std::vector<StringRef> EmplacyFunctions;
+  const std::vector<StringRef> PushLikeFunctions;
+  std::vector<StringRef> PushLikeFunctionNames;
+  std::vector<StringRef> PushLikeReplacements;
 };
 
 } // namespace clang::tidy::modernize

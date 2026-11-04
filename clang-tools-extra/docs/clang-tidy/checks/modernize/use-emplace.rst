@@ -24,6 +24,9 @@ respectively. The default values for these options are as follows:
 * :option:`ContainersWithPushFront`: ``std::forward_list``,
   ``std::list``, and ``std::deque``.
 
+Insertion methods with other names, such as ``append``, can be added with the
+:option:`PushLikeFunctions` option.
+
 This check also reports when an ``emplace``-like method is improperly used,
 for example using ``emplace_back`` while also calling a constructor. This
 creates a temporary that requires at best a move and at worst a copy. Almost
@@ -168,6 +171,18 @@ Options
     ``vector::emplace_back``. Those methods will be checked for improper use and
     the check will report when a temporary is unnecessarily created. All STL
     containers with such member functions are supported by default.
+
+.. option:: PushLikeFunctions
+
+    Semicolon-separated list of `function=replacement` pairs, where `function`
+    is a container and a ``push_back``-like method of it, without their
+    template parameters, and `replacement` is the ``emplace``-like method that
+    should be called instead. Example: ``MyVector::append=emplace_append``. A
+    method inherited from a base class is named with the base class. Since
+    such a method may be a template that accepts arguments of any type, the
+    check only reports a call whose argument is an explicitly-constructed
+    temporary of the container's ``value_type``, which may also be declared in
+    a base class. Default is an empty string.
 
 Example
 ^^^^^^^
