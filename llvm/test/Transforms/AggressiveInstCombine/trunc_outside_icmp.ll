@@ -8,12 +8,10 @@ target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
 define i1 @icmp_unsigned(i32 %x, ptr %out) {
 ; CHECK-LABEL: @icmp_unsigned(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[M:%.*]] = and i64 [[Z]], 255
-; CHECK-NEXT:    [[B:%.*]] = add i64 [[M]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[M]], 1
 ; CHECK-NEXT:    store i32 [[T]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[B]], 100
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[T]], 100
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = zext i32 %x to i64
@@ -27,12 +25,10 @@ define i1 @icmp_unsigned(i32 %x, ptr %out) {
 
 define i1 @icmp_signed(i32 %x, ptr %out) {
 ; CHECK-LABEL: @icmp_signed(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[M:%.*]] = and i64 [[Z]], 255
-; CHECK-NEXT:    [[B:%.*]] = add i64 [[M]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[M]], 1
 ; CHECK-NEXT:    store i32 [[T]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[B]], 100
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[T]], 100
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = zext i32 %x to i64
@@ -46,12 +42,10 @@ define i1 @icmp_signed(i32 %x, ptr %out) {
 
 define i1 @icmp_eq(i32 %x, ptr %out) {
 ; CHECK-LABEL: @icmp_eq(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[M:%.*]] = and i64 [[Z]], 255
-; CHECK-NEXT:    [[B:%.*]] = add i64 [[M]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[M]], 1
 ; CHECK-NEXT:    store i32 [[T]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[B]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], 7
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = zext i32 %x to i64
@@ -66,13 +60,12 @@ define i1 @icmp_eq(i32 %x, ptr %out) {
 ; The other icmp operand is outside the graph and gets its own trunc.
 define i1 @icmp_other_operand_outside_graph(i32 %x, i16 %y, ptr %out) {
 ; CHECK-LABEL: @icmp_other_operand_outside_graph(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[M:%.*]] = and i64 [[Z]], 255
-; CHECK-NEXT:    [[B:%.*]] = add i64 [[M]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[M]], 1
 ; CHECK-NEXT:    store i32 [[T]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[YZ:%.*]] = zext i16 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[B]], [[YZ]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[YZ]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[T]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = zext i32 %x to i64
@@ -89,15 +82,13 @@ define i1 @icmp_other_operand_outside_graph(i32 %x, i16 %y, ptr %out) {
 define i64 @icmp_in_loop(i64 %n) {
 ; CHECK-LABEL: @icmp_in_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN0:%.*]] = zext i64 [[N:%.*]] to i128
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LEN:%.*]] = phi i128 [ [[LEN0]], [[ENTRY:%.*]] ], [ [[LEN_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LEN:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY:%.*]] ], [ [[T:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[LEN_NEXT]] = lshr i128 [[LEN]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[LEN_NEXT]] to i64
+; CHECK-NEXT:    [[T]] = lshr i64 [[LEN]], 1
 ; CHECK-NEXT:    [[ACC_NEXT]] = add i64 [[ACC]], [[T]]
-; CHECK-NEXT:    [[CONT:%.*]] = icmp ugt i128 [[LEN_NEXT]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ugt i64 [[T]], 1
 ; CHECK-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 [[ACC_NEXT]]
