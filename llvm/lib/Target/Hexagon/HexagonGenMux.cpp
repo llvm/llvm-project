@@ -262,16 +262,21 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     // of the predicate register.
     unsigned MinX = std::min(CI.TrueX, CI.FalseX);
     unsigned MaxX = std::max(CI.TrueX, CI.FalseX);
-    // Specifically, check if the predicate definition is within a prescribed
-    // distance from the farther of the two predicated instructions.
-    unsigned SearchX = (MaxX >= MinPredDist) ? MaxX-MinPredDist : 0;
+    // Specifically, check if the predicate definition is within MinPredDist
+    // non-debug instructions before the farther predicated instruction.
     bool NearDef = false;
-    for (unsigned X = SearchX; X < MaxX; ++X) {
-      const DefUseInfo &DU = DUM.lookup(X);
-      if (!DU.Defs[PR])
-        continue;
-      NearDef = true;
-      break;
+    unsigned Dist = 0;
+    for (const MachineInstr &SearchMI : instructionsWithoutDebug(
+             std::next(MI.getReverseIterator()), B.instr_rend(),
+             /*SkipPseudoOp=*/false)) {
+      if (Dist == MinPredDist)
+        break;
+      ++Dist;
+      const DefUseInfo &DU = DUM.lookup(I2X.lookup(&SearchMI));
+      if (DU.Defs[PR]) {
+        NearDef = true;
+        break;
+      }
     }
     if (NearDef)
       continue;
