@@ -2218,8 +2218,7 @@ static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
   return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
 }
 
-static bool hasUniformPointerOperand(const Instruction *I,
-                                     const DataLayout &DL) {
+bool GCNTTIImpl::hasUniformPointerOperand(const Instruction *I) const {
   const auto *LI = dyn_cast_or_null<LoadInst>(I);
   if (!LI)
     return false;
@@ -2227,9 +2226,7 @@ static bool hasUniformPointerOperand(const Instruction *I,
   APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
   Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
                                                /*AllowNonInbounds=*/true);
-  if (const auto *Arg = dyn_cast<Argument>(Ptr))
-    return AMDGPU::isArgPassedInSGPR(Arg);
-  return isa<Constant>(Ptr);
+  return isa<Argument, Constant>(Ptr) && !isSourceOfDivergence(Ptr);
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2270,7 +2267,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
        AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
       Alignment >= std::min(Bytes, 4u) &&
       (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-       hasUniformPointerOperand(I, DL))) {
+       hasUniformPointerOperand(I))) {
     unsigned Dwords = divideCeil(Bytes, 4);
     unsigned MaxBytes = getLoadStoreVecRegBitWidth(AddressSpace) / 8;
     bool HasDwordx3 = ST->hasScalarDwordx3Loads();
