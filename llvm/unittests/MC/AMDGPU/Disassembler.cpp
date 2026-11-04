@@ -116,7 +116,7 @@ disassembleBranch(void *DisInfo, LLVMSymbolLookupCallback SymbolLookUp,
   }
 
   uint8_t Bytes[] = {0xf0, 0xff, 0x82, 0xbf};
-  char OutString[100];
+  char OutString[100] = {};
   EXPECT_EQ(LLVMDisasmInstruction(DCR, Bytes, sizeof(Bytes), BranchPC,
                                   OutString, sizeof(OutString)),
             4U);

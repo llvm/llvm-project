@@ -207,13 +207,13 @@ public:
 
 class AMDGPUSymbolizer : public MCSymbolizer {
 private:
-  void *DisInfo;
+  const SectionSymbolsTy *Symbols;
   std::vector<uint64_t> ReferencedAddresses;
 
 public:
   AMDGPUSymbolizer(MCContext &Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo,
-                   void *disInfo)
-                   : MCSymbolizer(Ctx, std::move(RelInfo)), DisInfo(disInfo) {}
+                   const SectionSymbolsTy *Symbols)
+      : MCSymbolizer(Ctx, std::move(RelInfo)), Symbols(Symbols) {}
 
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
                                 int64_t Value, uint64_t Address, bool IsBranch,

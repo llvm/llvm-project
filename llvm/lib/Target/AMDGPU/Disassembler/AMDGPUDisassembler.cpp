@@ -3171,7 +3171,6 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(
     return false;
   }
 
-  auto *Symbols = static_cast<SectionSymbolsTy *>(DisInfo);
   if (!Symbols)
     return false;
 
@@ -3201,7 +3200,7 @@ class AMDGPUExternalSymbolizer : public MCExternalSymbolizer {
 public:
   using MCExternalSymbolizer::MCExternalSymbolizer;
 
-  // Only SOPP branch targets are symbolized. They have no relocations, so
+  // Only branch targets are symbolized. They have no relocations, so
   // GetOpInfo is not used.
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
                                 int64_t Value, uint64_t Address, bool IsBranch,
@@ -3235,18 +3234,21 @@ public:
 //===----------------------------------------------------------------------===//
 
 static MCSymbolizer *
-createAMDGPUSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
-                       LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
+createAMDGPUExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                               LLVMSymbolLookupCallback SymbolLookUp,
+                               void *DisInfo, MCContext *Ctx,
+                               std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+  return new AMDGPUExternalSymbolizer(*Ctx, std::move(RelInfo), GetOpInfo,
+                                      SymbolLookUp, DisInfo);
+}
+
+// Used by clients that pass no callbacks, such as llvm-objdump and Mesa ACO.
+// Symbols may be null.
+static MCSymbolizer *
+createAMDGPUSymbolizer(const Triple &TT, const SectionSymbolsTy *Symbols,
                        MCContext *Ctx,
                        std::unique_ptr<MCRelocationInfo> &&RelInfo) {
-  if (GetOpInfo || SymbolLookUp) {
-    return new AMDGPUExternalSymbolizer(*Ctx, std::move(RelInfo), GetOpInfo,
-                                        SymbolLookUp, DisInfo);
-  }
-
-  // Without callbacks, DisInfo must be a SectionSymbolsTy (llvm-objdump and
-  // Mesa ACO).
-  return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
+  return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), Symbols);
 }
 
 static MCDisassembler *createAMDGPUDisassembler(const Target &T,
@@ -3260,9 +3262,13 @@ LLVMInitializeAMDGPUDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheGCNTarget(),
                                          createAMDGPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheGCNTarget(),
-                                       createAMDGPUSymbolizer);
+                                       createAMDGPUExternalSymbolizer);
+  TargetRegistry::RegisterMCSymbolListSymbolizer(getTheGCNTarget(),
+                                                 createAMDGPUSymbolizer);
   TargetRegistry::RegisterMCDisassembler(getTheGCNLegacyTarget(),
                                          createAMDGPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheGCNLegacyTarget(),
-                                       createAMDGPUSymbolizer);
+                                       createAMDGPUExternalSymbolizer);
+  TargetRegistry::RegisterMCSymbolListSymbolizer(getTheGCNLegacyTarget(),
+                                                 createAMDGPUSymbolizer);
 }
