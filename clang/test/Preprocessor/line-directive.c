@@ -30,8 +30,8 @@
 # 60 // expected-warning {{this style of line directive is a GNU extension}}
 # 62 "foo" // expected-warning {{this style of line directive is a GNU extension}}
 # 64 "foo" 2 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
-// The next two lines do not get diagnosed because they are considered to be
-// within the system header, where diagnostics are suppressed.
+
+
 # 70 "foo" 1 3  // enter expected-warning {{this style of line directive is a GNU extension}}
 # 72 "foo" 2 3  // exit
 # 74 "foo" 2 3 4 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
