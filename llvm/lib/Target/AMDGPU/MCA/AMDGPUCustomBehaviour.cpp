@@ -202,21 +202,22 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
                            << MCII.getName(Opcode) << " will be completely "
                            << "ignored. So the wait may not be accurate.\n";
     }
+    unsigned ImmEnc = static_cast<unsigned>(OpImm->getImm());
     switch (Opcode) {
     // Redundant switch so I don't have to repeat the code above
     // for each case. There are more clever ways to avoid this
     // extra switch and anyone can feel free to implement one of them.
     case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
-      Expcnt = static_cast<unsigned>(OpImm->getImm());
+      Expcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
-      Lgkmcnt = static_cast<unsigned>(OpImm->getImm());
+      Lgkmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VMCNT_gfx10:
-      Vmcnt = static_cast<unsigned>(OpImm->getImm());
+      Vmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VSCNT_gfx10:
-      Vscnt = static_cast<unsigned>(OpImm->getImm());
+      Vscnt = ImmEnc;
       break;
     }
     return;
