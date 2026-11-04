@@ -544,6 +544,9 @@ LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
 LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
+/// Minimizes execution domain crossings for specific register classes.
+LLVM_ABI FunctionPass *createExecutionDomainFixPass();
+
 // This pass expands indirectbr instructions.
 LLVM_ABI FunctionPass *createIndirectBrExpandPass(CodeGenOptLevel OptLevel);
 

@@ -78,7 +78,6 @@ MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2Pass())
 #ifndef DUMMY_MACHINE_FUNCTION_PASS
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
-DUMMY_MACHINE_FUNCTION_PASS("x86-execution-domain-fix", X86ExecutionDomainFix())
 DUMMY_MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunks())
 DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions", X86PadShortFunctionsPass())
 #undef DUMMY_MACHINE_FUNCTION_PASS
