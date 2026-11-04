@@ -1107,8 +1107,17 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
     symName = fun.getSymName();
     addrSpace = cirDataLayout.getProgramAddressSpace();
   } else if (auto alias = dyn_cast<mlir::LLVM::AliasOp>(sourceSymbol)) {
-    sourceType = alias.getType();
+    if (mlir::Type preType = getPreConversionSymType(alias)) {
+      originalType = preType;
+      if (mlir::isa<cir::FuncType>(preType))
+        sourceType = converter->convertType(originalType);
+      else
+        sourceType = convertTypeForMemory(*converter, dataLayout, originalType);
+    } else {
+      sourceType = alias.getType();
+    }
     symName = alias.getSymName();
+    addrSpace = alias.getAddrSpace();
   } else {
     llvm_unreachable("Unexpected GlobalOp type");
   }
@@ -3149,11 +3158,18 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
 
   mlir::Location loc = op.getLoc();
   // Create the alias before replacing: without pattern rollback the
-  // replace erases the root op immediately.
+  // replace erases the root op immediately. The driver does not
+  // invalidate the cached symbol table either, so build it before the
+  // replacement exists and maintain it explicitly below.
+  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+  mlir::Type preConversionType = op.getFunctionType();
+  symbolTables.getSymbolTable(modOp);
   auto aliasOp = mlir::LLVM::AliasOp::create(
       rewriter, loc, ty, convertLinkage(op.getLinkage()), op.getName(),
       op.getDsoLocal(), mlir::LLVM::ThreadLocalMode::NotThreadLocal,
       attributes);
+  aliasOp->setAttr(kPreConversionSymType,
+                   mlir::TypeAttr::get(preConversionType));
   aliasOp.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
   {
@@ -3167,7 +3183,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
         mlir::LLVM::AddressOfOp::create(rewriter, loc, ptrTy, aliasee);
     mlir::LLVM::ReturnOp::create(rewriter, loc, addrOp);
   }
+  symbolTables.getSymbolTable(modOp).remove(op);
   rewriter.replaceOp(op, aliasOp);
+  symbolTables.getSymbolTable(modOp).insert(aliasOp);
 
   return mlir::success();
 }
@@ -3526,10 +3544,15 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   if (std::optional<llvm::StringRef> aliasee = op.getAliasee()) {
     mlir::Location loc = op.getLoc();
     // Create the alias before replacing: without pattern rollback the
-    // replace erases the root op immediately.
+    // replace erases the root op immediately. The driver does not
+    // invalidate the cached symbol table either, so build it before the
+    // replacement exists and maintain it explicitly below.
+    mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+    symbolTables.getSymbolTable(modOp);
     auto aliasOp =
         mlir::LLVM::AliasOp::create(rewriter, loc, llvmType, linkage, symbol,
                                     isDsoLocal, threadLocalMode, attributes);
+    aliasOp->setAttr(kPreConversionSymType, mlir::TypeAttr::get(cirSymType));
     {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.createBlock(&aliasOp.getInitializerRegion());
@@ -3539,7 +3562,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
           mlir::LLVM::AddressOfOp::create(rewriter, loc, ptrTy, *aliasee);
       mlir::LLVM::ReturnOp::create(rewriter, loc, addrOp);
     }
+    symbolTables.getSymbolTable(modOp).remove(op);
     rewriter.replaceOp(op, aliasOp);
+    symbolTables.getSymbolTable(modOp).insert(aliasOp);
     return mlir::success();
   }
 
@@ -5386,7 +5411,18 @@ getValueForVTableSymbol(mlir::Operation *op,
   auto module = op->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *symbol = symbolTables.lookupSymbolIn(module, nameAttr);
   if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
-    eltType = llvmSymbol.getType();
+    // Prefer the stashed pre-conversion type: the LLVM global's type may
+    // have been adjusted (split rows, flexible array).
+    if (mlir::Type preType = getPreConversionSymType(llvmSymbol)) {
+      eltType = converter->convertType(preType);
+      if (!eltType) {
+        emitTypeConversionError(op, preType)
+            << " for vtable symbol " << nameAttr;
+        return {};
+      }
+    } else {
+      eltType = llvmSymbol.getType();
+    }
   } else if (auto cirSymbol = mlir::dyn_cast<cir::GlobalOp>(symbol)) {
     eltType = converter->convertType(cirSymbol.getSymType());
     if (!eltType) {
