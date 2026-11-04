@@ -54,6 +54,12 @@ StaticDataObject &StaticDataObject::Push(
   return *this;
 }
 
+StaticDataObject &StaticDataObject::Push(
+    const value::CharacterValue &v, bool bigEndian) {
+  return v.withStdString(
+      [&](const auto &s) -> StaticDataObject & { return Push(s, bigEndian); });
+}
+
 std::optional<std::string> StaticDataObject::AsString() const {
   if (itemBytes_ <= 1) {
     std::string result;
