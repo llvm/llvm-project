@@ -44,7 +44,46 @@ define i32 @f(i32 %x, i32 %y) {
   ret i32 %rr
 }
 
+; The LHS is completely unknown, but the constant RHS still provides known
+; bits for the product: 12 == 4 * 3, so the low 2 bits of the result are 0.
+define i32 @mul_i24_known_rhs_unknown_lhs(i32 %x) {
+; GCN-LABEL: mul_i24_known_rhs_unknown_lhs:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %mul = call i32 @llvm.amdgcn.mul.i24.i32(i32 %x, i32 12)
+  %and = and i32 %mul, 3
+  ret i32 %and
+}
+
+define i32 @mul_u24_known_rhs_unknown_lhs(i32 %x) {
+; GCN-LABEL: mul_u24_known_rhs_unknown_lhs:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %mul = call i32 @llvm.amdgcn.mul.u24.i32(i32 %x, i32 12)
+  %and = and i32 %mul, 3
+  ret i32 %and
+}
+
+; The known value is the LHS and the RHS is unknown. The known bits of the LHS
+; must still be used.
+define i32 @mul_i24_known_lhs_unknown_rhs(i32 %x) {
+; GCN-LABEL: mul_i24_known_lhs_unknown_rhs:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %mul = call i32 @llvm.amdgcn.mul.i24.i32(i32 12, i32 %x)
+  %and = and i32 %mul, 3
+  ret i32 %and
+}
+
 ; Function Attrs: nounwind readnone speculatable
 declare i32 @llvm.amdgcn.workitem.id.x() #20
+declare i32 @llvm.amdgcn.mul.i24.i32(i32, i32)
+declare i32 @llvm.amdgcn.mul.u24.i32(i32, i32)
 
 !4 = !{i32 0, i32 1024}

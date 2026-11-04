@@ -20699,16 +20699,17 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      if (RHSKnown.isUnknown())
+
+      bool SelfMultiply = LHS == RHS;
+      // For a self-multiply both operands are the same value, so an unknown RHS
+      // implies an unknown LHS: bail out before the duplicated query.
+      if (SelfMultiply && RHSKnown.isUnknown())
         break;
 
       KnownBits LHSKnown;
       VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      if (LHSKnown.isUnknown())
-        break;
-
-      bool SelfMultiply =
-          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      if (SelfMultiply)
+        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
                                        IID == Intrinsic::amdgcn_mul_i24,
                                        SelfMultiply);
