@@ -1266,12 +1266,11 @@ def : InstRW<[A78Wr_VA, A78Rd_VA],
 def : InstRW<[A78Write_3c_1V1], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
 
 // ASIMD arith, reduce, 8B/8H
-def : InstRW<[A78Write_5c_1V1_1V],
-             (instregex "^(ADDV|[SU]ADDLV)v8(i8|i16)v$")>;
+def : InstRW<[A78Write_5c_1V1_1V], (instregex "^(ADDV|[SU]ADDLV)v8(i8|i16)v$")>;
 
 // ASIMD arith, reduce, 16B
 def : InstRW<[A78Write_6c_2V1], (instrs ADDVv16i8v, SADDLVv16i8v,
-                                       UADDLVv16i8v)>;
+                                        UADDLVv16i8v)>;
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
@@ -1282,15 +1281,15 @@ def : InstRW<[A78Wr_VDOT, A78Rd_VDOT],
 def : InstRW<[A78Wr_VMMA, A78Rd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
 
 // ASIMD max/min, reduce, 4H/4S
-def : InstRW<[A78Write_2c_1V1], (instregex "^[SU](MAX|MIN)Vv4i16v$",
-                                          "^[SU](MAX|MIN)Vv4i32v$")>;
+def : InstRW<[A78Write_3c_1V1], (instregex "^[SU](MAX|MIN)Vv4i16v$",
+                                           "^[SU](MAX|MIN)Vv4i32v$")>;
 
 // ASIMD max/min, reduce, 8B/8H
-def : InstRW<[A78Write_4c_1V1_1V], (instregex "^[SU](MAX|MIN)Vv8i8v$",
-                                             "^[SU](MAX|MIN)Vv8i16v$")>;
+def : InstRW<[A78Write_5c_1V1_1V], (instregex "^[SU](MAX|MIN)Vv8i8v$",
+                                              "^[SU](MAX|MIN)Vv8i16v$")>;
 
 // ASIMD max/min, reduce, 16B
-def : InstRW<[A78Write_4c_2V1], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
+def : InstRW<[A78Write_6c_2V1], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
 
 // ASIMD multiply
 def : InstRW<[A78Write_4c_1V0], (instregex "^MULv", "^SQ(R)?DMULHv")>;

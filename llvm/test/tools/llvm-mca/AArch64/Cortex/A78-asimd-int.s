@@ -1275,16 +1275,16 @@ uqshl	v0.8h, v1.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uminp	v0.4h, v1.4h, v2.4h
 # CHECK-NEXT:  1      2     0.50                        uminp	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      2     0.50                        uminp	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      2     1.00                        smaxv	h0, v1.4h
-# CHECK-NEXT:  1      2     1.00                        smaxv	s0, v1.4s
-# CHECK-NEXT:  1      2     1.00                        sminv	h0, v1.4h
-# CHECK-NEXT:  1      2     1.00                        sminv	s0, v1.4s
-# CHECK-NEXT:  2      4     1.00                        smaxv	b0, v1.8b
-# CHECK-NEXT:  2      4     1.00                        smaxv	h0, v1.8h
-# CHECK-NEXT:  2      4     1.00                        sminv	b0, v1.8b
-# CHECK-NEXT:  2      4     1.00                        sminv	h0, v1.8h
-# CHECK-NEXT:  2      4     2.00                        smaxv	b0, v1.16b
-# CHECK-NEXT:  2      4     2.00                        sminv	b0, v1.16b
+# CHECK-NEXT:  1      3     1.00                        smaxv	h0, v1.4h
+# CHECK-NEXT:  1      3     1.00                        smaxv	s0, v1.4s
+# CHECK-NEXT:  1      3     1.00                        sminv	h0, v1.4h
+# CHECK-NEXT:  1      3     1.00                        sminv	s0, v1.4s
+# CHECK-NEXT:  2      5     1.00                        smaxv	b0, v1.8b
+# CHECK-NEXT:  2      5     1.00                        smaxv	h0, v1.8h
+# CHECK-NEXT:  2      5     1.00                        sminv	b0, v1.8b
+# CHECK-NEXT:  2      5     1.00                        sminv	h0, v1.8h
+# CHECK-NEXT:  2      6     2.00                        smaxv	b0, v1.16b
+# CHECK-NEXT:  2      6     2.00                        sminv	b0, v1.16b
 # CHECK-NEXT:  1      4     1.00                        mul	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      4     1.00                        mul	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      4     1.00                        mul	v0.8h, v1.8h, v2.8h
