@@ -792,7 +792,7 @@ inline bool isPurecap(ABI TargetABI) {
 }
 
 // Returns the stack alignment required by the ABI.
-// FIXME: Add the pure cap variants of the E ABIs?
+// FIXME: Add the purecap variants of the E ABIs?
 inline Align getStackAlignment(ABI TargetABI) {
   if (TargetABI == ABI_ILP32E)
     return Align(4);
