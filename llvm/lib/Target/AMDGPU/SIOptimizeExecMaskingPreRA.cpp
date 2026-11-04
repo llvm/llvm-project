@@ -454,7 +454,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     unsigned ScanCount = 0;
     for (auto I = MBB.rbegin(), E = MBB.rend();
          I != E && ScanCount < ScanThreshold; ++I) {
-      if (I->isDebugInstr())
+      if (I->isMetaInstruction())
         continue;
       ++ScanCount;
       // Continue scanning if this is not a full exec copy

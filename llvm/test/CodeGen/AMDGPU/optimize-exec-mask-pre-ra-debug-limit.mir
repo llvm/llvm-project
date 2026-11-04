@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=amdgpu10.10 -run-pass=si-optimize-exec-masking-pre-ra %s -o - | FileCheck %s
 
-# Debug instructions must not consume the backward scan budget for folding a
+# Meta instructions must not consume the backward scan budget for folding a
 # copy from exec into its only non-debug user.
 --- |
   define amdgpu_kernel void @debug_scan_budget() !dbg !5 {
@@ -38,6 +38,7 @@ body: |
     %0:sreg_32_xm0_xexec = IMPLICIT_DEF
     %1:sreg_32_xm0_xexec = COPY $exec_lo
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
+    SCHED_BARRIER 0
     %2:sreg_32_xm0_xexec = S_XOR_B32 %0, %1, implicit-def dead $scc
     S_NOP 0
     S_NOP 0
