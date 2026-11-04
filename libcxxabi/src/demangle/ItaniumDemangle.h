@@ -2818,6 +2818,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     AbstractManglingParser *Parser;
     decltype(TemplateParams) OldParams;
     decltype(OuterTemplateParams) OldOuterParams;
+    bool Keep = false;
 
   public:
     SaveTemplateParams(AbstractManglingParser *TheParser) : Parser(TheParser) {
@@ -2827,9 +2828,14 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       Parser->OuterTemplateParams.clear();
     }
     ~SaveTemplateParams() {
-      Parser->TemplateParams = std::move(OldParams);
-      Parser->OuterTemplateParams = std::move(OldOuterParams);
+      if (!Keep) {
+        Parser->TemplateParams = std::move(OldParams);
+        Parser->OuterTemplateParams = std::move(OldOuterParams);
+      }
     }
+    // Keep the parameters set up since construction instead of restoring the
+    // saved ones on destruction.
+    void keepCurrent() { Keep = true; }
   };
 
   // Set of unresolved forward <template-param> references. These can occur in a
@@ -3146,12 +3152,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
     Node *N = getDerived().parseName(State);
     if (N == nullptr)
       return nullptr;
+    // A template entity's parameters are those the enclosing <encoding> sees in
+    // its <bare-function-type>.
+    if (State && State->EndsWithTemplateArgs)
+      SaveTemplateParamsScope.keepCurrent();
     return make<LocalName>(Encoding, N);
   }
 
   Node *Entity = getDerived().parseName(State);
   if (Entity == nullptr)
     return nullptr;
+  if (State && State->EndsWithTemplateArgs)
+    SaveTemplateParamsScope.keepCurrent();
   First = parse_discriminator(First, Last);
   return make<LocalName>(Encoding, Entity);
 }

@@ -30234,4 +30234,10 @@
 {"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
 {"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
 {"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
+{"_ZZ4mainENK3$_0clIiEEDaT_", "auto main::$_0::operator()<int>(int) const"},
+{"_ZZ11dep_lambda2vEN3$_0clIfEEiT_", "int dep_lambda2()::$_0::operator()<float>(float)"},
+{"_ZZN26test_return_type_deduction4doitEvENK3$_0clIiiEEDaT_T0_", "auto test_return_type_deduction::doit()::$_0::operator()<int, int>(int, int) const"},
+{"_ZZN20GH161029_regression11hEvENK3$_0clIiEEvT_", "void GH161029_regression1::h()::$_0::operator()<int>(int) const"},
+{"_ZZ11test_lambdavENH3$_0clIS_EEiT_", "int test_lambda()::$_0::operator()<$_0>(this $_0)"},
+{"_ZZN7PR458811A1fEvENK3$_0clIPFiPS0_EEEDaT_DTclfL0p_fpTEE", "auto PR45881::A::f()::$_0::operator()<int (*)(PR45881::A*)>(int (*)(PR45881::A*), decltype(fp(this))) const"},
     // clang-format on
