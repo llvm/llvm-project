@@ -590,7 +590,7 @@
 # CHECK: ldr lr, [sp, #-4]!
 # CHECK: ldr lr, [sp, #0]!
 # CHECK: ldr r2, [r4], #255
-# CHECK: ldr r8, [sp], #4
+# CHECK: pop.w {r8}
 # CHECK: ldr lr, [sp], #-4
 
 0x58 0xf8 0x01 0x10
