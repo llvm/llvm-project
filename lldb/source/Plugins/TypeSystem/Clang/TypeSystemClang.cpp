@@ -128,7 +128,7 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsPascal(language) ||
          // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
+         // Use Clang for D until there is a D type system
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
