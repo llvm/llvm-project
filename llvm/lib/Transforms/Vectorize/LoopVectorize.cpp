@@ -4258,11 +4258,8 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   for (auto *V : filterExtractingOperands(Ops, VF))
     Tys.push_back(maybeVectorizeType(V->getType(), VF));
 
-  TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
-                                           ? TTI::VectorInstrContext::Store
-                                           : TTI::VectorInstrContext::None;
-  return Cost +
-         TTI.getOperandsScalarizationOverhead(Tys, Config.CostKind, OperandVIC);
+  return Cost + TTI.getOperandsScalarizationOverhead(
+                    Tys, Config.CostKind, TTI::VectorInstrContext::None);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
