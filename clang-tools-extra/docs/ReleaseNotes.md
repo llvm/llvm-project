@@ -273,6 +273,10 @@ infrastructure are described first, followed by tool-specific sections.
   - No longer diagnoses variables used as operands of `std::move` in template
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
+  
+  - No longer diagnoses variables used in fold expressions in template
+    instantiations where the parameter pack is empty, since adding const 
+    would break the case where the pack is non empty.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
