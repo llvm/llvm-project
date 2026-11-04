@@ -33,18 +33,6 @@ static cl::opt<bool> DisableSPIRVRemoveUnusedResources(
     cl::desc("Disable spirv-remove-unused-resources pass"), cl::init(false),
     cl::Hidden);
 
-static bool isResourceHandleCreation(Intrinsic::ID ID) {
-  return ID == Intrinsic::spv_resource_handlefrombinding ||
-         ID == Intrinsic::spv_resource_handlefromimplicitbinding ||
-         ID == Intrinsic::spv_resource_counterhandlefrombinding ||
-         ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
-}
-
-static bool isCounterHandle(Intrinsic::ID ID) {
-  return ID == Intrinsic::spv_resource_counterhandlefrombinding ||
-         ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
-}
-
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
@@ -56,13 +44,18 @@ static bool removeUnusedResources(Module &M) {
   for (Function &F : M) {
     for (Instruction &I : instructions(F)) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (!isResourceHandleCreation(II->getIntrinsicID()))
+        switch (II->getIntrinsicID()) {
+        default:
           continue;
-
-        if (isCounterHandle(II->getIntrinsicID()))
-          CounterHandles.push_back(II);
-        else
+        case Intrinsic::spv_resource_handlefrombinding:
+        case Intrinsic::spv_resource_handlefromimplicitbinding:
           Handles.push_back(II);
+          break;
+        case Intrinsic::spv_resource_counterhandlefrombinding:
+        case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
+          CounterHandles.push_back(II);
+          break;
+        }
       }
     }
   }
@@ -96,12 +89,11 @@ static bool removeUnusedResources(Module &M) {
 
   // Visit implicit counters first since they may use other handles
   // that are otherwise dead
-  for (auto *Counter : CounterHandles) {
+  for (auto *Counter : CounterHandles)
     VisitHandle(Counter, true);
-  }
-  for (auto *Handle : Handles) {
+  for (auto *Handle : Handles)
     VisitHandle(Handle, false);
-  }
+
   for (auto *GV : DeadGlobals) {
     if (GV->user_empty()) {
       GV->eraseFromParent();
