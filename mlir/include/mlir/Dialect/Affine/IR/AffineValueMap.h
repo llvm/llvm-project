@@ -19,6 +19,7 @@
 
 namespace mlir {
 namespace affine {
+
 /// An AffineValueMap is an affine map plus its ML value operands and
 /// results for analysis purposes. The structure is still a tree form that is
 /// same as that of an affine map or an AffineApplyOp. However, its operands,
@@ -113,6 +114,7 @@ private:
   /// The SSA results binding to the results of 'map'.
   SmallVector<Value, 4> results;
 };
+
 } // namespace affine
 } // namespace mlir
 

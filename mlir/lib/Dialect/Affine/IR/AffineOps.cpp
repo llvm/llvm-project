@@ -5085,6 +5085,7 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
 }
 
 namespace {
+
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {

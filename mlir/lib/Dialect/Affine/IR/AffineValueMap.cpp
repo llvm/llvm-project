@@ -144,8 +144,8 @@ bool AffineValueMap::operator==(const AffineValueMap &other) const {
     return false;
   AffineValueMap diff;
   AffineValueMap::difference(*this, other, &diff);
-  return llvm::all_of(diff.getAffineMap().getResults(), [](AffineExpr expr) {
-    return expr == getAffineConstantExpr(0, expr.getContext());
+  return llvm::all_of(diff.getAffineMap().getResults(), [](AffineExpr e) {
+    return e == getAffineConstantExpr(0, e.getContext());
   });
 }
 
