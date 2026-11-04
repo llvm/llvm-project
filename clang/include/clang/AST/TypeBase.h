@@ -4295,148 +4295,57 @@ enum class VectorKind {
   RVVFixedLengthMaskRatio64_4
 };
 
+// The helpers below rely on the order of the RVV fixed-length kinds:
+// RVVFixedLengthData_MF8 .. _M8 by LMUL, then RVVFixedLengthMaskRatio<R>,
+// <R>_1, <R>_2 and <R>_4 for R = 1 .. 64.
+static_assert(unsigned(VectorKind::RVVFixedLengthData_M1) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthData_M8) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 6,
+              "unexpected order of the RVV fixed-length data vector kinds");
+static_assert(unsigned(VectorKind::RVVFixedLengthMaskRatio1_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio2) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 4 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio64_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 27,
+              "unexpected order of the RVV fixed-length mask vector kinds");
+
 /// True if \p VK is one of the RVV fixed-length data vector kinds, i.e. a
 /// riscv_rvv_vector_bits typedef of a data (non-mask) RVV type.
 inline bool isRVVFixedLengthDataVectorKind(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthData_MF8:
-  case VectorKind::RVVFixedLengthData_MF4:
-  case VectorKind::RVVFixedLengthData_MF2:
-  case VectorKind::RVVFixedLengthData_M1:
-  case VectorKind::RVVFixedLengthData_M2:
-  case VectorKind::RVVFixedLengthData_M4:
-  case VectorKind::RVVFixedLengthData_M8:
-    return true;
-  default:
-    return false;
-  }
+  return VK >= VectorKind::RVVFixedLengthData_MF8 &&
+         VK <= VectorKind::RVVFixedLengthData_M8;
 }
 
 /// Return log2 of the LMUL recorded in an RVV fixed-length data vector kind:
-/// MF8 -> -3, MF4 -> -2, MF2 -> -1, M1 -> 0, M2 -> 1, M4 -> 2, M8 -> 3.
+/// MF8 -> -3, ..., M1 -> 0, ..., M8 -> 3.
 inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthData_MF8:
-    return -3;
-  case VectorKind::RVVFixedLengthData_MF4:
-    return -2;
-  case VectorKind::RVVFixedLengthData_MF2:
-    return -1;
-  case VectorKind::RVVFixedLengthData_M1:
-    return 0;
-  case VectorKind::RVVFixedLengthData_M2:
-    return 1;
-  case VectorKind::RVVFixedLengthData_M4:
-    return 2;
-  case VectorKind::RVVFixedLengthData_M8:
-    return 3;
-  default:
-    llvm_unreachable("not an RVV fixed-length data vector kind");
-  }
+  assert(isRVVFixedLengthDataVectorKind(VK) &&
+         "not an RVV fixed-length data vector kind");
+  return int(VK) - int(VectorKind::RVVFixedLengthData_M1);
 }
 
 /// Inverse of getRVVFixedLengthDataLMulLog2().
 inline VectorKind getRVVFixedLengthDataVectorKind(int LMulLog2) {
-  switch (LMulLog2) {
-  case -3:
-    return VectorKind::RVVFixedLengthData_MF8;
-  case -2:
-    return VectorKind::RVVFixedLengthData_MF4;
-  case -1:
-    return VectorKind::RVVFixedLengthData_MF2;
-  case 0:
-    return VectorKind::RVVFixedLengthData_M1;
-  case 1:
-    return VectorKind::RVVFixedLengthData_M2;
-  case 2:
-    return VectorKind::RVVFixedLengthData_M4;
-  case 3:
-    return VectorKind::RVVFixedLengthData_M8;
-  default:
-    llvm_unreachable("LMUL out of range for an RVV type");
-  }
+  assert(LMulLog2 >= -3 && LMulLog2 <= 3 &&
+         "LMUL out of range for an RVV type");
+  return VectorKind(int(VectorKind::RVVFixedLengthData_M1) + LMulLog2);
 }
 
 /// True if \p VK is one of the RVV fixed-length mask vector kinds, i.e. a
 /// riscv_rvv_vector_bits typedef of a vbool<R>_t type.
 inline bool isRVVFixedLengthMaskVectorKind(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthMaskRatio1:
-  case VectorKind::RVVFixedLengthMaskRatio1_1:
-  case VectorKind::RVVFixedLengthMaskRatio1_2:
-  case VectorKind::RVVFixedLengthMaskRatio1_4:
-  case VectorKind::RVVFixedLengthMaskRatio2:
-  case VectorKind::RVVFixedLengthMaskRatio2_1:
-  case VectorKind::RVVFixedLengthMaskRatio2_2:
-  case VectorKind::RVVFixedLengthMaskRatio2_4:
-  case VectorKind::RVVFixedLengthMaskRatio4:
-  case VectorKind::RVVFixedLengthMaskRatio4_1:
-  case VectorKind::RVVFixedLengthMaskRatio4_2:
-  case VectorKind::RVVFixedLengthMaskRatio4_4:
-  case VectorKind::RVVFixedLengthMaskRatio8:
-  case VectorKind::RVVFixedLengthMaskRatio8_1:
-  case VectorKind::RVVFixedLengthMaskRatio8_2:
-  case VectorKind::RVVFixedLengthMaskRatio8_4:
-  case VectorKind::RVVFixedLengthMaskRatio16:
-  case VectorKind::RVVFixedLengthMaskRatio16_1:
-  case VectorKind::RVVFixedLengthMaskRatio16_2:
-  case VectorKind::RVVFixedLengthMaskRatio16_4:
-  case VectorKind::RVVFixedLengthMaskRatio32:
-  case VectorKind::RVVFixedLengthMaskRatio32_1:
-  case VectorKind::RVVFixedLengthMaskRatio32_2:
-  case VectorKind::RVVFixedLengthMaskRatio32_4:
-  case VectorKind::RVVFixedLengthMaskRatio64:
-  case VectorKind::RVVFixedLengthMaskRatio64_1:
-  case VectorKind::RVVFixedLengthMaskRatio64_2:
-  case VectorKind::RVVFixedLengthMaskRatio64_4:
-    return true;
-  default:
-    return false;
-  }
+  return VK >= VectorKind::RVVFixedLengthMaskRatio1 &&
+         VK <= VectorKind::RVVFixedLengthMaskRatio64_4;
 }
 
 /// Return log2 of the R of the vbool<R>_t type recorded in an RVV fixed-length
 /// mask vector kind: Ratio1 -> 0, Ratio2 -> 1, ..., Ratio64 -> 6.
 inline unsigned getRVVFixedLengthMaskRatioLog2(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthMaskRatio1:
-  case VectorKind::RVVFixedLengthMaskRatio1_1:
-  case VectorKind::RVVFixedLengthMaskRatio1_2:
-  case VectorKind::RVVFixedLengthMaskRatio1_4:
-    return 0;
-  case VectorKind::RVVFixedLengthMaskRatio2:
-  case VectorKind::RVVFixedLengthMaskRatio2_1:
-  case VectorKind::RVVFixedLengthMaskRatio2_2:
-  case VectorKind::RVVFixedLengthMaskRatio2_4:
-    return 1;
-  case VectorKind::RVVFixedLengthMaskRatio4:
-  case VectorKind::RVVFixedLengthMaskRatio4_1:
-  case VectorKind::RVVFixedLengthMaskRatio4_2:
-  case VectorKind::RVVFixedLengthMaskRatio4_4:
-    return 2;
-  case VectorKind::RVVFixedLengthMaskRatio8:
-  case VectorKind::RVVFixedLengthMaskRatio8_1:
-  case VectorKind::RVVFixedLengthMaskRatio8_2:
-  case VectorKind::RVVFixedLengthMaskRatio8_4:
-    return 3;
-  case VectorKind::RVVFixedLengthMaskRatio16:
-  case VectorKind::RVVFixedLengthMaskRatio16_1:
-  case VectorKind::RVVFixedLengthMaskRatio16_2:
-  case VectorKind::RVVFixedLengthMaskRatio16_4:
-    return 4;
-  case VectorKind::RVVFixedLengthMaskRatio32:
-  case VectorKind::RVVFixedLengthMaskRatio32_1:
-  case VectorKind::RVVFixedLengthMaskRatio32_2:
-  case VectorKind::RVVFixedLengthMaskRatio32_4:
-    return 5;
-  case VectorKind::RVVFixedLengthMaskRatio64:
-  case VectorKind::RVVFixedLengthMaskRatio64_1:
-  case VectorKind::RVVFixedLengthMaskRatio64_2:
-  case VectorKind::RVVFixedLengthMaskRatio64_4:
-    return 6;
-  default:
-    llvm_unreachable("not an RVV fixed-length mask vector kind");
-  }
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  return (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) / 4;
 }
 
 /// True if \p VK is one of the RVV fixed-length data or mask vector kinds.
@@ -4448,23 +4357,10 @@ inline bool isRVVFixedLengthVectorKind(VectorKind VK) {
 /// Return the LMUL of an RVV fixed-length data vector kind, "mf8" .. "m8", or
 /// the ratio of a mask vector kind, "1" .. "64".
 inline StringRef getRVVFixedLengthString(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthData_MF8:
-    return "mf8";
-  case VectorKind::RVVFixedLengthData_MF4:
-    return "mf4";
-  case VectorKind::RVVFixedLengthData_MF2:
-    return "mf2";
-  case VectorKind::RVVFixedLengthData_M1:
-    return "m1";
-  case VectorKind::RVVFixedLengthData_M2:
-    return "m2";
-  case VectorKind::RVVFixedLengthData_M4:
-    return "m4";
-  case VectorKind::RVVFixedLengthData_M8:
-    return "m8";
-  default:
-    break;
+  if (isRVVFixedLengthDataVectorKind(VK)) {
+    static constexpr const char *LMuls[] = {"mf8", "mf4", "mf2", "m1",
+                                            "m2",  "m4",  "m8"};
+    return LMuls[getRVVFixedLengthDataLMulLog2(VK) + 3];
   }
   static constexpr const char *Ratios[] = {"1",  "2",  "4", "8",
                                            "16", "32", "64"};
@@ -4474,91 +4370,24 @@ inline StringRef getRVVFixedLengthString(VectorKind VK) {
 /// Return the number of lanes (1, 2 or 4) of an RVV fixed-length mask vector
 /// kind that fits in less than one byte, or 0 if its lanes fill whole bytes.
 inline unsigned getRVVFixedLengthMaskSubByteLanes(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthMaskRatio1:
-  case VectorKind::RVVFixedLengthMaskRatio2:
-  case VectorKind::RVVFixedLengthMaskRatio4:
-  case VectorKind::RVVFixedLengthMaskRatio8:
-  case VectorKind::RVVFixedLengthMaskRatio16:
-  case VectorKind::RVVFixedLengthMaskRatio32:
-  case VectorKind::RVVFixedLengthMaskRatio64:
-    return 0;
-  case VectorKind::RVVFixedLengthMaskRatio1_1:
-  case VectorKind::RVVFixedLengthMaskRatio2_1:
-  case VectorKind::RVVFixedLengthMaskRatio4_1:
-  case VectorKind::RVVFixedLengthMaskRatio8_1:
-  case VectorKind::RVVFixedLengthMaskRatio16_1:
-  case VectorKind::RVVFixedLengthMaskRatio32_1:
-  case VectorKind::RVVFixedLengthMaskRatio64_1:
-    return 1;
-  case VectorKind::RVVFixedLengthMaskRatio1_2:
-  case VectorKind::RVVFixedLengthMaskRatio2_2:
-  case VectorKind::RVVFixedLengthMaskRatio4_2:
-  case VectorKind::RVVFixedLengthMaskRatio8_2:
-  case VectorKind::RVVFixedLengthMaskRatio16_2:
-  case VectorKind::RVVFixedLengthMaskRatio32_2:
-  case VectorKind::RVVFixedLengthMaskRatio64_2:
-    return 2;
-  case VectorKind::RVVFixedLengthMaskRatio1_4:
-  case VectorKind::RVVFixedLengthMaskRatio2_4:
-  case VectorKind::RVVFixedLengthMaskRatio4_4:
-  case VectorKind::RVVFixedLengthMaskRatio8_4:
-  case VectorKind::RVVFixedLengthMaskRatio16_4:
-  case VectorKind::RVVFixedLengthMaskRatio32_4:
-  case VectorKind::RVVFixedLengthMaskRatio64_4:
-    return 4;
-  default:
-    llvm_unreachable("not an RVV fixed-length mask vector kind");
-  }
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  unsigned Col =
+      (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) % 4;
+  return Col ? 1u << (Col - 1) : 0;
 }
 
 /// Inverse of getRVVFixedLengthMaskRatioLog2() and
 /// getRVVFixedLengthMaskSubByteLanes().
 inline VectorKind getRVVFixedLengthMaskVectorKind(unsigned RatioLog2,
                                                   unsigned SubByteLanes) {
-  static constexpr VectorKind Kinds[7][4] = {
-      {VectorKind::RVVFixedLengthMaskRatio1,
-       VectorKind::RVVFixedLengthMaskRatio1_1,
-       VectorKind::RVVFixedLengthMaskRatio1_2,
-       VectorKind::RVVFixedLengthMaskRatio1_4},
-      {VectorKind::RVVFixedLengthMaskRatio2,
-       VectorKind::RVVFixedLengthMaskRatio2_1,
-       VectorKind::RVVFixedLengthMaskRatio2_2,
-       VectorKind::RVVFixedLengthMaskRatio2_4},
-      {VectorKind::RVVFixedLengthMaskRatio4,
-       VectorKind::RVVFixedLengthMaskRatio4_1,
-       VectorKind::RVVFixedLengthMaskRatio4_2,
-       VectorKind::RVVFixedLengthMaskRatio4_4},
-      {VectorKind::RVVFixedLengthMaskRatio8,
-       VectorKind::RVVFixedLengthMaskRatio8_1,
-       VectorKind::RVVFixedLengthMaskRatio8_2,
-       VectorKind::RVVFixedLengthMaskRatio8_4},
-      {VectorKind::RVVFixedLengthMaskRatio16,
-       VectorKind::RVVFixedLengthMaskRatio16_1,
-       VectorKind::RVVFixedLengthMaskRatio16_2,
-       VectorKind::RVVFixedLengthMaskRatio16_4},
-      {VectorKind::RVVFixedLengthMaskRatio32,
-       VectorKind::RVVFixedLengthMaskRatio32_1,
-       VectorKind::RVVFixedLengthMaskRatio32_2,
-       VectorKind::RVVFixedLengthMaskRatio32_4},
-      {VectorKind::RVVFixedLengthMaskRatio64,
-       VectorKind::RVVFixedLengthMaskRatio64_1,
-       VectorKind::RVVFixedLengthMaskRatio64_2,
-       VectorKind::RVVFixedLengthMaskRatio64_4},
-  };
   assert(RatioLog2 < 7 && "ratio out of range for an RVV mask type");
-  switch (SubByteLanes) {
-  case 0:
-    return Kinds[RatioLog2][0];
-  case 1:
-    return Kinds[RatioLog2][1];
-  case 2:
-    return Kinds[RatioLog2][2];
-  case 4:
-    return Kinds[RatioLog2][3];
-  default:
-    llvm_unreachable("unexpected sub-byte lane count");
-  }
+  assert((SubByteLanes == 0 || SubByteLanes == 1 || SubByteLanes == 2 ||
+          SubByteLanes == 4) &&
+         "unexpected sub-byte lane count");
+  unsigned Col = SubByteLanes == 4 ? 3 : SubByteLanes;
+  return VectorKind(unsigned(VectorKind::RVVFixedLengthMaskRatio1) +
+                    RatioLog2 * 4 + Col);
 }
 
 /// Represents a GCC generic vector type. This type is created using
