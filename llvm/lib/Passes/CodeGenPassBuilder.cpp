@@ -122,12 +122,15 @@
 #include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
 namespace llvm {
+extern cl::opt<bool> EnableProfcheckInPipeline;
+
 #define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                     \
   AnalysisKey PASS_NAME::Key;
 #include "llvm/Passes/MachinePassRegistry.def"
@@ -357,6 +360,11 @@ Error CodeGenPassBuilder::verifyStartStop(
 }
 
 void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
+  if (EnableProfcheckInPipeline) {
+    addFunctionPass(ProfileInjectorPass(), PMW);
+    flushFPMsToMPM(PMW);
+  }
+
   addGlobalMergePass(PMW);
   if (TM.useEmulatedTLS())
     addModulePass(LowerEmuTLSPass(), PMW);
@@ -519,6 +527,11 @@ void CodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     addFunctionPass(PrintFunctionPass(
                         dbgs(), "\n\n*** Final LLVM Code input to ISel ***\n"),
                     PMW);
+
+  if (EnableProfcheckInPipeline) {
+    flushFPMsToMPM(PMW);
+    addModulePass(ProfileVerifierPass(), PMW);
+  }
 
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.

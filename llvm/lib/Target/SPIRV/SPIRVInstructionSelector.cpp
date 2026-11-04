@@ -5951,13 +5951,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        SPIRVTypeInst ResType,
                                                        MachineInstr &I) const {
-  // The images need to be loaded in the same basic block as their use. We defer
-  // loading the image to the intrinsic that uses it.
-  if (ResType->getOpcode() == SPIRV::OpTypeImage)
-    return true;
-
-  return loadHandleBeforePosition(ResVReg, GR.getSPIRVTypeForVReg(ResVReg),
-                                  *cast<GIntrinsic>(&I), I);
+  // Image users reload the handle, so this load serves only other users.
+  return loadHandleBeforePosition(ResVReg, ResType, *cast<GIntrinsic>(&I), I);
 }
 
 bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
