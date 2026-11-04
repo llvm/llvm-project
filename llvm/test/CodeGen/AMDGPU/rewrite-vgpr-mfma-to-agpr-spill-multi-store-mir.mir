@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
-# RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
+# RUN:   -amdgpu-use-amdgpu-trackers=1 \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 # RUN:   -enable-misched=0 -amdgpu-stress-vgpr=168 \

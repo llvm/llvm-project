@@ -155,6 +155,9 @@ struct DeviceTy {
                                                    const char *Name,
                                                    size_t ExpectedSize);
 
+  /// The plugin-side context backing this device's context handle.
+  llvm::omp::target::plugin::PluginContextTy *getPluginContext();
+
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
   /// (depending on \p Kind) and returns the address/nullptr when
@@ -203,6 +206,15 @@ struct DeviceTy {
                          MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                          const ident_t *Loc = nullptr,
                          const char *Name = nullptr);
+
+  /// Copy data from host to device, assuming that no pending operation in the
+  /// queue associated with \p AsyncInfo accesses this memory. E.g., a fresh
+  /// allocation. If the device can write \p Size bytes directly, the copy is
+  /// synchronous so that the host can write the memory directly. Otherwise, it
+  /// is enqueued as asynchronous operation.
+  int32_t submitDataIndependently(void *TgtPtrBegin, void *HstPtrBegin,
+                                  int64_t Size, AsyncInfoTy &AsyncInfo,
+                                  const char *Name = nullptr);
 
   // Copy data from device back to host synchronously
   int32_t
@@ -382,6 +394,9 @@ private:
 
   /// The backend of this device.
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+
+  /// The maximum size of a direct write, see submitDataIndependently.
+  uint64_t MaxDirectWriteSize = 0;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

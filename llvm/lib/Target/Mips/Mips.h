@@ -171,7 +171,8 @@ class MipsPostLegalizerCombinerPass
   bool IsOptNone;
 
 public:
-  MipsPostLegalizerCombinerPass(bool IsOptNone) : IsOptNone(IsOptNone) {}
+  MipsPostLegalizerCombinerPass(bool IsOptNone = false)
+      : IsOptNone(IsOptNone) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
