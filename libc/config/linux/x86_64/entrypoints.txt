@@ -292,6 +292,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.malloc
     libc.src.stdlib.posix_memalign
     libc.src.stdlib.realloc
+    libc.src.stdlib.reallocarray
 
     # stdio.h entrypoints
     libc.src.stdio.fprintf
