@@ -17,6 +17,14 @@ func.func @invalid_to_ptr(%v: !ptr.ptr<#ptr.generic_space>) {
 
 // -----
 
+func.func @invalid_from_ptr_dynamic_without_metadata(%v: !ptr.ptr<#ptr.generic_space>) {
+  // expected-error@+1 {{expected metadata for a memref result whose offset, sizes or strides are dynamic}}
+  %r = ptr.from_ptr %v : !ptr.ptr<#ptr.generic_space> -> memref<?xf32, #ptr.generic_space>
+  return
+}
+
+// -----
+
 func.func @invalid_load_alignment(%arg0: !ptr.ptr<#ptr.generic_space>) -> i64 {
   // expected-error@+1 {{alignment must be a power of 2}}
   %r = ptr.load %arg0 alignment = 3 : !ptr.ptr<#ptr.generic_space> -> i64

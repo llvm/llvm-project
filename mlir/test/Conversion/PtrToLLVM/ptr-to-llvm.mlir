@@ -160,6 +160,43 @@ func.func @test_from_ptr_dynamic(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: !pt
   return %0 : memref<?x?xf32, #ptr.generic_space>
 }
 
+// Tests casting a pointer to a memref with a static layout without metadata:
+// the pointer is both the allocated and the aligned pointer.
+// CHECK-LABEL:   llvm.func @test_from_ptr_no_metadata(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) -> !llvm.struct<(ptr, ptr, i64)> {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[VAL_1:.*]] = llvm.insertvalue %[[ARG0]], %[[VAL_0]][0] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[VAL_2:.*]] = llvm.insertvalue %[[ARG0]], %[[VAL_1]][1] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_3]], %[[VAL_2]][2] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           llvm.return %[[VAL_4]] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:         }
+func.func @test_from_ptr_no_metadata(%arg0: !ptr.ptr<#ptr.generic_space>) -> memref<i8, #ptr.generic_space> {
+  %0 = ptr.from_ptr %arg0 : <#ptr.generic_space> -> memref<i8, #ptr.generic_space>
+  return %0 : memref<i8, #ptr.generic_space>
+}
+
+// Tests that `to_ptr` of a view at offset 0 of a buffer cast from a pointer
+// without metadata yields the view's aligned pointer.
+// CHECK-LABEL:   llvm.func @test_to_ptr_of_view_without_metadata(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) -> !llvm.ptr {
+// CHECK:           %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[DESC_0:.*]] = llvm.insertvalue %[[ARG0]], %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[DESC_1:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC_0]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[ALIGNED:.*]] = llvm.getelementptr %[[BASE]]{{\[}}%[[C0]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:           %[[VIEW:.*]] = llvm.insertvalue %[[ALIGNED]], %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[RESULT:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           llvm.return %[[RESULT]] : !llvm.ptr
+// CHECK:         }
+func.func @test_to_ptr_of_view_without_metadata(%arg0: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
+  %c0 = arith.constant 0 : index
+  %0 = ptr.from_ptr %arg0 : <#ptr.generic_space> -> memref<64xi8, #ptr.generic_space>
+  %1 = memref.view %0[%c0][] : memref<64xi8, #ptr.generic_space> to memref<16xf32, #ptr.generic_space>
+  %2 = ptr.to_ptr %1 : memref<16xf32, #ptr.generic_space> -> <#ptr.generic_space>
+  return %2 : !ptr.ptr<#ptr.generic_space>
+}
+
 // Tests a round-trip conversion of a memref with mixed static/dynamic dimensions
 // CHECK-LABEL:   llvm.func @test_memref_mixed(
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: i64, %[[ARG3:.*]]: i64, %[[ARG4:.*]]: i64, %[[ARG5:.*]]: i64, %[[ARG6:.*]]: i64, %[[ARG7:.*]]: i64, %[[ARG8:.*]]: i64) -> !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> {

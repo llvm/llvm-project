@@ -99,7 +99,9 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     - The cast is Pure (no UB and side-effect free).
 
     The optional `metadata` operand exists to provide any ptr-like metadata
-    that might be required to perform the cast.
+    that might be required to perform the cast. A memref result whose offset,
+    sizes and strides are all static needs none: the pointer is both its
+    allocated and its aligned pointer. Any other memref result requires it.
 
     Example:
 

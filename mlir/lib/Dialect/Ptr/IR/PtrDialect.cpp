@@ -98,6 +98,14 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
   return ptrLike;
 }
 
+bool ptr::hasStaticStridedLayout(MemRefType type) {
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  return succeeded(type.getStridesAndOffset(strides, offset)) &&
+         type.hasStaticShape() && !ShapedType::isDynamic(offset) &&
+         llvm::none_of(strides, ShapedType::isDynamic);
+}
+
 LogicalResult FromPtrOp::verify() {
   if (isa<PtrType>(getType()))
     return emitError() << "the result type cannot be `!ptr.ptr`";
@@ -105,6 +113,10 @@ LogicalResult FromPtrOp::verify() {
     return emitError()
            << "expected the input and output to have the same memory space";
   }
+  if (auto memRefTy = dyn_cast<MemRefType>(getType()))
+    if (!getMetadata() && !hasStaticStridedLayout(memRefTy))
+      return emitError() << "expected metadata for a memref result whose "
+                            "offset, sizes or strides are dynamic";
   return success();
 }
 

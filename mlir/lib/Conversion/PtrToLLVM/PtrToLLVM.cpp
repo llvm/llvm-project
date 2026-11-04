@@ -155,11 +155,6 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   if (!mTy)
     return rewriter.notifyMatchFailure(op, "Expected memref result type");
 
-  if (!op.getMetadata() && op.getType().hasPtrMetadata()) {
-    return rewriter.notifyMatchFailure(
-        op, "Can convert only memrefs with metadata");
-  }
-
   // Convert the result type
   Type descriptorTy = getTypeConverter()->convertType(mTy);
   if (!descriptorTy)
@@ -178,10 +173,14 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   Location loc = op.getLoc();
   auto desc = MemRefDescriptor::poison(rewriter, loc, descriptorTy);
 
-  // Set the allocated and aligned pointers.
-  desc.setAllocatedPtr(
-      rewriter, loc,
-      LLVM::ExtractValueOp::create(rewriter, loc, adaptor.getMetadata(), 0));
+  // Set the allocated and aligned pointers. Without metadata the input pointer
+  // is both, and the verifier has required a static layout.
+  Value allocatedPtr = adaptor.getPtr();
+  if (op.getMetadata()) {
+    allocatedPtr =
+        LLVM::ExtractValueOp::create(rewriter, loc, adaptor.getMetadata(), 0);
+  }
+  desc.setAllocatedPtr(rewriter, loc, allocatedPtr);
   desc.setAlignedPtr(rewriter, loc, adaptor.getPtr());
 
   // Extract metadata from the passed struct.

@@ -25,4 +25,12 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOps.h.inc"
 
+namespace mlir {
+namespace ptr {
+/// Returns true if `type` has a strided layout whose offset, sizes and strides
+/// are all static, so that a `from_ptr` producing it needs no metadata.
+bool hasStaticStridedLayout(MemRefType type);
+} // namespace ptr
+} // namespace mlir
+
 #endif // MLIR_DIALECT_PTR_IR_PTROPS_H
