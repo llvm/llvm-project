@@ -23751,7 +23751,7 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     Expr *SimpleExpr = RefExpr->IgnoreParenCasts();
     if (!IsSource) {
       if (Stack->getParentOrderedRegionParam().first &&
-          DepCounter >= TotalDepCount) {
+          llvm::APSInt::compareValues(DepCounter, TotalDepCount) >= 0) {
         SemaRef.Diag(ELoc, diag::err_omp_depend_sink_unexpected_expr);
         continue;
       }

@@ -416,3 +416,29 @@ int k;
 
   return foo<int>(); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
 }
+
+void gh235971() {
+  int k;
+#pragma omp for ordered(1LL)
+  for (int i = 0; i < 10; ++i) {
+#if _OPENMP >= 202111
+#pragma omp ordered doacross(sink : i - 1)
+#pragma omp ordered doacross(sink : i, k) // omp52-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
+#else
+#pragma omp ordered depend(sink : i - 1)
+#pragma omp ordered depend(sink : i, k) // expected-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
+#endif
+  }
+
+  const short One = 1;
+#pragma omp for ordered(One)
+  for (int i = 0; i < 10; ++i) {
+#if _OPENMP >= 202111
+#pragma omp ordered doacross(sink : i - 1)
+#pragma omp ordered doacross(sink : i, k) // omp52-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
+#else
+#pragma omp ordered depend(sink : i - 1)
+#pragma omp ordered depend(sink : i, k) // expected-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
+#endif
+  }
+}
