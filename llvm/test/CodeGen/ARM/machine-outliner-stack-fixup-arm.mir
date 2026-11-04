@@ -92,6 +92,7 @@ body:             |
     $d1 = VLDRD $sp, 8, 14, $noreg
     $d4 = VLDRD $sp, 253, 14, $noreg
     $d5 = VLDRD $sp, 254, 14, $noreg
+    DBG_VALUE $lr, $noreg
     BL @foo, implicit-def dead $lr, implicit $sp
     $d0 = VLDRD $sp, 0, 14, $noreg
     $d1 = VLDRD $sp, 8, 14, $noreg
