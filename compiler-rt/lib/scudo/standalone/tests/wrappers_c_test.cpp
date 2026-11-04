@@ -10,6 +10,7 @@
 #include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
+#include "wrappers_c.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -66,6 +67,26 @@ void free_sized(void *ptr, size_t size);
 void free_aligned_sized(void *ptr, size_t alignment, size_t size);
 void *valloc(size_t size);
 void *pvalloc(size_t size);
+
+#ifndef HAVE_DECL_MALLINFO
+#define HAVE_DECL_MALLINFO 1
+#endif
+#ifndef HAVE_DECL_MALLOPT
+#define HAVE_DECL_MALLOPT 1
+#endif
+#ifndef HAVE_DECL_MALLOC_INFO
+#define HAVE_DECL_MALLOC_INFO 1
+#endif
+
+#if !HAVE_DECL_MALLINFO
+struct __scudo_mallinfo mallinfo(void);
+#endif
+#if !HAVE_DECL_MALLOPT
+int mallopt(int param, int value);
+#endif
+#if !HAVE_DECL_MALLOC_INFO
+int malloc_info(int options, FILE *stream);
+#endif
 
 #ifndef SCUDO_ENABLE_HOOKS_TESTS
 #define SCUDO_ENABLE_HOOKS_TESTS 0
@@ -647,7 +668,7 @@ void MallInfoTest() {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   const FieldType BypassQuarantineSize = 1024U;
-  struct mallinfo MI = mallinfo();
+  auto MI = mallinfo();
   FieldType Allocated = MI.uordblks;
   void *P = malloc(BypassQuarantineSize);
   EXPECT_NE(P, nullptr);
