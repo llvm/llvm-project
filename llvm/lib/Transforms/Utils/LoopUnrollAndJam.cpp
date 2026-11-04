@@ -41,6 +41,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -62,7 +63,61 @@ using namespace llvm;
 STATISTIC(NumUnrolledAndJammed, "Number of loops unroll and jammed");
 STATISTIC(NumCompletelyUnrolledAndJammed, "Number of loops unroll and jammed");
 
+// When enabled, intrinsics that do not create a real cross-iteration memory
+// dependence (lifetime markers, assume, invariant markers, ...) no longer force
+// the unroll-and-jam dependency check to bail out.
+static cl::opt<bool> AllowUnrollAndJamSafeIntrinsics(
+    "allow-unj-safe-intrinsics", cl::init(true), cl::Hidden,
+    cl::desc("Allow unroll-and-jam of loops containing side-effect-free "
+             "intrinsics (lifetime markers, assume, ...)"));
+
 typedef SmallPtrSet<BasicBlock *, 4> BasicBlockSet;
+
+// Returns true for intrinsics that may nominally read/write memory but do not
+// impose a real cross-iteration data dependence, so they can be safely ignored
+// by the unroll-and-jam dependency analysis and safely cloned/reordered by the
+// transform.
+//
+// Rather than a fixed allow-list, safety is derived from memory effects and
+// attributes so the rule generalises to any harmless intrinsic:
+//   * reordering/cloning must be legal: not convergent, will-return, nothrow;
+//   * it must not access memory that can alias the loop's loads/stores:
+//     doesNotAccessMemory() or onlyAccessesInaccessibleMemory().
+// The stack/scope marker intrinsics access their own argument memory only, but
+// the real loads/stores to that alloca stay in the dependence set, so they are
+// admitted explicitly.
+static bool isSafeUnrollAndJamIntrinsic(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  // experimental.noalias_scope_decl only accesses inaccessible memory, so it
+  // would pass the generic test below -- but cloning it during jamming without
+  // duplicating its !noalias scopes (which UnrollAndJamLoop does not do) would
+  // corrupt alias metadata. Keep it blocking until that support is added.
+  if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
+    return false;
+
+  // Cloning/reordering across the jammed iterations must be semantically legal.
+  if (II->isConvergent() || II->mayThrow() || !II->willReturn())
+    return false;
+
+  // Generic case: cannot form a dependence with any analysable load/store.
+  if (II->doesNotAccessMemory() || II->onlyAccessesInaccessibleMemory())
+    return true;
+
+  // Stack/lifetime markers: only touch their own alloca; the substantive
+  // accesses to that alloca remain dependence-checked.
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+  case Intrinsic::invariant_start:
+  case Intrinsic::invariant_end:
+    return true;
+  default:
+    return false;
+  }
+}
 
 // Partition blocks in an outer/inner loop pair into blocks before and after
 // the loop
@@ -638,6 +693,10 @@ static bool getLoadsAndStores(BasicBlockSet &Blocks,
           return false;
         MemInstr.push_back(&I);
       } else if (I.mayReadOrWriteMemory()) {
+        // Side-effect-free intrinsics (lifetime markers, assume, ...) do not
+        // create real memory dependencies; skip them instead of bailing.
+        if (AllowUnrollAndJamSafeIntrinsics && isSafeUnrollAndJamIntrinsic(I))
+          continue;
         return false;
       }
     }
