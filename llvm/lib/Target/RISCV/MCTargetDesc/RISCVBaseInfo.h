@@ -731,7 +731,7 @@ enum ABI {
   ABI_L64PC128F,
   ABI_L64PC128D,
   ABI_CHERIOT,
-  ABI_Unknown,
+  ABI_Unknown
 };
 
 // Returns true for the ABIs that pass all floating point values in integer
