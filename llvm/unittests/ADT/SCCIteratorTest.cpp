@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/SCCIterator.h"
 #include "TestGraph.h"
+#include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
 #include <limits.h>
 
@@ -75,11 +76,12 @@ TEST(SCCIteratorTest, AllSmallGraphs) {
         if (NodesInThisSCC.count(i)) {
           GT::NodeSubset NodesReachableFromSCC = G.NodesReachableFrom(i);
           GT::NodeSubset ReachableButNotInSCC =
-            NodesReachableFromSCC.Meet(NodesInThisSCC.Complement());
+              NodesReachableFromSCC.Meet(NodesInThisSCC.Complement());
 
           for (unsigned j = 0; j != NUM_NODES; ++j)
             if (ReachableButNotInSCC.count(j)) {
-              EXPECT_TRUE(G.NodesReachableFrom(j).Meet(NodesInThisSCC).isEmpty());
+              EXPECT_TRUE(
+                  G.NodesReachableFrom(j).Meet(NodesInThisSCC).isEmpty());
             }
 
           // The result must be the same for all other nodes in this SCC, so
@@ -117,4 +119,90 @@ TEST(SCCIteratorTest, AllSmallGraphs) {
   }
 }
 
+TEST(SCCIteratorTest, GetUnvisitedNodesExcludesVisitedNodes) {
+  using GT = Graph<4>;
+  GT G;
+
+  G.AddEdge(0, 0);
+  G.AddEdge(0, 1);
+  G.AddEdge(1, 1);
+  G.AddEdge(2, 2);
+  G.AddEdge(3, 3);
+
+  scc_iterator<GT> I = scc_begin(G);
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_TRUE(I.isAtEnd());
+
+  SmallVector<GT::NodeType *, 2> VisitedNodes = {G.AccessNode(0),
+                                                 G.AccessNode(1)};
+
+  SmallVector<GT::NodeType *, 2> Unvisited;
+  for (auto *N : I.getUnvisitedNodes(VisitedNodes))
+    Unvisited.push_back(N);
+
+  EXPECT_TRUE(Unvisited.empty());
 }
+
+TEST(SCCIteratorTest, GetUnvisitedNodesIncludesOrphanNodes) {
+  using GT = Graph<4>;
+  GT G;
+
+  G.AddEdge(0, 0);
+  G.AddEdge(0, 1);
+  G.AddEdge(1, 1);
+  G.AddEdge(2, 2);
+  G.AddEdge(3, 3);
+
+  scc_iterator<GT> I = scc_begin(G);
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_TRUE(I.isAtEnd());
+
+  SmallVector<GT::NodeType *, 2> OrphanNodes = {G.AccessNode(2),
+                                                G.AccessNode(3)};
+
+  SmallVector<GT::NodeType *, 2> Unvisited;
+  for (auto *N : I.getUnvisitedNodes(OrphanNodes))
+    Unvisited.push_back(N);
+
+  EXPECT_EQ(Unvisited.size(), 2u);
+  EXPECT_EQ(Unvisited[0], G.AccessNode(2));
+  EXPECT_EQ(Unvisited[1], G.AccessNode(3));
+}
+
+TEST(SCCIteratorTest, GetUnvisitedNodesIncludesExternalNodes) {
+  using GT = Graph<4>;
+  GT G1, G2;
+
+  G1.AddEdge(0, 0);
+  G1.AddEdge(0, 1);
+  G1.AddEdge(1, 1);
+
+  G2.AddEdge(0, 0);
+  G2.AddEdge(1, 1);
+
+  scc_iterator<GT> I = scc_begin(G1);
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_FALSE(I.isAtEnd());
+  ++I;
+  EXPECT_TRUE(I.isAtEnd());
+
+  SmallVector<GT::NodeType *, 2> ExternalNodes = {G2.AccessNode(0),
+                                                  G2.AccessNode(1)};
+
+  SmallVector<GT::NodeType *, 2> Unvisited;
+  for (auto *N : I.getUnvisitedNodes(ExternalNodes))
+    Unvisited.push_back(N);
+
+  EXPECT_EQ(Unvisited.size(), 2u);
+  EXPECT_EQ(Unvisited[0], G2.AccessNode(0));
+  EXPECT_EQ(Unvisited[1], G2.AccessNode(1));
+}
+
+} // namespace llvm
