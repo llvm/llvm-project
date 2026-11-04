@@ -2901,7 +2901,7 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
     const FileSpec &file_spec, UUID uuid, lldb::addr_t header_addr,
     size_t size_to_read) {
-  DataFileCache *cache = Module::GetIndexCache(/* memory_module= */ true);
+  DataFileCache *cache = Module::GetIndexCache(/*memory_module=*/ true);
   if (cache)
     GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,
                                     size_to_read);
