@@ -6492,6 +6492,7 @@ bool VPlanTransforms::widenCompressingPatterns(VPlan &Plan,
     // Obtain the mask for the conditional update from the VPBlendRecipe.
     VPValue *Mask = nullptr;
     auto *BlendR = cast<VPBlendRecipe>(CondIndPhi.getBackedgeValue());
+    assert(!BlendR->isNormalized() && "Expected to run before simpifyBlends");
     for (unsigned ValIdx : seq(BlendR->getNumIncomingValues()))
       if (VPValue *IncomingValue = BlendR->getIncomingValue(ValIdx);
           IncomingValue != &CondIndPhi) {
