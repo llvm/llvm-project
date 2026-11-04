@@ -840,6 +840,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
+- Fixed a crash when a C++ bit-field is declared 32768 or more bits wide. (#GH119207)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
@@ -1428,6 +1429,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Add `RegroupByDirectory` value to `IncludeBlocks` to group includes by
+  category priority and top-level directory.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
@@ -1543,6 +1546,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   have arguments of different integer types. (#GH108367)
 - Fixed a crash when the init or increment of an OpenMP loop uses a braced
   list, such as `int i = {0}`. (#GH202562)
+- Fixed a crash when a `map`, `to` or `from` clause item uses a binary operator
+  other than pointer arithmetic, such as `s->*mp`. (#GH151542)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.

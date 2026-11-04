@@ -487,7 +487,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chroot
     libc.src.unistd.close
     libc.src.unistd.close_range
-    libc.src.unistd.copy_file_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
@@ -611,6 +610,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+    libc.src.sys.uio.process_vm_readv
+    libc.src.sys.uio.process_vm_writev
 
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
@@ -1218,6 +1219,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16
@@ -1597,6 +1599,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigfillset
     libc.src.signal.sigismember
     libc.src.signal.signal
+    libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
 
