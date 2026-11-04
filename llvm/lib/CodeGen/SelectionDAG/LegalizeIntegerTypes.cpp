@@ -6011,7 +6011,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   // the signed maximum so that the signed conversion can be used.
   EVT OpVT = Op.getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
-  unsigned NBits = NVT.getSizeInBits();
+  unsigned NBits = NVT.getScalarSizeInBits();
   unsigned MinIntBits = APFloat::semanticsIntSizeInBits(DstVT.getFltSemantics(),
                                                         /*isSigned=*/true);
   if (MinIntBits < NBits) {
