@@ -263,6 +263,7 @@ namespace {
 struct OptimizerAdditionalInfoTy {
   const llvm::TargetTransformInfo *TTI;
   const Dependences *D;
+  const Scop *S;
   bool PatternOpts;
   bool Postopts;
   bool Prevect;
@@ -674,6 +675,56 @@ ScheduleTreeOptimizer::applyPrevectBandOpt(isl::schedule_node Node) {
   return Node;
 }
 
+/// Check whether tiling is likely beneficial.  Tiling improves cache reuse
+/// only when a read access depends on multiple band dimensions (e.g. b[k][j]
+/// in matmul depends on both k and j).  If every read depends on at most one
+/// dimension, pure streaming along a single loop tiling just adds overhead.
+static bool hasTilingBeneficialReuse(isl::schedule_node Node, const Scop *S) {
+  if (!S)
+    return true;
+
+  auto Band = Node.as<isl::schedule_node_band>();
+  if (Band.is_null())
+    return true;
+
+  unsigned NumDims = unsignedFromIslSize(
+      isl::manage(isl_schedule_node_band_get_space(Node.get()))
+          .dim(isl::dim::set));
+  if (NumDims < 2)
+    return true;
+
+  isl::union_map Reads = isl::union_map::empty(S->getIslCtx());
+  for (auto &Stmt : *S)
+    for (auto *MA : Stmt)
+      if (MA->isRead())
+        Reads = Reads.unite(MA->getLatestAccessRelation());
+  if (Reads.is_empty())
+    return true;
+
+  auto SchedToArray =
+      Reads.apply_domain(isl::union_map::from(Band.get_partial_schedule()));
+  if (SchedToArray.is_empty())
+    return true;
+
+  // For each read, count how many schedule dimensions the access involves.
+  // If any read involves 2+, tiling can create cross-dimension reuse.
+  for (auto Map : SchedToArray.get_map_list()) {
+    unsigned InDims = unsignedFromIslSize(Map.domain().dim(isl::dim::set));
+    if (InDims < 2)
+      continue;
+    unsigned DepCount = 0;
+    for (unsigned d = 0; d < InDims && DepCount < 2; d++)
+      if (Map.involves_dims(isl::dim::in, d, 1).is_true())
+        DepCount++;
+    if (DepCount >= 2)
+      return true;
+  }
+
+  POLLY_DEBUG(dbgs() << "Tiling skipped: no read access depends on multiple "
+                        "band dimensions\n");
+  return false;
+}
+
 __isl_give isl_schedule_node *
 ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
                                     void *User) {
@@ -696,7 +747,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
   if (!isTileableBandNode(Node))
     return Node.release();
 
-  if (OAI->Postopts)
+  if (OAI->Postopts && hasTilingBeneficialReuse(Node, OAI->S))
     Node = applyTileBandOpt(Node);
 
   if (OAI->Prevect) {
@@ -1045,6 +1096,7 @@ static void runIslScheduleOptimizerImpl(
   const OptimizerAdditionalInfoTy OAI = {
       TTI,
       const_cast<Dependences *>(&D),
+      &S,
       /*PatternOpts=*/!HasUserTransformation && PMBasedOpts,
       /*Postopts=*/!HasUserTransformation && EnablePostopts,
       /*Prevect=*/PollyVectorizerChoice != VECTORIZER_NONE,
