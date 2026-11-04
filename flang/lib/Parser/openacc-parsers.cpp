@@ -354,6 +354,13 @@ std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
   return parser.Parse(state);
 }
 
+std::optional<ErrorRecovery> MisplacedOpenACCDeclareRecovery::Parse(
+    ParseState &state) const {
+  static constexpr auto parser{
+      misplacedOpenACCDeclare >> construct<ErrorRecovery>()};
+  return parser.Parse(state);
+}
+
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<AccClauseList>(
     many(maybe(","_tok) >> sourced(Parser<AccClause>{})))))

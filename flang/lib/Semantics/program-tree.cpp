@@ -76,6 +76,9 @@ static void GetGenerics(
   }
 }
 
+// Compiler entry points reject recovered parses before semantics. These
+// visitors still handle ErrorRecovery so they instantiate for every parse-tree
+// alternative and can skip empty child markers when used by other clients.
 template <typename T>
 static ProgramTree BuildSubprogramTree(
     const parser::Name &name, SemanticsContext &context, const T &x) {

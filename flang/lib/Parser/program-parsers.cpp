@@ -34,9 +34,20 @@ static constexpr auto validFunctionStmt{
             pure<std::list<Name>>()),
         pure<std::optional<Suffix>>())};
 
-// Complete structural SUBROUTINE headers, without repairing the argument list
-// or trailing text. Share this with lookahead that must not recognize an
-// assignment to a keyword-shaped name as a procedure header.
+// function-stmt with error recovery -- used in interfaces and internal
+// subprograms, but not at the top level, where REALFUNCTIONF and
+// INTEGERPUREELEMENTALFUNCTIONG(10) might appear as the first statement
+// of a main program.
+TYPE_PARSER(validFunctionStmt ||
+    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
+        defaulted(parenthesized(optionalList(name))), maybe(suffix)) /
+        checkEndOfKnownStmt)
+
+// R1535 subroutine-stmt ->
+//         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
+//         [proc-language-binding-spec]]
+// Lookahead needs complete headers, without repairing an argument list or
+// trailing text, so keyword-shaped assignments aren't mistaken for headers.
 static constexpr auto validSubroutineStmt{
     construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
         parenthesized(optionalList(dummyArg)), maybe(languageBindingSpec)) /
@@ -45,13 +56,15 @@ static constexpr auto validSubroutineStmt{
         "SUBROUTINE" >> name / atEndOfStmt, pure<std::list<DummyArg>>(),
         pure<std::optional<LanguageBindingSpec>>())};
 
-// function-stmt with error recovery -- used in interfaces and internal
-// subprograms, but not at the top level, where REALFUNCTIONF and
-// INTEGERPUREELEMENTALFUNCTIONG(10) might appear as the first statement
-// of a main program.
-TYPE_PARSER(validFunctionStmt ||
-    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
-        defaulted(parenthesized(optionalList(name))), maybe(suffix)) /
+// Normal parsing also repairs malformed argument lists and trailing text.
+// Keep that recovery out of the strict header parser used by lookahead.
+TYPE_PARSER(validSubroutineStmt ||
+    (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+         !"("_tok >> pure<std::list<DummyArg>>(),
+         pure<std::optional<LanguageBindingSpec>>()) ||
+        construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+            defaulted(parenthesized(optionalList(dummyArg))),
+            maybe(languageBindingSpec))) /
         checkEndOfKnownStmt)
 
 // R502 program-unit ->
@@ -98,9 +111,8 @@ static constexpr auto globalDirective{
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // Collapse only consecutive misplaced DECLAREs into a recovery node.
-static constexpr auto misplacedOpenACCDeclareRun{
-    construct<ProgramUnit>(misplacedOpenACCDeclare >>
-        skipMany(misplacedOpenACCDeclare) >> construct<ErrorRecovery>())};
+static constexpr auto misplacedOpenACCDeclareRun{construct<ProgramUnit>(
+    misplacedOpenACCDeclareRecovery / skipMany(misplacedOpenACCDeclare))};
 
 // Classification needs only the next Fortran statement, not the grammar or
 // parse-tree nodes of the intervening compiler directives.
@@ -122,26 +134,26 @@ static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
     !statement(typeDeclarationStmt) >> maybe(label) >>
     (validFunctionStmt >> ok || validSubroutineStmt >> ok)};
 
-// A leading DECLARE is misplaced only when the directive prefix is followed
-// by a complete procedure header. This decision does not consume input.
-static constexpr auto misplacedOpenACCDeclareAhead{
-    lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
-    lookAhead(skipDirectiveLines >> externalSubprogramStmt)};
-
-// After classification, parse the prefix once. Ordinary directives keep their
-// nodes; only DECLARE runs become recovery nodes. The final check ensures the
-// real directive parsers reach a procedure header: a directive skipped by the
-// generic lookahead but unsupported here must retain its normal diagnostics.
-static constexpr auto recoveredDirectivePrefix{
+// A leading DECLARE is misplaced only before a complete procedure header.
+// Classify the whole prefix without consuming it, then parse it once while
+// retaining ordinary directive nodes. The final check ensures the real parsers
+// reach that header: directives skipped by generic lookahead but unsupported
+// here must retain their normal parsing and diagnostics.
+static constexpr auto misplacedOpenACCDeclareAtFileScope{
+    lookAhead(MisplacedOpenACCDeclare{}) >>
+    lookAhead(skipDirectiveLines >> externalSubprogramStmt) >>
     some(skipStuffBeforeStatement >>
         (globalDirective || misplacedOpenACCDeclareRun)) /
-    lookAhead(externalSubprogramStmt)};
+        lookAhead(externalSubprogramStmt)};
 
-// A file item contributes either one ordinary unit or the units in a recovered
-// prefix. All branches return lists, so normal repetition can collect them.
+// Recover a whole prefix as one group: classifying each DECLARE separately
+// would rescan the remaining suffix and take quadratic time on long runs,
+// including runs interleaved with ordinary directives. All alternatives return
+// lists so repetition can collect complete groups; flattenProgramUnits then
+// splices them into Program's flat list, retaining ordinary directive nodes.
 static constexpr auto programUnitGroup{skipStuffBeforeStatement >>
     (applyFunction(singletonList<ProgramUnit>, globalDirective) ||
-        misplacedOpenACCDeclareAhead >> recoveredDirectivePrefix ||
+        misplacedOpenACCDeclareAtFileScope ||
         applyFunction(singletonList<ProgramUnit>, normalProgramUnit))};
 
 static std::list<ProgramUnit> flattenProgramUnits(
@@ -363,8 +375,7 @@ TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)) ||
-    construct<ModuleSubprogram>(
-        misplacedOpenACCDeclare >> construct<ErrorRecovery>()))
+    construct<ModuleSubprogram>(misplacedOpenACCDeclareRecovery))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -452,8 +463,7 @@ TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
     construct<InterfaceSpecification>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<InterfaceSpecification>(indirect(compilerDirective)) ||
-    construct<InterfaceSpecification>(
-        misplacedOpenACCDeclare >> construct<ErrorRecovery>()))
+    construct<InterfaceSpecification>(misplacedOpenACCDeclareRecovery))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -703,18 +713,6 @@ TYPE_CONTEXT_PARSER("SUBROUTINE subprogram"_en_US,
     construct<SubroutineSubprogram>(statement(subroutineStmt),
         specificationPart, executionPart, maybe(internalSubprogramPart),
         unterminatedStatement(endSubroutineStmt)))
-
-// R1535 subroutine-stmt ->
-//         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
-//         [proc-language-binding-spec]]
-TYPE_PARSER(validSubroutineStmt ||
-    (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-         !"("_tok >> pure<std::list<DummyArg>>(),
-         pure<std::optional<LanguageBindingSpec>>()) ||
-        construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-            defaulted(parenthesized(optionalList(dummyArg))),
-            maybe(languageBindingSpec))) /
-        checkEndOfKnownStmt)
 
 // R1536 dummy-arg -> dummy-arg-name | *
 TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))
