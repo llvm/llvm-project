@@ -5409,6 +5409,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // libcalls on the undef elements.
     EVT ResVT = N->getValueType(ResNo);
     EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
+    if (WideVecVT.isScalableVector())
+      return false;
     EVT VT0 = N->getValueType(0);
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
@@ -5902,17 +5904,17 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   unsigned Opcode = N->getOpcode();
   SDLoc dl(N);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  EVT WidenEltVT = WidenVT.getVectorElementType();
   EVT VT = WidenVT;
-  unsigned NumElts = VT.getVectorMinNumElements();
+  ElementCount NumElts = VT.getVectorElementCount();
   const SDNodeFlags Flags = N->getFlags();
-  while (!TLI.isTypeLegal(VT) && NumElts != 1) {
-    NumElts = NumElts / 2;
-    VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
+  while (!TLI.isTypeLegal(VT) && NumElts.getKnownMinValue() != 1) {
+    NumElts = NumElts.divideCoefficientBy(2);
+    VT = VT.changeVectorElementCount(*DAG.getContext(), NumElts);
   }
 
-  if (NumElts != 1 && DAG.isSafeToSpeculativelyExecute(Opcode)) {
-    // Operation doesn't trap so just widen as normal.
+  bool FoundLegalVectorType = TLI.isTypeLegal(VT) && !NumElts.isScalar();
+  if (FoundLegalVectorType && DAG.isSafeToSpeculativelyExecute(Opcode)) {
+    // Operation can be speculatively executed so just widen as normal.
     SDValue InOp1 = GetWidenedVector(N->getOperand(0));
     SDValue InOp2 = GetWidenedVector(N->getOperand(1));
     return DAG.getNode(Opcode, dl, WidenVT, InOp1, InOp2, Flags);
@@ -5938,20 +5940,21 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     }
   }
 
-  // FIXME: Improve support for scalable vectors.
-  assert(!VT.isScalableVector() && "Scalable vectors not handled yet.");
-
   // No legal vector version so unroll the vector operation and then widen.
-  if (NumElts == 1)
+  if (NumElts.isScalar())
     return DAG.UnrollVectorOp(N, WidenVT.getVectorNumElements());
+
+  if (!TLI.isTypeLegal(VT))
+    report_fatal_error("Cannot widen scalable vector trapping binop!");
 
   // Since the operation can trap, apply operation on the original vector.
   EVT MaxVT = VT;
+  EVT EltVT = VT.getVectorElementType();
   SDValue InOp1 = GetWidenedVector(N->getOperand(0));
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
-  unsigned CurNumElts = N->getValueType(0).getVectorNumElements();
+  ElementCount CurNumElts = N->getValueType(0).getVectorElementCount();
 
-  SmallVector<SDValue, 16> ConcatOps(CurNumElts);
+  SmallVector<SDValue, 16> ConcatOps(CurNumElts.getKnownMinValue());
   unsigned ConcatEnd = 0;  // Current ConcatOps index.
   int Idx = 0;        // Current Idx into input vectors.
 
@@ -5960,28 +5963,39 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   //   take munches of size NumElts from the beginning and add to ConcatOps
   //   NumElts := next smaller supported vector size or 1
   // }
-  while (CurNumElts != 0) {
-    while (CurNumElts >= NumElts) {
+  for (;;) {
+    while (ElementCount::isKnownGE(CurNumElts, NumElts)) {
       SDValue EOp1 = DAG.getExtractSubvector(dl, VT, InOp1, Idx);
       SDValue EOp2 = DAG.getExtractSubvector(dl, VT, InOp2, Idx);
       ConcatOps[ConcatEnd++] = DAG.getNode(Opcode, dl, VT, EOp1, EOp2, Flags);
-      Idx += NumElts;
+      // Subvector indices are implicitly scaled by vscale.
+      Idx += NumElts.getKnownMinValue();
       CurNumElts -= NumElts;
     }
-    do {
-      NumElts = NumElts / 2;
-      VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
-    } while (!TLI.isTypeLegal(VT) && NumElts != 1);
 
-    if (NumElts == 1) {
-      for (unsigned i = 0; i != CurNumElts; ++i, ++Idx) {
-        SDValue EOp1 = DAG.getExtractVectorElt(dl, WidenEltVT, InOp1, Idx);
-        SDValue EOp2 = DAG.getExtractVectorElt(dl, WidenEltVT, InOp2, Idx);
-        ConcatOps[ConcatEnd++] = DAG.getNode(Opcode, dl, WidenEltVT,
-                                             EOp1, EOp2, Flags);
+    if (CurNumElts.isZero())
+      break;
+
+    // Find the next smaller legal vector type.
+    do {
+      NumElts = NumElts.divideCoefficientBy(2);
+      VT = VT.changeVectorElementCount(*DAG.getContext(), NumElts);
+    } while (!TLI.isTypeLegal(VT) && NumElts.getKnownMinValue() != 1);
+
+    if (NumElts.isScalar()) {
+      // Scalarize the non-type-legal remainder.
+      for (unsigned i = 0; i != CurNumElts.getFixedValue(); ++i, ++Idx) {
+        SDValue EOp1 = DAG.getExtractVectorElt(dl, EltVT, InOp1, Idx);
+        SDValue EOp2 = DAG.getExtractVectorElt(dl, EltVT, InOp2, Idx);
+        ConcatOps[ConcatEnd++] =
+            DAG.getNode(Opcode, dl, EltVT, EOp1, EOp2, Flags);
       }
-      CurNumElts = 0;
+
+      break;
     }
+
+    if (!TLI.isTypeLegal(VT))
+      report_fatal_error("scalarization of scalable vectors is not supported");
   }
 
   return CollectOpsToWiden(DAG, TLI, ConcatOps, ConcatEnd, VT, MaxVT, WidenVT);
