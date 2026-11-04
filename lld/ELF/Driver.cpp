@@ -223,7 +223,7 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 }
 
 // Opens a file and create a file object. Path has to be resolved already.
-// Every regular input (not binary-format or linker scripts) is recorded as a
+// Every regular input (not linker scripts) is recorded as a
 // LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
 // the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
 // the single job is expanded immediately.
@@ -235,26 +235,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   MemoryBufferRef mbref = *buffer;
 
-  if (ctx.arg.formatBinary) {
-    loadJobs.push_back({mbref,
-                        path,
-                        LoadJob::Binary,
-                        /*inWholeArchive=*/false,
-                        /*lazy=*/false,
-                        /*asNeeded=*/false,
-                        /*withLOption=*/false,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
-  } else {
-    auto magic = identify_magic(mbref.getBuffer());
-    if (magic == file_magic::unknown) {
+  LoadJob::Kind kind = LoadJob::Binary;
+  if (!ctx.arg.formatBinary) {
+    switch (identify_magic(mbref.getBuffer())) {
+    case file_magic::unknown:
       readLinkerScript(ctx, mbref);
       return;
-    }
-    LoadJob::Kind kind;
-    switch (magic) {
     case file_magic::archive:
       kind = LoadJob::Archive;
       break;
@@ -275,18 +261,18 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       Err(ctx) << path << ": unknown file type";
       return;
     }
-    loadJobs.push_back({mbref,
-                        path,
-                        kind,
-                        inWholeArchive,
-                        inLib,
-                        ctx.arg.asNeeded,
-                        withLOption,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
   }
+  loadJobs.push_back({mbref,
+                      path,
+                      kind,
+                      inWholeArchive,
+                      inLib,
+                      ctx.arg.asNeeded,
+                      withLOption,
+                      nextGroupId,
+                      {},
+                      {},
+                      {}});
   if (!isInGroup)
     ++nextGroupId;
   if (!deferLoad)

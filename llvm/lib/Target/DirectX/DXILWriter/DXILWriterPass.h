@@ -38,8 +38,7 @@ public:
 ModulePass *createDXILWriterLegacyPass(raw_ostream &Str);
 
 /// Create and return a pass that writes the module to a global variable in the
-/// module for later emission in the MCStreamer. Note that this pass is designed
-/// for use with the legacy pass manager because it is run in CodeGen only.
+/// module for later emission in the MCStreamer.
 ModulePass *createDXILEmbedderPass();
 
 namespace dxil {

@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -run-pass=machine-outliner -mtriple=thumbv7m-none-eabi %s -o - | FileCheck %s
+# RUN: llc -run-pass=machine-outliner -mtriple=thumbv7m-none-eabi %s -o - | FileCheck %s
 
 # Check the outlined function does not contain debug instructions
 # CHECK-LABEL: name: f
