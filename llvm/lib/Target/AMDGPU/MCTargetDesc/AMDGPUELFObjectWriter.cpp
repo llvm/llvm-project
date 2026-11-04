@@ -100,8 +100,8 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
       reportError(
           Fixup.getLoc(),
           SymELF->getBinding() == ELF::STB_LOCAL
-              ? "PC-relative prefetch target must be in the same section"
-              : "PC-relative prefetch target must be a local label");
+              ? "pc-relative prefetch target must be in the same section"
+              : "pc-relative prefetch target must be a local label");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;

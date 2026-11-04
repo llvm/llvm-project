@@ -246,14 +246,11 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
 }
 
 class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase,
-                          bit isPCRel = 0>
+                          Operand offsetClass = SMEMOffset>
   : SM_Pseudo<opName, (outs),
               !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
-                   !if(isPCRel,
-                       (ins SMEMOffsetPCRel:$offset, SReg_32:$soffset, i8imm:$sdata,
-                            CPol_0:$cpol),
-                       (ins SMEMOffset:$offset, SReg_32:$soffset, i8imm:$sdata,
-                            CPol_0:$cpol))),
+                   (ins offsetClass:$offset, SReg_32:$soffset, i8imm:$sdata,
+                        CPol_0:$cpol)),
               !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata$cpol"> {
   // Mark prefetches as both load and store to prevent reordering with loads
   // and stores. This is also needed for pattern to match prefetch intrinsic.
@@ -481,7 +478,7 @@ defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards;
 
 let SubtargetPredicate = HasSmemPrefetchInsts in {
 def S_PREFETCH_INST        : SM_Prefetch_Pseudo <"s_prefetch_inst", SReg_64, 1>;
-def S_PREFETCH_INST_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_inst_pc_rel", SReg_64, 0, 1>;
+def S_PREFETCH_INST_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_inst_pc_rel", SReg_64, 0, SMEMOffsetPCRel>;
 def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
 def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_64, 0>;
 def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128_XNULL, 1> {

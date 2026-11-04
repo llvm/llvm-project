@@ -129,9 +129,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // byte offset from the next instruction, so subtract the remaining 4.
     int64_t OffImm = SignedValue - 4;
 
-    if (Ctx && !isInt<24>(OffImm))
+    if (Ctx && !isInt<24>(OffImm)) {
       Ctx->reportError(Fixup.getLoc(),
                        "prefetch offset exceeds 24-bit signed range");
+    }
 
     return OffImm;
   }
