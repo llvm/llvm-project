@@ -492,6 +492,37 @@ void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+  auto *BuildMI1 = getOpcodeDef<GBuildVector>(SrcVec1, MRI);
+  auto *BuildMI2 = getOpcodeDef<GBuildVector>(SrcVec2, MRI);
+  assert((BuildMI1 && (BuildMI2 || MRI.getVRegDef(SrcVec2)->getOpcode() ==
+                                       TargetOpcode::G_IMPLICIT_DEF)) &&
+         "Unexpected input to applyCombineShuffleOfBuildVector");
+  LLT EltTy = MRI.getType(SrcVec1).getElementType();
+  int NumElts = MRI.getType(SrcVec1).getNumElements();
+
+  SmallVector<Register> Extracts;
+  for (int Val : Shuffle.getMask()) {
+    if (Val == -1)
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+    else if (Val < NumElts)
+      Extracts.push_back(BuildMI1->getSourceReg(Val));
+    else if (BuildMI2)
+      Extracts.push_back(BuildMI2->getSourceReg(Val - NumElts));
+    else
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+  }
+
+  if (Extracts.size() == 1)
+    Builder.buildCopy(MI.getOperand(0).getReg(), Extracts[0]);
+  else
+    Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
@@ -3970,8 +4001,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
          "Expected Reg to only have one non-debug use?");
   Register MaybeLoad;
   int64_t Shift;
-  if (!mi_match(Reg, MRI,
-                m_OneNonDBGUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
+  if (!mi_match(Reg, MRI, m_OneUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
     Shift = 0;
     MaybeLoad = Reg;
   }
@@ -4682,9 +4712,8 @@ bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
   int64_t Width = MI.getOperand(2).getImm();
   Register ShiftSrc;
   int64_t ShiftImm;
-  if (!mi_match(
-          Src, MRI,
-          m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
                                   m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
     return false;
   if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
@@ -4714,7 +4743,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
   Register ShiftSrc;
   const unsigned Size = Ty.getScalarSizeInBits();
   if (!mi_match(And->getReg(0), MRI,
-                m_GAnd(m_OneNonDBGUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
+                m_GAnd(m_OneUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
                        m_ICst(AndImm))))
     return false;
 
@@ -4773,8 +4802,7 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
 
   // Try to match shr (shl x, c1), c2
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
+                m_BinOp(Opcode, m_OneUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -4815,8 +4843,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   int64_t ShrAmt;
   int64_t SMask;
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
+                m_BinOp(Opcode, m_OneUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -4974,7 +5001,7 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
   Register LHSBase;
   std::optional<ValueAndVReg> LHSCstOff;
   if (!mi_match(MI.getBaseReg(), MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
+                m_OneUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
@@ -5862,6 +5889,53 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
   auto C1 = Builder.buildCTTZ(ShiftAmtTy, RHS);
   Builder.buildLShr(MI.getOperand(0).getReg(), LHS, C1);
   MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchUDivByShiftedPow2(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Base, Shift;
+  if (!mi_match(RHS, MRI, m_GShl(m_Reg(Base), m_Reg(Shift))))
+    return false;
+
+  if (!matchUnaryPredicate(MRI, Base, [](const Constant *C) {
+        auto *CI = dyn_cast_if_present<ConstantInt>(C);
+        return CI && CI->getValue().isPowerOf2();
+      }))
+    return false;
+
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftTy = MRI.getType(Shift);
+  // The shift type must be able to represent every valid shift amount.
+  if (ShiftTy.getScalarSizeInBits() < Log2_64_Ceil(Ty.getScalarSizeInBits()))
+    return false;
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_CTTZ, {ShiftTy, Ty}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {ShiftTy, ShiftTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftTy}}))
+    return false;
+
+  unsigned Flags =
+      MI.getFlag(MachineInstr::IsExact) ? MachineInstr::IsExact : 0;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Log2 = B.buildCTTZ(ShiftTy, Base);
+    auto Amount = B.buildAdd(ShiftTy, Shift, Log2);
+    B.buildLShr(Dst, LHS, Amount, Flags);
+  };
+  return true;
+}
+
+bool CombinerHelper::matchSignedDivRemToUnsigned(
+    MachineInstr &MI, unsigned UnsignedOpcode) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  if (!VT || !VT->signBitIsZero(LHS) || !VT->signBitIsZero(RHS))
+    return false;
+
+  LLT Ty = MRI.getType(Dst);
+  return isLegalOrBeforeLegalizer({UnsignedOpcode, {Ty}});
 }
 
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
@@ -6892,9 +6966,9 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   // TODO: Allow multiple users of the compare if they are all selects.
   CmpInst::Predicate Pred;
   Register CmpLHS, CmpRHS;
-  if (!mi_match(Cond, MRI,
-                m_OneNonDBGUse(
-                    m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
+  if (!mi_match(
+          Cond, MRI,
+          m_OneUse(m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
       CmpInst::isEquality(Pred))
     return false;
   SelectPatternNaNBehaviour ResWithKnownNaNInfo =
@@ -6941,7 +7015,7 @@ bool CombinerHelper::matchSimplifySelectToMinMax(MachineInstr &MI,
   // Condition may be fed by a truncated compare.
   Register Cond = MI.getOperand(1).getReg();
   Register MaybeTrunc;
-  if (mi_match(Cond, MRI, m_OneNonDBGUse(m_GTrunc(m_Reg(MaybeTrunc)))))
+  if (mi_match(Cond, MRI, m_OneUse(m_GTrunc(m_Reg(MaybeTrunc)))))
     Cond = MaybeTrunc;
   Register Dst = MI.getOperand(0).getReg();
   Register TrueVal = MI.getOperand(2).getReg();
@@ -8474,6 +8548,34 @@ static APInt getDemandedBitsForLogicalOp(unsigned Opcode, const APInt &Demanded,
          ~(Opcode == TargetOpcode::G_AND ? OtherKnown.Zero : OtherKnown.One);
 }
 
+static std::optional<unsigned>
+getValidConstShiftAmt(const std::optional<APInt> &Amt, unsigned BW) {
+  if (!Amt || Amt->uge(BW))
+    return std::nullopt;
+  return Amt->getZExtValue();
+}
+
+static APInt getDemandedSrcBitsForShiftConst(unsigned Opcode,
+                                             const APInt &DemandedBits,
+                                             unsigned ShAmt) {
+  assert(ShAmt < DemandedBits.getBitWidth() &&
+         "shift amount must be less than the bit width");
+  switch (Opcode) {
+  case TargetOpcode::G_SHL:
+    return DemandedBits.lshr(ShAmt);
+  case TargetOpcode::G_LSHR:
+    return DemandedBits.shl(ShAmt);
+  case TargetOpcode::G_ASHR: {
+    APInt Src = DemandedBits.shl(ShAmt);
+    if (DemandedBits.countLeadingZeros() < ShAmt)
+      Src.setSignBit();
+    return Src;
+  }
+  default:
+    llvm_unreachable("not a shift opcode");
+  }
+}
+
 Register CombinerHelper::simplifyMultipleUseDemandedBits(
     Register R, const APInt &DemandedBits, unsigned Depth) const {
   assert(R.isVirtual() && "Expected a virtual register");
@@ -8692,6 +8794,58 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
                                           : LHSKnown | RHSKnown;
     return Changed;
   }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    std::optional<unsigned> ShAmt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(DefMI->getOperand(2).getReg()), BW);
+    if (!ShAmt)
+      return GiveUp();
+
+    APInt SrcDemand = getDemandedSrcBitsForShiftConst(Opcode, Demanded, *ShAmt);
+    KnownBits SrcKnown(BW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, SrcDemand,
+                                            SrcKnown, Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
+    KnownBits AmtKnown = KnownBits::makeConstant(APInt(BW, *ShAmt));
+    switch (Opcode) {
+    case TargetOpcode::G_SHL:
+      Known = KnownBits::shl(SrcKnown, AmtKnown);
+      break;
+    case TargetOpcode::G_LSHR:
+      Known = KnownBits::lshr(SrcKnown, AmtKnown);
+      break;
+    case TargetOpcode::G_ASHR: {
+      // ASHR and LSHR agree outside sign fill or for nonnegative inputs.
+      LLT AmtTy = MRI.getType(DefMI->getOperand(2).getReg());
+      bool LShrLegal = isPreLegalize() || !LI ||
+                       isLegal({TargetOpcode::G_LSHR, {OpTy, AmtTy}});
+      if ((Demanded.countLeadingZeros() >= *ShAmt ||
+           SrcKnown.isNonNegative()) &&
+          LShrLegal) {
+        if (DoRewrite) {
+          MachineBasicBlock &SaveMBB = Builder.getMBB();
+          MachineBasicBlock::iterator SavePt = Builder.getInsertPt();
+          DebugLoc SaveDL = Builder.getDL();
+          Builder.setInstrAndDebugLoc(*DefMI);
+          auto Lshr = Builder.buildLShr(OpTy, DefMI->getOperand(1).getReg(),
+                                        DefMI->getOperand(2).getReg());
+          Builder.setInsertPt(SaveMBB, SavePt);
+          Builder.setDebugLoc(SaveDL);
+          Rewrite(Lshr.getReg(0));
+          Known = KnownBits::lshr(SrcKnown, AmtKnown);
+        }
+        return true;
+      }
+      Known = KnownBits::ashr(SrcKnown, AmtKnown);
+      break;
+    }
+    }
+    return Changed;
+  }
   default:
     return GiveUp();
   }
@@ -8728,6 +8882,19 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
 
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    std::optional<unsigned> ShAmt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(MI.getOperand(2).getReg()),
+        RootDemand.getBitWidth());
+    if (!ShAmt)
+      return false;
+    APInt SrcDemand =
+        getDemandedSrcBitsForShiftConst(Opcode, RootDemand, *ShAmt);
+    KnownBits SrcKnown(RootDemand.getBitWidth());
+    return Probe(/*OpNo=*/1, SrcDemand, SrcKnown);
+  }
   default:
     return false;
   case TargetOpcode::G_AND:

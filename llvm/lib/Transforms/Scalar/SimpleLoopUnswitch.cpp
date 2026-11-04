@@ -1150,7 +1150,7 @@ static bool unswitchAllTrivialConditions(const ScalarOptions &Opts, Loop &L,
           if (const auto *CB = dyn_cast<CallBase>(&I))
             if (CB->isConvergent())
               return true;
-          return I.mayHaveSideEffects();
+          return I.mayHaveSideEffects() && !I.isDroppable();
         }))
       return Changed;
 
@@ -3393,8 +3393,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
                          MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 

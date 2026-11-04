@@ -210,7 +210,7 @@ struct annotated_sized_ptr_odd_pointee {
   unsigned byte_count;
 };
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_odd_pointee(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i8 @test_load_subscript_odd_pointee(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTCOUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
@@ -230,7 +230,7 @@ struct annotated_sized_ptr_odd_pointee {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA19:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    ret i8 [[TMP4]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_odd_pointee(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i8 @test_load_subscript_odd_pointee(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -240,7 +240,7 @@ struct annotated_sized_ptr_odd_pointee {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_odd_pointee(
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_odd_pointee(
 // SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -250,7 +250,7 @@ struct annotated_sized_ptr_odd_pointee {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17:![0-9]+]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_odd_pointee(
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_odd_pointee(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -341,14 +341,14 @@ struct annotated_sized_ptr_narrow_unsigned_count {
   unsigned char byte_count;
 };
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local noundef signext i8 @test_load_subscript_narrow_unsigned_count(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local noundef i8 @test_load_subscript_narrow_unsigned_count(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB11:[0-9]+]], i64 [[TMP0]]) #[[ATTR6]], !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_unsigned_count(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_unsigned_count(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS13LARGE_POINTEEPTR_TBAA20:![0-9]+]]
@@ -357,7 +357,7 @@ struct annotated_sized_ptr_narrow_unsigned_count {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_unsigned_count(
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_unsigned_count(
 // SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS13LARGE_POINTEEPTR_TBAA20:![0-9]+]]
@@ -366,7 +366,7 @@ struct annotated_sized_ptr_narrow_unsigned_count {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_unsigned_count(
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_unsigned_count(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS13LARGE_POINTEEPTR_TBAA20:![0-9]+]]
@@ -388,14 +388,14 @@ struct annotated_sized_ptr_narrow_signed_count {
   signed char byte_count;
 };
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local noundef signext i8 @test_load_subscript_narrow_signed_count(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local noundef i8 @test_load_subscript_narrow_signed_count(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB13:[0-9]+]], i64 [[TMP0]]) #[[ATTR6]], !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_signed_count(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_signed_count(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS15MIDSIZE_POINTEEPTR_TBAA23:![0-9]+]]
@@ -404,7 +404,7 @@ struct annotated_sized_ptr_narrow_signed_count {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_signed_count(
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_signed_count(
 // SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS15MIDSIZE_POINTEEPTR_TBAA23:![0-9]+]]
@@ -413,7 +413,7 @@ struct annotated_sized_ptr_narrow_signed_count {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA17]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret i8 [[TMP1]]
 //
-// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local signext i8 @test_load_subscript_narrow_signed_count(
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i8 @test_load_subscript_narrow_signed_count(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS15MIDSIZE_POINTEEPTR_TBAA23:![0-9]+]]
