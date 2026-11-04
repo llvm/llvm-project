@@ -1,5 +1,5 @@
 {
-  "name": "libstdcxx",
+  "name": "libstdcxx_microbenchmarks",
   "metrics": [
     {
       "name": "execution_time",
