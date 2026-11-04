@@ -101,6 +101,27 @@ contains
   end subroutine
 end subroutine
 
+! The associate name has its selector's spelling, so the note must stay at the
+! ASSOCIATE statement; and a section of a pointer selector gets the note too.
+subroutine test_attach_same_name(self, p)
+  use attach_associate_m
+  type(t) :: self
+  real, pointer :: p(:)
+
+  !BECAUSE: `p` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  associate (p => p)
+    !ERROR: Argument `p` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+    !$acc enter data attach(p)
+  end associate
+
+  !BECAUSE: `s` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  associate (s => self%p(1:2))
+    !ERROR: Argument `s` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+    !$acc enter data attach(s)
+  end associate
+  !$acc enter data attach(self%p(1:2))
+end subroutine
+
 ! A SELECT RANK associate name keeps the POINTER attribute of its selector.
 subroutine test_attach_select_rank(x)
   real, pointer :: x(..)

@@ -1804,7 +1804,10 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
                           &selector->GetLastSymbol())) {
                     // Without an associate-name, the associate entity takes
                     // the selector's name and declaration location, so point
-                    // at the clause instead.
+                    // at the clause instead. This compares source positions
+                    // on purpose: CharBlock is a StringRef, so `==` would
+                    // compare the text, and `associate (p => p)` would then
+                    // be taken as unnamed.
                     const Symbol *whole{
                         evaluate::UnwrapWholeSymbolDataRef(*selector)};
                     bool unnamed{whole &&
