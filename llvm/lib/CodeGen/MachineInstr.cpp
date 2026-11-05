@@ -1507,8 +1507,21 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
       return false;
     if (PSVb && ValA && !PSVb->mayAlias(&MFI))
       return false;
-    if (PSVa && PSVb && (PSVa == PSVb))
-      SameVal = true;
+    if (PSVa && PSVb) {
+      if (PSVa == PSVb)
+        SameVal = true;
+      else {
+        // A non-fixed spill slot is disjoint from every other memory object,
+        // including TargetCustom ones.
+        auto IsSpillSlot = [&](const PseudoSourceValue *PSV) {
+          const auto *FS = dyn_cast<FixedStackPseudoSourceValue>(PSV);
+          return FS && !MFI.isFixedObjectIndex(FS->getFrameIndex()) &&
+                 MFI.isSpillSlotObjectIndex(FS->getFrameIndex());
+        };
+        if (IsSpillSlot(PSVa) || IsSpillSlot(PSVb))
+          return false;
+      }
+    }
   }
 
   if (SameVal && BothMMONonScalable) {

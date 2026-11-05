@@ -4485,13 +4485,13 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v79, v2, s[0:3], 0 offen offset:18
 ; ALIGNED-NEXT:    buffer_load_ubyte v92, v2, s[0:3], 0 offen offset:16
 ; ALIGNED-NEXT:    buffer_load_ubyte v89, v2, s[0:3], 0 offen offset:17
-; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
-; ALIGNED-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:1184 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:232
 ; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:228
 ; ALIGNED-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:224
+; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
 ; ALIGNED-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1224 ; 4-byte Folded Reload
+; ALIGNED-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:1184 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v126, 8, v79
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
@@ -4520,6 +4520,7 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v14 offset:243
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v19 offset:241
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v20 offset:237
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1220 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:248
 ; ALIGNED-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:252
 ; ALIGNED-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:244
@@ -4564,7 +4565,6 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v88, off, s[0:3], s32 offset:212
 ; ALIGNED-NEXT:    buffer_store_dword v95, off, s[0:3], s32 offset:208
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1220 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v85 offset:199
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v86 offset:200
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v87 offset:198
@@ -13470,6 +13470,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v1 offset:243
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v8 offset:241
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v9 offset:237
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:248
 ; ALIGNED-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:252
 ; ALIGNED-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:244
@@ -13514,7 +13515,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:212
 ; ALIGNED-NEXT:    buffer_store_dword v75, off, s[0:3], s32 offset:208
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v65 offset:199
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v66 offset:200
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v67 offset:198
@@ -14977,6 +14977,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v1 offset:243
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v8 offset:241
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v9 offset:237
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:504
 ; ALIGNED-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:508
 ; ALIGNED-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:500
@@ -15021,7 +15022,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:476
 ; ALIGNED-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:468
 ; ALIGNED-NEXT:    buffer_store_dword v75, off, s[0:3], s32 offset:464
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v65 offset:199
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v66 offset:200
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v67 offset:198
