@@ -67,7 +67,7 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       ss.u);
 }
 
-Expr<SomeDerived> FoldOperation(
+Expr<Type<TypeCategory::Derived>> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
   StructureConstructor ctor{structure.derivedTypeSpec()};
   bool isConstant{true};
@@ -115,9 +115,10 @@ Expr<SomeDerived> FoldOperation(
     ctor.Add(symbol, std::move(expr));
   }
   if (isConstant) {
-    return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+    return Expr<Type<TypeCategory::Derived>>{
+        Constant<Type<TypeCategory::Derived>>{std::move(ctor)}};
   } else {
-    return Expr<SomeDerived>{std::move(ctor)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(ctor)};
   }
 }
 
@@ -170,7 +171,8 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
     cosubscript.emplace_back(Fold(context, std::move(x)));
   }
   CoarrayRef folded{std::move(base), std::move(cosubscript)};
-  if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
+  if (std::optional<Expr<Type<TypeCategory::Integer>>> stat{
+          coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
   }
   if (std::optional<Expr<SomeType>> notify{coarrayRef.notify()}) {
@@ -246,7 +248,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
   if (arguments[1]) { // MOLD=
     moldType = arguments[1]->GetType();
     if (moldType && moldType->category() == TypeCategory::Character) {
-      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+      if (const auto *chExpr{
+              UnwrapExpr<Expr<Type<TypeCategory::Character>>>(arguments[1])}) {
         moldLength = ToInt64(Fold(context, chExpr->LEN()));
       }
     }
@@ -397,7 +400,7 @@ void FoldConditionalArg(
   }
 }
 
-template class ExpressionBase<SomeDerived>;
+template class ExpressionBase<Type<TypeCategory::Derived>>;
 template class ExpressionBase<SomeType>;
 
 } // namespace Fortran::evaluate

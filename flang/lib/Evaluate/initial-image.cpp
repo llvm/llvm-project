@@ -14,7 +14,8 @@
 namespace Fortran::evaluate {
 
 auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
-    const Constant<SomeDerived> &x, FoldingContext &context) -> Result {
+    const Constant<Type<TypeCategory::Derived>> &x, FoldingContext &context)
+    -> Result {
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
   } else {
