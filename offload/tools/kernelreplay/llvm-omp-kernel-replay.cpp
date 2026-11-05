@@ -14,10 +14,13 @@
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -73,6 +76,15 @@ static cl::opt<bool>
                    cl::desc("Load the recorded IR bitcode image file."),
                    cl::init(false), cl::cat(ReplayOptions));
 
+static cl::opt<std::string> BatchOpt(
+    "batch",
+    cl::desc("Replay every launch configuration listed in this file within a "
+             "single process. Each line holds '<num-teams> <num-threads>' (0 "
+             "keeps the recorded value); blank lines and lines starting with "
+             "'#' are ignored. The recorded inputs are restored before each "
+             "replay."),
+    cl::init(""), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -118,6 +130,65 @@ Error processIntegerArray(const json::Object *Obj, StringRef Key,
       return createErr("failed to read an integer from JSON array %s",
                        Key.data());
   }
+  return Error::success();
+}
+
+/// A launch configuration to replay. Zero keeps the recorded value.
+struct LaunchConfigTy {
+  uint32_t NumTeams = 0;
+  uint32_t NumThreads = 0;
+};
+
+/// Read the launch configurations of a batch replay from \p Filename.
+static Error readBatchFile(const std::string &Filename,
+                           SmallVectorImpl<LaunchConfigTy> &Configs) {
+  auto BatchBufferOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true);
+  if (std::error_code EC = BatchBufferOrErr.getError())
+    return createErr("failed to read the batch file %s: %s", Filename.c_str(),
+                     EC.message().c_str());
+
+  SmallVector<StringRef> Lines;
+  (*BatchBufferOrErr)->getBuffer().split(Lines, '\n');
+  for (auto [LineNo, RawLine] : enumerate(Lines)) {
+    StringRef Line = RawLine.trim();
+    if (Line.empty() || Line.starts_with("#"))
+      continue;
+
+    SmallVector<StringRef, 2> Fields;
+    SplitString(Line, Fields);
+    LaunchConfigTy Config;
+    if (Fields.size() != 2 || Fields[0].getAsInteger(10, Config.NumTeams) ||
+        Fields[1].getAsInteger(10, Config.NumThreads))
+      return createErr("invalid batch file line %zu: expected '<num-teams> "
+                       "<num-threads>'",
+                       LineNo + 1);
+    Configs.push_back(Config);
+  }
+  if (Configs.empty())
+    return createErr("the batch file %s has no launch configurations",
+                     Filename.c_str());
+  return Error::success();
+}
+
+/// Check that a launch configuration respects the recorded teams and threads
+/// limits (min and max), unless they are zero or ignored.
+static Error checkLimits(const LaunchConfigTy &Config,
+                         ArrayRef<uint32_t> TeamsLimits,
+                         ArrayRef<uint32_t> ThreadsLimits) {
+  if (IgnoreLimitsOpt)
+    return Error::success();
+  if (TeamsLimits[0] > 0 &&
+      (Config.NumTeams < TeamsLimits[0] || Config.NumTeams > TeamsLimits[1]))
+    return createErr("number of teams (%" PRIu32
+                     ") is out of the allowed limits (min,max: %" PRIu32
+                     ",%" PRIu32 ")",
+                     Config.NumTeams, TeamsLimits[0], TeamsLimits[1]);
+  if (ThreadsLimits[0] > 0 && (Config.NumThreads < ThreadsLimits[0] ||
+                               Config.NumThreads > ThreadsLimits[1]))
+    return createErr("number of threads (%" PRIu32
+                     ") is out of the allowed limits (min,max: %" PRIu32
+                     ",%" PRIu32 ")",
+                     Config.NumThreads, ThreadsLimits[0], ThreadsLimits[1]);
   return Error::success();
 }
 
@@ -199,9 +270,26 @@ Error replayKernel() {
   if (auto Err = getString(JsonObj, "Name", KernelName))
     return Err;
 
-  // If needed, adjust number of teams and threads, and the device identifier.
-  NumTeams = NumTeamsOpt > 0 ? NumTeamsOpt : NumTeams;
-  NumThreads = NumThreadsOpt > 0 ? NumThreadsOpt : NumThreads;
+  // Select the launch configurations to replay: the ones in the batch file or
+  // the one from the command line. Zero values keep the recorded ones.
+  const bool IsBatch = !BatchOpt.empty();
+  if (IsBatch && (NumTeamsOpt > 0 || NumThreadsOpt > 0))
+    return createErr("--batch cannot be combined with --num-teams or "
+                     "--num-threads");
+
+  SmallVector<LaunchConfigTy> Configs;
+  if (IsBatch) {
+    if (auto Err = readBatchFile(BatchOpt, Configs))
+      return Err;
+  } else {
+    Configs.push_back({NumTeamsOpt, NumThreadsOpt});
+  }
+  for (auto &Config : Configs) {
+    Config.NumTeams = Config.NumTeams > 0 ? Config.NumTeams : NumTeams;
+    Config.NumThreads = Config.NumThreads > 0 ? Config.NumThreads : NumThreads;
+  }
+
+  // If needed, adjust the device identifier.
   DeviceId = DeviceIdOpt >= 0 ? DeviceIdOpt : DeviceId;
 
   // Retrieve the teams and threads limits (min and max).
@@ -229,19 +317,11 @@ Error replayKernel() {
   if (bool(ThreadsLimits[0]) != bool(ThreadsLimits[1]))
     return createErr("ThreadsLimits min and max are inconsistent");
 
-  // If the limits were specified, verify the selected values are valid.
-  if (!IgnoreLimitsOpt && TeamsLimits[0] > 0 &&
-      (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
-    return createErr("number of teams (%" PRIu32
-                     ") is out of the allowed limits (min,max: %" PRIu32
-                     ",%" PRIu32 ")",
-                     NumTeams, TeamsLimits[0], TeamsLimits[1]);
-  if (!IgnoreLimitsOpt && ThreadsLimits[0] > 0 &&
-      (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
-    return createErr("number of threads (%" PRIu32
-                     ") is out of the allowed limits (min,max: %" PRIu32
-                     ",%" PRIu32 ")",
-                     NumThreads, ThreadsLimits[0], ThreadsLimits[1]);
+  // If the limits were specified, verify the selected values are valid. A batch
+  // replay checks each configuration before replaying it instead.
+  if (!IsBatch)
+    if (auto Err = checkLimits(Configs[0], TeamsLimits, ThreadsLimits))
+      return Err;
 
   // Retrieve the arguments of the kernel.
   SmallVector<void *> TgtArgs;
@@ -345,40 +425,97 @@ Error replayKernel() {
     return createErr("failed to read the kernel record input file");
   auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
 
+  Filepath.replace_extension("record_output");
+  const std::string RecordOutputFilename = Filepath.string();
+
+  // The device allocation is kept in the outcome and reused by every replay;
+  // each replay restores the recorded inputs and globals before launching.
   KernelReplayOutcomeTy Outcome;
+  uint32_t NumFailed = 0;
 
-  // Perform the kernel replay and verification (if needed) for each repetition.
-  for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
-    Rc = __tgt_target_kernel_replay(
-        /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-        const_cast<char *>(RecordInputBuffer->getBufferStart()),
-        R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
-        RecordInputBuffer->getBufferSize(),
-        NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
-        TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
-        LoopTripCount, &Outcome);
-    if (Rc != OMP_TGT_SUCCESS)
-      return createErr("failed to replay kernel");
+  for (size_t Idx = 0; Idx < Configs.size(); ++Idx) {
+    const LaunchConfigTy &Config = Configs[Idx];
 
-    outs() << TOOL_PREFIX << " Replay time (" << R
-           << "): " << Outcome.KernelReplayTimeNs << " ns\n";
+    // In a batch, report a configuration error and continue with the next one.
+    auto HandleConfigError = [&](Error Err) -> Error {
+      if (!IsBatch)
+        return Err;
+      errs() << TOOL_PREFIX << " Error: configuration " << Idx << ": "
+             << toString(std::move(Err)) << "\n";
+      outs() << "||ReplayError|| index: " << Idx << "\n";
+      outs().flush();
+      ++NumFailed;
+      return Error::success();
+    };
+
+    if (IsBatch) {
+      outs() << "||ReplayConfig|| index: " << Idx
+             << " num_teams: " << Config.NumTeams
+             << " num_threads: " << Config.NumThreads << "\n";
+      if (auto Err = checkLimits(Config, TeamsLimits, ThreadsLimits)) {
+        if (auto Err2 = HandleConfigError(std::move(Err)))
+          return Err2;
+        continue;
+      }
+    }
+
+    // Perform the kernel replay for each repetition.
+    SmallVector<uint64_t> TimesNs;
+    Outcome.OutputFilepath.clear();
+    for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
+      Rc = __tgt_target_kernel_replay(
+          /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
+          const_cast<char *>(RecordInputBuffer->getBufferStart()),
+          Outcome.ReplayDeviceAlloc, RecordInputBuffer->getBufferSize(),
+          NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
+          TgtArgOffsets.data(), NumArgs, Config.NumTeams, Config.NumThreads,
+          SharedMemorySize, LoopTripCount, &Outcome);
+      // A failed launch may leave the device in an unknown state, so it stops
+      // a batch too.
+      if (Rc != OMP_TGT_SUCCESS) {
+        if (IsBatch)
+          return createErr("failed to replay kernel (configuration %zu)", Idx);
+        return createErr("failed to replay kernel");
+      }
+
+      TimesNs.push_back(Outcome.KernelReplayTimeNs);
+      outs() << TOOL_PREFIX << " Replay time (" << R
+             << "): " << Outcome.KernelReplayTimeNs << " ns\n";
+    }
+
+    if (IsBatch) {
+      // Report the median replay time of the configuration.
+      llvm::sort(TimesNs);
+      size_t N = TimesNs.size();
+      double MedianNs =
+          N % 2 ? TimesNs[N / 2] : 0.5 * (TimesNs[N / 2 - 1] + TimesNs[N / 2]);
+      outs() << "||ReplayTiming|| duration_seconds: "
+             << format("%.9g", MedianNs / 1.0e9) << "\n";
+    }
+
+    // Verify the replay output if requested.
+    if (VerifyOpt) {
+      Error Err = Outcome.OutputFilepath.empty()
+                      ? createErr("replay output file was not generated")
+                      : verifyReplayOutput(RecordOutputFilename,
+                                           Outcome.OutputFilepath.c_str());
+      if (Err) {
+        if (auto Err2 = HandleConfigError(std::move(Err)))
+          return Err2;
+        continue;
+      }
+
+      // The verification was successful.
+      outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
+    } else {
+      outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+    }
+    outs().flush();
   }
 
-  // Verify the replay output if requested.
-  if (VerifyOpt) {
-    if (Outcome.OutputFilepath.empty())
-      return createErr("replay output file was not generated");
-
-    Filepath.replace_extension("record_output");
-    if (auto Err = verifyReplayOutput(Filepath.c_str(),
-                                      Outcome.OutputFilepath.c_str()))
-      return Err;
-
-    // The verification was successful.
-    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
-  } else {
-    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
-  }
+  if (NumFailed)
+    return createErr("%" PRIu32 " of %zu batch configurations failed",
+                     NumFailed, Configs.size());
   return Error::success();
 }
 
