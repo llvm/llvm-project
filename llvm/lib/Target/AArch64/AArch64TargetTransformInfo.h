@@ -34,6 +34,7 @@ class APInt;
 class Instruction;
 class IntrinsicInst;
 class Loop;
+class LoopInfo;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -269,6 +270,12 @@ public:
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool useNeonVector(const Type *Ty) const;
+
+  // The expansion uses overlapping unaligned accesses, which are split up under
+  // strict alignment, and MOPS has its own variable-length lowering.
+  uint64_t getMaxBoundedMemSetInlineSize() const override {
+    return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
+  }
 
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
@@ -568,8 +575,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool isProfitableToSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const override;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops,
+                                  const LoopInfo *LI) const override;
 
   bool enableAggressiveInterleaving(bool) const override {
     return ST->enableAggressiveInterleaving();

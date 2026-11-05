@@ -1379,6 +1379,10 @@ uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
   return TTIImpl->getMaxMemIntrinsicInlineSizeThreshold();
 }
 
+uint64_t TargetTransformInfo::getMaxBoundedMemSetInlineSize() const {
+  return TTIImpl->getMaxBoundedMemSetInlineSize();
+}
+
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
@@ -1615,8 +1619,9 @@ bool TargetTransformInfo::hasActiveVectorLength() const {
 }
 
 bool TargetTransformInfo::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
-  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink,
+    const LoopInfo *LI) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink, LI);
 }
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {

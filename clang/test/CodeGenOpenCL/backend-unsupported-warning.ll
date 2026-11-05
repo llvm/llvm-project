@@ -1,5 +1,6 @@
 ; REQUIRES: amdgpu-registered-target
 ; RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -S -o - %s 2>&1 | FileCheck %s
+; RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu7.00-amd-amdhsa -S -o - %s 2>&1 | FileCheck %s %}
 
 ; Check that a DiagnosticUnsupported reported as a warning works
 ; correctly, and is not emitted as an error.

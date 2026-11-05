@@ -176,23 +176,14 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVSubtarget &STI) {
   static const MCPhysReg ArgEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
 }
 
 ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
-  static const RISCVABI::ABI SoftFPABIs[] = {
-      RISCVABI::ABI_ILP32,
-      RISCVABI::ABI_ILP32E,
-      RISCVABI::ABI_LP64,
-      RISCVABI::ABI_LP64E,
-  };
-
-  RISCVABI::ABI ABI = STI.getTargetABI();
-
-  if (llvm::is_contained(SoftFPABIs, ABI) || !STI.hasStdExtF())
+  if (STI.isSoftFPABI() || !STI.hasStdExtF())
     return {};
 
   if (STI.hasStdExtQ())
@@ -222,7 +213,7 @@ static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
                                        RISCV::X12_H, RISCV::X13_H,
                                        RISCV::X14_H, RISCV::X15_H};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
@@ -239,7 +230,7 @@ static ArrayRef<MCPhysReg> getArgGPR32s(const RISCVABI::ABI ABI) {
                                        RISCV::X12_W, RISCV::X13_W,
                                        RISCV::X14_W, RISCV::X15_W};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
@@ -257,7 +248,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
   static const MCPhysReg FastCCEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                           RISCV::X13, RISCV::X14, RISCV::X15};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -277,7 +268,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF16s(const RISCVABI::ABI ABI) {
                                           RISCV::X12_H, RISCV::X13_H,
                                           RISCV::X14_H, RISCV::X15_H};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -297,7 +288,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF32s(const RISCVABI::ABI ABI) {
                                           RISCV::X12_W, RISCV::X13_W,
                                           RISCV::X14_W, RISCV::X15_W};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -313,7 +304,7 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  bool EABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
+  bool EABI = RISCVABI::isRVE(ABI);
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
@@ -422,8 +413,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
 
     RISCVABI::ABI ABI = Subtarget.getTargetABI();
-    if (HasCFBranch &&
-        (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
+    if (HasCFBranch && RISCVABI::isRVE(ABI))
       reportFatalUsageError(
           "Nested functions with control flow protection are not "
           "usable with ILP32E or LP64E ABI.");
