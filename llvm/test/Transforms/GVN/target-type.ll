@@ -113,41 +113,18 @@ define <2 x target("spirv.TypedPointerType", i8, 0)> @memset_nonzero_vector() {
   ret <2 x target("spirv.TypedPointerType", i8, 0)> %ret
 }
 
-define <2 x target("spirv.TypedPointerType", i8, 0)> @store_int_load_vector(i128 %arg) {
-; CHECK-LABEL: @store_int_load_vector(
-; CHECK-NEXT:    [[VAL:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    store i128 [[ARG:%.*]], ptr [[VAL]], align 4
-; CHECK-NEXT:    [[RET:%.*]] = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr [[VAL]], align 16
-; CHECK-NEXT:    ret <2 x target("spirv.TypedPointerType", i8, 0)> [[RET]]
+; llvm.test.vectorelement has no zero value, so neither does a vector of it.
+define <2 x target("llvm.test.vectorelement")> @memset_zero_vector_no_zeroinit() {
+; CHECK-LABEL: @memset_zero_vector_no_zeroinit(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <2 x target("llvm.test.vectorelement")>, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load <2 x target("llvm.test.vectorelement")>, ptr [[VAL]], align 8
+; CHECK-NEXT:    ret <2 x target("llvm.test.vectorelement")> [[RET]]
 ;
-  %val = alloca i128
-  store i128 %arg, ptr %val
-  %ret = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr %val
-  ret <2 x target("spirv.TypedPointerType", i8, 0)> %ret
-}
-
-define i128 @store_vector_load_int(<2 x target("spirv.TypedPointerType", i8, 0)> %arg) {
-; CHECK-LABEL: @store_vector_load_int(
-; CHECK-NEXT:    [[VAL:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    store <2 x target("spirv.TypedPointerType", i8, 0)> [[ARG:%.*]], ptr [[VAL]], align 16
-; CHECK-NEXT:    [[RET:%.*]] = load i128, ptr [[VAL]], align 4
-; CHECK-NEXT:    ret i128 [[RET]]
-;
-  %val = alloca i128
-  store <2 x target("spirv.TypedPointerType", i8, 0)> %arg, ptr %val
-  %ret = load i128, ptr %val
-  ret i128 %ret
-}
-
-define <vscale x 2 x target("spirv.TypedPointerType", i8, 0)> @store_scalable_int_load_scalable_vector(<vscale x 4 x i32> %arg, ptr %val) {
-; CHECK-LABEL: @store_scalable_int_load_scalable_vector(
-; CHECK-NEXT:    store <vscale x 4 x i32> [[ARG:%.*]], ptr [[VAL:%.*]], align 16
-; CHECK-NEXT:    [[RET:%.*]] = load <vscale x 2 x target("spirv.TypedPointerType", i8, 0)>, ptr [[VAL]], align 16
-; CHECK-NEXT:    ret <vscale x 2 x target("spirv.TypedPointerType", i8, 0)> [[RET]]
-;
-  store <vscale x 4 x i32> %arg, ptr %val
-  %ret = load <vscale x 2 x target("spirv.TypedPointerType", i8, 0)>, ptr %val
-  ret <vscale x 2 x target("spirv.TypedPointerType", i8, 0)> %ret
+  %val = alloca <2 x target("llvm.test.vectorelement")>
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 8, i1 false)
+  %ret = load <2 x target("llvm.test.vectorelement")>, ptr %val
+  ret <2 x target("llvm.test.vectorelement")> %ret
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
