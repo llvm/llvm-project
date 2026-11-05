@@ -394,6 +394,18 @@ defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amd
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
 } // End isReMaterializable = 1
 
+// For defined unsigned conversions, flooring agrees with truncation.
+multiclass fp_to_uint_floor_Pats<ValueType dst_vt, ValueType src_vt,
+                                 Instruction cvt_inst_e64> {
+  def : GCNPat<
+    (dst_vt (fp_to_uint
+      (ffloor_oneuse (src_vt (VOP3Mods src_vt:$src0, i32:$src0_modifiers))))),
+    (cvt_inst_e64 $src0_modifiers, $src0)>;
+}
+
+defm : fp_to_uint_floor_Pats<i32, f32, V_CVT_U32_F32_e64>;
+defm : fp_to_uint_floor_Pats<i32, f64, V_CVT_U32_F64_e64>;
+
 // These i32 conversions naturally saturate.
 def : GCNPat<(i32 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
@@ -634,14 +646,20 @@ multiclass fp16_fp_to_int_sat_Pats<Instruction cvt_u16_f16_inst_e64,
                (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
 }
 
-let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in
+let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
+defm : fp_to_uint_floor_Pats<i16, f16, V_CVT_U16_F16_e64>;
 defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_e64, V_CVT_I16_F16_e64>;
+}
 
-let True16Predicate = UseRealTrue16Insts in
+let True16Predicate = UseRealTrue16Insts in {
+defm : fp_to_uint_floor_Pats<i16, f16, V_CVT_U16_F16_t16_e64>;
 defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_t16_e64, V_CVT_I16_F16_t16_e64>;
+}
 
-let True16Predicate = UseFakeTrue16Insts in
+let True16Predicate = UseFakeTrue16Insts in {
+defm : fp_to_uint_floor_Pats<i16, f16, V_CVT_U16_F16_fake16_e64>;
 defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_fake16_e64, V_CVT_I16_F16_fake16_e64>;
+}
 
 def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
   let Outs32 = (outs VGPR_32:$vdst, VRegSrc_32:$vdst1);
