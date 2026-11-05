@@ -1686,7 +1686,7 @@ public:
 
   /// Check if two SCEVs have matching loop uses so that they can be
   /// added or subtracted from each other.
-  bool haveMatchingLoopUses(const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI bool haveMatchingLoopUses(const SCEV *LHS, const SCEV *RHS);
 
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
