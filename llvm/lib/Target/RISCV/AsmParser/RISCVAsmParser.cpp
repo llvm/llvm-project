@@ -62,6 +62,8 @@ struct ParserOptionsSet {
 };
 
 class RISCVAsmParser : public MCTargetAsmParser {
+  const RISCVMCOptions &CLOpts;
+
   // This tracks the parsing of the 4 optional operands that make up the vtype
   // portion of vset(i)vli instructions which are separated by commas.
   enum class VTypeState {
@@ -320,7 +322,8 @@ public:
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII)
-      : MCTargetAsmParser(STI, MII) {
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(RISCV_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
     MCAsmParserExtension::Initialize(Parser);
 
     Parser.addAliasForDirective(".half", ".2byte");
@@ -332,7 +335,7 @@ public:
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
-    if (RISCVMCOptions::Global.add_build_attributes)
+    if (CLOpts.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 
@@ -1093,9 +1096,10 @@ public:
   }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
-    auto RegName = [](MCRegister Reg) {
+    const RISCVMCOptions &CLOpts = RISCV_MC::getCLOpts(MAI.getTargetOptions());
+    auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return RISCVInstPrinter::getRegisterName(Reg);
+        return RISCVInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
@@ -1406,6 +1410,11 @@ static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q2;
 }
 
+static bool regClassIsYGPR(const MCRegisterClass &RC) {
+  assert(RC.getNumRegs() > 0);
+  return getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(*RC.begin());
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
@@ -1419,10 +1428,18 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg);
   bool IsRegVR = getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg);
 
-  if (Op.isGPR() && Kind == MCK_YGPR) {
-    // GPR and capability GPR use the same register names, convert if required.
-    Op.Reg.Reg = convertGPRToYGPR(Reg);
-    return Match_Success;
+  // YGPR and GPR use the same register names in assembly, so convert GPR
+  // operands to YGPR when matching a YGPR register class (such as YGPRNoX0).
+  if (Op.isGPR()) {
+    const MCRegisterClass *RC =
+        getRegClassFromMatchKind(static_cast<MatchClassKind>(Kind));
+    if (RC && regClassIsYGPR(*RC)) {
+      MCRegister YReg = convertGPRToYGPR(Reg);
+      if (RC->contains(YReg)) {
+        Op.Reg.Reg = YReg;
+        return Match_Success;
+      }
+    }
   }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
     Op.Reg.Reg = convertFPR64ToFPR256(Reg);
@@ -3243,11 +3260,6 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
-  const auto &AllFeatures = getSTI().getAllProcessorFeatures();
-  for (auto &Feature : AllFeatures)
-    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
-      clearFeatureBits(Feature.Value, Feature.key());
-
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /*EnableExperimentalExtension=*/true,
       /*ExperimentalExtensionVersionCheck=*/true);
@@ -3263,23 +3275,29 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   }
   auto &ISAInfo = *ParseResult;
 
-  for (auto &Feature : AllFeatures)
-    if (ISAInfo->hasExtension(Feature.key()))
-      setFeatureBits(Feature.Value, Feature.key());
-
   if (FromOptionDirective) {
     if (ISAInfo->getXLen() == 32 && isRV64())
       return Error(Loc, "bad arch string switching from rv64 to rv32");
     else if (ISAInfo->getXLen() == 64 && !isRV64())
       return Error(Loc, "bad arch string switching from rv32 to rv64");
   }
-
-  if (ISAInfo->getXLen() == 32)
-    clearFeatureBits(RISCV::Feature64Bit, "64bit");
-  else if (ISAInfo->getXLen() == 64)
-    setFeatureBits(RISCV::Feature64Bit, "64bit");
-  else
+  if (ISAInfo->getXLen() != 32 && ISAInfo->getXLen() != 64)
     return Error(Loc, "bad arch string " + Arch);
+
+  // RISCVISAInfo::parseArchString already expands all implied extensions
+  // (including conditional C/Zce implications like Zcd and Zcf), so we can
+  // toggle the feature bits directly without calling setFeatureBits() (which
+  // would run updateCZceFeatureImplications() on an incomplete feature set).
+  MCSubtargetInfo &STI = copySTI();
+  for (auto &Feature : STI.getAllProcessorFeatures()) {
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      continue;
+    if (ISAInfo->hasExtension(Feature.key()) != STI.hasFeature(Feature.Value))
+      STI.ToggleFeature(Feature.Value);
+  }
+  if ((ISAInfo->getXLen() == 64) != STI.hasFeature(RISCV::Feature64Bit))
+    STI.ToggleFeature(RISCV::Feature64Bit);
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   Result = ISAInfo->toString();
   return false;
@@ -3363,6 +3381,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
       auto Ext = llvm::lower_bound(AllFeatures, Feature);
       if (Ext == std::end(AllFeatures) || StringRef(Ext->key()) != Feature)
         return Error(Loc, "unknown extension feature");
+
+      if (Ext->Value == RISCV::FeatureStdExtY)
+        return Error(Loc, "passing '+y'/'-y' is not supported yet; specify a "
+                          "full arch string instead");
 
       Args.emplace_back(Type, Arch.str());
 
@@ -4395,8 +4417,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       for (unsigned i = 0; i < RegLmul; i++) {
         if ((RegEnc + i) == MaskEnc) {
           SMLoc Loc = Operands[Idx]->getStartLoc();
-          return Error(Loc, Twine("register conflicts with vmask register ") +
-                                RISCVInstPrinter::getRegisterName(MaskReg));
+          return Error(Loc,
+                       Twine("register conflicts with vmask register ") +
+                           RISCVInstPrinter::getRegisterName(CLOpts, MaskReg));
         }
       }
     }

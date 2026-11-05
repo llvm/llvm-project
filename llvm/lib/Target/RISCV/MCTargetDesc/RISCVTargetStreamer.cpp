@@ -25,7 +25,8 @@
 using namespace llvm;
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), CLOpts(RISCVMCOptions::Global) {}
+    : MCTargetStreamer(S),
+      CLOpts(RISCV_MC::getCLOpts(S.getContext().getTargetOptions())) {}
 
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
@@ -63,16 +64,9 @@ void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
-  if (EmitStackAlign) {
-    unsigned StackAlign;
-    if (TargetABI == RISCVABI::ABI_ILP32E)
-      StackAlign = 4;
-    else if (TargetABI == RISCVABI::ABI_LP64E)
-      StackAlign = 8;
-    else
-      StackAlign = 16;
-    emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
-  }
+  if (EmitStackAlign)
+    emitAttribute(RISCVAttrs::STACK_ALIGN,
+                  RISCVABI::getStackAlignment(TargetABI).value());
 
   auto ParseResult = RISCVFeatures::parseFeatureBits(STI);
   if (!ParseResult) {

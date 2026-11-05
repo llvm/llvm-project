@@ -621,7 +621,7 @@ FuchsiaHandleChecker::reportLeaks(ArrayRef<SymbolRef> LeakedHandles,
 void FuchsiaHandleChecker::reportDoubleRelease(SymbolRef HandleSym,
                                                const SourceRange &Range,
                                                CheckerContext &C) const {
-  ExplodedNode *ErrNode = C.generateErrorNode(C.getState());
+  ExplodedNode *ErrNode = C.addSink(C.getState());
   reportBug(HandleSym, ErrNode, C, &Range, DoubleReleaseBugType,
             "Releasing a previously released handle");
 }
@@ -629,7 +629,7 @@ void FuchsiaHandleChecker::reportDoubleRelease(SymbolRef HandleSym,
 void FuchsiaHandleChecker::reportUnownedRelease(SymbolRef HandleSym,
                                                 const SourceRange &Range,
                                                 CheckerContext &C) const {
-  ExplodedNode *ErrNode = C.generateErrorNode(C.getState());
+  ExplodedNode *ErrNode = C.addSink(C.getState());
   reportBug(HandleSym, ErrNode, C, &Range, ReleaseUnownedBugType,
             "Releasing an unowned handle");
 }
@@ -637,7 +637,7 @@ void FuchsiaHandleChecker::reportUnownedRelease(SymbolRef HandleSym,
 void FuchsiaHandleChecker::reportUseAfterFree(SymbolRef HandleSym,
                                               const SourceRange &Range,
                                               CheckerContext &C) const {
-  ExplodedNode *ErrNode = C.generateErrorNode(C.getState());
+  ExplodedNode *ErrNode = C.addSink(C.getState());
   reportBug(HandleSym, ErrNode, C, &Range, UseAfterReleaseBugType,
             "Using a previously released handle");
 }

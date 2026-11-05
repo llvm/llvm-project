@@ -107,6 +107,9 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
   }
 
   char *exceptionSvptr{nullptr};
+  // Pass the string only on the first call; some libcs (e.g. AIX) set the
+  // save pointer to nullptr after the last token.
+  char *nextStr{envStr};
   char *exceptionStr;
   char *unitListStr;
   bool firstException{true};
@@ -123,12 +126,11 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
   while (success) {
 #if _WIN32
-    exceptionStr =
-        strtok_s(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+    exceptionStr = strtok_s(nextStr, ";", &exceptionSvptr);
 #else
-    exceptionStr =
-        strtok_r(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+    exceptionStr = strtok_r(nextStr, ";", &exceptionSvptr);
 #endif
+    nextStr = nullptr;
     if (nullptr == exceptionStr) {
       break;
     }
@@ -185,12 +187,11 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
       lb = ub = -1;
 #if _WIN32
-      units =
-          strtok_s(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_s(unitListStr, ",", &unitListSvptr);
 #else
-      units =
-          strtok_r(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_r(unitListStr, ",", &unitListSvptr);
 #endif
+      unitListStr = nullptr;
       if (nullptr == units) {
         break;
       }
@@ -233,6 +234,7 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
   } else {
     // Failure(s) - backout anything that could be permanent.
     std::free(convertUnits);
+    convertUnits = nullptr; // avoid a double free in ExternalFileUnit::CloseAll
     numConvertUnits = 0;
   }
   return success;
@@ -289,7 +291,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("FORT_FMT_RECL")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
-    if (n > 0 && n < std::numeric_limits<int>::max() && *end == '\0') {
+    if (n > 0 && n < common::numeric_limits<int>::max() && *end == '\0') {
       listDirectedOutputLineLengthLimit = n;
     } else {
       std::fprintf(
@@ -392,7 +394,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
-    if (n > 0 && n != std::numeric_limits<unsigned long>::max() &&
+    if (n > 0 && n != common::numeric_limits<unsigned long>::max() &&
         *end == '\0') {
       cudaStackLimit = n;
     } else {

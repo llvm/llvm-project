@@ -191,10 +191,6 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
 
-  // Additionally reserve dummy register used to form the register pair
-  // beginning with 'x0' for instructions that take register pairs.
-  markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
-
   // There are only 16 GPRs for RVE.
   if (Subtarget.hasStdExtE())
     for (MCPhysReg Reg = RISCV::X16_H; Reg <= RISCV::X31_H; Reg++)
@@ -901,7 +897,7 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
     return CSR_NoRegs_RegMask;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   if (CC == CallingConv::PreserveMost) {
-    if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    if (RISCVABI::isRVE(ABI))
       return CSR_RT_MostRegs_RVE_RegMask;
     return CSR_RT_MostRegs_RegMask;
   }
@@ -970,6 +966,14 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
     Ops.push_back(dwarf::DW_OP_mul);
     Ops.push_back(dwarf::DW_OP_minus);
   }
+}
+
+std::pair<Register, Register>
+RISCVRegisterInfo::getGPRPairSubRegs(MCRegister Pair) const {
+  if (Pair == RISCV::X0_Pair)
+    return {RISCV::X0, RISCV::X0};
+  return {getSubReg(Pair, RISCV::sub_gpr_even),
+          getSubReg(Pair, RISCV::sub_gpr_odd)};
 }
 
 unsigned

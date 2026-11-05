@@ -208,7 +208,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseN2:
   case NeoverseN3:
   case NeoverseV3AE:
-    PrefFunctionAlignment = Align(16);
+    PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
@@ -396,7 +396,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
     if (GV->hasDLLImportStorageClass()) {
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
-    if (getTargetTriple().isOSWindows())
+    if (getTargetTriple().isOSWindowsOrUEFI())
       return AArch64II::MO_GOT | AArch64II::MO_COFFSTUB;
     return AArch64II::MO_GOT;
   }
@@ -432,7 +432,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
-  if (getTargetTriple().isOSWindows()) {
+  if (getTargetTriple().isOSWindowsOrUEFI()) {
     if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
       if (GV->hasDLLImportStorageClass()) {
         // On Arm64EC, if we're calling a symbol from the import table

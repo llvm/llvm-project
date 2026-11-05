@@ -18,6 +18,7 @@
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
 #include "orc-rt/connect-socket/SocketConnector.h"
+#include "orc-rt/connect-tcp/TCPConnector.h"
 #include "orc-rt/connect/ConnectionSpec.h"
 #include "orc-rt/connect/ConnectorRegistry.h"
 
@@ -45,7 +46,20 @@ static std::variant<Options, int> parseArgs(int argc, char *argv[]) noexcept {
 
   OptionParser P;
   P.addFlag("verbose", "Print verbose output", false, O.Verbose, 'v')
-      .addFlag("help", "Display this help message", false, ShowHelp, 'h');
+      .addFlag("help", "Display this help message", false, ShowHelp, 'h')
+      .setPositionalUsage("<connection-spec>")
+      .setEpilogue(
+          "CONNECTION SPECS:\n"
+          "  socket:adopt=<fd>            Use <fd>, a connected stream socket\n"
+          "                               that ogre was started with.\n"
+          "  tcp:connect=<host>:<port>    Connect to the controller at\n"
+          "                               <host>:<port>.\n"
+          "  tcp:listen=<address>:<port>  Listen at <address>:<port> and\n"
+          "                               accept one controller. <address>\n"
+          "                               must be numeric.\n"
+          "\n"
+          "  Bracket IPv6 addresses, e.g. tcp:listen=[::1]:20000.\n"
+          "  A listening ogre runs code from whoever connects to it first.\n");
 
   auto PrintHelp = [&](Error Err) -> int {
     bool Failed = !!Err;
@@ -169,10 +183,13 @@ makeSession(const Options &Opts) noexcept {
     return Err;
 
   // Connectors establish the connection to the controller for a particular
-  // transport. Registering only the socket connector means ogre can only be
-  // reached over a socket.
+  // transport. ogre is a testing tool, so it registers "tcp:listen" as well as
+  // "tcp:connect" and "socket:adopt": a listening ogre runs code from whoever
+  // connects to it first.
   ConnectorRegistry Connectors;
   if (auto Err = registerSocketConnector(Connectors))
+    return Err;
+  if (auto Err = registerTCPConnectAndListen(Connectors))
     return Err;
 
   // Connect to the controller described by the ConnectionSpec, handing over the

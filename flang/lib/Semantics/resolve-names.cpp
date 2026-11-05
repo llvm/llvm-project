@@ -44,7 +44,6 @@
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -172,18 +171,6 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
-    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
-    // recognized as intrinsic names when the enumeration-type feature is
-    // enabled, so that pre-F2023 programs may still use those names for
-    // implicit external procedures.  This gating is removed once the
-    // enumeration-type feature is fully implemented.
-    if (!context_->languageFeatures().IsEnabled(
-            common::LanguageFeature::EnumerationType)) {
-      const std::string nameStr{name.ToString()};
-      if (nameStr == "next" || nameStr == "previous") {
-        return false;
-      }
-    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
@@ -232,7 +219,7 @@ public:
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
       return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*maybeIntExpr)));
+          evaluate::SubscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
     }
@@ -1864,6 +1851,16 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  void Post(const parser::OmpAssumesDirective &x) {
+    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
+          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
+        })) {
+      if (Symbol * symbol{currScope().symbol()}) {
+        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+      }
+    }
+  }
+
   // Make sure that the following code is properly handled:
   //
   // function baz(a)
@@ -2059,6 +2056,13 @@ bool OmpVisitor::Pre(const parser::OmpStylizedDeclaration &x) {
   BeginDecl();
   Walk(x.type.get());
   Walk(x.var);
+  // The special variables (omp_in, omp_out, omp_priv, omp_orig) are data
+  // objects. Make them object entities explicitly, so that a reference like
+  // omp_out(1) is not reinterpreted as a call to an external function.
+  // See issue #193431.
+  if (auto *symbol{std::get<parser::ObjectName>(x.var.t).symbol}) {
+    ConvertToObjectEntity(*symbol);
+  }
   return true;
 }
 
@@ -2152,47 +2156,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   PopScope();
 }
 
-parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context) {
-  switch (op) {
-  case parser::DefinedOperator::IntrinsicOperator::Multiply:
-    return parser::CharBlock{"op.*", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Add:
-    return parser::CharBlock{"op.+", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Subtract:
-    return parser::CharBlock{"op.-", 4};
-
-  case parser::DefinedOperator::IntrinsicOperator::AND:
-    return parser::CharBlock{"op.AND", 6};
-  case parser::DefinedOperator::IntrinsicOperator::OR:
-    return parser::CharBlock{"op.OR", 5};
-  case parser::DefinedOperator::IntrinsicOperator::EQV:
-    return parser::CharBlock{"op.EQV", 6};
-  case parser::DefinedOperator::IntrinsicOperator::NEQV:
-    return parser::CharBlock{"op.NEQV", 7};
-
-  default:
-    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
-    return parser::CharBlock{"op.?", 4};
-  }
-}
-
-parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
-  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
-      .Case("max", {"op.max", 6})
-      .Case("min", {"op.min", 6})
-      .Case("iand", {"op.iand", 7})
-      .Case("ior", {"op.ior", 6})
-      .Case("ieor", {"op.ieor", 7})
-      .Default(name);
-}
-
-std::string MangleDefinedOperator(const parser::CharBlock &name) {
-  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
-  return "op" + name.ToString();
-}
-
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
@@ -2216,8 +2179,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       mangledName = context().SaveTempName(MangleDefinedOperator(name->source));
     } else {
       mangledName = MakeNameFromOperator(
-          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
-          context());
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
     }
   }
 
@@ -2622,8 +2584,11 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     return;
   }
   symbol.SetIsCDefined(isCDefined_);
-  std::optional<std::string> label{
-      evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
+  std::optional<std::string> label;
+  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+          evaluate::AsciiKind, bindName_)}) {
+    label = charVal->AsStdString();
+  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     symbol.SetIsExplicitBindName(true);
@@ -6516,7 +6481,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     // Enumerators are treated as PARAMETER (section 7.6 paragraph (4))
     symbol = &MakeSymbol(name, Attrs{Attr::PARAMETER}, ObjectEntityDetails{});
     symbol->SetType(context().MakeNumericType(
-        TypeCategory::Integer, evaluate::CInteger::kind));
+        TypeCategory::Integer, evaluate::CIntegerKind));
   }
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
@@ -6527,7 +6492,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
       // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
       // has the value specified by INT(boz-literal-constant, C_INT).
       const evaluate::DynamicType cIntType{
-          TypeCategory::Integer, evaluate::CInteger::kind};
+          TypeCategory::Integer, evaluate::CIntegerKind};
       if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
         if (auto converted{
                 evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
@@ -6553,8 +6518,8 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::MakeCIntegerExpr(*enumerationState_.value)});
     } else {
       context().SetError(*symbol);
     }
@@ -6573,16 +6538,6 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  const auto &source{
-      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
-  // ENUMERATION TYPE is an experimental feature: semantics are partially
-  // implemented.  FIR lowering is not implemented.
-  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
-    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-    return false;
-  }
-  Say(source,
-      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
   BeginAttrs();
   return true;
 }
@@ -6628,7 +6583,7 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
   ordinalSym.SetType(
-      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+      currScope().MakeNumericType(TypeCategory::Integer, MakeKindExpr(4)));
   ordinalSym.set(Symbol::Flag::CompilerCreated);
   symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
 }
@@ -6674,7 +6629,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     CHECK(ordinalIter != currScope().end());
     const Symbol &ordinalSym{*ordinalIter->second};
     enumCtor.Add(ordinalSym,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+        evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
         SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
             evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
@@ -6904,7 +6859,11 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
-      SetBindNameOn(symbol);
+      if (symbol.detailsIf<ProcEntityDetails>() ||
+          symbol.detailsIf<ObjectEntityDetails>() ||
+          symbol.detailsIf<EntityDetails>()) {
+        SetBindNameOn(symbol);
+      }
     }
     return symbol;
   }
@@ -7074,7 +7033,7 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   }
   if (!charInfo_.kind) {
     charInfo_.kind =
-        KindExpr{context().GetDefaultKind(TypeCategory::Character)};
+        MakeKindExpr(context().GetDefaultKind(TypeCategory::Character));
   }
   SetDeclTypeSpec(currScope().MakeCharacterType(
       std::move(*charInfo_.length), std::move(*charInfo_.kind)));
@@ -7271,9 +7230,23 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   if (!spec) {
     return;
   }
+  const auto &typeParamSpecs{std::get<std::list<parser::TypeParamSpec>>(x.t)};
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (spec->typeSymbol().get<DerivedTypeDetails>().isEnumerationType()) {
+    if (!typeParamSpecs.empty()) { // F2023 7.6.2
+      Say(typeName.source,
+          "Enumeration type '%s' has no type parameters"_err_en_US);
+    }
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(
+        GetDeclTypeSpecCategory(), std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
   bool seenAnyName{false};
-  for (const auto &typeParamSpec :
-      std::get<std::list<parser::TypeParamSpec>>(x.t)) {
+  for (const auto &typeParamSpec : typeParamSpecs) {
     const auto &optKeyword{
         std::get<std::optional<parser::Keyword>>(typeParamSpec.t)};
     std::optional<SourceName> name;
@@ -7303,17 +7276,6 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
-
-  // Enumeration types are a special case of derived types and are handled
-  // differently.
-  if (dtDetails.isEnumerationType()) {
-    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
-    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
-    SetDeclTypeSpec(type);
-    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
-    return;
-  }
-
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -8776,6 +8738,11 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveExtendsType(
       Say(extendsName->source,
           "Derived type '%s' cannot extend itself"_err_en_US);
     } else if (auto dtSpec{ResolveDerivedType(*extendsName)}) {
+      // Reject now so that no parent component of enumeration type is made.
+      if (IsEnumerationType(dtSpec->typeSymbol())) {
+        Say(extendsName->source, "The parent type is not extensible"_err_en_US);
+        return std::nullopt;
+      }
       if (!dtSpec->IsForwardReferenced()) {
         return dtSpec;
       }
@@ -9552,11 +9519,11 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   if (length) {
     return currScope().MakeCharacterType(
         ParamValue{SomeIntExpr{*std::move(length)}, common::TypeParamAttr::Len},
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   } else {
     return currScope().MakeCharacterType(
         ParamValue::Deferred(common::TypeParamAttr::Len),
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   }
 }
 
@@ -9768,12 +9735,14 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto str{
-              evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
-        for (char ch : *str) {
-          if (ch != ' ') {
-            inAsyncIO_ = ch == 'y' || ch == 'Y';
-            break;
+      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *folded)}) {
+        if (auto str{charVal->AsStdString()}) {
+          for (char ch : *str) {
+            if (ch != ' ') {
+              inAsyncIO_ = ch == 'y' || ch == 'Y';
+              break;
+            }
           }
         }
       }
@@ -11536,6 +11505,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11621,7 +11592,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }
