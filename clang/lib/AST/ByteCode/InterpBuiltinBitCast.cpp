@@ -102,12 +102,9 @@ convertToBlockPointer(const Context &Ctx, const StringPointer &SP) {
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
-  // unsigned GlobalIndex = Globals.size();
   auto *Memory = new std::byte[sizeof(Block) + Desc->getAllocSize()];
   auto *B = new (Memory) Block(Ctx.getEvalID(), Desc.get(), Block::None);
   B->invokeCtor();
-
-  new (B->rawData()) GlobalInlineDescriptor{GlobalInitState::Initialized};
 
   Pointer Ptr(B);
   if (CharWidth == 1) {

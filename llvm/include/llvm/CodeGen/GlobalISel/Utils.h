@@ -227,7 +227,9 @@ struct FPValueAndVReg {
 };
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
-/// on a G_FCONSTANT returns its APFloat value and def register.
+/// on a G_FCONSTANT returns its APFloat value and def register. The value uses
+/// \p VReg's FP semantics when it has a known FP type, otherwise the
+/// G_FCONSTANT's unless the chain changed the bit width.
 LLVM_ABI std::optional<FPValueAndVReg>
 getFConstantVRegValWithLookThrough(Register VReg,
                                    const MachineRegisterInfo &MRI,
@@ -350,11 +352,12 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set. When \p OrNegative is true, the value is also considered a power of two
 /// if its negation is a power of two (i.e. its absolute value is a power of
-/// two).
+/// two). When \p OrZero is true, the value is also considered a power of two if
+/// it may be zero (i.e. it is known to be either zero or a power of two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr,
-                       bool OrNegative = false);
+                       bool OrNegative = false, bool OrZero = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);

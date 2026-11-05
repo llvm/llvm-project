@@ -2402,7 +2402,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo) {
 
   SDValue LHS = N->getOperand(2);
   SDValue RHS = N->getOperand(3);
-  PromoteSetCCOperands(LHS, RHS, cast<CondCodeSDNode>(N->getOperand(1))->get());
+  PromoteSetCCOperands(LHS, RHS, N->getOperandCondCode(1));
 
   // The chain (Op#0), CC (#1) and basic block destination (Op#4) are always
   // legal types.
@@ -2525,7 +2525,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo) {
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  PromoteSetCCOperands(LHS, RHS, cast<CondCodeSDNode>(N->getOperand(4))->get());
+  PromoteSetCCOperands(LHS, RHS, N->getOperandCondCode(4));
 
   // The CC (#4) and the possible return values (#2 and #3) have legal types.
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, N->getOperand(2),
@@ -2537,7 +2537,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SETCC(SDNode *N, unsigned OpNo) {
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  PromoteSetCCOperands(LHS, RHS, cast<CondCodeSDNode>(N->getOperand(2))->get());
+  PromoteSetCCOperands(LHS, RHS, N->getOperandCondCode(2));
 
   // The CC (#2) is always legal.
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, N->getOperand(2)), 0);
@@ -5967,7 +5967,7 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
 
 SDValue DAGTypeLegalizer::ExpandIntOp_BR_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(2), NewRHS = N->getOperand(3);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(1);
   IntegerExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
 
   // If ExpandSetCCOperands returned a scalar, we need to compare the result
@@ -5985,7 +5985,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_BR_CC(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandIntOp_SELECT_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(4);
   IntegerExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
 
   // If ExpandSetCCOperands returned a scalar, we need to compare the result
@@ -6003,7 +6003,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_SELECT_CC(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandIntOp_SETCC(SDNode *N) {
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(2);
   IntegerExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
 
   // If ExpandSetCCOperands returned a scalar, use it.

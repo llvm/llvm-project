@@ -1630,7 +1630,6 @@ Step is based on the following formula: (x >= y) ? 1 : 0
   let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the tangent of the input value, Val.
@@ -1881,6 +1880,16 @@ def hlsl_wave_is_first_lane :
   let ReturnType = BoolTy;
   let IsConvergent = 1;
   let Availability = SM6_0;
+}
+
+def hlsl_wave_multi_prefix_bit_and :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitAnd",
+                      "__builtin_hlsl_wave_multi_prefix_bit_and"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
 }
 
 // Returns the count of bits set to 1 on prior lanes.

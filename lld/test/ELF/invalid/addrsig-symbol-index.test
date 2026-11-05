@@ -1,0 +1,25 @@
+## Index 1 (the last symbol) is accepted; index 2 is out of range.
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld --icf=all %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+
+# CHECK: error: {{.*}}.o: out of range symbol index 2 in addrsig section
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .llvm_addrsig
+    Type:    SHT_LLVM_ADDRSIG
+    Flags:   [ SHF_EXCLUDE ]
+    Link:    .symtab
+    Symbols: [ 1, 2 ]
+Symbols:
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
