@@ -95,7 +95,7 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
     Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
+    : RegisterContextCore_arm64(thread, std::move(register_info)) {
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
 
   ProcessElfCore *process =

@@ -12881,8 +12881,6 @@ def err_omp_interchange_permutation_value_range : Error<
 def err_omp_interchange_permutation_value_repeated : Error<
   "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
-def err_omp_instantiation_not_supported
-    : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_adjust_args_invalid_item : Error<

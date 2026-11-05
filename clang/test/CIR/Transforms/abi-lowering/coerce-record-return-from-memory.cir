@@ -46,7 +46,7 @@ module attributes {
 
   // The alloca is big enough for the coerced type, so it is read in place.
   cir.func @returns_pair64() -> !rec_Pair64
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.const #cir.zero : !rec_Pair64
     cir.store %1, %0 : !rec_Pair64, !cir.ptr<!rec_Pair64>
@@ -64,7 +64,7 @@ module attributes {
 
   // The read keeps the alloca's alignment when the coerced type wants more.
   cir.func @returns_pair32() -> !rec_Pair32
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_Pair32>
     %1 = cir.const #cir.zero : !rec_Pair32
     cir.store %1, %0 : !rec_Pair32, !cir.ptr<!rec_Pair32>
@@ -82,7 +82,7 @@ module attributes {
 
   // An over-aligned alloca passes its alignment on to the read.
   cir.func @returns_pair64_align16() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(16) : !cir.ptr<!rec_Pair64>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     cir.return %1 : !rec_Pair64
@@ -96,7 +96,7 @@ module attributes {
 
   // The alloca is written after the load, so the read goes at the load.
   cir.func @returns_before_overwrite() -> !rec_Pair64
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.const #cir.zero : !rec_Pair64
     cir.store %1, %0 : !rec_Pair64, !cir.ptr<!rec_Pair64>
@@ -118,7 +118,7 @@ module attributes {
 
   // The record load has another user, so it stays.
   cir.func @returns_and_stores(%arg0: !cir.ptr<!rec_Pair64>) -> !rec_Pair64
-      attributes { test_classify = #ret_s64_one_arg } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64_one_arg } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     cir.store %1, %arg0 : !rec_Pair64, !cir.ptr<!rec_Pair64>
@@ -135,7 +135,7 @@ module attributes {
 
   // Each return gets its own read at the shared load, which then goes away.
   cir.func @returns_twice(%arg0: !cir.bool) -> !rec_Pair64
-      attributes { test_classify = #ret_s64_one_arg } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64_one_arg } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     cir.brcond %arg0 ^bb1, ^bb2
@@ -159,7 +159,7 @@ module attributes {
 
   // A load that reaches its alloca through a bitcast is still read in place.
   cir.func @returns_through_bitcast() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "buf" align(8) : !cir.ptr<!cir.array<!s64i x 2>>
     %1 = cir.cast bitcast %0 : !cir.ptr<!cir.array<!s64i x 2>> -> !cir.ptr<!rec_Pair64>
     %2 = cir.load %1 : !cir.ptr<!rec_Pair64>, !rec_Pair64
@@ -175,7 +175,7 @@ module attributes {
 
   // The view stays in the alloca's address space.
   cir.func @returns_from_addrspace() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64, target_address_space(5)>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair64, target_address_space(5)>, !rec_Pair64
     cir.return %1 : !rec_Pair64
@@ -189,7 +189,7 @@ module attributes {
 
   // Through an address space cast the load is still read in place.
   cir.func @returns_through_addrspace_cast() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64, target_address_space(5)>
     %1 = cir.cast address_space %0 : !cir.ptr<!rec_Pair64, target_address_space(5)> -> !cir.ptr<!rec_Pair64>
     %2 = cir.load %1 : !cir.ptr<!rec_Pair64>, !rec_Pair64
@@ -205,7 +205,7 @@ module attributes {
 
   // A 16-byte read does not fit the 12-byte record, so its bytes are copied.
   cir.func @returns_vec3() -> !rec_Vec3
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Vec3>
     %1 = cir.load %0 : !cir.ptr<!rec_Vec3>, !rec_Vec3
     cir.return %1 : !rec_Vec3
@@ -221,7 +221,7 @@ module attributes {
 
   // The alloca is written after the load, so the copy goes at the load.
   cir.func @returns_vec3_before_overwrite() -> !rec_Vec3
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_Vec3>
     %1 = cir.load %0 : !cir.ptr<!rec_Vec3>, !rec_Vec3
     %2 = cir.const #cir.zero : !rec_Vec3
@@ -241,7 +241,7 @@ module attributes {
 
   // The coercion slot is raised to the alignment of the storage copied from.
   cir.func @returns_vec3_overaligned() -> !rec_Vec3
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(32) : !cir.ptr<!rec_Vec3>
     %1 = cir.load %0 : !cir.ptr<!rec_Vec3>, !rec_Vec3
     cir.return %1 : !rec_Vec3
@@ -257,7 +257,7 @@ module attributes {
 
   // The bytes are copied from the alloca's address space into a default one.
   cir.func @returns_vec3_from_addrspace() -> !rec_Vec3
-      attributes { test_classify = #ret_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64 } {
     %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_Vec3, target_address_space(5)>
     %1 = cir.load %0 : !cir.ptr<!rec_Vec3, target_address_space(5)>, !rec_Vec3
     cir.return %1 : !rec_Vec3
@@ -273,7 +273,7 @@ module attributes {
 
   // A u24's 4-byte alloc size exceeds the 3-byte record, so it is copied.
   cir.func @returns_three() -> !rec_Three
-      attributes { test_classify = #ret_u24 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_u24 } {
     %0 = cir.alloca "__retval" align(1) : !cir.ptr<!rec_Three>
     %1 = cir.load %0 : !cir.ptr<!rec_Three>, !rec_Three
     cir.return %1 : !rec_Three
@@ -289,7 +289,7 @@ module attributes {
 
   // A _BitInt is not a record, so its value is stored into the slot.
   cir.func @returns_bitint() -> !b33i
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b33i>
     %1 = cir.load %0 : !cir.ptr<!b33i>, !b33i
     cir.return %1 : !b33i
@@ -307,7 +307,7 @@ module attributes {
   // A volatile load stays volatile as a volatile copy into the slot, even
   // from an alloca that could otherwise be read in place.
   cir.func @returns_volatile() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.load volatile %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     cir.return %1 : !rec_Pair64
@@ -323,7 +323,7 @@ module attributes {
 
   // A record read through a non-alloca pointer has its bytes copied.
   cir.func @returns_from_pointer(%arg0: !cir.ptr<!rec_Pair64>) -> !rec_Pair64
-      attributes { test_classify = #ret_s64_one_arg } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64_one_arg } {
     %0 = cir.load %arg0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     cir.return %0 : !rec_Pair64
   }
@@ -337,7 +337,7 @@ module attributes {
 
   // Without an alloca, the slot takes the alignment the record load carries.
   cir.func @returns_vec3_from_aligned_pointer(%arg0: !cir.ptr<!rec_Vec3>) -> !rec_Vec3
-      attributes { test_classify = #ret_twoi64_one_arg } {
+      requires_call_conv_lowering attributes { test_classify = #ret_twoi64_one_arg } {
     %0 = cir.load align(32) %arg0 : !cir.ptr<!rec_Vec3>, !rec_Vec3
     cir.return %0 : !rec_Vec3
   }
@@ -370,7 +370,7 @@ module attributes {
   // An atomic load has to happen as written, and a copy cannot keep it
   // atomic.
   cir.func @returns_atomic() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
+      requires_call_conv_lowering attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
     %1 = cir.load atomic(seq_cst) %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
     // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
