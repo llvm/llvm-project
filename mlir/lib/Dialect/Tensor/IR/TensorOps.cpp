@@ -1422,7 +1422,13 @@ static bool verifySliceValueDisjoint(Value v1, Value v2) {
     return false;
   }
 
-  return *c1 != *c2;
+  if (*c1 == *c2)
+    return false;
+
+  if (static_cast<uint32_t>(*c1) == static_cast<uint32_t>(*c2))
+    return false;
+
+  return true;
 }
 
 static bool verifyRangeDisjoint(OperandRange r1, OperandRange r2) {
@@ -1445,7 +1451,8 @@ static Value foldExtractAfterInsert(ExtractOp extractOp) {
     return getAsOpFoldResult(a) == getAsOpFoldResult(b);
   };
 
-  while (insertOp) {
+  SmallPtrSet<Operation *, 4> visited;
+  while (insertOp && visited.insert(insertOp).second) {
     if (insertOp.getScalar().getType() == extractOp.getType() &&
         llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
       return insertOp.getScalar();

@@ -379,6 +379,42 @@ func.func @extract_after_insert_unknown_indices(%v0: f32, %v1: f32, %i: index, %
 
 // -----
 
+// CHECK-LABEL: func.func @extract_after_insert_disjoint_aliasing_32bit(
+// CHECK: %[[INS0:.*]] = tensor.insert
+// CHECK: %[[INS1:.*]] = tensor.insert %{{.*}} into %[[INS0]]
+// CHECK: %[[EXT:.*]] = tensor.extract %[[INS1]]
+// CHECK: return %[[EXT]] : f32
+func.func @extract_after_insert_disjoint_aliasing_32bit(%t: tensor<8xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 4294967296 : index
+  %v0 = arith.constant 11.0 : f32
+  %v1 = arith.constant 12.0 : f32
+  %ins0 = tensor.insert %v0 into %t[%c0] : tensor<8xf32>
+  %ins1 = tensor.insert %v1 into %ins0[%c1] : tensor<8xf32>
+  %ext = tensor.extract %ins1[%c0] : tensor<8xf32>
+  return %ext : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_after_insert_cycle
+module @extract_after_insert_cycle {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %v = arith.constant 12.0 : f32
+
+  // CHECK: %[[T:.*]] = tensor.insert
+  // CHECK: %[[X:.*]] = tensor.extract %[[T]]
+  // CHECK: func.call @f(%[[X]])
+  %t = tensor.insert %v into %t[%c1] : tensor<8xf32>
+  %x = tensor.extract %t[%c0] : tensor<8xf32>
+
+  func.call @f(%x) : (f32) -> ()
+  func.func private @f(f32)
+}
+
+// -----
+
 // Ensure extract dense resource elements not crash.
 
 // CHECK-LABEL: func @extract_dense_resource_nofold
