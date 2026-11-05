@@ -72,6 +72,11 @@ kernel void test_invalid_store_stride(__global float *ptr) {
     coop_mat_store(ptr, a, ROW_MAJOR, stride); // expected-error {{stride argument for load/store of cooperative matrix must have type 'size_t'}}
 }
 
+void test_invalid_coop_mat_input_for_store(__global float *ptr) {
+  int value = 0;
+  coop_mat_store(ptr, value, ROW_MAJOR, 16); // expected-error {{argument must be a valid cooperative matrix}}
+}
+
 // Invalid value for fourth coop_mat_mulAdd argument.
 kernel void test_invalid_muladd_matrix_operand_type() {
     MatA_t a;
@@ -109,6 +114,13 @@ kernel void test_invalid_muladd_accumulator_use(__global float *ptr) {
     MatB_t b;
     MatA_t c;
     (void)coop_mat_mulAdd(a, b, c); // expected-error {{argument of cooperative matrix must have 'CLK_COOPERATIVE_MATRIX_ACCUMULATOR' use}}
+}
+
+void test_invalid_coop_mat_input_for_muladd(__global float *ptr) {
+  MatA_t a;
+  MatB_t b;
+  int value = 0;
+  (void)coop_mat_mulAdd(a, b, value); // expected-error {{argument must be a valid cooperative matrix}}
 }
 
 // Cooperative matrices with incompatible shapes cannot be used together.
@@ -177,6 +189,7 @@ void test_coop_mat_init_invalid(void) {
   float4 arr4;
   a = coop_mat_init(arr4); // expected-error {{invalid argument of cooperative matrix builtin}}
   a = coop_mat_init((float *)(0x10000000)); // expected-error {{invalid argument of cooperative matrix builtin}}
+  int i = coop_mat_init(10); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
 }
 
 // Test of coop_mat_length.
@@ -189,4 +202,5 @@ void test_coop_mat_length_invalid(void) {
 kernel void test_address_of(void) {
     MatA_t a;
 	(void)(&a); // expected-error {{cannot take the address of a cooperative matrix}}
+    (void)(&a[0]); // expected-error {{subscripted value is not an array, pointer, or vector}}
 }

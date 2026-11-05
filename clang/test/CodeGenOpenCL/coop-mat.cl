@@ -82,16 +82,57 @@ kernel void test_muladd(__global float *ptr) {
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_muladd
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixMulAddKHR
 
-// Binary add (float element) -> __spirv_FAdd
-kernel void test_binary_add(__global float *ptr) {
-    MatA_t a; MatA_t b; MatA_t r;
+// Binary ops -> __spirv_FAdd etc
+typedef int __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_int_t;
+typedef unsigned int __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_uint_t;
+kernel void test_binary_ops(__global float *ptr, __global int *ptr_i, __global unsigned int *ptr_u) {
+    MatA_t a, b, r1, r2, r3, r4;
     a = coop_mat_load(ptr, ROW_MAJOR, 16);
     b = coop_mat_load(ptr, ROW_MAJOR, 16);
-    r = a + b;
-    (void)r;
+    r1 = a + b;
+    (void)r1;
+    r2 = a - b;
+    (void)r2;
+    r3 = a * b;
+    (void)r3;
+    r4 = a / b;
+    (void)r4;
+    MatA_int_t ai, bi, r1i, r2i, r3i, r4i;
+    ai = coop_mat_load(ptr_i, ROW_MAJOR, 16);
+    bi = coop_mat_load(ptr_i, ROW_MAJOR, 16);
+    r1i = ai + bi;
+    (void)r1i;
+    r2i = ai - bi;
+    (void)r2i;
+    r3i = ai * bi;
+    (void)r3i;
+    r4i = ai / bi;
+    (void)r4i;
+    MatA_uint_t au, bu, r1u, r2u, r3u, r4u;
+    au = coop_mat_load(ptr_u, ROW_MAJOR, 16);
+    bu = coop_mat_load(ptr_u, ROW_MAJOR, 16);
+    r1u = au + bu;
+    (void)r1u;
+    r2u = au - bu;
+    (void)r2u;
+    r3u = au * bu;
+    (void)r3u;
+    r4u = au / bu;
+    (void)r4u;
 }
-// CHECK-LABEL: @__clang_ocl_kern_imp_test_binary_add
+// CHECK-LABEL: @__clang_ocl_kern_imp_test_binary_ops
 // CHECK: call {{.*}} @__spirv_FAdd
+// CHECK: call {{.*}} @__spirv_FSub
+// CHECK: call {{.*}} @__spirv_FMul
+// CHECK: call {{.*}} @__spirv_FDiv
+// CHECK: call {{.*}} @__spirv_IAdd
+// CHECK: call {{.*}} @__spirv_ISub
+// CHECK: call {{.*}} @__spirv_IMul
+// CHECK: call {{.*}} @__spirv_SDiv
+// CHECK: call {{.*}} @__spirv_IAdd
+// CHECK: call {{.*}} @__spirv_ISub
+// CHECK: call {{.*}} @__spirv_IMul
+// CHECK: call {{.*}} @__spirv_UDiv
 
 // Scalar multiply -> __spirv_CooperativeMatrixScalarMulKHR
 kernel void test_scalar_mul(__global float *ptr, float s) {
