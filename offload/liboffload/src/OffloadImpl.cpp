@@ -1703,17 +1703,36 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
 
-plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context) {
-  return Context ? Context->PluginCtx.get() : nullptr;
-}
-
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
 
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
   return Device->Device->getRecordReplay();
+}
+
+// Same as olMemAlloc/olMemAllocHost, but takes the plugin allocation kind and
+// also passes on the host pointer the allocation is made for, which is only a
+// hint for diagnostics and profiling that the public API cannot express.
+llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
+                                         ol_device_handle_t Device,
+                                         TargetAllocTy Kind, int64_t Size,
+                                         void *HostPtr) {
+  if (auto Err = Context->requireDevice(Device))
+    return std::move(Err);
+  return Context->PluginCtx->allocate(*Device->Device, Size, HostPtr, Kind,
+                                      /*Alignment=*/0);
+}
+
+// Same as olMemFree, but for a caller that knows the kind of memory it is
+// freeing: the plugin diagnoses a kind that differs from the allocated one,
+// which olMemFree, resolving the kind from the allocation, cannot.
+llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
+                             ol_device_handle_t Device, void *Ptr,
+                             TargetAllocTy Kind) {
+  if (auto Err = Context->requireDevice(Device))
+    return Err;
+  return Context->PluginCtx->deallocate(*Device->Device, Ptr, Kind);
 }
 
 } // namespace tmp

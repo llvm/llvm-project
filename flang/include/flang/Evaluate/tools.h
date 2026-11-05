@@ -651,28 +651,11 @@ common::IfNoLvalue<Expr<SomeType>, FROM> ConvertTo(
 
 // Convert an expression of some known category to a dynamically chosen
 // kind of some category (usually but not necessarily distinct).
-template <TypeCategory TOCAT, typename VALUE> struct ConvertToKindHelper {
-  using Result = std::optional<Expr<SomeKind<TOCAT>>>;
-  using Types = CategoryTypes<TOCAT>;
-  ConvertToKindHelper(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  template <typename T> Result Test(int k) {
-    if (kind == k) {
-      return std::make_optional(
-          AsCategoryExpr(ConvertToType<T>(k, std::move(value))));
-    }
-    return std::nullopt;
-  }
-  int kind;
-  VALUE value;
-};
-
 template <TypeCategory TOCAT, typename VALUE>
 common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
     int kind, VALUE &&x) {
-  auto result{
-      SearchTypes(ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})};
-  CHECK(result.has_value());
-  return *result;
+  CHECK(common::IsValidKindOfIntrinsicType(TOCAT, kind));
+  return AsCategoryExpr(ConvertToType<Type<TOCAT>>(kind, std::move(x)));
 }
 
 // Given a type category CAT, SameKindExprs<CAT, N> contains an array of
@@ -876,28 +859,6 @@ Expr<SomeKind<CAT>> operator/(
   return PromoteAndCombine<Divide, CAT>(std::move(x), std::move(y));
 }
 
-// A utility for use with evaluate::SearchTypes to create generic expressions
-// when an intrinsic type category for (say) a variable is known
-// but the kind parameter value is not.
-template <TypeCategory CAT, template <typename> class TEMPLATE, typename VALUE>
-struct TypeKindVisitor {
-  using Result = std::optional<Expr<SomeType>>;
-  using Types = CategoryTypes<CAT>;
-
-  TypeKindVisitor(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  TypeKindVisitor(int k, const VALUE &x) : kind{k}, value{x} {}
-
-  template <typename T> Result Test(int k) {
-    if (kind == k) {
-      return AsGenericExpr(TEMPLATE<T>{k, std::move(value)});
-    }
-    return std::nullopt;
-  }
-
-  int kind;
-  VALUE value;
-};
-
 // TypedWrapper() wraps a object in an explicitly typed representation
 // (e.g., Designator<> or FunctionRef<>) that has been instantiated on
 // a dynamically chosen Fortran type.
@@ -905,8 +866,10 @@ template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
     typename WRAPPED>
 common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> WrapperHelper(
     int kind, WRAPPED &&x) {
-  return SearchTypes(
-      TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
+  if (!common::IsValidKindOfIntrinsicType(CATEGORY, kind)) {
+    return std::nullopt;
+  }
+  return AsGenericExpr(WRAPPER<Type<CATEGORY>>{kind, std::move(x)});
 }
 
 template <template <typename> typename WRAPPER, typename WRAPPED>

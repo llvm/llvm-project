@@ -52,8 +52,13 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::omp::target::plugin::DeviceImageTy *
 __ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-llvm::omp::target::plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context);
+llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
+                                         ol_device_handle_t Device,
+                                         TargetAllocTy Kind, int64_t Size,
+                                         void *HostPtr);
+llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
+                             ol_device_handle_t Device, void *Ptr,
+                             TargetAllocTy Kind);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -411,10 +416,6 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
-llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
-  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
-}
-
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -423,16 +424,8 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to allocate device memory: device " << DeviceID
-             << " has no context";
-    return nullptr;
-  }
-
-  auto AllocOrErr =
-      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
-                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
+      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -451,16 +444,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
-             << ": device " << DeviceID << " has no context";
-    return OFFLOAD_FAIL;
-  }
-
-  if (auto Err =
-          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
-                                static_cast<TargetAllocTy>(Kind))) {
+  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
+          Context, DeviceHandle, TgtAllocBegin,
+          static_cast<TargetAllocTy>(Kind))) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
              << llvm::toString(std::move(Err));
     return OFFLOAD_FAIL;

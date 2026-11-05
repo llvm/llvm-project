@@ -123,7 +123,7 @@ private:
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+  RISCVABI::ABI TargetABI = RISCVABI::ABI::Unknown;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
   const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
