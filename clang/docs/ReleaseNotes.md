@@ -163,6 +163,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   This makes alignment behavior fully compatible with MSVC and fixes incorrect over‑alignment / under‑alignment of globals.
   `-fclang-abi-compat=22` restores the previous behavior. (#GH196071), (#GH171855)
 
+- On Windows targets using Microsoft C++ ABI, fixed returning a class with
+  a deleted template constructor which should be returned in a register.
+  This affects the ABI of `std::strong_ordering` in some versions of the
+  Microsoft STL. (#GH237188)
+
 ### AST Dumping Potentially Breaking Changes
 
 - The JSON AST dump now includes all fields from `AvailabilityAttr`: `platform`,
