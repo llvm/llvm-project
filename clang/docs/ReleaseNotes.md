@@ -1365,6 +1365,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
   CPU will be selected from `-mcpu`.
 
+- `riscv_rvv_vector_bits(N)` now accepts any `N` up to `VLEN*LMUL` bits for
+  data types. For them, it no longer requires `-mrvv-vector-bits`; without it,
+  `VLEN` is the minimum required by `-march`. A shorter typedef keeps the LMUL
+  of the type it was written against, and converts implicitly to and from that
+  sizeless type (truncating, or leaving the upper lanes undefined).
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected

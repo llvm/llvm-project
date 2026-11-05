@@ -3457,6 +3457,15 @@ def err_attribute_riscv_rvv_bits_unsupported : Error<
 def err_attribute_bad_rvv_vector_size : Error<
   "invalid RVV vector size '%0', expected size is '%1' based on LMUL of type "
   "and '-mrvv-vector-bits'">;
+def err_attribute_bad_rvv_vector_size_too_large : Error<
+  "invalid RVV vector size '%0', must not exceed '%1' based on LMUL of type "
+  "and the minimum VLEN">;
+def err_attribute_bad_rvv_vector_size_not_multiple_of_elem : Error<
+  "invalid RVV vector size '%0', must be a positive multiple of the element "
+  "size '%1'">;
+def err_attribute_bad_rvv_vector_size_not_pow2 : Error<
+  "invalid RVV vector size '%0', the resulting element count '%1' must be a "
+  "power of 2">;
 def err_attribute_invalid_rvv_type : Error<
   "%0 attribute applied to non-RVV type %1">;
 def err_attribute_requires_positive_integer : Error<

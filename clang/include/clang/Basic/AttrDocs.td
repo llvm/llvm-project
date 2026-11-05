@@ -3353,15 +3353,24 @@ can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
 
 The attribute can be attached to a single RVV vector (such as `vint8m1_t`).
-The attribute will be rejected unless
-`N==(__riscv_v_fixed_vlen*LMUL)`, the implementation defined feature macro that
-is enabled under the `-mrvv-vector-bits` flag. `__riscv_v_fixed_vlen` can
-only be a power of 2 between 64 and 65536.
 
-For types where LMUL!=1, `__riscv_v_fixed_vlen` needs to be scaled by the LMUL
-of the type before passing to the attribute.
+For data types, `N` is a size in bits. It must be a positive multiple of the
+element size, `N` divided by the element size must be a power of 2, and `N`
+must not exceed `VLEN*LMUL`.
 
-For `vbool*_t` types, `__riscv_v_fixed_vlen` needs to be divided by the
+A data type with `N` smaller than `VLEN*LMUL` uses only the low lanes of the
+register group:
+
+- It keeps the LMUL of the type it was written against. For example,
+  `vint32m1_t` with `riscv_rvv_vector_bits(64)` occupies one vector register
+  and is a different type from `vint32mf2_t` with `riscv_rvv_vector_bits(64)`.
+- It converts implicitly to and from its own sizeless type only. Converting to
+  the sizeless type leaves the upper lanes undefined; converting back keeps the
+  first `N` bits. When such a value is passed to an RVV intrinsic, the
+  programmer must keep `vl` (and any `vrgather` index) within those lanes.
+
+For `vbool*_t` types, the attribute will be rejected unless
+`-mrvv-vector-bits` is given and `N` is `__riscv_v_fixed_vlen` divided by the
 number from the type name. For example, `vbool8_t` needs to use
 `__riscv_v_fixed_vlen` / 8. If the resulting value is not a multiple of 8,
 the type is not supported for that value of `__riscv_v_fixed_vlen`.

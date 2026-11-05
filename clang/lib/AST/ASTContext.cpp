@@ -10839,6 +10839,16 @@ static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   return VScale->first * MinElts * EltSize;
 }
 
+/// Return log2 of the LMUL of a sizeless RVV data type, as
+/// getRVVFixedLengthDataLMulLog2() does for a vector kind.
+static int getRVVBuiltinLMulLog2(ASTContext &Context, const BuiltinType *Ty) {
+  ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
+  uint64_t SizeAtVScale1 =
+      Info.EC.getKnownMinValue() * Context.getTypeSize(Info.ElementType);
+  return int(llvm::Log2_64(SizeAtVScale1)) -
+         int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock));
+}
+
 bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
                                        QualType SecondType) {
   assert(
@@ -10862,11 +10872,20 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
                  VT->getRVVFixedLengthMaskLanes() == getRVVTypeSize(*this, BT);
         }
         if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
-            VT->getVectorKind() == VectorKind::Generic)
-          return FirstType->isRVVVLSBuiltinType() &&
-                 getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
-                 hasSameType(VT->getElementType(),
-                             getBuiltinVectorTypeInfo(BT).ElementType);
+            VT->getVectorKind() == VectorKind::Generic) {
+          bool IsRVVFixed = isRVVFixedLengthDataVectorKind(VT->getVectorKind());
+          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          // A riscv_rvv_vector_bits typedef may be shorter than the sizeless
+          // type, but must have the same LMUL.
+          bool SizeOk =
+              IsRVVFixed ? getTypeSize(SecondType) <= getRVVTypeSize(*this, BT)
+                         : getTypeSize(SecondType) == getRVVTypeSize(*this, BT);
+          bool LMulOk = !IsRVVFixed || Info.ElementType == BoolTy ||
+                        getRVVFixedLengthDataLMulLog2(VT->getVectorKind()) ==
+                            getRVVBuiltinLMulLog2(*this, BT);
+          return FirstType->isRVVVLSBuiltinType() && SizeOk && LMulOk &&
+                 hasSameType(VT->getElementType(), Info.ElementType);
+        }
       }
     }
     return false;
