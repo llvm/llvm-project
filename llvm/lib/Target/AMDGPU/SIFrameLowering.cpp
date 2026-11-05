@@ -58,7 +58,7 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
+static void encodeDwarfRegisterLocation(int64_t DwarfReg, raw_ostream &OS) {
   assert(DwarfReg >= 0);
   if (DwarfReg < 32) {
     OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
@@ -111,15 +111,16 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
+  unsigned DwarfStackPtrRegEnc = static_cast<unsigned>(DwarfStackPtrReg);
   MCCFIInstruction CFIInst =
       ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
-                       nullptr, DwarfStackPtrReg, 0,
+                       nullptr, DwarfStackPtrRegEnc, 0,
                        dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave, SMLoc())
                  : MCCFIInstruction::createDefCfaRegister(nullptr,
-                                                          DwarfStackPtrReg));
+                                                          DwarfStackPtrRegEnc));
   buildCFI(MBB, MBBI, DL, CFIInst, Flags);
 }
 
@@ -319,7 +320,7 @@ class PrologEpilogSGPRSpillBuilder {
   const DebugLoc &DL;
   Register FrameReg;
   ArrayRef<int16_t> SplitParts;
-  unsigned NumSubRegs;
+  size_t NumSubRegs;
   unsigned EltSize = 4;
   bool IsFramePtrPrologSpill;
   bool NeedsFrameMoves;
@@ -353,16 +354,18 @@ class PrologEpilogSGPRSpillBuilder {
 
     initLiveUnits(LiveUnits, TRI, FuncInfo, MF, MBB, MI, /*IsProlog*/ true);
 
-    MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
+    MCRegister TmpVGPR = findScratchNonCalleeSaveRegister(
         MRI, LiveUnits, AMDGPU::VGPR_32RegClass);
     if (!TmpVGPR)
       report_fatal_error("failed to find free scratch register");
 
     auto BuildCFI = [&](Register Reg) {
+      unsigned DwarfReg =
+          static_cast<unsigned>(MCRI->getDwarfRegNum(Reg, false));
       TFI->buildCFI(MBB, MI, DL,
-                    MCCFIInstruction::createOffset(
-                        nullptr, MCRI->getDwarfRegNum(Reg, false),
-                        MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+                    MCCFIInstruction::createOffset(nullptr, DwarfReg,
+                                                   MFI.getObjectOffset(FI) *
+                                                       ST.getWavefrontSize()));
     };
     MCRegister CFISuperReg = getCFISuperReg();
     for (unsigned I = 0, DwordOff = 0; I < NumSubRegs; ++I) {
@@ -430,7 +433,7 @@ class PrologEpilogSGPRSpillBuilder {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
     initLiveUnits(LiveUnits, TRI, FuncInfo, MF, MBB, MI, /*IsProlog*/ false);
-    MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
+    MCRegister TmpVGPR = findScratchNonCalleeSaveRegister(
         MRI, LiveUnits, AMDGPU::VGPR_32RegClass);
     if (!TmpVGPR)
       report_fatal_error("failed to find free scratch register");
@@ -582,7 +585,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     unsigned Offset =
         MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-    unsigned EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
+    uint64_t EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
     BuildMI(MBB, I, DL, LoadDwordX2, FlatScrInit)
         .addReg(FlatScrInit)
         .addImm(EncodedOffset) // offset
@@ -781,9 +784,10 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                             SMLoc(),
                                             "CFA is 0 in private_wave aspace"));
     // Unwinding halts when the return address (PC) is undefined.
+    unsigned DwarfPCReg =
+        static_cast<unsigned>(TRI->getDwarfRegNum(AMDGPU::PC_REG, false));
     buildCFI(MBB, I, DL,
-             MCCFIInstruction::createUndefined(
-                 nullptr, TRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
+             MCCFIInstruction::createUndefined(nullptr, DwarfPCReg));
   }
 
   Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
@@ -855,7 +859,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
-  unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
+  unsigned Offset = static_cast<unsigned>(FrameInfo.getStackSize() *
+                                          getScratchScaleFactor(ST));
   if (!mayReserveScratchForCWSR(MF)) {
     if (hasFP(MF)) {
       Register FPReg = MFI->getFrameOffsetReg();
@@ -878,12 +883,12 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     assert(hasFP(MF));
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
-    unsigned VGPRSize = llvm::alignTo(
+    unsigned VGPRSize = static_cast<unsigned>(llvm::alignTo(
         (ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) -
          AMDGPU::IsaInfo::getVGPRAllocGranule(ST,
                                               MFI->getDynamicVGPRBlockSize())) *
             4,
-        FrameInfo.getMaxAlign());
+        FrameInfo.getMaxAlign()));
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
     BuildMI(MBB, I, DL, TII->get(AMDGPU::GET_STACK_BASE), FPReg);
@@ -960,7 +965,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
         16, Align(4));
     unsigned Offset = Fn.getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-    unsigned EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
+    uint64_t EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
     BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
       .addReg(Rsrc01)
       .addImm(EncodedOffset) // offset
@@ -1116,7 +1121,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
       return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
-    unsigned DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+    unsigned DwarfReg = static_cast<unsigned>(MCRI->getDwarfRegNum(Reg, false));
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
   };
@@ -1215,10 +1220,12 @@ void SIFrameLowering::emitCSRSpillStores(
                            VGPR, FI, FrameReg);
           if (NeedsFrameMoves) {
             // We spill the entire VGPR, so we can get away with just cfi_offset
+            unsigned DwarfReg =
+                static_cast<unsigned>(MCRI->getDwarfRegNum(VGPR, false));
             buildCFI(MBB, MBBI, DL,
-                     MCCFIInstruction::createOffset(
-                         nullptr, MCRI->getDwarfRegNum(VGPR, false),
-                         MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+                     MCCFIInstruction::createOffset(nullptr, DwarfReg,
+                                                    MFI.getObjectOffset(FI) *
+                                                        ST.getWavefrontSize()));
           }
         }
       };
@@ -1285,13 +1292,13 @@ void SIFrameLowering::emitCSRSpillStores(
   FuncInfo->getAllScratchSGPRCopyDstRegs(ScratchSGPRs);
   if (!ScratchSGPRs.empty()) {
     for (MachineBasicBlock &MBB : MF) {
-      for (MCPhysReg Reg : ScratchSGPRs)
+      for (Register Reg : ScratchSGPRs)
         MBB.addLiveIn(Reg);
 
       MBB.sortUniqueLiveIns();
     }
     if (!LiveUnits.empty()) {
-      for (MCPhysReg Reg : ScratchSGPRs)
+      for (Register Reg : ScratchSGPRs)
         LiveUnits.addReg(Reg);
     }
   }
@@ -1487,7 +1494,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (HasFP) {
-    const unsigned Alignment = MFI.getMaxAlign().value();
+    const unsigned Alignment = static_cast<unsigned>(MFI.getMaxAlign().value());
 
     RoundedSize += Alignment;
     if (LiveUnits.empty()) {
@@ -1595,10 +1602,10 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI = MBB.getFirstTerminator();
   }
 
-  uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = FuncInfo->isStackRealigned()
-                             ? NumBytes + MFI.getMaxAlign().value()
-                             : NumBytes;
+  int64_t NumBytes = MFI.getStackSize();
+  int64_t RoundedSize = FuncInfo->isStackRealigned()
+                            ? NumBytes + MFI.getMaxAlign().value()
+                            : NumBytes;
   const Register StackPtrReg = FuncInfo->getStackPtrOffsetReg();
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
@@ -2526,11 +2533,13 @@ MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  unsigned MaskReg = MCRI.getDwarfRegNum(
-      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
+  unsigned MaskReg = static_cast<unsigned>(MCRI.getDwarfRegNum(
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false));
+  unsigned DwarfReg = static_cast<unsigned>(MCRI.getDwarfRegNum(Reg, false));
+  unsigned DwarfRegCopy =
+      static_cast<unsigned>(MCRI.getDwarfRegNum(RegCopy, false));
   auto CFIInst = MCCFIInstruction::createLLVMVectorRegisterMask(
-      nullptr, MCRI.getDwarfRegNum(Reg, false),
-      MCRI.getDwarfRegNum(RegCopy, false), VGPRLaneBitSize, MaskReg,
+      nullptr, DwarfReg, DwarfRegCopy, VGPRLaneBitSize, MaskReg,
       ST.getWavefrontSize());
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
@@ -2542,8 +2551,8 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
-  int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
-  int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int64_t DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfSGPR != -1 && DwarfVGPR != -1);
   assert(Lane != -1 && "Expected a lane to be present");
 
@@ -2551,8 +2560,8 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   // a VGPR.
   MCCFIInstruction::VectorRegisterWithLane VR{unsigned(DwarfVGPR),
                                               unsigned(Lane), VGPRLaneBitSize};
-  auto CFIInst =
-      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {VR});
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), {VR});
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
@@ -2566,7 +2575,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
-  int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   assert(DwarfSGPR != -1);
 
   // Build a CFI instruction that represents a SGPR spilled to multiple lanes of
@@ -2574,15 +2583,15 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 
   SmallVector<MCCFIInstruction::VectorRegisterWithLane> VGPRs;
   for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
-    int DwarfVGPR = MCRI.getDwarfRegNum(Spill.VGPR, false);
+    int64_t DwarfVGPR = MCRI.getDwarfRegNum(Spill.VGPR, false);
     assert(DwarfVGPR != -1);
     assert(Spill.hasLane() && "Expected a lane to be present");
     VGPRs.push_back(
         {unsigned(DwarfVGPR), unsigned(Spill.Lane), VGPRLaneBitSize});
   }
 
-  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR,
-                                                             std::move(VGPRs));
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), std::move(VGPRs));
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
@@ -2591,9 +2600,10 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVMEMSpill(
     const DebugLoc &DL, MCRegister SGPR, int64_t Offset) const {
   MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
-  return buildCFI(MBB, MBBI, DL,
-                  llvm::MCCFIInstruction::createOffset(
-                      nullptr, MCRI.getDwarfRegNum(SGPR, false), Offset));
+  unsigned DwarfSGPR = static_cast<unsigned>(MCRI.getDwarfRegNum(SGPR, false));
+  return buildCFI(
+      MBB, MBBI, DL,
+      llvm::MCCFIInstruction::createOffset(nullptr, DwarfSGPR, Offset));
 }
 
 MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
@@ -2603,11 +2613,11 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
+  int DwarfVGPR = static_cast<int>(MCRI.getDwarfRegNum(VGPR, false));
   assert(DwarfVGPR != -1);
 
-  unsigned MaskReg = MCRI.getDwarfRegNum(
-      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
+  unsigned MaskReg = static_cast<unsigned>(MCRI.getDwarfRegNum(
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false));
   auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
       nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),
       Offset);
@@ -2647,7 +2657,7 @@ void SIFrameLowering::buildCFIForSRegToSRegSpill(
   decomposeDwarfRegs(TRI, CopyReg, DwarfCopyRegs);
 
   if (DwarfRegs.size() == DwarfCopyRegs.size()) {
-    for (unsigned I = 0, E = DwarfRegs.size(); I < E; ++I) {
+    for (size_t I = 0, E = DwarfRegs.size(); I < E; ++I) {
       auto CFI = MCCFIInstruction::createRegister(nullptr, DwarfRegs[I],
                                                   DwarfCopyRegs[I]);
       buildCFI(MBB, MBBI, DL, CFI);
@@ -2663,7 +2673,7 @@ void SIFrameLowering::buildCFIForSRegToSRegSpill(
     return;
   }
 
-  for (unsigned I = 0, E = DwarfRegs.size(); I < E; ++I) {
+  for (size_t I = 0, E = DwarfRegs.size(); I < E; ++I) {
     auto CFI = MCCFIInstruction::createUndefined(nullptr, DwarfRegs[I]);
     buildCFI(MBB, MBBI, DL, CFI);
   }
@@ -2676,16 +2686,16 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVCCHalfCopy(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   assert(isWave64VCCHalf(MF.getSubtarget<GCNSubtarget>(), VCCHalf));
 
-  int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
-  int DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int64_t DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
   assert(DwarfSGPR != -1 && DwarfVCC != -1);
 
   // Describe the copy as one 32-bit lane of VCC_64: lane 0 is vcc_lo and lane 1
   // is vcc_hi.
   MCCFIInstruction::VectorRegisterWithLane Half{
       unsigned(DwarfVCC), VCCHalf == AMDGPU::VCC_HI ? 1u : 0u, SGPRBitSize};
-  auto CFIInst =
-      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {Half});
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), {Half});
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
@@ -2694,7 +2704,7 @@ MachineInstr *SIFrameLowering::buildCFIForSameValue(
     const DebugLoc &DL, MCRegister Reg) const {
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
-  int DwarfReg = MCRI.getDwarfRegNum(Reg, /*isEH=*/false);
+  int DwarfReg = static_cast<int>(MCRI.getDwarfRegNum(Reg, /*isEH=*/false));
   auto CFIInst = MCCFIInstruction::createSameValue(nullptr, DwarfReg);
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
