@@ -2141,7 +2141,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.alloc.shared.* to the anyptr alloc intrinsic.
+      // Upgrade tcgen05.alloc.shared.* to anyptr alloc intrinsic.
       IID = shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
