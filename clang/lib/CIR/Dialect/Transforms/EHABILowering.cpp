@@ -74,6 +74,9 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
   funcOp.setPrivate();
+  // This pass runs after CallConvLowering and builds the declaration in its
+  // target ABI form already.
+  funcOp.setRequiresCallConvLowering(false);
   return funcOp;
 }
 
@@ -249,6 +252,9 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
       cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
   funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  // This pass runs after CallConvLowering and builds the function in its
+  // target ABI form already.
+  funcOp.setRequiresCallConvLowering(false);
 
   mlir::Block *entryBlock = funcOp.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);

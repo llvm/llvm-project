@@ -91,9 +91,8 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 namespace llvm {
 namespace bolt {
 
-static bool
-hasAArch64ExclusiveMemop(BinaryFunction &Function,
-                         DenseSet<const BinaryBasicBlock *> &BBToSkip) {
+static bool hasExclusiveMemop(BinaryFunction &Function,
+                              DenseSet<const BinaryBasicBlock *> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
@@ -117,7 +116,7 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
 
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst) && IsLoad) {
+      if (BC.MIB->isExclusiveLoad(Inst) && IsLoad) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has two exclusive loads. Ignoring the function.\n";
@@ -125,7 +124,7 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         return true;
       }
 
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst))
+      if (BC.MIB->isExclusiveLoad(Inst))
         IsLoad = true;
 
       if (IsLoad && BBToSkip.insert(BB).second) {
@@ -136,7 +135,7 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         }
       }
 
-      if (!IsLoad && BC.MIB->isAArch64ExclusiveStore(Inst)) {
+      if (!IsLoad && BC.MIB->isExclusiveStore(Inst)) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has exclusive store without corresponding load. Ignoring "
@@ -145,8 +144,8 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         return true;
       }
 
-      if (IsLoad && (BC.MIB->isAArch64ExclusiveStore(Inst) ||
-                     BC.MIB->isAArch64ExclusiveClear(Inst)))
+      if (IsLoad &&
+          (BC.MIB->isExclusiveStore(Inst) || BC.MIB->isExclusiveClear(Inst)))
         IsLoad = false;
     }
 
@@ -372,7 +371,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
     return;
 
   DenseSet<const BinaryBasicBlock *> BBToSkip;
-  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
+  if ((BC.isAArch64() || BC.isRISCV()) && hasExclusiveMemop(Function, BBToSkip))
     return;
 
   SplitWorklistTy SplitWorklist;

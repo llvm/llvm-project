@@ -40,6 +40,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:config",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
         "//mlir:CallOpInterfaces",
