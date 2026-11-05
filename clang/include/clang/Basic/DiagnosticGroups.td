@@ -1786,8 +1786,10 @@ def ObjCStrictPotentiallyDirectSelector :
 
 // Inline ASM warnings.
 def ASMOperandWidths : DiagGroup<"asm-operand-widths">;
+def ASMUnusedOperand : DiagGroup<"unused-asm-operand">;
 def ASM : DiagGroup<"asm", [
-    ASMOperandWidths
+    ASMOperandWidths,
+    ASMUnusedOperand
   ]>;
 
 // Linker warnings.
