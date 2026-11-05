@@ -1789,6 +1789,9 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::riscv32:
   case Triple::riscv64:
     return EM_RISCV;
+  case Triple::sparc:
+  case Triple::sparcel:
+    return EM_SPARC;
   case Triple::sparcv9:
     return EM_SPARCV9;
   case Triple::systemz:
