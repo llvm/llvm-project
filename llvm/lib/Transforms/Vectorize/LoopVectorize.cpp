@@ -5174,10 +5174,10 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
 
   FixedScalableVFPair MaxFactors =
       EpilogueTfCM.computeMaxVF(EpilogueVectorizationForceVF, /*UserIC*/ 1);
-  // TODO: Validate EVF against MaxFactors.
+  // TODO: Validate the epilogue VF against MaxFactors.
   // That validation is ignored for now because computeMaxVF returns 0 for
   // max safe scalable VF when UserVF is not scalable, and at that case having
-  // scalable EVF is considered unsafe which is inaacurate.
+  // scalable epilogue VF is considered unsafe which is inaccurate.
   if (!MaxFactors || !EpilogueTfCM.foldTailByMasking()) {
     // Cases that should not be vectorized or tail-folded.
     reportVectorizationInfo("This case of epilogue loop can't be tail-folded",
@@ -5209,27 +5209,17 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   EpilogueTfCM.collectNonVectorizedAndSetWideningDecisions(
       EpilogueVectorizationForceVF);
 
-  size_t NumPlansBefore = VPlans.size();
+  [[maybe_unused]] size_t NumPlansBefore = VPlans.size();
   buildVPlans(*VPlan1, EpilogueVectorizationForceVF,
               EpilogueVectorizationForceVF, EpilogueTfCM);
 
   // Check that a Vplan is successfully built:
-  if (VPlans.size() == NumPlansBefore) {
-    reportVectorizationInfo("Failed to build tail-folded epilogue VPlan",
-                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    return false;
-  }
+  assert(VPlans.size() > NumPlansBefore + 1 &&
+         "Expected to build a single tail-folded VPlan");
   VPlan &Plan = *VPlans.back();
-  if (Plan.getSingleVF() != EpilogueVectorizationForceVF ||
-      !Plan.hasTailFolded()) {
-    reportVectorizationInfo(
-        "Failed to build a valid tail-folded epilogue VPlan",
-        "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    assert(VPlans.size() == (NumPlansBefore + 1) &&
-           "Expected a single VPlan constructed, found more");
-    VPlans.pop_back();
-    return false;
-  }
+  assert(Plan.getSingleVF() == EpilogueVectorizationForceVF &&
+         Plan.hasTailFolded() &&
+         "Expected to build a valid tail-folded VPlan with epilogue VF");
 
   if (!cost(Plan, EpilogueVectorizationForceVF, /*RU=*/nullptr, EpilogueTfCM)
            .isValid()) {
