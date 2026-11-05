@@ -5911,7 +5911,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
   }
 
-  if (NumElts != 1 && !ISD::canUndefLanePoisonVectorResult(Opcode)) {
+  if (NumElts != 1 && DAG.isSafeToSpeculativelyExecute(Opcode)) {
     // Operation doesn't trap so just widen as normal.
     SDValue InOp1 = GetWidenedVector(N->getOperand(0));
     SDValue InOp2 = GetWidenedVector(N->getOperand(1));

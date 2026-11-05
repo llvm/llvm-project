@@ -1696,13 +1696,6 @@ inline bool isMinMaxOpcode(unsigned Opcode) {
          Opcode == ISD::UMAX;
 }
 
-/// Returns true if \p Opcode is a lane-wise operation where poison in an
-/// operand lane may make the whole vector result poison.
-inline bool canUndefLanePoisonVectorResult(unsigned Opcode) {
-  return Opcode == ISD::SDIV || Opcode == ISD::SREM || Opcode == ISD::UDIV ||
-         Opcode == ISD::UREM;
-}
-
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
