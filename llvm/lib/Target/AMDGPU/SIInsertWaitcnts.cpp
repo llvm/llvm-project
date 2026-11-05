@@ -243,45 +243,39 @@ public:
 
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
-      WaitEventMaskForInstUpToGFX9[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstWithoutVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
               HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS |
               HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
+          // DS_CNT
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
+          // EXP_CNT
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
               HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE};
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE};
 
-  // GFX10 and GFX11 have a separate store counter (VScnt).
+  // Hardware with VScnt has non-empty STORE_CNT wait events.
   static constexpr const HWEvents
-      WaitEventMaskForInstGFX10GFX11[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstWithVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
               HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+          // DS_CNT
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
+          // EXP_CNT
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
               HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          // STORE_CNT
           HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
           HWEvents::NONE};
 
 public:
@@ -297,8 +291,8 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
-    return ST.hasVscnt() ? WaitEventMaskForInstGFX10GFX11[T]
-                         : WaitEventMaskForInstUpToGFX9[T];
+    return ST.hasVscnt() ? WaitEventMaskForInstWithVscnt[T]
+                         : WaitEventMaskForInstWithoutVscnt[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
