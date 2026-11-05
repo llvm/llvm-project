@@ -359,3 +359,14 @@ define i1 @umax_ule_nonnull(ptr %x, ptr %y) {
   ret i1 %nonnull
 }
 
+; Integer vector comparisons must not enter the pointer-only fold.
+define <2 x i1> @int_vec_zero_poison(<2 x i32> %x, <2 x i32> %y, <2 x i1> %c) {
+; CHECK-LABEL: @int_vec_zero_poison(
+; CHECK-NEXT:    [[MAX:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[MAX]], <i32 0, i32 poison>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %max = select <2 x i1> %c, <2 x i32> %x, <2 x i32> %y
+  %r = icmp eq <2 x i32> %max, <i32 0, i32 poison>
+  ret <2 x i1> %r
+}

@@ -4502,7 +4502,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   // umax(X, Y) != null -> (X != null) || (Y != null).
   case Instruction::Select: {
     CmpInst::Predicate Pred = I.getPredicate();
-    if (!ICmpInst::isEquality(Pred))
+    if (!ICmpInst::isEquality(Pred) || !RHSC->getType()->isPtrOrPtrVectorTy())
       break;
 
     // Require zero address bits, the minimum unsigned pointer value.
