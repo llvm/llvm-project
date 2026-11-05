@@ -2851,17 +2851,10 @@ static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
                        uuid.GetAsString());
 }
 
-void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
-                                              const FileSpec &file_spec,
-                                              const UUID &uuid,
-                                              lldb::addr_t header_addr,
-                                              size_t size_to_read) {
-  // If no UUID, the cache_key name may not be unique.  Don't cache.
-  if (!uuid.IsValid())
-    return;
-
-  const std::string cache_key = get_memory_binary_cache_key(file_spec, uuid);
-
+bool Process::LoadHeaderBytesFromCache(DataFileCache &cache,
+                                       llvm::StringRef cache_key,
+                                       lldb::addr_t header_addr,
+                                       size_t size_to_read) {
   // Read the memory bytes out of the DataFileCache, if it is there.
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
       cache.GetCachedData(cache_key);
@@ -2870,29 +2863,20 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
     // The ObjectFile will read the bytes from there at this
     // same stop.  ReadMemory strips non-addressable bits before
     // looking in the memory cache, so do the same here.
+    // Only add the requested bytes; anything past them may be
+    // stale contents of the next segment.
     lldb::addr_t cache_addr = FixAnyAddress(header_addr);
     WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
-        mem_buffer_up->getBufferStart(), mem_buffer_up->getBufferSize());
+        mem_buffer_up->getBufferStart(), size_to_read);
     AddCacheData(cache_addr, databuf_sp);
-    return;
+    return true;
   }
 
   // SetCachedData won't overwrite an existing entry, so remove
   // one that is too small to use.
   if (mem_buffer_up)
     cache.RemoveCacheFile(cache_key);
-
-  // The headerbytes are not yet in the DataFileCache.
-  // Read the bytes and cache them.
-  ProcessAddress header_address(header_addr);
-  std::vector<uint8_t> data(size_to_read);
-  Status error;
-  if (ReadMemory(header_address, data.data(), size_to_read, error) !=
-          size_to_read ||
-      !error.Success())
-    return;
-
-  cache.SetCachedData(cache_key, data);
+  return false;
 }
 
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
@@ -2901,14 +2885,34 @@ llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
   // Don't cache the headerbytes when corefile debugging; reading
   // from the corefile is just as fast.  The cached bytes are handed
   // to the ObjectFile through the process memory cache, so they are
-  // of no use when that is disabled.
-  if (IsLiveDebugSession() && !GetDisableMemoryCache()) {
-    DataFileCache *cache = Module::GetIndexCache(/*memory_module=*/true);
-    if (cache)
-      GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,
-                                      size_to_read);
+  // of no use when that is disabled.  If no UUID, the cache_key name
+  // may not be unique.
+  DataFileCache *cache = nullptr;
+  if (uuid.IsValid() && IsLiveDebugSession() && !GetDisableMemoryCache())
+    cache = Module::GetIndexCache(/*memory_module=*/true);
+  if (!cache)
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  const std::string cache_key = get_memory_binary_cache_key(file_spec, uuid);
+  if (LoadHeaderBytesFromCache(*cache, cache_key, header_addr, size_to_read))
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  // Only cache bytes that produced a module with the expected UUID,
+  // so a bad read isn't handed to every later debug session.
+  if (module_sp_or_err && (*module_sp_or_err)->GetUUID() == uuid) {
+    // These bytes are in the memory cache now, so this doesn't
+    // read from the inferior again.
+    std::vector<uint8_t> data(size_to_read);
+    Status error;
+    if (ReadMemory(header_addr, data.data(), size_to_read, error) ==
+            size_to_read &&
+        error.Success())
+      cache->SetCachedData(cache_key, data);
   }
-  return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+  return module_sp_or_err;
 }
 
 bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
