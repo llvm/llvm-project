@@ -1218,3 +1218,71 @@ define <4 x i64> @pdep_v4i64_minsize(<4 x i64> %val, <4 x i64> %mask) nounwind m
   %res = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> %val, <4 x i64> %mask)
   ret <4 x i64> %res
 }
+
+define i32 @pdep_scalar_i32(i32 %val, i32 %mask) nounwind {
+; SLOW-ZNVER-LABEL: pdep_scalar_i32:
+; SLOW-ZNVER:       # %bb.0:
+; SLOW-ZNVER-NEXT:    pdepl %esi, %edi, %eax
+; SLOW-ZNVER-NEXT:    retq
+;
+; SLOW-BDVER4-LABEL: pdep_scalar_i32:
+; SLOW-BDVER4:       # %bb.0:
+; SLOW-BDVER4-NEXT:    pdepl %esi, %edi, %eax
+; SLOW-BDVER4-NEXT:    retq
+;
+; FAST-LABEL: pdep_scalar_i32:
+; FAST:       # %bb.0:
+; FAST-NEXT:    pdepl %esi, %edi, %eax
+; FAST-NEXT:    retq
+  %res = call i32 @llvm.pdep.i32(i32 %val, i32 %mask)
+  ret i32 %res
+}
+
+define i64 @pdep_scalar_i64(i64 %val, i64 %mask) nounwind {
+; SLOW-ZNVER-LABEL: pdep_scalar_i64:
+; SLOW-ZNVER:       # %bb.0:
+; SLOW-ZNVER-NEXT:    pdepq %rsi, %rdi, %rax
+; SLOW-ZNVER-NEXT:    retq
+;
+; SLOW-BDVER4-LABEL: pdep_scalar_i64:
+; SLOW-BDVER4:       # %bb.0:
+; SLOW-BDVER4-NEXT:    pdepq %rsi, %rdi, %rax
+; SLOW-BDVER4-NEXT:    retq
+;
+; FAST-LABEL: pdep_scalar_i64:
+; FAST:       # %bb.0:
+; FAST-NEXT:    pdepq %rsi, %rdi, %rax
+; FAST-NEXT:    retq
+  %res = call i64 @llvm.pdep.i64(i64 %val, i64 %mask)
+  ret i64 %res
+}
+
+define i32 @pdep_single_bit_i32_minsize(i32 %mask, i32 %n) nounwind minsize {
+; SLOW-ZNVER-LABEL: pdep_single_bit_i32_minsize:
+; SLOW-ZNVER:       # %bb.0:
+; SLOW-ZNVER-NEXT:    pushq $1
+; SLOW-ZNVER-NEXT:    popq %rax
+; SLOW-ZNVER-NEXT:    shlxl %esi, %eax, %eax
+; SLOW-ZNVER-NEXT:    pdepl %edi, %eax, %eax
+; SLOW-ZNVER-NEXT:    retq
+;
+; SLOW-BDVER4-LABEL: pdep_single_bit_i32_minsize:
+; SLOW-BDVER4:       # %bb.0:
+; SLOW-BDVER4-NEXT:    pushq $1
+; SLOW-BDVER4-NEXT:    popq %rax
+; SLOW-BDVER4-NEXT:    shlxl %esi, %eax, %eax
+; SLOW-BDVER4-NEXT:    pdepl %edi, %eax, %eax
+; SLOW-BDVER4-NEXT:    retq
+;
+; FAST-LABEL: pdep_single_bit_i32_minsize:
+; FAST:       # %bb.0:
+; FAST-NEXT:    pushq $1
+; FAST-NEXT:    popq %rax
+; FAST-NEXT:    shlxl %esi, %eax, %eax
+; FAST-NEXT:    pdepl %edi, %eax, %eax
+; FAST-NEXT:    retq
+  %n.mask = and i32 %n, 31
+  %bit = shl nuw i32 1, %n.mask
+  %res = call i32 @llvm.pdep.i32(i32 %bit, i32 %mask)
+  ret i32 %res
+}
