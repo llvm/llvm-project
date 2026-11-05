@@ -11,14 +11,13 @@ define i1 @scan_byte(ptr %p) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl 4095(%rdi,%rax), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    orb %dl, %sil
-; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    cmpb $1, %sil
+; CHECK-NEXT:    leaq 1(%rax), %rax
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:  .LBB0_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -62,14 +61,13 @@ define i1 @scan_word(ptr %p) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq 32760(%rdi,%rax), %rcx
 ; CHECK-NEXT:    testq %rcx, %rcx
-; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    jne .LBB1_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    orb %dl, %sil
-; CHECK-NEXT:    addq $8, %rax
-; CHECK-NEXT:    cmpb $1, %sil
+; CHECK-NEXT:    leaq 8(%rax), %rax
 ; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:  .LBB1_3: # %exit
 ; CHECK-NEXT:    testq %rcx, %rcx
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -112,14 +110,14 @@ define i1 @scan_and(ptr %p) {
 ; CHECK-NEXT:  .LBB2_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl 4095(%rdi,%rax), %ecx
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    sete %dl
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    testb %dl, %sil
-; CHECK-NEXT:    jne .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    je .LBB2_1
+; CHECK-NEXT:  .LBB2_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -162,14 +160,14 @@ define i1 @scan_swapped(ptr %p) {
 ; CHECK-NEXT:  .LBB3_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl 4095(%rdi,%rax), %ecx
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    sete %dl
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    je .LBB3_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    testb %dl, %sil
-; CHECK-NEXT:    jne .LBB3_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    je .LBB3_1
+; CHECK-NEXT:  .LBB3_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -213,14 +211,13 @@ define i1 @scan_phi(ptr %p) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl 4095(%rdi,%rax), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    jne .LBB4_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    orb %dl, %sil
-; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    cmpb $1, %sil
+; CHECK-NEXT:    leaq 1(%rax), %rax
 ; CHECK-NEXT:    jne .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:  .LBB4_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -317,14 +314,13 @@ define i1 @scan_step_two(ptr %p) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl 4094(%rdi,%rax), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    jne .LBB6_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    orb %dl, %sil
-; CHECK-NEXT:    addq $2, %rax
-; CHECK-NEXT:    cmpb $1, %sil
+; CHECK-NEXT:    leaq 2(%rax), %rax
 ; CHECK-NEXT:    jne .LBB6_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:  .LBB6_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -368,14 +364,13 @@ define i1 @scan_minsize(ptr %p) minsize optsize {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movb 4095(%rdi,%rax), %cl
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    jne .LBB7_3
+; CHECK-NEXT:  # %bb.2: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    orb %dl, %sil
-; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    cmpb $1, %sil
+; CHECK-NEXT:    leaq 1(%rax), %rax
 ; CHECK-NEXT:    jne .LBB7_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:  .LBB7_3: # %exit
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
