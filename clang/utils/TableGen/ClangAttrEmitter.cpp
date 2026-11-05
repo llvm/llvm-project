@@ -442,6 +442,10 @@ namespace {
       : Argument(Arg, Attr)
     {}
 
+    std::string getIsOmitted() const override {
+      return "get" + getUpperName().str() + "().empty()";
+    }
+
     void writeAccessors(raw_ostream &OS) const override {
       OS << "  llvm::StringRef get" << getUpperName() << "() const {\n";
       OS << "    return llvm::StringRef(" << getLowerName() << ", "

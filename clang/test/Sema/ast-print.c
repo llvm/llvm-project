@@ -83,7 +83,7 @@ void initializers(void) {
 enum EnumWithAttributes { // expected-warning {{'EnumWithAttributes' is deprecated}}
   // CHECK-NEXT: EnumWithAttributesFoo __attribute__((deprecated(""))),
   EnumWithAttributesFoo __attribute__((deprecated)),
-  // CHECK-NEXT: EnumWithAttributesBar __attribute__((unavailable(""))) = 50
+  // CHECK-NEXT: EnumWithAttributesBar __attribute__((unavailable)) = 50
   EnumWithAttributesBar __attribute__((unavailable)) = 50
   // CHECK-NEXT: } *EnumWithAttributesPtr;
 } __attribute__((deprecated)) *EnumWithAttributesPtr; // expected-note {{'EnumWithAttributes' has been explicitly marked deprecated here}}
