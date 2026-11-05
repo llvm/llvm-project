@@ -3,6 +3,8 @@
 ; typed placeholder: starting from a bare poison, every such chain shared one
 ; uniqued i32 value, so the second struct got the first one's type. With
 ; SPV_KHR_poison_freeze the placeholders are OpPoisonKHR instead of OpUndef.
+; A PHI arm is rebuilt in its incoming block, once even when a switch lists
+; that block twice.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
@@ -21,6 +23,11 @@
 ; CHECK: OpSelect %[[#Pair]]
 ; CHECK: OpCompositeInsert %[[#Frexp]] %[[#]] %[[#FrexpInit]] 0
 ; CHECK: OpSelect %[[#Frexp]]
+; CHECK: OpFunction %[[#Pair]]
+; CHECK: OpCompositeInsert %[[#Pair]] %[[#]] %[[#]] 0
+; CHECK: %[[#Arm:]] = OpCompositeInsert %[[#Pair]] %[[#]] %[[#]] 1
+; CHECK-NOT: OpCompositeInsert
+; CHECK: OpPhi %[[#Pair]] %[[#Arm]] %[[#]] %[[#]] %[[#]]{{$}}
 
 define spir_kernel void @k(ptr addrspace(1) %out, float %a, i1 %c) {
   %sc = call { float, float } @llvm.sincos.f32(float %a)
@@ -33,4 +40,18 @@ define spir_kernel void @k(ptr addrspace(1) %out, float %a, i1 %c) {
   %p = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4
   store i32 %e, ptr addrspace(1) %p
   ret void
+}
+
+define { float, float } @phi(i32 %x, float %a) {
+entry:
+  %sc = call { float, float } @llvm.sincos.f32(float %a)
+  switch i32 %x, label %join [
+    i32 1, label %join
+    i32 2, label %other
+  ]
+other:
+  br label %join
+join:
+  %p = phi { float, float } [ %sc, %entry ], [ %sc, %entry ], [ zeroinitializer, %other ]
+  ret { float, float } %p
 }
