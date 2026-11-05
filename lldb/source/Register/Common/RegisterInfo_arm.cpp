@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+
+#include "Register/Arch/lldb-arm-register-enums.h"
 #include <cstddef>
 #include <vector>
 
@@ -39,7 +41,7 @@ using namespace lldb_private;
                       DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex,           \
                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
-                                  dbg_##reg##i },                              \
+                                  dbg_##reg##i##_arm_with_tls },                              \
                                   NULL, NULL, NULL,
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +   \
@@ -75,8 +77,8 @@ GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch) {
 
 // Number of register sets provided by this context.
 enum {
-  k_num_gpr_registers = gpr_cpsr - gpr_r0 + 1,
-  k_num_fpr_registers = fpu_q15 - fpu_s0 + 1,
+  k_num_gpr_registers = gpr_cpsr_arm - gpr_r0_arm + 1,
+  k_num_fpr_registers = fpu_q15_arm - fpu_s0_arm + 1,
   k_num_tls_registers = 1,
   k_num_register_sets_without_tls = 2,
   k_num_register_sets_with_tls = 3
@@ -84,15 +86,15 @@ enum {
 
 // arm general purpose registers.
 static const uint32_t g_gpr_regnums_arm[] = {
-    gpr_r0,   gpr_r1,
-    gpr_r2,   gpr_r3,
-    gpr_r4,   gpr_r5,
-    gpr_r6,   gpr_r7,
-    gpr_r8,   gpr_r9,
-    gpr_r10,  gpr_r11,
-    gpr_r12,  gpr_sp,
-    gpr_lr,   gpr_pc,
-    gpr_cpsr, LLDB_INVALID_REGNUM // register sets need to end with this flag
+    gpr_r0_arm,   gpr_r1_arm,
+    gpr_r2_arm,   gpr_r3_arm,
+    gpr_r4_arm,   gpr_r5_arm,
+    gpr_r6_arm,   gpr_r7_arm,
+    gpr_r8_arm,   gpr_r9_arm,
+    gpr_r10_arm,  gpr_r11_arm,
+    gpr_r12_arm,  gpr_sp_arm,
+    gpr_lr_arm,   gpr_pc_arm,
+    gpr_cpsr_arm, LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_gpr_regnums_arm / sizeof g_gpr_regnums_arm[0]) - 1) ==
                   k_num_gpr_registers,
@@ -100,47 +102,47 @@ static_assert(((sizeof g_gpr_regnums_arm / sizeof g_gpr_regnums_arm[0]) - 1) ==
 
 // arm floating point registers.
 static const uint32_t g_fpu_regnums_arm[] = {
-    fpu_s0,    fpu_s1,
-    fpu_s2,    fpu_s3,
-    fpu_s4,    fpu_s5,
-    fpu_s6,    fpu_s7,
-    fpu_s8,    fpu_s9,
-    fpu_s10,   fpu_s11,
-    fpu_s12,   fpu_s13,
-    fpu_s14,   fpu_s15,
-    fpu_s16,   fpu_s17,
-    fpu_s18,   fpu_s19,
-    fpu_s20,   fpu_s21,
-    fpu_s22,   fpu_s23,
-    fpu_s24,   fpu_s25,
-    fpu_s26,   fpu_s27,
-    fpu_s28,   fpu_s29,
-    fpu_s30,   fpu_s31,
-    fpu_fpscr, fpu_d0,
-    fpu_d1,    fpu_d2,
-    fpu_d3,    fpu_d4,
-    fpu_d5,    fpu_d6,
-    fpu_d7,    fpu_d8,
-    fpu_d9,    fpu_d10,
-    fpu_d11,   fpu_d12,
-    fpu_d13,   fpu_d14,
-    fpu_d15,   fpu_d16,
-    fpu_d17,   fpu_d18,
-    fpu_d19,   fpu_d20,
-    fpu_d21,   fpu_d22,
-    fpu_d23,   fpu_d24,
-    fpu_d25,   fpu_d26,
-    fpu_d27,   fpu_d28,
-    fpu_d29,   fpu_d30,
-    fpu_d31,   fpu_q0,
-    fpu_q1,    fpu_q2,
-    fpu_q3,    fpu_q4,
-    fpu_q5,    fpu_q6,
-    fpu_q7,    fpu_q8,
-    fpu_q9,    fpu_q10,
-    fpu_q11,   fpu_q12,
-    fpu_q13,   fpu_q14,
-    fpu_q15,   LLDB_INVALID_REGNUM // register sets need to end with this flag
+    fpu_s0_arm,    fpu_s1_arm,
+    fpu_s2_arm,    fpu_s3_arm,
+    fpu_s4_arm,    fpu_s5_arm,
+    fpu_s6_arm,    fpu_s7_arm,
+    fpu_s8_arm,    fpu_s9_arm,
+    fpu_s10_arm,   fpu_s11_arm,
+    fpu_s12_arm,   fpu_s13_arm,
+    fpu_s14_arm,   fpu_s15_arm,
+    fpu_s16_arm,   fpu_s17_arm,
+    fpu_s18_arm,   fpu_s19_arm,
+    fpu_s20_arm,   fpu_s21_arm,
+    fpu_s22_arm,   fpu_s23_arm,
+    fpu_s24_arm,   fpu_s25_arm,
+    fpu_s26_arm,   fpu_s27_arm,
+    fpu_s28_arm,   fpu_s29_arm,
+    fpu_s30_arm,   fpu_s31_arm,
+    fpu_fpscr_arm, fpu_d0_arm,
+    fpu_d1_arm,    fpu_d2_arm,
+    fpu_d3_arm,    fpu_d4_arm,
+    fpu_d5_arm,    fpu_d6_arm,
+    fpu_d7_arm,    fpu_d8_arm,
+    fpu_d9_arm,    fpu_d10_arm,
+    fpu_d11_arm,   fpu_d12_arm,
+    fpu_d13_arm,   fpu_d14_arm,
+    fpu_d15_arm,   fpu_d16_arm,
+    fpu_d17_arm,   fpu_d18_arm,
+    fpu_d19_arm,   fpu_d20_arm,
+    fpu_d21_arm,   fpu_d22_arm,
+    fpu_d23_arm,   fpu_d24_arm,
+    fpu_d25_arm,   fpu_d26_arm,
+    fpu_d27_arm,   fpu_d28_arm,
+    fpu_d29_arm,   fpu_d30_arm,
+    fpu_d31_arm,   fpu_q0_arm,
+    fpu_q1_arm,    fpu_q2_arm,
+    fpu_q3_arm,    fpu_q4_arm,
+    fpu_q5_arm,    fpu_q6_arm,
+    fpu_q7_arm,    fpu_q8_arm,
+    fpu_q9_arm,    fpu_q10_arm,
+    fpu_q11_arm,   fpu_q12_arm,
+    fpu_q13_arm,   fpu_q14_arm,
+    fpu_q15_arm,   LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_fpu_regnums_arm / sizeof g_fpu_regnums_arm[0]) - 1) ==
                   k_num_fpr_registers,
@@ -148,7 +150,7 @@ static_assert(((sizeof g_fpu_regnums_arm / sizeof g_fpu_regnums_arm[0]) - 1) ==
 
 // arm thread local storage registers.
 static const uint32_t g_tls_regnums_arm[] = {
-    tls_tpidruro,
+    tls_tpidruro_arm,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_tls_regnums_arm / sizeof g_tls_regnums_arm[0]) - 1) ==
@@ -190,11 +192,11 @@ size_t RegisterInfo_arm::GetRegisterSetCount() const {
 
 size_t RegisterInfo_arm::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
-  if (reg_index <= gpr_cpsr)
+  if (reg_index <= gpr_cpsr_arm)
     return GPRegSet;
-  if (reg_index <= fpu_q15)
+  if (reg_index <= fpu_q15_arm)
     return FPRegSet;
-  if (reg_index == tls_tpidruro && m_has_tls_reg)
+  if (reg_index == tls_tpidruro_arm && m_has_tls_reg)
     return TLSRegSet;
   return LLDB_INVALID_REGNUM;
 }
