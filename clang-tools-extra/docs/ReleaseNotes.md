@@ -274,6 +274,11 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
 
+- Improved {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by matching
+  {option}`IgnoreHeaders` patterns containing `/` against header paths on
+  Windows.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
