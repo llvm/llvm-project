@@ -18,7 +18,7 @@ using namespace lldb_private;
 RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
     Thread &thread, std::unique_ptr<RegisterInfo_arm> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_arm(thread, std::move(register_info)) {
+    : RegisterContextCore_arm(thread, std::move(register_info)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);

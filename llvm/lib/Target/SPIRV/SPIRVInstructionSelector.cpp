@@ -322,6 +322,9 @@ private:
   bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
 
+  bool selectWaveMultiPrefixBitAnd(Register ResVReg, SPIRVTypeInst ResType,
+                                   MachineInstr &I) const;
+
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
 
@@ -4037,6 +4040,42 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectWaveMultiPrefixBitAnd(
+    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  if (!STI.canUseExtension(
+          SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned) &&
+      !STI.canUseExtension(
+          SPIRV::Extension::SPV_NV_shader_subgroup_partitioned))
+    return diagnoseUnsupported(
+        I, "WaveMultiPrefixBitAnd requires SPV_EXT_shader_subgroup_partitioned "
+           "or SPV_NV_shader_subgroup_partitioned");
+
+  assert(I.getNumOperands() == 7);
+  SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  SPIRVTypeInst MaskTy = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
+  Register Mask = MRI->createVirtualRegister(GR.getRegClass(MaskTy));
+  GR.assignSPIRVTypeToVReg(MaskTy, Mask, MRI->getMF());
+  auto MaskMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                         TII.get(SPIRV::OpCompositeConstruct))
+                     .addDef(Mask)
+                     .addUse(GR.getSPIRVTypeID(MaskTy));
+  for (unsigned Op = 3; Op != 7; ++Op)
+    MaskMIB.addUse(I.getOperand(Op).getReg());
+  MaskMIB.constrainAllUses(TII, TRI, RBI);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpGroupNonUniformBitwiseAnd))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
+                                     !STI.isShader()))
+      .addImm(SPIRV::GroupOperation::PartitionedExclusiveScanNV)
+      .addUse(I.getOperand(2).getReg())
+      .addUse(Mask)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
@@ -5815,6 +5854,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                             SPIRV::OpGroupNonUniformBroadcastFirst);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
+  case Intrinsic::spv_subgroup_multi_prefix_bit_and:
+    return selectWaveMultiPrefixBitAnd(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {

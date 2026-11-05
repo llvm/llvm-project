@@ -1078,7 +1078,8 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelValueTracking *VT, bool OrNegative) {
+                                  GISelValueTracking *VT, bool OrNegative,
+                                  bool OrZero) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1087,8 +1088,9 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   const MachineInstr &MI = *DefSrcReg->MI;
   const LLT Ty = MRI.getType(Reg);
 
-  auto IsPow2 = [OrNegative](const APInt &V) {
-    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2());
+  auto IsPow2 = [OrNegative, OrZero](const APInt &V) {
+    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2()) ||
+           (OrZero && V.isZero());
   };
 
   switch (MI.getOpcode()) {
@@ -1099,11 +1101,19 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   }
   case TargetOpcode::G_SHL: {
     // A left-shift of a constant one will have exactly one bit set because
-    // shifting the bit off the end is undefined.
+    // shifting the bit off the end is undefined. Otherwise, shifting a power
+    // of two (or zero) yields a power of two, or zero, since the bit moves or
+    // is shifted off the end. That is sufficient with OrZero set, otherwise
+    // the result must also be known never to be zero.
 
     // TODO: Constant splat
     if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
+        return true;
+    }
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT, OrNegative,
+                                 OrZero))
         return true;
     }
 
@@ -1114,6 +1124,25 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
       if (ConstLHS->isSignMask())
         return true;
     }
+    // As with G_SHL, the set bit is either moved or shifted off the end.
+    // OrNegative is not propagated because a logical right shift fills with
+    // zeros and thus does not preserve negated powers of two.
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT,
+                                 /*OrNegative=*/false, OrZero))
+        return true;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_TRUNC: {
+    // Truncation preserves the lower bits of the operand, so the set bit either
+    // survives or is cut off, yielding zero.
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT,
+                                 /*OrNegative=*/false, OrZero))
+        return true;
+    }
 
     break;
   }
@@ -1121,7 +1150,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative, OrZero))
         return false;
 
     return true;
