@@ -298,9 +298,9 @@ define void @no_coalesce() #0 {
 ; CHECK-NEXT:  .LBB12_1: # %crash
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    sd a0, 0(zero)
-; CHECK-NEXT:    sw a1, 8(zero)
 ; CHECK-NEXT:    sw a1, 0(zero)
 ; CHECK-NEXT:    sw a1, 4(zero)
+; CHECK-NEXT:    sw a1, 8(zero)
 ; CHECK-NEXT:  .LBB12_2: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bnez a1, .LBB12_1

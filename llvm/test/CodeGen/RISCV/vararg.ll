@@ -833,18 +833,18 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a5, 36(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a6, 40(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a7, 44(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 20
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a1, 20(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a2, 24(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a3, 28(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a4, 32(sp)
+; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 20
+; ILP32-ILP32F-FPELIM-NEXT:    addi a1, sp, 27
+; ILP32-ILP32F-FPELIM-NEXT:    andi a1, a1, -8
+; ILP32-ILP32F-FPELIM-NEXT:    addi a2, sp, 35
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a0, 12(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 27
-; ILP32-ILP32F-FPELIM-NEXT:    addi a1, sp, 35
-; ILP32-ILP32F-FPELIM-NEXT:    andi a2, a0, -8
-; ILP32-ILP32F-FPELIM-NEXT:    sw a1, 12(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    lw a0, 0(a2)
-; ILP32-ILP32F-FPELIM-NEXT:    lw a1, 4(a2)
+; ILP32-ILP32F-FPELIM-NEXT:    sw a2, 12(sp)
+; ILP32-ILP32F-FPELIM-NEXT:    lw a0, 0(a1)
+; ILP32-ILP32F-FPELIM-NEXT:    lw a1, 4(a1)
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, 48
 ; ILP32-ILP32F-FPELIM-NEXT:    ret
 ;
@@ -857,18 +857,18 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a5, 36(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a6, 40(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a7, 44(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 20
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a1, 20(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a2, 24(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a3, 28(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a4, 32(sp)
+; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 20
+; ILP32-ILP32F-WITHFP-NEXT:    addi a1, sp, 27
+; ILP32-ILP32F-WITHFP-NEXT:    andi a1, a1, -8
+; ILP32-ILP32F-WITHFP-NEXT:    addi a2, sp, 35
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a0, 4(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 27
-; ILP32-ILP32F-WITHFP-NEXT:    addi a1, sp, 35
-; ILP32-ILP32F-WITHFP-NEXT:    andi a2, a0, -8
-; ILP32-ILP32F-WITHFP-NEXT:    sw a1, 4(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    lw a0, 0(a2)
-; ILP32-ILP32F-WITHFP-NEXT:    lw a1, 4(a2)
+; ILP32-ILP32F-WITHFP-NEXT:    sw a2, 4(sp)
+; ILP32-ILP32F-WITHFP-NEXT:    lw a0, 0(a1)
+; ILP32-ILP32F-WITHFP-NEXT:    lw a1, 4(a1)
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    addi sp, sp, 48
@@ -880,18 +880,18 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a7, 44(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 20
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a1, 20(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a2, 24(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a3, 28(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a4, 32(sp)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 20
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a1, sp, 27
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    andi a1, a1, -8
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a2, sp, 35
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a0, 12(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 27
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a1, sp, 35
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    andi a2, a0, -8
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a1, 12(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a0, 0(a2)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a1, 4(a2)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a2, 12(sp)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a0, 0(a1)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a1, 4(a1)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, 48
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    ret
 ;
@@ -899,18 +899,18 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    addi sp, sp, -28
 ; ILP32E-FPELIM-NEXT:    sw a5, 24(sp)
-; ILP32E-FPELIM-NEXT:    addi a0, sp, 8
 ; ILP32E-FPELIM-NEXT:    sw a1, 8(sp)
 ; ILP32E-FPELIM-NEXT:    sw a2, 12(sp)
 ; ILP32E-FPELIM-NEXT:    sw a3, 16(sp)
 ; ILP32E-FPELIM-NEXT:    sw a4, 20(sp)
+; ILP32E-FPELIM-NEXT:    addi a0, sp, 8
+; ILP32E-FPELIM-NEXT:    addi a1, sp, 15
+; ILP32E-FPELIM-NEXT:    andi a1, a1, -8
+; ILP32E-FPELIM-NEXT:    addi a2, sp, 23
 ; ILP32E-FPELIM-NEXT:    sw a0, 0(sp)
-; ILP32E-FPELIM-NEXT:    addi a0, sp, 15
-; ILP32E-FPELIM-NEXT:    addi a1, sp, 23
-; ILP32E-FPELIM-NEXT:    andi a2, a0, -8
-; ILP32E-FPELIM-NEXT:    sw a1, 0(sp)
-; ILP32E-FPELIM-NEXT:    lw a0, 0(a2)
-; ILP32E-FPELIM-NEXT:    lw a1, 4(a2)
+; ILP32E-FPELIM-NEXT:    sw a2, 0(sp)
+; ILP32E-FPELIM-NEXT:    lw a0, 0(a1)
+; ILP32E-FPELIM-NEXT:    lw a1, 4(a1)
 ; ILP32E-FPELIM-NEXT:    addi sp, sp, 28
 ; ILP32E-FPELIM-NEXT:    ret
 ;
@@ -921,18 +921,18 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; ILP32E-WITHFP-NEXT:    sw s0, 4(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 12
 ; ILP32E-WITHFP-NEXT:    sw a5, 32(sp)
-; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
 ; ILP32E-WITHFP-NEXT:    sw a1, 16(sp)
 ; ILP32E-WITHFP-NEXT:    sw a2, 20(sp)
 ; ILP32E-WITHFP-NEXT:    sw a3, 24(sp)
 ; ILP32E-WITHFP-NEXT:    sw a4, 28(sp)
+; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi a1, sp, 23
+; ILP32E-WITHFP-NEXT:    andi a1, a1, -8
+; ILP32E-WITHFP-NEXT:    addi a2, sp, 31
 ; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
-; ILP32E-WITHFP-NEXT:    addi a0, sp, 23
-; ILP32E-WITHFP-NEXT:    addi a1, sp, 31
-; ILP32E-WITHFP-NEXT:    andi a2, a0, -8
-; ILP32E-WITHFP-NEXT:    sw a1, 0(sp)
-; ILP32E-WITHFP-NEXT:    lw a0, 0(a2)
-; ILP32E-WITHFP-NEXT:    lw a1, 4(a2)
+; ILP32E-WITHFP-NEXT:    sw a2, 0(sp)
+; ILP32E-WITHFP-NEXT:    lw a0, 0(a1)
+; ILP32E-WITHFP-NEXT:    lw a1, 4(a1)
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    addi sp, sp, 36
@@ -1335,20 +1335,20 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; ILP32-ILP32F-FPELIM:       # %bb.0:
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, -32
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a7, 28(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 12
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a3, 12(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a4, 16(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a5, 20(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a6, 24(sp)
+; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 12
+; ILP32-ILP32F-FPELIM-NEXT:    addi a3, sp, 19
+; ILP32-ILP32F-FPELIM-NEXT:    andi a3, a3, -8
+; ILP32-ILP32F-FPELIM-NEXT:    addi a4, sp, 27
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a0, 4(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 19
-; ILP32-ILP32F-FPELIM-NEXT:    addi a3, sp, 27
-; ILP32-ILP32F-FPELIM-NEXT:    andi a0, a0, -8
-; ILP32-ILP32F-FPELIM-NEXT:    sw a3, 4(sp)
-; ILP32-ILP32F-FPELIM-NEXT:    lw a3, 0(a0)
-; ILP32-ILP32F-FPELIM-NEXT:    lw a4, 4(a0)
-; ILP32-ILP32F-FPELIM-NEXT:    add a0, a1, a3
-; ILP32-ILP32F-FPELIM-NEXT:    add a2, a2, a4
+; ILP32-ILP32F-FPELIM-NEXT:    sw a4, 4(sp)
+; ILP32-ILP32F-FPELIM-NEXT:    lw a0, 0(a3)
+; ILP32-ILP32F-FPELIM-NEXT:    lw a3, 4(a3)
+; ILP32-ILP32F-FPELIM-NEXT:    add a0, a1, a0
+; ILP32-ILP32F-FPELIM-NEXT:    add a2, a2, a3
 ; ILP32-ILP32F-FPELIM-NEXT:    sltu a1, a0, a1
 ; ILP32-ILP32F-FPELIM-NEXT:    add a1, a2, a1
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, 32
@@ -1361,20 +1361,20 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
 ; ILP32-ILP32F-WITHFP-NEXT:    addi s0, sp, 24
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a7, 44(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 28
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a3, 28(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a4, 32(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a5, 36(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a6, 40(sp)
+; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 28
+; ILP32-ILP32F-WITHFP-NEXT:    addi a3, sp, 35
+; ILP32-ILP32F-WITHFP-NEXT:    andi a3, a3, -8
+; ILP32-ILP32F-WITHFP-NEXT:    addi a4, sp, 43
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a0, 12(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    addi a0, sp, 35
-; ILP32-ILP32F-WITHFP-NEXT:    addi a3, sp, 43
-; ILP32-ILP32F-WITHFP-NEXT:    andi a0, a0, -8
-; ILP32-ILP32F-WITHFP-NEXT:    sw a3, 12(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    lw a3, 0(a0)
-; ILP32-ILP32F-WITHFP-NEXT:    lw a4, 4(a0)
-; ILP32-ILP32F-WITHFP-NEXT:    add a0, a1, a3
-; ILP32-ILP32F-WITHFP-NEXT:    add a2, a2, a4
+; ILP32-ILP32F-WITHFP-NEXT:    sw a4, 12(sp)
+; ILP32-ILP32F-WITHFP-NEXT:    lw a0, 0(a3)
+; ILP32-ILP32F-WITHFP-NEXT:    lw a3, 4(a3)
+; ILP32-ILP32F-WITHFP-NEXT:    add a0, a1, a0
+; ILP32-ILP32F-WITHFP-NEXT:    add a2, a2, a3
 ; ILP32-ILP32F-WITHFP-NEXT:    sltu a1, a0, a1
 ; ILP32-ILP32F-WITHFP-NEXT:    add a1, a2, a1
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Folded Reload
@@ -1386,20 +1386,20 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM:       # %bb.0:
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, -32
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a7, 28(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 12
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a3, 12(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a4, 16(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a5, 20(sp)
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a6, 24(sp)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 12
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a3, sp, 19
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    andi a3, a3, -8
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a4, sp, 27
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a0, 4(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, sp, 19
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a3, sp, 27
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    andi a0, a0, -8
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a3, 4(sp)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a3, 0(a0)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a4, 4(a0)
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    add a0, a1, a3
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    add a2, a2, a4
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw a4, 4(sp)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a0, 0(a3)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw a3, 4(a3)
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    add a0, a1, a0
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    add a2, a2, a3
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sltu a1, a0, a1
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    add a1, a2, a1
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, 32
@@ -1408,19 +1408,19 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; ILP32E-FPELIM-LABEL: va3:
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    addi sp, sp, -20
-; ILP32E-FPELIM-NEXT:    addi a0, sp, 8
 ; ILP32E-FPELIM-NEXT:    sw a3, 8(sp)
 ; ILP32E-FPELIM-NEXT:    sw a4, 12(sp)
 ; ILP32E-FPELIM-NEXT:    sw a5, 16(sp)
+; ILP32E-FPELIM-NEXT:    addi a0, sp, 8
+; ILP32E-FPELIM-NEXT:    addi a3, sp, 15
+; ILP32E-FPELIM-NEXT:    andi a3, a3, -8
+; ILP32E-FPELIM-NEXT:    addi a4, sp, 23
 ; ILP32E-FPELIM-NEXT:    sw a0, 0(sp)
-; ILP32E-FPELIM-NEXT:    addi a0, sp, 15
-; ILP32E-FPELIM-NEXT:    addi a3, sp, 23
-; ILP32E-FPELIM-NEXT:    andi a0, a0, -8
-; ILP32E-FPELIM-NEXT:    sw a3, 0(sp)
-; ILP32E-FPELIM-NEXT:    lw a3, 0(a0)
-; ILP32E-FPELIM-NEXT:    lw a4, 4(a0)
-; ILP32E-FPELIM-NEXT:    add a0, a1, a3
-; ILP32E-FPELIM-NEXT:    add a2, a2, a4
+; ILP32E-FPELIM-NEXT:    sw a4, 0(sp)
+; ILP32E-FPELIM-NEXT:    lw a0, 0(a3)
+; ILP32E-FPELIM-NEXT:    lw a3, 4(a3)
+; ILP32E-FPELIM-NEXT:    add a0, a1, a0
+; ILP32E-FPELIM-NEXT:    add a2, a2, a3
 ; ILP32E-FPELIM-NEXT:    sltu a1, a0, a1
 ; ILP32E-FPELIM-NEXT:    add a1, a2, a1
 ; ILP32E-FPELIM-NEXT:    addi sp, sp, 20
@@ -1432,19 +1432,19 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; ILP32E-WITHFP-NEXT:    sw ra, 8(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    sw s0, 4(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 12
-; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
 ; ILP32E-WITHFP-NEXT:    sw a3, 16(sp)
 ; ILP32E-WITHFP-NEXT:    sw a4, 20(sp)
 ; ILP32E-WITHFP-NEXT:    sw a5, 24(sp)
+; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi a3, sp, 23
+; ILP32E-WITHFP-NEXT:    andi a3, a3, -8
+; ILP32E-WITHFP-NEXT:    addi a4, sp, 31
 ; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
-; ILP32E-WITHFP-NEXT:    addi a0, sp, 23
-; ILP32E-WITHFP-NEXT:    addi a3, sp, 31
-; ILP32E-WITHFP-NEXT:    andi a0, a0, -8
-; ILP32E-WITHFP-NEXT:    sw a3, 0(sp)
-; ILP32E-WITHFP-NEXT:    lw a3, 0(a0)
-; ILP32E-WITHFP-NEXT:    lw a4, 4(a0)
-; ILP32E-WITHFP-NEXT:    add a0, a1, a3
-; ILP32E-WITHFP-NEXT:    add a2, a2, a4
+; ILP32E-WITHFP-NEXT:    sw a4, 0(sp)
+; ILP32E-WITHFP-NEXT:    lw a0, 0(a3)
+; ILP32E-WITHFP-NEXT:    lw a3, 4(a3)
+; ILP32E-WITHFP-NEXT:    add a0, a1, a0
+; ILP32E-WITHFP-NEXT:    add a2, a2, a3
 ; ILP32E-WITHFP-NEXT:    sltu a1, a0, a1
 ; ILP32E-WITHFP-NEXT:    add a1, a2, a1
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload

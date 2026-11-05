@@ -592,10 +592,10 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
 ; GISEL-NEXT:    v_readlane_b32 s2, v0, 31
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s33
+; GISEL-NEXT:    s_add_co_u32 s32, s0, s2
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    scratch_store_b32 off, v8, s0 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
-; GISEL-NEXT:    s_add_co_u32 s32, s0, s2
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s0 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    s_alloc_vgpr 0
