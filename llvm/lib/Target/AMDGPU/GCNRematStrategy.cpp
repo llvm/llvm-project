@@ -17,8 +17,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -30,34 +28,18 @@ using namespace llvm;
 using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
-GCNRematStrategy::RematRegions::RematRegions(MachineFunction &MF,
-                                             ArrayRef<RegionBoundaries> Regions,
-                                             LiveIntervals &LIS)
-    : Bounds(Regions), Frequencies(Regions.size(), 0), LIS(LIS),
-      MRI(MF.getRegInfo()) {
-  // Compute live-ins and live-outs for each region.
-  LiveIns.reserve(Regions.size());
-  LiveOuts.reserve(Regions.size());
-  for (const auto &[Begin, End] : Regions) {
-    MachineBasicBlock::const_iterator FirstMI =
-        skipDebugInstructionsForward(Begin, End);
-    assert(FirstMI != End && "empty regions are not allowed");
-    SlotIndex LiveInSlot = LIS.getInstructionIndex(*FirstMI).getBaseIndex();
-    LiveIns.push_back(getLiveRegs(LiveInSlot, LIS, MRI));
-
-    MachineBasicBlock::const_iterator LastMI =
-        skipDebugInstructionsBackward(std::prev(End), Begin);
-    SlotIndex LiveOutSlot = LIS.getInstructionIndex(*LastMI).getDeadSlot();
-    LiveOuts.push_back(getLiveRegs(LiveOutSlot, LIS, MRI));
-  }
+GCNRematStrategy::RematRegions::RematRegions(
+    ArrayRef<RegionBoundaries> Regions,
+    MutableArrayRef<GCNRPTracker::LiveRegSet> LiveIns,
+    MutableArrayRef<GCNRPTracker::LiveRegSet> LiveOuts, LiveIntervals &LIS,
+    const MachineBlockFrequencyInfo &MBFI, const MachineRegisterInfo &MRI)
+    : Bounds(Regions), LiveIns(LiveIns), LiveOuts(LiveOuts),
+      Frequencies(Regions.size(), 0), LIS(LIS), MRI(MRI) {
+  assert(LiveIns.size() == Regions.size());
+  assert(LiveOuts.size() == Regions.size());
 
   // Derive frequency of each region. Frequencies are scaled down if they are
   // high to avoid overflow/underflow when combining them.
-  MachineBranchProbabilityInfo MBPI;
-  MachineCycleInfo MCI;
-  MCI.compute(MF);
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
-
   MinFreq = MBFI.getEntryFreq().getFrequency();
   MaxFreq = 0;
   for (unsigned RegionIdx : seq(Regions.size())) {
@@ -111,19 +93,21 @@ void GCNRematStrategy::RematRegions::addToLiveMaps(Register Reg,
     LiveOuts[I].insert(LiveReg);
 }
 
-GCNRematStrategy::RematTargets::RematTargets(unsigned MaxSGPRs,
-                                             unsigned MaxVGPRs,
-                                             bool SpillReduction,
-                                             const MachineFunction &MF,
-                                             const RematRegions &Regions)
+GCNRematStrategy::RematTargets::RematTargets(
+    unsigned MaxSGPRs, unsigned MaxVGPRs, bool SpillReduction,
+    const MachineFunction &MF, const RematRegions &Regions,
+    ArrayRef<GCNRegPressure> *MaxPressure)
     : ExcessRP(Regions.size()), Regions(Regions),
       SpillReduction(SpillReduction) {
   RPTargets.reserve(Regions.size());
   for (unsigned RegionIdx : seq(Regions.size())) {
-    const GCNRegPressure &RP = Regions.computeMaxRegPressure(RegionIdx);
-    const GCNRPTarget &Target =
-        RPTargets.emplace_back(MaxSGPRs, MaxVGPRs, MF, RP);
-    if (!Target.satisfied())
+    if (MaxPressure) {
+      RPTargets.emplace_back(MaxSGPRs, MaxVGPRs, MF, (*MaxPressure)[RegionIdx]);
+    } else {
+      RPTargets.emplace_back(MaxSGPRs, MaxVGPRs, MF,
+                             Regions.computeMaxRegPressure(RegionIdx));
+    }
+    if (!RPTargets.back().satisfied())
       ExcessRP.set(RegionIdx);
   }
 }
@@ -252,21 +236,20 @@ void GCNRematStrategy::RematCandidate::rematerialize(
   }
 }
 
-GCNRematStrategy::GCNRematStrategy(MachineFunction &MF,
-                                   SmallVectorImpl<RegionBoundaries> &Regions,
-                                   LiveIntervals &LIS)
-    : Regions(MF, Regions, LIS), Remater(MF, Regions, LIS), MF(MF),
-      MRI(MF.getRegInfo()), LIS(LIS) {
-  Remater.analyze();
-  createCandidates();
-}
+void GCNRematStrategy::rematerializeFor(
+    unsigned MaxSGPRs, unsigned MaxVGPRs, bool SpillReduction,
+    BitVector &AffectedRegions, MutableArrayRef<GCNRegPressure> *MaxPressure) {
+  assert(AffectedRegions.size() == Regions.size());
+  assert(!MaxPressure || MaxPressure->size() == Regions.size());
 
-void GCNRematStrategy::rematerializeFor(unsigned MaxSGPRs, unsigned MaxVGPRs,
-                                        bool SpillReduction,
-                                        BitVector &AffectedRegions) {
-  RematTargets Targets(MaxSGPRs, MaxVGPRs, SpillReduction, MF, Regions);
+  RematTargets Targets(MaxSGPRs, MaxVGPRs, SpillReduction, MF, Regions,
+                       MaxPressure);
   if (Targets.allAchieved())
     return;
+  if (!CandidatesCreated) {
+    Remater.analyze();
+    createCandidates();
+  }
 
   LLVM_DEBUG({
     dbgs() << "Rematerializing across regions to reduce RP below target in "
@@ -415,9 +398,16 @@ void GCNRematStrategy::rematerializeFor(unsigned MaxSGPRs, unsigned MaxVGPRs,
     }
     CandidateOrder.truncate(NumUsefulCandidates);
   }
+
+  if (!MaxPressure)
+    return;
+  for (unsigned RegionIdx : AffectedRegions.set_bits())
+    (*MaxPressure)[RegionIdx] = Targets.RPTargets[RegionIdx].getCurrentRP();
 }
 
 void GCNRematStrategy::createCandidates() {
+  CandidatesCreated = true;
+
   // Set of registers already marked for potential remterialization; used to
   // avoid rematerialization chains.
   SmallSet<Register, 4> MarkedRegs;
@@ -474,14 +464,14 @@ void GCNRematStrategy::createCandidates() {
   // Initialize the LiveIn and LiveOut sets of all candidates. This is more
   // efficient than querying those structures for each candidate separately.
   for (unsigned RegionIdx = 0; RegionIdx < NumRegions; ++RegionIdx) {
-    for (const auto &[Reg, Mask] : getLiveIns(RegionIdx)) {
+    for (const auto &[Reg, Mask] : Regions.getLiveIns(RegionIdx)) {
       if (Register::isPhysicalRegister(Reg))
         continue;
       unsigned CandIdx = DefRegToCandIdx[Reg];
       if (CandIdx != ~0u)
         Candidates[CandIdx].LiveIn.set(RegionIdx);
     }
-    for (const auto &[Reg, Mask] : getLiveOuts(RegionIdx)) {
+    for (const auto &[Reg, Mask] : Regions.getLiveOuts(RegionIdx)) {
       if (Register::isPhysicalRegister(Reg))
         continue;
       unsigned CandIdx = DefRegToCandIdx[Reg];

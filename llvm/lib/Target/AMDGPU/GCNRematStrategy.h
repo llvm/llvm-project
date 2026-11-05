@@ -22,8 +22,9 @@
 namespace llvm {
 
 /// Rematerializes registers across code regions to achieve register pressure
-/// targets. Uses the target independent rematerializers to expose
-/// rematerializabke registers and perform rematerializations.
+/// targets. The strategy updates region boundaries and live-ins/live-outs as it
+/// rematerializes. It uses the target independent rematerializers to expose
+/// rematerializable registers and perform rematerializations.
 ///
 /// The strategy only supports rematerializing registers that meet all of the
 /// following constraints.
@@ -43,20 +44,28 @@ class GCNRematStrategy {
   using RegisterIdx = Rematerializer::RegisterIdx;
 
 public:
-  /// Creates a strategy that can rematerialize across \p Regions. The
-  /// underlying rematerializer is created and initialized.
+  /// Creates a strategy that can rematerialize across \p Regions whose live-ins
+  /// \p LiveIns and live-outs \p LiveOuts are provided. The underlying
+  /// rematerializer is created and initialized.
   GCNRematStrategy(MachineFunction &MF,
-                   SmallVectorImpl<RegionBoundaries> &Regions,
-                   LiveIntervals &LIS);
+                   MutableArrayRef<RegionBoundaries> Regions,
+                   MutableArrayRef<GCNRPTracker::LiveRegSet> LiveIns,
+                   MutableArrayRef<GCNRPTracker::LiveRegSet> LiveOuts,
+                   LiveIntervals &LIS, const MachineBlockFrequencyInfo &MBFI)
+      : Regions(Regions, LiveIns, LiveOuts, LIS, MBFI, MF.getRegInfo()),
+        Remater(MF, Regions, LIS), MF(MF), MRI(MF.getRegInfo()), LIS(LIS) {}
 
   /// Rematerializes with the goal of reducing the maximum pressure in all \ref
   /// Regions to \p MaxSGPRs SGPRs and \p MaxVGPRs VGPRs. \p SpillReduction
   /// indicates whether that register pressure target allows to reduce spilling,
   /// which influences rematerialization decisions. Regions which are
   /// rematerialized from/into/over have their corresponding index set in \p
-  /// AffectedRegions.
+  /// AffectedRegions. When not null, \p MaxPressure provides initial maximum
+  /// pressure for all regions and contains updated maximum pressures when the
+  /// function returns.
   void rematerializeFor(unsigned MaxSGPRs, unsigned MaxVGPRs,
-                        bool SpillReduction, BitVector &AffectedRegions);
+                        bool SpillReduction, BitVector &AffectedRegions,
+                        MutableArrayRef<GCNRegPressure> *MaxPressure = nullptr);
 
   /// Starts recording rematerializations for eventual rollback.
   void startRecordingRemats() {
@@ -74,24 +83,19 @@ public:
   /// Rolls back all recorded rematerializations.
   void rollbackRecordedRemats();
 
-  /// Returns up-to-date live-ins for region \p RegionIdx.
-  const GCNRPTracker::LiveRegSet &getLiveIns(unsigned RegionIdx) const {
-    return Regions.getLiveIns(RegionIdx);
-  }
-
-  /// Returns up-to-date live-outs for region \p RegionIdx.
-  const GCNRPTracker::LiveRegSet &getLiveOuts(unsigned RegionIdx) const {
-    return Regions.getLiveOuts(RegionIdx);
-  }
-
 private:
   /// Groups information about code regions to rematerialize across.
   struct RematRegions {
     /// Boundaries of regions across which the strategy rematerializes.
+    /// FIXME: the rematerializer updates them when necessary, but the strategy
+    /// should be responsible for that.
     ArrayRef<RegionBoundaries> Bounds;
 
-    RematRegions(MachineFunction &MF, ArrayRef<RegionBoundaries> Regions,
-                 LiveIntervals &LIS);
+    RematRegions(ArrayRef<RegionBoundaries> Regions,
+                 MutableArrayRef<GCNRPTracker::LiveRegSet> LiveIns,
+                 MutableArrayRef<GCNRPTracker::LiveRegSet> LiveOuts,
+                 LiveIntervals &LIS, const MachineBlockFrequencyInfo &MBFI,
+                 const MachineRegisterInfo &MRI);
 
     /// Returns the number of rematerialization regions.
     unsigned size() const { return Bounds.size(); }
@@ -142,7 +146,7 @@ private:
     static const uint64_t FreqScaleFactor = 1024;
 
     /// Current live-ins and live-outs for each region.
-    SmallVector<GCNRPTracker::LiveRegSet> LiveIns, LiveOuts;
+    MutableArrayRef<GCNRPTracker::LiveRegSet> LiveIns, LiveOuts;
     /// Scaled per-region execution frequencies. 0 when unknown.
     SmallVector<uint64_t> Frequencies;
     /// Scaled minimum and maximum observed frequencies.
@@ -165,9 +169,11 @@ private:
 
     /// Sets a target \ref of maximum \p MaxSGPRs SGPRs and \p MaxVGPRs VGPRs
     /// per region. \p SpillReduction indicates whether that register pressure
-    /// target allows to reduce spilling,
+    /// target allows to reduce spilling. When not null, \p MaxPressure provides
+    /// initial maximum pressure for all regions.
     RematTargets(unsigned MaxSGPRs, unsigned MaxVGPRs, bool SpillReduction,
-                 const MachineFunction &MF, const RematRegions &Regions);
+                 const MachineFunction &MF, const RematRegions &Regions,
+                 ArrayRef<GCNRegPressure> *MaxPressure = nullptr);
 
     /// Returns whether the RP target is thought to be achieved in all regions.
     bool allAchieved() const { return ExcessRP.none(); }
@@ -303,6 +309,9 @@ private:
   Rematerializer Remater;
   /// Candidates for rematerializations.
   SmallVector<RematCandidate, 0> Candidates;
+  /// Whether candidates were already created, implying that the rematerializer
+  /// was also fully initialized.
+  bool CandidatesCreated = false;
   /// When not null, records all rematerializations.
   std::unique_ptr<RematRecorder> Recorder;
 

@@ -560,6 +560,9 @@ public:
 /// rematerializations.
 class PreRARematStage : public GCNSchedStage {
 private:
+  /// Live-outs are not maintained in a contiguous array so we have to have one
+  /// here to give to the strategy.
+  SmallVector<GCNRPTracker::LiveRegSet> LiveOuts;
   /// Rematerialization strategy.
   std::unique_ptr<GCNRematStrategy> Strategy;
   /// The target occupancy the stage is tring to achieve. Empty when the

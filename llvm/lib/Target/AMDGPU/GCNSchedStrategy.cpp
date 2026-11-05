@@ -1525,9 +1525,13 @@ bool PreRARematStage::initGCNSchedStage() {
     }
   });
 
+  LiveOuts.reserve(DAG.Regions.size());
   DAG.RegionLiveOuts.buildLiveRegMap();
+  for (unsigned RegionIdx : seq(DAG.Regions.size()))
+    LiveOuts.push_back(DAG.RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx));
 
-  Strategy = std::make_unique<GCNRematStrategy>(MF, DAG.Regions, *DAG.LIS);
+  Strategy = std::make_unique<GCNRematStrategy>(MF, DAG.Regions, DAG.LiveIns,
+                                                LiveOuts, *DAG.LIS, *DAG.MBFI);
   if (TargetOcc.has_value()) {
     // Rematerialization is likely to move instructions into higher frequency
     // regions, increasing their total sum latency. This is acceptable if we are
@@ -1539,19 +1543,17 @@ bool PreRARematStage::initGCNSchedStage() {
   }
 
   RescheduleRegions.resize(DAG.Regions.size());
+  MutableArrayRef<GCNRegPressure> MaxPressure = DAG.Pressure;
   Strategy->rematerializeFor(MaxSGPRs, MaxVGPRs,
                              /*ReduceSpill=*/!TargetOcc.has_value(),
-                             RescheduleRegions);
+                             RescheduleRegions, &MaxPressure);
   if (RescheduleRegions.none())
     return false;
 
   // Reflect changes in the DAG and compute achieved occupancy.
   LLVM_DEBUG(dbgs() << "==== REMAT RESULTS ====\n");
   for (unsigned RegionIdx : RescheduleRegions.set_bits()) {
-    DAG.LiveIns[RegionIdx] = Strategy->getLiveIns(RegionIdx);
-    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx) =
-        Strategy->getLiveOuts(RegionIdx);
-    DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
+    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx) = LiveOuts[RegionIdx];
     LLVM_DEBUG(dbgs() << '[' << RegionIdx << "] Achieved occupancy "
                       << DAG.Pressure[RegionIdx].getOccupancy(ST, VGPRBlockSize)
                       << '\n');
@@ -2910,9 +2912,7 @@ void PreRARematStage::finalizeGCNSchedStage() {
   DAG.setTargetOccupancy(*TargetOcc - 1);
   Strategy->rollbackRecordedRemats();
   for (unsigned RegionIdx : RescheduleRegions.set_bits()) {
-    DAG.LiveIns[RegionIdx] = Strategy->getLiveIns(RegionIdx);
-    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx) =
-        Strategy->getLiveOuts(RegionIdx);
+    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx) = LiveOuts[RegionIdx];
     DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
   }
 
