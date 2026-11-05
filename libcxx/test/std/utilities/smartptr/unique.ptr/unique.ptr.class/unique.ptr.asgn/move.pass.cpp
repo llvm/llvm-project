@@ -113,18 +113,25 @@ TEST_CONSTEXPR_CXX23 void test_sfinae() {
     static_assert(std::is_nothrow_assignable<U, U&&>::value, "");
   }
   {
+    typedef std::unique_ptr<VT, NCDeleter<VT> > U;
+    static_assert(!std::is_assignable<U, U&>::value, "");
+    static_assert(!std::is_assignable<U, const U&>::value, "");
+    static_assert(!std::is_assignable<U, const U&&>::value, "");
+    static_assert(!std::is_assignable<U, U&&>::value, "");
+  }
+  {
     typedef std::unique_ptr<VT, NCDeleter<VT>&> U;
     static_assert(!std::is_assignable<U, U&>::value, "");
     static_assert(!std::is_assignable<U, const U&>::value, "");
     static_assert(!std::is_assignable<U, const U&&>::value, "");
-    static_assert(std::is_nothrow_assignable<U, U&&>::value, "");
+    static_assert(!std::is_assignable<U, U&&>::value, "");
   }
   {
     typedef std::unique_ptr<VT, const NCDeleter<VT>&> U;
     static_assert(!std::is_assignable<U, U&>::value, "");
     static_assert(!std::is_assignable<U, const U&>::value, "");
     static_assert(!std::is_assignable<U, const U&&>::value, "");
-    static_assert(std::is_nothrow_assignable<U, U&&>::value, "");
+    static_assert(!std::is_assignable<U, U&&>::value, "");
   }
 }
 

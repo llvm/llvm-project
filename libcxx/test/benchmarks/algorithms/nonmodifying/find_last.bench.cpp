@@ -18,6 +18,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto ranges_find_last_if = [](auto first, auto last, auto const& value) {
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find_last) {
       benchmark::RegisterBenchmark(
           name,
-          [find_last](auto& st) {
+          [find_last](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -86,7 +87,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find_last) {
       benchmark::RegisterBenchmark(
           name,
-          [find_last](auto& st) {
+          [find_last](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

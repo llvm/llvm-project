@@ -14,13 +14,15 @@ define void @sink1(i32 %k, i32 %x) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -29,7 +31,7 @@ define void @sink1(i32 %k, i32 %x) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp eq ir<%iv>, ir<%x>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%cond>
@@ -127,13 +129,15 @@ define void @sink2(i32 %k) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -142,7 +146,7 @@ define void @sink2(i32 %k) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
@@ -240,13 +244,15 @@ define void @sink3(i32 %k) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -255,7 +261,7 @@ define void @sink3(i32 %k) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
@@ -354,12 +360,14 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  Live-in ir<11> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<11>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -446,13 +454,15 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -461,7 +471,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.1>
@@ -564,13 +574,15 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -579,7 +591,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:      WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
@@ -692,13 +704,15 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -707,7 +721,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:      WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.0>
@@ -732,12 +746,11 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then.0.0:
 ; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/ir<%c.0>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.0>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP12]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
@@ -820,13 +833,15 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -835,7 +850,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -950,13 +965,15 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -964,7 +981,7 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
@@ -1039,13 +1056,15 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -1054,7 +1073,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[VP10:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP9]]>
 ; CHECK-NEXT:    Successor(s): pred.load
@@ -1248,7 +1267,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep>, ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer float, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%pred> = fcmp une ir<%0>, ir<0.000000e+00>
 ; CHECK-NEXT:    Successor(s): pred.store
@@ -1420,7 +1439,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %start to i64))
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV ((-1 * (ptrtoaddr ptr %end to i64)) + (ptrtoaddr ptr %start to i64))
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
@@ -1435,7 +1454,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<%next.gep>, ir<-1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds ir<%ptr.iv.next>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds i8, ir<%ptr.iv.next>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%l>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ne vp<[[VP9]]>, ir<0>

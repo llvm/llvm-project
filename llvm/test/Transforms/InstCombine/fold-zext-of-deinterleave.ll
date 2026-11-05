@@ -134,8 +134,9 @@ define <16 x i16> @zext_shufflevector_correct_insertpoint(<16 x i8> %load) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = and <8 x i16> [[TMP2]], splat (i16 255)
 ; CHECK-NEXT:    [[ZEXT9:%.*]] = lshr <8 x i16> [[TMP2]], splat (i16 8)
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <8 x i16> [[ZEXT]], splat (i16 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[ADD]], [[ZEXT9]]
-; CHECK-NEXT:    [[OR:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[SHUFFLEVECTOR6:%.*]] = shufflevector <8 x i16> [[ADD]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[SHUFFLEVECTOR10:%.*]] = shufflevector <8 x i16> [[ZEXT9]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[OR:%.*]] = or <16 x i16> [[SHUFFLEVECTOR6]], [[SHUFFLEVECTOR10]]
 ; CHECK-NEXT:    ret <16 x i16> [[OR]]
 ;
   %shufflevector4 = shufflevector <16 x i8> %load, <16 x i8> zeroinitializer, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>

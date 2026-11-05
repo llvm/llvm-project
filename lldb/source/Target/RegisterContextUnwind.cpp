@@ -37,6 +37,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <cassert>
 #include <memory>
@@ -221,6 +222,16 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       m_current_offset =
           m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     }
+    m_current_offset_backed_up_one = m_current_offset;
+  } else if (Address start =
+                 pc_module_sp ? pc_module_sp->GetUnwindTable()
+                                    .GetFunctionStartFromObjectFileUnwindInfo(
+                                        m_current_pc)
+                              : Address();
+             start.IsValid()) {
+    m_start_pc = start;
+    m_current_offset =
+        m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
@@ -913,9 +924,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
   // could not augment its function table with another source, like
-  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame or the
-  // .ARM.exidx tables have unwind information for this address, else fall back
-  // to the architectural default unwind.
+  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame, the
+  // .ARM.exidx tables or the object file's own unwind info (e.g. the PE EH info
+  // in .pdata) have unwind information for this address, else fall back to the
+  // architectural default unwind.
   if (!func_unwinders_sp) {
     m_frame_type = eNormalFrame;
 
@@ -928,7 +940,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     if (DWARFCallFrameInfo *eh_frame =
             pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
       if (std::unique_ptr<UnwindPlan> plan_up =
-              eh_frame->GetUnwindPlan(m_current_pc))
+              eh_frame->GetUnwindPlan(m_current_pc, m_start_pc))
         return plan_up;
     }
 
@@ -1305,20 +1317,24 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
     const lldb_private::SymbolContext &m_sym_ctx) const {
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
-    const std::vector<ConstString> trap_handler_names(
+    const std::vector<std::string> &trap_handler_names(
         platform_sp->GetTrapHandlerSymbolNames());
-    for (ConstString name : trap_handler_names) {
-      if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-          (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+    for (const std::string &name : trap_handler_names) {
+      if ((m_sym_ctx.function &&
+           m_sym_ctx.function->GetName().GetStringRef() == name) ||
+          (m_sym_ctx.symbol &&
+           m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
         return true;
       }
     }
   }
-  const std::vector<ConstString> user_specified_trap_handler_names(
-      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames());
-  for (ConstString name : user_specified_trap_handler_names) {
-    if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-        (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+  const std::vector<std::string> &user_specified_trap_handler_names =
+      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
+  for (const std::string &name : user_specified_trap_handler_names) {
+    if ((m_sym_ctx.function &&
+         m_sym_ctx.function->GetName().GetStringRef() == name) ||
+        (m_sym_ctx.symbol &&
+         m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
       return true;
     }
   }
@@ -1583,7 +1599,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
-    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString("");
+    unwindplan_name += m_full_unwind_plan_sp->GetSourceName();
     unwindplan_name += "'";
   }
   UNWIND_LOG(log, "no save location for {0} ({1}) {2}", regnum.GetName(),
@@ -2210,8 +2226,8 @@ bool RegisterContextUnwind::ReadFrameAddress(
       UNWIND_LOG(log, "CFA value set by DWARF expression is {0:x}", address);
       return true;
     }
-    UNWIND_LOG(log, "Failed to set CFA value via DWARF expression: {0}",
-               fmt_consume(result.takeError()));
+    LLDB_LOG_ERROR(log, result.takeError(),
+                   "Failed to set CFA value via DWARF expression: {0}");
     break;
   }
   case UnwindPlan::Row::FAValue::isRaSearch: {
@@ -2222,18 +2238,18 @@ bool RegisterContextUnwind::ReadFrameAddress(
       return false;
     const unsigned max_iterations = 256;
     for (unsigned i = 0; i < max_iterations; ++i) {
-      Status st;
       lldb::addr_t candidate_addr =
           return_address_hint + i * process.GetAddressByteSize();
-      lldb::addr_t candidate =
-          process.ReadPointerFromMemory(candidate_addr, st);
-      if (st.Fail()) {
-        UNWIND_LOG(log, "Cannot read memory at {0:x}: {1}", candidate_addr, st);
+      llvm::Expected<lldb::addr_t> candidate =
+          process.ReadPointerFromMemory(candidate_addr);
+      if (!candidate) {
+        LLDB_LOG_ERROR(log, candidate.takeError(),
+                       "Cannot read memory at {1:x}: {0}", candidate_addr);
         return false;
       }
       Address addr;
       uint32_t permissions;
-      if (process.GetLoadAddressPermissions(candidate, permissions) &&
+      if (process.GetLoadAddressPermissions(*candidate, permissions) &&
           permissions & lldb::ePermissionsExecutable) {
         address = candidate_addr;
         UNWIND_LOG(log, "Heuristically found CFA: {0:x}", address);
@@ -2273,9 +2289,8 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
                 *next->m_sym_ctx.symbol))
       hint += *expected_size;
     else {
-      UNWIND_LOG_VERBOSE(GetLog(LLDBLog::Unwind),
-                         "Could not retrieve parameter size: {0}",
-                         fmt_consume(expected_size.takeError()));
+      LLDB_LOG_ERRORV(GetLog(LLDBLog::Unwind), expected_size.takeError(),
+                      "Could not retrieve parameter size: {0}");
       return LLDB_INVALID_ADDRESS;
     }
   }

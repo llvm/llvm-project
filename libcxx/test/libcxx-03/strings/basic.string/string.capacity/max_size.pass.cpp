@@ -20,7 +20,7 @@
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
 static const std::size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 #else
-static const std::size_t alginment = 8;
+static const std::size_t alignment = 8;
 #endif
 
 template <class = int>

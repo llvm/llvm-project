@@ -40,6 +40,7 @@
 
 namespace clang {
   class ASTContext;
+  class BoundsAttributedType;
   class CXXRecordDecl;
   class TypeLoc;
   class LangOptions;
@@ -213,6 +214,64 @@ namespace clang {
     unsigned location_size() const { return Builder.getBuffer().second; }
   };
 
+  /// A set of tokens that has been cached for later parsing.
+  typedef SmallVector<Token, 4> CachedTokens;
+
+  // A list of late-parsed attributes.  Used by ParseGNUAttributes.
+  class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
+  public:
+    LateParsedAttrList(bool PSoon = false,
+                       bool LateAttrParseExperimentalExtOnly = false,
+                       bool LateAttrParseTypeAttrOnly = false)
+        : ParseSoon(PSoon),
+          LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
+          LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
+
+    /// A list for the late-parsed type attributes of a declaration specifier,
+    /// declarator or declarator chunk.
+    static LateParsedAttrList forTypeAttrs() {
+      return LateParsedAttrList(/*PSoon=*/true,
+                                /*LateAttrParseExperimentalExtOnly=*/true,
+                                /*LateAttrParseTypeAttrOnly=*/true);
+    }
+
+    bool parseSoon() const { return ParseSoon; }
+    /// returns true iff the attribute to be parsed should only be late parsed
+    /// if it is annotated with `LateAttrParseExperimentalExt`
+    bool lateAttrParseExperimentalExtOnly() const {
+      return LateAttrParseExperimentalExtOnly;
+    }
+
+    bool lateAttrParseTypeAttrOnly() const { return LateAttrParseTypeAttrOnly; }
+
+  private:
+    bool ParseSoon; // Are we planning to parse these shortly after creation?
+    bool LateAttrParseExperimentalExtOnly;
+    bool LateAttrParseTypeAttrOnly;
+  };
+
+  /// The part of a late-parsed type attribute that Sema reads and fills in
+  /// during type construction. The parser owns the attribute and its cached
+  /// tokens and embeds this, so Sema never needs to see the parser's type.
+  struct LateParsedTypeAttrInfo {
+    ParsedAttr::Kind Kind;
+    SourceLocation NameLoc;
+
+    /// The type built for this attribute during type construction, still
+    /// missing the argument that hasn't been parsed yet. Filled in by
+    /// `Sema::ProcessLateParsedTypeAttr` and completed once the enclosing scope
+    /// makes the argument parseable. Null if type construction rejected the
+    /// attribute.
+    ///
+    /// Store pointer to the base class so the parser stays agnostic about which
+    /// bounds attribute this is; Sema dispatches on the concrete kind when
+    /// completing.
+    BoundsAttributedType *TypeToComplete = nullptr;
+
+    LateParsedTypeAttrInfo(ParsedAttr::Kind Kind, SourceLocation NameLoc)
+        : Kind(Kind), NameLoc(NameLoc) {}
+  };
+
 /// Captures information about "declaration specifiers".
 ///
 /// "Declaration specifiers" encompasses storage-class-specifiers,
@@ -287,7 +346,7 @@ public:
       clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -298,6 +357,9 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   static const TST TST_##Name = clang::TST_##Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -363,10 +425,6 @@ private:
   unsigned TypeSpecSat : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned ConstrainedAuto : 1;
-  // Track conflicting type specifier when 'auto' is set (for Finish()
-  // detection)
-  LLVM_PREFERRED_TYPE(TST)
-  unsigned ConflictingTypeSpecifier : 7;
 
   // type-qualifiers
   LLVM_PREFERRED_TYPE(TQ)
@@ -408,6 +466,9 @@ private:
   // attributes.
   ParsedAttributes Attrs;
 
+  // late attributes
+  LateParsedAttrList LateParsedAttrs;
+
   // Scope specifier for the type spec, if applicable.
   CXXScopeSpec TypeScope;
 
@@ -431,50 +492,10 @@ private:
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
-  SourceLocation TQ_pipeLoc, ConflictingTypeSpecifierLoc;
+  SourceLocation TQ_pipeLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
-  void setConflictingTypeSpecifier(TST T, SourceLocation Loc) {
-    // Store conflicting type specifier for Finish() to detect:
-    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
-    // - If 'auto' is being set after another type, store TST_auto
-    //   (e.g., "int auto").
-    if (TypeSpecType == TST_auto) {
-      ConflictingTypeSpecifier = T;
-      ConflictingTypeSpecifierLoc = Loc;
-    } else if (T == TST_auto) {
-      ConflictingTypeSpecifier = TST_auto;
-      ConflictingTypeSpecifierLoc = Loc;
-    }
-  }
-  void setConflictingTypeSpecifier(TST T, SourceLocation Loc,
-                                   SourceLocation NameLoc, ParsedType Rep) {
-    setConflictingTypeSpecifier(T, Loc);
-    if (TypeSpecType == TST_auto) {
-      TypeRep = Rep;
-      TSTNameLoc = NameLoc;
-      TypeSpecOwned = false;
-    }
-  }
-  void setConflictingTypeSpecifier(TST T, SourceLocation Loc, Expr *Rep) {
-    setConflictingTypeSpecifier(T, Loc);
-    if (TypeSpecType == TST_auto) {
-      ExprRep = Rep;
-      TSTNameLoc = Loc;
-      TypeSpecOwned = false;
-    }
-  }
-  void setConflictingTypeSpecifier(TST T, SourceLocation Loc,
-                                   SourceLocation NameLoc, Decl *Rep,
-                                   bool Owned) {
-    setConflictingTypeSpecifier(T, Loc);
-    if (TypeSpecType == TST_auto) {
-      DeclRep = Rep;
-      TSTNameLoc = NameLoc;
-      TypeSpecOwned = Owned && Rep != nullptr;
-    }
-  }
 
   ObjCDeclSpec *ObjCQualifiers;
 
@@ -502,7 +523,7 @@ public:
   static bool isTransformTypeTrait(TST T) {
     constexpr std::array<TST, 16> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     };
 
     return T >= Traits.front() && T <= Traits.back();
@@ -518,15 +539,14 @@ public:
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
-        ConflictingTypeSpecifier(TST_unspecified),
         TypeQualifiers(TQ_unspecified),
         OB_state(static_cast<unsigned>(OverflowBehaviorState::Unspecified)),
         FS_inline_specified(false), FS_forceinline_specified(false),
         FS_virtual_specified(false), FS_noreturn_specified(false),
         FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
                                          ConstexprSpecKind::Unspecified)),
-        Attrs(attrFactory), ConflictingTypeSpecifierLoc(), writtenBS(),
-        ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), LateParsedAttrs(LateParsedAttrList::forTypeAttrs()),
+        writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -566,9 +586,6 @@ public:
     return static_cast<TypeSpecifierSign>(TypeSpecSign);
   }
   TST getTypeSpecType() const { return (TST)TypeSpecType; }
-  bool hasConflictingTypeSpecifier() const {
-    return ConflictingTypeSpecifier != TST_unspecified;
-  }
   bool isTypeAltiVecVector() const { return TypeAltiVecVector; }
   bool isTypeAltiVecPixel() const { return TypeAltiVecPixel; }
   bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
@@ -928,6 +945,11 @@ public:
 
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
+
+  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
+  const LateParsedAttrList &getLateAttributes() const {
+    return LateParsedAttrs;
+  }
 
   void takeAttributesAppendingingFrom(ParsedAttributes &attrs) {
     Attrs.takeAllAppendingFrom(attrs);
@@ -1301,40 +1323,12 @@ public:
   SourceLocation getEndLoc() const LLVM_READONLY { return EndLocation; }
 };
 
-/// A set of tokens that has been cached for later parsing.
-typedef SmallVector<Token, 4> CachedTokens;
-
-// A list of late-parsed attributes.  Used by ParseGNUAttributes.
-class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
-public:
-  LateParsedAttrList(bool PSoon = false,
-                     bool LateAttrParseExperimentalExtOnly = false,
-                     bool LateAttrParseTypeAttrOnly = false)
-      : ParseSoon(PSoon),
-        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
-        LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
-
-  bool parseSoon() const { return ParseSoon; }
-  /// returns true iff the attribute to be parsed should only be late parsed
-  /// if it is annotated with `LateAttrParseExperimentalExt`
-  bool lateAttrParseExperimentalExtOnly() const {
-    return LateAttrParseExperimentalExtOnly;
-  }
-
-  bool lateAttrParseTypeAttrOnly() const { return LateAttrParseTypeAttrOnly; }
-
-private:
-  bool ParseSoon; // Are we planning to parse these shortly after creation?
-  bool LateAttrParseExperimentalExtOnly;
-  bool LateAttrParseTypeAttrOnly;
-};
-
 /// One instance of this struct is used for each type in a
 /// declarator that is parsed.
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() {};
+  DeclaratorChunk() : LateAttrList(LateParsedAttrList::forTypeAttrs()) {}
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
@@ -1352,6 +1346,7 @@ struct DeclaratorChunk {
   }
 
   ParsedAttributesView AttrList;
+  LateParsedAttrList LateAttrList;
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
@@ -2064,6 +2059,8 @@ private:
   /// corresponding constructor parameter.
   const ParsedAttributesView &DeclarationAttrs;
 
+  LateParsedAttrList LateParsedAttrs;
+
   /// The asm label, if specified.
   Expr *AsmLabel;
 
@@ -2129,7 +2126,8 @@ public:
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
-        DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
+        DeclarationAttrs(DeclarationAttrs),
+        LateParsedAttrs(LateParsedAttrList::forTypeAttrs()), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
         InventedTemplateParameterList(nullptr) {
     assert(llvm::all_of(DeclarationAttrs,
@@ -2218,6 +2216,7 @@ public:
       DeclTypeInfo[i].destroy();
     DeclTypeInfo.clear();
     Attrs.clear();
+    LateParsedAttrs.clear();
     AsmLabel = nullptr;
     InlineStorageUsed = false;
     HasInitializer = false;
@@ -2452,13 +2451,16 @@ public:
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+                   SourceLocation EndLoc,
+                   const LateParsedAttrList &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.append(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
@@ -2786,6 +2788,11 @@ public:
 
   const ParsedAttributesView &getDeclarationAttributes() const {
     return DeclarationAttrs;
+  }
+
+  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
+  const LateParsedAttrList &getLateAttributes() const {
+    return LateParsedAttrs;
   }
 
   /// hasAttributes - do we contain any attributes?

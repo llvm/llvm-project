@@ -34,6 +34,9 @@ public:
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
 
+  std::optional<AcceleratorDynamicLoaderResponse> GetDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) override;
+
 private:
   // Lazily bring up the mock accelerator GDB server and return its connection
   // info. Called on the connection breakpoint hit, so inferiors that never

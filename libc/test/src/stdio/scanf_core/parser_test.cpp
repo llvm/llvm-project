@@ -1,9 +1,14 @@
-//===-- Unittests for the scanf Parser -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for the scanf Parser.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bit.h"
@@ -510,6 +515,50 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgBackwardsRange) {
   LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range('0', '9');
+
+  expected.scan_set = scan_set;
+
+  ASSERT_SFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcScanfParserTest, EvalBracketArgNonAsciiRange) {
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
+  const char *str = "%[\x80-\x85]";
+  char arg1 = 'a';
+  evaluate(format_arr, str, &arg1);
+
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = str;
+  expected.conv_name = '[';
+  expected.output_ptr = &arg1;
+
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
+
+  scan_set.set_range(0x80, 0x85);
+
+  expected.scan_set = scan_set;
+
+  ASSERT_SFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcScanfParserTest, EvalBracketArgNonAsciiSingleChar) {
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
+  const char *str = "%[\xff]";
+  char arg1 = 'a';
+  evaluate(format_arr, str, &arg1);
+
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = str;
+  expected.conv_name = '[';
+  expected.output_ptr = &arg1;
+
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
+
+  scan_set.set(0xff);
 
   expected.scan_set = scan_set;
 

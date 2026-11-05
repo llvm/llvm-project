@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before=si-pre-emit-peephole %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu9.08 -start-before=si-pre-emit-peephole %s -o - | FileCheck -check-prefix=GCN %s
 
 # Verify that the dedicated hazard recognizer pass is run after late peephole
 # optimizations. New hazards can be introduced if instructions are removed by
@@ -10,6 +10,7 @@
 # GCN-NEXT: s_nop
 # GCN-NEXT: flat_load_dword
 name:            mai_hazard_pass_ordering_optimize_vcc_branch
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec

@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ExprDoesntDeadlockTestCase(TestBase):
     @add_test_categories(["basic_process"])
     def test_with_run_command(self):

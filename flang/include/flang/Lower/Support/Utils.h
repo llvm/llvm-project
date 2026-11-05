@@ -23,14 +23,10 @@
 
 namespace Fortran::evaluate {
 class Component;
-class ArrayRef;
 } // namespace Fortran::evaluate
 
 namespace Fortran::lower {
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
-using ExplicitSpaceArrayBases =
-    std::variant<const semantics::Symbol *, const evaluate::Component *,
-                 const evaluate::ArrayRef *>;
 // FIXME: needed for privatizeSymbol that does not belong to this header.
 class AbstractConverter;
 class SymMap;
@@ -66,10 +62,11 @@ static Fortran::lower::SomeExpr toEvExpr(const A &x) {
 }
 
 template <Fortran::common::TypeCategory FROM>
-static Fortran::lower::SomeExpr ignoreEvConvert(
-    const Fortran::evaluate::Convert<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>,
-        FROM> &x) {
+static Fortran::lower::SomeExpr
+ignoreEvConvert(const Fortran::evaluate::Convert<
+                Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>,
+                FROM> &x) {
+  CHECK(x.kind() == 8);
   return toEvExpr(x.left());
 }
 template <typename A>
@@ -80,35 +77,20 @@ static Fortran::lower::SomeExpr ignoreEvConvert(const A &x) {
 /// A vector subscript expression may be wrapped with a cast to INTEGER*8.
 /// Get rid of it here so the vector can be loaded. Add it back when
 /// generating the elemental evaluation (inside the loop nest).
-inline Fortran::lower::SomeExpr
-ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
-                    Fortran::common::TypeCategory::Integer, 8>> &x) {
+inline Fortran::lower::SomeExpr ignoreEvConvert(
+    const Fortran::evaluate::Expr<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
+  CHECK(x.kind() == 8);
   return Fortran::common::visit(
       [](const auto &v) { return ignoreEvConvert(v); }, x.u);
 }
 
-/// Zip two containers of the same size together and flatten the pairs. `flatZip
-/// [1;2] [3;4]` yields `[1;3;2;4]`.
-template <typename A>
-A flatZip(const A &container1, const A &container2) {
-  assert(container1.size() == container2.size());
-  A result;
-  for (auto [e1, e2] : llvm::zip(container1, container2)) {
-    result.emplace_back(e1);
-    result.emplace_back(e2);
-  }
-  return result;
-}
-
 namespace Fortran::lower {
 unsigned getHashValue(const Fortran::lower::SomeExpr *x);
-unsigned getHashValue(const Fortran::lower::ExplicitSpaceArrayBases &x);
 unsigned getHashValue(const Fortran::evaluate::Component *x);
 
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y);
-bool isEqual(const Fortran::lower::ExplicitSpaceArrayBases &x,
-             const Fortran::lower::ExplicitSpaceArrayBases &y);
 bool isEqual(const Fortran::evaluate::Component *x,
              const Fortran::evaluate::Component *y);
 
@@ -120,7 +102,8 @@ void privatizeSymbol(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
     std::optional<llvm::omp::Directive> dir = std::nullopt,
-    bool forceHeapAllocationForPrivateDynamicArrays = false);
+    bool forceHeapAllocationForPrivateDynamicArrays = false,
+    bool isLinear = false);
 
 } // end namespace Fortran::lower
 

@@ -9,6 +9,7 @@
 #include "DWARFLinkerTypeUnit.h"
 #include "DIEGenerator.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 
 using namespace llvm;
 using namespace dwarf_linker;
@@ -161,10 +162,10 @@ void TypeUnit::prepareDataForTreeCreation() {
     DebugInfoSection.ListDebugTypeDeclFilePatch.forEach(
         [&](DebugTypeDeclFilePatch &Patch) {
           TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
-          assert(TypeEntry &&
-                 formatv("No data for type {0}", Patch.TypeName->getKey())
-                     .str()
-                     .c_str());
+          assert(TypeEntry && formatv("No data for type {0}",
+                                      TypeKey::expand(Patch.TypeName->getKey()))
+                                  .str()
+                                  .c_str());
           if (&TypeEntry->getFinalDie() != Patch.Die)
             return;
 

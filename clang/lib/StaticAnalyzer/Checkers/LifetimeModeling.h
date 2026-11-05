@@ -13,6 +13,20 @@ std::vector<const MemRegion *>
 getDanglingRegionsAfterReturn(SVal Source, ProgramStateRef State,
                               CheckerContext &C);
 
+/// Returns true if the underlying MemRegion is deallocated.
+bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
+
+/// Returns true if \p Val is a key in the LifetimeBoundMap.
+bool isBoundToLifetimeSource(ProgramStateRef State, SVal Val);
+
+/// Returns the descriptive name of the memory region or a placeholder if a
+/// descriptive name cannot be constructed for it.
+std::string getRegionName(const MemRegion *Reg);
+
+/// Returns the updated \p State with \p R marked as reported if \p R is seen
+/// the first time. Returns nullptr if \p R was already reported.
+ProgramStateRef markAsReported(ProgramStateRef State, const MemRegion *Region);
+
 } // namespace clang::ento::lifetime_modeling
 
 #endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H

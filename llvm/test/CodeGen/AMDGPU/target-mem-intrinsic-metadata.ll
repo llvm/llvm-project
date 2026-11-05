@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.04 -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.04 -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,GISEL %s
 
 ; Make sure !noalias metadata is passed through from target intrinsics
 
@@ -19,4 +19,4 @@ attributes #0 = { argmemonly convergent nounwind willreturn }
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}

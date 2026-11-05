@@ -68,7 +68,6 @@ define i1 @bzhi32_overflow(i32 %x, i32 %y) {
 ; EGPR-LABEL: bzhi32_overflow:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    bzhil %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf5,0xc7]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setle %al # encoding: [0x0f,0x9e,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %x, i32 %y)

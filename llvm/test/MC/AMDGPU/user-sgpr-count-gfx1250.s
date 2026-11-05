@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=asm %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa -filetype=asm %s 2>&1 | FileCheck %s
 
 .amdhsa_code_object_version 6
 

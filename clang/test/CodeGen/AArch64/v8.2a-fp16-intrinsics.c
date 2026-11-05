@@ -450,10 +450,3 @@ int32_t test_vcvth_n_u32_f16(float16_t a) {
 int64_t test_vcvth_n_u64_f16(float16_t a) {
   return vcvth_n_u64_f16(a, 1);
 }
-
-// CHECK-LABEL: test_vmulxh_f16
-// CHECK:  [[MUL:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half %a, half %b)
-// CHECK:  ret half [[MUL]]
-float16_t test_vmulxh_f16(float16_t a, float16_t b) {
-  return vmulxh_f16(a, b);
-}

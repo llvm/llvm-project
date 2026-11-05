@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefix=ALL %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=ALL,GFX90A %s
+; RUN: llc -O0 -mtriple=amdgpu9.08-amd-amdhsa < %s | FileCheck -check-prefix=ALL %s
+; RUN: llc -O0 -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck -check-prefixes=ALL,GFX90A %s
 
 ; CallGraphAnalysis, which CodeGenSCC order depends on, does not look
 ; through aliases. If GlobalOpt is never run, we do not see direct

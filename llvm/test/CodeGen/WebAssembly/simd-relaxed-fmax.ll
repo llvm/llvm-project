@@ -9,18 +9,21 @@ target triple = "wasm32"
 define <4 x float> @test_maxnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_maxnum_f32x4:
 ; CHECK:         .functype test_maxnum_f32x4 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f32
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    call fmaxf
 ; CHECK-NEXT:    f32x4.splat
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    f32x4.replace_lane 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32x4.extract_lane 2
@@ -187,18 +190,21 @@ define <4 x float> @test_maximumnum_f32x4_nsz_nnan(<4 x float> %a, <4 x float> %
 define <2 x double> @test_maxnum_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: test_maxnum_f64x2:
 ; CHECK:         .functype test_maxnum_f64x2 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f64
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    call fmax
 ; CHECK-NEXT:    f64x2.splat
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
@@ -340,6 +346,19 @@ define <4 x float> @test_pmax_v4f32_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ogt_const(<4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ogt_const:
+; CHECK:         .functype test_pmax_v4f32_ogt_const (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0x1p0, 0x1p0, 0x1p0, 0x1p0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ogt <4 x float> %y, splat(float 1.0)
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> splat(float 1.0)
   ret <4 x float> %a
 }
 

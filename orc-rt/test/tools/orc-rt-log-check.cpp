@@ -23,9 +23,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
-#include "orc-rt-utils/CommandLine.h"
+#include "orc-rt-internal/tools/OptionParser.h"
 
 #include <iostream>
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   int UID = -1;
 
   {
-    orc_rt::CommandLineParser P;
+    orc_rt::OptionParser P;
     P.addFlag("print-backend", "Print log backend", false, PrintBackend)
         .addFlag("print-enabled-levels", "Print enabled log levels", false,
                  PrintEnabledLevels)
@@ -78,19 +78,19 @@ int main(int argc, char *argv[]) {
                   -1, UID)
         .addFlag("help", "Print help", false, PrintHelp);
 
-    if (auto Err = P.parse(argc, argv)) {
+    if (auto Err = P.parseAsMainArgs(argc, argv)) {
       std::cerr << "error: " << orc_rt::toString(std::move(Err)) << "\n";
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if ((PrintBackend && PrintEnabledLevels) || !P.positionals().empty()) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if (PrintHelp) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 0;
     }
   }
@@ -108,7 +108,16 @@ int main(int argc, char *argv[]) {
     // Emit one record whose payload carries the caller-supplied id, so a
     // delivery test can match exactly its own record and not a stale one. The
     // id is an integer (a %d scalar), which os_log shows unredacted.
-    ORC_RT_LOG(Error, General, "delivery marker uid=%d", UID);
+    //
+    // The record also carries a runtime string logged via ORC_RT_LOG_PUB_S. On
+    // the os_log backend a dynamic string argument is redacted to <private>
+    // unless the public annotation is applied, so a delivery test can confirm
+    // the annotation publishes the string by matching its contents rather than
+    // <private>.
+    const char *PublicPayload = "public-payload";
+    ORC_RT_LOG(Error, General,
+               "delivery marker uid=%d payload=" ORC_RT_LOG_PUB_S, UID,
+               PublicPayload);
     return 0;
   }
 

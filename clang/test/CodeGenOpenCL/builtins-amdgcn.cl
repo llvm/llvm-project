@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu6.00-unknown-unknown -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK,CHECK-SPIRV %s
 
 
@@ -1048,12 +1048,11 @@ void test_read_exec(global ulong* out) {
 }
 
 // CHECK-LABEL: @test_read_exec_lo(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ballot.i32(i1 true)
+// CHECK: [[A:%.*]] = {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 true)
+// CHECK: trunc i64 [[A]] to i32
 void test_read_exec_lo(global uint* out) {
   *out = __builtin_amdgcn_read_exec_lo();
 }
-
-// CHECK: declare i32 @llvm.amdgcn.ballot.i32(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_hi(
 // CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 true)

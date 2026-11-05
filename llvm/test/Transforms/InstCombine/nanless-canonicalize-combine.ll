@@ -412,7 +412,7 @@ define float @fcmp_ord_nan_constant(float %x) #0 {
 ;
   %hard.canonical = call float @llvm.canonicalize.f32(float %x)
   %soft.canonical = fdiv float 1.0, %x
-  %ord = fcmp ord float %x, 0x7FF8000000000000
+  %ord = fcmp ord float %x, +qnan
   %x.canon = select i1 %ord, float %hard.canonical, float %soft.canonical
   ret float %x.canon
 }

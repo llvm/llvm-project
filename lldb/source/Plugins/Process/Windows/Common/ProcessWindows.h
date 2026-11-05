@@ -69,12 +69,13 @@ public:
 
   ArchSpec GetSystemArchitecture() override;
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+  size_t DoReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
                       Status &error) override;
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
                        Status &error) override;
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
+  bool DoCanAllocateMemory() override { return true; }
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   lldb::addr_t GetImageInfoAddress() override;
@@ -112,7 +113,9 @@ public:
 
 protected:
   /// Block until the stdio read thread has surfaced everything currently
-  /// buffered in the ConPTY/pipe to the process's STDOUT cache.
+  /// buffered in the pipe to the process's STDOUT cache. With the process
+  /// stopped, that is all it wrote to a pipe. A ConPTY may still be rendering.
+  /// That output arrives after the stop.
   void DrainProcessStdout();
 
   size_t PutSTDIN(const char *src, size_t src_len, Status &error) override;
@@ -133,6 +136,8 @@ private:
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
   std::shared_ptr<PTY> m_pty;
+  bool m_pending_halt = false;
+  bool m_expecting_loader_int3 = false;
 };
 } // namespace lldb_private
 

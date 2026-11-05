@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DynamicAllocator.h"
-#include "InterpBlock.h"
-#include "InterpState.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -40,8 +38,7 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
   // Create a new descriptor for an array of the specified size and
   // element type.
   const Descriptor *D =
-      allocateDescriptor(Source, nullptr, T, Descriptor::InlineDescMD,
-                         NumElements, /*IsConst=*/false,
+      allocateDescriptor(Source, nullptr, T, NumElements, /*IsConst=*/false,
                          /*IsTemporary=*/false, /*IsMutable=*/false,
                          /*IsVolatile=*/false);
 
@@ -51,13 +48,11 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
 Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
                                   size_t NumElements, unsigned EvalID,
                                   Form AllocForm) {
-  assert(ElementDesc->getMetadataSize() == 0);
   // Create a new descriptor for an array of the specified size and
   // element type.
   // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), nullptr, ElementDesc, Descriptor::InlineDescMD,
-      NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }
@@ -74,25 +69,23 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   });
 
   auto Memory =
-      std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
+      std::make_unique<std::byte[]>(Block::allocSize(D, Block::Local));
+  auto *B = new (Memory.get()) Block(EvalID, D, Block::Local);
   B->invokeCtorNoMemset();
-
-  assert(D->getMetadataSize() == sizeof(InlineDescriptor));
-  InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
-  ID->Desc = D;
-  ID->IsActive = true;
-  ID->Offset = sizeof(InlineDescriptor);
-  ID->IsBase = false;
-  ID->IsFieldMutable = false;
-  ID->IsConst = false;
-  ID->IsInitialized = false;
-  ID->IsVolatile = false;
+  InlineDescriptor &ID = B->getBlockDesc<InlineDescriptor>();
+  ID.Desc = D;
+  ID.IsActive = true;
+  ID.Offset = sizeof(InlineDescriptor);
+  ID.IsBase = false;
+  ID.IsFieldMutable = false;
+  ID.IsConst = false;
+  ID.IsInitialized = false;
+  ID.IsVolatile = false;
 
   if (D->isCompositeArray())
-    ID->LifeState = Lifetime::Started;
+    ID.LifeState = Lifetime::Started;
   else
-    ID->LifeState =
+    ID.LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
   if (auto It = AllocationSites.find(D->asExpr());
@@ -140,7 +133,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   // over to a DeadBlock and simply keep the block in a separate DeadAllocations
   // list.
   if (B->hasPointers()) {
-    B->AccessFlags |= Block::DeadFlag;
+    B->markDead();
     DeadAllocations.push_back(std::move(*AllocIt));
     Site.Allocations.erase(AllocIt);
 

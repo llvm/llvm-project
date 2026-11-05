@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr9 -stop-after=early-ifcvt < %s | FileCheck %s
 
 define float @test_XSRDPI(float %f) {
@@ -7,8 +7,8 @@ entry:
   ret float %0
 
 ; CHECK-LABEL: name:            test_XSRDPI
-; CHECK-NOT:  %2:vsfrc = nofpexcept XSRDPI killed %1, implicit $rm
-; CHECK:      %2:vsfrc = nofpexcept XSRDPI killed %1
+; CHECK-NOT:  %2:vsfrc = nofpexcept XSRDPI %1, implicit $rm
+; CHECK:      %2:vsfrc = nofpexcept XSRDPI %1
 }
 
 define double @test_XSRDPIM(double %d) {

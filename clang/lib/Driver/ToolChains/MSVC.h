@@ -61,10 +61,6 @@ public:
   MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                 const llvm::opt::ArgList &Args);
 
-  llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
-                Action::OffloadKind DeviceOffloadKind) const override;
-
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
@@ -101,6 +97,8 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
+  llvm::StringRef
+  GetCXXStdlibName(const llvm::opt::ArgList &DriverArgs) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
@@ -143,6 +141,12 @@ public:
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
+  void AddMSVCStdlibMultilibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                        llvm::opt::ArgStringList &CC1Args,
+                                        bool HonorNostdincxx) const;
+  void AddMSVCStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CC1Args) const;
+
   void AddSystemIncludeWithSubfolder(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args,
                                      const std::string &folder,

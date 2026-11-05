@@ -37,46 +37,66 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
     return;
 
   // TODO: There are missing flags. Add them here.
-  if (Attrs.hasAttribute(Attribute::SExt))
-    Flags.setSExt();
-  if (Attrs.hasAttribute(Attribute::ZExt))
-    Flags.setZExt();
-  if (Attrs.hasAttribute(Attribute::InReg))
-    Flags.setInReg();
-  if (Attrs.hasAttribute(Attribute::StructRet))
-    Flags.setSRet();
-  if (Attrs.hasAttribute(Attribute::Nest))
-    Flags.setNest();
-  if (Attrs.hasAttribute(Attribute::ByVal))
-    Flags.setByVal();
-  if (Attrs.hasAttribute(Attribute::ByRef))
-    Flags.setByRef();
-  if (Attrs.hasAttribute(Attribute::InAlloca)) {
-    Flags.setInAlloca();
-    // Set the byval flag for CCAssignFn callbacks that don't know about
-    // inalloca.  This way we can know how many bytes we should've allocated
-    // and how many bytes a callee cleanup function will pop.  If we port
-    // inalloca to more targets, we'll have to add custom inalloca handling
-    // in the various CC lowering callbacks.
-    Flags.setByVal();
+  for (Attribute Attr : Attrs) {
+    if (Attr.isStringAttribute())
+      continue;
+
+    switch (Attr.getKindAsEnum()) {
+    case Attribute::SExt:
+      Flags.setSExt();
+      break;
+    case Attribute::ZExt:
+      Flags.setZExt();
+      break;
+    case Attribute::InReg:
+      Flags.setInReg();
+      break;
+    case Attribute::StructRet:
+      Flags.setSRet();
+      break;
+    case Attribute::Nest:
+      Flags.setNest();
+      break;
+    case Attribute::ByVal:
+      Flags.setByVal();
+      break;
+    case Attribute::ByRef:
+      Flags.setByRef();
+      break;
+    case Attribute::InAlloca:
+      Flags.setInAlloca();
+      // Set the byval flag for CCAssignFn callbacks that don't know about
+      // inalloca.  This way we can know how many bytes we should've allocated
+      // and how many bytes a callee cleanup function will pop.  If we port
+      // inalloca to more targets, we'll have to add custom inalloca handling
+      // in the various CC lowering callbacks.
+      Flags.setByVal();
+      break;
+    case Attribute::Preallocated:
+      Flags.setPreallocated();
+      // Set the byval flag for CCAssignFn callbacks that don't know about
+      // preallocated.  This way we can know how many bytes we should've
+      // allocated and how many bytes a callee cleanup function will pop.  If
+      // we port preallocated to more targets, we'll have to add custom
+      // preallocated handling in the various CC lowering callbacks.
+      Flags.setByVal();
+      break;
+    case Attribute::Returned:
+      Flags.setReturned();
+      break;
+    case Attribute::SwiftSelf:
+      Flags.setSwiftSelf();
+      break;
+    case Attribute::SwiftAsync:
+      Flags.setSwiftAsync();
+      break;
+    case Attribute::SwiftError:
+      Flags.setSwiftError();
+      break;
+    default:
+      break;
+    }
   }
-  if (Attrs.hasAttribute(Attribute::Preallocated)) {
-    Flags.setPreallocated();
-    // Set the byval flag for CCAssignFn callbacks that don't know about
-    // preallocated.  This way we can know how many bytes we should've
-    // allocated and how many bytes a callee cleanup function will pop.  If
-    // we port preallocated to more targets, we'll have to add custom
-    // preallocated handling in the various CC lowering callbacks.
-    Flags.setByVal();
-  }
-  if (Attrs.hasAttribute(Attribute::Returned))
-    Flags.setReturned();
-  if (Attrs.hasAttribute(Attribute::SwiftSelf))
-    Flags.setSwiftSelf();
-  if (Attrs.hasAttribute(Attribute::SwiftAsync))
-    Flags.setSwiftAsync();
-  if (Attrs.hasAttribute(Attribute::SwiftError))
-    Flags.setSwiftError();
 }
 
 ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
@@ -130,6 +150,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
+  Info.NoMerge = CB.hasFnAttr(Attribute::NoMerge);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
@@ -440,7 +461,13 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    LLT OrigITy = OrigTy.changeToInteger();
+    if (OrigTy == OrigITy) {
+      B.buildTrunc(OrigRegs[0], SrcReg);
+    } else {
+      auto Trunc = B.buildTrunc(OrigITy, SrcReg);
+      B.buildBitcast(OrigRegs[0], Trunc);
+    }
     return;
   }
 
@@ -452,7 +479,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     if (SrcSize == OrigTy.getSizeInBits())
       B.buildMergeValues(OrigRegs[0], Regs);
     else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
+      auto Widened = B.buildMergeLikeInstr(LLT::integer(SrcSize), Regs);
       B.buildTrunc(OrigRegs[0], Widened);
     }
 
@@ -518,7 +545,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     SmallVector<Register, 8> EltMerges;
     int PartsPerElt =
         divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
+    LLT ExtendedPartTy = LLT::integer(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
@@ -593,7 +620,21 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
-    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
+    // Convert float to integer if needed
+    LLT SrcITy = SrcTy.changeToInteger();
+    LLT PartITy = PartTy.changeToInteger();
+    if (SrcTy != SrcITy)
+      SrcReg = B.buildBitcast(SrcITy, SrcReg).getReg(0);
+
+    // Emit the sext/zext/anyext
+    Register DstIReg =
+        B.buildInstr(ExtendOp,
+                     PartITy == PartTy ? DstOp(DstRegs[0]) : DstOp(PartITy),
+                     {SrcReg})
+            .getReg(0);
+    // Convert back to the original type if needed
+    if (PartITy != PartTy)
+      B.buildBitcast(DstRegs[0], DstIReg);
     return;
   }
 
@@ -628,8 +669,8 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                 SrcTy.getNumElements()));
     auto Ext = B.buildAnyExt(ExtTy, SrcReg);
     B.buildUnmerge(DstRegs, Ext);
     return;
@@ -639,8 +680,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT CoverTy = getCoverTy(SrcTy, PartTy);
   if (SrcTy.isVector() && DstRegs.size() > 1) {
-    TypeSize FullCoverSize =
-        DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    TypeSize FullCoverSize = DstTy.getSizeInBits() * DstRegs.size();
 
     LLT EltTy = SrcTy.getElementType();
     TypeSize EltSize = EltTy.getSizeInBits();
@@ -667,7 +707,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
+      LLT CoverTy = LLT::integer(CoveringSize);
       UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
     } else {
       // Widen to the common type.

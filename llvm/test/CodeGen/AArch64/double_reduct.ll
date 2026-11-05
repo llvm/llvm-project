@@ -918,11 +918,11 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v4.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v5.2s
 ; CHECK-GI-NEXT:    mov s4, v0.s[1]
-; CHECK-GI-NEXT:    mov s5, v1.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s4
-; CHECK-GI-NEXT:    fmul s1, s1, s5
 ; CHECK-GI-NEXT:    fmul s0, s0, s2
+; CHECK-GI-NEXT:    mov s2, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NEXT:    fmul s0, s0, s4
+; CHECK-GI-NEXT:    fmul s1, s1, s2
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)

@@ -18,9 +18,11 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Threading.h"
 
 #include <cstdint>
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -31,40 +33,45 @@ class FileSpec;
 struct SharedCacheImageInfo {
   SharedCacheImageInfo()
       : m_filename(), m_uuid(), m_extractor_sp(),
-        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
-  SharedCacheImageInfo(ConstString filename, UUID uuid,
+        m_create_data_extractor(nullptr), m_image_baton(nullptr), m_lazy() {}
+  SharedCacheImageInfo(std::string filename, UUID uuid,
                        lldb::DataExtractorSP extractor_sp)
-      : m_filename(filename), m_uuid(uuid), m_extractor_sp(extractor_sp),
-        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+      : m_filename(std::move(filename)), m_uuid(uuid),
+        m_extractor_sp(extractor_sp), m_create_data_extractor(nullptr),
+        m_image_baton(nullptr), m_lazy() {}
   SharedCacheImageInfo(
-      ConstString filename, UUID uuid,
+      std::string filename, UUID uuid,
       lldb::DataExtractorSP (*create_data_extractor)(void *image),
       void *image_baton)
-      : m_filename(filename), m_uuid(uuid), m_extractor_sp(),
+      : m_filename(std::move(filename)), m_uuid(uuid), m_extractor_sp(),
         m_create_data_extractor(create_data_extractor),
-        m_image_baton(image_baton) {}
+        m_image_baton(image_baton), m_lazy(std::make_shared<LazyExtractor>()) {}
 
+  /// Copies share the extractor, which is created at most once.
   lldb::DataExtractorSP GetExtractor() {
-    if (!m_extractor_sp && m_image_baton)
-      m_extractor_sp = m_create_data_extractor(m_image_baton);
+    if (m_lazy) {
+      llvm::call_once(m_lazy->once, [&] {
+        m_lazy->extractor_sp = m_create_data_extractor(m_image_baton);
+      });
+      return m_lazy->extractor_sp;
+    }
     return m_extractor_sp;
   }
-  ConstString GetFilename() const { return m_filename; }
+  llvm::StringRef GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
-  void *GetImageBaton();
-  void SetExtractor(lldb::DataExtractorSP extractor_sp) {
-    m_extractor_sp = extractor_sp;
-  }
-  void SetImageBaton(void *image_baton) { m_image_baton = image_baton; }
-  void SetDataExtractorCreateFunction(
-      lldb::DataExtractorSP (*create_data_extractor)(void *image));
 
 private:
-  ConstString m_filename;
+  struct LazyExtractor {
+    llvm::once_flag once;
+    lldb::DataExtractorSP extractor_sp;
+  };
+
+  std::string m_filename;
   UUID m_uuid;
   lldb::DataExtractorSP m_extractor_sp;
   lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
   void *m_image_baton;
+  std::shared_ptr<LazyExtractor> m_lazy;
 };
 
 namespace {
@@ -197,7 +204,7 @@ public:
   ///     cache binary blob directly, needed to keep user settings out of
   ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(ConstString filepath,
+  GetSharedCacheImageInfo(llvm::StringRef filepath,
                           lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
@@ -224,7 +231,7 @@ public:
   ///     cache binary blob directly, needed to keep user settings out of
   ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(ConstString filepath, const UUID &sc_uuid,
+  GetSharedCacheImageInfo(llvm::StringRef filepath, const UUID &sc_uuid,
                           lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
@@ -239,20 +246,6 @@ public:
   ///     Host.
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(const UUID &uuid, const UUID &sc_uuid,
-                          lldb::SymbolSharedCacheUse sc_mode) {
-    return {};
-  }
-
-  /// Return information about module \p image_name if it is loaded in
-  /// the current process's address space using shared cache \p uuid.
-  /// The shared cache UUID must have been previously indexed.
-  ///
-  /// \param[in] use_sc_binary_directly
-  ///     Flag to control if this method can try to read a shared
-  ///     cache binary blob directly, needed to keep user settings out of
-  ///     Host.
-  static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
                           lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }

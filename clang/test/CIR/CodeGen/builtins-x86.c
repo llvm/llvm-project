@@ -289,3 +289,28 @@ void test_movntss(float *dest, v4f src) {
   // OGCG: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal 
   return __builtin_ia32_movntss(dest, src);
 }
+
+float test_fma_f32(float a, float b, float c) {
+  // CIR-LABEL: test_fma_f32 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.float
+
+  // LLVM-LABEL: @test_fma_f32
+  // LLVM: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f32
+  // OGCG: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+  return __builtin_fmaf(a, b, c);
+}
+
+double test_fma_f64(double a, double b, double c) {
+  // CIR-LABEL: test_fma_f64 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.double
+
+  // LLVM-LABEL: @test_fma_f64
+  // LLVM: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f64
+  // OGCG: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+  return __builtin_fma(a, b, c);
+}
+

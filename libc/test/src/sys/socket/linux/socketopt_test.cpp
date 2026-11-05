@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/netinet_in_macros.h"
+#include "hdr/netinet_tcp_macros.h"
 #include "hdr/sys_socket_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_linger.h"
@@ -24,7 +26,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <sys/socket.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -84,6 +85,42 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
   ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(lin)));
 }
 
+TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
+  static_assert(SOL_TCP == IPPROTO_TCP);
+
+  int sock = LIBC_NAMESPACE::socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(sock, 0);
+  scope_exit close_sock(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
+
+  static constexpr socklen_t INT_OPTLEN = sizeof(int);
+
+  int optval = 1;
+  socklen_t optlen = INT_OPTLEN;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, optlen),
+      Succeeds(0));
+
+  optval = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, &optlen),
+      Succeeds(0));
+  ASSERT_EQ(optval, 1);
+  ASSERT_EQ(optlen, INT_OPTLEN);
+
+  optval = 47;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen),
+      Succeeds(0));
+
+  optval = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, &optlen),
+      Succeeds(0));
+  ASSERT_EQ(optval, 47);
+  ASSERT_EQ(optlen, INT_OPTLEN);
+}
+
 TEST_F(LlvmLibcSocketOptTest, NotASocket) {
   int fds[2];
   ASSERT_THAT(LIBC_NAMESPACE::pipe(fds), Succeeds(0));
@@ -139,8 +176,16 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockopt(sv[0], SOL_SOCKET, SO_RCVTIMEO,
                                          &retrieved_tv, &retrieved_optlen),
               Succeeds(0));
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // Under QEMU getsockopt(SO_RCVTIMEO) may return a length of 0.
+  ASSERT_TRUE(retrieved_optlen == optlen || retrieved_optlen == 0);
+  if (retrieved_optlen == optlen) {
+    ASSERT_EQ(retrieved_tv.tv_sec, tv.tv_sec);
+  }
+#else
   ASSERT_EQ(retrieved_optlen, optlen);
   ASSERT_EQ(retrieved_tv.tv_sec, tv.tv_sec);
+#endif
 
   char buffer[10];
   struct timespec start, end;
@@ -155,6 +200,7 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
   int64_t elapsed_seconds = end.tv_sec - start.tv_sec;
   int64_t elapsed_nseconds = end.tv_nsec - start.tv_nsec;
   int64_t elapsed_ms = elapsed_seconds * 1000 + elapsed_nseconds / 1000000;
-  ASSERT_GE(elapsed_ms, static_cast<int64_t>(1000));
+  // Make sure the value is in the right ballpark.
+  ASSERT_GE(elapsed_ms, static_cast<int64_t>(900));
   ASSERT_LT(elapsed_ms, static_cast<int64_t>(10000));
 }

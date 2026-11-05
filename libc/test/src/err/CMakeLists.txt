@@ -1,4 +1,4 @@
-add_custom_target(libc_err_unittests)
+add_libc_testsuite(libc-err-tests)
 
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   return()
@@ -6,9 +6,8 @@ endif()
 
 add_libc_test(
   err_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     err_test.cpp
   DEPENDS
@@ -18,9 +17,8 @@ add_libc_test(
 
 add_libc_test(
   errx_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     errx_test.cpp
   DEPENDS
@@ -29,9 +27,8 @@ add_libc_test(
 
 add_libc_test(
   verr_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     verr_test.cpp
   DEPENDS
@@ -41,9 +38,8 @@ add_libc_test(
 
 add_libc_test(
   verrx_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     verrx_test.cpp
   DEPENDS
@@ -52,9 +48,8 @@ add_libc_test(
 
 add_libc_test(
   warn_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     warn_test.cpp
   DEPENDS
@@ -64,9 +59,8 @@ add_libc_test(
 
 add_libc_test(
   warnx_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     warnx_test.cpp
   DEPENDS
@@ -76,9 +70,8 @@ add_libc_test(
 
 add_libc_test(
   vwarn_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     vwarn_test.cpp
   DEPENDS
@@ -88,9 +81,8 @@ add_libc_test(
 
 add_libc_test(
   vwarnx_test
-  UNIT_TEST_ONLY
   SUITE
-    libc_err_unittests
+    libc-err-tests
   SRCS
     vwarnx_test.cpp
   DEPENDS

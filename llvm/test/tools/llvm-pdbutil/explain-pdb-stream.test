@@ -45,4 +45,4 @@ CHECK:      Block:Offset = 11:001C.
 CHECK-NEXT: Address is in block 17 (allocated).
 CHECK-NEXT:   Address is at offset 28/202 of Stream 1 (PDB Stream).
 CHECK-NEXT:   Within the PDB stream:
-CHECK-NEXT:     address is at offset 0/166 of the Named Stream Map.
+CHECK-NEXT:     address is at offset 0/170 of the Named Stream Map.

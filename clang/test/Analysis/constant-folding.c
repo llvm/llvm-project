@@ -1,10 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -triple x86_64-pc-linux-gnu -verify -analyzer-config eagerly-assume=false %s
 
 #define UINT_MAX (~0U)
 #define INT_MAX (int)(UINT_MAX & (UINT_MAX >> 1))
 #define INT_MIN (int)(UINT_MAX & ~(UINT_MAX >> 1))
 
 void clang_analyzer_eval(int);
+void clang_analyzer_value(int);
 
 // There should be no warnings unless otherwise indicated.
 
@@ -428,3 +430,122 @@ void testDisequalityRules(unsigned int u1, unsigned int u2, unsigned int u3,
     clang_analyzer_eval(ush != ssh); // expected-warning{{FALSE}}
   }
 }
+
+void arith_mul_signed_spanning_zero(int x) {
+  if (x < -3 || x > 5)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{32s:{ [-3, 5] }}}
+  clang_analyzer_value(x * 2); // expected-warning{{32s:{ [-6, 10] }}}
+}
+
+void arith_mul_negative_multiplier(int x) {
+  if (x < 2 || x > 5)
+    return;
+  clang_analyzer_value(x);      // expected-warning{{32s:{ [2, 5] }}}
+  // A negative multiplier flips the order of the corner products.
+  clang_analyzer_value(x * -3); // expected-warning{{32s:{ [-15, -6] }}}
+}
+
+void arith_mul_two_symbols_spanning_zero(int x, int y) {
+  if (x < -3 || x > 5)
+    return;
+  if (y < -2 || y > 4)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{32s:{ [-3, 5] }}}
+  clang_analyzer_value(y);     // expected-warning{{32s:{ [-2, 4] }}}
+  // Both operands span zero, so the extremes come from different corners.
+  clang_analyzer_value(x * y); // expected-warning{{32s:{ [-12, 20] }}}
+}
+
+void arith_add_bounded(int x) {
+  if (x < 10 || x > 20)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{32s:{ [10, 20] }}}
+  clang_analyzer_value(x + 5); // expected-warning{{32s:{ [15, 25] }}}
+}
+
+void arith_unsigned_sub_no_wraparound(unsigned u, unsigned v) {
+  if (u < 20 || u > 30)
+    return;
+  if (v > 5)
+    return;
+  clang_analyzer_value(u);     // expected-warning{{32u:{ [20, 30] }}}
+  clang_analyzer_value(v);     // expected-warning{{32u:{ [0, 5] }}}
+  // The subtraction cannot wrap here.
+  clang_analyzer_value(u - v); // expected-warning{{32u:{ [15, 30] }}}
+}
+
+void arith_unsigned_sub_wraparound(unsigned u, unsigned v) {
+  if (u > 5)
+    return;
+  if (v > 10)
+    return;
+  clang_analyzer_value(u);     // expected-warning{{32u:{ [0, 5] }}}
+  clang_analyzer_value(v);     // expected-warning{{32u:{ [0, 10] }}}
+  // u - v can wrap around (e.g. 0u - 10u), so the result must stay the full
+  // unsigned range -- narrowing it here would be unsound.
+  clang_analyzer_value(u - v); // expected-warning{{32u:{ [0, 4294967295] }}}
+}
+
+void arith_signed_mul_overflow(int x) {
+  if (x < 100000 || x > 200000)
+    return;
+  clang_analyzer_value(x);          // expected-warning{{32s:{ [100000, 200000] }}}
+  // x * 100000 overflows 'int', so we conservatively fall back to the full range.
+  clang_analyzer_value(x * 100000); // expected-warning{{32s:{ [-2147483648, 2147483647] }}}
+}
+
+void arith_mul_64bit_bounded(unsigned long long u) {
+  if (u > 100)
+    return;
+  clang_analyzer_value(u);     // expected-warning{{64u:{ [0, 100] }}}
+  // Wide (64-bit) operands must be handled without widening.
+  clang_analyzer_value(u * 8); // expected-warning{{64u:{ [0, 800] }}}
+}
+
+void arith_mul_int_min_no_assert(int x) {
+  if (x > INT_MIN + 2)
+    return;
+  clang_analyzer_value(x);      // expected-warning{{32s:{ [-2147483648, -2147483646] }}}
+  // The corner INT_MIN * -1 overflows, so this must fall back to the full range
+  // rather than asserting inside smul_ov.
+  clang_analyzer_value(x * -1); // expected-warning{{32s:{ [-2147483648, 2147483647] }}}
+}
+
+void arith_mul_int128_bounded(unsigned __int128 x) {
+  if (x > 100)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{128u:{ [0, 100] }}}
+  // 128-bit operands must not trip a bit-width assertion.
+  clang_analyzer_value(x * 8); // expected-warning{{128u:{ [0, 800] }}}
+}
+
+void arith_mul_bitint111_bounded(unsigned _BitInt(111) x) {
+  if (x > 100)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{111u:{ [0, 100] }}}
+  // 111-bit operands must not trip a bit-width assertion.
+  clang_analyzer_value(x * 8); // expected-warning{{111u:{ [0, 800] }}}
+}
+
+void arith_mul_bitint333_bounded(unsigned _BitInt(333) x) {
+  if (x > 100)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{333u:{ [0, 100] }}}
+  // 333-bit operands must not trip a bit-width assertion.
+  clang_analyzer_value(x * 8); // expected-warning{{333u:{ [0, 800] }}}
+}
+
+
+void arith_mul_gappy_over_approximation(int x) {
+  if (x < -3 || x > 5)
+    return;
+  if (x == 1)
+    return;
+  clang_analyzer_value(x);     // expected-warning{{32s:{ [-3, 0], [2, 5] }}}
+  // The inference coarsens the gappy range to [-3, 5] before multiplying, which
+  // stays a sound over-approximation: the coarse result contains every feasible
+  // product of x * 4.
+  clang_analyzer_value(x * 4); // expected-warning{{32s:{ [-12, 20] }}}
+}
+

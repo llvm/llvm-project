@@ -8,6 +8,8 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPUUnitTests.h"
+#include "GCNSubtarget.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -20,7 +22,7 @@
 
 using namespace llvm;
 
-class GCNRegPressureTest : public llvm::CodeGenTestBase {
+class GCNRegPressureTest : public AMDGPUCodeGenTestBase {
 public:
   void SetUp() override { setUpImpl("amdgpu9.08--", "", ""); }
 };
@@ -48,7 +50,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerEndOnDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -117,7 +119,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerAllDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -144,4 +146,180 @@ body:             |
   // Register pressure should be the one at the block's live-ins.
   EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 1U);
   EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 1U);
+}
+
+// Tests the correct handling of multiple uses of the same virtual register
+// in bumpDownwardPressure (speculative estimate of register pressure).
+TEST_F(GCNRegPressureTest, BumpDownwardPressureLastUseAfterCommit) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureLastUseAfterCommit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureLastUseAfterCommit");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0, 1: def %1, 2: U1 (use %1), 3: U2 (last use %1),
+  // 4: use %0, 5: S_ENDPGM
+  MachineInstr *DefV0 = Instrs[0];
+  MachineInstr *DefV1 = Instrs[1];
+  MachineInstr *U1 = Instrs[2];
+  MachineInstr *U2 = Instrs[3];
+
+  GCNManualDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the defs and the first use of %1 via the externally-managed
+  // iterator (same as while scheduling).
+  RPTracker.advance(*DefV0);
+  RPTracker.advance(*DefV1);
+  RPTracker.advance(*U1);
+
+  // After committing U1, both %0 (1 VGPR) and %1 (vreg_256 = 8 VGPRs) are live.
+  EXPECT_EQ(RPTracker.getPressure().getArchVGPRNum(), 9U);
+
+  // Speculate the last use of %1. %1 must die here, dropping its 8 VGPRs and
+  // leaving only %0 live.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(U2, TRI);
+  EXPECT_EQ(P.getArchVGPRNum(), 1U);
+}
+
+// Tests bumpDownwardPressure for an instruction that uses and redefines
+// the same register.
+TEST_F(GCNRegPressureTest, BumpDownwardPressureUseAndRedef) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureUseAndRedef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %0:sgpr_32 = S_OR_B32 %0:sgpr_32, 1, implicit-def dead $scc
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureUseAndRedef");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0 (sgpr_32 = 1 SGPR)
+  // 1: use+redef of %0
+  // 2: use %0
+  // 3: S_ENDPGM
+  MachineInstr *DefS0 = Instrs[0];
+  MachineInstr *UseRedef = Instrs[1];
+
+  GCNManualDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the def; %0 occupies 1 SGPR and stays live.
+  RPTracker.advance(*DefS0);
+  EXPECT_EQ(RPTracker.getPressure().getSGPRNum(), 1U);
+
+  // Speculate the instruction. It uses and redefines %0, which stays live, so
+  // pressure must be unchanged.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(UseRedef, TRI);
+  EXPECT_EQ(P.getSGPRNum(), 1U);
+}
+
+// Returns the maximum pressure over the only block of \p MF, from the downward
+// and from the upward tracker.
+static std::pair<GCNRegPressure, GCNRegPressure>
+getMaxPressureOfBlock(MachineFunction &MF, LiveIntervals &LIS) {
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  GCNDownwardRPTracker Down(LIS);
+  Down.advance(MBB.begin(), MBB.end(), nullptr);
+
+  GCNUpwardRPTracker Up(LIS);
+  Up.reset(MF.getRegInfo(),
+           LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+  for (const MachineInstr &MI : reverse(MBB))
+    Up.recede(MI);
+
+  return {Down.moveMaxPressure(), Up.getMaxPressure()};
+}
+
+// An AV register and a VGPR are live at different points. Only one vector
+// register is live at any point.
+TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRAtDifferentPoints) {
+  StringRef MIR = R"(
+name:            MaxPressureAVAndVGPRAtDifferentPoints
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:av_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    %1:vgpr_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  EXPECT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("MaxPressureAVAndVGPRAtDifferentPoints");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+
+  auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
+  for (const GCNRegPressure *RP : {&Down, &Up}) {
+    EXPECT_EQ(RP->getArchVGPRNum(), 1U);
+    EXPECT_EQ(RP->getVGPRNum(/*UnifiedVGPRFile=*/false), 1U);
+  }
+}
+
+// The same with 64-bit registers, for the tuple weights.
+TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRTuplesAtDifferentPoints) {
+  StringRef MIR = R"(
+name:            MaxPressureAVAndVGPRTuplesAtDifferentPoints
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:av_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    %1:vreg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  EXPECT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("MaxPressureAVAndVGPRTuplesAtDifferentPoints");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  unsigned TupleWeight =
+      std::max(TRI->getRegClassWeight(&AMDGPU::AV_64RegClass).RegWeight,
+               TRI->getRegClassWeight(&AMDGPU::VReg_64RegClass).RegWeight);
+
+  auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
+  for (const GCNRegPressure *RP : {&Down, &Up}) {
+    EXPECT_EQ(RP->getArchVGPRNum(), 2U);
+    EXPECT_EQ(RP->getVGPRTuplesWeight(), TupleWeight);
+  }
 }

@@ -971,8 +971,10 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
     case Hexagon::A4_combineri:     return TargetOpcode::REG_SEQUENCE;
     case Hexagon::A4_rcmpeqi:       return Hexagon::A4_rcmpeq;
     case Hexagon::A4_rcmpneqi:      return Hexagon::A4_rcmpneq;
-    case Hexagon::C2_cmoveif:       return Hexagon::A2_tfrpf;
-    case Hexagon::C2_cmoveit:       return Hexagon::A2_tfrpt;
+    case Hexagon::C2_cmoveif:
+      return Hexagon::A2_tfrf;
+    case Hexagon::C2_cmoveit:
+      return Hexagon::A2_tfrt;
     case Hexagon::C2_cmpeqi:        return Hexagon::C2_cmpeq;
     case Hexagon::C2_cmpgti:        return Hexagon::C2_cmpgt;
     case Hexagon::C2_cmpgtui:       return Hexagon::C2_cmpgtu;
@@ -1115,7 +1117,7 @@ OffsetRange HCE::getOffsetRange(const ExtDesc &ED) const {
 // all uses of Rd.
 OffsetRange HCE::getOffsetRange(Register Rd) const {
   OffsetRange Range;
-  for (const MachineOperand &Op : MRI->use_operands(Rd.Reg)) {
+  for (const MachineOperand &Op : MRI->use_nodbg_operands(Rd.Reg)) {
     // Make sure that the register being used by this operand is identical
     // to the register that was defined: using a different subregister
     // precludes any non-trivial range.
@@ -1859,7 +1861,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
   // must follow the Rd in the operand list.
   std::vector<std::pair<MachineInstr*,unsigned>> RegOps;
   if (ED.IsDef && Diff != 0) {
-    for (MachineOperand &Op : MRI->use_operands(ED.Rd.Reg)) {
+    for (MachineOperand &Op : MRI->use_nodbg_operands(ED.Rd.Reg)) {
       MachineInstr &UI = *Op.getParent();
       RegOps.push_back({&UI, getOperandIndex(UI, Op)});
     }

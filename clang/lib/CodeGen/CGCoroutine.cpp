@@ -880,6 +880,9 @@ struct GetReturnObjectManager {
     Builder.CreateCondBr(InRamp, ConvBB, AfterConvBB);
 
     CGF.EmitBlock(ConvBB);
+    if (auto *AI = dyn_cast<llvm::AllocaInst>(CGF.ReturnValue.getBasePointer()))
+      AI->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                      llvm::MDNode::get(CGF.getLLVMContext(), {}));
     CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                          S.getReturnValue()->getType().getQualifiers(),
                          /*IsInit*/ true);

@@ -634,7 +634,7 @@ define i1 @test_constant_class_qnan_test_qnan_f64() {
 ; CHECK-LABEL: @test_constant_class_qnan_test_qnan_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF8000000000000, i32 2)
+  %val = call i1 @llvm.is.fpclass.f64(double +qnan, i32 2)
   ret i1 %val
 }
 
@@ -642,7 +642,7 @@ define i1 @test_constant_class_qnan_test_snan_f64() {
 ; CHECK-LABEL: @test_constant_class_qnan_test_snan_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF8000000000000, i32 1)
+  %val = call i1 @llvm.is.fpclass.f64(double +qnan, i32 1)
   ret i1 %val
 }
 
@@ -650,7 +650,7 @@ define i1 @test_constant_class_ninf_test_ninf_f64() {
 ; CHECK-LABEL: @test_constant_class_ninf_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0xFFF0000000000000, i32 4)
+  %val = call i1 @llvm.is.fpclass.f64(double -inf, i32 4)
   ret i1 %val
 }
 
@@ -658,7 +658,7 @@ define i1 @test_constant_class_pinf_test_ninf_f64() {
 ; CHECK-LABEL: @test_constant_class_pinf_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF0000000000000, i32 4)
+  %val = call i1 @llvm.is.fpclass.f64(double +inf, i32 4)
   ret i1 %val
 }
 
@@ -666,7 +666,7 @@ define i1 @test_constant_class_qnan_test_ninf_f64() {
 ; CHECK-LABEL: @test_constant_class_qnan_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF8000000000000, i32 4)
+  %val = call i1 @llvm.is.fpclass.f64(double +qnan, i32 4)
   ret i1 %val
 }
 
@@ -778,7 +778,7 @@ define i1 @test_constant_class_pinf_test_pinf_f64() {
 ; CHECK-LABEL: @test_constant_class_pinf_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF0000000000000, i32 512)
+  %val = call i1 @llvm.is.fpclass.f64(double +inf, i32 512)
   ret i1 %val
 }
 
@@ -786,7 +786,7 @@ define i1 @test_constant_class_ninf_test_pinf_f64() {
 ; CHECK-LABEL: @test_constant_class_ninf_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0xFFF0000000000000, i32 512)
+  %val = call i1 @llvm.is.fpclass.f64(double -inf, i32 512)
   ret i1 %val
 }
 
@@ -794,7 +794,7 @@ define i1 @test_constant_class_qnan_test_pinf_f64() {
 ; CHECK-LABEL: @test_constant_class_qnan_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.is.fpclass.f64(double 0x7FF8000000000000, i32 512)
+  %val = call i1 @llvm.is.fpclass.f64(double +qnan, i32 512)
   ret i1 %val
 }
 
@@ -2744,7 +2744,7 @@ define i1 @test_class_is_nan_assume_not_eq_pinf(float %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %ord = fcmp oeq float %x, 0x7FF0000000000000
+  %ord = fcmp oeq float %x, +inf
   call void @llvm.assume(i1 %ord)
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   ret i1 %class
@@ -3919,6 +3919,14 @@ define i1 @test_class_is_not_psub_pnorm_pinf__dynamic(float %arg) #3 {
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 127)
+  ret i1 %class
+}
+
+define i1 @test_class_is_pnorm_subset_of_normal_mask(float nofpclass(nan inf zero sub nnorm) %arg) {
+; CHECK-LABEL: @test_class_is_pnorm_subset_of_normal_mask(
+; CHECK-NEXT:    ret i1 true
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 264)
   ret i1 %class
 }
 

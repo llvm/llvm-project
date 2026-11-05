@@ -11,7 +11,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
-# MISSING: error: cannot open output file /no/such/file
+# MISSING: error: failed to open /no/such/file:
 
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:
@@ -40,24 +40,24 @@
 
 ## "--output=foo" is equivalent to "-o foo".
 # RUN: not ld.lld %t --output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR8 %s
-# ERR8: error: cannot open output file /no/such/file
+# ERR8: error: failed to open /no/such/file:
 
 ## "-output=foo" is equivalent to "-o utput=foo".
 # RUN: not ld.lld %t -output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR9 %s
-# ERR9: error: cannot open output file utput=/no/such/file
+# ERR9: error: failed to open utput=/no/such/file:
 
 # RUN: ld.lld %t -z foo -o /dev/null 2>&1 | FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
 # RUN: ld.lld %t -z foo -z rel -z rela -z max-page-size=1 -z common-page-size=1 -z dynamic-undefined-weak \
 # RUN:   -z nodynamic-undefined-weak -o /dev/null --version 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
-# ERR10: warning: unknown -z value: foo
+# ERR10: warning: unknown -z value 'foo'
 
 ## Check we report "unknown -z value" error even with -v.
 # RUN: ld.lld %t -z foo -z rel -o /dev/null -v 2>&1 | FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
 
 ## Note: in GNU ld, --fatal-warning still leads to a warning.
 # RUN: not ld.lld %t -z foo --fatal-warnings 2>&1 | FileCheck --check-prefix=ERR10-FATAL %s
-# ERR10-FATAL: error: unknown -z value: foo
+# ERR10-FATAL: error: unknown -z value 'foo'
 
 # RUN: not ld.lld %t -z max-page-size 2>&1 | FileCheck -check-prefix=ERR11 %s
 # ERR11: error: invalid max-page-size:

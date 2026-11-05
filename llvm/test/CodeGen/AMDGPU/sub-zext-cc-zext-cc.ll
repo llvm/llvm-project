@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 <%s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal <%s | FileCheck -check-prefixes=GCN %s
 ;
 ; This test checks that we have the correct fold for zext(cc1) - zext(cc2).
 ;

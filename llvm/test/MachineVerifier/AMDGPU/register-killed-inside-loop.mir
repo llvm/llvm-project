@@ -1,6 +1,6 @@
 # FIXME: This should fail the verifier
 # XFAIL: *
-# RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=amdgpu-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck %s
 
 # %1 is live out of %bb.1 through the loop edge, and therefore the kill flag is invalid.
 
@@ -8,6 +8,7 @@
 
 ---
 name:            kill_flag_in_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $vgpr0_vgpr1

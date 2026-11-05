@@ -9,20 +9,16 @@
 #include "SPIRVCommandLine.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Pass.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -79,10 +75,10 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   if (!TheTarget)
     return false;
 
-  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple)
-  // hits the following assertion: llvm/lib/CodeGen/CommandFlags.cpp:78:
-  // llvm::FPOpFusion::FPOpFusionMode llvm::codegen::getFuseFPOps(): Assertion
-  // `FuseFPOpsView && "RegisterCodeGenFlags not created."' failed.
+  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple) hits an
+  // assertion in one of the codegen flag getters in
+  // llvm/lib/CodeGen/CommandFlags.cpp:
+  // `...View && "RegisterCodeGenFlags not created."' failed.
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
@@ -103,31 +99,20 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   std::string DLStr = M->getDataLayoutStr();
   Expected<DataLayout> MaybeDL = DataLayout::parse(
-      DLStr.empty() ? Target->createDataLayout().getStringRepresentation()
-                    : DLStr);
+      DLStr.empty() ? TargetTriple.computeDataLayout() : DLStr);
   if (!MaybeDL) {
     ErrMsg = toString(MaybeDL.takeError());
     return false;
   }
   M->setDataLayout(MaybeDL.get());
 
-  TargetLibraryInfoImpl TLII(M->getTargetTriple());
-  legacy::PassManager PM;
-  PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
-      new MachineModuleInfoWrapperPass(Target.get()));
-  Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
-                                           *Target);
-
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);
-  if (Target->addPassesToEmitFile(PM, OutStream, nullptr,
-                                  CodeGenFileType::ObjectFile)) {
-    ErrMsg = "Target machine cannot emit a file of this type";
+  if (Error Err = runCodeGenPipeline(*Target, *M, OutStream, nullptr,
+                                     CodeGenFileType::ObjectFile)) {
+    ErrMsg = toString(std::move(Err));
     return false;
   }
-
-  PM.run(*M);
   SpirvObj = OutBuffer.str();
 
   return true;

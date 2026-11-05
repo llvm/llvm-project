@@ -18,6 +18,8 @@
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/expression.h"
+#include "mlir/IR/IRMapping.h"
 
 //===----------------------------------------------------------------------===//
 // Synchronization statements
@@ -97,7 +99,7 @@ void Fortran::lower::genSyncTeamStatement(
       std::get<Fortran::parser::TeamValue>(stmt.t);
   const SomeExpr *teamExpr = Fortran::semantics::GetExpr(teamValue);
   mlir::Value team =
-      fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+      fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
@@ -161,7 +163,7 @@ Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
   // Handle TEAM-VALUE
   const auto *teamExpr =
       Fortran::semantics::GetExpr(std::get<Fortran::parser::TeamValue>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   return mif::ChangeTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
 }
@@ -251,7 +253,7 @@ void Fortran::lower::genFormTeamStatement(
   // Handle TEAM-VARIABLE
   const auto *teamExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::TeamVariable>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   mif::FormTeamOp::create(builder, loc, teamNumber, team, newIndex, statAddr,
                           errMsgAddr);
@@ -260,6 +262,34 @@ void Fortran::lower::genFormTeamStatement(
 //===----------------------------------------------------------------------===//
 // COARRAY utils
 //===----------------------------------------------------------------------===//
+
+/// Generates a vector of cosubscripts from CoarrayRef
+mlir::SmallVector<mlir::Value>
+Fortran::lower::getCosubscripts(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc,
+                                const Fortran::evaluate::CoarrayRef &expr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::SmallVector<mlir::Value> cosubscripts;
+
+  // Creation of the cosubscripts vector
+  mlir::Type i64Ty = builder.getI64Type();
+  unsigned corank = expr.cosubscript().size();
+  for (unsigned dim = 0; dim < corank; ++dim) {
+    auto cosub = ToInt64(expr.cosubscript()[dim]);
+    mlir::Value idx;
+    if (cosub.has_value())
+      idx = builder.createIntegerConstant(loc, i64Ty, cosub.value());
+    else {
+      auto s = ignoreEvConvert(expr.cosubscript()[dim]);
+      idx = builder.createConvert(
+          loc, i64Ty, fir::getBase(converter.genExprValue(loc, s, stmtCtx)));
+    }
+
+    cosubscripts.push_back(idx);
+  }
+  return cosubscripts;
+}
 
 mlir::Value
 Fortran::lower::genLowerCoBounds(Fortran::lower::AbstractConverter &converter,
@@ -449,6 +479,33 @@ mlir::Value Fortran::lower::genAllocateCoarray(
   return stat;
 }
 
+void Fortran::lower::genAllocateNonAllocatableSaveCoarray(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, mlir::Value addr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::IRMapping mapping;
+
+  auto func = mif::getOrCreateInitFunc(builder, mod, mifSaveCoarraysAllocName);
+  bool funcIsEmpty = func.empty();
+
+  mlir::Block &entry = func.getBody().front();
+  auto returnOp = entry.getTerminator();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(returnOp);
+
+  // If the function is empty, then we add the MIF initialization operation
+  // at the beginning.
+  if (funcIsEmpty)
+    mif::InitOp::create(builder, loc);
+
+  mlir::Operation &op = *addr.getDefiningOp();
+  mlir::Operation *localAddrOp = builder.clone(op, mapping);
+  Fortran::lower::genAllocateCoarray(converter, loc, sym,
+                                     localAddrOp->getResult(0));
+}
+
 //===----------------------------------------------------------------------===//
 // COARRAY expressions
 //===----------------------------------------------------------------------===//
@@ -462,4 +519,100 @@ fir::ExtendedValue Fortran::lower::CoarrayExprHelper::genAddr(
 fir::ExtendedValue Fortran::lower::CoarrayExprHelper::genValue(
     const Fortran::evaluate::CoarrayRef &expr) {
   TODO(converter.getCurrentLocation(), "coarray: coarray value");
+}
+
+//===----------------------------------------------------------------------===//
+// EVENT and NOTIFY statements
+//===----------------------------------------------------------------------===//
+
+void Fortran::lower::genNotifyWaitStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::NotifyWaitStmt &) {
+  TODO(converter.getCurrentLocation(), "coarray: NOTIFY WAIT runtime");
+}
+
+void Fortran::lower::genEventPostStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::EventPostStmt &stmt) {
+  converter.checkCoarrayEnabled();
+  mlir::Location loc = converter.getCurrentLocation();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+
+  // Handle STAT and ERRMSG values
+  const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
+      std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
+  auto [statAddr, errMsgAddr] = converter.genStatAndErrmsg(loc, statOrErrList);
+
+  // Handle EVENT-VAR and IMAGE_NUMBER
+  auto eventExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::EventVariable>(stmt.t));
+  mlir::Value event = fir::getBase(
+      converter.genExprBox(loc, *eventExpr, stmtCtx, /*allowCoarray=*/true));
+  llvm::SmallVector<mlir::Value> cosubscripts;
+  if (auto coref{evaluate::ExtractCoarrayRef(eventExpr)}) {
+    cosubscripts =
+        Fortran::lower::getCosubscripts(converter, loc, coref.value());
+    if (coref->stat().has_value())
+      TODO(loc, "event post: event variable with STAT= specifier.");
+    if (coref->team().has_value())
+      TODO(loc, "event post: event variable image selector with TEAM= or "
+                "TEAM_NUMBER= specifier.");
+    if (coref->notify().has_value())
+      mlir::emitError(loc,
+                      "event post: NOTIFY= specifier forbidden in event post.");
+  }
+
+  mif::EventPostOp::create(builder, loc, event, cosubscripts, statAddr,
+                           errMsgAddr);
+}
+
+void Fortran::lower::genEventWaitStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::EventWaitStmt &stmt) {
+  converter.checkCoarrayEnabled();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
+
+  // Handle STAT ,ERRMSG and UNTIL_COUNT
+  mlir::Value statAddr, errMsg, untilCount;
+  const auto &eventSpecList =
+      std::get<std::list<Fortran::parser::EventWaitSpec>>(stmt.t);
+  for (const Fortran::parser::EventWaitSpec &eventSpec : eventSpecList) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::StatOrErrmsg &statOrErr) {
+              std::visit(
+                  Fortran::common::visitors{
+                      [&](const Fortran::parser::StatVariable &statVar) {
+                        statAddr = fir::getBase(converter.genExprAddr(
+                            loc, Fortran::semantics::GetExpr(statVar),
+                            stmtCtx));
+                      },
+                      [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                        const Fortran::semantics::SomeExpr *expr =
+                            Fortran::semantics::GetExpr(errMsgVar);
+                        errMsg = fir::getBase(
+                            converter.genExprBox(loc, *expr, stmtCtx));
+                      },
+                  },
+                  statOrErr.u);
+            },
+            [&](const Fortran::parser::ScalarIntExpr &untilCountVar) {
+              untilCount = fir::getBase(converter.genExprValue(
+                  loc, Fortran::semantics::GetExpr(untilCountVar), stmtCtx));
+            },
+        },
+        eventSpec.u);
+  }
+
+  // Handle EVENT-VAR
+  auto eventExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::EventVariable>(stmt.t));
+  mlir::Value eventVar = fir::getBase(
+      converter.genExprAddr(loc, *eventExpr, stmtCtx, /*allowCoarray=*/true));
+
+  mif::EventWaitOp::create(builder, loc, eventVar, untilCount, statAddr,
+                           errMsg);
 }

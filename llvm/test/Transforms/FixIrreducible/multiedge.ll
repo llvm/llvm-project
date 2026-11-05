@@ -32,6 +32,42 @@ b:
   br label %a
 }
 
+define void @multiedge_external_switch(i32 %Pred) {
+; CHECK-LABEL: define void @multiedge_external_switch(
+; CHECK-SAME: i32 [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i32 [[PRED]], label %[[ENTRY_TARGET_A:.*]] [
+; CHECK-NEXT:      i32 0, label %[[ENTRY_TARGET_A]]
+; CHECK-NEXT:      i32 1, label %[[ENTRY_TARGET_B:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, %[[B:.*]] ], [ [[PHI_MOVED:%.*]], %[[IRR_GUARD:.*]] ]
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    br label %[[A]]
+; CHECK:       [[ENTRY_TARGET_A]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[ENTRY_TARGET_B]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[PHI_MOVED]] = phi i32 [ poison, %[[A]] ], [ 0, %[[ENTRY_TARGET_A]] ], [ poison, %[[ENTRY_TARGET_B]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[A]] ], [ false, %[[ENTRY_TARGET_A]] ], [ true, %[[ENTRY_TARGET_B]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  switch i32 %Pred, label %a [
+  i32 0, label %a
+  i32 1, label %b
+  ]
+
+a:
+  %phi = phi i32 [ 0, %entry ], [ 0, %entry ], [ 1, %b ]
+  br label %b
+
+b:
+  br label %a
+}
+
 define void @multiedge_internal_callbr() {
 ; CHECK-LABEL: define void @multiedge_internal_callbr() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -53,6 +89,36 @@ entry:
 
 a:
   callbr void asm "", "!i"() to label %b [label %b]
+
+b:
+  %phi = phi i1 [ false, %entry ], [ true, %a ], [ true, %a ]
+  br label %a
+}
+
+define void @multiedge_internal_switch() {
+; CHECK-LABEL: define void @multiedge_internal_switch() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD:.*]]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    switch i32 0, label %[[A_TARGET_B:.*]] [
+; CHECK-NEXT:      i32 0, label %[[A_TARGET_B]]
+; CHECK-NEXT:    ]
+; CHECK:       [[B:.*]]:
+; CHECK-NEXT:    br label %[[A]]
+; CHECK:       [[A_TARGET_B]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[PHI_MOVED:%.*]] = phi i1 [ true, %[[A_TARGET_B]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[A_TARGET_B]] ], [ true, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  br i1 false, label %a, label %b
+
+a:
+  switch i32 0, label %b [
+  i32 0, label %b
+  ]
 
 b:
   %phi = phi i1 [ false, %entry ], [ true, %a ], [ true, %a ]
@@ -88,6 +154,49 @@ entry:
 a:
   %phi.a = phi i32 [ 0, %entry ], [ 0, %entry ], [ 1, %b ]
   callbr void asm "", "!i"() to label %b [label %b]
+
+b:
+  %phi.b = phi i32 [ 2, %entry ], [ 3, %a ], [ 3, %a ]
+  br label %a
+}
+
+define void @multiedge_both_switch() {
+; CHECK-LABEL: define void @multiedge_both_switch() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i32 0, label %[[ENTRY_TARGET_A:.*]] [
+; CHECK-NEXT:      i32 0, label %[[ENTRY_TARGET_A]]
+; CHECK-NEXT:      i32 1, label %[[ENTRY_TARGET_B:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    [[PHI_A:%.*]] = phi i32 [ 1, %[[B:.*]] ], [ [[PHI_A_MOVED:%.*]], %[[IRR_GUARD:.*]] ]
+; CHECK-NEXT:    switch i32 0, label %[[A_TARGET_B:.*]] [
+; CHECK-NEXT:      i32 0, label %[[A_TARGET_B]]
+; CHECK-NEXT:    ]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    br label %[[A]]
+; CHECK:       [[A_TARGET_B]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[ENTRY_TARGET_A]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[ENTRY_TARGET_B]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[PHI_A_MOVED]] = phi i32 [ poison, %[[A_TARGET_B]] ], [ 0, %[[ENTRY_TARGET_A]] ], [ poison, %[[ENTRY_TARGET_B]] ]
+; CHECK-NEXT:    [[PHI_B_MOVED:%.*]] = phi i32 [ 3, %[[A_TARGET_B]] ], [ poison, %[[ENTRY_TARGET_A]] ], [ 2, %[[ENTRY_TARGET_B]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[A_TARGET_B]] ], [ false, %[[ENTRY_TARGET_A]] ], [ true, %[[ENTRY_TARGET_B]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  switch i32 0, label %a [
+  i32 0, label %a
+  i32 1, label %b
+  ]
+
+a:
+  %phi.a = phi i32 [ 0, %entry ], [ 0, %entry ], [ 1, %b ]
+  switch i32 0, label %b [
+  i32 0, label %b
+  ]
 
 b:
   %phi.b = phi i32 [ 2, %entry ], [ 3, %a ], [ 3, %a ]

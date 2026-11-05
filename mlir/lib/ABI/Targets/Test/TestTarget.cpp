@@ -103,12 +103,12 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
   uint64_t alignBytes = dl.getTypeABIAlignment(type);
   return ArgClassification::getIndirect(llvm::Align(alignBytes),
-                                        /*byVal=*/true);
+                                        /*byVal=*/true, /*addrSpace=*/0);
 }
 
 } // namespace
 
-FunctionClassification mlir::abi::test::classify(ArrayRef<Type> argTypes,
+FunctionClassification mlir::abi::test::classify(TypeRange argTypes,
                                                  Type returnType,
                                                  const DataLayout &dl) {
   FunctionClassification fc;
@@ -125,8 +125,8 @@ namespace {
 /// set causes a parse error (no silent ignore).  Updated when new
 /// optional keys are added to the schema.
 constexpr StringRef knownArgKeys[] = {
-    "kind",        "coerced_type",   "sign_extend",
-    "can_flatten", "indirect_align", "byval",
+    "kind",           "coerced_type", "sign_extend",         "can_flatten",
+    "indirect_align", "byval",        "indirect_addr_space",
 };
 
 bool isKnownArgKey(StringRef key) {
@@ -151,7 +151,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       emitError() << "unknown key '" << na.getName().getValue()
                   << "' in classification dictionary; allowed keys are "
                   << "kind, coerced_type, sign_extend, can_flatten, "
-                  << "indirect_align, byval";
+                  << "indirect_align, byval, indirect_addr_space";
       return std::nullopt;
     }
 
@@ -161,7 +161,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     Type coerced;
     if (auto t = argDict.getAs<TypeAttr>("coerced_type"))
       coerced = t.getValue();
-    auto c = ArgClassification::getDirect(coerced);
+    auto c = ArgClassification::getDirect(coerced, /*offset=*/0);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
     return c;
@@ -179,10 +179,11 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     return ArgClassification::getExtend(coerced.getValue(), signExt);
   }
 
-  if (kind == "indirect") {
+  if (kind == "indirect" || kind == "indirect_aliased") {
     auto align = argDict.getAs<IntegerAttr>("indirect_align");
     if (!align) {
-      emitError() << "kind='indirect' requires 'indirect_align' IntegerAttr";
+      emitError() << "kind='" << kind
+                  << "' requires 'indirect_align' IntegerAttr";
       return std::nullopt;
     }
     if (align.getInt() <= 0 || !llvm::isPowerOf2_64(align.getInt())) {
@@ -190,10 +191,28 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
                   << align.getInt();
       return std::nullopt;
     }
+    unsigned addrSpace = 0;
+    if (auto as = argDict.getAs<IntegerAttr>("indirect_addr_space")) {
+      if (as.getInt() < 0) {
+        emitError() << "'indirect_addr_space' must be non-negative; got "
+                    << as.getInt();
+        return std::nullopt;
+      }
+      addrSpace = as.getInt();
+    }
+    if (kind == "indirect_aliased") {
+      if (argDict.get("byval")) {
+        emitError() << "kind='indirect_aliased' does not take 'byval'";
+        return std::nullopt;
+      }
+      return ArgClassification::getIndirectAliased(llvm::Align(align.getInt()),
+                                                   addrSpace);
+    }
     bool byVal = true;
     if (auto bv = argDict.getAs<BoolAttr>("byval"))
       byVal = bv.getValue();
-    return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal);
+    return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal,
+                                          addrSpace);
   }
 
   if (kind == "ignore") {
@@ -207,7 +226,8 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
   }
 
   emitError() << "unknown kind='" << kind
-              << "'; expected one of direct, extend, indirect, ignore, expand";
+              << "'; expected one of direct, extend, indirect, "
+                 "indirect_aliased, ignore, expand";
   return std::nullopt;
 }
 

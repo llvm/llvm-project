@@ -11,7 +11,6 @@
 #include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -39,8 +38,8 @@ class SIShrinkInstructions {
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
-  bool isKImmOperand(const MachineOperand &Src) const;
-  bool isKUImmOperand(const MachineOperand &Src) const;
+  bool isKImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
+  bool isKUImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
   void copyExtraImplicitOps(MachineInstr &NewMI, MachineInstr &MI) const;
   bool shrinkScalarCompare(MachineInstr &MI) const;
@@ -108,14 +107,21 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
     if (Reg.isVirtual()) {
       MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
-        MachineOperand &MovSrc = Def->getOperand(1);
+        const MachineOperand &MovSrc = Def->getOperand(1);
         bool ConstantFolded = false;
 
-        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm()) {
-            Src0.ChangeToImmediate(MovSrc.getImm());
-            ConstantFolded = true;
-          } else if (MovSrc.isFI()) {
+        if (MovSrc.isImm()) {
+          if (std::optional<int64_t> Imm = SIInstrInfo::extractSubregFromImm(
+                  MovSrc.getImm(), Src0.getSubReg())) {
+            MachineOperand ImmOp = MachineOperand::CreateImm(*Imm);
+            if (TII->isOperandLegal(MI, Src0Idx, &ImmOp)) {
+              Src0.ChangeToImmediate(*Imm);
+              ConstantFolded = true;
+            }
+          }
+        } else if (!Src0.getSubReg() &&
+                   TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
+          if (MovSrc.isFI()) {
             Src0.ChangeToFrameIndex(MovSrc.getIndex());
             ConstantFolded = true;
           } else if (MovSrc.isGlobal()) {
@@ -170,14 +176,16 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
   return true;
 }
 
-bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKImmOperand(const MachineInstr &MI,
+                                         const MachineOperand &Src) const {
   return isInt<16>(SignExtend64(Src.getImm(), 32)) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
-bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKUImmOperand(const MachineInstr &MI,
+                                          const MachineOperand &Src) const {
   return isUInt<16>(Src.getImm()) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
@@ -288,8 +296,8 @@ bool SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(MI, Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(MI, Src1))) {
     if (!SIInstrInfo::sopkIsZext(SOPKOpc))
       Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
@@ -927,10 +935,13 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       }
 
       // Try to use S_ADDK_I32 and S_MULK_I32.
+      // S_OR_B32 sets SCC to (result != 0), but S_ADDK_I32 sets it to
+      // signed overflow, so only shrink the OR when SCC is dead.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32 ||
           (MI.getOpcode() == AMDGPU::S_OR_B32 &&
-           MI.getFlag(MachineInstr::MIFlag::Disjoint))) {
+           MI.getFlag(MachineInstr::MIFlag::Disjoint) &&
+           MI.allImplicitDefsAreDead())) {
         const MachineOperand *Dest = &MI.getOperand(0);
         MachineOperand *Src0 = &MI.getOperand(1);
         MachineOperand *Src1 = &MI.getOperand(2);
@@ -951,7 +962,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           continue;
         }
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
-          if (Src1->isImm() && isKImmOperand(*Src1)) {
+          if (Src1->isImm() && isKImmOperand(MI, *Src1)) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
                                ? AMDGPU::S_MULK_I32
                                : AMDGPU::S_ADDK_I32;
@@ -977,7 +988,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         if (Src.isImm() && Dst.getReg().isPhysical()) {
           unsigned ModOpc;
           int32_t ModImm;
-          if (isKImmOperand(Src)) {
+          if (isKImmOperand(MI, Src)) {
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
             Src.setImm(SignExtend64(Src.getImm(), 32));
             Changed = true;
@@ -1016,12 +1027,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // If there is no chance we will shrink it and use VCC as sdst to get
       // a 32 bit form try to replace dead sdst with NULL.
-      if (TII->isVOP3(MI.getOpcode())) {
-        Changed |= tryReplaceDeadSDST(MI);
-        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-          continue;
-        }
-      }
+      Changed |= tryReplaceDeadSDST(MI);
+      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
+        continue;
 
       if (!TII->canShrink(MI, *MRI)) {
         // Try commuting the instruction and see if that enables us to shrink
@@ -1115,10 +1123,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // Copy extra operands not present in the instruction definition.
       copyExtraImplicitOps(*Inst32, MI);
-
-      // Copy deadness from the old explicit vcc def to the new implicit def.
-      if (SDst && SDst->isDead())
-        Inst32->findRegisterDefOperand(VCCReg, /*TRI=*/nullptr)->setIsDead();
 
       MI.eraseFromParent();
       foldImmediates(*Inst32);

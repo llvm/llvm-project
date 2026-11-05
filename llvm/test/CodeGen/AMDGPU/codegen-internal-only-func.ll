@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 
 ; CHECK-NOT: func
 
