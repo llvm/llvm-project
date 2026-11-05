@@ -172,6 +172,7 @@ protected:
   /// Where CheckForPacket resumes its search for the '#' that ends the first
   /// packet in m_bytes. Nonzero only while that packet is incomplete.
   size_t m_hash_search_start = 0;
+  size_t m_hash_search_bytes_size = 0;
   std::recursive_mutex m_bytes_mutex;
   CompressionType m_compression_type;
 

@@ -692,6 +692,11 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
                                        StringExtractorGDBRemote &packet) {
   // Put the packet data into the buffer in a thread safe fashion
   std::lock_guard<std::recursive_mutex> guard(m_bytes_mutex);
+  assert(
+      (m_hash_search_start == 0 ||
+       m_hash_search_bytes_size == m_bytes.size()) &&
+      "m_bytes modified outside CheckForPacket while search cursor was cached");
+  assert(m_hash_search_start <= m_bytes.size());
 
   Log *log = GetLog(GDBRLog::Packets);
 
@@ -759,9 +764,11 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
             // Checksum bytes aren't all here yet
             content_length = std::string::npos;
             m_hash_search_start = hash_pos;
+            m_hash_search_bytes_size = m_bytes.size();
           }
         } else {
           m_hash_search_start = m_bytes.size();
+          m_hash_search_bytes_size = m_bytes.size();
         }
       }
       break;
