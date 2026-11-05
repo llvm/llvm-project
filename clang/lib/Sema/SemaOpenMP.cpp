@@ -17625,13 +17625,29 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   collectLoopStmts(AStmt, LoopStmts);
 
   // Collect pre-init statements in outer-to-inner order.
+  // Finals below already skip leftover writes when a loop has no trips, so a
+  // leftover value is whatever PreInits last wrote. Gate inner assignment
+  // inits the same way: otherwise J = 0 always runs, Finals skip, and J stays
+  // at that wrong PreInit value.
   SmallVector<Stmt *> PreInits;
+  SmallVector<SmallVector<Stmt *, 1>, 4> GatedInits(NumLoops);
   for (auto I : llvm::seq<unsigned>(NumLoops)) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     assert(LoopHelper.Counters.size() == 1 &&
            "Single-dimensional loop iteration space expected");
-    addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
-                    PreInits);
+    if (I == 0) {
+      addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
+                      PreInits);
+      continue;
+    }
+    SmallVector<Stmt *, 1> AlwaysInits;
+    for (Stmt *S : OriginalInits[I]) {
+      if (isa<DeclStmt>(S))
+        AlwaysInits.push_back(S);
+      else
+        GatedInits[I].push_back(S);
+    }
+    addLoopPreInits(Context, LoopHelper, LoopStmts[I], AlwaysInits, PreInits);
   }
 
   CaptureVars CopyTransformer(SemaRef);
@@ -17755,6 +17771,22 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
                                          TripCount.get(), ZeroTripCount);
   if (!TripCount.isUsable())
     return StmtError();
+  // Inner assignments run only if every enclosing loop has at least one
+  // iteration. Otherwise the gated Finals leave that PreInit as the leftover.
+  for (unsigned I = 1; I < NumLoops; ++I) {
+    if (GatedInits[I].empty())
+      continue;
+    ExprResult InitCond = BuildHasIterations(/*Count=*/I);
+    if (!InitCond.isUsable())
+      return StmtError();
+    Stmt *ThenStmt = GatedInits[I].front();
+    if (GatedInits[I].size() > 1)
+      ThenStmt = CompoundStmt::Create(Context, GatedInits[I],
+                                      FPOptionsOverride(), CondLoc, CondLoc);
+    PreInits.push_back(IfStmt::Create(
+        Context, CondLoc, IfStatementKind::Ordinary, nullptr, nullptr,
+        InitCond.get(), CondLoc, CondLoc, ThenStmt, SourceLocation(), nullptr));
+  }
 
   auto MakeNumIterationsInIVTy = [&](unsigned I) -> ExprResult {
     ExprResult N = MakeNumIterations(I);
@@ -17893,9 +17925,10 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
       OutermostHelper.Inc->getEndLoc());
 
   // A counter only reaches its final value if its own loop and all enclosing
-  // loops execute at least one iteration; otherwise it keeps the value assigned
-  // by the pre-inits. Guarding also avoids evaluating 'start + n * step' for an
-  // empty loop, whose trip count may have wrapped.
+  // loops execute at least one iteration. Otherwise it keeps the last value
+  // from its init, or the value from before the nest if that init did not run.
+  // Guarding also avoids evaluating 'start + n * step' for an empty loop,
+  // whose trip count may have wrapped.
   SmallVector<Stmt *, 4> Finals;
   for (unsigned I = 0; I < NumLoops; ++I) {
     assert(LoopHelpers[I].Finals.size() == 1 &&

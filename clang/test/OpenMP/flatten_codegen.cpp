@@ -142,4 +142,23 @@ extern "C" void mixed_sign(int n) {
       body((int)i, j);
 }
 
+// Empty outer loop: outer I = 0 always runs; inner J = 0 is gated on the
+// outer PreCond, same idea as gated Finals leftover writes.
+// CHECK-LABEL: define {{.*}}void @empty_outer(
+// CHECK:       store i32 0, ptr %I,
+// CHECK:       %[[HAS_OUTER:.+]] = icmp slt i32 0, %{{.+}}
+// CHECK-NEXT:  br i1 %[[HAS_OUTER]], label %[[J_INIT:[^,]+]], label %[[AFTER_J:[^,]+]]
+// CHECK:     [[J_INIT]]:
+// CHECK:       store i32 0, ptr %J,
+// CHECK-NEXT:  br label %[[AFTER_J]]
+extern "C" void empty_outer() {
+  int I = -1;
+  int J = -1;
+  int Zero = 0;
+#pragma omp flatten
+  for (I = 0; I < Zero; ++I)
+    for (J = 0; J < 3; ++J)
+      body(I, J);
+}
+
 #endif
