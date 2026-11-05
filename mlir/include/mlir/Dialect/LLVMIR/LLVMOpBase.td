@@ -310,7 +310,11 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // interfaces the intrinsic implements. When a flag is set, the "baseArgs"
 // list includes the arguments required by the corresponding interface.
 // Derived intrinsics must append "baseArgs" to their argument list if they
-// enable any of these flags.
+// enable any of these flags. "requiresTBAAStruct" is not tied to an
+// interface: it adds the tbaa_struct argument after tbaa (when present),
+// for the aggregate-copy intrinsics only. It only wires the argument;
+// the export, import, and verifier sites name those three ops directly,
+// so a future op setting the flag also needs handling there.
 //
 // LLVM `immargs` can be represented as MLIR attributes by providing both
 // the `immArgPositions` and `immArgAttrNames` lists. These two lists should
@@ -324,7 +328,8 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       bit requiresFastmath = 0, bit requiresArgAndResultAttrs = 0,
                       bit requiresOpBundles = 0,
                       list<int> immArgPositions = [],
-                      list<string> immArgAttrNames = []>
+                      list<string> immArgAttrNames = [],
+                      bit requiresTBAAStruct = 0>
     : LLVM_OpBase<dialect, opName, !listconcat(
         !if(!gt(requiresAccessGroup, 0),
             [DeclareOpInterfaceMethods<AccessGroupOpInterface>], []),
@@ -345,6 +350,9 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             (ins OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
+            (ins )),
+        !if(!gt(requiresTBAAStruct, 0),
+            (ins OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct),
             (ins )),
         !if(!gt(requiresArgAndResultAttrs, 0),
             (ins OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -456,12 +464,14 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   bit requiresAliasAnalysis = 0, bit requiresFastmath = 0,
                   bit requiresArgAndResultAttrs = 0, bit requiresOpBundles = 0,
                   list<int> immArgPositions = [],
-                  list<string> immArgAttrNames = []>
+                  list<string> immArgAttrNames = [],
+                  bit requiresTBAAStruct = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
                       requiresFastmath, requiresArgAndResultAttrs,
-                      requiresOpBundles, immArgPositions, immArgAttrNames>;
+                      requiresOpBundles, immArgPositions, immArgAttrNames,
+                      requiresTBAAStruct>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -484,11 +494,13 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             bit requiresArgAndResultAttrs = 0,
                             bit requiresOpBundles = 0,
                             list<int> immArgPositions = [],
-                            list<string> immArgAttrNames = []>
+                            list<string> immArgAttrNames = [],
+                            bit requiresTBAAStruct = 0>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
                   requiresAccessGroup, requiresAliasAnalysis,
                   /*requiresFastMath=*/0, requiresArgAndResultAttrs,
-                  requiresOpBundles, immArgPositions, immArgAttrNames>;
+                  requiresOpBundles, immArgPositions, immArgAttrNames,
+                  requiresTBAAStruct>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
