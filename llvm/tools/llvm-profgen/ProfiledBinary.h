@@ -276,6 +276,18 @@ class ProfiledBinary {
   // start of a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
+  // Linker range-extension thunks (e.g. lld's __AArch64ADRPThunk_*) are
+  // synthesized by the linker, carry no pseudo probes and only forward control
+  // to a fixed destination. Map each thunk entry to that destination and
+  // map the address of its branch back to the entry, so that call-graph
+  // inference and call target naming can treat the thunk as transparent.
+  DenseMap<uint64_t, uint64_t> LinkerThunkTargets;
+  DenseMap<uint64_t, uint64_t> LinkerThunkBranches;
+
+  void recognizeLinkerThunk(StringRef SymbolName, uint64_t StartAddress,
+                            uint64_t EndAddress, ArrayRef<uint8_t> Bytes,
+                            uint64_t SectionAddress);
+
   // Address to context location map. Used to expand the context.
   // getCachedFrameLocationStack returns references to the mapped values while
   // later queries insert, so the values' addresses must be stable: keep
@@ -556,6 +568,20 @@ public:
     if (FrameAddr && addressIsCall(FrameAddr))
       return FrameAddr;
     return 0;
+  }
+
+  bool hasLinkerThunks() const { return !LinkerThunkTargets.empty(); }
+
+  // If Address is the entry of a recognized AArch64 linker range-extension
+  // thunk, return the thunk's branch destination; otherwise return Address.
+  uint64_t resolveLinkerThunk(uint64_t Address) const {
+    auto I = LinkerThunkTargets.find(Address);
+    return I == LinkerThunkTargets.end() ? Address : I->second;
+  }
+
+  // Whether Address is the forwarding branch inside a recognized linker thunk.
+  bool isLinkerThunkBranch(uint64_t Address) const {
+    return LinkerThunkBranches.contains(Address);
   }
 
   FuncRange *findFuncRangeForStartAddr(uint64_t Address) {

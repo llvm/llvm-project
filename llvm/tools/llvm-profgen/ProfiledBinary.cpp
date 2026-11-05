@@ -23,7 +23,9 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -85,6 +87,12 @@ static cl::opt<bool>
     WarnNotSymbolized("warn-not-symbolized", cl::init(false),
                       cl::desc("Generate warnings for unsymbolized addresses"),
                       cl::cat(ProfGenCategory));
+
+static cl::opt<bool> ResolveLinkerThunks(
+    "resolve-linker-thunks", cl::Hidden, cl::init(true),
+    cl::desc("Treat AArch64 linker range-extension thunks as transparent when "
+             "inferring missing frames and naming call targets."),
+    cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 
@@ -559,6 +567,21 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
     }
   }
 
+  // Linker thunks carry no pseudo probes. A probed range is real code with a
+  // thunk-like name, so keep it as a normal frame.
+  const AddressProbesMap &Probes = ProbeDecoder.getAddress2ProbesMap();
+  size_t NumProbedThunks = 0;
+  LinkerThunkBranches.remove_if([&](const auto &Thunk) {
+    if (Probes.find(Thunk.second, Thunk.first + 4).empty())
+      return false;
+    LinkerThunkTargets.erase(Thunk.second);
+    ++NumProbedThunks;
+    return true;
+  });
+  if (ShowDetailedWarning && NumProbedThunks)
+    WithColor::note() << "Ignored " << NumProbedThunks
+                      << " linker thunk candidates with pseudo probes\n";
+
   // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
   // is available
   if (TrackFuncContextSize) {
@@ -607,6 +630,13 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       (SI + 1 < SE) ? Symbols[SI + 1].Addr : SectionAddress + SectSize;
   FuncRange *FRange = findFuncRange(StartAddress);
   setIsFuncEntry(FRange, FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
+  if (ResolveLinkerThunks && TheTriple.isAArch64()) {
+    uint64_t EndAddress = NextStartAddress;
+    if (FRange && FRange->StartAddress == StartAddress)
+      EndAddress = std::min(EndAddress, FRange->EndAddress);
+    recognizeLinkerThunk(Symbols[SI].Name, StartAddress, EndAddress, Bytes,
+                         SectionAddress);
+  }
   StringRef SymbolName =
       ShowCanonicalFnName
           ? FunctionSamples::getCanonicalFnName(Symbols[SI].Name)
@@ -797,6 +827,52 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
+void ProfiledBinary::recognizeLinkerThunk(StringRef SymbolName,
+                                          uint64_t StartAddress,
+                                          uint64_t EndAddress,
+                                          ArrayRef<uint8_t> Bytes,
+                                          uint64_t SectionAddress) {
+  if (!TheTriple.isAArch64() || !SymbolName.starts_with("__AArch64ADRPThunk_"))
+    return;
+  // lld emits "adrp x16, Page(dst); add x16, x16, PageOff(dst); br x16", or a
+  // single "b dst" when the destination is within direct branch range of the
+  // thunk, optionally preceded by "bti c" for BTI-enabled output.
+  auto ReadWord = [&](uint64_t Addr, uint32_t &W) {
+    if (Addr < SectionAddress || Addr > EndAddress || EndAddress - Addr < 4 ||
+        Addr - SectionAddress > Bytes.size() ||
+        Bytes.size() - (Addr - SectionAddress) < 4)
+      return false;
+    W = support::endian::read32le(Bytes.data() + (Addr - SectionAddress));
+    return true;
+  };
+  uint64_t Addr = StartAddress;
+  uint32_t W = 0;
+  if (!ReadWord(Addr, W))
+    return;
+  if (W == 0xD503245F) { // bti c
+    Addr += 4;
+    if (!ReadWord(Addr, W))
+      return;
+  }
+  if ((W & 0xFC000000) == 0x14000000) { // b imm26
+    LinkerThunkTargets[StartAddress] =
+        Addr + SignExtend64<28>(uint64_t(W & 0x3FFFFFF) << 2);
+    LinkerThunkBranches[Addr] = StartAddress;
+    return;
+  }
+  uint32_t Add = 0, Br = 0;
+  if ((W & 0x9F00001F) != 0x90000010 || // adrp x16, imm
+      !ReadWord(Addr + 4, Add) ||
+      (Add & 0xFFC003FF) != 0x91000210 || // add x16, x16, #imm12 (lsl 0)
+      !ReadWord(Addr + 8, Br) || Br != 0xD61F0200) // br x16
+    return;
+  uint64_t ImmLo = (W >> 29) & 0x3, ImmHi = (W >> 5) & 0x7FFFF;
+  int64_t PageOff = SignExtend64<21>((ImmHi << 2) | ImmLo) * 4096;
+  uint64_t Dest = (Addr & ~uint64_t(0xFFF)) + PageOff + ((Add >> 10) & 0xFFF);
+  LinkerThunkTargets[StartAddress] = Dest;
+  LinkerThunkBranches[Addr + 8] = StartAddress;
+}
+
 void ProfiledBinary::disassemble(const ObjectFile *Obj) {
   // Set up disassembler and related components.
   setUpDisassembler(Obj);
@@ -865,6 +941,10 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
         exitWithError("disassembling error", FileName);
     }
   }
+
+  if (ShowDetailedWarning && !LinkerThunkTargets.empty())
+    WithColor::note() << "Recognized " << LinkerThunkTargets.size()
+                      << " linker range-extension thunks\n";
 
   if (!AddrsWithInvalidInstruction.empty()) {
     if (ShowDetailedWarning) {

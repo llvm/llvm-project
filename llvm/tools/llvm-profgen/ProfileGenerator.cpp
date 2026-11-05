@@ -729,6 +729,10 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
 
 StringRef
 ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
+  // A call through a linker range-extension thunk targets the thunk's
+  // destination.
+  if (Binary->hasLinkerThunks())
+    TargetAddress = Binary->resolveLinkerThunk(TargetAddress);
   // Get the function range by branch target if it's a call branch.
   auto *FRange = Binary->findFuncRangeForStartAddr(TargetAddress);
 
