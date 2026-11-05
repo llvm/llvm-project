@@ -10,7 +10,6 @@
 // into the calling function.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -20,12 +19,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -2486,69 +2480,14 @@ static bool mayBeVolatileCharacter(hlfir::Entity var) {
   }
 }
 
-// TODO: share with the identical helpers in LoopTripCountVersioning.cpp.
-static bool isNoHostDeclareTarget(mlir::func::FuncOp func) {
-  auto iface = mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*func);
-  if (!iface)
-    return false;
-  mlir::omp::DeclareTargetAttr attr = iface.getDeclareTarget();
-  return attr &&
-         attr.getDeviceType() == mlir::omp::DeclareTargetDeviceType::nohost;
-}
-
-static bool runsOnDevice(mlir::Operation *op) {
-  if (cuf::isExecutingOnDevice(op) ||
-      op->getParentOfType<mlir::omp::TargetOp>())
-    return true;
-  auto func = op->getParentOfType<mlir::func::FuncOp>();
-  if (func && (cuf::isDeviceProcedure(func) || mlir::acc::isAccRoutine(func) ||
-               isNoHostDeclareTarget(func)))
-    return true;
-  auto offloadMod = op->getParentOfType<mlir::omp::OffloadModuleInterface>();
-  return offloadMod && offloadMod.getIsTargetDevice();
-}
-
 // Inline TRIM(x) of a character variable as a copy of x(1:LEN_TRIM(x)) into a
-// temporary placed by the allocation policy. Dynamic-size allocas are never
-// used: they are not reclaimed in CFG loops and are illegal on some devices.
+// heap temporary. The allocation placement passes decide whether it moves to
+// the stack.
 class CharTrimOpConversion : public mlir::OpRewritePattern<hlfir::CharTrimOp> {
 public:
-  CharTrimOpConversion(mlir::MLIRContext *ctx,
-                       const fir::AllocationSizeContext &sizeContext)
-      : OpRewritePattern{ctx}, sizeContext{sizeContext} {}
+  using mlir::OpRewritePattern<hlfir::CharTrimOp>::OpRewritePattern;
 
   static constexpr llvm::StringRef tmpName = ".tmp.trim";
-
-  // Allocation size of a constant-length character, as the other allocation
-  // policy users compute it. Unknown without a data layout.
-  static std::optional<std::size_t>
-  charBytes(mlir::Location loc, fir::CharacterType charTy,
-            const fir::AllocationSizeContext &sizeContext) {
-    if (!charTy.hasConstantLen() || !sizeContext.dataLayout ||
-        !sizeContext.kindMap)
-      return std::nullopt;
-    auto sizeAndAlign = fir::getTypeSizeAndAlignment(
-        loc, charTy, *sizeContext.dataLayout, *sizeContext.kindMap);
-    if (!sizeAndAlign)
-      return std::nullopt;
-    return sizeAndAlign->first;
-  }
-
-  // Bytes of TRIM temporaries already hoisted into \p block. The pass runs
-  // twice in the pipeline, so the count is read back from the IR.
-  static std::size_t
-  trimTempBytes(mlir::Block *block,
-                const fir::AllocationSizeContext &sizeContext) {
-    std::size_t bytes = 0;
-    for (auto alloca : block->getOps<fir::AllocaOp>()) {
-      if (alloca.getBindcName() != tmpName)
-        continue;
-      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(alloca.getInType()))
-        if (auto size = charBytes(alloca.getLoc(), charTy, sizeContext))
-          bytes += *size;
-    }
-    return bytes;
-  }
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::CharTrimOp op,
@@ -2556,46 +2495,17 @@ public:
     hlfir::Entity str{op.getChr()};
     if (!str.isVariable())
       return rewriter.notifyMatchFailure(op, "operand is not a variable");
-    if (str.isMutableBox())
-      return rewriter.notifyMatchFailure(op, "operand is not dereferenced");
-    // Lowering never produces a polymorphic character, but the verifier
-    // accepts fir.class<!fir.char<...>>, and translateToExtendedValue
-    // returns a BoxValue rather than a CharBoxValue for it.
-    if (str.isPolymorphic())
-      return rewriter.notifyMatchFailure(op, "operand is polymorphic");
+    // TODO: inline once the volatility of the variable is propagated to the
+    // designators and loads generated below. Until then the inline scan and
+    // copy would be ordinary loads that LLVM may merge or hoist.
     if (mayBeVolatileCharacter(str))
       return rewriter.notifyMatchFailure(op, "operand may be volatile");
 
     fir::FirOpBuilder builder{rewriter, op.getOperation()};
     mlir::Location loc = op->getLoc();
     mlir::MLIRContext *ctx = builder.getContext();
-
-    // Decide where the temporary lives before emitting any IR. Only a
-    // constant-size temporary may go on the stack: a dynamic-size one would
-    // be allocated at the point of use and never reclaimed in a CFG loop.
     auto charTy = mlir::cast<fir::CharacterType>(str.getFortranElementType());
     fir::KindTy kind = charTy.getFKind();
-    fir::PendingAllocationInfo info;
-    info.isTemporary = true;
-    info.isDynamic = !charTy.hasConstantLen();
-    if (auto size = charBytes(loc, charTy, sizeContext))
-      info.byteSize = static_cast<std::int64_t>(*size);
-    info.context = op;
-    // Keep the stack temporary small even under -fstack-arrays, as copy-in
-    // buffers do. The TRIM temporaries of one alloca block together share a
-    // single small-array budget: each site keeps its own buffer since their
-    // lifetimes may overlap, but a frame with many sites, or a recursive one,
-    // must not grow with the number of sites.
-    fir::AllocationPolicy policy = fir::getAllocationPolicy(op);
-    policy.stackArrays = false;
-    policy.totalStackLimitBytes =
-        std::min(policy.totalStackLimitBytes, policy.smallArrayThresholdBytes);
-    bool useStack =
-        !info.isDynamic &&
-        fir::shouldAllocateOnStack(
-            info, policy, trimTempBytes(builder.getAllocaBlock(), sizeContext));
-    if (!useStack && runsOnDevice(op))
-      return rewriter.notifyMatchFailure(op, "heap temporary in device code");
 
     auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, str);
     assert(!cleanup && "variable to Exv should not produce cleanup");
@@ -2617,14 +2527,15 @@ public:
         /*typeParams=*/mlir::ValueRange{lenTrim},
         fir::FortranVariableFlagsAttr{});
 
-    // The temporary holds LEN_TRIM(x) characters. On the stack it is sized
-    // for the whole of x so that the allocation is constant and hoisted.
+    // The temporary holds LEN_TRIM(x) characters. When LEN(x) is constant it
+    // is allocated with that length instead, so that the allocation has no
+    // operands and the placement passes can move it to the stack.
     auto dynCharTy = fir::CharacterType::getUnknownLen(ctx, kind);
     mlir::Value temp;
-    if (useStack)
-      temp =
-          builder.createConvert(loc, fir::ReferenceType::get(dynCharTy),
-                                builder.createTemporary(loc, charTy, tmpName));
+    if (charTy.hasConstantLen())
+      temp = builder.createConvert(
+          loc, fir::HeapType::get(dynCharTy),
+          builder.createHeapTemporary(loc, charTy, tmpName));
     else
       temp = builder.createHeapTemporary(loc, dynCharTy, tmpName, /*shape=*/{},
                                          /*lenParams=*/{lenTrim});
@@ -2634,16 +2545,15 @@ public:
         /*storage=*/nullptr, /*storage_offset=*/0,
         fir::FortranVariableFlagsAttr{});
     hlfir::Entity tempVar{declare.getBase()};
-    hlfir::AssignOp::create(builder, loc, substr, tempVar);
+    hlfir::AssignOp::create(builder, loc, substr, tempVar, /*realloc=*/false,
+                            /*keep_lhs_length_if_realloc=*/false,
+                            /*temporary_lhs=*/true);
     mlir::Value result = hlfir::AsExprOp::create(
-        builder, loc, tempVar, builder.createBool(loc, !useStack));
+        builder, loc, tempVar, builder.createBool(loc, /*mustFree=*/true));
     assert(result.getType() == op.getType() && "unexpected hlfir.expr type");
     rewriter.replaceOp(op, result);
     return mlir::success();
   }
-
-private:
-  const fir::AllocationSizeContext &sizeContext;
 };
 
 class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
@@ -3531,9 +3441,6 @@ public:
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
 
-    const fir::AllocationSizeContext sizeContext =
-        fir::getAllocationSizeContext(getOperation());
-
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
@@ -3542,7 +3449,7 @@ public:
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
     patterns.insert<CmpCharOpConversion>(context);
     patterns.insert<IndexOpConversion>(context);
-    patterns.insert<CharTrimOpConversion>(context, sizeContext);
+    patterns.insert<CharTrimOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
