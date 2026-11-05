@@ -17607,18 +17607,10 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
 bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx) {
   assert(TheCall->getNumArgs() >= ArgIdx + 1);
   Expr *Stride = TheCall->getArg(ArgIdx);
-  QualType StrideType = Stride->getType();
-  QualType SizeType = Context.getSizeType();
-  bool IsSizeT = Context.hasSameType(StrideType, SizeType);
-  bool IsIntegerConstant = Stride->isIntegerConstantExpr(Context);
-  if (!IsSizeT && !IsIntegerConstant) {
-    Diag(Stride->getExprLoc(), diag::err_invalid_coopmat_stride_type);
+  QualType ValidStrideType =
+      Context.getIntTypeForBitwidth(32, /* Signed */ false);
+  if (convertArgumentToType(Stride, ValidStrideType))
     return true;
-  }
-  if (convertArgumentToType(Stride, SizeType)) {
-    Diag(Stride->getExprLoc(), diag::err_invalid_coopmat_stride_type);
-    return true;
-  }
   TheCall->setArg(ArgIdx, Stride);
   return false;
 }

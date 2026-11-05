@@ -61,15 +61,21 @@ kernel void test_invalid_store_layout(__global float *ptr) {
 // Invalid stride type for cooperative matrix load.
 kernel void test_invalid_load_stride(__global float *ptr) {
     MatA_t a;
-    int stride = 16;
-    a = coop_mat_load(ptr, ROW_MAJOR, stride); // expected-error {{stride argument for load/store of cooperative matrix must have type 'size_t'}}
+    struct S {
+        int X;
+    };
+    struct S stride;
+    a = coop_mat_load(ptr, ROW_MAJOR, stride); // expected-error-re {{passing{{.*}}struct S{{.*}} to parameter of incompatible type 'unsigned int'}}
 }
 
 // Invalid stride type for cooperative matrix store.
 kernel void test_invalid_store_stride(__global float *ptr) {
     MatA_t a;
-    int stride = 16;
-    coop_mat_store(ptr, a, ROW_MAJOR, stride); // expected-error {{stride argument for load/store of cooperative matrix must have type 'size_t'}}
+    struct S {
+        int X;
+    };
+    struct S stride;
+    coop_mat_store(ptr, a, ROW_MAJOR, stride); // expected-error-re {{passing{{.*}}struct S{{.*}} to parameter of incompatible type 'unsigned int'}}
 }
 
 void test_invalid_coop_mat_input_for_store(__global float *ptr) {

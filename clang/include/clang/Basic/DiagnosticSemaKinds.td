@@ -12116,10 +12116,6 @@ def err_invalid_coopmat_mem_layout
             "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
             "CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR">;
 
-def err_invalid_coopmat_stride_type
-    : Error<"stride argument for load/store of cooperative matrix must have "
-            "type 'size_t'">;
-
 def err_invalid_coopmat_arg
     : Error<"argument must be a valid cooperative matrix">;
 
