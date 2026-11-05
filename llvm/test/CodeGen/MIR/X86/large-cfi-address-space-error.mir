@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name:            test
+body: |
+  bb.0:
+    ; CHECK: [[@LINE+1]]:50: expected 32-bit integer (too large)
+    CFI_INSTRUCTION llvm_def_aspace_cfa $rsp, 8, 4294967297
+    RET64
+...
