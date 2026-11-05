@@ -6754,7 +6754,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     // The new allocas may escape into tail calls.
     SmallVector<CallInst *, 16> TailCalls;
     if (any_of(AllocationInfos,
-               [](const auto &It) {
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
                  return It.second->Status != AllocationInfo::INVALID;
                }) &&
         !collectTailCalls(A, *this, TailCalls))
