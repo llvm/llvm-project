@@ -141,7 +141,7 @@ struct CIRRecordLowering final {
   void calculateZeroInit();
 
   CharUnits getSize(mlir::Type Ty) {
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+    return CharUnits::fromQuantity(dataLayout.getTypeAllocSize(Ty));
   }
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));

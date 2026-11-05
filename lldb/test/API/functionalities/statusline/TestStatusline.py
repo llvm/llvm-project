@@ -235,6 +235,23 @@ class TestStatusline(PExpectTest):
         # Room is made by scrolling up: a newline followed by a cursor-up.
         self.assertIn(b"\n\x1b[1A", tee.data)
 
+    def test_flush_deadlock(self):
+        """Regression test for lock inversion between the statusline mutex and
+        the target API mutex."""
+        self.build()
+        self.launch()
+        self.do_setup()
+        self.expect('set set separator "| "')
+        self.expect(
+            "set set show-statusline true", ["a.out | main.c:2:11 | breakpoint 1.1"]
+        )
+
+        flush = self.getSourcePath("statusline_flush.py")
+        self.expect('command script import "{}"'.format(flush))
+        self.expect("statusline_flush 0x1000")
+        # The flush drops the cached frame, and with it the location.
+        self.child.expect_exact("a.out | breakpoint 1.1")
+
     @skipUnlessPlatform(["linux"])
     def test_target_symbols_add(self):
         """Regression test: adding symbols while the statusline is enabled

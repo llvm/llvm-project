@@ -204,6 +204,23 @@ getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
   llvm_unreachable("Unknown kind?");
 }
 
+std::optional<cir::FramePointerKind>
+CIRGenModule::getFramePointerKind(CodeGenOptions::FramePointerKind kind) {
+  switch (kind) {
+  case CodeGenOptions::FramePointerKind::None:
+    return std::nullopt;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    return cir::FramePointerKind::Reserved;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    return cir::FramePointerKind::NonLeafNoReserve;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    return cir::FramePointerKind::NonLeaf;
+  case CodeGenOptions::FramePointerKind::All:
+    return cir::FramePointerKind::All;
+  }
+  llvm_unreachable("Unknown frame pointer kind");
+}
+
 /// Add default attributes to a function, which have merge semantics under
 /// -mlink-builtin-bitcode and should not simply overwrite any existing
 /// attributes in the linked library.
@@ -235,7 +252,11 @@ static void addTrivialDefaultFunctionAttributes(
       attrs.set(cir::CIRDialect::getTrapFuncNameAttrName(),
                 mlir::StringAttr::get(mlirCtx, codeGenOpts.TrapFuncName));
   } else {
-    // TODO(cir): Set frame pointer attribute here.
+    if (std::optional<cir::FramePointerKind> kind =
+            CIRGenModule::getFramePointerKind(codeGenOpts.getFramePointer()))
+      attrs.set(cir::CIRDialect::getFramePointerAttrName(),
+                cir::FramePointerKindAttr::get(mlirCtx, *kind));
+
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
     // no-trapping-math
@@ -382,8 +403,14 @@ void CIRGenModule::constructAttributeList(
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
 
-      // TODO(cir): When doing 'return attrs' we need to cover the 'NoAlias' for
-      // global allocation functions here.
+      // A sane operator new returns a non-aliasing pointer.
+      if (attrOnCallSite && func->isReplaceableGlobalAllocationFunction() &&
+          codeGenOpts.AssumeSaneOperatorNew &&
+          func->getDeclName().isAnyOperatorNew()) {
+        retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                     mlir::UnitAttr::get(&getMLIRContext()));
+      }
+
       assert(!cir::MissingFeatures::opCallAttrs());
 
       const CXXMethodDecl *md = dyn_cast<CXXMethodDecl>(func);
@@ -422,8 +449,12 @@ void CIRGenModule::constructAttributeList(
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
     }
 
-    // TODO(cir): Add noalias to returns for malloc-like functions
-    // (__attribute__((malloc)) / __declspec(restrict)).
+    // Both __attribute__((malloc)) and __declspec(restrict) are represented by
+    // RestrictAttr. Only forms without a deallocator imply a noalias return.
+    if (const auto *restrictAttr = targetDecl->getAttr<RestrictAttr>();
+        restrictAttr && restrictAttr->getDeallocator() == nullptr)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
 
     if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !codeGenOpts.NullPointerIsValid)
@@ -458,17 +489,6 @@ void CIRGenModule::constructAttributeList(
     // uniform (global work-size is a multiple of work-group size).
     if (langOpts.OffloadUniformBlock)
       addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
-
-    if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
-        targetDecl->hasAttr<CUDAGlobalAttr>()) {
-      GlobalDecl kernel(calleeInfo.getCalleeDecl());
-      llvm::StringRef kernelName = getMangledName(
-          kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-      auto attr = cir::CUDAKernelNameAttr::get(
-          &getMLIRContext(),
-          mlir::StringAttr::get(&getMLIRContext(), kernelName));
-      attrs.set(attr.getMnemonic(), attr);
-    }
 
     // TODO(cir): we should also do 'aarch64_pstate_sm_body' here.
 
@@ -1661,7 +1681,7 @@ RValue CIRGenFunction::emitAnyExprToTemp(const Expr *e) {
 void CIRGenFunction::emitCallArgs(
     CallArgList &args, PrototypeWrapper prototype,
     llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
-    AbstractCallee callee, unsigned paramsToSkip) {
+    AbstractCallee callee, unsigned paramsToSkip, EvaluationOrder order) {
   llvm::SmallVector<QualType, 16> argTypes;
 
   assert(!cir::MissingFeatures::opCallCallConv());
@@ -1685,11 +1705,11 @@ void CIRGenFunction::emitCallArgs(
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because
   // arguments are destroyed left to right in the callee. As a special case,
-  // there are certain language constructs taht require left-to-right
+  // there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  auto leftToRight = true;
-  assert(!cir::MissingFeatures::msabi());
+  bool leftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      order, getTarget().getCXXABI());
 
   auto maybeEmitImplicitObjectSize = [&](size_t i, const Expr *arg,
                                          RValue emittedArg) {
@@ -1734,9 +1754,13 @@ void CIRGenFunction::emitCallArgs(
       assert(!cir::MissingFeatures::sanitizers());
       maybeEmitImplicitObjectSize(idx, *currentArg, rvArg);
     }
+  }
 
-    if (!leftToRight)
-      std::reverse(args.begin() + callArgsStart, args.end());
+  if (!leftToRight) {
+    // Un-reverse the arguments we just evaluated so they match up with the
+    // callee's parameter order.
+    std::reverse(args.begin() + callArgsStart, args.end());
+    assert(!cir::MissingFeatures::writebacks());
   }
 }
 

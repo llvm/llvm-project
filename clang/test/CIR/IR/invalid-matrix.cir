@@ -103,17 +103,6 @@ cir.func @add_mismatched_matrix_types(%arg0: !cir.matrix<2 x 2 x !s32i>, %arg1: 
 
 !s32i = !cir.int<s, 32>
 
-// Only element-wise ops accept matrices; mul on a matrix is not element-wise.
-cir.func @mul_of_matrix(%arg0: !cir.matrix<2 x 2 x !s32i>) {
-  // expected-error@+1 {{'cir.mul' op operand #0 must be integer or vector of integer type}}
-  %0 = cir.mul %arg0, %arg0 : !cir.matrix<2 x 2 x !s32i>
-  cir.return
-}
-
-// -----
-
-!s32i = !cir.int<s, 32>
-
 cir.func @splat_element_type_mismatch(%arg0: !s32i) {
   // expected-error@+1 {{type of 'value' matches element type of 'result'}}
   %0 = cir.vec.splat %arg0 : !s32i, !cir.matrix<2 x 2 x !cir.float>

@@ -34,7 +34,7 @@ body:             |
     %2:rgpr = t2MOVi 1, 14, $noreg, $noreg
     %3:gprnopc = t2ADDrr %0, %1, 14, $noreg, $noreg
     %4:rgpr = t2SUBri %3, 0, 14, $noreg, def dead $cpsr
-    t2CMPri killed %3, 0, 14, $noreg, implicit-def $cpsr
+    t2CMPri %3, 0, 14, $noreg, implicit-def $cpsr
     %5:rgpr = t2MOVCCi %2, 0, 7, $cpsr
     $r0 = COPY %5
     tBX_RET 14, $noreg, implicit $r0
