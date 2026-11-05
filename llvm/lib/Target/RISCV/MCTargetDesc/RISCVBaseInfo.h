@@ -813,13 +813,31 @@ inline bool isPurecap(ABI TargetABI) {
 }
 
 // Returns the stack alignment required by the ABI.
-// FIXME: Add the purecap variants of the E ABIs?
 inline Align getStackAlignment(ABI TargetABI) {
-  if (TargetABI == ABI::ILP32E)
+  switch (TargetABI) {
+  case ABI::ILP32E:
     return Align(4);
-  if (TargetABI == ABI::LP64E)
+  case ABI::LP64E:
     return Align(8);
-  return Align(16);
+  case ABI::ILP32:
+  case ABI::ILP32F:
+  case ABI::ILP32D:
+  case ABI::IL32PC64:
+  case ABI::IL32PC64F:
+  case ABI::IL32PC64D:
+  case ABI::IL32PC64E:
+  case ABI::LP64:
+  case ABI::LP64F:
+  case ABI::LP64D:
+  case ABI::L64PC128:
+  case ABI::L64PC128F:
+  case ABI::L64PC128D:
+  case ABI::CHERIOT:
+    return Align(16);
+  case ABI::Unknown:
+    llvm_unreachable("Unknown ABI has no stack alignment");
+  }
+  llvm_unreachable("Unhandled ABI");
 }
 
 // Returns the target ABI, or else a StringError if the requested ABIName is

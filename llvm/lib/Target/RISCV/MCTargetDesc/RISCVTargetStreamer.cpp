@@ -64,7 +64,7 @@ void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
-  if (EmitStackAlign)
+  if (EmitStackAlign && TargetABI != RISCVABI::ABI::Unknown)
     emitAttribute(RISCVAttrs::STACK_ALIGN,
                   RISCVABI::getStackAlignment(TargetABI).value());
 
