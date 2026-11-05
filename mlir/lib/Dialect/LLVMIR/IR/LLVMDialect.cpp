@@ -4714,7 +4714,7 @@ struct LLVMLoopAnnotationInterface : LoopAnnotationDialectInterface {
   bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
     // Preserve the existing policy of forwarding LLVM-valued attributes,
     // including loop annotations, when lowering a structured loop.
-    return &attr.getValue().getDialect() == getDialect();
+    return true;
   }
 };
 } // namespace
