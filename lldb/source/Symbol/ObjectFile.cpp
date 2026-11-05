@@ -801,7 +801,7 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
     // not be able to access the symbol table contents since all APIs in Symtab
     // are protected by a mutex in the Symtab object itself.
     llvm::call_once(*m_symtab_once_up, [&]() {
-      Symtab *symtab = new Symtab(this, m_disable_memory_symtab_caching);
+      Symtab *symtab = new Symtab(this);
       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
       m_symtab_up.reset(symtab);
       if (!m_symtab_up->LoadFromCache()) {

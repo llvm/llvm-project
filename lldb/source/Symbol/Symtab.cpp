@@ -32,9 +32,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Symtab::Symtab(ObjectFile *objfile, bool disable_memory_symtab_caching)
-    : m_objfile(objfile), m_file_addr_to_index(*this),
-      m_disable_memory_symtab_caching(disable_memory_symtab_caching) {
+Symtab::Symtab(ObjectFile *objfile)
+    : m_objfile(objfile), m_file_addr_to_index(*this) {
   m_name_to_symbol_indices.emplace(std::make_pair(
       lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
   m_name_to_symbol_indices.emplace(std::make_pair(
@@ -1152,7 +1151,7 @@ std::string Symtab::GetCacheKey() {
 void Symtab::SaveToCache() {
   Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
   if (m_objfile->IsInMemory()) {
-    if (m_disable_memory_symtab_caching)
+    if (m_objfile->GetDisableMemorySymtabCaching())
       return;
     else
       type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
@@ -1339,7 +1338,7 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 bool Symtab::LoadFromCache() {
   Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
   if (m_objfile->IsInMemory()) {
-    if (m_disable_memory_symtab_caching)
+    if (m_objfile->GetDisableMemorySymtabCaching())
       return false;
     else
       type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;

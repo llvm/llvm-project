@@ -117,7 +117,7 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
 
   // Check that we can parse the symbol table several times over without
   // crashing.
-  Symtab symtab(OF, /*disable_memory_symtab_caching=*/false);
+  Symtab symtab(OF);
   for (size_t i = 0; i < 10; i++)
     OF->ParseSymtab(symtab);
 }
@@ -200,7 +200,7 @@ LoadCommands:
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
 
   // Simply no crashing is the regression check.
-  Symtab symtab(OF, /*disable_memory_symtab_caching=*/false);
+  Symtab symtab(OF);
   OF->ParseSymtab(symtab);
 }
 
@@ -245,6 +245,6 @@ LoadCommands:
   ObjectFile *OF = module->GetObjectFile();
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
 
-  Symtab symtab(OF, /*disable_memory_symtab_caching=*/false);
+  Symtab symtab(OF);
   OF->ParseSymtab(symtab);
 }
