@@ -9,9 +9,11 @@
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ETMTraceDecoder.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -21,6 +23,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
+#include <cmath>
+#include <limits>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -369,12 +373,14 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
   assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
+  Input.Content = PerfScriptReader::checkPerfScriptType(
+      Binary, Input.InputFilePath, Input.UseProcessMappings, PIDFilter);
   if (Input.Content == PerfContent::LBRStack) {
-    PerfReader.reset(
-        new HybridPerfReader(Binary, Input.InputFilePath, PIDFilter));
+    PerfReader.reset(new HybridPerfReader(Binary, Input.InputFilePath,
+                                          PIDFilter, Input.UseProcessMappings));
   } else if (Input.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter));
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter,
+                                       Input.UseProcessMappings));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -453,11 +459,71 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   return Error::success();
 }
 
+enum class TaskKind { Fork, Comm, Exec, Exit };
+
+struct TaskEvent {
+  TaskKind Kind;
+  // PID owns the address space; TID identifies a thread using that space.
+  int32_t PID;
+  int32_t TID;
+  int32_t ParentPID = 0;
+  int32_t ParentTID = 0;
+  // Perf's timestamp-zero task snapshot describes tasks already present when
+  // recording began. Its fork records do not imply a new inherited mapping.
+  bool IsSynthetic;
+};
+
+static TaskEvent parseTaskEvent(StringRef Line) {
+  size_t Marker = Line.find("PERF_RECORD_");
+  // The timestamp is in the perf prefix, but task ownership comes from the
+  // record payload. The prefix can describe the task that emitted the event.
+  StringRef Prefix = Line.take_front(Marker).rtrim();
+  auto [BeforeTime, Time] = Prefix.rsplit(' ');
+  double Timestamp = 0;
+  if (BeforeTime.empty() || !Time.consume_back(":") ||
+      Time.getAsDouble(Timestamp) || !std::isfinite(Timestamp))
+    exitWithError("Invalid perf script task event");
+
+  StringRef Record = Line.drop_front(Marker).rtrim();
+  SmallVector<StringRef, 6> Fields;
+  auto ParsePID = [](StringRef Field) {
+    int32_t PID = 0;
+    if (Field.getAsInteger(10, PID) || PID < 0)
+      exitWithError("Invalid perf script task event");
+    return PID;
+  };
+  TaskEvent Event{TaskKind::Comm, 0, 0, 0, 0, Timestamp == 0};
+  // FORK carries child and parent IDs. EXIT uses the same printed shape,
+  // but only the exiting PID/TID pair changes our ownership state.
+  if (Regex("^PERF_RECORD_(FORK|EXIT)\\((-?[0-9]+):([0-9]+)\\):"
+            "\\((-?[0-9]+):([0-9]+)\\)$")
+          .match(Record, &Fields)) {
+    Event.Kind = Fields[1] == "FORK" ? TaskKind::Fork : TaskKind::Exit;
+    Event.PID = ParsePID(Fields[2]);
+    Event.TID = ParsePID(Fields[3]);
+    if (Event.Kind == TaskKind::Fork) {
+      Event.ParentPID = ParsePID(Fields[4]);
+      Event.ParentTID = ParsePID(Fields[5]);
+    }
+  } else if (Regex("^PERF_RECORD_COMM( exec)?: .*:(-?[0-9]+)/([0-9]+)$")
+                 .match(Record, &Fields)) {
+    // A name change keeps the mappings; COMM with the exec flag replaces the
+    // process image, even when its PID and name happen to stay the same.
+    Event.Kind = Fields[1].empty() ? TaskKind::Comm : TaskKind::Exec;
+    Event.PID = ParsePID(Fields[2]);
+    Event.TID = ParsePID(Fields[3]);
+  } else {
+    exitWithError("Invalid perf script task event");
+  }
+  return Event;
+}
+
 InputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFilePath;
+  bool UseProcessMappings = File.UseProcessMappings;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
@@ -513,31 +579,114 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
-                                  "script",
-                                  "--show-mmap-events",
-                                  "-F",
-                                  "comm,pid",
-                                  "-i",
-                                  PerfData};
-    RunPerfScript(ScriptMMapArgs);
+    // Discover sample PIDs. Mapped mode follows task records because children
+    // can inherit the target without emitting their own mmap.
+    SmallVector<StringRef, 8> Args = {PerfExecutablePath, "script",
+                                      "--show-mmap-events"};
+    if (UseProcessMappings)
+      Args.push_back("--show-task-events");
+    Args.append(
+        {"-F", UseProcessMappings ? "pid,time" : "comm,pid", "-i", PerfData});
+    RunPerfScript(Args);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
     DenseSet<int32_t> PIDSet;
+    // ActivePIDs decides which later forks may inherit the target. EverPIDs
+    // retains earlier owners after exit/exec, since their recorded samples
+    // must still be extracted. This pass selects candidates, not addresses.
+    std::unordered_set<int32_t> ActivePIDs;
+    // A recording may begin after threads were created. Their observed subset
+    // cannot prove process death unless a birth/exec established completeness.
+    std::unordered_map<int32_t, std::unordered_set<int32_t>> ActiveThreads;
+    std::unordered_set<int32_t> CompleteThreadPIDs;
+    std::set<int32_t> EverPIDs;
     while (!TraceIt.isAtEoF()) {
       MMapEvent MMap;
-      if (isMMapEvent(TraceIt.getCurrentLine()) &&
-          extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-        auto It = PIDSet.insert(MMap.PID);
-        if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
-          if (!PIDs.empty()) {
-            PIDs.append(",");
+      StringRef Line = TraceIt.getCurrentLine();
+      // Mapped output prefixes metadata with a numeric PID. The legacy mmap
+      // shortcut skips digit-leading lines, so inspect the marker here.
+      bool IsMMap = UseProcessMappings ? Line.contains("PERF_RECORD_MMAP")
+                                       : isMMapEvent(Line);
+      if (IsMMap) {
+        if (extractMMapEventForBinary(Binary, Line, MMap, UseProcessMappings)) {
+          if (UseProcessMappings) {
+            ActivePIDs.insert(MMap.PID);
+            EverPIDs.insert(MMap.PID);
+          } else {
+            auto It = PIDSet.insert(MMap.PID);
+            if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
+              if (!PIDs.empty()) {
+                PIDs.append(",");
+              }
+              PIDs.append(utostr(MMap.PID));
+            }
           }
-          PIDs.append(utostr(MMap.PID));
+        }
+        // An mmap from any binary also tells us its emitting thread is live.
+        if (UseProcessMappings && MMap.PID >= 0 &&
+            ActiveThreads[static_cast<int32_t>(MMap.PID)]
+                .insert(MMap.TID)
+                .second)
+          CompleteThreadPIDs.erase(MMap.PID);
+      } else if (UseProcessMappings && Line.contains("PERF_RECORD_")) {
+        TaskEvent Event = parseTaskEvent(Line);
+        if (Event.Kind == TaskKind::Fork && !Event.IsSynthetic) {
+          // The parent may first appear in this fork record. Remember it so
+          // a later child-thread exit cannot retire a still-live process.
+          if (ActiveThreads[Event.ParentPID].insert(Event.ParentTID).second)
+            CompleteThreadPIDs.erase(Event.ParentPID);
+          if (Event.PID == Event.ParentPID) {
+            // New thread: the process's existing address space is shared.
+            ActiveThreads[Event.PID].insert(Event.TID);
+          } else if (ActivePIDs.count(Event.ParentPID)) {
+            ActivePIDs.insert(Event.PID);
+            ActiveThreads[Event.PID] = {Event.TID};
+            EverPIDs.insert(Event.PID);
+          } else {
+            // A reused child PID loses its previous target eligibility.
+            ActivePIDs.erase(Event.PID);
+            ActiveThreads[Event.PID] = {Event.TID};
+          }
+          if (Event.PID != Event.ParentPID)
+            CompleteThreadPIDs.insert(Event.PID);
+        } else if (Event.Kind == TaskKind::Comm) {
+          if (ActiveThreads[Event.PID].insert(Event.TID).second)
+            CompleteThreadPIDs.erase(Event.PID);
+        } else if (Event.Kind == TaskKind::Exec) {
+          // Stop inheritance from the old image. A later target mmap will
+          // make the new image eligible again.
+          ActivePIDs.erase(Event.PID);
+          ActiveThreads[Event.PID] = {Event.TID};
+          if (Event.IsSynthetic)
+            CompleteThreadPIDs.erase(Event.PID);
+          else
+            CompleteThreadPIDs.insert(Event.PID);
+        } else if (Event.Kind == TaskKind::Exit) {
+          // An EXIT record describes one thread, not necessarily the process.
+          auto It = ActiveThreads.find(Event.PID);
+          if (It == ActiveThreads.end() || !It->second.erase(Event.TID)) {
+            CompleteThreadPIDs.erase(Event.PID);
+          } else if (It->second.empty()) {
+            ActiveThreads.erase(It);
+            if (CompleteThreadPIDs.erase(Event.PID))
+              ActivePIDs.erase(Event.PID);
+          }
         }
       }
       TraceIt.advance();
+    }
+
+    if (UseProcessMappings) {
+      // Apply --pid only after following ancestry: the chosen process may
+      // obtain all its mappings from an unselected parent.
+      for (int32_t PID : EverPIDs) {
+        if (PIDFilter && PID != *PIDFilter)
+          continue;
+        if (!PIDs.empty())
+          PIDs.append(",");
+        PIDs.append(utostr(PID));
+      }
     }
 
     if (PIDs.empty()) {
@@ -550,18 +699,32 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
+  // perf's PID selection filters samples while these options retain metadata
+  // needed to replay inherited mappings and later address-space changes.
+  if (UseProcessMappings && !Binary->isKernel())
+    ScriptSampleArgs.push_back("--show-task-events");
   ScriptSampleArgs.push_back("-F");
-  ScriptSampleArgs.push_back("ip,brstack");
+  ScriptSampleArgs.push_back(UseProcessMappings ? "pid,time,ip,brstack"
+                                                : "ip,brstack");
+  // Keep stack lines as bare addresses so the mapped parser can distinguish
+  // them from the next PID/timestamp header, even after an incomplete stack.
+  if (UseProcessMappings)
+    ScriptSampleArgs.append({"-F", "-sym"});
   ScriptSampleArgs.push_back("-i");
   ScriptSampleArgs.push_back(PerfData);
   if (!PIDs.empty()) {
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
+  // The unwinder expects physical frames: the sampled IP followed by saved
+  // return addresses. Perf's inline expansion repeats IPs for logical inline
+  // calls, which can truncate the stack when interpreted as return addresses.
+  // llvm-profgen reconstructs inline contexts from the profiled binary itself.
+  ScriptSampleArgs.push_back("--no-inline");
   RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
-          PerfContent::UnknownContent};
+          PerfContent::UnknownContent, UseProcessMappings};
 }
 
 static StringRef filename(StringRef Path, bool UseBackSlash) {
@@ -648,6 +811,126 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   }
 }
 
+void PerfScriptReader::updateExecutableMapping(const MMapEvent &Event,
+                                               bool IsTarget) {
+  // An mmap is also evidence that its emitting thread is alive. The map is
+  // owned by PID even when a worker TID, not the leader, emitted the record.
+  if (!Binary->isKernel() && Event.PID >= 0 &&
+      ThreadsByPID[static_cast<int32_t>(Event.PID)].insert(Event.TID).second)
+    CompleteThreadPIDs.erase(Event.PID);
+  if (Event.Size == 0 || (!Binary->isKernel() && Event.PID < 0))
+    return;
+  if (Binary->isKernel() && Event.PID != -1)
+    return;
+
+  // Kernel mmaps use PID -1, but samples carry the interrupted task's PID.
+  // Store one shared kernel history; userspace histories remain per process.
+  int32_t PID = static_cast<int32_t>(Event.PID);
+  SmallVector<ExecutableMapping, 2> NewMappings;
+  if (IsTarget &&
+      (Binary->isKernel() || Event.MemProtectionFlag.contains('x'))) {
+    if (Binary->isKernel() || Binary->isCOFF()) {
+      // Kernel mmap offsets describe a text address, not an ELF file offset.
+      // COFF mappings also use an image base, so neither uses the ELF join.
+      uint64_t Address = Binary->getPreferredTextSegmentAddresses().front();
+      NewMappings.push_back({Event.Address, Event.Size, Address, true});
+    } else {
+      // Join the mmap's file interval to each executable ELF segment. One mmap
+      // may span several segments, or begin part-way through one segment.
+      for (auto [Offset, Size, PreferredAddress] :
+           llvm::zip_equal(Binary->getTextSegmentOffsets(),
+                           Binary->getTextSegmentFileSizes(),
+                           Binary->getPreferredTextSegmentAddresses())) {
+        // Test for overlap using distances, avoiding overflowing end offsets.
+        if (Size == 0 ||
+            (Offset >= Event.Offset ? Offset - Event.Offset >= Event.Size
+                                    : Event.Offset - Offset >= Size))
+          continue;
+        uint64_t FileOffset = std::max(Offset, Event.Offset);
+        // The same file byte has one offset from the runtime mmap start and
+        // another from the segment's preferred address in the binary.
+        uint64_t MMapDelta = FileOffset - Event.Offset;
+        uint64_t SegmentDelta = FileOffset - Offset;
+        auto Address = checkedAddUnsigned(PreferredAddress, SegmentDelta);
+        if (!Address)
+          exitWithError("Invalid perf script mmap address");
+        // mmap parsing already checked the runtime interval. Limit this entry
+        // to its intersection with the file-backed executable segment.
+        ExecutableMapping Mapping{
+            Event.Address + MMapDelta,
+            std::min(Event.Size - MMapDelta, Size - SegmentDelta), *Address,
+            true};
+        // Overlapping segments must translate their shared bytes identically.
+        // Disjoint segments may legitimately have different load biases.
+        for (const ExecutableMapping &Other : NewMappings) {
+          uint64_t Start =
+              std::max(Mapping.RuntimeAddress, Other.RuntimeAddress);
+          if (Start - Mapping.RuntimeAddress < Mapping.Size &&
+              Start - Other.RuntimeAddress < Other.Size &&
+              Mapping.CanonicalAddress - Mapping.RuntimeAddress !=
+                  Other.CanonicalAddress - Other.RuntimeAddress)
+            exitWithError("Ambiguous perf script mmap load bias");
+        }
+        NewMappings.push_back(Mapping);
+      }
+    }
+  }
+  IsTarget = !NewMappings.empty();
+
+  auto It = MappingsByPID.find(PID);
+  // A non-target or non-executable mmap matters when it replaces target code.
+  // Ignore it only when it cannot hide any previously recorded target range.
+  if (!IsTarget &&
+      (It == MappingsByPID.end() ||
+       llvm::none_of(It->second, [&](const ExecutableMapping &Mapping) {
+         if (!Mapping.IsTarget)
+           return false;
+         return Event.Address >= Mapping.RuntimeAddress
+                    ? Event.Address - Mapping.RuntimeAddress < Mapping.Size
+                    : Mapping.RuntimeAddress - Event.Address < Event.Size;
+       })))
+    return;
+
+  auto &Mappings = MappingsByPID[PID];
+  // First mask the entire replacement mmap, then add its executable subranges.
+  // Reverse lookup sees the new code first and the mask in any remaining gaps.
+  // Older entries stay valid outside this mmap, including partial remappings.
+  Mappings.push_back({Event.Address, Event.Size, 0, false});
+  for (const ExecutableMapping &Mapping : NewMappings) {
+    Mappings.push_back(Mapping);
+    // Warning ranges use the same binary addresses as the relocated samples.
+    Binary->addMMapRange(Mapping.CanonicalAddress, Mapping.Size);
+  }
+  if (IsTarget)
+    Binary->setIsLoadedByMMap(true);
+  if (IsTarget && (Binary->isKernel() || !PIDFilter || PID == *PIDFilter))
+    // A recording can end after the last mapped process exits. Retain evidence
+    // that it had usable mappings when deciding whether the input is valid.
+    HadUsableMapping = true;
+}
+
+std::optional<uint64_t>
+PerfScriptReader::resolveMappedAddress(uint64_t Address, int32_t PID) const {
+  auto It = MappingsByPID.find(Binary->isKernel() ? -1 : PID);
+  if (It == MappingsByPID.end())
+    return std::nullopt;
+  // The latest event covering this byte wins. A replacement by another binary
+  // stops lookup before it can expose an older target map underneath.
+  for (const ExecutableMapping &Mapping : llvm::reverse(It->second)) {
+    if (Address < Mapping.RuntimeAddress)
+      continue;
+    uint64_t Delta = Address - Mapping.RuntimeAddress;
+    if (Delta < Mapping.Size) {
+      // CanonicalAddress is the binary address at this runtime interval's
+      // start; retain the sample's displacement within that interval.
+      if (Mapping.IsTarget)
+        return checkedAddUnsigned(Mapping.CanonicalAddress, Delta);
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::string getContextKeyStr(ContextKey *K,
                                     const ProfiledBinary *Binary) {
   if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
@@ -729,36 +1012,89 @@ void HybridPerfReader::unwindSamples() {
 }
 
 /// Parse a hex address from \p Str.
-static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
-  Str = Str.take_while([](char C) { return !isspace(C); });
+static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix,
+                         bool AllowSymbols = true) {
+  // Legacy input permits symbol/DSO suffixes. Mapped frames must be whole
+  // address lines so a PID/time header cannot be consumed as another frame.
+  if (AllowSymbols)
+    Str = Str.take_while([](char C) { return !isspace(C); });
+  else
+    Str = Str.rtrim();
   if (Str.consume_front("0x") != HasPrefix)
     return true;
   return Str.getAsInteger(16, Addr);
 }
 
+static bool skipCallchainFrames(TraceStream &TraceIt) {
+  uint64_t FrameAddr = 0;
+  bool HasCallchain = false;
+  while (!TraceIt.isAtEoF() &&
+         !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false,
+                       /*AllowSymbols=*/false)) {
+    HasCallchain = true;
+    TraceIt.advance();
+  }
+  return HasCallchain;
+}
+
+static int32_t parseSamplePID(StringRef &Line) {
+  // Consume only the header prefix, leaving the IP/branches for flat samples
+  // or an empty payload when perf prints the callchain on following lines.
+  auto [PIDField, Rest] = Line.trim().split(' ');
+  int32_t PID = 0;
+  if (PIDField.getAsInteger(10, PID) || PID < 0)
+    exitWithError("Invalid perf script sample PID");
+  // The timestamp distinguishes the next sample header from a callchain frame.
+  auto [Time, Payload] = Rest.ltrim().split(' ');
+  double Timestamp = 0;
+  if (!Time.consume_back(":") || Time.getAsDouble(Timestamp) ||
+      !std::isfinite(Timestamp))
+    exitWithError("Invalid perf script sample timestamp");
+  Line = Payload.ltrim();
+  return PID;
+}
+
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
-                                       SmallVectorImpl<LBREntry> &LBRStack) {
+                                       SmallVectorImpl<LBREntry> &LBRStack,
+                                       std::optional<int32_t> PID) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and separated by whitespace.
-  SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().rtrim().split(Records, " ", -1, false);
-  auto WarnInvalidLBR = [](TraceStream &TraceIt) {
+  StringRef Line = TraceIt.getCurrentLine();
+  if (UseProcessMappings && !PID) {
+    // The hybrid reader passes the PID after consuming its header. The flat
+    // reader starts at the header and may need to skip an unused callchain.
+    PID = parseSamplePID(Line);
+    if (Line.empty()) {
+      TraceIt.advance();
+      skipCallchainFrames(TraceIt);
+      if (TraceIt.isAtEoF() ||
+          !TraceIt.getCurrentLine().ltrim().starts_with("0x"))
+        return false;
+      Line = TraceIt.getCurrentLine();
+    }
+  }
+  if (parseLBRLine(Line, LBRStack, PID))
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "
                          << TraceIt.getCurrentLine() << "\n";
-  };
+  TraceIt.advance();
+  return !LBRStack.empty();
+}
+
+bool PerfScriptReader::parseLBRLine(StringRef Line,
+                                    SmallVectorImpl<LBREntry> &LBRStack,
+                                    std::optional<int32_t> PID) const {
+  SmallVector<StringRef, 32> Records;
+  Line.rtrim().split(Records, " ", -1, false);
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
   uint64_t LeadingAddr;
   if (!Records.empty() && !Records[0].contains('/')) {
-    if (parseAddress(Records[0], LeadingAddr, false)) {
-      WarnInvalidLBR(TraceIt);
-      TraceIt.advance();
-      return false;
-    }
+    if (parseAddress(Records[0], LeadingAddr, false))
+      return true;
     Index = 1;
   }
 
@@ -777,32 +1113,34 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
     // Stop at broken LBR records.
     if (Addresses.size() < 2 || parseAddress(Addresses[0], Src, true) ||
-        parseAddress(Addresses[1], Dst, true)) {
-      WarnInvalidLBR(TraceIt);
-      break;
-    }
+        parseAddress(Addresses[1], Dst, true))
+      return true;
 
-    // Canonicalize to use preferred load address as base address.
-    Src = Binary->canonicalizeVirtualAddress(Src);
-    Dst = Binary->canonicalizeVirtualAddress(Dst);
-    bool SrcIsInternal = Binary->addressIsCode(Src);
-    bool DstIsInternal = Binary->addressIsCode(Dst);
-    if (!SrcIsInternal)
-      Src = ExternalAddr;
-    if (!DstIsInternal)
-      Dst = ExternalAddr;
+    // Mapped input resolves both ends through the sampled process before
+    // checking binary instructions. An unmapped end remains external, keeping
+    // the unwinder's handling of calls into or out of other binaries.
+    std::optional<uint64_t> ResolvedSrc =
+        PID ? resolveMappedAddress(Src, *PID)
+            : Binary->canonicalizeVirtualAddress(Src);
+    std::optional<uint64_t> ResolvedDst =
+        PID ? resolveMappedAddress(Dst, *PID)
+            : Binary->canonicalizeVirtualAddress(Dst);
+    bool SrcIsInternal = ResolvedSrc && Binary->addressIsCode(*ResolvedSrc);
+    bool DstIsInternal = ResolvedDst && Binary->addressIsCode(*ResolvedDst);
+    Src = SrcIsInternal ? *ResolvedSrc : ExternalAddr;
+    Dst = DstIsInternal ? *ResolvedDst : ExternalAddr;
     // Filter external-to-external case to reduce LBR trace size.
     if (!SrcIsInternal && !DstIsInternal)
       continue;
 
     LBRStack.emplace_back(LBREntry(Src, Dst));
   }
-  TraceIt.advance();
-  return !LBRStack.empty();
+  return false;
 }
 
 bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
-                                        SmallVectorImpl<uint64_t> &CallStack) {
+                                        SmallVectorImpl<uint64_t> &CallStack,
+                                        std::optional<int32_t> PID) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
   //	          400634
@@ -813,17 +1151,21 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
-    if (parseAddress(FrameStr, FrameAddr, false)) {
-      // We might parse a non-perf sample line like empty line and comments,
-      // skip it
-      TraceIt.advance();
+    if (parseAddress(FrameStr, FrameAddr, false, /*AllowSymbols=*/!PID)) {
+      // With PID headers, leave non-frame lines for the outer parser.
+      if (!PID)
+        TraceIt.advance();
       return false;
     }
     TraceIt.advance();
 
-    FrameAddr = Binary->canonicalizeVirtualAddress(FrameAddr);
+    // Relocate before decoding the saved return PC into a call instruction.
+    // The instruction decoder and debug information use binary addresses.
+    std::optional<uint64_t> ResolvedFrameAddr =
+        PID ? resolveMappedAddress(FrameAddr, *PID)
+            : Binary->canonicalizeVirtualAddress(FrameAddr);
     // Currently intermixed frame from different binaries is not supported.
-    if (!Binary->addressIsCode(FrameAddr)) {
+    if (!ResolvedFrameAddr || !Binary->addressIsCode(*ResolvedFrameAddr)) {
       if (CallStack.empty())
         NumLeafExternalFrame++;
       // Push a special value(ExternalAddr) for the external frames so that
@@ -834,6 +1176,7 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
         CallStack.emplace_back(ExternalAddr);
       continue;
     }
+    FrameAddr = *ResolvedFrameAddr;
 
     // We need to translate return address to call address for non-leaf frames.
     if (!CallStack.empty()) {
@@ -859,8 +1202,15 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   // Note that even for empty call stack, we should skip the address at the
   // bottom, otherwise the following pass may generate a truncated callstack
   while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
+    // Leave the next sample header and mapping events for the outer parser.
+    uint64_t FrameAddr = 0;
+    if (PID && parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false,
+                            /*AllowSymbols=*/false))
+      return false;
     TraceIt.advance();
   }
+  if (PID && TraceIt.isAtEoF())
+    return false;
   // Filter out broken stack sample. We may not have complete frame info
   // if sample end up in prolog/epilog, the result is dangling context not
   // connected to entry point. This should be relatively rare thus not much
@@ -874,6 +1224,10 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
 }
 
 void PerfScriptReader::warnIfMissingMMap() {
+  // Mapped mode cannot fall back to a shared preferred load base; it checks
+  // for usable per-process metadata after the full trace has been read.
+  if (UseProcessMappings)
+    return;
   if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
     WithColor::warning() << "No relevant mmap event is matched for "
                          << Binary->getName()
@@ -905,12 +1259,23 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
+  std::optional<int32_t> PID;
+  if (UseProcessMappings) {
+    // Perf puts PID/time on their own line for a resolved callchain. An IP
+    // still on that header means this sample has no stack to seed the unwinder.
+    StringRef Header = TraceIt.getCurrentLine();
+    PID = parseSamplePID(Header);
+    bool HasCallchain = Header.empty();
+    TraceIt.advance();
+    if (!HasCallchain)
+      return;
+  }
   std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
 #ifndef NDEBUG
   Sample->Linenum = TraceIt.getLineNumber();
 #endif
   // Parsing call stack and populate into PerfSample.CallStack
-  if (!extractCallstack(TraceIt, Sample->CallStack)) {
+  if (!extractCallstack(TraceIt, Sample->CallStack, PID)) {
     // Skip the next LBR line matched current call stack
     if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true))
       TraceIt.advance();
@@ -921,7 +1286,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 
   if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true)) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+    if (extractLBRStack(TraceIt, Sample->LBRStack, PID)) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
@@ -1156,95 +1521,208 @@ uint64_t PerfScriptReader::parseAggregatedCount(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseSample(TraceStream &TraceIt) {
+  // Filter samples before updating statistics. Metadata is replayed for every
+  // PID because a selected child may inherit an unselected parent's maps.
+  if (UseProcessMappings && PIDFilter) {
+    StringRef Line = TraceIt.getCurrentLine();
+    if (parseSamplePID(Line) != *PIDFilter) {
+      TraceIt.advance();
+      if (Line.empty()) {
+        // Consume the rest of this sample as a unit, preserving the next
+        // header or task event if the excluded sample has no branch line.
+        skipCallchainFrames(TraceIt);
+        if (!TraceIt.isAtEoF() &&
+            TraceIt.getCurrentLine().ltrim().starts_with("0x"))
+          TraceIt.advance();
+      }
+      return;
+    }
+  }
   NumTotalSample++;
-  uint64_t Count = parseAggregatedCount(TraceIt);
+  uint64_t Count = UseProcessMappings ? 1 : parseAggregatedCount(TraceIt);
   assert(Count >= 1 && "Aggregated count should be >= 1!");
   parseSample(TraceIt, Count);
 }
 
-bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
-                                                 StringRef Line,
-                                                 MMapEvent &MMap) {
-  if (!Binary->isKernel() && !Line.contains(Binary->getName()) &&
-      !ShowMmapEvents)
-    return false;
+static bool extractMMapEvent(StringRef Line, MMapEvent &MMap,
+                             bool RequireProcessMappingInfo) {
   // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
   constexpr static const char *const MMap2Pattern =
-      "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
-      "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
+      "PERF_RECORD_MMAP2 (-?[0-9]+)/([0-9]+): "
+      "\\[(0x[a-f0-9]+|0)\\((0x[a-f0-9]+|0)\\) @ "
       "(0x[a-f0-9]+|0) .*\\]: ([-a-z]+) (.*)";
   // Parse a MMap line like
   // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
   //  0xffffffff81e00000]: x [kernel.kallsyms]_text
   constexpr static const char *const MMapPattern =
-      "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
-      "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
+      "PERF_RECORD_MMAP (-?[0-9]+)/([0-9]+): "
+      "\\[(0x[a-f0-9]+|0)\\((0x[a-f0-9]+|0)\\) @ "
       "(0x[a-f0-9]+|0)\\]: ([-a-z]+) (.*)";
-  // Field 0 - whole line
-  // Field 1 - PID
-  // Field 2 - base address
-  // Field 3 - mmapped size
-  // Field 4 - page offset
-  // Field 5 - binary path
+  // Both patterns use these capture-group indices.
   enum EventIndex {
     WHOLE_LINE = 0,
     PID = 1,
-    MMAPPED_ADDRESS = 2,
-    MMAPPED_SIZE = 3,
-    PAGE_OFFSET = 4,
-    MEM_PROTECTION_FLAG = 5,
-    BINARY_PATH = 6,
+    TID = 2,
+    MMAPPED_ADDRESS = 3,
+    MMAPPED_SIZE = 4,
+    PAGE_OFFSET = 5,
+    MEM_PROTECTION_FLAG = 6,
+    BINARY_PATH = 7,
   };
 
   bool R = false;
-  SmallVector<StringRef, 7> Fields;
+  SmallVector<StringRef, 8> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
     Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);
   } else if (Line.contains("PERF_RECORD_MMAP ")) {
     Regex RegMmap(MMapPattern);
     R = RegMmap.match(Line, &Fields);
-  } else
+  } else if (!RequireProcessMappingInfo)
     llvm_unreachable("unexpected MMAP event entry");
 
   if (!R) {
+    if (RequireProcessMappingInfo)
+      exitWithError("Invalid perf script mmap event");
+    return false;
+  }
+  // Preserve the legacy address/size spelling outside mapped mode.
+  if (!RequireProcessMappingInfo &&
+      (Fields[MMAPPED_ADDRESS] == "0" || Fields[MMAPPED_SIZE] == "0"))
+    return false;
+  if (RequireProcessMappingInfo) {
+    // Size-1 permits a valid mapping whose final byte is UINT64_MAX.
+    int32_t MMapPID = 0;
+    if (Fields[PID].getAsInteger(10, MMapPID) ||
+        Fields[TID].getAsInteger(10, MMap.TID) ||
+        Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address) ||
+        Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size) ||
+        (MMap.Size != 0 &&
+         MMap.Size - 1 > std::numeric_limits<uint64_t>::max() - MMap.Address) ||
+        Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset) ||
+        Fields[BINARY_PATH].empty())
+      exitWithError("Invalid perf script mmap event");
+    MMap.PID = MMapPID;
+  } else {
+    long long MMapPID = 0;
+    getAsSignedInteger(Fields[PID], 10, MMapPID);
+    MMap.PID = MMapPID;
+    Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
+    Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
+    Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
+  }
+  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
+  MMap.BinaryPath = Fields[BINARY_PATH];
+  return true;
+}
+
+static bool mmapMatchesBinary(const ProfiledBinary &Binary,
+                              const MMapEvent &MMap) {
+  StringRef BinaryName = filename(MMap.BinaryPath, Binary.isCOFF());
+  if (Binary.isKernel())
+    return Binary.isKernelImageName(BinaryName);
+  return Binary.getName() == BinaryName;
+}
+
+bool PerfScriptReader::extractMMapEventForBinary(
+    ProfiledBinary *Binary, StringRef Line, MMapEvent &MMap,
+    bool RequireProcessMappingInfo) {
+  // Mapped mode needs records for other binaries too: a later mmap can cover
+  // a target address even when it has a different filename or permissions.
+  if (!RequireProcessMappingInfo && !Binary->isKernel() &&
+      !Line.contains(Binary->getName()) && !ShowMmapEvents)
+    return false;
+  if (!extractMMapEvent(Line, MMap, RequireProcessMappingInfo)) {
     std::string WarningMsg = "Cannot parse mmap event: " + Line.str() + " \n";
     WithColor::warning() << WarningMsg;
     return false;
   }
-  long long MMapPID = 0;
-  getAsSignedInteger(Fields[PID], 10, MMapPID);
-  MMap.PID = MMapPID;
-  Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
-  Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
-  Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
-  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
-  MMap.BinaryPath = Fields[BINARY_PATH];
   if (ShowMmapEvents) {
     outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "
            << format("0x%" PRIx64 ":", MMap.Address) << " \n";
   }
 
-  StringRef BinaryName = filename(MMap.BinaryPath, Binary->isCOFF());
-  if (Binary->isKernel()) {
-    return Binary->isKernelImageName(BinaryName);
-  }
-  return Binary->getName() == BinaryName;
+  return mmapMatchesBinary(*Binary, MMap);
 }
 
 void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
   MMapEvent MMap;
-  if (extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
+  bool IsTarget = extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(),
+                                            MMap, UseProcessMappings);
+  if (UseProcessMappings)
+    updateExecutableMapping(MMap, IsTarget);
+  else if (IsTarget)
     updateBinaryAddress(MMap);
   TraceIt.advance();
 }
 
 void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
-  if (isMMapEvent(TraceIt.getCurrentLine()))
+  if (UseProcessMappings && TraceIt.getCurrentLine().trim().empty()) {
+    TraceIt.advance();
+    return;
+  }
+  StringRef Line = TraceIt.getCurrentLine();
+  if (UseProcessMappings ? Line.contains("PERF_RECORD_MMAP")
+                         : isMMapEvent(Line))
     parseMMapEvent(TraceIt);
-  else
+  else if (UseProcessMappings && Line.contains("PERF_RECORD_")) {
+    // Replay metadata in input order before resolving subsequent samples.
+    // The kernel address space is shared and outlives individual tasks.
+    TaskEvent Event = parseTaskEvent(Line);
+    if (!Binary->isKernel()) {
+      if (Event.Kind == TaskKind::Fork && !Event.IsSynthetic) {
+        // FORK also proves the parent thread is live, even when recording
+        // began too late to include a separate record announcing that thread.
+        if (ThreadsByPID[Event.ParentPID].insert(Event.ParentTID).second)
+          CompleteThreadPIDs.erase(Event.ParentPID);
+        if (Event.PID == Event.ParentPID) {
+          // Thread creation shares the existing process map.
+          ThreadsByPID[Event.PID].insert(Event.TID);
+        } else {
+          // Process creation snapshots the parent's current map history.
+          // Copying keeps later remaps or execs in either process independent.
+          ThreadsByPID[Event.PID] = {Event.TID};
+          CompleteThreadPIDs.insert(Event.PID);
+          auto Parent = MappingsByPID.find(Event.ParentPID);
+          if (Parent == MappingsByPID.end()) {
+            // A reused child PID must not retain maps from its old lifetime.
+            MappingsByPID.erase(Event.PID);
+          } else {
+            MappingsByPID[Event.PID] = Parent->second;
+            if (!PIDFilter || Event.PID == *PIDFilter)
+              HadUsableMapping = true;
+          }
+        }
+      } else if (Event.Kind == TaskKind::Comm) {
+        // A name change reveals a live thread but does not replace its image.
+        if (ThreadsByPID[Event.PID].insert(Event.TID).second)
+          CompleteThreadPIDs.erase(Event.PID);
+      } else if (Event.Kind == TaskKind::Exec) {
+        // Exec keeps the PID, replaces its image and removes sibling threads.
+        // New mmap/task records will describe the replacement process state.
+        MappingsByPID.erase(Event.PID);
+        ThreadsByPID[Event.PID] = {Event.TID};
+        if (Event.IsSynthetic)
+          CompleteThreadPIDs.erase(Event.PID);
+        else
+          CompleteThreadPIDs.insert(Event.PID);
+      } else if (Event.Kind == TaskKind::Exit) {
+        // Only a complete inventory proves this is the final thread. Retain
+        // mappings when recording began too late to observe every thread.
+        auto It = ThreadsByPID.find(Event.PID);
+        if (It == ThreadsByPID.end() || !It->second.erase(Event.TID)) {
+          CompleteThreadPIDs.erase(Event.PID);
+        } else if (It->second.empty()) {
+          ThreadsByPID.erase(It);
+          if (CompleteThreadPIDs.erase(Event.PID))
+            MappingsByPID.erase(Event.PID);
+        }
+      }
+    }
+    TraceIt.advance();
+  } else
     parseSample(TraceIt);
 }
 
@@ -1298,8 +1776,57 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
 // Determine the perfscript contains hybrid samples(call stack + LBRs) by
 // checking whether there is a non-empty call stack immediately followed by
 // a LBR sample
-PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
+PerfContent PerfScriptReader::checkPerfScriptType(
+    ProfiledBinary *Binary, StringRef FileName, bool UseProcessMappings,
+    std::optional<int32_t> PIDFilter) {
   TraceStream TraceIt(FileName);
+  if (UseProcessMappings) {
+    // Discover the reader type using the same mapping/task replay as the real
+    // parse. A callchain from another PID or binary must not select CS mode
+    // for a target whose usable samples contain only branch stacks.
+    PerfScriptReader Reader(Binary, FileName, PIDFilter, true);
+    bool HasLBR = false;
+    while (!TraceIt.isAtEoF()) {
+      StringRef Line = TraceIt.getCurrentLine().trim();
+      if (Line.contains("PERF_RECORD_MMAP")) {
+        MMapEvent MMap;
+        extractMMapEvent(TraceIt.getCurrentLine(), MMap,
+                         /*RequireProcessMappingInfo=*/true);
+        Reader.updateExecutableMapping(MMap, mmapMatchesBinary(*Binary, MMap));
+        TraceIt.advance();
+        continue;
+      }
+      if (Line.contains("PERF_RECORD_")) {
+        Reader.parseEventOrSample(TraceIt);
+        continue;
+      }
+      if (!Line.empty()) {
+        int32_t PID = parseSamplePID(Line);
+        if (Line.empty()) {
+          TraceIt.advance();
+          bool HasCallchain = skipCallchainFrames(TraceIt);
+          if (!TraceIt.isAtEoF() &&
+              isLBRSample(TraceIt.getCurrentLine(), false)) {
+            HasLBR = true;
+            SmallVector<LBREntry, 16> LBRStack;
+            if (!PIDFilter || PID == *PIDFilter)
+              Reader.parseLBRLine(TraceIt.getCurrentLine(), LBRStack, PID);
+            TraceIt.advance();
+            // Require a selected sample with a branch touching target code,
+            // not merely a syntactically valid stack from some other image.
+            if (!LBRStack.empty() && HasCallchain)
+              return PerfContent::LBRStack;
+          }
+          continue;
+        }
+        HasLBR |= isLBRSample(Line, false);
+      }
+      TraceIt.advance();
+    }
+    if (HasLBR)
+      return PerfContent::LBR;
+    exitWithError("Invalid perf script input!");
+  }
   uint64_t FrameAddr = 0;
   while (!TraceIt.isAtEoF()) {
     // Skip the aggregated count
@@ -1499,6 +2026,10 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+  // An empty result can be valid after filtering, but missing mapping metadata
+  // cannot establish which binary instructions the samples referred to.
+  if (UseProcessMappings && !HadUsableMapping)
+    exitWithError("Invalid perf script input: no usable mmap");
   if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
     exitWithError(
         "Kernel is requested, but no kernel is found in mmap events.");

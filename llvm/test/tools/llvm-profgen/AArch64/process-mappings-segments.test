@@ -1,0 +1,155 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/binary
+# RUN: llvm-readobj --program-headers %t/binary | FileCheck %s --check-prefix=HEADERS
+# RUN: llvm-objdump -d %t/binary | FileCheck %s --check-prefix=INSTRUCTIONS
+
+## A loader first maps the complete image and then places the second executable
+## segment at its final address. Its file and virtual offsets differ from those
+## of the first segment. Both processes retain both segments at their own bases.
+# RUN: llvm-profgen --per-process-mappings --binary=%t/binary \
+# RUN:   --perfscript=%t/loader.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/all.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=COUNTS -D#COUNT=2 --input-file=%t/all.raw
+# RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%t/binary \
+# RUN:   --perfscript=%t/loader.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/selected.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=COUNTS -D#COUNT=1 --input-file=%t/selected.raw
+
+## A broad mmap replaces an older mapping in its gap as well as its executable
+## portions. A previously forked child retains the old mapping. Later replacement
+## of the first segment leaves the second segment usable.
+# RUN: llvm-profgen --per-process-mappings --binary=%t/binary \
+# RUN:   --perfscript=%t/replacement.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/replacement.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=REPLACEMENT -D#SECOND=4 --input-file=%t/replacement.raw
+# RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%t/binary \
+# RUN:   --perfscript=%t/replacement.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/replacement-pid.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=REPLACEMENT -D#SECOND=3 --input-file=%t/replacement-pid.raw
+
+## Overlapping file bytes with different destinations are ambiguous. Identical
+## duplicate segment descriptions resolve each sample once.
+# RUN: yaml2obj %t/binary.yaml -DALIAS_TYPE=PT_LOAD -o %t/binary
+# RUN: not llvm-profgen --per-process-mappings --binary=%t/binary \
+# RUN:   --perfscript=%t/loader.perfscript --skip-symbolization --output=%t/invalid \
+# RUN:   2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+# RUN: yaml2obj %t/binary.yaml -DALIAS_TYPE=PT_LOAD -DALIAS_ADDRESS=0 -o %t/binary
+# RUN: llvm-profgen --per-process-mappings --binary=%t/binary \
+# RUN:   --perfscript=%t/loader.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/duplicate.raw
+# RUN: cmp %t/all.raw %t/duplicate.raw
+
+# HEADERS:      Type: PT_LOAD
+# HEADERS:      Offset: 0x0
+# HEADERS-NEXT: VirtualAddress: 0x0
+# HEADERS:      FileSize: 524
+# HEADERS:      Type: PT_LOAD
+# HEADERS:      Offset: 0x1000
+# HEADERS-NEXT: VirtualAddress: 0x101000
+# HEADERS:      FileSize: 12
+
+# INSTRUCTIONS: 204: 14000001{{.*}}b{{.*}}0x208
+# INSTRUCTIONS: 101004: 14000001{{.*}}b{{.*}}0x101008
+
+# COUNTS-NOT:  {{.}}
+# COUNTS:      0
+# COUNTS-NEXT: 2
+# COUNTS-NEXT: 204->208:[[#COUNT]]
+# COUNTS-NEXT: 101004->101008:[[#COUNT]]
+# COUNTS-NOT:  {{.}}
+
+# REPLACEMENT-NOT:  {{.}}
+# REPLACEMENT:      0
+# REPLACEMENT-NEXT: 2
+# REPLACEMENT-NEXT: 204->208:1
+# REPLACEMENT-NEXT: 101004->101008:[[#SECOND]]
+# REPLACEMENT-NOT:  {{.}}
+
+# AMBIGUOUS: error: Ambiguous perf script mmap load bias
+
+#--- loader.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x102000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+PERF_RECORD_MMAP2 100/100: [0x601000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/binary
+PERF_RECORD_MMAP2 200/200: [0x900000(0x102000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+PERF_RECORD_MMAP2 200/200: [0xa01000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/binary
+100 1.000000: 500208 0x500204/0x500208/P/-/-/0
+100 1.000001: 601008 0x601004/0x601008/P/-/-/0
+200 1.000002: 900208 0x900204/0x900208/P/-/-/0
+200 1.000003: a01008 0xa01004/0xa01008/P/-/-/0
+
+#--- replacement.perfscript
+PERF_RECORD_MMAP2 100/100: [0x580000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/binary
+100 1.000000: 580008 0x580004/0x580008/P/-/-/0
+100 1.000001: PERF_RECORD_FORK(200:200):(100:100)
+PERF_RECORD_MMAP2 100/100: [0x500000(0x102000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 1.000002: 580008 0x580004/0x580008/P/-/-/0
+200 1.000003: 580008 0x580004/0x580008/P/-/-/0
+100 1.000004: 501008 0x501004/0x501008/P/-/-/0
+100 1.000005: 500208 0x500204/0x500208/P/-/-/0
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/other.bin
+100 1.000006: 500208 0x500204/0x500208/P/-/-/0
+100 1.000007: 501008 0x501004/0x501008/P/-/-/0
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name: .text.first
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x200
+    Offset: 0x200
+    AddressAlign: 4
+    Content: '1F2003D501000014C0035FD6' # nop; b +4; ret
+  - Name: .text.second
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x101000
+    Offset: 0x1000
+    AddressAlign: 4
+    Content: '1F2003D501000014C0035FD6' # nop; b +4; ret
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: 0
+    FileSize: 0x20c
+    MemSize: 0x20c
+    Align: 0x1000
+    FirstSec: .text.first
+    LastSec: .text.first
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0x1000
+    VAddr: 0x101000
+    FileSize: 0xc
+    MemSize: 0xc
+    Align: 0x1000
+    FirstSec: .text.second
+    LastSec: .text.second
+  - Type: [[ALIAS_TYPE=PT_NULL]]
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: [[ALIAS_ADDRESS=0x100000]]
+    FileSize: 0x20c
+    MemSize: 0x20c
+    Align: 0x1000
+Symbols:
+  - Name: first
+    Type: STT_FUNC
+    Section: .text.first
+    Binding: STB_GLOBAL
+    Value: 0x200
+    Size: 12
+  - Name: second
+    Type: STT_FUNC
+    Section: .text.second
+    Binding: STB_GLOBAL
+    Value: 0x101000
+    Size: 12
