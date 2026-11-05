@@ -203,9 +203,8 @@ define void @divergent_magnitude_divergent_sign(ptr addrspace(1) inreg %out, ptr
 ; GCN-NEXT:    v_add_f16_e32 v1.l, v0.l, v0.l
 ; GCN-NEXT:  ; %bb.4: ; %exit
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GCN-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
+; GCN-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

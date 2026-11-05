@@ -6943,6 +6943,26 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
+  case AMDGPU::SI_LO16_TO_VGPR32: {
+    Register Dst = MI.getOperand(0).getReg();
+    const MachineOperand &Src = MI.getOperand(1);
+    const TargetRegisterClass *SrcRC = TRI->getRegClassForOperandReg(MRI, Src);
+    if (TRI->getRegSizeInBits(*SrcRC) == 16) {
+      assert(TRI->isVGPRClass(SrcRC));
+      Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
+          .add(Src)
+          .addImm(AMDGPU::lo16)
+          .addReg(Undef)
+          .addImm(AMDGPU::hi16);
+    } else {
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), Dst).add(Src);
+    }
+
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:

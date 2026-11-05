@@ -678,6 +678,10 @@ def SI_ILLEGAL_COPY : SPseudoInstSI <
 
 } // End Uses = [EXEC]
 
+let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def SI_LO16_TO_VGPR32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+                                     (ins unknown:$src)>;
+
 // Branch on undef scc. Used to avoid intermediate copy from
 // IMPLICIT_DEF to SCC.
 def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins SOPPBrTarget:$simm16)> {
@@ -2471,13 +2475,9 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-    (REG_SEQUENCE VGPR_32,
-      (fp16vt (COPY_TO_REGCLASS $src0, VGPR_16)), lo16,
-      (i16 (IMPLICIT_DEF)), hi16),
-    (REG_SEQUENCE VGPR_32,
-      (fp16vt (COPY_TO_REGCLASS $src1, VGPR_16)), lo16,
-      (i16 (IMPLICIT_DEF)), hi16)), lo16)
+  (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+    (i32 (SI_LO16_TO_VGPR32 $src0)),
+    (i32 (SI_LO16_TO_VGPR32 $src1)))), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
