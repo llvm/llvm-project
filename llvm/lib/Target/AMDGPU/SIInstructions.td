@@ -679,8 +679,7 @@ def SI_ILLEGAL_COPY : SPseudoInstSI <
 } // End Uses = [EXEC]
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def SI_LO16_TO_VGPR32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-                                     (ins unknown:$src)>;
+def SI_LO16_TO_VGPR32 : VPseudoInstSI <(outs VGPR_32:$vdst), (ins unknown:$src)>;
 
 // Branch on undef scc. Used to avoid intermediate copy from
 // IMPLICIT_DEF to SCC.

@@ -6945,10 +6945,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::SI_LO16_TO_VGPR32: {
     Register Dst = MI.getOperand(0).getReg();
-    const MachineOperand &Src = MI.getOperand(1);
-    const TargetRegisterClass *SrcRC = TRI->getRegClassForOperandReg(MRI, Src);
-    if (TRI->getRegSizeInBits(*SrcRC) == 16) {
-      assert(TRI->isVGPRClass(SrcRC));
+    MachineOperand Src = MI.getOperand(1);
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(Src.getReg());
+    unsigned SrcSize = TRI->getRegSizeInBits(*SrcRC);
+    if (Src.getSubReg())
+      SrcSize = TRI->getSubRegIdxSize(Src.getSubReg());
+    const TargetRegisterClass *SrcOpRC =
+        TRI->getSubRegisterClass(SrcRC, Src.getSubReg());
+    if (TRI->getCommonSubClass(SrcOpRC, &AMDGPU::VGPR_16RegClass)) {
       Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
       BuildMI(*BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
       BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
@@ -6957,6 +6961,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           .addReg(Undef)
           .addImm(AMDGPU::hi16);
     } else {
+      assert(SrcSize >= 32 && "Expected a source of at least 32 bits");
+      if (SrcSize > 32)
+        Src.setSubReg(TRI->composeSubRegIndices(Src.getSubReg(), AMDGPU::sub0));
       BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), Dst).add(Src);
     }
 
