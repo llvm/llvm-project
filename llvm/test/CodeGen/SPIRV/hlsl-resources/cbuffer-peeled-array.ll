@@ -44,10 +44,9 @@ entry:
 ; CHECK: %[[IDX:[0-9]+]] = OpUMod %[[UINT]] {{%[0-9]+}} %[[CONST_3]]
   %rem.i = urem i32 %1, 3
 
-; CHECK: %[[IDX_CONV:[0-9]+]] = OpUConvert {{.*}} %[[IDX]]
   %idxprom.i = zext nneg i32 %rem.i to i64
 
-; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX_CONV]]
+; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX]]
   %cbufferidx.i = getelementptr <{ <3 x float>, target("spirv.Padding", 4) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] {{.*}}

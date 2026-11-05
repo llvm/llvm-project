@@ -22,7 +22,7 @@
 ; CHECK: %[[HANDLE:.*]] = call target("spirv.VulkanBuffer", %Data, 2, 0) @llvm.spv.resource.handlefromimplicitbinding
 ; CHECK-NEXT: store target("spirv.VulkanBuffer", %Data, 2, 0) %[[HANDLE]], ptr @_ZL4data.0
 
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 target triple = "spirv1.6-unknown-vulkan1.3-pixel"
 
 %Data = type <{ float }>

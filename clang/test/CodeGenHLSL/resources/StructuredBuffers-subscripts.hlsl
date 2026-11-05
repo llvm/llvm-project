@@ -40,8 +40,8 @@ void main(unsigned GI : SV_GroupIndex) {
 
   // SPV: %[[OUTPTR:.*]] = call noundef align 1 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %{{.*}}, i32 %{{.*}})
   // SPV: %[[INPTR:.*]] = call noundef align 1 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %{{.*}}, i32 %{{.*}})
-  // SPV: call void @llvm.memcpy.p11.p11.i64(ptr addrspace(11) align 1 %[[OUTPTR]], ptr addrspace(11) align 1 %[[INPTR]], i64 4, i1 false)
-  // SPV: call void @llvm.memcpy.p0.p11.i64(ptr align 1 %[[TMP]], ptr addrspace(11) align 1 %[[OUTPTR]], i64 4, i1 false)
+  // SPV: call void @llvm.memcpy.p11.p11.i32(ptr addrspace(11) align 1 %[[OUTPTR]], ptr addrspace(11) align 1 %[[INPTR]], i32 4, i1 false)
+  // SPV: call void @llvm.memcpy.p0.p11.i32(ptr align 1 %[[TMP]], ptr addrspace(11) align 1 %[[OUTPTR]], i32 4, i1 false)
 
   // DXIL: %[[OUTPTR:.*]] = call noundef nonnull align 1 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 %{{.*}})
   // DXIL: %[[INPTR:.*]] = call noundef nonnull align 1 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 %{{.*}})
