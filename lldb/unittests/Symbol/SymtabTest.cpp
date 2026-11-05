@@ -58,6 +58,22 @@ static void EncodeDecode(const Symtab &object) {
   EncodeDecode(object, eByteOrderBig);
 }
 
+/// Decode \a bytes, encoded from a binary with the same UUID as the one
+/// \a expected was parsed from, using the ObjectFile of \a expected, and
+/// check that the decoded symbols match \a expected's.
+static void DecodeAndCompare(llvm::ArrayRef<uint8_t> bytes,
+                             const Symtab &expected) {
+  DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle, 8);
+  Symtab decoded(expected.GetObjectFile());
+  offset_t data_offset = 0;
+  bool signature_mismatch = false;
+  ASSERT_TRUE(decoded.Decode(data, &data_offset, signature_mismatch));
+  ASSERT_FALSE(signature_mismatch);
+  ASSERT_EQ(expected.GetNumSymbols(), decoded.GetNumSymbols());
+  for (size_t i = 0; i < expected.GetNumSymbols(); ++i)
+    EXPECT_EQ(*expected.SymbolAtIndex(i), *decoded.SymbolAtIndex(i));
+}
+
 TEST_F(SymtabTest, EncodeDecodeSymtab) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
@@ -645,25 +661,28 @@ LinkEditData:
       0x00, 0x00, 0x00, 0x00, 0x7b, 0xc3, 0x69, 0x62, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x66, 0x00,
       0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x6d, 0x00, 0x00,
-      0x00, 0x01, 0x64, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x08, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x71, 0x00, 0x00, 0x00, 0x01,
-      0x6c, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x0c, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x02, 0x32, 0x01, 0x75, 0x00, 0x00, 0x00, 0x01, 0x74, 0x3f,
+      0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x02, 0x32, 0x01, 0x71, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
+      0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x75, 0x00, 0x00,
+      0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x02, 0x32, 0x01, 0x79, 0x00, 0x00, 0x00, 0x01, 0x7c, 0x3f, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x0f, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x12,
-      0x01, 0x7e, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x64, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
-      0x0f, 0x00, 0x01, 0x00, 0x43, 0x4d, 0x41, 0x50, 0x07, 0x00, 0x00, 0x00,
-      0x71, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x79, 0x00, 0x00, 0x00,
-      0x05, 0x00, 0x00, 0x00, 0x6d, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x02, 0x32, 0x01, 0x79, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
+      0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x12, 0x01, 0x7e, 0x00, 0x00,
+      0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x3f, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x10, 0x00, 0x0f, 0x00, 0x01, 0x00, 0x43, 0x4d, 0x41, 0x50,
+      0x07, 0x00, 0x00, 0x00, 0x79, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x7e, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x37, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-      0x75, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00};
+      0x6d, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x71, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x00, 0x00, 0x75, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00};
 
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
@@ -848,13 +867,12 @@ DWARF:
 }
 
 TEST_F(SymtabTest, TestSymbolTableRelativeFileAddresses) {
-  // Section-relative in a serialized symbol table are expressed as
-  // offsets from the base file address of the binary.  It is possible
+  // Section-relative addresses in a serialized symbol table are expressed
+  // as a section ID and an offset within that section.  It is possible
   // for a binary to be zero-address offset initially, but then included
-  // in a Darwin shared cache with all of the segment and file addresses
-  // slid to a non-zero value -- with the same filename and UUID.  To make
-  // the serialized symtab work for both, we must make the file addresses
-  // relative ot the file base.
+  // in a Darwin shared cache with its segments slid to non-zero file
+  // addresses, not all by the same amount -- with the same filename and
+  // UUID.  The serialized symtab must work for all of them.
   //
   // static int c = 10;
   // int d = 20;
@@ -871,8 +889,14 @@ TEST_F(SymtabTest, TestSymbolTableRelativeFileAddresses) {
   // Any macOS version higher than 11 results in chained fixups in the binary,
   // and you can't compile the dylib to a non-zero offset with chained fixups.
   //
-  // These two YAMLs are below are then serialized into a buffer, and we
-  // compare the buffers -- they must be byte-by-byte identical.
+  // A third YAML is the non-zero one with __DATA and __LINKEDIT moved
+  // to 0x100000 and 0x104000, sliding them by a different amount than
+  // __TEXT, as the shared cache builder does.
+  //
+  // All three YAMLs are serialized into a buffer, and we compare the
+  // buffers -- they must be byte-by-byte identical.  Then buffers are
+  // decoded with a different binary's ObjectFile, and must produce that
+  // binary's symbols.
 
   auto ExpectedFileZeroOffset = TestFile::fromYaml(R"(
 --- !mach-o
@@ -1378,6 +1402,258 @@ LinkEditData:
 ...
 )");
 
+  auto ExpectedFileSplitOffset = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          245760
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x3C388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3C3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          1048576
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          1064960
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         1048580
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246676
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         1048576
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246664
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246708
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
   //
   // Create a binary for the 0-address YAML, serialize it
   // to a buffer.
@@ -1415,9 +1691,36 @@ LinkEditData:
   llvm::ArrayRef<uint8_t> nonzero_filebytes = nonzero_file.GetData();
 
   //
-  // Compare the two serialized buffers, they must be identical.
+  // Create a binary for the split-slide YAML, serialize it
+  // to a buffer.
+  //
+  ASSERT_THAT_EXPECTED(ExpectedFileSplitOffset, llvm::Succeeded());
+  auto split_module_sp =
+      std::make_shared<Module>(ExpectedFileSplitOffset->moduleSpec());
+  ObjectFile *split_objfile = split_module_sp->GetObjectFile();
+  ASSERT_NE(split_objfile, nullptr);
+
+  Symtab *split_module_symtab = split_module_sp->GetSymtab();
+  ASSERT_NE(split_module_symtab, nullptr);
+  split_module_symtab->PreloadSymbols();
+
+  DataEncoder split_file(eByteOrderLittle, addr_size);
+  split_module_symtab->Encode(split_file);
+  llvm::ArrayRef<uint8_t> split_filebytes = split_file.GetData();
+
+  //
+  // Compare the serialized buffers, they must be identical.
   //
   ASSERT_EQ(zero_filebytes, nonzero_filebytes);
+  ASSERT_EQ(zero_filebytes, split_filebytes);
+
+  //
+  // Decoding one binary's serialized symtab with another binary's
+  // ObjectFile must yield that binary's own symbols.
+  //
+  DecodeAndCompare(zero_filebytes, *nonzero_module_symtab);
+  DecodeAndCompare(zero_filebytes, *split_module_symtab);
+  DecodeAndCompare(split_filebytes, *zero_module_symtab);
 
   //
   // Test that the symtabs round-trip through serialization and yield
@@ -1425,4 +1728,5 @@ LinkEditData:
   //
   EncodeDecode(*zero_module_symtab);
   EncodeDecode(*nonzero_module_symtab);
+  EncodeDecode(*split_module_symtab);
 }
