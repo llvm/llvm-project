@@ -1313,10 +1313,31 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
+Error LTO::loadPassPlugins() {
+  if (Conf.PassPluginFilenames.empty())
+    return Error::success();
+  assert(PassPlugins.empty() && "Pass-plugins must be loaded only once");
+
+  // Load plugins from file and append them to the list of client loaded ones.
+  for (const std::string &PluginFN : Conf.PassPluginFilenames) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
+    if (!Plugin)
+      return Plugin.takeError();
+    PassPlugins.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
+    Conf.LoadedPassPlugins.push_back(PassPlugins.back().get());
+  }
+
+  Conf.PassPluginFilenames.clear();
+  return Error::success();
+}
+
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
+
+  if (Error Err = loadPassPlugins())
+    return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
