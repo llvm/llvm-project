@@ -1409,6 +1409,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       Builder.defineMacro("__PIE__", Twine(PICLevel));
       Builder.defineMacro("__pie__", Twine(PICLevel));
     }
+    if ((TI.getTriple().isARM() || TI.getTriple().isThumb()) &&
+        !CGOpts.PicDataIsTextRelative)
+      Builder.defineMacro("__ARM_PIC_DATA_STATIC_BASE", "1");
   }
 
   // Macros to control C99 numerics and <float.h>

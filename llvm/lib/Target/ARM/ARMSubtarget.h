@@ -396,6 +396,8 @@ public:
 
   bool isROPI() const;
   bool isRWPI() const;
+  bool isPicDataStaticBase() const;
+  bool useStaticBaseForPicData(const GlobalValue *GV) const;
 
   bool useMachineScheduler() const { return UseMISched; }
   bool useMachinePipeliner() const { return UseMIPipeliner; }
