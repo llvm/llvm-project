@@ -68,12 +68,10 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
     ++CD.Count;
     CD.Timeline.push_back(Rec);
 
-#ifndef NDEBUG
     LLVM_DEBUG(if (EventTrackerPrintAll) {
       dbgs().indent(2) << "Updated Timeline:\n";
       print(dbgs(), CD, /*Indent=*/4);
     });
-#endif
   }
 
   assert(FoundMatch && "Event has no matching InstCounterType!");
@@ -108,12 +106,10 @@ void EventTracker::drain(InstCounterType T, unsigned N) {
 
     LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
-#ifndef NDEBUG
     LLVM_DEBUG(if (EventTrackerPrintAll) {
       dbgs().indent(2) << "Updated Timeline:\n";
       print(dbgs(), CD, /*Indent=*/4);
     });
-#endif
   }
 
 #ifdef EXPENSIVE_CHECKS

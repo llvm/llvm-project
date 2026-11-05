@@ -15,9 +15,9 @@
 ///   - \ref CounterInfo: constant per-counter description (events, limit).
 ///   - \ref EventTrackerRecord: a (MachineInstr, SingleHWEvent) pair.
 ///   - \ref EventTracker: per-MBB state; for each counter, a count and a
-///     timeline of records ordered from oldest to youngest. Driven by the
-///     client while visiting the MBB: \ref EventTracker::record adds events,
-///     and \ref EventTracker::drain models waits.
+///     sequence of records ordered from oldest to youngest. Driven by the
+///     client while visiting the MBB: \ref EventTracker::record appends new
+///     events, and \ref EventTracker::drain removes oldest events.
 ///
 /// This is a low-level API. It can be used directly for trivial waitcnt
 /// calculation (e.g. wait on a specific MI), but the typical usage is for
@@ -55,7 +55,7 @@ struct CounterInfo {
 
   /// Type of counter this is.
   InstCounterType CounterT;
-  /// HWEvents for this counter.
+  /// HWEvents that increment this counter.
   HWEvents Events;
   /// Hardware limit for this counter.
   unsigned Limit;
