@@ -16,8 +16,6 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h"
-
 #include "src/__support/math/exp10_double_eval.h"
 #define LIBC_MATH_EXP10_IMPL double_eval
 

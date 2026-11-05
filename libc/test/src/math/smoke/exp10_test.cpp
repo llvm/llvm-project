@@ -13,13 +13,11 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
-#include "hdr/stdint_proxy.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/math/exp10_double_eval.h"
 #include "src/math/exp10.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
 LIBC_NOINLINE double exp10_double_eval(double x) {
@@ -58,13 +56,47 @@ public:
   }
 
   void test_overflow(double (*func)(double)) {
-    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(0x1.0p20), FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+    using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+    using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+    const double OVERFLOW_INPUTS[] = {0x1.34413509f79ffp+8, 0x1.0p20,
+                                      max_normal};
+    for (double x : OVERFLOW_INPUTS) {
+      for (int i = 0; i < N_ROUNDING_MODES; ++i) {
+        ForceRoundingMode r(ROUNDING_MODES[i]);
+        if (!r.success)
+          continue;
+
+        double expected = (ROUNDING_MODES[i] == RoundingMode::Downward ||
+                           ROUNDING_MODES[i] == RoundingMode::TowardZero)
+                              ? max_normal
+                              : inf;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected, func(x),
+                                    FE_OVERFLOW | FE_INEXACT);
+        EXPECT_MATH_ERRNO(ERANGE);
+      }
+    }
   }
 
   void test_underflow(double (*func)(double)) {
-    EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(-0x1.0p20), FE_UNDERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+    using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+    using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+    const double UNDERFLOW_INPUTS[] = {-0x1.439b746e36b53p+8, -0x1.0p20,
+                                       neg_max_normal};
+    for (double x : UNDERFLOW_INPUTS) {
+      for (int i = 0; i < N_ROUNDING_MODES; ++i) {
+        ForceRoundingMode r(ROUNDING_MODES[i]);
+        if (!r.success)
+          continue;
+
+        double expected =
+            (ROUNDING_MODES[i] == RoundingMode::Upward) ? min_denormal : zero;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected, func(x),
+                                    FE_UNDERFLOW | FE_INEXACT);
+        EXPECT_MATH_ERRNO(ERANGE);
+      }
+    }
   }
 
 #ifdef LIBC_TEST_FTZ_DAZ

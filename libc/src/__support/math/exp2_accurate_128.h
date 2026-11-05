@@ -16,11 +16,13 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/frac128.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/sign.h"
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h"
@@ -20,6 +19,7 @@
 #include "src/__support/math/exp10_double_eval.h"
 #include "src/math/exp10.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
@@ -58,17 +58,50 @@ public:
   }
 
   void test_overflow(double (*func)(double)) {
-    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(0x1.0p20), FE_OVERFLOW);
+    using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+    using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+    const double OVERFLOW_INPUTS[] = {0x1.34413509f79ffp+8, 0x1.0p20,
+                                      max_normal};
+    for (double x : OVERFLOW_INPUTS) {
+      for (int i = 0; i < N_ROUNDING_MODES; ++i) {
+        ForceRoundingMode r(ROUNDING_MODES[i]);
+        if (!r.success)
+          continue;
+
+        double expected = (ROUNDING_MODES[i] == RoundingMode::Downward ||
+                           ROUNDING_MODES[i] == RoundingMode::TowardZero)
+                              ? max_normal
+                              : inf;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected, func(x),
+                                    FE_OVERFLOW | FE_INEXACT);
+      }
+    }
   }
 
   void test_underflow(double (*func)(double)) {
-    EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(-0x1.0p20), FE_UNDERFLOW);
+    using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+    using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+    const double UNDERFLOW_INPUTS[] = {-0x1.439b746e36b53p+8, -0x1.0p20,
+                                       neg_max_normal};
+    for (double x : UNDERFLOW_INPUTS) {
+      for (int i = 0; i < N_ROUNDING_MODES; ++i) {
+        ForceRoundingMode r(ROUNDING_MODES[i]);
+        if (!r.success)
+          continue;
+
+        double expected =
+            (ROUNDING_MODES[i] == RoundingMode::Upward) ? min_denormal : zero;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected, func(x),
+                                    FE_UNDERFLOW | FE_INEXACT);
+      }
+    }
   }
 
   void test_tricky_inputs(double (*func)(double), double ulp_tolerance = 0.5,
                           bool all_rounding = true) {
-    constexpr int N = 41;
-    constexpr uint64_t INPUTS[N] = {
+    constexpr uint64_t INPUTS[] = {
         0x40033093317082F8, 0x3FD79289C6E6A5C0,
         0x3FD05DE80A173EA0, // 0x1.05de80a173eap-2
         0xbf1eb7a4cb841fcc, // -0x1.eb7a4cb841fccp-14
@@ -78,6 +111,8 @@ public:
         0x4044c19e5712e377, // x=0x1.4c19e5712e377p+5
         0xbf19a61fb925970d, // x=-0x1.9a61fb925970dp-14
         0xc039a74cdab36c28, // x=-0x1.9a74cdab36c28p+4
+        0x40734413509f79fe, // x=0x1.34413509f79fep+8 (last non-overflowing)
+        0xc07439b746e36b52, // x=-0x1.439b746e36b52p+8 (last non-underflowing)
         0xc085b3e4e2e3bba9, // x=-0x1.5b3e4e2e3bba9p+9
         0xc086960d591aec34, // x=-0x1.6960d591aec34p+9
         0xc086232c09d58d91, // x=-0x1.6232c09d58d91p+9
@@ -110,8 +145,8 @@ public:
         0x4036000000000000, // x = 22
         0x4037000000000000, // x = 23
     };
-    for (int i = 0; i < N; ++i) {
-      double x = FPBits(INPUTS[i]).get_val();
+    for (uint64_t input : INPUTS) {
+      double x = FPBits(input).get_val();
       if (all_rounding) {
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x, func(x),
                                        ulp_tolerance);

@@ -138,7 +138,7 @@ LIBC_ALWAYS_INLINE double exp10(double x) {
     if (d <= 0x46U) {
       uint32_t scaled = (16U | (d & 0xfU)) << (d >> 4);
       if ((scaled & 0xfU) == 0U)
-        return EXP10_EXACT[static_cast<size_t>(scaled >> 4) - 1];
+        return EXP10_EXACT[(scaled >> 4) - 1];
     }
   }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
