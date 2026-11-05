@@ -474,6 +474,36 @@ add_header_library(
 )
 
 add_header_library(
+  process_vm_readv
+  HDRS
+    process_vm_readv.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  process_vm_writev
+  HDRS
+    process_vm_writev.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   recvfrom
   HDRS
     recvfrom.h
@@ -654,6 +684,19 @@ add_header_library(
   rt_sigprocmask
   HDRS
     rt_sigprocmask.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.sigset_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  rt_sigpending
+  HDRS
+    rt_sigpending.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
@@ -1374,6 +1417,18 @@ add_header_library(
 )
 
 add_header_library(
+  close_range
+  HDRS
+    close_range.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   dup
   HDRS
     dup.h
@@ -1892,6 +1947,34 @@ add_header_library(
   clock_getres
   HDRS
     clock_getres.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  clock_gettime
+  HDRS
+    clock_gettime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  clock_settime
+  HDRS
+    clock_settime.h
   DEPENDS
     libc.hdr.types.clockid_t
     libc.hdr.types.struct_timespec

@@ -141,6 +141,11 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// Symbols created as the target of a weakref. They are extern_weak until
+  /// something names them in a way that is not itself weak, such as an
+  /// ordinary declaration or definition of the target.
+  llvm::SmallPtrSet<mlir::Operation *, 4> weakRefReferences;
+
   /// -------
   /// Annotations
   /// -------
@@ -289,11 +294,17 @@ public:
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
   cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
-                                     LangAS langAS, const VarDecl *d,
+                                     LangAS langAS, mlir::Location loc,
+                                     const VarDecl *d,
                                      ForDefinition_t isForDefinition);
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
+
+  /// Return the symbol that a weakref declaration refers to: the cir.func or
+  /// cir.global named by its alias target, declared extern_weak if it did not
+  /// already exist.
+  mlir::Operation *getWeakRefReference(const clang::ValueDecl *vd);
 
   cir::GlobalOp
   createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
@@ -643,6 +654,16 @@ public:
   mlir::Operation *
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  cir::FuncOp getRawFunctionPointer(GlobalDecl GD);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  cir::FuncOp getFunctionPointer(GlobalDecl GD);
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {

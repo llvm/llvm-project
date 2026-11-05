@@ -30,6 +30,7 @@
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
+/llvm/lib/Transforms/Scalar/SeparateConstOffsetFromGEP.cpp @krzysz00
 
 # AMDGPU buffer pointer lowerings
 /llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
@@ -53,6 +54,13 @@
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
+# MLIR core tablegen.
+/mlir/lib/TableGen @krzysz00
+/mlir/tools/mlir-tblgen @krzysz00
+
+# MLIR properties.
+/mlir/include/mlir/IR/Properties.td @krzysz00
+
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
@@ -68,6 +76,17 @@
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer
+/mlir/**/Interfaces/InferIntRangeInterface.* @krzysz00
+/mlir/**/Interfaces/InferIntDivisibilityOpInterface.* @krzysz00
+
+# Integer range inference infrastructure.
+/mlir/lib/Analysis/DataFlow/IntegerRangeAnalysis.cpp @krzysz00
+/mlir/**/Interfaces/Utils/InferIntRangeCommon.* @krzysz00
+/mlir/**/InferIntRangeInterfaceImpls.cpp @krzysz00
+/mlir/**/InferIntDivisibilityOpInterfaceImpl.cpp @krzysz00
+/mlir/lib/Analysis/DataFlow/IntegerDivisibilityAnalysis.cpp @krzysz00
+/mlir/lib/Dialect/Arith/Transforms/IntRangeOptimizations.cpp @krzysz00
+/mlir/lib/Dialect/Arith/Transforms/UnsignedWhenEquivalent.cpp @krzysz00
 
 # AMDGPU and ROCDL dialects in MLIR.
 /mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
@@ -77,9 +96,9 @@
 /mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
 
 # Arith dialect in MLIR.
-/mlir/include/mlir/Dialect/Arith @kuhar
-/mlir/lib/Dialect/Arith @kuhar
-/mlir/lib/Conversion/ArithTo* @kuhar
+/mlir/include/mlir/Dialect/Arith @kuhar @krzysz00
+/mlir/lib/Dialect/Arith @kuhar @krzysz00
+/mlir/lib/Conversion/ArithTo* @kuhar @krzysz00
 
 # XeGPU and XeVM dialects in MLIR.
 /mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
@@ -157,7 +176,7 @@
 /mlir/test/**/CUDA/ @grypp
 
 # MLIR GPU Dialect
-/mlir/**/GPU*/ @fabianmcg
+/mlir/**/GPU*/ @fabianmcg @krzysz00
 
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp

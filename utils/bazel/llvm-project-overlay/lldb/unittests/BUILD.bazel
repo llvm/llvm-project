@@ -446,6 +446,23 @@ cc_test(
 )
 
 cc_test(
+    name = "LanguageDTests",
+    srcs = glob(["Language/D/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginDLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LanguageFortranLanguageTests",
     srcs = glob(["Language/Fortran/*.cpp"]),
     deps = [
@@ -471,6 +488,23 @@ cc_test(
         "//lldb:Interpreter",
         "//lldb:Utility",
         "//lldb/source/Plugins:PluginObjCLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LanguageRustTests",
+    srcs = glob(["Language/Rust/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginRustLanguage",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -529,10 +563,12 @@ cc_test(
         "//lldb:Target",
         "//lldb:Utility",
         "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginDLanguage",
         "//lldb/source/Plugins:PluginObjectFileELF",
         "//lldb/source/Plugins:PluginObjectFileMachO",
         "//lldb/source/Plugins:PluginObjectFilePECOFF",
         "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginRustLanguage",
         "//lldb/source/Plugins:PluginSymbolFileSymtab",
         "//llvm:Option",
         "//llvm:Support",
