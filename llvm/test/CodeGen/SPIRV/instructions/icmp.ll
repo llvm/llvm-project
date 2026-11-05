@@ -1,5 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[EQ:%.*]] "test_eq"
 ; CHECK-DAG: OpName [[NE:%.*]] "test_ne"
@@ -273,11 +275,13 @@ define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-;; Vectors whose length is not a power of two are widened to the next one.
+;; Vectors with an unsupported length are widened to the next power of two.
 ; CHECK:      [[v5SLT]] = OpFunction
 ; CHECK:      [[A:%.*]] = OpVectorShuffle
 ; CHECK:      [[B:%.*]] = OpVectorShuffle
-; CHECK:      OpSLessThan [[v8Bool]] [[A]] [[B]]
+; CHECK:      [[R:%.*]] = OpSLessThan [[v8Bool]] [[A]] [[B]]
+; CHECK:      [[E:%.*]] = OpCompositeExtract [[Bool]] [[R]] 4
+; CHECK:      OpReturnValue [[E]]
 ; CHECK:      OpFunctionEnd
 define i1 @test_v5_slt(<8 x i32> %a, <8 x i32> %b) {
   %a5 = shufflevector <8 x i32> %a, <8 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
