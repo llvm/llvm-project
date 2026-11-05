@@ -249,7 +249,15 @@ static mlir::Value lookThroughDeclaresAndConverts(mlir::Value value) {
       value = declareOp.getMemref();
     else if (auto convertOp = llvm::dyn_cast<fir::ConvertOp>(op))
       value = convertOp->getOperand(0);
-    else
+    else if (auto noReassoc = llvm::dyn_cast<fir::NoReassocOp>(op))
+      value = noReassoc.getVal();
+    else if (auto boxAddr = llvm::dyn_cast<fir::BoxAddrOp>(op)) {
+      auto box = lookThroughDeclaresAndConverts(boxAddr.getVal());
+      if (auto embox = box.getDefiningOp<fir::EmboxCharOp>())
+        value = embox.getMemref();
+      else
+        return value;
+    } else
       return value;
   }
   return value;
@@ -276,8 +284,9 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
 
     auto retTy = allocmem.getAllocatedType();
     if (!fir::isStackArraysCandidateType(retTy)) {
-      LLVM_DEBUG(llvm::dbgs() << "--Allocation is not for an array or a "
-                                 "constant-length character: skipping\n");
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "--Allocation is not for an array or character: skipping\n");
       return mlir::success();
     }
 
@@ -417,11 +426,12 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   // through the function because otherwise the allocation may have an intende
   // lifetime longer than the current stack frame (e.g. a heap allocation which
   // is then freed by another function).
+  llvm::DenseMap<mlir::Block *, bool> blockCanSaveRestore;
   for (mlir::Value freedValue : freedValues) {
     fir::AllocMemOp allocmem = freedValue.getDefiningOp<fir::AllocMemOp>();
     InsertionPoint insertionPoint =
         AllocMemConversion::findAllocaInsertionPoint(
-            allocmem, allocToFreeMemMap[allocmem]);
+            allocmem, allocToFreeMemMap[allocmem], blockCanSaveRestore);
     if (insertionPoint)
       candidateOps.insert({allocmem, insertionPoint});
   }
@@ -539,7 +549,8 @@ static bool isInStackGrowingLoop(mlir::Operation *op) {
 
 fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
     fir::AllocMemOp &oldAlloc,
-    const llvm::SmallVector<mlir::Operation *> &freeOps) {
+    const llvm::SmallVector<mlir::Operation *> &freeOps,
+    llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore) {
   // Ideally the alloca should be inserted at the end of the function entry
   // block so that we do not allocate stack space in a loop. However,
   // the operands to the alloca may not be available that early, so insert it
@@ -559,7 +570,8 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
       if (isInStackGrowingLoop(oldAllocOp)) {
         // where we want to put it is in a loop, and even the old location is in
         // a loop. Give up.
-        return findAllocaLoopInsertionPoint(oldAlloc, freeOps);
+        return findAllocaLoopInsertionPoint(oldAlloc, freeOps,
+                                            blockCanSaveRestore);
       }
       return {oldAllocOp};
     }
@@ -649,32 +661,32 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
 
 fir::InsertionPoint fir::AllocMemConversion::findAllocaLoopInsertionPoint(
     fir::AllocMemOp &oldAlloc,
-    const llvm::SmallVector<mlir::Operation *> &freeOps) {
-  mlir::Operation *oldAllocOp = oldAlloc;
-  // This is only called as a last resort. We should try to insert at the
-  // location of the old allocation, which is inside of a loop, using
-  // llvm.stacksave/llvm.stackrestore
-
-  assert(freeOps.size() && "DFA should only return freed memory");
-
-  // Don't attempt to reason about a stacksave/stackrestore between different
-  // blocks
+    const llvm::SmallVector<mlir::Operation *> &freeOps,
+    llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore) {
+  mlir::Block *block = oldAlloc->getBlock();
+  assert(!freeOps.empty() && "DFA should only return freed memory");
+  // A single block scope reclaims every promoted allocation together,
+  // regardless of whether the individual lifetimes are nested or crossing.
   for (mlir::Operation *free : freeOps)
-    if (free->getBlock() != oldAllocOp->getBlock())
+    if (free->getBlock() != block)
       return {nullptr};
 
-  // Check that there aren't any other stack allocations in between the
-  // stack save and stack restore
-  // note: for flang generated temporaries there should only be one free op
-  for (mlir::Operation *free : freeOps) {
-    for (mlir::Operation *op = oldAlloc; op && op != free;
-         op = op->getNextNode()) {
-      if (mlir::isa<fir::AllocaOp>(op))
-        return {nullptr};
-    }
+  auto [it, inserted] = blockCanSaveRestore.try_emplace(block, false);
+  if (inserted) {
+    // Do not reclaim pre-existing stack storage or interfere with another
+    // stack scope. Nested heap allocations are analyzed independently and
+    // either stay on the heap or receive a safe allocation scope of their own.
+    auto walkResult = block->walk([&](mlir::Operation *op) {
+      return mlir::isa<fir::AllocaOp, mlir::LLVM::AllocaOp,
+                       mlir::LLVM::StackSaveOp, mlir::LLVM::StackRestoreOp>(op)
+                 ? mlir::WalkResult::interrupt()
+                 : mlir::WalkResult::advance();
+    });
+    it->second = !walkResult.wasInterrupted();
   }
-
-  return InsertionPoint{oldAllocOp, /*shouldStackSaveRestore=*/true};
+  if (!it->second)
+    return {nullptr};
+  return InsertionPoint{oldAlloc.getOperation(), /*saveRestoreStack=*/true};
 }
 
 std::optional<fir::AllocaOp>
@@ -732,18 +744,16 @@ visitFreeMemOp(fir::AllocMemOp oldAlloc,
 
 void fir::AllocMemConversion::insertStackSaveRestore(
     fir::AllocMemOp oldAlloc, mlir::PatternRewriter &rewriter) const {
+  mlir::Block *block = oldAlloc->getBlock();
+  if (!blocksWithStackSaveRestore.insert(block).second)
+    return;
   mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder{rewriter, mod};
-
-  builder.setInsertionPoint(oldAlloc);
+  builder.setInsertionPointToStart(block);
   mlir::Value sp = builder.genStackSave(oldAlloc.getLoc());
-
-  auto createStackRestoreCall = [&](mlir::Operation *user) {
-    builder.setInsertionPoint(user);
-    builder.genStackRestore(user->getLoc(), sp);
-  };
-  visitFreeMemOp(oldAlloc, createStackRestoreCall);
+  builder.setInsertionPoint(block->getTerminator());
+  builder.genStackRestore(oldAlloc.getLoc(), sp);
 }
 
 void fir::AllocMemConversion::insertLifetimeMarkers(
