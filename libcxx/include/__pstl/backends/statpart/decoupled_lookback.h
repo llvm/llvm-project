@@ -17,11 +17,11 @@
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
-#include <__memory/unique_ptr.h>
 #include <__new/global_new_delete.h>
 #include <__new/nothrow_t.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 
@@ -137,11 +137,21 @@ private:
 template <typename _Tp>
 class _LIBCPP_HIDE_FROM_ABI __decoupled_lookback {
 public:
+  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback(__decoupled_lookback&& __other) noexcept
+      : __partitions_(std::exchange(__other.__partitions_, nullptr)),
+        __partitions_count_(std::exchange(__other.__partitions_count_, 0)) {}
+
+  __decoupled_lookback(const __decoupled_lookback&)            = delete;
+  __decoupled_lookback& operator=(const __decoupled_lookback&) = delete;
+  __decoupled_lookback& operator=(__decoupled_lookback&&)      = delete;
+
+  _LIBCPP_HIDE_FROM_ABI ~__decoupled_lookback() { delete[] __partitions_; }
+
   // Returns the number of partitions in the lookback.
   _LIBCPP_HIDE_FROM_ABI size_t __size() const { return __partitions_count_; }
 
   // Provides a pointer to the first partition in a contiguous storage.
-  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>* __partitions() const { return __partitions_.get(); }
+  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>* __partitions() const { return __partitions_; }
 
   // Provides a reference to the specified partition.
   _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>& __partition(size_t __index) const {
@@ -150,8 +160,10 @@ public:
   }
 
 private:
-  unique_ptr<__decoupled_lookback_partition<_Tp>[]> __partitions_;
-  size_t __partitions_count_ = 0;
+  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback() = default;
+
+  __decoupled_lookback_partition<_Tp>* __partitions_ = nullptr;
+  size_t __partitions_count_                         = 0;
 
   template <class _Up>
   friend _LIBCPP_HIDE_FROM_ABI optional<__decoupled_lookback<_Up>> __make_decoupled_lookback(size_t) noexcept;
@@ -162,7 +174,7 @@ private:
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI optional<__decoupled_lookback<_Tp>> __make_decoupled_lookback(size_t __size) noexcept {
   __decoupled_lookback<_Tp> __lookback;
-  __lookback.__partitions_.reset(new (std::nothrow) __decoupled_lookback_partition<_Tp>[__size]);
+  __lookback.__partitions_ = new (std::nothrow) __decoupled_lookback_partition<_Tp>[__size];
   if (!__lookback.__partitions_)
     return nullopt;
   __lookback.__partitions_count_ = __size;
