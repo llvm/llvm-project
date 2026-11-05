@@ -461,6 +461,38 @@ void test_complex_double_input_r(_Complex double *p) {
   asm volatile("" : : "r"(*p));
 }
 
+struct S16 { long a, b; };
+
+// A 16-byte struct input goes the same way as a _Complex double: by value
+// when it has to be in registers.
+// CHECK-LABEL: define dso_local void @test_struct16_input_r(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP0]], align 8
+// CHECK-NEXT:    call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(i128 [[TMP1]]) #[[ATTR3]], !srcloc [[META20:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+void test_struct16_input_r(struct S16 *p) {
+  asm volatile("" : : "r"(*p));
+}
+
+// And by its address when it can be in memory.
+// CHECK-LABEL: define dso_local void @test_struct16_input_rm(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    call void asm sideeffect "", "*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([[STRUCT_S16:%.*]]) [[TMP0]]) #[[ATTR3]], !srcloc [[META21:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+void test_struct16_input_rm(struct S16 *p) {
+  asm volatile("" : : "rm"(*p));
+}
+
 #else
 
 // No integer type is 256 bits wide.
