@@ -2013,6 +2013,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
@@ -2339,6 +2340,7 @@ cc_library(
         ":PluginDynamicLoaderDarwinKernel",
         ":PluginDynamicLoaderStatic",
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         ":ProcessKDPProperties",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -2421,6 +2423,23 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterDarwin",
+    srcs = glob(["Register/Darwin/*.cpp"]),
+    hdrs = glob(["Register/Darwin/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

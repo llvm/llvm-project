@@ -32,6 +32,7 @@ else()
       libc.src.__support.math.acosf
       libc.src.__support.math.acosf16
       libc.src.__support.math.acoshf
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.acoshf16
       libc.src.__support.math.acospif
       libc.src.__support.math.acospif16
@@ -565,6 +566,7 @@ else()
       libc.src.__support.math.acosbf16
       libc.src.__support.math.acosf
       libc.src.__support.math.acosf16
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.acoshf
       libc.src.__support.math.acoshf16
       libc.src.__support.math.acospif

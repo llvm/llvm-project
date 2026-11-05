@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_arm.cpp --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,54 +20,54 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextPOSIX_arm.h"
+#include "RegisterContextCore_arm.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-bool RegisterContextPOSIX_arm::IsGPR(unsigned reg) {
+bool RegisterContextCore_arm::IsGPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
       RegisterInfo_arm::GPRegSet)
     return true;
   return false;
 }
 
-bool RegisterContextPOSIX_arm::IsFPR(unsigned reg) {
+bool RegisterContextCore_arm::IsFPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
       RegisterInfo_arm::FPRegSet)
     return true;
   return false;
 }
 
-RegisterContextPOSIX_arm::RegisterContextPOSIX_arm(
+RegisterContextCore_arm::RegisterContextCore_arm(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfo_arm> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
-RegisterContextPOSIX_arm::~RegisterContextPOSIX_arm() = default;
+RegisterContextCore_arm::~RegisterContextCore_arm() = default;
 
-void RegisterContextPOSIX_arm::Invalidate() {}
+void RegisterContextCore_arm::Invalidate() {}
 
-void RegisterContextPOSIX_arm::InvalidateAllRegisters() {}
+void RegisterContextCore_arm::InvalidateAllRegisters() {}
 
-unsigned RegisterContextPOSIX_arm::GetRegisterOffset(unsigned reg) {
+unsigned RegisterContextCore_arm::GetRegisterOffset(unsigned reg) {
   return m_register_info_up->GetRegisterInfo()[reg].byte_offset;
 }
 
-unsigned RegisterContextPOSIX_arm::GetRegisterSize(unsigned reg) {
+unsigned RegisterContextCore_arm::GetRegisterSize(unsigned reg) {
   return m_register_info_up->GetRegisterInfo()[reg].byte_size;
 }
 
-size_t RegisterContextPOSIX_arm::GetRegisterCount() {
+size_t RegisterContextCore_arm::GetRegisterCount() {
   return m_register_info_up->GetRegisterCount();
 }
 
-size_t RegisterContextPOSIX_arm::GetGPRSize() {
+size_t RegisterContextCore_arm::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-const lldb_private::RegisterInfo *RegisterContextPOSIX_arm::GetRegisterInfo() {
+const lldb_private::RegisterInfo *RegisterContextCore_arm::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
@@ -75,23 +75,23 @@ const lldb_private::RegisterInfo *RegisterContextPOSIX_arm::GetRegisterInfo() {
 }
 
 const lldb_private::RegisterInfo *
-RegisterContextPOSIX_arm::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_arm::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < GetRegisterCount())
     return &GetRegisterInfo()[reg];
 
   return nullptr;
 }
 
-size_t RegisterContextPOSIX_arm::GetRegisterSetCount() {
+size_t RegisterContextCore_arm::GetRegisterSetCount() {
   return m_register_info_up->GetRegisterSetCount();
 }
 
 const lldb_private::RegisterSet *
-RegisterContextPOSIX_arm::GetRegisterSet(size_t set) {
+RegisterContextCore_arm::GetRegisterSet(size_t set) {
   return m_register_info_up->GetRegisterSet(set);
 }
 
-const char *RegisterContextPOSIX_arm::GetRegisterName(unsigned reg) {
+const char *RegisterContextCore_arm::GetRegisterName(unsigned reg) {
   if (reg < GetRegisterCount())
     return GetRegisterInfo()[reg].name;
   return nullptr;

@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_arm64.h ----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_ARM64_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_ARM64_H
 
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_arm64.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextPOSIX_arm64 : public lldb_private::RegisterContext {
+class RegisterContextCore_arm64 : public lldb_private::RegisterContext {
 public:
-  RegisterContextPOSIX_arm64(
+  RegisterContextCore_arm64(
       lldb_private::Thread &thread,
       std::unique_ptr<RegisterInfo_arm64> register_info);
 
-  ~RegisterContextPOSIX_arm64() override;
+  ~RegisterContextCore_arm64() override;
 
   void Invalidate();
 
@@ -86,4 +86,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM64_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_ARM64_H
