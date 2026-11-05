@@ -1819,12 +1819,20 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
     if (!isAggregateValueIdInstr(I))
       continue;
     auto *Phi = dyn_cast<PHINode>(&I);
+    // A switch can list an incoming block twice, and both entries need the
+    // same value, so build one chain per block.
+    SmallDenseMap<BasicBlock *, Value *> PhiArms;
     for (Use &U : I.operands()) {
       auto *C = dyn_cast<ConstantAggregate>(U.get());
       if (!C || none_of(C->operands(), [](const Use &E) {
             return E->getType()->isPointerTy();
           }))
         continue;
+      if (Value *Arm =
+              Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
+        U.set(Arm);
+        continue;
+      }
       Instruction *InsertPt =
           Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I;
       Value *Composite = PoisonValue::get(C->getType());
@@ -1832,6 +1840,8 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
         Composite = InsertValueInst::Create(Composite, C->getOperand(Idx), Idx,
                                             "", InsertPt->getIterator());
       U.set(Composite);
+      if (Phi)
+        PhiArms[Phi->getIncomingBlock(U)] = Composite;
     }
   }
 }

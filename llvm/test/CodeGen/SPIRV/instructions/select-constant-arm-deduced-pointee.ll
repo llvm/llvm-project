@@ -3,6 +3,8 @@
 ; shared between functions): i8 for the one returned in @a, i32 for the one
 ; loaded through in @a2. The arm is rebuilt with insertvalue, which casts each
 ; member to the result's member type, so all arms have the result's type.
+; A PHI arm is rebuilt in its incoming block, once even when a switch lists
+; that block twice.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
@@ -11,6 +13,11 @@
 ; CHECK: OpSelect %[[#Q]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpSelect %[[#Q]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpPhi %[[#Q]]
+; CHECK: OpFunction %[[#Q]]
+; CHECK: OpCompositeInsert %[[#Q]] %[[#]] %[[#]] 0
+; CHECK: %[[#Arm:]] = OpCompositeInsert %[[#Q]] %[[#]] %[[#]] 1
+; CHECK-NOT: OpCompositeInsert
+; CHECK: OpPhi %[[#Q]] %[[#Arm]] %[[#]] %[[#]] %[[#]]{{$}}
 
 %P = type { ptr addrspace(4), i32 }
 %Q = type { ptr addrspace(4), ptr addrspace(4) }
@@ -41,5 +48,18 @@ then:
   br label %join
 join:
   %p = phi %Q [ zeroinitializer, %entry ], [ { ptr addrspace(4) inttoptr (i64 12 to ptr addrspace(4)), ptr addrspace(4) null }, %then ]
+  ret %Q %p
+}
+
+define %Q @switch(i32 %x) {
+entry:
+  switch i32 %x, label %join [
+    i32 1, label %join
+    i32 2, label %other
+  ]
+other:
+  br label %join
+join:
+  %p = phi %Q [ { ptr addrspace(4) inttoptr (i64 12 to ptr addrspace(4)), ptr addrspace(4) null }, %entry ], [ { ptr addrspace(4) inttoptr (i64 12 to ptr addrspace(4)), ptr addrspace(4) null }, %entry ], [ zeroinitializer, %other ]
   ret %Q %p
 }
