@@ -16,7 +16,7 @@ using namespace mlir::vector;
 
 namespace {
 // Check both the mask operand and an enclosing vector.mask.
-static bool isMaskedTransfer(VectorTransferOpInterface transfer) {
+bool isMaskedTransfer(VectorTransferOpInterface transfer) {
   return transfer.getMask() ||
          cast<MaskableOpInterface>(transfer.getOperation()).isMasked();
 }
