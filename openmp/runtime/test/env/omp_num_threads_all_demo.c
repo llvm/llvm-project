@@ -1,5 +1,5 @@
 // RUN: %libomp-compile
-// RUN: env OMP_NUM_THREADS_ALL=8 OMP_NUM_THREADS_DEV_0=128 %libomp-run \
+// RUN: env OMP_NUM_THREADS_ALL=8 OMP_NUM_THREADS_DEV_0=128 env -u OMP_NUM_THREADS %libomp-run \
 // RUN:   | FileCheck %s
 //
 // Demo: host=8 (_ALL), device 0=128 (_DEV_0), other devices=8 (_ALL fallback).

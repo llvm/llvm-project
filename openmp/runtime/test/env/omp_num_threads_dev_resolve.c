@@ -1,5 +1,5 @@
 // RUN: %libomp-compile && \
-// RUN:   env OMP_NUM_THREADS_ALL=8 OMP_NUM_THREADS_DEV=64 \
+// RUN:   env OMP_NUM_THREADS_ALL=8 OMP_NUM_THREADS_DEV=64 env -u OMP_NUM_THREADS \
 // RUN:   OMP_NUM_THREADS_DEV_0=128 %libomp-run
 //
 // OpenMP 6.0 non-host precedence: `_DEV_<d>` > `_DEV` > `_ALL` > default.
