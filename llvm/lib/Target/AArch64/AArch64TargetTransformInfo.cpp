@@ -5848,8 +5848,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
+    // Fall back to the base cost (we can expand fixed-width expandloads).
     if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
-      return InstructionCost::getInvalid();
+      return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
     // Operation will be split into expand of masked.load
     // Something like:
@@ -5861,8 +5862,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
+    // Fall back to the base cost (we can expand fixed-width compressstores).
     if (!isLegalMaskedCompressStore(Src, MICA.getAlignment()))
-      return InstructionCost::getInvalid();
+      return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
     // A compress store lowers to something like:
     //  compact  z0.s, p0, z0.s
@@ -6237,6 +6239,9 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
                                              Align Alignment) const {
   // Neon types should be scalarised when we are not choosing to use SVE.
   if (useNeonVector(DataTy))
+    return false;
+
+  if (!isElementTypeLegalForScalableVector(DataTy->getScalarType()))
     return false;
 
   // Return true only if we are able to lower using the SVE2p2/SME2p2
@@ -8422,7 +8427,7 @@ bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
     return isElementTypeLegalForScalableVector(DataType);
 
   auto LT = getTypeLegalizationCost(DataType);
-  if (!LT.first.isValid())
+  if (!LT.first.isValid() || !LT.second.isVector())
     return false;
 
   // Use the i32 or i64 compact instructions for f16/bf16 unpacked types.
