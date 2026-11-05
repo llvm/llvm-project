@@ -501,3 +501,36 @@ body: |
     SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
 ...
 
+---
+name: unmerge_bitcast_readanylane
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; CHECK-LABEL: name: unmerge_bitcast_readanylane
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x i32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<4 x i32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32), [[UV2:%[0-9]+]]:vgpr(i32), [[UV3:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<4 x i32>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[UV1]](i32)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](f32), [[MV1]](p1) :: (store (f32), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p1) = G_MERGE_VALUES %0(s32), %1(s32)
+    %3:sgpr(s32) = COPY $sgpr2
+    %4:sgpr(s32) = COPY $sgpr3
+    %5:sgpr(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %6:sgpr(<4 x i32>) = G_LOAD %2(p1) :: (volatile "amdgpu-noclobber" load (<4 x i32>), addrspace 1)
+    %7:sgpr(<4 x f32>) = G_BITCAST %6(<4 x i32>)
+    %8:sgpr(f32), %9:sgpr(f32), %10:sgpr(f32), %11:sgpr(f32) = G_UNMERGE_VALUES %7(<4 x f32>)
+    G_STORE %9(f32), %5(p1) :: (store (f32), addrspace 1)
+    S_ENDPGM 0
+...

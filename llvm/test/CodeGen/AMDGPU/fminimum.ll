@@ -1014,36 +1014,15 @@ define amdgpu_ps <2 x float> @test_fminimum_f64_ss(double inreg %a, double inreg
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-SDAG-LABEL: test_fminimum_f64_ss:
-; GFX1170-SDAG:       ; %bb.0:
-; GFX1170-SDAG-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
-; GFX1170-SDAG-NEXT:    ; return to shader part epilog
+; GFX1170-LABEL: test_fminimum_f64_ss:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
+; GFX1170-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-GISEL-LABEL: test_fminimum_f64_ss:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1170-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-LABEL: test_fminimum_f64_ss:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_fminimum_f64_ss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: test_fminimum_f64_ss:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
+; GFX12-NEXT:    ; return to shader part epilog
   %val = call double @llvm.minimum.f64(double %a, double %b)
   %ret = bitcast double %val to <2 x float>
   ret <2 x float> %ret
