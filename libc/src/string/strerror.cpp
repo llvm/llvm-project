@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strerror, (int err_num)) {
-  return const_cast<char *>(get_error_string(err_num).data());
+  return const_cast<char *>(get_error_cstring(err_num));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

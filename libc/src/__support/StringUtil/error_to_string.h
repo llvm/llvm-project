@@ -16,9 +16,18 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// The description of an error. The view is not followed by a terminator in
+// general, so a caller that needs a C string uses get_error_cstring. If the
+// error has no description of its own the text is built in the buffer, or in a
+// thread local one if none is given, and is valid until the next call.
 cpp::string_view get_error_string(int err_num);
 
 cpp::string_view get_error_string(int err_num, cpp::span<char> buffer);
+
+// As get_error_string, but the result is a terminated C string.
+const char *get_error_cstring(int err_num);
+
+const char *get_error_cstring(int err_num, cpp::span<char> buffer);
 
 cpp::optional<cpp::string_view> try_get_errno_name(int err_num);
 
