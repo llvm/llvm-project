@@ -1022,7 +1022,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
 
-  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(llvmModule->getContext(), targetMachine, pto, pgoOpt,
+                       &pic);
 
   // Register plugin callbacks with PB.
   for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())

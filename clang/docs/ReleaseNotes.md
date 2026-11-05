@@ -1086,6 +1086,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Bug Fixes
 
+- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain. Macro definitions using `#` as the value separator and
+  `/permissive` options are also translated consistently for host and device
+  compilation.
+
 #### Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.

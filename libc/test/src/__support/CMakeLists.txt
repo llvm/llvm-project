@@ -286,8 +286,6 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_libc_test(

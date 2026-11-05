@@ -2029,8 +2029,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2045,8 +2043,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrt
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2061,8 +2057,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtl
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
