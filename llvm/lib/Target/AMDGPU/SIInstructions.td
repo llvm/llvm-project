@@ -4081,6 +4081,15 @@ def : GCNPat <
                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)), hi16)
 >;
 
+def umin_u16 : PatFrag<(ops node:$src), (umin node:$src, (i32 0xffff))>;
+
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector>
+    (i16 (trunc (umin_u16 i32:$src0))),
+    (i16 (trunc (umin_u16 i32:$src1))))),
+  (V_CVT_PK_U16_U32_e64 $src0, $src1)
+>;
+
 let SubtargetPredicate = HasVOP3PInsts in {
 let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <

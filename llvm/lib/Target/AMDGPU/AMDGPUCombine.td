@@ -304,6 +304,34 @@ def fold_carry_into_addsub_combines : GICombineGroup<[
   fold_carry_into_addsub<(G_SUB i32:$dst, i32:$src, $zext), G_USUBE>
 ]>;
 
+def umin_u16_combiner_frag : GICombinePatFrag<
+  (outs root:$dst), (ins $src),
+  [(pattern (G_UMIN i32:$dst, $src, $limit),
+            (G_CONSTANT i32:$limit, 65535)),
+   (pattern (G_UMIN i32:$dst, $limit, $src),
+            (G_CONSTANT i32:$limit, 65535))]>;
+
+// v2i16 build_vector_trunc(umin(i32:x, 0xffff), umin(i32:y, 0xffff))
+//   -> amdgcn.cvt.pk.u16(x, y)
+def build_vector_trunc_umin_u16 : GICombineRule<
+  (defs root:$dst),
+  (match (G_BUILD_VECTOR_TRUNC v2i16:$dst, $lo, $hi),
+         (umin_u16_combiner_frag $lo, $src0),
+         (umin_u16_combiner_frag $hi, $src1),
+         [{ return isVgprRegBank(${dst}.getReg()); }]),
+  (apply (int_amdgcn_cvt_pk_u16 $dst, $src0, $src1))>;
+
+// v2i16 trunc(build_vector(umin(i32:x, 0xffff), umin(i32:y, 0xffff)))
+//   -> amdgcn.cvt.pk.u16(x, y)
+def trunc_build_vector_umin_u16 : GICombineRule<
+  (defs root:$dst),
+  (match (G_TRUNC v2i16:$dst, v2i32:$vec),
+         (G_BUILD_VECTOR $vec, $lo, $hi),
+         (umin_u16_combiner_frag $lo, $src0),
+         (umin_u16_combiner_frag $hi, $src1),
+         [{ return isVgprRegBank(${dst}.getReg()); }]),
+  (apply (int_amdgcn_cvt_pk_u16 $dst, $src0, $src1))>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -360,5 +388,6 @@ def AMDGPURegBankCombiner : GICombiner<
    d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
    umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
    fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3,
-   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
+   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
+   build_vector_trunc_umin_u16, trunc_build_vector_umin_u16]> {
 }
