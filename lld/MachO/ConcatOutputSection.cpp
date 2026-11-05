@@ -82,9 +82,10 @@ bool TextOutputSection::needsThunks() const {
   // Calculate the total size of all branch target sections
   uint64_t branchTargetsSize = in.stubs->getSize();
 
-  // Add the size of __objc_stubs section if it exists
-  if (in.objcStubs && in.objcStubs->isNeeded())
-    branchTargetsSize += in.objcStubs->getSize();
+  // Add the sizes of the ObjC stubs sections if they exist
+  for (const ObjCStubsSection *osec : {in.objcClassStubs, in.objcStubs})
+    if (osec && osec->isNeeded())
+      branchTargetsSize += osec->getSize();
 
   if (!needsThunks &&
       isecAddr - addr + branchTargetsSize <=
@@ -216,7 +217,8 @@ TextOutputSection::estimateStubsEndVA(unsigned numPotentialThunks) const {
   // Walk backwards to find the last stubs section
   while (!sections.empty()) {
     auto *osec = sections.back();
-    if (osec->isNeeded() && (osec == in.stubs || osec == in.objcStubs))
+    if (osec->isNeeded() &&
+        (osec == in.stubs || osec == in.objcClassStubs || osec == in.objcStubs))
       break;
     sections.consume_back();
   }
@@ -232,7 +234,8 @@ TextOutputSection::estimateStubsEndVA(unsigned numPotentialThunks) const {
     if (!osec->isNeeded())
       continue;
     // Check if we will emit any more sections before the last stubs section
-    if (osec != in.stubs && osec != in.stubHelper && osec != in.objcStubs)
+    if (osec != in.stubs && osec != in.stubHelper &&
+        osec != in.objcClassStubs && osec != in.objcStubs)
       return std::nullopt;
     estimatedStubsEnd =
         alignToPowerOf2(estimatedStubsEnd, osec->align) + osec->getSize();
@@ -246,7 +249,10 @@ bool TextOutputSection::isTargetStubsAndInRange(
   if (!estimatedStubsEnd.has_value())
     return false;
   auto *funcSym = cast<Symbol *>(r.referent);
-  if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
+  ObjCStubsSection *objcStubs = ObjCStubsSection::isObjCClassStubSymbol(funcSym)
+                                    ? in.objcClassStubs
+                                    : in.objcStubs;
+  if (!funcSym->isInStubs() && !(objcStubs && objcStubs->isNeeded() &&
                                  ObjCStubsSection::isObjCStubSymbol(funcSym)))
     return false;
   if (r.getAddend())
@@ -334,7 +340,7 @@ void TextOutputSection::finalize() {
   });
   // Count distinct unresolved branch targets that still lack an in-range thunk.
   // We use this as an upper bound on the number of thunks we may still create
-  // when estimating where __stubs / __objc_stubs could end up.
+  // when estimating where the stubs sections could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
     if (!findThunkInRange(*callerIsec, *r))

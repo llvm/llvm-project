@@ -14,12 +14,12 @@
 # RUN: %lld -arch arm64 -lSystem -dead_strip -dead_strip_dylibs \
 # RUN:   -o %t.out %t/main.o %t/libdead.dylib -U _objc_msgSend \
 # RUN:   -objc_stubs_small
-# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_clsstubs \
 # RUN:   --macho %t.out | FileCheck %s --check-prefix=STUBS
 # RUN: llvm-nm %t.out | FileCheck %s --check-prefix=SYMS
 # RUN: llvm-otool -L %t.out | FileCheck %s --check-prefix=LOAD
 
-# STUBS:      Contents of (__TEXT,__objc_stubs) section
+# STUBS:      Contents of (__TEXT,__objc_clsstubs) section
 # STUBS-NEXT: _objc_msgSendClass$live$_OBJC_CLASS_$_LiveClass:
 # STUBS-NOT:  _objc_msgSendClass$dead$_OBJC_CLASS_$_DeadClass:
 # STUBS-NOT:  _objc_msgSendClass$missing$_OBJC_CLASS_$_NeverDefined:

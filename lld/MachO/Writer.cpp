@@ -791,7 +791,10 @@ void Writer::scanSymbols() {
           if (!sym->isLive())
             continue;
         }
-        in.objcStubs->addEntry(sym);
+        if (ObjCStubsSection::isObjCClassStubSymbol(sym))
+          in.objcClassStubs->addEntry(sym);
+        else
+          in.objcStubs->addEntry(sym);
       }
     }
   }
@@ -984,13 +987,14 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
-// __objc_stubs is synthetic, so the input section sorting in
-// sortSegmentsAndSections() does not reach its entries. Order each stub by the
-// priority of the earliest-laid-out section that calls it, which keeps the
+// __objc_clsstubs and __objc_stubs are synthetic, so the input section sorting
+// in sortSegmentsAndSections() does not reach their entries. Order each stub by
+// the priority of the earliest-laid-out section that calls it, which keeps the
 // stubs reached during startup together.
 static void orderObjCStubsByCallerPriority(
     const DenseMap<const InputSection *, int> &priorities) {
-  if (priorities.empty() || !in.objcStubs->isNeeded())
+  if (priorities.empty() ||
+      (!in.objcClassStubs->isNeeded() && !in.objcStubs->isNeeded()))
     return;
 
   // ICF may make the prioritized section differ from the section whose
@@ -1020,6 +1024,7 @@ static void orderObjCStubsByCallerPriority(
   if (stubPriority.empty())
     return;
 
+  in.objcClassStubs->sortSymbols(stubPriority);
   in.objcStubs->sortSymbols(stubPriority);
 }
 
@@ -1385,8 +1390,8 @@ template <class LP> void Writer::run() {
   // these two scan* methods. I.e. from this point onward, for all live
   // InputSections, we should have `isec->canonical() == isec`.
   scanSymbols();
-  if (in.objcStubs->isNeeded())
-    in.objcStubs->setUp();
+  if (in.objcClassStubs->isNeeded() || in.objcStubs->isNeeded())
+    ObjCStubsSection::setUp();
   if (in.objcMethList->isNeeded())
     in.objcMethList->setUp();
   scanRelocations();
@@ -1458,7 +1463,8 @@ void macho::createSyntheticSections() {
   if (config->arch() == AK_arm64e)
     in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
-  in.objcStubs = make<ObjCStubsSection>();
+  in.objcClassStubs = make<ObjCStubsSection>(section_names::objcClassStubs);
+  in.objcStubs = make<ObjCStubsSection>(section_names::objcStubs);
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
