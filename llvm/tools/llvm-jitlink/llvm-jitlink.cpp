@@ -1602,8 +1602,7 @@ Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   auto It = DynLibJDs.find(LibPath);
   if (It != DynLibJDs.end())
     return It->second;
-  auto G =
-      EPCDynamicLibrarySearchGenerator::Load(*DylibMgr, LibPath.data());
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*DylibMgr, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -2392,8 +2391,7 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      *S.DylibMgr,
-      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      *S.DylibMgr, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
