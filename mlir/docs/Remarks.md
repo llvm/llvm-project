@@ -219,11 +219,11 @@ remark::missed(loc, opts) << "Loop trip count is unknown";
 remark::missed(loc, opts) << "Loop trip count is too small";
 ```
 
-`finalize()` drains one batch of stored remarks. Unreferenced remarks with IDs
-are emitted in ID order, followed by ID-less roots in unspecified order.
-Related remarks are grouped after their parent. Shared targets, transitive links,
-and cycles emit every surviving remark once. Calling `finalize()` again emits
-only remarks reported since the previous drain.
+`finalize()` drains one batch of stored remarks. Traversals start from roots
+with IDs in ID order, then ID-less roots in unspecified order, then any unvisited
+remarks in ID order. Related remarks are grouped after their parent.
+Shared targets, transitive links, and cycles emit every surviving remark once.
+Calling `finalize()` again emits only remarks reported since the previous drain.
 
 If a related target was overwritten in the current batch, its link is removed
 from the surviving consumer and its serialized arguments. The consumer still

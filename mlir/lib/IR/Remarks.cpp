@@ -384,6 +384,8 @@ RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
 
 static void dropDiscardedLinks(detail::Remark &remark,
                                const llvm::DenseSet<uint64_t> &discardedIds) {
+  if (discardedIds.empty())
+    return;
   auto ids = llvm::to_vector(remark.getRelatedRemarkIds());
   llvm::erase_if(
       ids, [&](RemarkId id) { return discardedIds.contains(id.getValue()); });
@@ -393,7 +395,7 @@ static void dropDiscardedLinks(detail::Remark &remark,
 
 void RemarkEmittingPolicyFinal::reportRemark(const detail::Remark &remark) {
   detail::Remark copy = remark;
-  std::scoped_lock<std::mutex> lock(mutex);
+  std::scoped_lock lock(mutex);
   auto previous = pendingRemarks.find(copy);
   if (previous != pendingRemarks.end()) {
     if (previous->getId() && previous->getId() != copy.getId())
@@ -409,7 +411,7 @@ void RemarkEmittingPolicyFinal::finalize() {
   SmallVector<detail::Remark, 0> remarks;
   llvm::DenseSet<uint64_t> discarded;
   {
-    std::scoped_lock<std::mutex> lock(mutex);
+    std::scoped_lock lock(mutex);
     remarks = llvm::to_vector<0>(pendingRemarks);
     pendingRemarks.clear();
     discarded.swap(discardedIds);

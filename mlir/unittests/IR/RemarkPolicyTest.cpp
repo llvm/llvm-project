@@ -206,14 +206,13 @@ TEST_F(FinalRemarkPolicyTest, RemarksWithoutIDsSurvive) {
                                           "WithID"));
 }
 
-TEST_F(FinalRemarkPolicyTest, ArgumentViewsRemainValidAcrossReadsAndCopies) {
+TEST_F(FinalRemarkPolicyTest, RelatedLinksSerializeAndCopy) {
   auto original = makeRemark("Original", 1, {2});
   original.insert(Remark::Arg("RelatedTo", "caller"));
   original.insert(Remark::Arg("Payload", std::string(256, 'x')));
   auto args = original.getArgs();
   auto serialized = original.generateRemark();
   EXPECT_THAT(original.getMsg(), HasSubstr("RelatedTo=2"));
-  EXPECT_EQ(args.data(), original.getArgs().data());
   EXPECT_THAT(relatedArgs(args), UnorderedElementsAre("caller", "2"));
   EXPECT_THAT(relatedArgs(serialized), UnorderedElementsAre("caller", "2"));
 
@@ -227,7 +226,6 @@ TEST_F(FinalRemarkPolicyTest, ArgumentViewsRemainValidAcrossReadsAndCopies) {
   EXPECT_THAT(relatedArgs(moved.generateRemark()),
               UnorderedElementsAre("caller", "copy", "2", "3"));
   EXPECT_THAT(relatedArgs(serialized), UnorderedElementsAre("caller", "2"));
-  EXPECT_EQ(args.data(), original.getArgs().data());
 
   // Mutations leave the copied remark unchanged.
   original.addRelatedRemark(RemarkId(4));

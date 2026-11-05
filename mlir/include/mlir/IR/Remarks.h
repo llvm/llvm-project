@@ -684,8 +684,8 @@ public:
   void reportRemark(const detail::Remark &remark) override;
 
   /// Emit each survivor once, grouping related remarks after their parents.
-  /// Roots with IDs and rootless cycles are visited in ID order. ID-less roots
-  /// follow the other roots in unspecified order.
+  /// Visit roots with IDs in ID order, then ID-less roots in unspecified order.
+  /// Finally, start traversals from any unvisited remarks in ID order.
   /// Links to IDs replaced in this batch are removed; IDs outside this batch
   /// are preserved without validation. Call after reporting stops; callbacks
   /// must not reenter the policy. A later call emits only new remarks.

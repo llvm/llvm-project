@@ -33,7 +33,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
 }
 
 void LLVMRemarkStreamer::streamOptimizationRemark(const Remark &remark) {
-  std::scoped_lock<std::mutex> lock(mutex);
+  std::scoped_lock lock(mutex);
   if (!remarkStreamer->matchesFilter(remark.getCategoryName()))
     return;
 
