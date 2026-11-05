@@ -1090,14 +1090,18 @@ Fortran::lower::genCallOpAndResult(
     // do not deallocate the top-level entity. The two clean-ups
     // must be pushed in reverse order, so that the final order is:
     //   Destroy(desc)
-    //   free(desc->base_addr)
+    //   deallocate desc (an inlined free, or a runtime call if the storage
+    //   may come from another allocator)
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
           if (box.isAllocatable()) {
             // 9.7.3.2 point 4. Deallocate allocatable results. Note that
             // finalization was done independently by calling
             // genDerivedTypeDestroy above and is not triggered by this
-            // deallocation.
+            // deallocation. When the storage may come from a non-default
+            // allocator, it is released through the runtime, which uses the
+            // allocator recorded in the descriptor. cuf.deallocate is not
+            // used here: it would finalize the result a second time.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
             const bool useRuntime = resultMayUseNonDefaultAllocator(
                 converter, getResultSymbol(caller));
