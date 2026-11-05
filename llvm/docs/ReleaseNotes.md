@@ -266,6 +266,13 @@ Makes programs 10x faster by doing Special New Thing.
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
   `condition : value` pairs, along with their corresponding side effects,
   are left unresolved.
+* Once a record is complete, a reference to one of its uninitialized fields
+  now resolves to `?`. As more values are resolved, more class instantiations
+  may occur: a class invoked with such a field (`Class<field>`) is now
+  instantiated with `?` as its template argument rather than left unresolved.
+  This creates additional anonymous records and runs the assertions and dumps
+  of the invoked class, which may fail for `?`. Use `!initialized` to guard
+  against such cases.
 
 ### Changes to Interprocedural Optimizations
 
