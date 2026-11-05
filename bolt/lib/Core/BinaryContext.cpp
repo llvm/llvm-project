@@ -87,11 +87,6 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
-static cl::opt<bool> CloneConstantIsland("clone-constant-island",
-                                         cl::desc("clone constant islands"),
-                                         cl::Hidden, cl::init(true),
-                                         cl::cat(BoltCategory));
-
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
