@@ -4385,7 +4385,7 @@ inline VectorKind getRVVFixedLengthMaskVectorKind(unsigned RatioLog2,
   assert((SubByteLanes == 0 || SubByteLanes == 1 || SubByteLanes == 2 ||
           SubByteLanes == 4) &&
          "unexpected sub-byte lane count");
-  unsigned Col = SubByteLanes == 4 ? 3 : SubByteLanes;
+  unsigned Col = SubByteLanes == 0 ? 0 : llvm::Log2_32(SubByteLanes) + 1;
   return VectorKind(unsigned(VectorKind::RVVFixedLengthMaskRatio1) +
                     RatioLog2 * 4 + Col);
 }
