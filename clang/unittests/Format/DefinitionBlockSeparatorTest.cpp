@@ -581,18 +581,17 @@ TEST_F(DefinitionBlockSeparatorTest, MacroExpansion) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
   Style.Macros = {"AUTO_RETURN(a)=-> decltype(auto) { return a; }"};
-  StringRef Code = "auto a(int t) AUTO_RETURN(g(t))\n"
-                   "\n"
-                   "auto b(int t) AUTO_RETURN(g(t))\n"
-                   "\n"
-                   "int f(bool c) {\n"
-                   "  if (c) {\n"
-                   "    return 1;\n"
-                   "  } else {\n"
-                   "    return 2;\n"
-                   "  }\n"
-                   "}";
-  EXPECT_EQ(Code, separateDefinitionBlocks(Code, Style));
+  verifyFormat("auto a(int t) AUTO_RETURN(g(t))\n"
+               "auto b(int t) AUTO_RETURN(g(t))\n"
+               "\n"
+               "int f(bool c) {\n"
+               "  if (c) {\n"
+               "    return 1;\n"
+               "  } else {\n"
+               "    return 2;\n"
+               "  }\n"
+               "}",
+               Style);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Leave) {
