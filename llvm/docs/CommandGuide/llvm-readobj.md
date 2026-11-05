@@ -264,8 +264,9 @@ Display the section to segment mapping.
 
 :::{option} --stack-sizes
 Display the contents of the stack sizes section(s), i.e. pairs of function
-names and the size of their stack frames. Currently only implemented for GNU
-style output.
+names and the size of their stack frames. In `LLVM` and `JSON` output (see
+{option}`--elf-output-style`), each entry in a linked file also includes the
+function's address.
 :::
 
 :::{option} --version-info, -V

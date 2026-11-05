@@ -2194,7 +2194,6 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -3539,6 +3538,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       StringRef ImportedName = ReadStringBlob(Record, Idx, Blob);
 
       bool IsImportingStdCXXModule = Record[Idx++];
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit = Record[Idx++];
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
@@ -3558,12 +3558,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
             ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
 
-      if (IsImportingStdCXXModule && ImportedFile.empty()) {
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit && ImportedFile.empty()) {
         Diag(diag::err_failed_to_find_module_file) << ImportedName;
         return Missing;
       }
 
-      if (!IsImportingStdCXXModule) {
+      if (!IsCXX20ModuleOrPrebuiltHeaderUnit) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
         FileNameKind = (unsigned)Record[Idx++];
@@ -3605,10 +3605,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 Loaded, StoredSize, StoredModTime,
                                 StoredSignature, Capabilities);
 
-      // Check the AST we just read from ImportedFile contains a different
-      // module than we expected (ImportedName). This can occur for C++20
-      // Modules when given a mismatch via -fmodule-file=<name>=<file>
-      if (IsImportingStdCXXModule) {
+      // Check whether the AST we just read from ImportedFile contains a
+      // different module than we expected (ImportedName).
+      //
+      // This can occur for C++20 Modules (including explicitly mapped header
+      // units) when given a mismatch in -fmodule-file=<name>=<file>.
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         if (const auto *Imported =
                 getModuleManager().lookupByFileName(ImportedFile);
             Imported != nullptr && Imported->ModuleName != ImportedName) {
@@ -6330,11 +6332,12 @@ bool ASTReader::readASTFileControlBlock(
 
       StringRef ModuleName = ReadStringBlob(Record, Idx, Blob);
 
-      bool IsStandardCXXModule = Record[Idx++];
+      ++Idx; // Standard C++ module
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit = Record[Idx++];
 
-      // In C++20 Modules, we don't record the path to imported
-      // modules in the BMI files.
-      if (IsStandardCXXModule) {
+      // For C++20 Modules (including explicitly mapped header units),
+      // we don't record the path to imported modules in the BMI files.
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         Listener.visitImport(ModuleName, /*Filename=*/"");
         continue;
       }

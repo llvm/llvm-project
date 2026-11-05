@@ -20,6 +20,7 @@ FatArchs:
     align:           14
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x1000007
@@ -300,6 +301,7 @@ Slices:
                          0x5F, 0x73, 0x61, 0x79, 0x5A, 0x0, 0x0, 0x0, 0x0, 
                          0x0, 0x0 ]
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x100000C
@@ -584,6 +586,7 @@ Slices:
                          0x5F, 0x73, 0x61, 0x79, 0x5A, 0x0, 0x0, 0x0, 0x0, 
                          0x0, 0x0 ]
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x100000C

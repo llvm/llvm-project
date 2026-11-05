@@ -328,7 +328,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Op.getOpcode() == ISD::STRICT_FSETCC ||
         Op.getOpcode() == ISD::STRICT_FSETCCS) {
       MVT OpVT = Node->getOperand(1).getSimpleValueType();
-      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(3))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(3);
       Action = TLI.getCondCodeAction(CCCode, OpVT);
       if (Action == TargetLowering::Legal)
         Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -556,7 +556,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::SETCC: {
     MVT OpVT = Node->getOperand(0).getSimpleValueType();
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+    ISD::CondCode CCCode = Node->getOperandCondCode(2);
     Action = TLI.getCondCodeAction(CCCode, OpVT);
     if (Action == TargetLowering::Legal)
       Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -783,11 +783,22 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSETCC(Node, Results);
     return;
   case ISD::STRICT_FADD:
-  case ISD::STRICT_FSUB:
-  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FCEIL:
   case ISD::STRICT_FDIV:
-  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FMA:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FTRUNC:
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
@@ -2166,19 +2177,39 @@ void VectorLegalizer::ExpandFixedPointDiv(SDNode *Node,
 
 void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
-  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP) {
+  switch (Node->getOpcode()) {
+  default:
+    break;
+  case ISD::STRICT_UINT_TO_FP:
     ExpandUINT_TO_FLOAT(Node, Results);
     return;
-  }
-  if (Node->getOpcode() == ISD::STRICT_FP_TO_UINT) {
+  case ISD::STRICT_FP_TO_UINT:
     ExpandFP_TO_UINT(Node, Results);
     return;
-  }
-
-  if (Node->getOpcode() == ISD::STRICT_FSETCC ||
-      Node->getOpcode() == ISD::STRICT_FSETCCS) {
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
     ExpandSETCC(Node, Results);
     return;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FSUB: {
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded.getValue(0));
+      Results.push_back(Expanded.getValue(1));
+      return;
+    }
+    break;
+  }
   }
 
   UnrollStrictFPOp(Node, Results);

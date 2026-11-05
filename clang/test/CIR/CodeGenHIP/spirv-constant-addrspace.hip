@@ -26,11 +26,13 @@
 // LLVM-DAG: @_ZZ10static_fmtiE3fmt = internal addrspace(1) constant [3 x i8] c"%d\00"
 // LLVM-DAG: @dev = addrspace(1) externally_initialized global i32 3
 // LLVM-DAG: @_ZZ10get_sharedvE2sh = internal addrspace(3) global [4 x i32]
+// LLVM-DAG: @_Z5aliasv = alias i32 (), ptr addrspace(4) @alias_target
 __constant__ int tab[2] = {1, 2};
 __device__ int dev = 3;
 
 // Functions live in the program address space 4.
-// LLVM-DAG: @llvm.used = {{.*}}ptr addrspace(4) @_Z7used_fnv
+// CIR-DAG: cir.global "private" appending target_address_space(1) @llvm.used = #cir.const_array<[#cir.global_view<@_Z7used_fnv> : !cir.ptr<!void, target_address_space(4)>]> : !cir.array<!cir.ptr<!void, target_address_space(4)> x 1>
+// LLVM-DAG: @llvm.used = appending addrspace(1) global [1 x ptr addrspace(4)] [ptr addrspace(4) @_Z7used_fnv], section "llvm.metadata"
 __attribute__((used)) __device__ void used_fn() {}
 
 // CIR-LABEL: cir.func{{.*}} @_Z10static_fmti
@@ -60,3 +62,20 @@ __device__ int get_shared() {
 // An explicit opencl_constant qualifier keeps UniformConstant.
 // LLVM-LABEL: define{{.*}} i32 @_Z6get_ocPU3AS2i(ptr addrspace(2)
 __device__ int get_oc(__attribute__((opencl_constant)) int *p) { return *p; }
+
+// Function addresses are in the program address space 4.
+// CIR-LABEL: cir.func{{.*}} @_Z7take_fnv
+// CIR: cir.get_global @_Z6fn_refv : !cir.ptr<!cir.func<()>, target_address_space(4)>
+// LLVM-LABEL: define{{.*}} void @_Z7take_fnv
+// LLVM: call{{.*}} @_Z6use_fnPFvvE(ptr addrspace(4) noundef @_Z6fn_refv)
+__device__ void fn_ref();
+__device__ void use_fn(void (*)());
+__device__ void take_fn() { use_fn(fn_ref); }
+
+// Function aliases point into the program address space 4.
+extern "C" __device__ int alias_target() { return 1; }
+[[gnu::alias("alias_target")]] __device__ int alias();
+
+// Host-only aliases are skipped on the device.
+extern "C" int host_target() { return 2; }
+[[gnu::alias("host_target")]] int host_alias();

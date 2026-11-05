@@ -737,11 +737,12 @@ Value *ConstantOffsetExtractor::applyCasts(Value *V, const CastState &Casts) {
     Cast->setOperand(0, Current);
     // In ConstantOffsetExtractor::find we do not analyze nuw/nsw for trunc, so
     // we assume that it is ok to redistribute trunc over add/sub/or. But for
-    // example (add (trunc nuw A), (trunc nuw B)) is more poisonous than (trunc
-    // nuw (add A, B))). To make such redistributions legal we drop all the
-    // poison generating flags from cloned trunc instructions here.
-    if (isa<TruncInst>(Cast))
-      Cast->dropPoisonGeneratingFlags();
+    // example (add (trunc nuw A), (trunc nuw B)) would be more poisonous than
+    // (trunc nuw (add A, B))), and similarly, (sub (zext nneg A), (zext nneg
+    // B)) would be more poisonous than (zext nneg (sub nuw A, B)). To make such
+    // redistributions legal, we drop all the poison generating flags from the
+    // cloned cast instructions here.
+    Cast->dropPoisonGeneratingFlags();
     Cast->insertBefore(*IP->getParent(), IP);
     Current = Cast;
   }
@@ -1081,12 +1082,12 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  bool ExtractBase = match(GEP->getPointerOperand(),
-                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(*DL, m_Value(NewBase), m_APInt(BaseOffset)));
 
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
-  APInt BaseByteOffset =
-      ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
+  APInt BaseByteOffset = ExtractBase ? *BaseOffset : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
   // constant.
@@ -1299,8 +1300,7 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SeparateConstOffsetFromGEP::run(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   if (Opts.disable_separate_const_offset_from_gep)
     return false;
 

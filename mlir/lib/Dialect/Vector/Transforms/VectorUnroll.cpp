@@ -109,7 +109,7 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
     LDBG() << "--not an unrollable op -> BAIL";
     return std::nullopt;
   }
-  auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
+  auto maybeUnrollShape = unrollableVectorOp.getIterationShapeToUnroll();
   if (!maybeUnrollShape) {
     LDBG() << "--could not get shape of op " << *op << " -> BAIL";
     return std::nullopt;
@@ -294,7 +294,7 @@ struct UnrollContractionPattern
     if (!targetShape)
       return failure();
     auto dstVecType = cast<VectorType>(contractOp.getResultType());
-    SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize = *contractOp.getIterationShapeToUnroll();
 
     Location loc = contractOp.getLoc();
     unsigned accIndex = vector::ContractionOp::getAccOperandIndex();
@@ -388,7 +388,8 @@ struct UnrollMultiReductionPattern
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
-    SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize =
+        *reductionOp.getIterationShapeToUnroll();
     Location loc = reductionOp.getLoc();
     auto resultType = reductionOp->getResult(0).getType();
 
@@ -496,7 +497,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     int64_t targetShapeRank = targetShape->size();
     auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
-        *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
+        *cast<VectorUnrollOpInterface>(op).getIterationShapeToUnroll();
     int64_t originalShapeRank = originalSize.size();
 
     Location loc = op->getLoc();
@@ -574,7 +575,8 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
-    SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize =
+        *reductionOp.getIterationShapeToUnroll();
 
     // Create unrolled vector reduction.
     Location loc = reductionOp.getLoc();
@@ -816,7 +818,8 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
     VectorType srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
     VectorType resType = broadcastOp.getResultVectorType();
 
-    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
+    SmallVector<int64_t> originalShape =
+        *broadcastOp.getIterationShapeToUnroll();
     // Pad the target shape with leading unit dimensions when the broadcast
     // result has a higher rank than the native shape.
     SmallVector<int64_t> adjustedTargetShape(originalShape.size(), 1);
@@ -1084,7 +1087,8 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
       return failure();
 
     VectorType resultType = createMaskOp.getVectorType();
-    SmallVector<int64_t> originalSize = *createMaskOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize =
+        *createMaskOp.getIterationShapeToUnroll();
     Location loc = createMaskOp.getLoc();
 
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
@@ -1176,7 +1180,8 @@ struct UnrollConstantMaskPattern
       return failure();
 
     VectorType resultType = constantMaskOp.getVectorType();
-    SmallVector<int64_t> originalSize = *constantMaskOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize =
+        *constantMaskOp.getIterationShapeToUnroll();
     Location loc = constantMaskOp.getLoc();
 
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,

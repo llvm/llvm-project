@@ -39,12 +39,12 @@ TEST_F(CopyProfStateTest, NestingCounters) {
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::NONE);
 
   // Enter constructor callback.
-  __copyprof_ctor_enter_callback(nullptr, 16);
+  __copyprof_ctor_enter_callback(/*this_ptr=*/nullptr, /*obj_size=*/16);
   EXPECT_EQ(__copyprof_state.construct_nesting_level, 1u);
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::CTOR);
 
   // Exit constructor callback.
-  __copyprof_ctor_exit_callback(nullptr, 16);
+  __copyprof_ctor_exit_callback(/*this_ptr=*/nullptr, /*obj_size=*/16);
   EXPECT_EQ(__copyprof_state.construct_nesting_level, 0u);
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::NONE);
 }
@@ -79,7 +79,7 @@ TEST_F(CopyProfStateTest, ModifiedCopyIsNotMakedAsCopyAnymore) {
   EXPECT_TRUE(IsMarkedAsCopy(obj, sizeof(obj)));
 
   // Modifying `obj` must mark it as non-copy.
-  __copyprof_store_callback(obj + 4, 4);
+  __copyprof_store_callback(obj + 4, /*size=*/4);
   EXPECT_FALSE(IsMarkedAsCopy(obj, sizeof(obj)));
 
   // After destroying the modified copy, `is_transitive_copy` must be `false`.
