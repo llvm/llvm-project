@@ -477,6 +477,8 @@ static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
   return success();
 }
 
+/// Builds the call-stack hash list of a MemProf `callsite` node, one int64
+/// per operand. Returns an empty attribute for an empty or malformed node.
 static DenseI64ArrayAttr getCallStackAttr(OpBuilder &builder,
                                           const llvm::MDNode *node) {
   if (node->getNumOperands() == 0)
