@@ -404,7 +404,6 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -832
 ; RV64I-NEXT:    .cfi_def_cfa_offset 832
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 824(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 816(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
@@ -432,7 +431,6 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -832
 ; RV32I-NEXT:    .cfi_def_cfa_offset 832
-; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 828(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 824(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
@@ -1165,7 +1163,6 @@ define void @f18(i64 %n) #0 {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
@@ -1235,6 +1232,59 @@ define void @f18(i64 %n) #0 {
   %vla = alloca i8, i64 %n, align 16
   call void @g(ptr %vla)
   call void @k([150 x i64] poison)
+  ret void
+}
+
+; Forced realignment with no object aligned above the stack alignment: the
+; realignment moves nothing, so no probe loop for it.
+define void @f19() #0 "stackrealign" {
+; RV64I-LABEL: f19:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -128
+; RV64I-NEXT:    .cfi_def_cfa_offset 128
+; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    addi s0, sp, 128
+; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    andi sp, sp, -8
+; RV64I-NEXT:    addi a0, sp, 12
+; RV64I-NEXT:    call g
+; RV64I-NEXT:    addi sp, s0, -128
+; RV64I-NEXT:    .cfi_def_cfa sp, 128
+; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 128
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: f19:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -112
+; RV32I-NEXT:    .cfi_def_cfa_offset 112
+; RV32I-NEXT:    sw ra, 108(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 104(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    addi s0, sp, 112
+; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    andi sp, sp, -4
+; RV32I-NEXT:    addi a0, sp, 4
+; RV32I-NEXT:    call g
+; RV32I-NEXT:    addi sp, s0, -112
+; RV32I-NEXT:    .cfi_def_cfa sp, 112
+; RV32I-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 112
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+  %a = alloca i8, i64 100
+  call void @g(ptr %a)
   ret void
 }
 

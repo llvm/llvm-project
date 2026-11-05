@@ -15,7 +15,6 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
@@ -169,7 +168,6 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -64
 ; RV64I-NEXT:    .cfi_def_cfa_offset 64
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
@@ -209,7 +207,6 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
 ; RV32I-NEXT:    .cfi_def_cfa_offset 64
-; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
@@ -386,7 +383,6 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
@@ -547,7 +543,6 @@ define void @dynamic_vector(i64 %size, ptr %out) #0 {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
