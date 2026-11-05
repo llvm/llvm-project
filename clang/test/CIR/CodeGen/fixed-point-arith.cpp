@@ -832,4 +832,90 @@ _Sat unsigned _Accum padSatSubUAccum(_Sat unsigned _Accum a,
                                      _Sat unsigned _Accum b) {
   return a - b;
 }
+
+// Unary minus on a saturating type is a saturating 0 - x, like classic codegen.
+
+// CIR-LABEL: cir.func {{.*}}@satNeg(
+// CIR:      %[[LOAD_A:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!s16i>, !s16i
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// CIR-NEXT: %[[NEG:.*]] = cir.sub.sat %[[ZERO]], %[[LOAD_A]] : !s16i
+
+// LLVM-LABEL: define {{.*}}i16 @satNeg(
+// LLVM:      %[[LOAD_A:.*]] = load i16, ptr %{{.*}}, align 2
+// LLVM-NEXT: %{{.*}} = call i16 @llvm.ssub.sat.i16(i16 0, i16 %[[LOAD_A]])
+_Sat short _Accum satNeg(_Sat short _Accum a) {
+  return -a;
+}
+
+// CIR-LABEL: cir.func {{.*}}@satNegU(
+// CIR:      %[[LOAD_A:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!u16i>, !u16i
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u16i
+// CIR-NEXT: %[[NEG:.*]] = cir.sub.sat %[[ZERO]], %[[LOAD_A]] : !u16i
+
+// LLVM-LABEL: define {{.*}}i16 @satNegU(
+// LLVM:      %[[LOAD_A:.*]] = load i16, ptr %{{.*}}, align 2
+// LLVM-NEXT: %{{.*}} = call i16 @llvm.usub.sat.i16(i16 0, i16 %[[LOAD_A]])
+
+// PAD-CIR-LABEL: cir.func {{.*}}@satNegU(
+// PAD-CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[A:.*]] = cir.cast integral %{{.*}} : !u16i -> !s16i
+// PAD-CIR-NEXT: %[[DIFF:.*]] = cir.sub.sat %[[ZERO]], %[[A]] : !s16i
+// PAD-CIR-NEXT: %[[ZERO2:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[LT:.*]] = cir.cmp lt %[[DIFF]], %[[ZERO2]] : !s16i
+// PAD-CIR-NEXT: %{{.*}} = cir.select if %[[LT]] then %[[ZERO2]] else %[[DIFF]]
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @satNegU(
+// PAD-LLVM:      %[[DIFF:.*]] = call i16 @llvm.ssub.sat.i16(i16 0, i16 %{{.*}})
+// PAD-LLVM-NEXT: %[[LT:.*]] = icmp slt i16 %[[DIFF]], 0
+// PAD-LLVM-NEXT: %{{.*}} = select i1 %[[LT]], i16 0, i16 %[[DIFF]]
+_Sat unsigned short _Accum satNegU(_Sat unsigned short _Accum a) {
+  return -a;
+}
+
+// With unsigned padding, float to fixed-point conversion is signed, and the
+// saturating form clamps negative values to 0.
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padFloatToSatU(
+// PAD-CIR:      %[[CONV:.*]] = cir.call_llvm_intrinsic "fptosi.sat" %{{.*}} : (!cir.float) -> !s16i
+// PAD-CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[LT:.*]] = cir.cmp lt %[[CONV]], %[[ZERO]] : !s16i
+// PAD-CIR-NEXT: %[[CLAMP:.*]] = cir.select if %[[LT]] then %[[ZERO]] else %[[CONV]]
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[CLAMP]] : !s16i -> !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @padFloatToSatU(
+// PAD-LLVM:      %[[CONV:.*]] = call i16 @llvm.fptosi.sat.i16.f32(float %{{.*}})
+// PAD-LLVM-NEXT: %[[LT:.*]] = icmp slt i16 %[[CONV]], 0
+// PAD-LLVM-NEXT: %{{.*}} = select i1 %[[LT]], i16 0, i16 %[[CONV]]
+_Sat unsigned short _Accum padFloatToSatU(float f) {
+  return f;
+}
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padFloatToU(
+// PAD-CIR:      %[[CONV:.*]] = cir.cast float_to_int %{{.*}} : !cir.float -> !s16i
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[CONV]] : !s16i -> !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @padFloatToU(
+// PAD-LLVM:      %{{.*}} = fptosi float %{{.*}} to i16
+unsigned short _Accum padFloatToU(float f) {
+  return f;
+}
+
+// A saturating conversion that only changes signedness still yields a value of
+// the destination type.
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padSatSignedToU(
+// PAD-CIR:      %[[LT:.*]] = cir.cmp lt %[[A:.*]], %[[ZERO:.*]] : !s16i
+// PAD-CIR-NEXT: %[[CLAMP:.*]] = cir.select if %[[LT]] then %[[ZERO]] else %[[A]]
+// PAD-CIR-NEXT: %[[CONV:.*]] = cir.cast integral %[[CLAMP]] : !s16i -> !u16i
+// PAD-CIR-NEXT: %[[B:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!u16i>, !u16i
+// PAD-CIR-NEXT: %{{.*}} = cir.cmp lt %[[CONV]], %[[B]] : !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i1 @padSatSignedToU(
+// PAD-LLVM:      %[[LT:.*]] = icmp slt i16 %[[A:.*]], 0
+// PAD-LLVM-NEXT: %[[CLAMP:.*]] = select i1 %[[LT]], i16 0, i16 %[[A]]
+// PAD-LLVM-NEXT: %[[B:.*]] = load i16, ptr %{{.*}}, align 2
+// PAD-LLVM-NEXT: %{{.*}} = icmp ult i16 %[[CLAMP]], %[[B]]
+bool padSatSignedToU(_Sat short _Accum a, _Sat unsigned short _Accum b) {
+  return (_Sat unsigned short _Accum)a < b;
+}
 }
