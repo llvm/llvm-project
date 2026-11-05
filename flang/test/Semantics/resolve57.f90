@@ -132,3 +132,36 @@ subroutine s8()
   do concurrent (i=1:5) local(iconst)
   end do
 end subroutine s8
+
+! A variable declared in a BLOCK may appear in a locality-spec of a
+! DO CONCURRENT in that BLOCK or in a nested BLOCK.
+subroutine block_local_locality(n)
+  integer :: n, j
+  block
+    integer :: t1, t2, t3, t4
+    t2 = 1
+    t3 = 0
+    do concurrent (j=1:n) local(t1) local_init(t2) reduce(+:t3) shared(t4)
+      t1 = j + t2
+      t3 = t3 + t1
+    end do
+    t4 = t3
+    block
+      do concurrent (j=1:n) local(t1)
+        t1 = j
+      end do
+    end block
+  end block
+end subroutine
+
+! A BLOCK entity that cannot be a variable is still rejected.
+subroutine block_local_not_variable(n)
+  integer :: n, j
+  block
+    integer, external :: f
+!ERROR: 'f' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'f' is not a variable
+    do concurrent (j=1:n) local(f)
+    end do
+  end block
+end subroutine
