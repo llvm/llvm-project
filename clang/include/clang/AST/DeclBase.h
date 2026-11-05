@@ -1846,12 +1846,6 @@ protected:
     LLVM_PREFERRED_TYPE(FunctionDeclBitfields)
     uint64_t : NumFunctionDeclBits;
 
-    enum { NumCtorInitializerBits = 19 };
-    enum { MaxNumCtorInitializers = (1u << NumCtorInitializerBits) - 1 };
-
-    /// Uses all of the remaining available space, which makes
-    /// CXXConstructorDeclBitfields take exactly 64 bits.
-    uint64_t NumCtorInitializers : NumCtorInitializerBits;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsInheritingConstructor : 1;
 
@@ -1862,10 +1856,12 @@ protected:
     /// Whether this constructor is explicit specified.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsSimpleExplicit : 1;
+
+    /// Note that there are 19 spare bits here.
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 22 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 3 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor

@@ -1767,7 +1767,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 64,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 45,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 

@@ -2650,6 +2650,8 @@ class CXXConstructorDecl final
   /// \{
   /// The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
+  /// The number of base/member initializers.
+  unsigned numCtorInitializers = 0;
 
   CXXConstructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                      const DeclarationNameInfo &NameInfo, QualType T,
@@ -2772,25 +2774,14 @@ public:
     return init_const_reverse_iterator(init_begin());
   }
 
-  /// The maximum number of base and member initializers a constructor can
-  /// have; this is limited by the width of the NumCtorInitializers bitfield.
-  static constexpr unsigned getMaxNumCtorInitializers() {
-    return DeclContext::CXXConstructorDeclBitfields::MaxNumCtorInitializers;
-  }
-
   /// Determine the number of arguments used to initialize the member
   /// or base.
   unsigned getNumCtorInitializers() const {
-      return CXXConstructorDeclBits.NumCtorInitializers;
+      return numCtorInitializers;
   }
 
   void setNumCtorInitializers(unsigned numCtorInitializers) {
-    CXXConstructorDeclBits.NumCtorInitializers = numCtorInitializers;
-    // This assert added because NumCtorInitializers is stored
-    // in CXXConstructorDeclBits as a bitfield and its width has
-    // been shrunk from 32 bits to fit into CXXConstructorDeclBitfields.
-    assert(CXXConstructorDeclBits.NumCtorInitializers ==
-           numCtorInitializers && "NumCtorInitializers overflow!");
+    this->numCtorInitializers = numCtorInitializers;
   }
 
   void setCtorInitializers(CXXCtorInitializer **Initializers) {

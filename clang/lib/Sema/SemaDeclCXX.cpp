@@ -5542,14 +5542,6 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
     // Just store the initializers as written, they will be checked during
     // instantiation.
     if (!Initializers.empty()) {
-      if (Initializers.size() >
-          CXXConstructorDecl::getMaxNumCtorInitializers()) {
-        Diag(Constructor->getLocation(), diag::err_ctor_too_many_initializers)
-            << Initializers.size()
-            << CXXConstructorDecl::getMaxNumCtorInitializers();
-        Constructor->setInvalidDecl();
-        return true;
-      }
       Constructor->setNumCtorInitializers(Initializers.size());
       CXXCtorInitializer **baseOrMemberInitializers =
         new (Context) CXXCtorInitializer*[Initializers.size()];
@@ -5702,12 +5694,6 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
   }
 
   unsigned NumInitializers = Info.AllToInit.size();
-  if (NumInitializers > CXXConstructorDecl::getMaxNumCtorInitializers()) {
-    Diag(Constructor->getLocation(), diag::err_ctor_too_many_initializers)
-        << NumInitializers << CXXConstructorDecl::getMaxNumCtorInitializers();
-    Constructor->setInvalidDecl();
-    return true;
-  }
   if (NumInitializers > 0) {
     Constructor->setNumCtorInitializers(NumInitializers);
     CXXCtorInitializer **baseOrMemberInitializers =
