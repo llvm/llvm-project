@@ -22,3 +22,7 @@ static int g(int b) {return b;}
 // Check that we ensure the types of the two definitions are the same
 GNU_INLINE extern inline int h(int a) {return a;} // expected-note{{previous definition is here}}
 int h(short b) {return b;}  // expected-error{{conflicting types for 'h'}}
+
+// GH110774: a second extern inline definition is a redefinition, as in GCC.
+GNU_INLINE extern inline int k(int a) {return a;} // expected-note{{previous definition is here}}
+GNU_INLINE extern inline int k(int b) {return b;} // expected-error{{redefinition of 'k'}}
