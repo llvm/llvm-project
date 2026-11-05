@@ -9172,8 +9172,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       D.getDirectiveKind() == OMPD_section ||
       D.getDirectiveKind() == OMPD_master ||
       D.getDirectiveKind() == OMPD_masked ||
-      D.getDirectiveKind() == OMPD_unroll ||
-      D.getDirectiveKind() == OMPD_assume) {
+      D.getDirectiveKind() == OMPD_assume ||
+      isOpenMPLoopTransformationDirective(D.getDirectiveKind())) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =

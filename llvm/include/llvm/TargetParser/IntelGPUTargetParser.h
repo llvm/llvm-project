@@ -179,6 +179,10 @@ LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 /// Append every valid IGCA target spelling to \p Values.
 LLVM_ABI void fillValidIGCATargetList(SmallVectorImpl<StringRef> &Values);
 
+/// \return the IGCA target of \p Kind, e.g. igca_20ca for xe-pvc, or an
+/// invalid IGCATarget for GK_NONE.
+LLVM_ABI IGCATarget getIGCATarget(GPUKind Kind);
+
 } // namespace IntelGPU
 } // namespace llvm
 
