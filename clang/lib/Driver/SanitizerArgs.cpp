@@ -778,10 +778,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Undefined | SanitizerKind::Memory |
                          SanitizerKind::Type),
       std::make_pair(SanitizerKind::AllocToken,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::KernelAddress |
-                         SanitizerKind::KernelHWAddress |
-                         SanitizerKind::Memory)};
+                     SanitizerKind::HWAddress | SanitizerKind::KernelAddress |
+                         SanitizerKind::KernelHWAddress | SanitizerKind::Memory)};
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
@@ -1323,6 +1321,22 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AllocTokenExtended = Args.hasFlag(
         options::OPT_fsanitize_alloc_token_extended,
         options::OPT_fno_sanitize_alloc_token_extended, AllocTokenExtended);
+    if ((Kinds & SanitizerKind::Address) &&
+        (Kinds & SanitizerKind::AllocToken) && DiagnoseErrors) {
+      const llvm::Triple &Triple = TC.getTriple();
+      bool SupportedArch =
+          (Triple.getArch() == llvm::Triple::x86_64 && !Triple.isX32()) ||
+          (Triple.getArch() == llvm::Triple::aarch64 && Triple.isAArch64(64));
+      if (!Triple.isOSLinux() || Triple.isAndroid() || !SupportedArch)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-fsanitize=address,alloc-token" << Triple.str();
+      if (AllocTokenFastABI)
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << "-fsanitize-alloc-token-fast-abi" << "-fsanitize=address";
+      if (AllocTokenExtended)
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << "-fsanitize-alloc-token-extended" << "-fsanitize=address";
+    }
   }
 
   if (AllAddedKinds & SanitizerKind::Type) {

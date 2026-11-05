@@ -144,6 +144,14 @@ void *__alloc_token_2_Znwm(size_t size);
 This ABI provides a more efficient alternative where
 `-falloc-token-max` is small.
 
+### AddressSanitizer Integration
+
+`-fsanitize=address,alloc-token` includes allocation tokens in heap reports,
+including freed allocations in quarantine. It supports non-Android Linux
+x86-64 and AArch64 with 64-bit pointers and the default ABI. The fast ABI and
+extended instrumentation are unsupported with AddressSanitizer.
+Token-enabled allocations reserve one additional shadow granule for metadata.
+
 ### Instrumenting Non-Standard Allocation Functions
 
 By default, AllocToken only instruments standard library allocation functions.

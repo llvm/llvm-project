@@ -3,6 +3,7 @@
 set(ASAN_SOURCES
   asan_aix.cpp
   asan_allocator.cpp
+  asan_alloc_token.cpp
   asan_activation.cpp
   asan_debugging.cpp
   asan_descriptions.cpp

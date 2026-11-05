@@ -121,6 +121,8 @@ struct HeapAddressDescription {
   uptr free_tid;
   u32 alloc_stack_id;
   u32 free_stack_id;
+  uptr alloc_token;
+  bool has_alloc_token;
   ChunkAccess chunk_access;
 
   void Print() const;
