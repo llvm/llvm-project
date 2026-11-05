@@ -10197,15 +10197,6 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
                 BinOpFrag<(AArch64vshl (sext node:$LHS), node:$RHS)>>;
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
-// Only fold a shift into SSRA/USRA if it has no other users. Otherwise the
-// shift still has to be computed separately, and folding it can stop the
-// other operand of the add from being folded instead.
-let HasOneUse = 1 in {
-def AArch64vashr_oneuse : PatFrag<(ops node:$src, node:$amt),
-                                  (AArch64vashr node:$src, node:$amt)>;
-def AArch64vlshr_oneuse : PatFrag<(ops node:$src, node:$amt),
-                                  (AArch64vlshr node:$src, node:$amt)>;
-}
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
                 TriOpFrag<(add_like node:$LHS, (AArch64vashr_oneuse node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
