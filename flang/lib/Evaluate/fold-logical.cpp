@@ -110,6 +110,8 @@ static std::optional<Expr<SomeReal>> RealToIntLimit(
     lo = Expr<SomeReal>{
         Fold(context, ConvertToType<T>(nextKind, std::move(lo)))};
     if (constResult) {
+      // Retry with both constant bounds widened to nextKind; kind 16 is never
+      // promoted which terminates this recursive tail call.
       return RealToIntLimit(context, std::move(hi), lo);
     }
   }
