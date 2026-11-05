@@ -691,14 +691,28 @@ Value *llvm::lowerObjectSizeCall(
       // exactly 0 bytes.
       Value *ResultSize = Builder.CreateSub(Size, Offset);
       Value *UseZero = Builder.CreateICmpULT(Size, Offset);
-      ResultSize = Builder.CreateZExtOrTrunc(ResultSize, ResultType);
-      Value *Ret = Builder.CreateSelect(
-          UseZero, ConstantInt::get(ResultType, 0), ResultSize);
+      unsigned IntBW = Size->getType()->getIntegerBitWidth();
+      unsigned ResultBW = ResultType->getBitWidth();
+      Type *WideTy = IntBW > ResultBW ? Size->getType() : ResultType;
+      ResultSize = Builder.CreateZExtOrTrunc(ResultSize, WideTy);
+      Value *Ret = Builder.CreateSelect(UseZero, ConstantInt::get(WideTy, 0),
+                                        ResultSize);
 
       // The non-constant size expression cannot evaluate to -1.
       if (!isa<Constant>(Size) || !isa<Constant>(Offset))
-        Builder.CreateAssumption(Builder.CreateICmpNE(
-            Ret, ConstantInt::getAllOnesValue(ResultType)));
+        Builder.CreateAssumption(
+            Builder.CreateICmpNE(Ret, ConstantInt::getAllOnesValue(WideTy)));
+
+      // A size that does not fit in the result type is unknown.
+      if (IntBW > ResultBW) {
+        Value *Fits = Builder.CreateICmpULE(
+            Ret,
+            ConstantInt::get(WideTy, APInt::getLowBitsSet(IntBW, ResultBW)));
+        Ret =
+            Builder.CreateSelect(Fits, Builder.CreateTrunc(Ret, ResultType),
+                                 MaxVal ? Constant::getAllOnesValue(ResultType)
+                                        : Constant::getNullValue(ResultType));
+      }
 
       return Ret;
     }
