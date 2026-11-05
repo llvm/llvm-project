@@ -169,7 +169,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
   }
   // FIXME: postvisits eventually go in ::Visit()
   getCheckerManager().runCheckersForPostStmt(Dst, AssumedSet, B, *this);
-
 }
 
 void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
