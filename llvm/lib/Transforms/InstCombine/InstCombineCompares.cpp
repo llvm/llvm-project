@@ -4522,8 +4522,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     CmpPredicate SelectPred;
     if (!match(SI->getCondition(),
                m_c_ICmp(SelectPred, m_Specific(A), m_Specific(B))) ||
-        (SelectPred != ICmpInst::ICMP_UGT &&
-         SelectPred != ICmpInst::ICMP_UGE))
+        (SelectPred != ICmpInst::ICMP_UGT && SelectPred != ICmpInst::ICMP_UGE))
       break;
 
     Value *ACmp = Builder.CreateICmp(Pred, A, RHSC);
