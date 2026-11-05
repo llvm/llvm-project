@@ -5908,14 +5908,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   const SDNodeFlags Flags = N->getFlags();
   while (!TLI.isTypeLegal(VT) && NumElts != 1) {
     NumElts = NumElts / 2;
-    VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
+    VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT,
+                          ElementCount::get(NumElts, VT.isScalableVector()));
   }
 
-  if (NumElts != 1 && !TLI.canOpTrap(N->getOpcode(), VT)) {
+  bool CanTrap = !TLI.isTypeLegal(VT) || TLI.canOpTrap(Opcode, VT);
+  SDValue LHS = GetWidenedVector(N->getOperand(0));
+  SDValue RHS = GetWidenedVector(N->getOperand(1));
+  if (NumElts != 1 && !CanTrap) {
     // Operation doesn't trap so just widen as normal.
-    SDValue InOp1 = GetWidenedVector(N->getOperand(0));
-    SDValue InOp2 = GetWidenedVector(N->getOperand(1));
-    return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
+    return DAG.getNode(Opcode, dl, WidenVT, LHS, RHS, Flags);
   }
 
   // Generate a vp.op if it is custom/legal for the target.  This avoids need
@@ -5927,19 +5929,22 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     if (EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                           WidenVT.getVectorElementCount());
         TLI.isTypeLegal(WideMaskVT)) {
-      SDValue InOp1 = GetWidenedVector(N->getOperand(0));
-      SDValue InOp2 = GetWidenedVector(N->getOperand(1));
       SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
       SDValue EVL =
           DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
                               N->getValueType(0).getVectorElementCount());
-      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL,
-                         Flags);
+      return DAG.getNode(*VPOpcode, dl, WidenVT, LHS, RHS, Mask, EVL, Flags);
     }
   }
 
-  // FIXME: Improve support for scalable vectors.
-  assert(!VT.isScalableVector() && "Scalable vectors not handled yet.");
+  if (WidenVT.isScalableVector()) {
+    // A divisor of one prevents traps in the lanes added by widening.
+    SDValue Mask = DAG.getMaskFromElementCount(
+        dl, WidenVT, N->getValueType(0).getVectorElementCount());
+    RHS =
+        DAG.getSelect(dl, WidenVT, Mask, RHS, DAG.getConstant(1, dl, WidenVT));
+    return DAG.getNode(Opcode, dl, WidenVT, LHS, RHS, Flags);
+  }
 
   // No legal vector version so unroll the vector operation and then widen.
   if (NumElts == 1)
@@ -5947,8 +5952,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
 
   // Since the operation can trap, apply operation on the original vector.
   EVT MaxVT = VT;
-  SDValue InOp1 = GetWidenedVector(N->getOperand(0));
-  SDValue InOp2 = GetWidenedVector(N->getOperand(1));
   unsigned CurNumElts = N->getValueType(0).getVectorNumElements();
 
   SmallVector<SDValue, 16> ConcatOps(CurNumElts);
@@ -5962,8 +5965,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   // }
   while (CurNumElts != 0) {
     while (CurNumElts >= NumElts) {
-      SDValue EOp1 = DAG.getExtractSubvector(dl, VT, InOp1, Idx);
-      SDValue EOp2 = DAG.getExtractSubvector(dl, VT, InOp2, Idx);
+      SDValue EOp1 = DAG.getExtractSubvector(dl, VT, LHS, Idx);
+      SDValue EOp2 = DAG.getExtractSubvector(dl, VT, RHS, Idx);
       ConcatOps[ConcatEnd++] = DAG.getNode(Opcode, dl, VT, EOp1, EOp2, Flags);
       Idx += NumElts;
       CurNumElts -= NumElts;
@@ -5975,8 +5978,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
 
     if (NumElts == 1) {
       for (unsigned i = 0; i != CurNumElts; ++i, ++Idx) {
-        SDValue EOp1 = DAG.getExtractVectorElt(dl, WidenEltVT, InOp1, Idx);
-        SDValue EOp2 = DAG.getExtractVectorElt(dl, WidenEltVT, InOp2, Idx);
+        SDValue EOp1 = DAG.getExtractVectorElt(dl, WidenEltVT, LHS, Idx);
+        SDValue EOp2 = DAG.getExtractVectorElt(dl, WidenEltVT, RHS, Idx);
         ConcatOps[ConcatEnd++] = DAG.getNode(Opcode, dl, WidenEltVT,
                                              EOp1, EOp2, Flags);
       }
