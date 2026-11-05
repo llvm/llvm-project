@@ -3297,8 +3297,8 @@ used directly as an interrupt service routine.
 
 Permissible values for this parameter are `machine`, `supervisor`,
 `rnmi`, `qci-nest`, `qci-nonest`, `SiFive-CLIC-preemptible`, and
-`SiFive-CLIC-stack-swap`. If there is no parameter, then it defaults to
-`machine`.
+`SiFive-CLIC-stack-swap`, `preemptible`, and `push-pop`. If there is no
+parameter, then it defaults to `machine`.
 
 The `rnmi` value is used for resumable non-maskable interrupts. It requires the
 standard Smrnmi extension.
@@ -3320,6 +3320,15 @@ swapped with `mscratch` before its first use and after its last use.
 The SiFive CLIC values may be combined with each other and with the `machine`
 attribute value. Any other combination of different values is not allowed.
 
+The `preemptible` and `push-pop` values are used with the ACLIC fast Interrupt
+extensions. The `preemptible` value requires `Smnip` for machine-mode
+interrupts or `Ssnip` for supervisor-mode interrupts. It saves the interrupt
+status and exception PC before re-enabling interrupts. The `push-pop` value
+requires `Smip` for machine-mode interrupts or `Ssip` for supervisor-mode
+interrupts. It assumes that `a0`-`a5` were saved by the interrupt trap and
+returns with `mipopret` or `sipopret`. These values may be combined with each
+other and with either `machine` or `supervisor`.
+
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
 
@@ -3328,6 +3337,7 @@ References:
 - [The RISC-V Instruction Set Manual Volume II: Privileged Architecture Version 1.10](https://docs.riscv.org/reference/isa/v1.10/_attachments/riscv-privileged.pdf)
 - [Xqci extension v0.13](https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0)
 - [SiFive Interrupt Cookbook Version 1.2](https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf)
+- [RISC-V Fast Interrupt v0.20](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20)
   }];
 }
 

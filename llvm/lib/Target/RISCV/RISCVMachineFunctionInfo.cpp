@@ -80,6 +80,15 @@ RISCVMachineFunctionInfo::getInterruptStackKind(
       .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
       .Case("SiFive-CLIC-preemptible-stack-swap",
             InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
+      .Case("machine-preemptible", InterruptStackKind::ACLICPreemptible)
+      .Case("supervisor-preemptible",
+            InterruptStackKind::ACLICSupervisorPreemptible)
+      .Case("machine-push-pop", InterruptStackKind::ACLICPushPop)
+      .Case("supervisor-push-pop", InterruptStackKind::ACLICSupervisorPushPop)
+      .Case("machine-preemptible-push-pop",
+            InterruptStackKind::ACLICPreemptiblePushPop)
+      .Case("supervisor-preemptible-push-pop",
+            InterruptStackKind::ACLICSupervisorPreemptiblePushPop)
       .Default(InterruptStackKind::None);
 }
 
@@ -115,6 +124,11 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
 
   // SiFive interrupts are not compatible with push/pop.
   if (useSiFiveInterrupt(MF))
+    return PushPopKind::None;
+
+  // ACLIC push-pop uses a separate hardware frame restored by
+  // mipopret/sipopret.
+  if (isACLICPushPopInterrupt(MF))
     return PushPopKind::None;
 
   // Zcmp is not compatible with the frame pointer convention.
