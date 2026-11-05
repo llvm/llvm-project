@@ -32,6 +32,20 @@
 using namespace llvm;
 
 namespace lld::coff {
+// Propagation mixes a self-referencing section's hash with itself, so mix(h, h)
+// must not be a constant.
+static uint64_t mix(uint64_t h, uint64_t v) {
+  h = (h + v) * 0x9e3779b97f4a7c15;
+  return h ^ (h >> 32);
+}
+
+// Ignore associated metadata sections that don't participate in ICF, such as
+// debug info and CFGuard metadata.
+static bool considerForICF(const SectionChunk &assoc) {
+  StringRef name = assoc.getSectionName();
+  return !(name.starts_with(".debug") || name == ".gfids$y" ||
+           name == ".giats$y" || name == ".gljmp$y");
+}
 
 class ICF {
 public:
@@ -128,13 +142,6 @@ template <bool constant> void ICF::segregate(size_t begin, size_t end) {
 // Returns true if two sections' associative children, i.e. exception handling
 // metadata such as .pdata and .xdata, are equal.
 bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
-  // Ignore associated metadata sections that don't participate in ICF, such as
-  // debug info and CFGuard metadata.
-  auto considerForICF = [](const SectionChunk &assoc) {
-    StringRef Name = assoc.getSectionName();
-    return !(Name.starts_with(".debug") || Name == ".gfids$y" ||
-             Name == ".giats$y" || Name == ".gljmp$y");
-  };
   auto ra = make_filter_range(a->children(), considerForICF);
   auto rb = make_filter_range(b->children(), considerForICF);
   return std::equal(ra.begin(), ra.end(), rb.begin(), rb.end(),
@@ -245,10 +252,14 @@ void ICF::run() {
   uint32_t nextId = 1;
   for (Chunk *c : ctx.driver.getChunks()) {
     if (auto *sc = dyn_cast<SectionChunk>(c)) {
-      if (isEligible(sc))
+      if (isEligible(sc)) {
+        // Candidates hold their index, tagged with the MSB, until hashing
+        // completes.
+        sc->eqClass[0] = chunks.size() | (1U << 31);
         chunks.push_back(sc);
-      else
+      } else {
         sc->eqClass[0] = nextId++;
+      }
     }
   }
 
@@ -259,35 +270,100 @@ void ICF::run() {
       for (SectionChunk *sc : mc->sections)
         sc->eqClass[0] = nextId++;
 
-  // Initially, we use hash values to partition sections.
-  parallelForEach(chunks, [&](SectionChunk *sc) {
-    sc->eqClass[0] = xxh3_64bits(sc->getContents());
+  assert(chunks.size() <= (1U << 31) && nextId < (1U << 31) &&
+         "the MSB marks a candidate and the low bits index chunks");
+
+  // Hash sections in chunks. An edge is a relocation or associated section
+  // referencing a candidate, recorded as the target's index. Each chunk
+  // appends its sections' edges to its own buffer; edgeEnd[i] is where
+  // section i's edges end within that buffer.
+  constexpr size_t blockSize = 1024;
+  size_t numChunks = chunks.size();
+  size_t numBlocks = divideCeil(numChunks, blockSize);
+  SmallVector<uint64_t, 0> hashes, nextHashes;
+  hashes.resize_for_overwrite(numChunks);
+  nextHashes.resize_for_overwrite(numChunks);
+  SmallVector<uint32_t, 0> edgeEnd;
+  edgeEnd.resize_for_overwrite(numChunks);
+  SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numBlocks);
+  parallelFor(0, numBlocks, [&](size_t b) {
+    SmallVectorImpl<uint32_t> &edges = chunkEdges[b];
+    size_t begin = b * blockSize, end = std::min(begin + blockSize, numChunks);
+    for (size_t i = begin; i != end; ++i) {
+      SectionChunk *sc = chunks[i];
+      uint64_t h = xxh3_64bits(sc->getContents());
+      h = mix(h, sc->getOutputCharacteristics());
+      h = mix(h, xxh3_64bits(sc->getSectionName()));
+      h = mix(h, sc->header->SizeOfRawData);
+      h = mix(h, sc->checksum);
+      h = mix(h, sc->getMachine());
+      auto hashChunk = [&](SectionChunk *target) {
+        if (target->eqClass[0] & (1U << 31))
+          edges.push_back(target->eqClass[0] & ~(1U << 31));
+        else
+          h = mix(h, target->eqClass[0]);
+      };
+      for (const coff_relocation &r : sc->getRelocs()) {
+        h = mix(h, r.Type);
+        h = mix(h, r.VirtualAddress);
+        Symbol *sym = sc->file->getSymbol(r.SymbolTableIndex);
+        if (auto *d = dyn_cast_or_null<DefinedRegular>(sym)) {
+          h = mix(h, d->getValue());
+          hashChunk(d->getChunk());
+        } else {
+          h = mix(h, sym ? xxh3_64bits(sym->getName()) : 0);
+        }
+      }
+      if (Defined *e = sc->getEntryThunk()) {
+        if (auto *d = dyn_cast<DefinedRegular>(e))
+          hashChunk(d->getChunk());
+        else
+          h = mix(h, xxh3_64bits(e->getName()));
+      }
+      size_t numAssoc = 0;
+      for (const SectionChunk &c : sc->children()) {
+        if (!considerForICF(c))
+          continue;
+        ++numAssoc;
+        hashChunk(const_cast<SectionChunk *>(&c));
+      }
+      h = mix(h, numAssoc);
+      hashes[i] = h;
+      edgeEnd[i] = edges.size();
+    }
   });
 
-  // Combine the hashes of the sections referenced by each section into its
-  // hash.
-  for (unsigned cnt = 0; cnt != 2; ++cnt) {
-    parallelForEach(chunks, [&](SectionChunk *sc) {
-      uint32_t hash = sc->eqClass[cnt % 2];
-      for (Symbol *b : sc->symbols())
-        if (auto *sym = dyn_cast_or_null<DefinedRegular>(b))
-          hash += sym->getChunk()->eqClass[cnt % 2];
-      // Set MSB to 1 to avoid collisions with non-hash classes.
-      sc->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
+  // Propagate hashes over edges for 7 rounds. Each round saves up to one
+  // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  for (int round = 7; round--;) {
+    parallelFor(0, numBlocks, [&](size_t b) {
+      ArrayRef<uint32_t> edges = chunkEdges[b];
+      size_t begin = b * blockSize,
+             end = std::min(begin + blockSize, numChunks), j = 0;
+      for (size_t i = begin; i != end; ++i) {
+        uint64_t h = hashes[i];
+        for (size_t e = edgeEnd[i]; j != e; ++j)
+          h = mix(h, hashes[edges[j]]);
+        nextHashes[i] = h;
+      }
     });
+    std::swap(hashes, nextHashes);
   }
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  SmallVector<uint64_t, 0> keys(chunks.size());
-  parallelFor(0, chunks.size(), [&](size_t i) {
-    keys[i] = uint64_t(chunks[i]->eqClass[0]) << 32 | i;
+  SmallVector<uint64_t, 0> keys;
+  keys.resize_for_overwrite(numChunks);
+  parallelFor(0, numChunks, [&](size_t i) {
+    // Set MSB to 1 to avoid collisions with non-hash classes.
+    uint32_t h = hashes[i] | (1U << 31);
+    chunks[i]->eqClass[0] = h;
+    keys[i] = uint64_t(h) << 32 | i;
   });
   parallelSort(keys.begin(), keys.end());
-  std::vector<SectionChunk *> sorted;
-  sorted.reserve(keys.size());
-  for (uint64_t k : keys)
-    sorted.push_back(chunks[uint32_t(k)]);
+  std::vector<SectionChunk *> sorted(numChunks);
+  parallelFor(0, numChunks,
+              [&](size_t i) { sorted[i] = chunks[uint32_t(keys[i])]; });
   chunks = std::move(sorted);
 
   // Compare static contents and assign unique IDs for each static content.
