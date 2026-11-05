@@ -399,11 +399,12 @@ __uninitialized_allocator_copy_n_impl(_Alloc& __alloc, _Iter1 __first1, _Size __
   return __first2;
 }
 
-template <class _Alloc, class _Type>
-inline const bool __allocator_has_trivial_copy_construct_v = !__has_construct_v<_Alloc, _Type*, const _Type&>;
+// Check for the same construct call as the generic __uninitialized_allocator_copy_n_impl above makes.
+template <class _Alloc, class _In, class _Out>
+inline const bool __allocator_has_trivial_copy_construct_v = !__has_construct_v<_Alloc, _Out*, _In&>;
 
-template <class _Type>
-inline const bool __allocator_has_trivial_copy_construct_v<allocator<_Type>, _Type> = true;
+template <class _Type, class _In, class _Out>
+inline const bool __allocator_has_trivial_copy_construct_v<allocator<_Type>, _In, _Out> = true;
 
 template <class _Alloc,
           class _In,
@@ -412,7 +413,7 @@ template <class _Alloc,
           __enable_if_t<__is_always_bitcastable<_In, _Out>::value && is_trivially_constructible<_Out, _In>::value &&
                             is_trivially_assignable<_Out&, _In&>::value &&
                             is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
-                            __allocator_has_trivial_copy_construct_v<_Alloc, _In>,
+                            __allocator_has_trivial_copy_construct_v<_Alloc, _In, _Out>,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
 __uninitialized_allocator_copy_n_impl(_Alloc&, _In* __first1, _Size __count, _Out* __first2) {
