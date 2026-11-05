@@ -897,7 +897,9 @@ def binop_with_neg : GICombineRule<
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
   (match (G_UREM $dst, $x, $y):$root,
-    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y}); }]),
+    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y},
+                                                       /*OrNegative=*/false,
+                                                       /*OrZero=*/true); }]),
   (apply [{ Helper.applySimplifyURemByPow2(*${root}); }])
 >;
 

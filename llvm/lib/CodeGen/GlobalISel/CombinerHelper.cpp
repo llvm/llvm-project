@@ -2974,8 +2974,8 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
 }
 
 bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
-    const MachineOperand &MO, bool OrNegative) const {
-  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative);
+    const MachineOperand &MO, bool OrNegative, bool OrZero) const {
+  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative, OrZero);
 }
 
 void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
