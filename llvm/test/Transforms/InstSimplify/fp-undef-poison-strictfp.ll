@@ -923,6 +923,15 @@ define float @acos_poison_op0() #0 {
   ret float %r
 }
 
+define float @acos_poison_op0_strict() #0 {
+; CHECK-LABEL: @acos_poison_op0_strict(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.acos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.acos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %r
+}
+
 define float @asin_poison_op0() #0 {
 ; CHECK-LABEL: @asin_poison_op0(
 ; CHECK-NEXT:    ret float poison
