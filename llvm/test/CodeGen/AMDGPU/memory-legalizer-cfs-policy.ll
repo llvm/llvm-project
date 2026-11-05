@@ -440,9 +440,9 @@ define amdgpu_kernel void @scratch_load_store_cfs_128B(ptr addrspace(5) %in, ptr
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    scratch_load_b32 v0, off, s0 cfs:CFS_128B
+; GFX13-NEXT:    scratch_load_b32 v0, off, s0 nv cfs:CFS_128B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    scratch_store_b32 off, v0, s1 cfs:CFS_128B
+; GFX13-NEXT:    scratch_store_b32 off, v0, s1 nv cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(5) %in, align 4, !amdgpu.cfs !{i32 1}
@@ -455,9 +455,9 @@ define amdgpu_kernel void @scratch_load_store_cfs_64B(ptr addrspace(5) %in, ptr 
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    scratch_load_b32 v0, off, s0 cfs:CFS_64B
+; GFX13-NEXT:    scratch_load_b32 v0, off, s0 nv cfs:CFS_64B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    scratch_store_b32 off, v0, s1 cfs:CFS_64B
+; GFX13-NEXT:    scratch_store_b32 off, v0, s1 nv cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(5) %in, align 4, !amdgpu.cfs !{i32 2}
@@ -470,9 +470,9 @@ define amdgpu_kernel void @scratch_load_store_cfs_32B(ptr addrspace(5) %in, ptr 
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    scratch_load_b32 v0, off, s0 cfs:CFS_32B
+; GFX13-NEXT:    scratch_load_b32 v0, off, s0 nv cfs:CFS_32B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    scratch_store_b32 off, v0, s1 cfs:CFS_32B
+; GFX13-NEXT:    scratch_store_b32 off, v0, s1 nv cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(5) %in, align 4, !amdgpu.cfs !{i32 3}
