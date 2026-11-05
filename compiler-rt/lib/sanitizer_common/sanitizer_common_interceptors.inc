@@ -10471,7 +10471,7 @@ INTERCEPTOR(int, getservbyport_r, int port, const char *proto,
 #  define INIT_GETSERVBYPORT_R
 #endif
 
-#if SANITIZER_INTERCEPT_FTW
+#if SANITIZER_INTERCEPT_FTW || SANITIZER_INTERCEPT_FTW64
 typedef int (*ftw_func_f)(const char* fpath, const void* sb, int typeflag);
 typedef int (*nftw_func_f)(const char* fpath, const void* sb, int typeflag,
                            struct __sanitizer_FTW* ftwbuf);
