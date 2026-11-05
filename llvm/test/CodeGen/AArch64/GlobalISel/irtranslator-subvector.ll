@@ -92,14 +92,14 @@ define i32 @extract_v4i32_vector_extract(<4 x i32> %a, <2 x i32> %b, i32 %c) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<4 x i32>) = G_EXTRACT_SUBVECTOR [[COPY]](<4 x i32>), 0
+  ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x i32>) = G_EXTRACT_SUBVECTOR [[COPY]](<4 x i32>), 0
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
-  ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[EXTRACT_SUBVECTOR]](<4 x i32>), [[ZEXT]](i64)
+  ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[EXTRACT_SUBVECTOR]](<2 x i32>), [[ZEXT]](i64)
   ; CHECK-NEXT:   $w0 = COPY [[EVEC]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <4 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %a, i64 0)
-  %d = extractelement <4 x i32> %vector, i32 %c
+  %vector = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %a, i64 0)
+  %d = extractelement <2 x i32> %vector, i32 %c
   ret i32 %d
 }
 
