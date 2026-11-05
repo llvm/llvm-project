@@ -77,6 +77,7 @@
 ; CHECK-NEXT:       AArch64 sls hardening pass
 ; CHECK-NEXT:       AArch64 Pointer Authentication
 ; CHECK-NEXT:       AArch64 Branch Targets
+; CHECK-NEXT:       AArch64 Biased Branch Optimization
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       Insert CFI remember/restore state instructions
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
