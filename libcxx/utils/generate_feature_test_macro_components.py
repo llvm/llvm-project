@@ -353,6 +353,12 @@ feature_test_macros = [
             "headers": ["algorithm", "utility"],
         },
         {
+            "name": "__cpp_lib_constexpr_atomic",
+            "values": {"c++20": 202411},
+            "headers": ["atomic"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_bitset",
             "values": {"c++23": 202207},
             "headers": ["bitset"],
@@ -386,7 +392,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_exceptions",
-            "values": {"c++26": 202502},
+            "values": {
+                "c++26": 202411  # P3068R6 Allowing exception throwing in constant-evaluation
+                # "c++26": 202502  # P3378R2: constexpr exception types
+            },
             "headers": [
                 "exception",
                 "expected",
@@ -1101,6 +1110,8 @@ feature_test_macros = [
             "name": "__cpp_lib_linalg",
             "values": {
                 "c++26": 202311  # P1673 A free function linear algebra interface based on the BLAS
+                # "c++26": 202411  # P3222R0 Fix C++26 by adding transposed special cases for P2642 layouts
+                # "c++26": 202411  # P3050R2 Fix C++26 by optimizing linalg::conjugated for noncomplex value types
             },
             "headers": ["linalg"],
             "unimplemented": True,
@@ -1334,6 +1345,12 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_as_rvalue",
             "values": {"c++23": 202207},
             "headers": ["ranges"],
+        },
+        {
+            "name": "__cpp_lib_ranges_cache_latest",
+            "values": {"c++23": 202411},
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_chunk",
