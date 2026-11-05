@@ -31,3 +31,44 @@ define i64 @sext_xor_setcc(i64 %x, i64 %y) {
   %r = sext i1 %n to i64
   ret i64 %r
 }
+
+; (zext (setcc)) is represented as an any_extend of the i1 setcc, and when the
+; xor result only feeds a sign extension the generic combiner may turn the xor
+; with 1 into a xor with -1. The setcc then still has an i1 result type, so it
+; must be rebuilt with the i64 type instead of being used directly by the i64
+; add.
+
+define i64 @sext_zext_setcc_xor(i64 %a, i64 %b) {
+; CHECK-LABEL: sext_zext_setcc_xor:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt $a0, $a0, $a1
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    ret
+  %c = icmp slt i64 %a, %b
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %r = ashr i64 %s, 63
+  ret i64 %r
+}
+
+; Inverting the condition code is only profitable when the setcc is replaced by
+; the inverted one. If it has other users, negating its result avoids creating
+; a second compare; this matters for FP compares, where both condition codes
+; cost one instruction and the compare is shared with the zext'ed value.
+
+define i64 @sext_fcmp_multi_use(double %a, double %b, ptr %p) {
+; CHECK-LABEL: sext_fcmp_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcmp.cule.d $fcc0, $fa1, $fa0
+; CHECK-NEXT:    movcf2gr $a2, $fcc0
+; CHECK-NEXT:    sub.d $a1, $zero, $a2
+; CHECK-NEXT:    st.d $a2, $a0, 0
+; CHECK-NEXT:    move $a0, $a1
+; CHECK-NEXT:    ret
+  %c = fcmp uge double %a, %b
+  %z = zext i1 %c to i64
+  store i64 %z, ptr %p
+  %r = sext i1 %c to i64
+  ret i64 %r
+}

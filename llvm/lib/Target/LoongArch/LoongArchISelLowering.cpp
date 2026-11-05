@@ -9411,34 +9411,38 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // Fold (sext_inreg (setcc X, Y, CC), i1) -> (sub 0, (setcc X, Y, CC)) if CC
   // can be selected with a single instruction, or
   // (add (setcc X, Y, inv(CC)), -1) if the inverted CC is cheaper. LoongArch
-  // selects setge/setle/setuge/setule as slt + xori, so inverting them avoids
-  // the extra xor. The setcc is only combined before op legalization on
-  // LoongArch, so this doesn't gate on the DAG combine phase.
+  // selects setge/setle/setuge/setule as slt + xori, so inverting such an
+  // integer compare avoids the extra xor. Inverting replaces the original
+  // setcc, so only do it when it has a single use; otherwise (e.g. an FP
+  // compare shared with another user) this would introduce a second compare.
   if (Opc == ISD::SETCC && SrcVT == MVT::i1) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
-    switch (CC) {
-    case ISD::SETGE:
-    case ISD::SETLE:
-    case ISD::SETUGE:
-    case ISD::SETULE:
-      // (sub 0, X >= Y) == (add (X < Y), -1), etc.
-      return DAG.getNode(
-          ISD::ADD, DL, VT,
-          DAG.getSetCC(
-              SDLoc(N), Src.getValueType(), Src.getOperand(0),
-              Src.getOperand(1),
-              ISD::getSetCCInverse(CC, Src.getOperand(0).getValueType())),
-          DAG.getAllOnesConstant(DL, VT));
-    default:
-      return DAG.getNegative(Src, DL, VT);
+    if (Src.hasOneUse() && Src.getOperand(0).getValueType().isInteger()) {
+      switch (CC) {
+      case ISD::SETGE:
+      case ISD::SETLE:
+      case ISD::SETUGE:
+      case ISD::SETULE:
+        // (sub 0, X >= Y) == (add (X < Y), -1), etc.
+        return DAG.getNode(
+            ISD::ADD, DL, VT,
+            DAG.getSetCC(
+                SDLoc(N), Src.getValueType(), Src.getOperand(0),
+                Src.getOperand(1),
+                ISD::getSetCCInverse(CC, Src.getOperand(0).getValueType())),
+            DAG.getAllOnesConstant(DL, VT));
+      default:
+        break;
+      }
     }
+    return DAG.getNegative(Src, DL, VT);
   }
 
   // Fold (sext_inreg (xor (setcc), C), i1) -> (add (setcc), -1) where C is
   // either 1 or -1. Since setcc only produces 0 or 1, the xor only flips the
   // low bit, so the sign extension of that bit is -(1 - setcc) == setcc - 1.
-  // The setcc may be wrapped in a truncate/any_extend when the i1 xor is
-  // type-legalized on LA64.
+  // The setcc may be wrapped in a truncate/any_extend when the boolean is
+  // extended to VT (e.g. by a zext, which knows the upper bits are zero).
   if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
       (isOneConstant(Src.getOperand(1)) ||
        isAllOnesConstant(Src.getOperand(1)))) {
@@ -9446,9 +9450,16 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     if (XorOp.getOpcode() == ISD::TRUNCATE ||
         XorOp.getOpcode() == ISD::ANY_EXTEND)
       XorOp = XorOp.getOperand(0);
-    if (XorOp.getOpcode() == ISD::SETCC)
-      return DAG.getNode(ISD::ADD, DL, VT, XorOp,
-                         DAG.getAllOnesConstant(DL, VT));
+    if (XorOp.getOpcode() != ISD::SETCC)
+      return SDValue();
+    // The setcc may still have an i1 result type, in which case rebuild it
+    // with VT so that both ADD operands have the same type. A setcc produces
+    // a canonical 0/1 value, so this is exact while the any_extend leaves the
+    // upper bits undefined.
+    if (XorOp.getValueType() != VT)
+      XorOp = DAG.getSetCC(DL, VT, XorOp.getOperand(0), XorOp.getOperand(1),
+                           cast<CondCodeSDNode>(XorOp.getOperand(2))->get());
+    return DAG.getNode(ISD::ADD, DL, VT, XorOp, DAG.getAllOnesConstant(DL, VT));
   }
 
   return SDValue();
