@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalOpt.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -55,7 +56,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -92,30 +92,6 @@ STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
-
-static cl::opt<bool>
-    OptimizeNonFMVCallers("optimize-non-fmv-callers",
-                          cl::desc("Statically resolve calls to versioned "
-                                   "functions from non-versioned callers."),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> MaxIFuncVersions(
-    "max-ifunc-versions", cl::Hidden, cl::init(5),
-    cl::desc("Maximum number of caller/callee versions that is allowed for "
-             "using the expensive (cubic) static resolution algorithm."));
-
-static cl::opt<bool>
-    EnableColdCCStressTest("enable-coldcc-stress-test",
-                           cl::desc("Enable stress test of coldcc by adding "
-                                    "calling conv to all internal functions."),
-                           cl::init(false), cl::Hidden);
-
-static cl::opt<int> ColdCCRelFreq(
-    "coldcc-rel-freq", cl::Hidden, cl::init(2),
-    cl::desc(
-        "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling "
-        "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,
 /// we might not really want to eliminate the stores to it.
@@ -1399,9 +1375,10 @@ static bool hasChangeableCC(Function *F,
 }
 
 /// Return true if the block containing the call site has a BlockFrequency of
-/// less than ColdCCRelFreq% of the entry block.
-static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
-  const BranchProbability ColdProb(ColdCCRelFreq, 100);
+/// less than -coldcc-rel-freq percent of the entry block.
+static bool isColdCallSite(const IPOOptions &Opts, CallBase &CB,
+                           BlockFrequencyInfo &CallerBFI) {
+  const BranchProbability ColdProb(Opts.coldcc_rel_freq, 100);
   auto *CallSiteBB = CB.getParent();
   auto CallSiteFreq = CallerBFI.getBlockFreq(CallSiteBB);
   auto CallerEntryFreq =
@@ -1414,7 +1391,7 @@ static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
 // caller function contains other non cold calls. HasOnlyColdCalls returns
 // whether a function only has call sites in cold blocks.
 static bool
-isValidCandidateForColdCC(Function &F,
+isValidCandidateForColdCC(const IPOOptions &Opts, Function &F,
                           function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                           function_ref<bool(Function &)> HasOnlyColdCalls) {
 
@@ -1427,7 +1404,7 @@ isValidCandidateForColdCC(Function &F,
       continue;
     Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(*CB, CallerBFI))
+    if (!isColdCallSite(Opts, *CB, CallerBFI))
       return false;
     if (!HasOnlyColdCalls(*CallerFunc))
       return false;
@@ -1446,7 +1423,7 @@ static void changeCallSitesToColdCC(Function *F) {
 // and checks that all call sites are in cold blocks and are allowed to use the
 // coldcc calling convention.
 static bool
-hasOnlyColdCalls(Function &F,
+hasOnlyColdCalls(const IPOOptions &Opts, Function &F,
                  function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                  ChangeableCCCacheTy &ChangeableCCCache) {
   for (BasicBlock &BB : F) {
@@ -1470,7 +1447,7 @@ hasOnlyColdCalls(Function &F,
         if (!hasChangeableCC(CalledFn, ChangeableCCCache))
           return false;
         BlockFrequencyInfo &CallerBFI = GetBFI(F);
-        if (!isColdCallSite(*CI, CallerBFI))
+        if (!isColdCallSite(Opts, *CI, CallerBFI))
           return false;
       }
     }
@@ -1580,6 +1557,7 @@ OptimizeFunctions(Module &M,
                   SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats,
                   function_ref<void(Function &F)> ChangedCFGCallback,
                   function_ref<void(Function &F)> DeleteFnCallback) {
+  const IPOOptions &Opts = getIPOOptions(M);
 
   bool Changed = false;
 
@@ -1590,7 +1568,8 @@ OptimizeFunctions(Module &M,
   auto HasOnlyColdCalls = [&](Function &Caller) {
     auto Res = AllCallsColdCache.try_emplace(&Caller, false);
     if (Res.second)
-      Res.first->second = hasOnlyColdCalls(Caller, GetBFI, ChangeableCCCache);
+      Res.first->second =
+          hasOnlyColdCalls(Opts, Caller, GetBFI, ChangeableCCCache);
     return Res.first->second;
   };
 
@@ -1664,9 +1643,9 @@ OptimizeFunctions(Module &M,
       // enabled or the target would like to use coldcc on functions which are
       // cold at all call sites and the callers contain no other non coldcc
       // calls.
-      if (EnableColdCCStressTest ||
+      if (Opts.enable_coldcc_stress_test ||
           (TTI.useColdCCForColdCall(F) &&
-           isValidCandidateForColdCC(F, GetBFI, HasOnlyColdCalls))) {
+           isValidCandidateForColdCC(Opts, F, GetBFI, HasOnlyColdCalls))) {
         ChangeableCCCache.erase(&F);
         F.setCallingConv(CallingConv::Cold);
         changeCallSitesToColdCC(&F);
@@ -2196,6 +2175,7 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
 // https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
 static bool OptimizeNonTrivialIFuncs(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
   // Map containing the feature bits for a given function.
@@ -2270,7 +2250,7 @@ static bool OptimizeNonTrivialIFuncs(
           // The caller is a version of a known IFunc.
           if (auto It = VersionOf.find(Caller); It != VersionOf.end())
             CallerIF = It->second;
-          else if (!CallerIsFMV && OptimizeNonFMVCallers) {
+          else if (!CallerIsFMV && Opts.optimize_non_fmv_callers) {
             // The caller is non-FMV.
             auto [It, Inserted] = FeatureMask.try_emplace(Caller);
             if (Inserted)
@@ -2297,14 +2277,14 @@ static bool OptimizeNonTrivialIFuncs(
                       << CalleeIF->getResolverFunction()->getName() << "\n");
 
     // The complexity of this algorithm is linear: O(NumCallers + NumCallees)
-    // if NumCallers > MaxIFuncVersions || NumCallees > MaxIFuncVersions,
+    // if NumCallers or NumCallees exceeds -max-ifunc-versions,
     // otherwise it is cubic: O((NumCallers ^ 2) x NumCallees).
     auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
                                       ArrayRef<Function *> Callees,
                                       bool CallerIsFMV) {
       bool AllowExpensiveChecks = CallerIsFMV &&
-                                  Callers.size() <= MaxIFuncVersions &&
-                                  Callees.size() <= MaxIFuncVersions;
+                                  Callers.size() <= Opts.max_ifunc_versions &&
+                                  Callees.size() <= Opts.max_ifunc_versions;
       // Index to the highest callee candidate.
       unsigned J = 0;
 
@@ -2380,7 +2360,7 @@ static bool OptimizeNonTrivialIFuncs(
     auto &Callees = VersionedFuncs[CalleeIF];
 
     // Optimize non-FMV calls.
-    if (OptimizeNonFMVCallers)
+    if (Opts.optimize_non_fmv_callers)
       staticallyResolveCalls(NonFMVCallers, Callees, /*CallerIsFMV=*/false);
 
     // Optimize FMV calls.
