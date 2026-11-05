@@ -723,11 +723,6 @@ public:
   common::CombineVariants<Operations, Others> u;
 };
 
-extern template class Expr<Type<TypeCategory::Integer>>;
-extern template class Expr<Type<TypeCategory::Unsigned>>;
-extern template class Expr<Type<TypeCategory::Real>>;
-extern template class Expr<Type<TypeCategory::Complex>>;
-
 template <>
 class Expr<Type<TypeCategory::Character>>
     : public ExpressionBase<Type<TypeCategory::Character>> {
@@ -746,8 +741,6 @@ public:
       Extremum<Result>, SetLength, ConditionalExpr<Result>>
       u;
 };
-
-extern template class Expr<Type<TypeCategory::Character>>;
 
 // The Relational class template is a helper for constructing logical
 // expressions with polymorphism over the cross product of the possible
@@ -839,8 +832,6 @@ public:
   common::TupleToVariant<common::CombineTuples<Operations, Relations, Others>>
       u;
 };
-
-extern template class Expr<Type<TypeCategory::Logical>>;
 
 // StructureConstructor pairs a StructureConstructorValues instance
 // (a map associating symbols with expressions) with a derived type
@@ -1047,7 +1038,6 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
 
 // Template instantiations to resolve these "extern template" declarations.
 #define INSTANTIATE_EXPRESSION_TEMPLATES \
-  FOR_EACH_INTRINSIC_KIND(template class Expr, ) \
   FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
   template class Relational<Type<TypeCategory::Integer>>; \
   template class Relational<Type<TypeCategory::Unsigned>>; \
