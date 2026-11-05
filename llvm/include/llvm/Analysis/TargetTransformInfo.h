@@ -465,8 +465,10 @@ public:
 
   /// \returns The cost of having an Alloca in the caller if not inlined, to be
   /// added to the threshold
+  /// \param Callee The known target being analyzed, even when CB is indirect.
   LLVM_ABI unsigned getCallerAllocaCost(const CallBase *CB,
-                                        const AllocaInst *AI) const;
+                                        const AllocaInst *AI,
+                                        const Function &Callee) const;
 
   /// \returns Vector bonus in percent.
   ///
