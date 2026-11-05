@@ -2628,6 +2628,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "'sanitize_realtime and sanitize_realtime_blocking' are incompatible!",
         V);
 
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeThread) &&
+          Attrs.hasFnAttr(Attribute::SanitizeConcurrency)),
+        "Attributes 'sanitize_thread and sanitize_concurrency' are "
+        "incompatible!",
+        V);
+
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optdebug' are incompatible!", V);
@@ -4745,12 +4751,13 @@ void Verifier::checkGEPOperator(const GEPOperator &GEP) {
         "GEP base pointer is not a vector or a vector of pointers", &GEP);
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
 
-  if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
-    Check(!STy->isScalableTy(),
-          "getelementptr cannot target structure that contains scalable vector"
-          "type",
-          &GEP);
-  }
+  Type *SrcTy = GEP.getSourceElementType();
+  while (auto *ATy = dyn_cast<ArrayType>(SrcTy))
+    SrcTy = ATy->getElementType();
+  Check(!isa<StructType>(SrcTy) || !SrcTy->isScalableTy(),
+        "getelementptr cannot target structure that contains scalable vector "
+        "type",
+        &GEP);
 
   SmallVector<Value *, 16> Idxs(GEP.indices());
   Check(
