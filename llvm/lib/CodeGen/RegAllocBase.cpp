@@ -121,9 +121,8 @@ void RegAllocBase::allocatePhysRegs() {
       // selectOrSplit failed to find a register! Probably caused by an inline
       // asm. Keep going after reporting the error.
       assignFailedVirtReg(VirtReg->reg(), *RegClassInfo, *LIS, *VRM);
-    } else if (AvailablePhysReg) {
+    } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
-    }
 
     for (Register Reg : SplitVRegs) {
       assert(LIS->hasInterval(Reg));
