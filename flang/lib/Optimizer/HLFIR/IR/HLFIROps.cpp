@@ -22,6 +22,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -792,6 +793,64 @@ getCharacterLengthIfStatic(mlir::Type t) {
     if (charType.hasConstantLen())
       return charType.getLen();
   return std::nullopt;
+}
+
+namespace {
+/// Fuse single-use concatenations before allocating their buffers. The reads
+/// of the inner operands move to the outer concatenation, so do not cross any
+/// operation that may change or release their storage.
+struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
+  using OpRewritePattern::OpRewritePattern;
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ConcatOp concat,
+                  mlir::PatternRewriter &rewriter) const override {
+    for (auto [index, string] : llvm::enumerate(concat.getStrings())) {
+      auto inner = string.getDefiningOp<hlfir::ConcatOp>();
+      if (!inner || inner->getBlock() != concat->getBlock())
+        continue;
+      unsigned uses = 0;
+      llvm::SmallVector<hlfir::DestroyOp> destroys;
+      for (mlir::OpOperand &use : string.getUses()) {
+        if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(use.getOwner()))
+          destroys.push_back(destroy);
+        else
+          ++uses;
+      }
+      if (uses != 1)
+        continue;
+      bool canMove = true;
+      for (mlir::Operation *op = inner->getNextNode(); op != concat;
+           op = op->getNextNode()) {
+        auto effects = mlir::getEffectsRecursively(op);
+        if (!effects || llvm::any_of(*effects, [](const auto &effect) {
+              return !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect());
+            })) {
+          canMove = false;
+          break;
+        }
+      }
+      if (!canMove)
+        continue;
+      llvm::SmallVector<mlir::Value> strings(concat.getStrings());
+      strings.erase(strings.begin() + index);
+      strings.insert(strings.begin() + index, inner.getStrings().begin(),
+                     inner.getStrings().end());
+      rewriter.modifyOpInPlace(
+          concat, [&]() { concat.getStringsMutable().assign(strings); });
+      for (auto destroy : destroys)
+        rewriter.eraseOp(destroy);
+      rewriter.eraseOp(inner);
+      return mlir::success();
+    }
+    return mlir::failure();
+  }
+};
+
+} // namespace
+
+void hlfir::ConcatOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<InlineConcat>(context);
 }
 
 llvm::LogicalResult hlfir::ConcatOp::verify() {
