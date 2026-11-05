@@ -1110,7 +1110,7 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
   // global name.
   if (semaCtx) {
     parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
-        ReductionProcessor::toParserIntrinsicOperator(intrinsicOp), *semaCtx);
+        ReductionProcessor::toParserIntrinsicOperator(intrinsicOp));
     if (const semantics::Symbol *userSym =
             semantics::omp::FindUserReductionSymbol(converter.getCurrentScope(),
                                                     mangledOpName, varType)) {

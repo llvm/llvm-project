@@ -92,6 +92,8 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (unsigned n = 0; n < 31; n++)
     Reserved.set(SP::ASR1 + n);
 
+  Reserved.set(SP::FSR);
+
   for (TargetRegisterClass::iterator i = SP::IntRegsRegClass.begin();
        i != SP::IntRegsRegClass.end(); ++i) {
     if (MF.getSubtarget<SparcSubtarget>().isRegisterReserved(*i))

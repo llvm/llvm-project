@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +cmpccxadd \
 // RUN: -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +cmpccxadd -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s %}
 
 #include <immintrin.h>
 #include <stddef.h>
