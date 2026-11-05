@@ -208,6 +208,8 @@ define ptr @store_v2ptr_to_ptr(<2 x ptr> %v, ptr %p) {
   ret ptr %l
 }
 
+; Pointers in different address spaces can't be bitcast, so this goes through
+; integer vectors. The bitcast between vectors keeps poison per lane.
 define <4 x ptr addrspace(1)> @store_v2ptr_to_v4ptr1(<2 x ptr> %v, ptr %p) {
 ; CHECK-LABEL: define <4 x ptr addrspace(1)> @store_v2ptr_to_v4ptr1(
 ; CHECK-SAME: <2 x ptr> [[V:%.*]], ptr [[P:%.*]]) {
