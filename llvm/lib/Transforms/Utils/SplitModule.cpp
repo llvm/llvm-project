@@ -35,8 +35,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/Transforms/Utils/SplitModuleUtils.h"
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -278,20 +277,20 @@ void llvm::SplitModule(
     }
   }
 
+  auto ShouldCloneDefinition = [&](const GlobalValue *GV, unsigned I) {
+    if (auto It = ClusterIDMap.find(GV); It != ClusterIDMap.end())
+      return It->second == I;
+    return isInPartition(GV, I, N);
+  };
+  auto ProcessPartition = [&](std::unique_ptr<Module> MPart, unsigned) {
+    ModuleCallback(std::move(MPart));
+  };
+
   // FIXME: We should be able to reuse M as the last partition instead of
   // cloning it. Note that the callers at the moment expect the module to
   // be preserved, so will need some adjustments as well.
-  for (unsigned I = 0; I < N; ++I) {
-    ValueToValueMapTy VMap;
-    std::unique_ptr<Module> MPart(
-        CloneModule(M, VMap, [&](const GlobalValue *GV) {
-          if (auto It = ClusterIDMap.find(GV); It != ClusterIDMap.end())
-            return It->second == I;
-          else
-            return isInPartition(GV, I, N);
-        }));
-    if (I != 0)
-      MPart->removeModuleInlineAsm();
-    ModuleCallback(std::move(MPart));
-  }
+  for (unsigned I = 0; I < N; ++I)
+    splitmodule::materializePartitions(
+        M, I, ShouldCloneDefinition, ProcessPartition,
+        splitmodule::ModuleAsmPolicy::PreserveFirst);
 }
