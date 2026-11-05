@@ -411,6 +411,56 @@ void test_complex_char_tied_pointer(_Complex char *p, void *x) {
   asm("" : "=r"(*p) : "0"(x));
 }
 
+// A tied input narrower than the output is widened to the output's integer
+// type, as for a scalar output, since the backend needs them the same size.
+// CHECK-LABEL: define dso_local void @test_complex_float_tied_narrower_int(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[TMP3:%.*]] = call i64 asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i64 [[TMP2]]) #[[ATTR2]], !srcloc [[META17:![0-9]+]]
+// CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_complex_float_tied_narrower_int(_Complex float *p, int x) {
+  asm("" : "=r"(*p) : "0"(x));
+}
+
+// A 128-bit input that can be in memory is passed by its address, so the asm
+// gets the object itself, not a copy of it.
+// CHECK-LABEL: define dso_local void @test_complex_double_input_rm(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    call void asm sideeffect "", "*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype({ double, double }) [[TMP0]]) #[[ATTR3]], !srcloc [[META18:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+void test_complex_double_input_rm(_Complex double *p) {
+  asm volatile("" : : "rm"(*p));
+}
+
+// A 128-bit input that has to be in registers is loaded by value.
+// CHECK-LABEL: define dso_local void @test_complex_double_input_r(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP0]], align 8
+// CHECK-NEXT:    call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(i128 [[TMP1]]) #[[ATTR3]], !srcloc [[META19:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+void test_complex_double_input_r(_Complex double *p) {
+  asm volatile("" : : "r"(*p));
+}
+
 #else
 
 // No integer type is 256 bits wide.
