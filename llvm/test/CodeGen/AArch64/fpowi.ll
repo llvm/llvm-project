@@ -1266,7 +1266,7 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    .cfi_offset b14, -88
 ; CHECK-GI-NEXT:    .cfi_offset b15, -96
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    str q1, [sp, #64] // 16-byte Spill
+; CHECK-GI-NEXT:    str q1, [sp, #112] // 16-byte Spill
 ; CHECK-GI-NEXT:    mov h14, v1.h[1]
 ; CHECK-GI-NEXT:    mov h1, v1.h[2]
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
@@ -1278,17 +1278,17 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    mov h13, v0.h[6]
 ; CHECK-GI-NEXT:    mov h15, v0.h[7]
 ; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    str h1, [sp, #16] // 2-byte Spill
+; CHECK-GI-NEXT:    str h1, [sp, #80] // 2-byte Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[3]
-; CHECK-GI-NEXT:    str h1, [sp, #32] // 2-byte Spill
+; CHECK-GI-NEXT:    str h1, [sp, #64] // 2-byte Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[4]
 ; CHECK-GI-NEXT:    str h1, [sp, #48] // 2-byte Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[5]
-; CHECK-GI-NEXT:    str h1, [sp, #80] // 2-byte Spill
+; CHECK-GI-NEXT:    str h1, [sp, #32] // 2-byte Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[6]
-; CHECK-GI-NEXT:    str h1, [sp, #112] // 2-byte Spill
+; CHECK-GI-NEXT:    str h1, [sp, #16] // 2-byte Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[7]
-; CHECK-GI-NEXT:    str h1, [sp, #176] // 2-byte Spill
+; CHECK-GI-NEXT:    str h1, [sp] // 2-byte Spill
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1299,7 +1299,7 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp, #144] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #160] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h10
@@ -1317,53 +1317,32 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    fcvt s1, h12
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp, #160] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #176] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h13
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #144] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h15
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp, #96] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q1, [sp, #112] // 16-byte Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
 ; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h14
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    fmov s0, s1
-; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr h1, [sp, #16] // 2-byte Reload
-; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
-; CHECK-GI-NEXT:    fmov s0, s1
-; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr h1, [sp, #32] // 2-byte Reload
-; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
-; CHECK-GI-NEXT:    fmov s0, s1
-; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr h1, [sp, #48] // 2-byte Reload
-; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #96] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    ldr h1, [sp, #80] // 2-byte Reload
@@ -1373,52 +1352,74 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr h1, [sp, #112] // 2-byte Reload
+; CHECK-GI-NEXT:    ldr h1, [sp, #64] // 2-byte Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
 ; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldr h1, [sp, #176] // 2-byte Reload
+; CHECK-GI-NEXT:    ldr h1, [sp, #48] // 2-byte Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
 ; CHECK-GI-NEXT:    fcvt s1, h1
-; CHECK-GI-NEXT:    str q0, [sp, #176] // 16-byte Spill
+; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov s0, s1
+; CHECK-GI-NEXT:    bl __powisf2
+; CHECK-GI-NEXT:    ldr h1, [sp, #32] // 2-byte Reload
+; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    fcvt s1, h1
+; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov s0, s1
+; CHECK-GI-NEXT:    bl __powisf2
+; CHECK-GI-NEXT:    ldr h1, [sp, #16] // 2-byte Reload
+; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    fcvt s1, h1
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov s0, s1
+; CHECK-GI-NEXT:    bl __powisf2
+; CHECK-GI-NEXT:    ldr h1, [sp] // 2-byte Reload
+; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    fcvt s1, h1
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    ldr q3, [sp, #192] // 16-byte Reload
-; CHECK-GI-NEXT:    ldr q2, [sp, #144] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #160] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldr x29, [sp, #304] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #320] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldp q1, q2, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q1, [sp, #80] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #288] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #272] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [sp, #224] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #256] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[2], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldp d15, d14, [sp, #240] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [sp, #208] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v3.h[3], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #160] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #176] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v3.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q4, [sp, #112] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    mov v3.h[5], v4.h[0]
+; CHECK-GI-NEXT:    ldr q2, [sp, #144] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v3.h[5], v2.h[0]
+; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    fcvt h2, s0
-; CHECK-GI-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q0, [sp, #128] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v3.h[6], v0.h[0]
-; CHECK-GI-NEXT:    ldr q0, [sp, #176] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q0, [sp, #112] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v3.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v2.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v3.16b

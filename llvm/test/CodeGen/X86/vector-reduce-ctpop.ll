@@ -5107,7 +5107,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpsadbw (%esp), %ymm0, %ymm4 # 32-byte Folded Reload
 ; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm6, %ymm6
 ; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm7, %ymm7
-; X86-AVX2-NEXT:    vmovdqa %ymm7, (%esp) # 32-byte Spill
+; X86-AVX2-NEXT:    vmovdqa %ymm7, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
 ; X86-AVX2-NEXT:    vmovdqa %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
@@ -5121,10 +5121,10 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm5, %xmm7
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm2
 ; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm4, %xmm1
-; X86-AVX2-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX2-NEXT:    vmovdqa %xmm1, (%esp) # 16-byte Spill
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm6, %xmm2
 ; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm6, %xmm6
-; X86-AVX2-NEXT:    vmovdqa (%esp), %ymm1 # 32-byte Reload
+; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %ymm1 # 32-byte Reload
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm4
 ; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %ymm1 # 32-byte Reload
@@ -5146,7 +5146,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm6[2,3,2,3]
 ; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm6, %xmm1
-; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm3 # 16-byte Reload
+; X86-AVX2-NEXT:    vmovdqa (%esp), %xmm3 # 16-byte Reload
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
 ; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm3, %xmm3
 ; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]

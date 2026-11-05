@@ -363,7 +363,7 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; SPARC32-NEXT:    ld [%fp+64], %i1
 ; SPARC32-NEXT:    call __extendhfsf2
 ; SPARC32-NEXT:    lduh [%i0+4], %o0
-; SPARC32-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; SPARC32-NEXT:    st %f0, [%fp+-24] ! 4-byte Folded Spill
 ; SPARC32-NEXT:    call __extendhfsf2
 ; SPARC32-NEXT:    lduh [%i0+2], %o0
 ; SPARC32-NEXT:    st %f0, [%fp+-16] ! 4-byte Folded Spill
@@ -371,21 +371,21 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; SPARC32-NEXT:    lduh [%i0], %o0
 ; SPARC32-NEXT:    lduh [%i0+6], %o0
 ; SPARC32-NEXT:    fstod %f0, %f0
-; SPARC32-NEXT:    std %f0, [%fp+-24] ! 8-byte Folded Spill
+; SPARC32-NEXT:    std %f0, [%fp+-8] ! 8-byte Folded Spill
 ; SPARC32-NEXT:    ld [%fp+-16], %f0 ! 4-byte Folded Reload
 ; SPARC32-NEXT:    fstod %f0, %f0
 ; SPARC32-NEXT:    std %f0, [%fp+-16] ! 8-byte Folded Spill
-; SPARC32-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
+; SPARC32-NEXT:    ld [%fp+-24], %f0 ! 4-byte Folded Reload
 ; SPARC32-NEXT:    fstod %f0, %f0
 ; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    std %f0, [%fp+-8]
+; SPARC32-NEXT:    std %f0, [%fp+-24]
 ; SPARC32-NEXT:    fstod %f0, %f0
 ; SPARC32-NEXT:    std %f0, [%i1+24]
-; SPARC32-NEXT:    ldd [%fp+-8], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    ldd [%fp+-24], %f0 ! 8-byte Folded Reload
 ; SPARC32-NEXT:    std %f0, [%i1+16]
 ; SPARC32-NEXT:    ldd [%fp+-16], %f0 ! 8-byte Folded Reload
 ; SPARC32-NEXT:    std %f0, [%i1+8]
-; SPARC32-NEXT:    ldd [%fp+-24], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    ldd [%fp+-8], %f0 ! 8-byte Folded Reload
 ; SPARC32-NEXT:    std %f0, [%i1]
 ; SPARC32-NEXT:    ret
 ; SPARC32-NEXT:    restore

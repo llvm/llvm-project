@@ -17,8 +17,8 @@ entry:
   tail call void @foo(i32 %a, i32 %b, i32 %c, i64 %d, i32 %e) #2
   tail call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{memory}"() #2
 
-; CHECK:        *(u32 *)(r10 - 8) = w5
-; CHECK:        *(u64 *)(r10 - 16) = r4
+; CHECK:        *(u32 *)(r10 - 16) = w5
+; CHECK:        *(u64 *)(r10 - 8) = r4
 ; CHECK:        *(u32 *)(r10 - 24) = w3
 ; CHECK:        *(u32 *)(r10 - 32) = w2
 ; CHECK:        *(u32 *)(r10 - 40) = w1
