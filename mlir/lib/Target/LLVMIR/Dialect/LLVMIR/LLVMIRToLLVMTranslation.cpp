@@ -238,12 +238,19 @@ static LogicalResult setTBAAStructAttr(OpBuilder &builder,
         node->getOperand(i + 1));
     if (!offset || !size)
       return failure();
-    // Offsets and sizes are int64 in the attribute; wider constants cannot be
-    // represented, and extracting them would assert.
-    std::optional<int64_t> offsetValue = offset->getValue().trySExtValue();
-    std::optional<int64_t> sizeValue = size->getValue().trySExtValue();
-    if (!offsetValue || !sizeValue)
+    // Offsets and sizes are int64 in the attribute; values that do not fit
+    // in 64 bits cannot be represented, and extracting them would assert.
+    // Read them unsigned and keep the bits: LLVM compares offsets
+    // zero-extended, so a narrow constant with its high bit set (e.g. i32
+    // 0x80000000) must keep its unsigned value rather than sign-extending,
+    // and a high-bit i64 offset must round-trip through the signed
+    // attribute unchanged.
+    std::optional<uint64_t> offsetZExt = offset->getValue().tryZExtValue();
+    std::optional<uint64_t> sizeZExt = size->getValue().tryZExtValue();
+    if (!offsetZExt || !sizeZExt)
       return failure();
+    int64_t offsetValue = static_cast<int64_t>(*offsetZExt);
+    int64_t sizeValue = static_cast<int64_t>(*sizeZExt);
     auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
     if (!tagNode)
       return failure();
@@ -252,7 +259,7 @@ static LogicalResult setTBAAStructAttr(OpBuilder &builder,
     if (!tag)
       return failure();
     fields.push_back(
-        builder.getAttr<TBAAStructFieldAttr>(*offsetValue, *sizeValue, tag));
+        builder.getAttr<TBAAStructFieldAttr>(offsetValue, sizeValue, tag));
   }
 
   return TypeSwitch<Operation *, LogicalResult>(op)
