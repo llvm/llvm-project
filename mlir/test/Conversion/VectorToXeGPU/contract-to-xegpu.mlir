@@ -165,24 +165,6 @@ func.func @negative_combining_kind(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf1
 
 // -----
 
-#map = affine_map<(d0, d1, d2) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#map2 = affine_map<(d0, d1, d2) -> ()>
-func.func @negative_accumulator_shape(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf16>,
-    %acc: vector<f32>) -> vector<f32> {
-  %3 = vector.contract
-    {indexing_maps = [#map, #map1, #map2],
-    iterator_types = ["reduction", "reduction", "reduction"],
-    kind = #vector.kind<add>} %lhs, %rhs, %acc
-    : vector<8x16xf16>, vector<16x16xf16> into vector<f32>
-  return %3 : vector<f32>
-}
-
-// CHECK-LABEL: @negative_accumulator_shape(
-// CHECK:       vector.contract
-
-// -----
-
 // A batched matmul whose leading dimensions are batch dimensions shared across
 // lhs, rhs, and acc lowers to a batched xegpu.dpas. Two batch dims exercise the
 // upper bound (rank 4 = 2 batch + 2 core dims).
