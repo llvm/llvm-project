@@ -339,5 +339,5 @@ defm : BoolField<"vplan-print-in-dot-format", "false",
 // VPlanTransforms.cpp
 // TODO: Remove this once the partial reduction intrinsics are no worse than
 // normal vector operations.
-defm : BoolField<"use-partial-reductions-by-default", "false",
+defm : BoolField<"use-partial-reductions-by-default", "true",
   "Use partial reduction intrinsics for all supported unordered reductions">;

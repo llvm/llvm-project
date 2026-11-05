@@ -15,10 +15,11 @@ define zeroext i8 @sum() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <64 x i8>, ptr @bytes, align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, ptr getelementptr inbounds (i8, ptr @bytes, i64 64), align 1
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = add <64 x i8> [[WIDE_LOAD1]], zeroinitializer
+; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <64 x i8> @llvm.vector.partial.reduce.add.v64i8.v64i8(<64 x i8> zeroinitializer, <64 x i8> [[WIDE_LOAD1]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE2:%.*]] = call <64 x i8> @llvm.vector.partial.reduce.add.v64i8.v64i8(<64 x i8> zeroinitializer, <64 x i8> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <64 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <64 x i8> [[PARTIAL_REDUCE2]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:

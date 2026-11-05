@@ -31,8 +31,8 @@ define void @pr15344(ptr noalias %ar, ptr noalias %ar2, i32 %exit.limit, i1 %con
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2]] = fadd fast <2 x double> [[VEC_PHI]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP3]] = fadd fast <2 x double> [[VEC_PHI2]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP2]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI]], <2 x double> splat (double 1.000000e+00))
+; CHECK-NEXT:    [[TMP3]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI2]], <2 x double> splat (double 1.000000e+00))
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[AR2]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 2
 ; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP4]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]

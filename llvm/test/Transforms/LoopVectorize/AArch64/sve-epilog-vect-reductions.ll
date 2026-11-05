@@ -27,8 +27,8 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x i64>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP16]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP17]] = add <vscale x 2 x i64> [[WIDE_LOAD3]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP16]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI]], <vscale x 2 x i64> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP17]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI2]], <vscale x 2 x i64> [[WIDE_LOAD3]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -52,7 +52,7 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x i64> [ [[TMP22]], [[VEC_EPILOG_PH]] ], [ [[TMP26:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX7]]
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP24]], align 8
-; CHECK-NEXT:    [[TMP26]] = add <2 x i64> [[WIDE_LOAD9]], [[VEC_PHI8]]
+; CHECK-NEXT:    [[TMP26]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI8]], <2 x i64> [[WIDE_LOAD9]])
 ; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX7]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

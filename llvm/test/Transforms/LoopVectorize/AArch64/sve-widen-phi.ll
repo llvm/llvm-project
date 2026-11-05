@@ -229,7 +229,7 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP12]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv2i32(<vscale x 2 x i32> [[VEC_PHI]], <vscale x 2 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[VECTOR_GEP]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP1]], 2

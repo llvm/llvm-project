@@ -34,21 +34,21 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i32>, ptr [[TMP3]], align 8, !alias.scope [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <16 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META0]]
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6]] = add <16 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
-; CHECK-NEXT:    [[TMP7]] = add <16 x i32> [[VEC_PHI5]], [[WIDE_LOAD8]]
-; CHECK-NEXT:    [[TMP8]] = add <16 x i32> [[VEC_PHI6]], [[WIDE_LOAD9]]
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i32>, ptr [[TMP3]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP6]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI3]], <16 x i32> [[WIDE_LOAD6]])
+; CHECK-NEXT:    [[TMP7]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI4]], <16 x i32> [[WIDE_LOAD7]])
+; CHECK-NEXT:    [[TMP8]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI5]], <16 x i32> [[WIDE_LOAD8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -72,10 +72,10 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <8 x i32> [ [[TMP11]], %[[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <8 x i32> [ [[TMP11]], %[[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX14]]
-; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META0]]
-; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI15]], [[WIDE_LOAD16]]
+; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP13]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI16]], <8 x i32> [[WIDE_LOAD17]])
 ; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX14]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -86,11 +86,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    br i1 [[CMP_N18]], label %[[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX18:%.*]] = phi i32 [ [[TMP15]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX21:%.*]] = phi i32 [ [[TMP15]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[T0:%.*]] = phi i32 [ [[T3:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX18]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[T0:%.*]] = phi i32 [ [[T3:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX21]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[T1]], align 8
 ; CHECK-NEXT:    [[T3]] = add i32 [[T0]], [[T2]]
@@ -335,8 +335,8 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD25]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT21]], ptr [[TMP5]], align 4, !alias.scope [[META20]], !noalias [[META23]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[C]], i64 [[INDEX18]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD25:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 8 [[TMP7]], <8 x i1> [[TMP6]], <8 x i32> poison), !alias.scope [[META26]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[WIDE_MASKED_LOAD25]], <8 x ptr> align 4 [[BROADCAST_SPLAT26]], <8 x i1> [[TMP6]]), !alias.scope [[META27]], !noalias [[META26]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD31:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 8 [[TMP7]], <8 x i1> [[TMP6]], <8 x i32> poison), !alias.scope [[META26]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[WIDE_MASKED_LOAD31]], <8 x ptr> align 4 [[BROADCAST_SPLAT26]], <8 x i1> [[TMP6]]), !alias.scope [[META27]], !noalias [[META26]]
 ; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[INDEX18]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT27]], [[N_VEC17]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
