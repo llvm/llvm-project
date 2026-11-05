@@ -321,7 +321,6 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
 
 namespace khr {
 namespace {
-
 struct MemoryRequirements {
   spirv::MemoryAccessAttr memoryAccess;
   IntegerAttr alignment;
