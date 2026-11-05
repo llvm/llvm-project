@@ -152,6 +152,22 @@ add_libc_test(
 )
 
 add_libc_test(
+  c32rtomb_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    c32rtomb_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.wchar.c32rtomb
+    libc.src.string.memset
+    libc.hdr.types.char32_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   wcsrtombs_test
   SUITE
     libc-wchar-tests
