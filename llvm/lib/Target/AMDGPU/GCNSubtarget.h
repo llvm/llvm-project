@@ -1022,6 +1022,12 @@ public:
     return HasGFX1250Insts;
   }
 
+  /// A 16-bit write by TRANS VALU needs 4 VALU instructions or va_vdst(0) wait
+  /// before the other half of the same register can be overwritten.
+  bool hasTransF16ToPartialVGPRWriteHazard() const {
+    return HasGFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
   unsigned getSNopBits() const {

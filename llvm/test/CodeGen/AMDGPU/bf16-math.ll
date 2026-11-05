@@ -611,7 +611,7 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
 ; TRUE16-NEXT:    v_nop
-; TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; TRUE16-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    ; return to shader part epilog
 ;
