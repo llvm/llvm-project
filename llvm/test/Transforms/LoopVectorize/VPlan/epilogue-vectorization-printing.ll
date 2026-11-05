@@ -78,7 +78,7 @@ define i64 @resume_values(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>, ir-bb<vector.body>
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle.block>:
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
@@ -255,7 +255,7 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>, ir-bb<vector.body>
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle.block>:
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
@@ -421,7 +421,7 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>, ir-bb<vector.body>
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle.block>:
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
@@ -568,7 +568,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>, ir-bb<vector.body>
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle.block>:
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
@@ -835,7 +835,7 @@ define i32 @nested_loop(ptr noalias %p, ptr noalias %end, ptr noalias %dst, i64 
 ; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>, ir-bb<vector.body>
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle.block>:
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>

@@ -189,6 +189,11 @@ infrastructure are described first, followed by tool-specific sections.
   assignments inside GNU statement expressions unless they form the value of
   the statement expression.
 
+- Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
+  constructor begins with a macro, and fix-its that inserted `private:` into
+  the preceding token, comment or macro argument.
+
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
   emitting empty notes for type aliases when {option}`ModelImplicitConversions`
@@ -261,9 +266,18 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-    
+
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
+
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
+
+- Improved {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by matching
+  {option}`IgnoreHeaders` patterns containing `/` against header paths on
+  Windows.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -273,6 +287,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
+
+- Fixed false positive in {doc}`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
+  or deleted destructor.
 
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
@@ -287,6 +305,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
+
+- Fixed false positive in {doc}`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` check when a constructor argument
+  is `0` or `NULL` used as a null pointer, which an `emplace`-like method would
+  forward as an integer.
 
 - Improved {doc}`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check to also capture
@@ -429,7 +452,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-    
+
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
