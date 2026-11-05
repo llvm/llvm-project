@@ -417,19 +417,16 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
     writeArm64eChainedRebase(buf, targetVA, auth);
     return;
   }
-  // DYLD_CHAINED_PTR_64 fixups only need to be 4-byte aligned, so build the
-  // pointer here and copy it out.
-  dyld_chained_ptr_64_rebase rebase;
-  rebase.target = targetVA & 0xf'ffff'ffff;
-  rebase.high8 = (targetVA >> 56);
-  rebase.reserved = 0;
-  rebase.next = 0;
-  rebase.bind = 0;
-  memcpy(buf, &rebase, sizeof(rebase));
+  auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
+  rebase->target = targetVA & 0xf'ffff'ffff;
+  rebase->high8 = (targetVA >> 56);
+  rebase->reserved = 0;
+  rebase->next = 0;
+  rebase->bind = 0;
 
   // The fixup format places a 64 GiB limit on the output's size.
   // Should we handle this gracefully?
-  uint64_t encodedVA = rebase.target | ((uint64_t)rebase.high8 << 56);
+  uint64_t encodedVA = rebase->target | ((uint64_t)rebase->high8 << 56);
   if (encodedVA != targetVA)
     error("rebase target address 0x" + Twine::utohexstr(targetVA) +
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
@@ -486,15 +483,13 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
       writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
     return;
   }
-  // See writeChainedRebase() for why this is copied out.
-  dyld_chained_ptr_64_bind bind;
+  auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
-  bind.ordinal = ordinal;
-  bind.addend = inlineAddend;
-  bind.reserved = 0;
-  bind.next = 0;
-  bind.bind = 1;
-  memcpy(buf, &bind, sizeof(bind));
+  bind->ordinal = ordinal;
+  bind->addend = inlineAddend;
+  bind->reserved = 0;
+  bind->next = 0;
+  bind->bind = 1;
 }
 
 void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
@@ -2877,8 +2872,10 @@ void ChainedFixupsSection::finalizeContents() {
     };
     if (offset % pageSize + target->wordSize > pageSize)
       report("fixup straddles page boundary");
-    if (offset % chainStride() != 0)
-      report("fixup is not " + Twine(chainStride()) + "-byte aligned");
+    // DYLD_CHAINED_PTR_64's 4-byte stride could chain 4-byte aligned pointers,
+    // but ld64 doesn't, so neither do we.
+    if (offset % target->wordSize != 0)
+      report("fixup is not " + Twine(target->wordSize) + "-byte aligned");
     loc.offset = offset;
   }
 
