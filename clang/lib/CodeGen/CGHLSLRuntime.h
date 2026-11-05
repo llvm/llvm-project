@@ -161,6 +161,12 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixUProduct,
                                         wave_multi_prefix_uproduct,
                                         subgroup_multi_prefix_product)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixSum,
+                                        wave_multi_prefix_sum,
+                                        subgroup_multi_prefix_sum)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixUSum,
+                                        wave_multi_prefix_usum,
+                                        subgroup_multi_prefix_sum)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)

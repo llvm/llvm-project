@@ -24,6 +24,8 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
   case Intrinsic::dx_wave_multi_prefix_bit_xor:
   case Intrinsic::dx_wave_multi_prefix_product:
   case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
     return ScalarOpdIdx >= 1 && ScalarOpdIdx <= 4;
   default:
     return false;
