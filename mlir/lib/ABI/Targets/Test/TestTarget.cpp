@@ -179,10 +179,11 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     return ArgClassification::getExtend(coerced.getValue(), signExt);
   }
 
-  if (kind == "indirect") {
+  if (kind == "indirect" || kind == "indirect_aliased") {
     auto align = argDict.getAs<IntegerAttr>("indirect_align");
     if (!align) {
-      emitError() << "kind='indirect' requires 'indirect_align' IntegerAttr";
+      emitError() << "kind='" << kind
+                  << "' requires 'indirect_align' IntegerAttr";
       return std::nullopt;
     }
     if (align.getInt() <= 0 || !llvm::isPowerOf2_64(align.getInt())) {
@@ -190,9 +191,6 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
                   << align.getInt();
       return std::nullopt;
     }
-    bool byVal = true;
-    if (auto bv = argDict.getAs<BoolAttr>("byval"))
-      byVal = bv.getValue();
     unsigned addrSpace = 0;
     if (auto as = argDict.getAs<IntegerAttr>("indirect_addr_space")) {
       if (as.getInt() < 0) {
@@ -202,6 +200,17 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       }
       addrSpace = as.getInt();
     }
+    if (kind == "indirect_aliased") {
+      if (argDict.get("byval")) {
+        emitError() << "kind='indirect_aliased' does not take 'byval'";
+        return std::nullopt;
+      }
+      return ArgClassification::getIndirectAliased(llvm::Align(align.getInt()),
+                                                   addrSpace);
+    }
+    bool byVal = true;
+    if (auto bv = argDict.getAs<BoolAttr>("byval"))
+      byVal = bv.getValue();
     return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal,
                                           addrSpace);
   }
@@ -217,7 +226,8 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
   }
 
   emitError() << "unknown kind='" << kind
-              << "'; expected one of direct, extend, indirect, ignore, expand";
+              << "'; expected one of direct, extend, indirect, "
+                 "indirect_aliased, ignore, expand";
   return std::nullopt;
 }
 

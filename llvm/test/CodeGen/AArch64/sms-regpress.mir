@@ -102,7 +102,7 @@ body:             |
     %0:fpr64 = LDRDui %10, 0 :: (load (s64) from %ir.a)
     %1:fpr64 = LDRDui %10, 1 :: (load (s64) from %ir.arrayidx1)
     %16:gpr32 = ORRWrs $wzr, %12, 0
-    %2:gpr64all = SUBREG_TO_REG killed %16, %subreg.sub_32
+    %2:gpr64all = SUBREG_TO_REG %16, %subreg.sub_32
     %15:fpr64 = FMOVD0
     B %bb.3
   
@@ -135,22 +135,22 @@ body:             |
     %33:fpr64 = nofpexcept FMADDDrrr %32, %18, %32, implicit $fpcr
     %34:fpr64 = nofpexcept FMADDDrrr %33, %18, %33, implicit $fpcr
     %35:fpr64 = nofpexcept FADDDrr %33, %34, implicit $fpcr
-    %36:fpr64 = nofpexcept FMADDDrrr %34, %18, killed %35, implicit $fpcr
-    %37:fpr64 = nofpexcept FADDDrr %26, killed %36, implicit $fpcr
-    %38:fpr64 = nofpexcept FMADDDrrr %19, %18, killed %37, implicit $fpcr
-    %39:fpr64 = nofpexcept FADDDrr %27, killed %38, implicit $fpcr
-    %40:fpr64 = nofpexcept FMADDDrrr %20, %18, killed %39, implicit $fpcr
-    %41:fpr64 = nofpexcept FADDDrr %28, killed %40, implicit $fpcr
-    %42:fpr64 = nofpexcept FMADDDrrr %21, %18, killed %41, implicit $fpcr
+    %36:fpr64 = nofpexcept FMADDDrrr %34, %18, %35, implicit $fpcr
+    %37:fpr64 = nofpexcept FADDDrr %26, %36, implicit $fpcr
+    %38:fpr64 = nofpexcept FMADDDrrr %19, %18, %37, implicit $fpcr
+    %39:fpr64 = nofpexcept FADDDrr %27, %38, implicit $fpcr
+    %40:fpr64 = nofpexcept FMADDDrrr %20, %18, %39, implicit $fpcr
+    %41:fpr64 = nofpexcept FADDDrr %28, %40, implicit $fpcr
+    %42:fpr64 = nofpexcept FMADDDrrr %21, %18, %41, implicit $fpcr
     %43:fpr64 = nofpexcept FADDDrr %30, %31, implicit $fpcr
-    %44:fpr64 = nofpexcept FADDDrr %29, killed %43, implicit $fpcr
-    %45:fpr64 = nofpexcept FADDDrr killed %44, killed %42, implicit $fpcr
-    %46:fpr64 = nofpexcept FMADDDrrr %22, %18, killed %45, implicit $fpcr
+    %44:fpr64 = nofpexcept FADDDrr %29, %43, implicit $fpcr
+    %45:fpr64 = nofpexcept FADDDrr %44, %42, implicit $fpcr
+    %46:fpr64 = nofpexcept FMADDDrrr %22, %18, %45, implicit $fpcr
     %47:fpr64 = nofpexcept FMULDrr %18, %23, implicit $fpcr
-    %48:fpr64 = nofpexcept FMULDrr %1, killed %47, implicit $fpcr
-    %49:fpr64 = nofpexcept FMADDDrrr killed %48, %25, killed %46, implicit $fpcr
-    %50:fpr64 = nofpexcept FMADDDrrr %24, %1, killed %49, implicit $fpcr
-    %7:fpr64 = nofpexcept FADDDrr %6, killed %50, implicit $fpcr
+    %48:fpr64 = nofpexcept FMULDrr %1, %47, implicit $fpcr
+    %49:fpr64 = nofpexcept FMADDDrrr %48, %25, %46, implicit $fpcr
+    %50:fpr64 = nofpexcept FMADDDrrr %24, %1, %49, implicit $fpcr
+    %7:fpr64 = nofpexcept FADDDrr %6, %50, implicit $fpcr
     %8:gpr64all = COPY %17
     %51:gpr64 = nsw SUBSXri %4, 1, 0, implicit-def $nzcv
     %9:gpr64all = COPY %51

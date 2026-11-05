@@ -21,7 +21,7 @@ module attributes {
   // already been rewritten, and its slot already queued for collapsing, by the
   // time the call is reached.
   cir.func @forwards_non_byval_param(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -37,7 +37,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -60,10 +60,10 @@ module attributes {
   // own definition is rewritten and the slot is still untouched.  The callee
   // receives the caller's storage either way.
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   cir.func @forwards_non_byval_param_via_slot(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -97,7 +97,7 @@ module attributes {
 
   // Mutual recursion puts each function on both sides of the other, so both
   // orders above occur in one module.
-  cir.func @ping(%arg0: !rec_Big) attributes { test_classify = #non_byval_arg } {
+  cir.func @ping(%arg0: !rec_Big) requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -105,7 +105,7 @@ module attributes {
     cir.return
   }
 
-  cir.func @pong(%arg0: !rec_Big) attributes { test_classify = #non_byval_arg } {
+  cir.func @pong(%arg0: !rec_Big) requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -154,7 +154,7 @@ module attributes {
   // so that parameter sits at a different index than it was declared at.
   // The attributes have to follow it there for the forward to be recognized.
   cir.func @expand_ahead_of_non_byval(%two: !rec_Two, %big: !rec_Big)
-      attributes { test_classify = #expand_then_non_byval } {
+      requires_call_conv_lowering attributes { test_classify = #expand_then_non_byval } {
     %spill = cir.alloca "big" align(8) init : !cir.ptr<!rec_Big>
     cir.store %big, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -169,7 +169,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -195,13 +195,13 @@ module attributes {
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   // A slot reached through casts that preserve the storage.  The slot states
   // the alignment, so it is found underneath the chain, while the outermost
   // cast is what gets forwarded.
   cir.func @forwards_slot_through_cast(%s: !rec_Big)
-      attributes { test_classify = #passthrough } {
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
     %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 32>>
     %mid = cir.cast bitcast %raw
         : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
@@ -244,7 +244,7 @@ module attributes {
   // The sret pointer takes block argument 0, so the forwarded parameter sits
   // one past where it was declared.
   cir.func @sret_forwards_non_byval_param(%arg0: !rec_Big) -> !rec_Big
-      attributes { test_classify = #sret_non_byval } {
+      requires_call_conv_lowering attributes { test_classify = #sret_non_byval } {
     %spill = cir.alloca "arg0" align(8) : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -265,7 +265,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -289,10 +289,10 @@ module attributes {
   // parameter's, so it holds here regardless of which of the two was declared
   // first.
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   cir.func @forwards_param_over_underaligned_slot(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(4) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
@@ -327,7 +327,7 @@ module attributes {
   // Two parameters in one function, forwarded in the opposite order, so a slot
   // paired with the wrong incoming pointer would swap the operands.
   cir.func @forwards_two_non_byval_params(%x: !rec_Big, %y: !rec_Big)
-      attributes { test_classify = #two_non_byval } {
+      requires_call_conv_lowering attributes { test_classify = #two_non_byval } {
     %sx = cir.alloca "x" align(8) init : !cir.ptr<!rec_Big>
     %sy = cir.alloca "y" align(8) init : !cir.ptr<!rec_Big>
     cir.store %x, %sx : !rec_Big, !cir.ptr<!rec_Big>
@@ -344,7 +344,7 @@ module attributes {
   // CHECK:        cir.call @sink_two(%[[Y]], %[[X]]) :
 
   cir.func private @sink_two(%a: !rec_Big, %b: !rec_Big)
-      attributes { test_classify = #two_non_byval }
+      requires_call_conv_lowering attributes { test_classify = #two_non_byval }
 
 }
 
@@ -372,10 +372,10 @@ module attributes {
   // the caller's storage with cir.get_member rather than extracted from a
   // whole-record value.
   cir.func private @takes_two_expanded(%arg0: !rec_Two)
-      attributes { test_classify = #expand_two }
+      requires_call_conv_lowering attributes { test_classify = #expand_two }
 
   cir.func @expands_non_byval_param(%arg0: !rec_Two)
-      attributes { test_classify = #non_byval_two } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_two } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Two>
     cir.store %arg0, %spill : !rec_Two, !cir.ptr<!rec_Two>
     %v = cir.load %spill : !cir.ptr<!rec_Two>, !rec_Two
@@ -412,7 +412,7 @@ module attributes {
   // The parameter is handed on directly, with no load of its slot, which is
   // what cir-simplify leaves at -O1 and above for a slot marked const.
   cir.func @forwards_unloaded_param(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
@@ -427,7 +427,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -450,10 +450,10 @@ module attributes {
   // the caller's own definition is rewritten, and over a slot aligned for a
   // local copy rather than for the parameter.
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   cir.func @forwards_unloaded_param_early_call(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(4) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
@@ -491,10 +491,10 @@ module attributes {
 
   // The unloaded parameter feeding an Expand callee.
   cir.func private @takes_two_expand(%arg0: !rec_Two)
-      attributes { test_classify = #expand_two }
+      requires_call_conv_lowering attributes { test_classify = #expand_two }
 
   cir.func @unloaded_param_to_expand(%arg0: !rec_Two)
-      attributes { test_classify = #non_byval_two } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_two } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Two>
     cir.store %arg0, %spill : !rec_Two, !cir.ptr<!rec_Two>
     cir.call @takes_two_expand(%arg0) : (!rec_Two) -> ()
@@ -534,10 +534,10 @@ module attributes {
 
   // A byval callee gets its own copy, read out of the caller's storage.
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
   cir.func @unloaded_param_to_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
@@ -576,10 +576,10 @@ module attributes {
   // A Direct argument with a coerced type reads the record into a register,
   // out of the caller's storage.
   cir.func private @takes_two_coerced(%arg0: !rec_Two)
-      attributes { test_classify = #coerced_two }
+      requires_call_conv_lowering attributes { test_classify = #coerced_two }
 
   cir.func @unloaded_param_to_coerced_direct(%arg0: !rec_Two)
-      attributes { test_classify = #non_byval_two } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_two } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Two>
     cir.store %arg0, %spill : !rec_Two, !cir.ptr<!rec_Two>
     cir.call @takes_two_coerced(%arg0) : (!rec_Two) -> ()
@@ -618,7 +618,7 @@ module attributes {
   // Two arguments taken from one parameter, one forwarded and one copied, so
   // a second read of the slot would show up as a second load.
   cir.func @unloaded_param_to_two_calls(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
@@ -634,10 +634,10 @@ module attributes {
   // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
 }
 
@@ -658,7 +658,7 @@ module attributes {
 
   // The argument is in a later block, which the spill still dominates.
   cir.func @unloaded_param_read_in_successor(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.br ^bb1
@@ -676,7 +676,7 @@ module attributes {
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -703,7 +703,7 @@ module attributes {
   // The body overwrites the slot before the argument is taken, so the copy the
   // callee gets holds the parameter only if the read happens at the spill.
   cir.func @unloaded_param_read_before_overwrite(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
@@ -721,7 +721,7 @@ module attributes {
   // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
 }
 
@@ -748,7 +748,7 @@ module attributes {
   // An sret return prepends a block argument, so the parameter is not at the
   // index its classification sits at once the signature is rewritten.
   cir.func @sret_with_unloaded_param(%arg0: !rec_Big) -> !rec_Big
-      attributes { test_classify = #sret_and_non_byval } {
+      requires_call_conv_lowering attributes { test_classify = #sret_and_non_byval } {
     %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
@@ -766,7 +766,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -795,7 +795,7 @@ module attributes {
   // An Expand parameter ahead of it becomes one block argument per field, so
   // again the parameter moves off its classification's index.
   cir.func @expand_ahead_of_unloaded_param(%arg0: !rec_Two, %arg1: !rec_Big)
-      attributes { test_classify = #expand_then_non_byval } {
+      requires_call_conv_lowering attributes { test_classify = #expand_then_non_byval } {
     %s0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Two>
     %s1 = cir.alloca "arg1" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %s0 : !rec_Two, !cir.ptr<!rec_Two>
@@ -813,7 +813,7 @@ module attributes {
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
 }
 
@@ -841,7 +841,7 @@ module attributes {
   // in for it may only claim the promise.  The byval callee is handed the
   // incoming pointer, which carries the promise and not the slot's alignment.
   cir.func @unloaded_param_over_overaligned_slot(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(16) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
@@ -855,7 +855,7 @@ module attributes {
   // CHECK:        cir.call @takes_big_byval(%[[PTR]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
 }
 
@@ -877,7 +877,7 @@ module attributes {
   // A parameter with no uses at all, so there is no spill to prepare and
   // nothing to read back.  The signature still becomes the incoming pointer.
   cir.func @unused_non_byval_param(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     cir.return
   }
 
@@ -907,7 +907,7 @@ module attributes {
   // The body writes the slot but nothing takes the parameter as an argument,
   // so there is nothing to read it back for.
   cir.func @spilled_param_no_call_arg(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(4) init : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
@@ -941,10 +941,10 @@ module attributes {
   // The parameter has no spill of its own, so it already names the caller's
   // storage and is handed on as it stands.
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
 
   cir.func @forwards_unspilled_param(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
     cir.return
   }
@@ -981,10 +981,10 @@ module attributes {
   // The same parameter handed to a callee that wants its own copy, which is
   // read out of the caller's storage through the incoming pointer.
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
   cir.func @unspilled_param_to_byval(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
     cir.return
   }
@@ -1020,7 +1020,7 @@ module attributes {
   // The argument sits inside a nested region, which is where a full-expression
   // scope puts it.  The copy is taken at the spill, outside the region.
   cir.func @unloaded_param_read_in_scope(%arg0: !rec_Big)
-      attributes { test_classify = #non_byval_arg } {
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.scope {
@@ -1037,6 +1037,6 @@ module attributes {
   // CHECK:          cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
-      attributes { test_classify = #byval_arg }
+      requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
 }
