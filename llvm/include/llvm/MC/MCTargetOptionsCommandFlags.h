@@ -60,6 +60,8 @@ LLVM_ABI bool getCrel();
 
 LLVM_ABI bool getImplicitMapSyms();
 
+LLVM_ABI bool getMachORelocatableDwarf();
+
 LLVM_ABI bool getX86RelaxRelocations();
 
 LLVM_ABI bool getX86Sse2Avx();
