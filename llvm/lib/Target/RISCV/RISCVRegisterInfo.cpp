@@ -1220,7 +1220,7 @@ void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
   }
 }
 
-Register
+MCRegister
 RISCVRegisterInfo::findVRegWithEncoding(const TargetRegisterClass &RegClass,
                                         uint16_t Encoding) const {
   MCRegister Reg = RISCV::V0 + Encoding;
