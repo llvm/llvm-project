@@ -621,9 +621,10 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
-enum class FMinFMaxKind { None, Scalar, Vector };
+enum class FMinFMaxKind { None, Scalar, Vector, ScalarNM, VectorNM };
 
-// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd), and their
+// number (NM) variants.
 static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::FMAXHrr:
@@ -644,11 +645,29 @@ static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   case AArch64::FMINv4f32:
   case AArch64::FMINv2f64:
     return FMinFMaxKind::Vector;
+  case AArch64::FMAXNMHrr:
+  case AArch64::FMAXNMSrr:
+  case AArch64::FMAXNMDrr:
+  case AArch64::FMINNMHrr:
+  case AArch64::FMINNMSrr:
+  case AArch64::FMINNMDrr:
+    return FMinFMaxKind::ScalarNM;
+  case AArch64::FMAXNMv4f16:
+  case AArch64::FMAXNMv8f16:
+  case AArch64::FMAXNMv2f32:
+  case AArch64::FMAXNMv4f32:
+  case AArch64::FMAXNMv2f64:
+  case AArch64::FMINNMv4f16:
+  case AArch64::FMINNMv8f16:
+  case AArch64::FMINNMv2f32:
+  case AArch64::FMINNMv4f32:
+  case AArch64::FMINNMv2f64:
+    return FMinFMaxKind::VectorNM;
   }
   return FMinFMaxKind::None;
 }
 
-// FMIN + FMAX, both scalar or both vector.
+// FMIN + FMAX, or FMINNM + FMAXNM, both scalar or both vector.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
   FMinFMaxKind SecondKind = getFMinFMaxKind(SecondMI.getOpcode());
