@@ -66,13 +66,7 @@ foreach(archive IN ZIP_LISTS
     add_bitcode_entrypoint_library(
       ${archive_1}bitcode
       ${archive_1}
-      DEPENDS
-        ${${archive_2}}
-    )
-    set_target_properties(
-      ${archive_1}bitcode
-      PROPERTIES
-        OUTPUT_NAME ${archive_1}.bc
+      OUTPUT_NAME ${archive_1}.bc
     )
     list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
@@ -107,7 +101,6 @@ install(
 foreach(file ${added_bitcode_targets})
   install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
     DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-    RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
     COMPONENT libc
   )
 endforeach()

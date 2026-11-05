@@ -59,8 +59,6 @@ public:
   }
 
 protected:
-  lldb::OptionValueSP Clone() const override;
-
   void ClearImpl() override {
     m_current_value.Clear();
     m_value_was_set = false;

@@ -1,0 +1,97 @@
+# This file defines a reusable workflow that selects the anchor commits of a LNT pipeline. Those
+# are the commits that should have historical benchmark data based on a fixed calendar interval.
+#
+# The selected commits are uploaded as an artifact containing a single `anchors.txt` file, with
+# one commit per line, oldest first.
+#
+# See libcxx/utils/ci/lnt/README.md for a description of the tools used here.
+
+name: "[libc++] Select anchor commits"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      since:
+        description: 'The date (YYYY-MM-DD) to select anchor commits from'
+        required: true
+        type: string
+      every:
+        description: 'The calendar granularity at which to select anchor commits (day, week or month)'
+        required: true
+        type: string
+      artifact-name:
+        description: 'The name of the artifact to upload the result as'
+        required: true
+        type: string
+
+jobs:
+  select:
+    name: Select anchor commits
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash # for pipefail, which the default shell doesn't set
+    env:
+      SINCE: ${{ inputs.since }}
+      EVERY: ${{ inputs.every }}
+    steps:
+      # Anchor commits are stable through time (except for the single new anchor commit every
+      # day/week/month depending on the granularity). Since computing anchor commits requires
+      # cloning the whole monorepo (which is expensive) and this workflow is called regularly,
+      # we cache anchor commits and avoid recomputing them unless necessary.
+      #
+      # Since we currently use weekly granularity for anchor commits on most LNT machines, we
+      # cache them and re-generate them only daily.
+      - name: Compute the cache key
+        id: key
+        run: echo "key=lnt-anchor-commits-${SINCE}-${EVERY}-$(date -u +%F)" >> "${GITHUB_OUTPUT}"
+
+      - name: Try restoring the selection from cache
+        id: restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/anchors.txt # restore to temp since the checkout below would overwrite it
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Checkout the full LLVM monorepo
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Selecting anchor commits requires full Git history, but not the blob content.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Install Python
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.15'
+          cache: pip
+          cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
+
+      - name: Install dependencies
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: pip install -r libcxx/utils/ci/lnt/requirements.txt
+
+      - name: Select anchor commits
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output "${RUNNER_TEMP}/anchors.txt"
+
+      - name: Cache the selection
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/anchors.txt
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Upload the selection
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ runner.temp }}/anchors.txt
+          if-no-files-found: error

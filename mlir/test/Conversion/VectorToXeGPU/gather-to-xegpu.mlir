@@ -27,6 +27,27 @@ gpu.func @load_1D_vector(%source: memref<8x16x32xf32>,
 }
 
 // -----
+
+// XeGPU load offsets and masks must be fixed-size vectors.
+gpu.module @xevm_module {
+gpu.func @no_load_scalable_vector(%source: memref<?xf32>,
+    %indices: vector<[3]xindex>, %mask: vector<[3]xi1>,
+    %pass_thru: vector<[3]xf32>) -> vector<[3]xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %source[%c0][%indices], %mask, %pass_thru
+    : memref<?xf32>, vector<[3]xindex>, vector<[3]xi1>, vector<[3]xf32> into vector<[3]xf32>
+  gpu.return %0 : vector<[3]xf32>
+}
+// CHECK-LABEL: @no_load_scalable_vector
+// CHECK-SAME: %[[SRC:.*]]: memref<?xf32>,
+// CHECK-SAME: %[[INDICES:.*]]: vector<[3]xindex>, %[[MASK:.*]]: vector<[3]xi1>,
+// CHECK-SAME: %[[PASS:.*]]: vector<[3]xf32>
+// CHECK: %[[OFF:.*]] = arith.constant 0 : index
+// CHECK: %[[RES:.*]] = vector.gather %[[SRC]][%[[OFF]]] [%[[INDICES]]], %[[MASK]], %[[PASS]]
+// CHECK: gpu.return %[[RES]] : vector<[3]xf32>
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @load_2D_memref(%source: memref<8x32xf32>,
      %off1: index, %off2: index,

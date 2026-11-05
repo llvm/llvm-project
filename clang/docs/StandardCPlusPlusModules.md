@@ -511,14 +511,6 @@ the Itanium C++ ABI are covered.
 The declarations in a module unit which are not in the global module fragment
 have new linkage names.
 
-By default, Clang keeps internal-linkage functions from global module
-fragments in different named module units distinct and includes the
-module-unit owner in their mangled names. This is a practical, non-conforming
-strategy for C-style `static inline` functions in real-world headers. Specify
-`-fno-modules-unique-gmf-internal-linkage` to restore the ordinary
-internal-linkage identity and mangling. This behavior is independent of
-whether global module fragment ODR checking is enabled.
-
 For example,
 
 ```c++
@@ -538,6 +530,14 @@ $ llvm-cxxfilt _ZN2NSW1M3fooEv
 ```
 
 The result should be read as `NS::foo()` in module `M`.
+
+Clang includes the owning named module unit in the mangled name of an
+internal-linkage function defined in a global module fragment. This
+disambiguates object-level names when different module units contain the same
+header definition. This CodeGen disambiguation does not alter whether
+declarations that expose such a TU-local entity are well-formed under the C++
+module rules. This behavior is independent of whether global module fragment
+ODR checking is enabled.
 
 The ABI implies that something cannot be declared in a module unit and defined
 in a non-module unit (or vice-versa), as this would result in linking errors.

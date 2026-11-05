@@ -26,7 +26,8 @@ using namespace llvm;
 // AArch64TargetStreamer Implementation
 //
 AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), CLOpts(AArch64MCOptions::Global),
+    : MCTargetStreamer(S),
+      CLOpts(AArch64_MC::getCLOpts(S.getContext().getTargetOptions())),
       ConstantPools(new AssemblerConstantPools()) {}
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
@@ -189,9 +190,9 @@ AArch64TargetStreamer::getAttributesSubsectionByName(StringRef Name) {
 }
 
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                          unsigned Value, std::string String) {
+                                          uint64_t Value, std::string String) {
 
-  if (unsigned(-1) == Value && "" == String) {
+  if (uint64_t(-1) == Value && "" == String) {
     assert(0 && "Arguments error");
     return;
   }
@@ -211,20 +212,20 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
         // Tag already exists
         if (Item.Tag == Tag) {
-          Item.Type = unsigned(-1) != Value
+          Item.Type = uint64_t(-1) != Value
                           ? MCELFStreamer::AttributeItem::NumericAttribute
                           : MCELFStreamer::AttributeItem::TextAttribute;
-          Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
-          Item.StringValue = unsigned(-1) != Value ? "" : String;
+          Item.IntValue = uint64_t(-1) != Value ? Value : uint64_t(-1);
+          Item.StringValue = uint64_t(-1) != Value ? "" : String;
           return;
         }
       }
-      if (unsigned(-1) != Value)
+      if (uint64_t(-1) != Value)
         SubSection.Content.push_back(MCELFStreamer::AttributeItem(
             MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
       if ("" != String)
         SubSection.Content.push_back(MCELFStreamer::AttributeItem(
-            MCELFStreamer::AttributeItem::TextAttribute, Tag, unsigned(-1),
+            MCELFStreamer::AttributeItem::TextAttribute, Tag, uint64_t(-1),
             String));
       return;
     }
