@@ -98,8 +98,8 @@ class Compilation {
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
-  /// For each SYCL device compile for an IGCA target, the Intel GPUs to compile
-  /// it ahead of time for, sorted, e.g. xe-mtl-h and xe-mtl-u for igca_30r.
+  /// For SYCL, the Intel GPUs given in --offload-arch for each IGCA target,
+  /// e.g. xe-mtl-h and xe-mtl-u for igca_30r. Each list is sorted.
   llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
                  llvm::SmallVector<StringRef, 2>>
       SYCLIGCADevices;
@@ -263,14 +263,12 @@ public:
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
 
-  /// Record that the SYCL device compile for the IGCA target \p Target on
-  /// \p TC is compiled ahead of time for the Intel GPU \p Device.
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target.
   void addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
                          StringRef Device);
 
-  /// \return the Intel GPUs that the SYCL device compile for the IGCA target
-  /// \p Target on \p TC is compiled ahead of time for, sorted, or an empty
-  /// list.
+  /// \return the Intel GPUs of the IGCA target \p Target, sorted, or an empty
+  /// list if there are none.
   ArrayRef<StringRef> getSYCLIGCADevices(const ToolChain *TC,
                                          StringRef Target) const;
 
