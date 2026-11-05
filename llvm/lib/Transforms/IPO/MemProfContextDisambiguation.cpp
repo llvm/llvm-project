@@ -2495,8 +2495,8 @@ static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
 }
 
-static bool isMemProfClone(const Function &F) {
-  return F.getName().contains(MemProfCloneSuffix);
+static bool isMemProfClone(const GlobalValue &GV) {
+  return GV.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the
@@ -6730,13 +6730,16 @@ static ValueInfo findValueInfoForGV(const GlobalValue &GV, const Module &M,
 // CandidateGUID of an indirect tail call, in MapTailCallCalleeVIToCallsite
 // (which maps each synthesized record's callee to the record). Returns null if
 // there is none. OrigNameGUIDToTailCallCallsite caches a map from the original
-// name GUID of each record's callee to the record, and is built on first use.
+// name GUID of each record's callee to the record, and is built on first use
+// (along with AliasVIToGV, which caches alias ValueInfos in M).
 static const CallsiteInfo *findIndirectTailCallCallsite(
     uint64_t CandidateGUID,
     const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
     std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
         &OrigNameGUIDToTailCallCallsite,
-    const ModuleSummaryIndex *ImportSummary, InstrProfSymtab &Symtab) {
+    std::optional<DenseMap<ValueInfo, const GlobalAlias *>> &AliasVIToGV,
+    const Module &M, const ModuleSummaryIndex *ImportSummary,
+    InstrProfSymtab &Symtab) {
   auto End = MapTailCallCalleeVIToCallsite.end();
   // The callee of the synthesized record is normally the VP metadata GUID, so
   // check that first.
@@ -6758,17 +6761,34 @@ static const CallsiteInfo *findIndirectTailCallCallsite(
   // The index for a distributed ThinLTO backend does not record the original
   // names of local functions, in which case the above lookup via
   // getGUIDFromOriginalID fails. Instead, compute the original name GUID of
-  // each record's callee from its function in this module, located via its
-  // GUID (which is recorded in the function's !guid metadata), using its name
-  // before any promotion.
+  // each record's callee from its function or alias in this module, using its
+  // name before any promotion.
   if (!OrigNameGUIDToTailCallCallsite) {
     // Construct the (initially empty) map so that it is marked as built, even
     // if no entries are added below, to avoid rebuilding it on later calls.
     OrigNameGUIDToTailCallCallsite.emplace();
     for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
-      Function *Callee = Symtab.getFunction(CalleeVI.getGUID());
-      if (!Callee)
-        continue;
+      const GlobalValue *Callee = Symtab.getFunction(CalleeVI.getGUID());
+      if (!Callee) {
+        // InstrProfSymtab only indexes Functions, not GlobalAliases (imported
+        // alias copies are materialized as Functions with thinlto_alias_guid
+        // metadata and are found via Symtab above). Lazily build a module-wide
+        // map for same-module function GlobalAliases once per module so we can
+        // recover the alias's pre-promotion name.
+        if (!AliasVIToGV) {
+          AliasVIToGV.emplace();
+          for (const GlobalAlias &A : M.aliases()) {
+            if (isMemProfClone(A) ||
+                !isa_and_nonnull<Function>(A.getAliaseeObject()))
+              continue;
+            if (ValueInfo VI = findValueInfoForGV(A, M, ImportSummary))
+              AliasVIToGV->try_emplace(VI, &A);
+          }
+        }
+        Callee = AliasVIToGV->lookup(CalleeVI);
+        if (!Callee)
+          continue;
+      }
       StringRef OrigName =
           ModuleSummaryIndex::getOriginalNameBeforePromote(Callee->getName());
       auto [It, Inserted] = OrigNameGUIDToTailCallCallsite->try_emplace(
@@ -6796,7 +6816,16 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // promoted and global function names shouldn't need any special handling
   // (they should not get the ".llvm.*" suffix that the canonicalization
   // handling is attempting to strip).
-  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
+  // Key imported copies of aliases by the alias's GUID rather than the
+  // aliasee's GUID retained in their !guid metadata, since we rely on the
+  // looked up function's name (to compute its original name GUID and the names
+  // of its clones), and so that they don't shadow the aliasee's own function
+  // when both are in the module. See AliaseeGUIDToImportedAlias for how
+  // performICP handles profiled targets that are the aliasee of an imported
+  // alias copy when the aliasee itself is not in the module.
+  AliaseeGUIDToImportedAlias.reset();
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false,
+                               /*KeyImportedAliasesByAliasGUID=*/true)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -6871,6 +6900,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
   if (!initializeIndirectCallPromotionInfo(M))
     return false;
+
+  // Lazily populated map from alias ValueInfo to the corresponding same-module
+  // GlobalAlias, used by findIndirectTailCallCallsite when a local alias target
+  // is not in Symtab.
+  std::optional<DenseMap<ValueInfo, const GlobalAlias *>> AliasVIToGV;
 
   for (auto &F : M) {
     if (F.isDeclaration() || isMemProfClone(F))
@@ -7229,7 +7263,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               [&](const InstrProfValueData &Candidate) {
                 return findIndirectTailCallCallsite(
                     Candidate.Value, MapTailCallCalleeVIToCallsite,
-                    OrigNameGUIDToTailCallCallsite, ImportSummary, *Symtab);
+                    OrigNameGUIDToTailCallCallsite, AliasVIToGV, M,
+                    ImportSummary, *Symtab);
               },
               ICallAnalysisInfo);
           if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
@@ -7349,6 +7384,30 @@ void MemProfContextDisambiguation::performICP(
       if (!TargetFunction && StackNode && StackNode->Callee &&
           StackNode->Callee.getGUID() != Candidate.Value)
         TargetFunction = Symtab->getFunction(StackNode->Callee.getGUID());
+      // The target may be the aliasee of an alias imported as a copy of the
+      // aliasee, without the aliasee itself being imported (e.g. an IRPGO value
+      // profile records the aliasee for calls through the alias, as the alias
+      // has no profile data of its own). The Symtab keys such a copy by the
+      // alias GUID (see initializeIndirectCallPromotionInfo), so look for one
+      // with the target's GUID as its aliasee GUID. Promoting to the copy is
+      // correct as it has the same address, and its clones are aliases of the
+      // aliasee's clones in the defining module.
+      if (!TargetFunction) {
+        if (!AliaseeGUIDToImportedAlias) {
+          AliaseeGUIDToImportedAlias.emplace();
+          for (Function &Fn : M) {
+            if (isMemProfClone(Fn) || !getImportedAliasGUID(Fn))
+              continue;
+            if (auto AliaseeGUID = Fn.getGUIDIfAssigned())
+              AliaseeGUIDToImportedAlias->try_emplace(*AliaseeGUID, &Fn);
+          }
+        }
+        TargetFunction = AliaseeGUIDToImportedAlias->lookup(Candidate.Value);
+        if (!TargetFunction && StackNode && StackNode->Callee &&
+            StackNode->Callee.getGUID() != Candidate.Value)
+          TargetFunction =
+              AliaseeGUIDToImportedAlias->lookup(StackNode->Callee.getGUID());
+      }
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a

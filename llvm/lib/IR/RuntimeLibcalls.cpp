@@ -201,6 +201,10 @@ static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
 }
 
+static unsigned getIntSize(const Triple &TT) {
+  return RuntimeLibcallsInfo::getIntSize(TT);
+}
+
 static unsigned getLongSize(const Triple &TT, const DataLayout &DL) {
   if (TT.isOSWindowsOrUEFI() && !TT.isWindowsCygwinEnvironment())
     return 32;
@@ -229,9 +233,15 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
   llvm_unreachable("unhandled long double format");
 }
 
+static Type *getInt128Type(LLVMContext &Ctx, const Triple &TT) {
+  if (TT.isOSWindowsOrUEFI() && TT.isX86_64())
+    return FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  return Type::getInt128Ty(Ctx);
+}
+
 static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
                              const Triple &TT, const DataLayout &DL,
-                             unsigned IntBits, LongDoubleFormat LdblFormat) {
+                             LongDoubleFormat LdblFormat) {
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
@@ -253,7 +263,7 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
   case UIntPlus:
   case IntX:
   case UIntX:
-    return IntegerType::get(Ctx, IntBits);
+    return IntegerType::get(Ctx, getIntSize(TT));
   case Long:
   case ULong:
     return IntegerType::get(Ctx, getLongSize(TT, DL));
@@ -264,10 +274,20 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     return IntegerType::get(Ctx, 64);
   case Int128:
   case UInt128:
-    return IntegerType::get(Ctx, 128);
+    return getInt128Type(Ctx, TT);
   case SizeT:
   case SSizeT:
     return getSizeTType(Ctx, DL);
+  case CmpResult:
+    if (TT.isAArch64() || TT.isAMDGPU() || TT.isWasm())
+      return Type::getInt32Ty(Ctx);
+    if (TT.isAVR())
+      return Type::getInt8Ty(Ctx);
+    return IntegerType::get(Ctx, TT.getArchPointerBitWidth());
+  case Half:
+    return Type::getHalfTy(Ctx);
+  case BFloat:
+    return Type::getBFloatTy(Ctx);
   case Flt:
   case Floating:
     return Type::getFloatTy(Ctx);
@@ -353,18 +373,19 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
 }
 
 static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
-                                         const Triple &TT, unsigned IntBits,
-                                         bool IsReturn) {
+                                         const Triple &TT, bool IsReturn) {
   if (ID == Bool)
     return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
 
   std::optional<bool> Signed = isSignedIntArgType(ID);
-  if (!Signed)
+  if (!Signed || !Ty->isIntegerTy())
     return Attribute::None;
 
   // All targets currently extend types narrower than int according to their
   // signedness, but this could become target dependent if a target needs it.
   unsigned Bits = Ty->getIntegerBitWidth();
+  unsigned IntBits = getIntSize(TT);
+
   if (Bits < IntBits)
     return *Signed ? Attribute::SExt : Attribute::ZExt;
   if (Bits != 32 || IntBits != 32)
@@ -374,6 +395,10 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   if (IsReturn ? shouldSignExtI32Return(TT) : shouldSignExtI32Param(TT))
     return Attribute::SExt;
   return Attribute::None;
+}
+
+static bool isFPVectorTy(Type *Ty) {
+  return Ty->isVectorTy() && Ty->isFPOrFPVectorTy();
 }
 
 std::pair<FunctionType *, AttributeList>
@@ -386,13 +411,12 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   if (ProtoTypes[0] == NoFuncArgType)
     return {};
 
-  unsigned IntBits = getIntSize(TT);
   AttributeList Attrs;
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, IntBits, LongDoubleFmt);
+  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
   if (Attribute::AttrKind AK =
-          getIntExtAttr(LastID, RetTy, TT, IntBits, /*IsReturn=*/true))
+          getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
     Attrs = Attrs.addRetAttribute(Ctx, AK);
 
   SmallVector<Type *, 4> ArgTys;
@@ -413,14 +437,14 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     else
       LastID = TyID;
 
-    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, IntBits, LongDoubleFmt);
+    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
     if (Attribute::AttrKind AK =
-            getIntExtAttr(TyID, ArgTy, TT, IntBits, /*IsReturn=*/false))
+            getIntExtAttr(TyID, ArgTy, TT, /*IsReturn=*/false))
       Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, AK);
   }
 
-  if (RetTy->isVectorTy()) {
+  if (RetTy->isVectorTy() && !ArgTys.empty() && isFPVectorTy(ArgTys[0])) {
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
@@ -631,7 +655,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
   auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
   if (!FuncTy || FuncTy->getNumParams() == 0 ||
-      !FuncTy->getParamType(0)->isVectorTy())
+      !isFPVectorTy(FuncTy->getParamType(0)))
     return {FuncTy, Attrs};
 
   Type *VecTy = FuncTy->getParamType(0);

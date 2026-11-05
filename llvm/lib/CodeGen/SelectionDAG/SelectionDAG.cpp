@@ -6101,7 +6101,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // nonan condition codes to be used. Those condition codes may be preserved
     // even if the nonan flag is dropped somewhere.
     unsigned CCOp = Opcode == ISD::SETCC ? 2 : 4;
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(CCOp))->get();
+    ISD::CondCode CCCode = Op.getOperandCondCode(CCOp);
     return (unsigned)CCCode & 0x10U;
   }
 
@@ -14811,8 +14811,9 @@ std::pair<SDValue, SDValue> SelectionDAG::SplitEVL(SDValue N, EVT VecVT,
 /// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
 SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
   EVT VT = N.getValueType();
-  EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
-                                NextPowerOf2(VT.getVectorNumElements()));
+  EVT WideVT = VT.changeElementCount(
+      *getContext(),
+      ElementCount::getFixed(NextPowerOf2(VT.getVectorNumElements())));
   return getInsertSubvector(DL, getPOISON(WideVT), N, 0);
 }
 

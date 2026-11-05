@@ -2398,7 +2398,8 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
+  // TODO: Select the variant at runtime.
+  EmitStmt(S.variants().front());
 }
 
 namespace {
@@ -9103,6 +9104,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     EmitOMPScanDirective(*SD);
     return;
   }
+  // A metadirective has no associated statement; emit its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(&D)) {
+    EmitOMPMetaDirective(*MD);
+    return;
+  }
   if (!D.hasAssociatedStmt() || !D.getAssociatedStmt())
     return;
   auto &&CodeGen = [&D](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -9166,8 +9172,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       D.getDirectiveKind() == OMPD_section ||
       D.getDirectiveKind() == OMPD_master ||
       D.getDirectiveKind() == OMPD_masked ||
-      D.getDirectiveKind() == OMPD_unroll ||
-      D.getDirectiveKind() == OMPD_assume) {
+      D.getDirectiveKind() == OMPD_assume ||
+      isOpenMPLoopTransformationDirective(D.getDirectiveKind())) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =
