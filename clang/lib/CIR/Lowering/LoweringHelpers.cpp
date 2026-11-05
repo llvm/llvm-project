@@ -198,8 +198,8 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 template <typename AttrTy, typename StorageTy>
 bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
-    const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
-    int64_t currentIndex) {
+    const llvm::SmallVectorImpl<int64_t> &currentDims,
+    mlir::Type convertedElementType, int64_t dimIndex, int64_t currentIndex) {
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
@@ -221,8 +221,10 @@ bool convertToDenseElementsAttrImpl(
   for (auto eltAttr : arrayAttr) {
     if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
       if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
+        unsigned bitWidth =
+            mlir::cast<mlir::IntegerType>(convertedElementType).getWidth();
         values[currentIndex++] =
-            llvm::APInt(1, static_cast<uint64_t>(boolAttr.getValue()));
+            llvm::APInt(bitWidth, static_cast<uint64_t>(boolAttr.getValue()));
         continue;
       }
     }
@@ -233,7 +235,8 @@ bool convertToDenseElementsAttrImpl(
 
     if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
-                                             dimIndex, currentIndex);
+                                             convertedElementType, dimIndex,
+                                             currentIndex);
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -260,10 +263,18 @@ std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
   unsigned vectorSize = 1;
   for (auto dim : dims)
     vectorSize *= dim;
-  auto values = llvm::SmallVector<StorageTy, 8>(
-      vectorSize, getZeroInitFromType<StorageTy>(elementType));
+  StorageTy zero = getZeroInitFromType<StorageTy>(elementType);
+  if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
+    if (mlir::isa<cir::BoolType>(elementType)) {
+      unsigned bitWidth =
+          mlir::cast<mlir::IntegerType>(convertedElementType).getWidth();
+      zero = mlir::APInt::getZero(bitWidth);
+    }
+  }
+  llvm::SmallVector<StorageTy> values(vectorSize, zero);
 
   if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
+                                              convertedElementType,
                                               /*currentDim=*/0,
                                               /*initialIndex=*/0))
     return std::nullopt;
@@ -508,9 +519,12 @@ std::optional<mlir::Attribute> lowerConstArrayAttr(
         constArr, dims, type, converter->convertType(type));
   }
 
-  if (mlir::isa<cir::BoolType>(type))
+  if (mlir::isa<cir::BoolType>(type)) {
+    mlir::Type storageType =
+        convertTypeForMemory(*converter, mlir::DataLayout(moduleOp), type);
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+        constArr, dims, type, storageType);
+  }
 
   if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
@@ -598,9 +612,11 @@ static std::optional<mlir::Attribute> lowerConstRecordMemberAttr(
                                   intAttr.getValue());
   }
 
-  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
-    return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),
-                                  boolAttr.getValue() ? 1 : 0);
+  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
+    mlir::Type storageType = convertTypeForMemory(
+        *converter, mlir::DataLayout(moduleOp), boolAttr.getType());
+    return mlir::IntegerAttr::get(storageType, boolAttr.getValue() ? 1 : 0);
+  }
 
   if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr))
     return mlir::FloatAttr::get(converter->convertType(fpAttr.getType()),
