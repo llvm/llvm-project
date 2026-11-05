@@ -156,8 +156,6 @@ define void @many_args_test(double, float, i16, <4 x half>, <8 x half>, <8 x hal
 ; SOFT-NEXT:    add r12, sp, #16
 ; SOFT-NEXT:    vmul.f16 q8, q9, q8
 ; SOFT-NEXT:    vst1.64 {d16, d17}, [r12]
-; SOFT-NEXT:    vldr d16, [sp]
-; SOFT-NEXT:    vstr d16, [sp]
 ; SOFT-NEXT:    str r3, [sp, #8]
 ; SOFT-NEXT:    b use
 ;
@@ -185,10 +183,8 @@ define void @many_args_test(double, float, i16, <4 x half>, <8 x half>, <8 x hal
 ; SOFTEB-NEXT:    add r12, sp, #16
 ; SOFTEB-NEXT:    vrev64.16 q9, q9
 ; SOFTEB-NEXT:    vmul.f16 q8, q9, q8
-; SOFTEB-NEXT:    vldr d18, [sp]
 ; SOFTEB-NEXT:    vrev64.16 q8, q8
 ; SOFTEB-NEXT:    vst1.64 {d16, d17}, [r12]
-; SOFTEB-NEXT:    vstr d18, [sp]
 ; SOFTEB-NEXT:    str r3, [sp, #8]
 ; SOFTEB-NEXT:    b use
 ;
