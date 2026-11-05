@@ -3847,16 +3847,9 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
   }
 }
 
-static cl::opt<bool> EnableMaskedInvariantLoad(
-    "enable-masked-invariant-load", cl::init(false), cl::ReallyHidden,
-    cl::desc("Rewrite predicated loads from loop-invariant addresses as a "
-             "single-lane masked load + broadcast"));
-
 void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
-                                                    VPCostContext &CostCtx) {
-  if (!EnableMaskedInvariantLoad)
-    return;
-
+                                                    VPCostContext &CostCtx,
+                                                    VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   if (!LoopRegion)
     return;
@@ -3894,14 +3887,13 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
     unsigned AS = LI->getPointerAddressSpace();
     Type *I1Ty = Type::getInt1Ty(Ctx);
 
-    // Only rewrite when the masked-load + broadcast lowering is no more
-    // expensive than the scalarized predicated load for every vector VF.
-    bool Beneficial = true;
-    for (ElementCount VF : Plan.vectorFactors()) {
+    // Clamp Range so the masked-load + broadcast lowering is no more expensive
+    // than the scalarized predicated load for every VF this plan covers.
+    auto IsProfitable = [&](ElementCount VF) {
       if (!VF.isVector())
-        continue;
-      auto *MaskTy = cast<VectorType>(toVectorTy(I1Ty, VF));
-      auto *VecTy = cast<VectorType>(toVectorTy(LoadTy, VF));
+        return false;
+      auto *MaskTy = VectorType::get(I1Ty, VF);
+      auto *VecTy = VectorType::get(LoadTy, VF);
       InstructionCost NewCost =
           VPInstruction::computeAnyOfCost(MaskTy, CostCtx) +
           VPWidenLoadRecipe::computeMaskedCost(Instruction::Load, VecTy,
@@ -3910,12 +3902,10 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
           VPInstruction::computeShuffleCost(TargetTransformInfo::SK_Broadcast,
                                             VecTy, CostCtx);
       InstructionCost OldCost = RepR->computeCost(VF, CostCtx);
-      if (NewCost > OldCost) {
-        Beneficial = false;
-        break;
-      }
-    }
-    if (!Beneficial)
+      return !(NewCost > OldCost);
+    };
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                            Range))
       continue;
 
     DebugLoc DL = RepR->getDebugLoc();
@@ -3930,13 +3920,12 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
 
     // Build a mask with `any` in lane 0 and false elsewhere:
     //   vmsk = insertelement <VF x i1> zeroinitializer, any, 0
-    VPValue *FalseI1 = Plan.getOrAddLiveIn(ConstantInt::getFalse(I1Ty));
+    VPValue *FalseI1 = Plan.getFalse();
     VPValue *ZeroVMask =
         Builder.createNaryOp(VPInstruction::Broadcast, {FalseI1}, DL);
-    VPValue *Lane0Idx =
-        Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
-    VPValue *VMask = Builder.createNaryOp(
-        Instruction::InsertElement, {ZeroVMask, AnyActive, Lane0Idx}, DL);
+    VPValue *Lane0Idx = Plan.getZero(Type::getInt32Ty(Ctx));
+    VPValue *VMask = Builder.createNaryOp(Instruction::InsertElement,
+                                          {ZeroVMask, AnyActive, Lane0Idx}, DL);
 
     // Consecutive=true selects the masked-load (not masked-gather) lowering in
     // VPWidenLoadRecipe::execute. The access is stride-0, not stride-1; lane 0
@@ -3947,10 +3936,11 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
 
     // Broadcast lane 0 of the masked load across all lanes, reusing the
     // existing extractelement + broadcast recipes.
-    VPValue *Lane0 = Builder.createNaryOp(
-        Instruction::ExtractElement, {MaskedLoad->getVPSingleValue(), Lane0Idx},
-        DL);
-    VPValue *Bcast = Builder.createNaryOp(VPInstruction::Broadcast, {Lane0}, DL);
+    VPValue *Lane0 =
+        Builder.createNaryOp(Instruction::ExtractElement,
+                             {MaskedLoad->getVPSingleValue(), Lane0Idx}, DL);
+    VPValue *Bcast =
+        Builder.createNaryOp(VPInstruction::Broadcast, {Lane0}, DL);
 
     RepR->replaceAllUsesWith(Bcast);
     RepR->eraseFromParent();

@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
-#include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -58,10 +57,12 @@ cl::opt<bool> llvm::PreferInLoopReductions(
 
 /// Note: This currently only applies to `llvm.masked.load` and
 /// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
-cl::opt<bool> llvm::ForceTargetSupportsMaskedMemoryOps(
+namespace llvm {
+cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
+} // namespace llvm
 
 static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
     "force-target-supports-gather-scatter-ops", cl::init(false), cl::Hidden,

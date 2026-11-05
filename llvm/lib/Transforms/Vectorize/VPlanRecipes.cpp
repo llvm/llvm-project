@@ -24,6 +24,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -1329,11 +1330,12 @@ InstructionCost VPInstruction::computeExtractElementCost(VectorType *VecTy,
                                     Ctx.CostKind);
 }
 
-InstructionCost
-VPInstruction::computeShuffleCost(TargetTransformInfo::ShuffleKind Kind,
-                                 VectorType *VecTy, VPCostContext &Ctx) {
-  return Ctx.TTI.getShuffleCost(Kind, VecTy, VecTy, /*Mask=*/{}, Ctx.CostKind,
-                                /*Index=*/0);
+InstructionCost VPInstruction::computeShuffleCost(unsigned Kind,
+                                                  VectorType *VecTy,
+                                                  VPCostContext &Ctx) {
+  return Ctx.TTI.getShuffleCost(
+      static_cast<TargetTransformInfo::ShuffleKind>(Kind), VecTy, VecTy,
+      /*Mask=*/{}, Ctx.CostKind, /*Index=*/0);
 }
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
@@ -1375,12 +1377,11 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     }
 
     // Add on the cost of extracting the element.
-    auto *VecTy =
-        cast<VectorType>(toVectorTy(getOperand(0)->getScalarType(), VF));
+    auto *VecTy = VectorType::get(getOperand(0)->getScalarType(), VF);
     return computeExtractElementCost(VecTy, Ctx);
   }
   case VPInstruction::AnyOf: {
-    auto *VecTy = cast<VectorType>(toVectorTy(this->getScalarType(), VF));
+    auto *VecTy = VectorType::get(this->getScalarType(), VF);
     return computeAnyOfCost(VecTy, Ctx);
   }
   case VPInstruction::FirstActiveLane: {

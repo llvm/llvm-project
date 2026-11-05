@@ -6616,9 +6616,6 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     // Now optimize the initial VPlan.
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
-    VPCostContext InvarLoadCostCtx(*CM.TLI, *Plan, CM, Config);
-    RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan,
-                   InvarLoadCostCtx);
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
@@ -6866,6 +6863,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // legal and profitable.
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
                  *OrigLoop, CostCtx, Range);
+
+  // Rewrite predicated invariant loads when a single-lane masked load is legal
+  // and no more expensive than scalarizing the load.
+  RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan, CostCtx,
+                 Range);
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())

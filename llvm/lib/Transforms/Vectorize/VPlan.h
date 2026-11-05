@@ -34,7 +34,6 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -1447,11 +1446,10 @@ public:
                                                    VPCostContext &Ctx);
 
   /// Return the cost of a shuffle of kind \p Kind over vector type \p VecTy.
-  /// Static helper so callers can price the operation without constructing a
-  /// recipe.
-  static InstructionCost
-  computeShuffleCost(TargetTransformInfo::ShuffleKind Kind, VectorType *VecTy,
-                     VPCostContext &Ctx);
+  /// \p Kind is a TargetTransformInfo::ShuffleKind. Static helper so callers
+  /// can price the operation without constructing a recipe.
+  static InstructionCost computeShuffleCost(unsigned Kind, VectorType *VecTy,
+                                            VPCostContext &Ctx);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to dbgs() (for debugging).
@@ -3500,10 +3498,6 @@ public:
 
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
-  /// Return the scalar result type of the replicated instruction. Note that
-  /// for stores this is the void type.
-  Type *getScalarType() const { return getUnderlyingInstr()->getType(); }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3811,9 +3805,9 @@ public:
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 
   /// Return the cost of a masked widened memory operation with opcode \p Opcode
-  /// (Load or Store), vectorized data type \p DataTy, alignment \p Alignment and
-  /// address space \p AS. This is a static helper so callers can price a masked
-  /// memory access without first constructing a recipe.
+  /// (Load or Store), vectorized data type \p DataTy, alignment \p Alignment
+  /// and address space \p AS. This is a static helper so callers can price a
+  /// masked memory access without first constructing a recipe.
   static InstructionCost computeMaskedCost(unsigned Opcode, Type *DataTy,
                                            Align Alignment, unsigned AS,
                                            VPCostContext &Ctx);

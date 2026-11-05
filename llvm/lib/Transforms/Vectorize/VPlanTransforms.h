@@ -431,12 +431,12 @@ struct VPlanTransforms {
                                    const Loop *L);
 
   /// Rewrite predicated VPReplicateRecipe loads from a loop-invariant address
-  /// into a single-lane masked load + broadcast pattern. Only applied when
-  /// the target reports isLegalMaskedLoad for the element type and when the new
-  /// lowering is not more expensive than the scalarized predicated load for all
-  /// vector VFs of \p Plan. Gated by -enable-masked-invariant-load.
-  static void widenPredicatedInvariantLoads(VPlan &Plan,
-                                            VPCostContext &CostCtx);
+  /// into a single-lane masked load + broadcast. Applied when the target can
+  /// lower a masked load of the element type and that lowering is no more
+  /// expensive than the scalarized predicated load. Clamps \p Range so the
+  /// decision holds for every VF the plan covers.
+  static void widenPredicatedInvariantLoads(VPlan &Plan, VPCostContext &CostCtx,
+                                            VFRange &Range);
 
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
