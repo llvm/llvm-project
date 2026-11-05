@@ -2,15 +2,15 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM70,SM70-NOFTZ-DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM70,SM70-NOFTZ-ALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=SM70,SM70-NOFTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM70,SM70-FTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM70,SM70-FTZ-ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM70,SM70-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM70,SM70-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM70,SM70-FTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign | FileCheck %s --check-prefixes=SM70,SM70-FTZ-DISALLOW
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_70 %}
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_70 %}
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -denormal-fp-math=preserve-sign | %ptxas-verify -arch=sm_70 %}
 
 define <1 x i8> @xchg_acq_rel_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
 ; SM70-LABEL: xchg_acq_rel_v1i8_global_cta(
@@ -16236,93 +16236,396 @@ define <8 x double> @fmaximum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <
 }
 
 define <1 x half> @fadd_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x half> %val) {
-; SM70-LABEL: fadd_acq_rel_v1f16_global_cta(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<3>;
-; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f16_global_cta_param_0];
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.b16 %rs1, [fadd_acq_rel_v1f16_global_cta_param_1];
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
-; SM70-NEXT:    ret;
+; SM70-NOFTZ-DISALLOW-LABEL: fadd_acq_rel_v1f16_global_cta(
+; SM70-NOFTZ-DISALLOW:       {
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<3>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-DISALLOW-EMPTY:
+; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f16_global_cta_param_0];
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b16 %rs1, [fadd_acq_rel_v1f16_global_cta_param_1];
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-NOFTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-NOFTZ-ALLOW-LABEL: fadd_acq_rel_v1f16_global_cta(
+; SM70-NOFTZ-ALLOW:       {
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<3>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-ALLOW-EMPTY:
+; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f16_global_cta_param_0];
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b16 %rs1, [fadd_acq_rel_v1f16_global_cta_param_1];
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-NOFTZ-ALLOW-NEXT:    ret;
+;
+; SM70-FTZ-DISALLOW-LABEL: fadd_acq_rel_v1f16_global_cta(
+; SM70-FTZ-DISALLOW:       {
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<4>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<14>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<3>;
+; SM70-FTZ-DISALLOW-EMPTY:
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_v1f16_global_cta_param_0];
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b16 %rs1, [fadd_acq_rel_v1f16_global_cta_param_1];
+; SM70-FTZ-DISALLOW-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r4, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:    and.b32 %r5, %r4, 3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r1, %r5, 3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB288_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16 %rs3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r10, %r9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r13, %r11;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r3, %r13;
+; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r13, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB288_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    shr.u32 %r12, %r3, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.b16 [func_retval0], %r12;
+; SM70-FTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-FTZ-ALLOW-LABEL: fadd_acq_rel_v1f16_global_cta(
+; SM70-FTZ-ALLOW:       {
+; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<3>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-ALLOW-EMPTY:
+; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f16_global_cta_param_0];
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    ld.param.b16 %rs1, [fadd_acq_rel_v1f16_global_cta_param_1];
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <1 x half> %val syncscope("block") acq_rel
         ret <1 x half> %retval
 }
 
 define <2 x half> @fadd_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
-; SM70-LABEL: fadd_acq_rel_v2f16_global_cta(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
-; SM70-NEXT:    ret;
+; SM70-NOFTZ-DISALLOW-LABEL: fadd_acq_rel_v2f16_global_cta(
+; SM70-NOFTZ-DISALLOW:       {
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<5>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-DISALLOW-EMPTY:
+; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-NOFTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-NOFTZ-ALLOW-LABEL: fadd_acq_rel_v2f16_global_cta(
+; SM70-NOFTZ-ALLOW:       {
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-ALLOW-EMPTY:
+; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-NOFTZ-ALLOW-NEXT:    ret;
+;
+; SM70-FTZ-DISALLOW-LABEL: fadd_acq_rel_v2f16_global_cta(
+; SM70-FTZ-DISALLOW:       {
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-DISALLOW-EMPTY:
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b32 %r2, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB289_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r3, %r4, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB289_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM70-FTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-FTZ-ALLOW-LABEL: fadd_acq_rel_v2f16_global_cta(
+; SM70-FTZ-ALLOW:       {
+; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-ALLOW-EMPTY:
+; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
 }
 
 define <4 x half> @fadd_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
-; SM70-LABEL: fadd_acq_rel_v4f16_global_cta(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<9>;
-; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
-; SM70-NEXT:    ret;
+; SM70-NOFTZ-DISALLOW-LABEL: fadd_acq_rel_v4f16_global_cta(
+; SM70-NOFTZ-DISALLOW:       {
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<9>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-DISALLOW-EMPTY:
+; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM70-NOFTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-NOFTZ-ALLOW-LABEL: fadd_acq_rel_v4f16_global_cta(
+; SM70-NOFTZ-ALLOW:       {
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-ALLOW-EMPTY:
+; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM70-NOFTZ-ALLOW-NEXT:    ret;
+;
+; SM70-FTZ-DISALLOW-LABEL: fadd_acq_rel_v4f16_global_cta(
+; SM70-FTZ-DISALLOW:       {
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
+; SM70-FTZ-DISALLOW-EMPTY:
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB290_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r3, %r5, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r4, %r6, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd11; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB290_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
+; SM70-FTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-FTZ-ALLOW-LABEL: fadd_acq_rel_v4f16_global_cta(
+; SM70-FTZ-ALLOW:       {
+; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-ALLOW-EMPTY:
+; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
 }
 
 define <8 x half> @fadd_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
-; SM70-LABEL: fadd_acq_rel_v8f16_global_cta(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<17>;
-; SM70-NEXT:    .reg .b32 %r<9>;
-; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM70-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
-; SM70-NEXT:    mov.b32 %r5, {%rs9, %rs10};
-; SM70-NEXT:    mov.b32 %r6, {%rs11, %rs12};
-; SM70-NEXT:    mov.b32 %r7, {%rs13, %rs14};
-; SM70-NEXT:    mov.b32 %r8, {%rs15, %rs16};
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
-; SM70-NEXT:    ret;
+; SM70-NOFTZ-DISALLOW-LABEL: fadd_acq_rel_v8f16_global_cta(
+; SM70-NOFTZ-DISALLOW:       {
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<17>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<9>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-DISALLOW-EMPTY:
+; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs9, %rs10};
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r6, {%rs11, %rs12};
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r7, {%rs13, %rs14};
+; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r8, {%rs15, %rs16};
+; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM70-NOFTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-NOFTZ-ALLOW-LABEL: fadd_acq_rel_v8f16_global_cta(
+; SM70-NOFTZ-ALLOW:       {
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<9>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-NOFTZ-ALLOW-EMPTY:
+; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs9, %rs10};
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r6, {%rs11, %rs12};
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r7, {%rs13, %rs14};
+; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r8, {%rs15, %rs16};
+; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM70-NOFTZ-ALLOW-NEXT:    ret;
+;
+; SM70-FTZ-DISALLOW-LABEL: fadd_acq_rel_v8f16_global_cta(
+; SM70-FTZ-DISALLOW:       {
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<3>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<22>;
+; SM70-FTZ-DISALLOW-EMPTY:
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB291_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r5, %r9, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r6, %r10, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r9;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r10;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd11; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd11;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB291_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd12, [%rd1+8];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd12;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB291_3: // %atomicrmw.start2
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r7, %r11, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
+; SM70-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16x2 %r8, %r12, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd15, %rd14, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd16, %rd13, %rd15;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r11;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd18, %r12;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd19, %rd18, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd20, %rd17, %rd19;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p2, %rd21, %rd20;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd21; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
+; SM70-FTZ-DISALLOW-NEXT:    @%p2 bra $L__BB291_3;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.4: // %atomicrmw.end1
+; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
+; SM70-FTZ-DISALLOW-NEXT:    ret;
+;
+; SM70-FTZ-ALLOW-LABEL: fadd_acq_rel_v8f16_global_cta(
+; SM70-FTZ-ALLOW:       {
+; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<9>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-ALLOW-EMPTY:
+; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs9, %rs10};
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r6, {%rs11, %rs12};
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r7, {%rs13, %rs14};
+; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r8, {%rs15, %rs16};
+; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
+; SM70-FTZ-ALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <8 x half> %val syncscope("block") acq_rel
         ret <8 x half> %retval
 }
@@ -16360,17 +16663,39 @@ define <1 x half> @fsub_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v1f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<14>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<3>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v1f16_global_cta_param_0];
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd2, [fsub_acq_rel_v1f16_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b16 %rs1, [fsub_acq_rel_v1f16_global_cta_param_1];
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs2, %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r4, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:    and.b32 %r5, %r4, 3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r1, %r5, 3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB292_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16 %rs3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r10, %r9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r13, %r11;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r3, %r13;
+; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r13, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB292_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    shr.u32 %r12, %r3, %r1;
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.b16 [func_retval0], %rs3;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.b16 [func_retval0], %r12;
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v1f16_global_cta(
@@ -16382,7 +16707,7 @@ define <1 x half> @fsub_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v1f16_global_cta_param_0];
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b16 %rs1, [fsub_acq_rel_v1f16_global_cta_param_1];
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.b16 [func_retval0], %rs3;
@@ -16428,19 +16753,25 @@ define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<7>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.b32 %r2, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fsub_acq_rel_v2f16_global_cta_param_1];
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs3, %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1], %rs3;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs5, %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs5;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB293_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r3, %r4, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB293_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs6};
+; SM70-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
@@ -16452,9 +16783,9 @@ define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fsub_acq_rel_v2f16_global_cta_param_1];
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1], %rs3;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs5, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs5, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs5;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs6};
@@ -16508,23 +16839,37 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<13>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
+; SM70-FTZ-DISALLOW-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4f16_global_cta_param_1];
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v4f16_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fsub_acq_rel_v4f16_global_cta_param_1];
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs5, %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1], %rs5;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs7, %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+2], %rs7;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs9, %rs3;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+4], %rs9;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs11, %rs4;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs11;
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB294_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r3, %r5, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r4, %r6, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd11; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB294_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs6, %rs8, %rs10, %rs12};
+; SM70-FTZ-DISALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
@@ -16536,13 +16881,13 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v4f16_global_cta_param_0];
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fsub_acq_rel_v4f16_global_cta_param_1];
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs5, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs5, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1], %rs5;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs7, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs7, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+2], %rs7;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs9, %rs3;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs9, %rs3;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+4], %rs9;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs11, %rs4;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs11, %rs4;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs11;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs6, %rs8, %rs10, %rs12};
@@ -16630,40 +16975,58 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<25>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<9>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .pred %p<3>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<22>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v8f16_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fsub_acq_rel_v8f16_global_cta_param_1];
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs9, %rs7;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1], %rs9;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs11, %rs8;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+2], %rs11;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs13, %rs5;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+4], %rs13;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs15, %rs6;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+6], %rs15;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs17, %rs3;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs18, [%rd1+8], %rs17;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs19, %rs4;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs20, [%rd1+10], %rs19;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs21, %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs22, [%rd1+12], %rs21;
-; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs23, %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs24, [%rd1+14], %rs23;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs10, %rs12};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r6, {%rs14, %rs16};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r7, {%rs18, %rs20};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r8, {%rs22, %rs24};
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB295_1: // %atomicrmw.start
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r5, %r9, %r1;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r6, %r10, %r2;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r9;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r10;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd11; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd11;
+; SM70-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB295_1;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
+; SM70-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd12, [%rd1+8];
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd12;
+; SM70-FTZ-DISALLOW-NEXT:  $L__BB295_3: // %atomicrmw.start2
+; SM70-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r7, %r11, %r3;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
+; SM70-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16x2 %r8, %r12, %r4;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd15, %rd14, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd16, %rd13, %rd15;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r11;
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd18, %r12;
+; SM70-FTZ-DISALLOW-NEXT:    shl.b64 %rd19, %rd18, 32;
+; SM70-FTZ-DISALLOW-NEXT:    or.b64 %rd20, %rd17, %rd19;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
+; SM70-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p2, %rd21, %rd20;
+; SM70-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd21; }
+; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
+; SM70-FTZ-DISALLOW-NEXT:    @%p2 bra $L__BB295_3;
+; SM70-FTZ-DISALLOW-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
@@ -16680,21 +17043,21 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs9, %rs7;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs9, %rs7;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1], %rs9;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs11, %rs8;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs11, %rs8;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+2], %rs11;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs13, %rs5;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs13, %rs5;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+4], %rs13;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs15, %rs6;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs15, %rs6;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+6], %rs15;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs17, %rs3;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs17, %rs3;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs18, [%rd1+8], %rs17;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs19, %rs4;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs19, %rs4;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs20, [%rd1+10], %rs19;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs21, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs21, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs22, [%rd1+12], %rs21;
-; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs23, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs23, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs24, [%rd1+14], %rs23;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs10, %rs12};
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r6, {%rs14, %rs16};
@@ -18668,11 +19031,11 @@ define <1 x half> @fminimum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -18712,11 +19075,11 @@ define <1 x half> @fminimum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -18838,19 +19201,19 @@ define <2 x half> @fminimum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
@@ -18880,19 +19243,19 @@ define <2 x half> @fminimum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
@@ -19073,38 +19436,38 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
@@ -19145,38 +19508,38 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
@@ -19479,38 +19842,38 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -19535,19 +19898,19 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p18, %rs28, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p19, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p19, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p20, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p21, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p22, %rs27, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p23, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p23, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p24, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p25, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
@@ -19555,19 +19918,19 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p26, %rs40, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p27, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p27, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p28, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p29, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p30, %rs39, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p31, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p31, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p32, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p33, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;
@@ -19608,38 +19971,38 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -19664,19 +20027,19 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p18, %rs28, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p19, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p19, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p20, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p21, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p22, %rs27, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p23, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p23, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p24, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p25, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
@@ -19684,19 +20047,19 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p26, %rs40, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p27, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p27, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p28, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p29, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p30, %rs39, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p31, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p31, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p32, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p33, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;
@@ -19832,11 +20195,11 @@ define <1 x half> @fmaximum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -19876,11 +20239,11 @@ define <1 x half> @fmaximum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -20002,19 +20365,19 @@ define <2 x half> @fmaximum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
@@ -20044,19 +20407,19 @@ define <2 x half> @fmaximum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
@@ -20237,38 +20600,38 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p13, %rs15, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
@@ -20309,38 +20672,38 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p13, %rs15, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
@@ -20643,38 +21006,38 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p13, %rs15, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -20699,19 +21062,19 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p18, %rs28, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p19, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p19, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p20, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p21, %rs28, %rs26;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p22, %rs27, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p23, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p23, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p24, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p25, %rs27, %rs25;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
@@ -20719,19 +21082,19 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p26, %rs40, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p27, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p27, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p28, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p29, %rs40, %rs38;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p30, %rs39, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p31, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p31, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p32, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p33, %rs39, %rs37;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
 ; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;
@@ -20772,38 +21135,38 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs4, %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p6, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p7, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p8, %rs3, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p10, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p11, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p12, %rs16, %rs14;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p13, %rs15, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p14, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p15, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p16, %rs15, %rs13;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -20828,19 +21191,19 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p18, %rs28, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p19, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p19, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p20, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p21, %rs28, %rs26;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p22, %rs27, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p23, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p23, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p24, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p25, %rs27, %rs25;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r7;
@@ -20848,19 +21211,19 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p26, %rs40, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p27, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p27, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p28, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p29, %rs40, %rs38;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p30, %rs39, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p31, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p31, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p32, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p33, %rs39, %rs37;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
 ; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd14, %r8;

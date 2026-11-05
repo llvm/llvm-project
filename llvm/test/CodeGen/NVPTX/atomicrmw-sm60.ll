@@ -2,15 +2,15 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM60,SM60-NOFTZ-DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM60,SM60-NOFTZ-ALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 | FileCheck %s --check-prefixes=SM60,SM60-NOFTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM60,SM60-FTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM60,SM60-FTZ-ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM60,SM60-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM60,SM60-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM60,SM60-FTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign | FileCheck %s --check-prefixes=SM60,SM60-FTZ-DISALLOW
 ; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_60 %}
 ; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_60 %}
 ; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 | %ptxas-verify -arch=sm_60 %}
-; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_60 %}
-; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_60 %}
-; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas-sm_60 && ptxas-isa-5.0 %{ llc < %s -march=nvptx64 -mcpu=sm_60 -mattr=+ptx50 -denormal-fp-math=preserve-sign | %ptxas-verify -arch=sm_60 %}
 
 define i8 @xchg_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-LABEL: xchg_acq_rel_i8_global_cta(
@@ -2585,7 +2585,7 @@ define half @fadd_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM60-FTZ-DISALLOW-NEXT:    add.rn.f16 %rs3, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16 %rs3, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2622,7 +2622,7 @@ define half @fadd_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM60-FTZ-ALLOW-NEXT:    add.rn.f16 %rs3, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    add.rn.ftz.f16 %rs3, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2737,7 +2737,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM60-FTZ-DISALLOW-NEXT:    sub.rn.f16 %rs3, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f16 %rs3, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2774,7 +2774,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM60-FTZ-ALLOW-NEXT:    sub.rn.f16 %rs3, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    sub.rn.ftz.f16 %rs3, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -3233,11 +3233,11 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM60-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM60-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -3277,11 +3277,11 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM60-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM60-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -3413,11 +3413,11 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM60-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM60-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -3457,11 +3457,11 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM60-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM60-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
