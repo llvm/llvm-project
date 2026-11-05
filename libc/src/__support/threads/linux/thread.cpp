@@ -151,8 +151,9 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
     free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
 }
 
-// Enum values used for controlling thread startup.
-enum class ClearTidState : FutexWordType {
+// Enum values used for controlling thread startup. The underlying type is
+// uint8_t so that the values can be passed to Futex::store_and_notify_all.
+enum class ClearTidState : uint8_t {
   EXITED = 0, // Set by the kernel when the thread exits.
   WAITING,    // Waiting for additional initialization.
   RUNNING,    // Initialization complete or not needed.
@@ -167,12 +168,12 @@ static int start_thread(void *arg) {
   // If explicit scheduling parameters were requested, wait for the parent to
   // apply them via setschedparam. If setschedparam fails, the parent signals
   // ABORT, and the child exits immediately without running user code.
-  clear_tid->wait(static_cast<FutexWordType>(ClearTidState::WAITING),
-                  cpp::nullopt, /*is_shared=*/false);
-  if (clear_tid->load(cpp::MemoryOrder::ACQUIRE) ==
-      static_cast<FutexWordType>(ClearTidState::ABORT)) {
+  FutexWordType state;
+  while ((state = clear_tid->load(cpp::MemoryOrder::ACQUIRE)) ==
+         static_cast<FutexWordType>(ClearTidState::WAITING))
+    clear_tid->wait(state, cpp::nullopt, /*is_shared=*/false);
+  if (state == static_cast<FutexWordType>(ClearTidState::ABORT))
     linux_syscalls::exit(0);
-  }
 
   if (attrib->style == ThreadStyle::POSIX) {
     ThreadReturnValue retval = start_args->runner.posix_runner(start_args->arg);
@@ -308,9 +309,11 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   int sched_result = setschedparam(*sched_params);
   ClearTidState state =
       sched_result != 0 ? ClearTidState::ABORT : ClearTidState::RUNNING;
-  clear_tid->store(static_cast<FutexWordType>(state),
-                   cpp::MemoryOrder::RELEASE);
-  clear_tid->notify_one(/*is_shared=*/false);
+  // The child may exit (and free the memory holding clear_tid) as soon as it
+  // sees the new value, so use a store-and-notify operation to avoid spurious
+  // wakeups.
+  clear_tid->store_and_notify_all(static_cast<uint8_t>(state),
+                                  /*is_shared=*/false);
 
   if (sched_result != 0) {
     wait();

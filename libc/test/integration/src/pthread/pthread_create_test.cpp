@@ -467,8 +467,19 @@ static void verify_sched_policy(pthread_attr_t &attr, int expected_policy,
             0);
   ASSERT_ERRNO_SUCCESS();
 
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+  int detachstate;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getdetachstate(&attr, &detachstate),
+            0);
   ASSERT_ERRNO_SUCCESS();
+  if (detachstate == PTHREAD_CREATE_DETACHED) {
+    // A detached thread can't be joined, so wait for it to report back.
+    // sched_runner doesn't access args after setting executed.
+    while (!args.executed.load())
+      ;
+  } else {
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+    ASSERT_ERRNO_SUCCESS();
+  }
   ASSERT_TRUE(args.executed.load());
   ASSERT_EQ(args.policy, expected_policy);
   ASSERT_EQ(args.priority, expected_priority);
@@ -488,6 +499,33 @@ static void test_sched_explicit_success() {
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
   ASSERT_ERRNO_SUCCESS();
+}
+
+static void test_sched_explicit_detached() {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setdetachstate(
+                &attr, PTHREAD_CREATE_DETACHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+
+  verify_sched_policy(attr, SCHED_BATCH, 0);
+
+  // If the scheduling parameters can't be applied, pthread_create must fail
+  // without running the thread, even though it is detached.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_OTHER), 0);
+  ASSERT_ERRNO_SUCCESS();
+  sched_param bad_param;
+  bad_param.sched_priority = 1;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &bad_param), 0);
+  ASSERT_ERRNO_SUCCESS();
+  // This also destroys attr.
+  create_and_check_failure_thread(&attr);
 }
 
 static void test_sched_realtime_permission() {
@@ -534,6 +572,7 @@ TEST_MAIN() {
   run_failure_tests();
   test_sched_inherit();
   test_sched_explicit_success();
+  test_sched_explicit_detached();
   test_sched_realtime_permission();
   return 0;
 }
