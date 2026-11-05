@@ -21,7 +21,6 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
-    orc-rt/bedrock/SymbolResolver.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
     orc-rt/bedrock/sps/AllSPSCI.h
