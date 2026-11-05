@@ -2,6 +2,7 @@ import time
 import lldb
 import glob
 import re
+import struct
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -60,6 +61,17 @@ class MemoryReadModuleSymtabTestCase(TestBase):
             cache_dir, "llvmcache-*libsystem_c.dylib*-symtab-*"
         )
         self.assertEqual(len(glob.glob(module_file_glob)), 0)
+
+    def header_and_load_commands_size(self, cache_dir):
+        """Return the size of a.out's mach_header_64 and load commands,
+        parsed from the cached 'headerbytes' file."""
+        module_file_glob = os.path.join(cache_dir, "llvmcache-a.out-*-headerbytes")
+        headerbytes_files = glob.glob(module_file_glob)
+        self.assertEqual(len(headerbytes_files), 1)
+        with open(headerbytes_files[0], "rb") as f:
+            magic, _, _, _, _, sizeofcmds, _, _ = struct.unpack("<8I", f.read(32))
+        self.assertEqual(magic, 0xFEEDFACF, "headerbytes is a mach_header_64")
+        return 32 + sizeofcmds
 
     def attach_to_process(self, pid):
         target = self.dbg.CreateTarget(None)
@@ -133,10 +145,10 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         exe_module = target.FindModule(exe_filespec)
         exe_text = exe_module.FindSection("__TEXT")
         self.assertTrue(exe_text.IsValid())
-        exe_text_text = exe_text.FindSubSection("__text")
-        self.assertTrue(exe_text_text.IsValid())
         exe_header_start = exe_text.GetLoadAddress(target)
-        exe_header_end = exe_text_text.GetLoadAddress(target)
+        exe_header_end = exe_header_start + self.header_and_load_commands_size(
+            cache_dir
+        )
 
         exe_linkedit = exe_module.FindSection("__LINKEDIT")
         self.assertTrue(exe_linkedit.IsValid())
@@ -149,7 +161,8 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         # Iterate through the start & end address of every memory
         # read packet, and confirm that none of them are within
         #   1. the VM range of a.out's Mach-O header and load commands
-        #      (the bytes between the start of __TEXT and the start of __text)
+        #      (not all of the padding before __text, which a read of the
+        #      start of __text, grown down to a cache line, may touch)
         #   2. the VM range of __LINKEDIT.
         #
         # The Mach-O header and load commands should have been read from
