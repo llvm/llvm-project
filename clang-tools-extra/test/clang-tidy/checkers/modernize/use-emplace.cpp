@@ -196,6 +196,92 @@ void testNewExpr() {
   v.push_back(Derived(new int, Something{}));
 }
 
+struct WithMember {
+  int Member;
+  void method();
+};
+
+struct MemberPointer {
+  MemberPointer(int WithMember::*) {}
+};
+
+struct MemberFunctionPointer {
+  MemberFunctionPointer(void (WithMember::*)()) {}
+};
+
+struct FunctionPointer {
+  FunctionPointer(void (*)()) {}
+};
+
+using IntPointer = int *;
+
+struct PointerAlias {
+  PointerAlias(IntPointer) {}
+};
+
+struct PointerReference {
+  PointerReference(int *const &) {}
+};
+
+#define NULL_CONSTANT 0
+
+void testNullPointerConstants() {
+  std::vector<Base> v;
+  v.push_back(Base(42, 0));
+  v.push_back(Base(42, (0)));
+  v.push_back(Base(42, 0L));
+  v.push_back(Base(42, __null));
+  v.push_back(Base(42, NULL_CONSTANT));
+  v.emplace_back(Base(42, 0));
+
+  v.push_back(Base(42, nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, nullptr);
+
+  v.push_back(Base(0, nullptr, 0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(0, nullptr, 0);
+
+  v.push_back(Base(42, static_cast<int *>(0)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, static_cast<int *>(0));
+
+  v.push_back(Base(42, (int *)0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, (int *)0);
+
+  v.emplace_back(Base(42, nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v.emplace_back(42, nullptr);
+
+  std::vector<MemberPointer> w;
+  w.push_back(MemberPointer(0));
+
+  w.push_back(MemberPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: w.emplace_back(nullptr);
+
+  std::vector<MemberFunctionPointer> x;
+  x.push_back(MemberFunctionPointer(0));
+
+  x.push_back(MemberFunctionPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: x.emplace_back(nullptr);
+
+  std::vector<FunctionPointer> y;
+  y.push_back(FunctionPointer(0));
+
+  y.push_back(FunctionPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: y.emplace_back(nullptr);
+
+  std::vector<PointerAlias> z;
+  z.push_back(PointerAlias(0));
+
+  std::vector<PointerReference> r;
+  r.push_back(PointerReference(0));
+}
+
 void testSpaces() {
   std::vector<Something> v;
 

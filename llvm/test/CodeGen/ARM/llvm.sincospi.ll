@@ -158,23 +158,23 @@ define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    add r1, sp, #12
 ; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    mov r2, sp
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldr r0, [sp, #36]
-; CHECK-NEXT:    vmov d0, r7, r6
-; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    add.w r2, r4, #16
-; CHECK-NEXT:    vmov d1, r5, r0
+; CHECK-NEXT:    vmov d0, r6, r5
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    add.w r2, r7, #16
+; CHECK-NEXT:    vmov d1, r4, r0
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vldr s1, [sp, #8]
 ; CHECK-NEXT:    vldr s3, [sp, #12]
@@ -219,27 +219,27 @@ define { <2 x double>, <2 x double> } @test_sincospi_v2f64(<2 x double> %a) #0 {
 ; CHECK-NEXT:    mov r4, sp
 ; CHECK-NEXT:    bfc r4, #0, #3
 ; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    ldr r1, [r7, #8]
-; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    mov r8, r2
 ; CHECK-NEXT:    add r2, sp, #24
 ; CHECK-NEXT:    add r3, sp, #16
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl ___sincospi
 ; CHECK-NEXT:    add r2, sp, #8
 ; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    bl ___sincospi
 ; CHECK-NEXT:    vldr d19, [sp, #24]
+; CHECK-NEXT:    sub.w r4, r7, #16
 ; CHECK-NEXT:    vldr d18, [sp, #8]
 ; CHECK-NEXT:    vldr d17, [sp, #16]
 ; CHECK-NEXT:    vldr d16, [sp]
-; CHECK-NEXT:    vst1.32 {d18, d19}, [r4]!
-; CHECK-NEXT:    vst1.32 {d16, d17}, [r4]
-; CHECK-NEXT:    sub.w r4, r7, #16
+; CHECK-NEXT:    vst1.32 {d18, d19}, [r6]!
+; CHECK-NEXT:    vst1.32 {d16, d17}, [r6]
 ; CHECK-NEXT:    mov sp, r4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %result = call { <2 x double>, <2 x double> } @llvm.sincospi.v2f64(<2 x double> %a)

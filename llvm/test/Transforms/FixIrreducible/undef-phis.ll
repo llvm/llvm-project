@@ -94,10 +94,9 @@ define i32 @self_loop_moved_undef(i1 %c, i1 %d, i1 %e) {
 ; CHECK:       [[B]]:
 ; CHECK-NEXT:    br label %[[IRR_GUARD]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[Z:%.*]] = and i32 [[P_MOVED:%.*]], 0
+; CHECK-NEXT:    [[Z:%.*]] = and i32 undef, 0
 ; CHECK-NEXT:    ret i32 [[Z]]
 ; CHECK:       [[IRR_GUARD]]:
-; CHECK-NEXT:    [[P_MOVED]] = phi i32 [ undef, %[[B]] ], [ [[P_MOVED]], %[[A]] ], [ undef, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ true, %[[B]] ], [ true, %[[A]] ], [ [[C_INV]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A]], label %[[A]], label %[[B]]
 ;
