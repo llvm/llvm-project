@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "llvm/IR/Attributes.td"
 include "llvm/TableGen/SetTheory.td"
 
 // Dag operators for composing predicates.
@@ -130,6 +131,24 @@ def V4F64 : VectorFuncArgType<Dbl, 4>;
 def V8F64 : VectorFuncArgType<Dbl, 8>;
 def NXV2F64 : VectorFuncArgType<Dbl, 2, scalable = true>;
 
+class ModRefInfo;
+def NoModRef : ModRefInfo;
+def Ref : ModRefInfo;
+def Mod : ModRefInfo;
+def ModRef : ModRefInfo;
+
+class MemoryEffects<ModRefInfo mr = ModRef> {
+  ModRefInfo ArgMem = mr;
+  ModRefInfo InaccessibleMem = mr;
+  ModRefInfo ErrnoMem = mr;
+  ModRefInfo Other = mr;
+  ModRefInfo TargetMem0 = mr;
+  ModRefInfo TargetMem1 = mr;
+}
+
+def UnknownMemory : MemoryEffects;
+def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
 /// all of the runtime library calls the backend can emit. The various
@@ -145,7 +164,10 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   FuncArgType ReturnType = RetType;
   list<FuncArgType> ArgumentTypes = ArgTypes;
 
-  // TODO: Record attributes
+  list<EnumAttr> FnAttrs = [];
+  MemoryEffects Memory = UnknownMemory;
+  list<list<EnumAttr>> ParamAttrs = [];
+  list<FuncArgType> ParamPointeeTypes = [];
 }
 
 class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
@@ -153,12 +175,27 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
                      !if(!empty(unmasked.ArgumentTypes), [],
                          !listconcat(unmasked.ArgumentTypes, [mask]))> {
   RuntimeLibcall Unmasked = unmasked;
+  let FnAttrs = unmasked.FnAttrs;
+  let Memory = unmasked.Memory;
+  let ParamAttrs = unmasked.ParamAttrs;
+  let ParamPointeeTypes = unmasked.ParamPointeeTypes;
 }
 
+// TODO: NoCallback probably unsafe in general
+defvar VectorMathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+
 multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
-                             list<FuncArgType> ArgTypes = []> {
+                             list<FuncArgType> ArgTypes = [],
+                             MemoryEffects memory = UnknownMemory,
+                             list<list<EnumAttr>> paramAttrs = [],
+                             list<FuncArgType> paramPointeeTypes = []> {
   defvar VT = !cast<VectorFuncArgType>(suffix);
-  def _#suffix : RuntimeLibcall<RetType, ArgTypes>;
+  def _#suffix : RuntimeLibcall<RetType, ArgTypes> {
+    let FnAttrs = VectorMathFnAttrs;
+    let Memory = memory;
+    let ParamAttrs = paramAttrs;
+    let ParamPointeeTypes = paramPointeeTypes;
+  }
   if !initialized(VT.MaskType) then
     def _MASKED_#suffix
         : MaskedRuntimeLibcall<!cast<RuntimeLibcall>(NAME#"_"#suffix),
@@ -173,6 +210,10 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   string LibCallFuncName = Name;
   FuncArgType ReturnType = P.ReturnType;
   list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+  list<EnumAttr> FnAttrs = P.FnAttrs;
+  MemoryEffects Memory = P.Memory;
+  list<list<EnumAttr>> ParamAttrs = P.ParamAttrs;
+  list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
 }
 
 // Implementation of a long double function, which provides the libcall

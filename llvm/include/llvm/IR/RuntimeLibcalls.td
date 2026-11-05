@@ -426,9 +426,12 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
   defvar IntVT = VT.IntType;
+  defvar EltVT = VT.ElementType;
   defm ACOS : VectorMathLibcall<S, VT, [VT]>;
   defm ACOSH : VectorMathLibcall<S, VT, [VT]>;
   defm ASIN : VectorMathLibcall<S, VT, [VT]>;
@@ -468,15 +471,20 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOG1P : VectorMathLibcall<S, VT, [VT]>;
   defm LOG2 : VectorMathLibcall<S, VT, [VT]>;
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
-  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr]>;
+  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr], ArgMemWriteOnly,
+                                 [[], OutPtrAttrs], [NoneType, EltVT]>;
   defm MODF_STRET : VectorMathLibcall<S>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW_FINITE : VectorMathLibcall<S, VT, [VT, VT]>;
   defm REMAINDER : VectorMathLibcall<S, VT, [VT, VT]>;
-  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                   [[], OutPtrAttrs, OutPtrAttrs],
+                                   [NoneType, EltVT, EltVT]>;
   defm SINCOS_STRET : VectorMathLibcall<S>;
-  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                     [[], OutPtrAttrs, OutPtrAttrs],
+                                     [NoneType, EltVT, EltVT]>;
   defm SINCOSPI_STRET : VectorMathLibcall<S>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
@@ -4810,6 +4818,12 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 // AMD vector math library (AMDLIBM) functions
 //===----------------------------------------------------------------------===//
 
+class VectorAlignedOutPtrsImpl<RuntimeLibcall P, string Name = NAME>
+    : RuntimeLibcallImpl<P, Name> {
+  let ParamPointeeTypes = !foreach(T, P.ArgumentTypes,
+                                 !if(!eq(T, Ptr), P.ArgumentTypes[0], NoneType));
+}
+
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_asin : RuntimeLibcallImpl<ASIN_V2F64>;
@@ -4828,7 +4842,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
-  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def amd_vrd2_sincos : VectorAlignedOutPtrsImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
   def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
@@ -4845,7 +4859,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
   def amd_vrd4_pow : RuntimeLibcallImpl<POW_V4F64>;
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
-  def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
+  def amd_vrd4_sincos : VectorAlignedOutPtrsImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
   def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
   def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
@@ -4862,7 +4876,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
   def amd_vrd8_pow : RuntimeLibcallImpl<POW_V8F64>;
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
-  def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
+  def amd_vrd8_sincos : VectorAlignedOutPtrsImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
   def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
   def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
@@ -4890,7 +4904,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs16_log2f : RuntimeLibcallImpl<LOG2_V16F32>;
   def amd_vrs16_logf : RuntimeLibcallImpl<LOG_V16F32>;
   def amd_vrs16_powf : RuntimeLibcallImpl<POW_V16F32>;
-  def amd_vrs16_sincosf : RuntimeLibcallImpl<SINCOS_V16F32>;
+  def amd_vrs16_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V16F32>;
   def amd_vrs16_sinf : RuntimeLibcallImpl<SIN_V16F32>;
   def amd_vrs16_tanf : RuntimeLibcallImpl<TAN_V16F32>;
   def amd_vrs16_tanhf : RuntimeLibcallImpl<TANH_V16F32>;
@@ -4910,7 +4924,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs4_log2f : RuntimeLibcallImpl<LOG2_V4F32>;
   def amd_vrs4_logf : RuntimeLibcallImpl<LOG_V4F32>;
   def amd_vrs4_powf : RuntimeLibcallImpl<POW_V4F32>;
-  def amd_vrs4_sincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
+  def amd_vrs4_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V4F32>;
   def amd_vrs4_sinf : RuntimeLibcallImpl<SIN_V4F32>;
   def amd_vrs4_tanf : RuntimeLibcallImpl<TAN_V4F32>;
   def amd_vrs4_tanhf : RuntimeLibcallImpl<TANH_V4F32>;
@@ -4928,7 +4942,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_log2f : RuntimeLibcallImpl<LOG2_V8F32>;
   def amd_vrs8_logf : RuntimeLibcallImpl<LOG_V8F32>;
   def amd_vrs8_powf : RuntimeLibcallImpl<POW_V8F32>;
-  def amd_vrs8_sincosf : RuntimeLibcallImpl<SINCOS_V8F32>;
+  def amd_vrs8_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V8F32>;
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
