@@ -8,7 +8,7 @@
 
 #if defined(__linux__)
 #  include "debugging/linux.ipp"
-#elif defined(__FREEBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
 #  include "debugging/bsd_like.ipp"
 #elif defined(_WIN32)
 #  include "debugging/windows.ipp"

@@ -12,41 +12,12 @@
                                                      [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
                padding = {!cir.array<!u8i x 7>}>
 !rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
-!rec_SX87 = !cir.struct<"SX87" {data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
-!rec_UX87Bytes =
-    !cir.union<"UX87Bytes" {data !cir.vector<1 x !cir.long_double<!cir.f80>>,
-                            data !cir.array<!u8i x 16>}>
-!rec_UX87InRec =
-    !cir.union<"UX87InRec" {data !rec_SX87, data !cir.array<!u8i x 16>}>
-!rec_UX87InArr =
-    !cir.union<"UX87InArr" {data !cir.array<!cir.vector<1 x !cir.long_double<!cir.f80>> x 1>,
-                            data !cir.array<!u8i x 16>}>
-!rec_SUX87 = !cir.struct<"SUX87" {data !rec_UX87Bytes}>
-!rec_UX87Twice =
-    !cir.union<"UX87Twice" {data !cir.vector<1 x !cir.long_double<!cir.f80>>,
-                            data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
-!rec_UX87Scalar =
-    !cir.union<"UX87Scalar" {data !cir.long_double<!cir.f80>,
-                             data !cir.array<!u8i x 11>}>
-!rec_SLongDouble = !cir.struct<"SLongDouble" {data !cir.long_double<!cir.f80>}>
-!rec_UX87Nested =
-    !cir.union<"UX87Nested" {data !rec_SLongDouble, data !cir.array<!u8i x 4>}>
-!rec_UEmptyX87 =
-    !cir.union<"UEmptyX87" {data !s32i,
-                            empty !cir.array<!cir.long_double<!cir.f80> x 0>},
-               padding = {!cir.array<!u8i x 16>}>
-!rec_UX87Displaced =
-    !cir.union<"UX87Displaced" {data !rec_UEmptyX87,
-                                data !cir.long_double<!cir.f80>}>
-!rec_UX87Complex =
-    !cir.union<"UX87Complex" {data !cir.complex<!cir.long_double<!cir.f80>>,
-                              data !cir.array<!u8i x 32>}>
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
                padding = {!cir.array<!u8i x 32>}>
 !rec_UVec3x384 =
     !cir.union<"UVec3x384" {data !cir.vector<3 x !cir.float>, data !cir.array<!s8i x 33>},
-               padding = {!cir.array<!u8i x 36>}>
+               padding = {!cir.array<!u8i x 32>}>
 !rec_UVecInArr =
     !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
                             data !cir.array<!s8i x 33>},
@@ -86,7 +57,7 @@ module attributes {
   // this bridge refuses the shape rather than guessing at it.  Below the
   // threshold the same shape is accepted and classifies Ignore, matching
   // classic; see x86_64-union.cir take_empty.
-  cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
+  cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) requires_call_conv_lowering {
     cir.return
   }
 
@@ -95,7 +66,7 @@ module attributes {
   // A zero-sized member is dropped before classification, so its offset never
   // reaches the rule sending a record with a member off its own alignment to
   // memory.  Only packing can put one at such an offset.
-  cir.func @take_zero_len_arr(%arg0: !rec_ZeroLenArr) {
+  cir.func @take_zero_len_arr(%arg0: !rec_ZeroLenArr) requires_call_conv_lowering {
     cir.return
   }
 
@@ -106,7 +77,7 @@ module attributes {
   // Past one eightbyte the declared extent settles nothing: the coercion
   // follows this 9-byte unit and would give i8 for the second eightbyte,
   // where classic sizes it from the record and gives i64.
-  cir.func @take_bitint_unit_union(%arg0: !rec_UBitIntUnit) {
+  cir.func @take_bitint_unit_union(%arg0: !rec_UBitIntUnit) requires_call_conv_lowering {
     cir.return
   }
 
@@ -119,43 +90,42 @@ module attributes {
 
 
   // 48 bytes with a vector member, a size no SSEUP coerce can be named from.
-  cir.func @take_vec384_union(%arg0: !rec_UVec384) {
+  cir.func @take_vec384_union(%arg0: !rec_UVec384) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
-  // A three-float vector is 96 bits in CIR but classifies at 128, so it
-  // reaches SSEUP too.
-  cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) {
+  // A three-float vector's 96 bits classify at 128, so it reaches SSEUP too.
+  cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UVec3x384"
 
   // The same vector, an array away.
-  cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
+  cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UVecInArr"
 
   // The same vector, a record away.
-  cir.func @take_vec_in_rec_union(%arg0: !rec_UVecInRec) {
+  cir.func @take_vec_in_rec_union(%arg0: !rec_UVecInRec) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UVecInRec"
 
   // An IEEE-quad float reaches SSEUP as well.
-  cir.func @take_quad384_union(%arg0: !rec_UQuad384) {
+  cir.func @take_quad384_union(%arg0: !rec_UQuad384) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UQuad384"
 
   // A long double carrying quad semantics is the same float.
-  cir.func @take_long_double384_union(%arg0: !rec_ULongDouble384) {
+  cir.func @take_long_double384_union(%arg0: !rec_ULongDouble384) requires_call_conv_lowering {
     cir.return
   }
 
@@ -163,7 +133,7 @@ module attributes {
 
   // Packed, so 17 bytes, another size no coerce can be named from.  Its
   // 17-byte member spans the union, so only refusing the size catches it.
-  cir.func @take_quad_packed_union(%arg0: !rec_UQuadPacked) {
+  cir.func @take_quad_packed_union(%arg0: !rec_UQuadPacked) requires_call_conv_lowering {
     cir.return
   }
 
@@ -175,14 +145,14 @@ module attributes {
 
   // The all-pad reject also has to hold when the record is reached as a member,
   // which is the shape a C++ empty class produces.
-  cir.func @take_holds_all_pad(%arg0: !rec_HoldsAllPad) {
+  cir.func @take_holds_all_pad(%arg0: !rec_HoldsAllPad) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
 
   // A scalable vector has no size the eightbyte rules can read.
-  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) requires_call_conv_lowering {
     cir.return
   }
 
@@ -191,79 +161,16 @@ module attributes {
   // A _BitInt element narrower than a byte has no memory representation in
   // CIR's lowering to LLVM, so this is rejected here rather than failing
   // there.
-  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
+  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
 
-  // A union is moved as a value of its storage type, so a member holding data
-  // past the 10 bytes an x87 double extended value stores would lose it.  A
-  // member reaching byte 11 is refused next to one, and so is a double
-  // extended value held any other way, in a record, a _Complex, a vector or an
-  // array, even next to one of the same type.  A record holding such a union
-  // is refused with it.
-  cir.func @take_union_x87_scalar(%arg0: !rec_UX87Scalar) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Scalar"
-
-  cir.func @take_union_x87_nested(%arg0: !rec_UX87Nested) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Nested"
-
-  // A member that ties the double extended member on alignment and size,
-  // listed first, becomes the storage type in its place, so the union is
-  // refused even though that member's data ends within the 10 bytes.
-  cir.func @take_union_x87_displaced(%arg0: !rec_UX87Displaced) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Displaced"
-
-  cir.func @take_union_x87_complex(%arg0: !rec_UX87Complex) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Complex"
-
-  cir.func @take_union_x87_twice(%arg0: !rec_UX87Twice) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Twice"
-
-  cir.func @take_union_x87_bytes(%arg0: !rec_UX87Bytes) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Bytes"
-
-  cir.func @take_union_x87_in_rec(%arg0: !rec_UX87InRec) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87InRec"
-
-  cir.func @take_union_x87_in_arr(%arg0: !rec_UX87InArr) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87InArr"
-
-  cir.func @take_struct_union_x87(%arg0: !rec_SUX87) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"SUX87"
-
   // A definition (unlike a declaration) is refused: no incomplete-by-value
   // definition can arise from valid C++, so this stays a hard reject rather
   // than the declaration-only skip in x86_64-incomplete-record-declaration.cir.
-  cir.func @take_incomplete_defined(%arg0: !rec_Incomplete) {
+  cir.func @take_incomplete_defined(%arg0: !rec_Incomplete) requires_call_conv_lowering {
     cir.return
   }
 

@@ -593,8 +593,9 @@ void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
                                           SlotIndex Pos) {
   for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
-    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
-                                           I->VRegOrUnit, Pos.getDeadSlot());
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     I = adjustDef(*I, LiveAfter);
   }
   adjustUses(LIS, MRI, Pos.getBaseIndex());
@@ -605,8 +606,9 @@ void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
                                           MachineInstr &MI) {
   SlotIndex Pos = LIS.getInstructionIndex(MI);
   for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
-    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
-                                           I->VRegOrUnit, Pos.getDeadSlot());
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     VirtRegOrUnit VRegOrUnit = I->VRegOrUnit;

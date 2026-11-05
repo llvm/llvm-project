@@ -179,12 +179,18 @@ struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
         Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
+  /// Global variable symbol. \p Global holds the device address and size;
+  /// \p HostAddress is the address within the host-side program image, or
+  /// null if the image has no contents for the variable (e.g. `.bss`).
+  ol_symbol_impl_t(GlobalTy &&Global, void *HostAddress)
       : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
-        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
+        Name(std::get<GlobalTy>(PluginImpl).getName()),
+        HostAddress(HostAddress) {}
+
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
+  void *HostAddress = nullptr;
 };
 
 struct ol_context_impl_t {
@@ -269,9 +275,12 @@ struct ol_context_impl_t {
     llvm::Error Result = Plugin::success();
     for (auto &Bucket : OutstandingQueues) {
       auto *Device = Bucket.first;
-      for (auto *AI : Bucket.second)
+      for (auto &AI : Bucket.second) {
         if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
           Result = llvm::joinErrors(std::move(Result), std::move(Err));
+        delete AI;
+        AI = nullptr;
+      }
     }
     OutstandingQueues.clear();
     return Result;
@@ -279,12 +288,12 @@ struct ol_context_impl_t {
 
   /// Drain outstanding queues and tear down the plugin-side context.
   llvm::Error destroy() {
-    if (auto Err = drainOutstandingQueues())
-      return Err;
-    if (PluginCtx)
-      if (auto Err = PluginCtx->deinit())
-        return Err;
-    return llvm::Error::success();
+    llvm::Error Result = drainOutstandingQueues();
+    if (PluginCtx) {
+      PluginCtx->releaseMemoryManagers();
+      Result = llvm::joinErrors(std::move(Result), PluginCtx->deinit());
+    }
+    return Result;
   }
 
   ~ol_context_impl_t() {
@@ -559,6 +568,46 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_ID:
     return Info.write<uint32_t>(Device->Device->getDriverId());
 
+  case OL_DEVICE_INFO_COMPUTE_UNIT_KIND:
+    return Info.writeString(Device->Device->getComputeUnitKind());
+
+  case OL_DEVICE_INFO_TIMESTAMP_FREQUENCY:
+    return Info.write<uint64_t>(Device->Device->getClockFrequency());
+
+  case OL_DEVICE_INFO_HARDWARE_PARALLELISM:
+    return Info.write<uint64_t>(Device->Device->getHardwareParallelism());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumThreads());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
+
+  case OL_DEVICE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
+  case OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativePlatformHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+
+  case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
+
+  case OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxDirectWriteSize());
+
   default:
     break;
   }
@@ -769,6 +818,12 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -1025,6 +1080,13 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
       return Err;
     return Info.write<bool>(!*Pending);
   }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
@@ -1153,8 +1215,11 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
-  bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  // A null device handle means the pointer belongs to the host.
+  bool IsDstHost =
+      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost =
+      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {
@@ -1331,7 +1396,6 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
-  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
@@ -1376,8 +1440,11 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       if (!KernelImpl)
         return KernelImpl.takeError();
 
-      if (auto Err = KernelImpl->init(Device, *Program->Image))
+      if (auto Err = KernelImpl->init(Device, *Program->Image)) {
+        Device.Plugin.free(&*KernelImpl);
+        Program->KernelSymbols.erase(Name);
         return Err;
+      }
 
       Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
     }
@@ -1387,13 +1454,54 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
-      GlobalTy GlobalObj{Name};
-      if (auto Res =
-              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-                  Device, *Program->Image, GlobalObj))
-        return Res;
+      auto &GlobalHandler = Device.Plugin.getGlobalHandler();
 
-      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
+      GlobalTy GlobalObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromDevice(
+              Device, *Program->Image, GlobalObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      // The host address is null for variables without contents in the image
+      // (e.g. `.bss`).
+      GlobalTy ImageObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromImage(
+              Device, *Program->Image, ImageObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      void *HostAddress = ImageObj.getPtr();
+      if (HostAddress) {
+        // The address is a host pointer; make sure it lies inside the image.
+        uintptr_t Start = uintptr_t(Program->Image->getStart());
+        uintptr_t End = Start + Program->Image->getSize();
+        uintptr_t Ptr = (uintptr_t)HostAddress;
+        if (Ptr < Start || Ptr > End || ImageObj.getSize() > End - Ptr) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' lies outside of the program image",
+              Name.str().c_str());
+        }
+
+        // Some plugins only report the address from the device; a zero device
+        // size means unknown, so only check it when it was reported.
+        if (!GlobalObj.getSize())
+          GlobalObj.setSize(ImageObj.getSize());
+        else if (GlobalObj.getSize() != ImageObj.getSize()) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' has inconsistent sizes: %u (device) vs %u "
+              "(image)",
+              Name.str().c_str(), GlobalObj.getSize(), ImageObj.getSize());
+        }
+      }
+
+      Global =
+          std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj), HostAddress);
     }
 
     return Global.get();
@@ -1453,12 +1561,15 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  auto CheckKind = [&](ol_symbol_kind_t Required) {
-    if (Symbol->Kind != Required) {
+  auto CheckKind = [&](std::initializer_list<ol_symbol_kind_t> Allowed) {
+    if (!llvm::is_contained(Allowed, Symbol->Kind)) {
       std::string ErrBuffer;
-      raw_string_ostream(ErrBuffer)
-          << PropName << ": Expected a symbol of Kind " << Required
-          << " but given a symbol of Kind " << Symbol->Kind;
+      raw_string_ostream OS(ErrBuffer);
+      OS << PropName << ": Expected a symbol of Kind ";
+      ListSeparator LS(" or ");
+      for (ol_symbol_kind_t Kind : Allowed)
+        OS << LS << Kind;
+      OS << " but given a symbol of Kind " << Symbol->Kind;
       return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
     }
     return Plugin::success();
@@ -1470,13 +1581,27 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   case OL_SYMBOL_INFO_NAME:
     return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
+      return Err;
+    return Info.write<void *>(Symbol->HostAddress);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
+      return Err;
+    return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
+                                    ->getStaticBlockMemSize());
+  case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
+      return Err;
+    return Info.write<uint32_t>(
+        std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
@@ -1522,6 +1647,40 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
       Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
+Error olMemIsAccessible_impl(ol_context_handle_t Context,
+                             ol_device_handle_t Device, const void *Ptr,
+                             size_t Size, bool *IsAccessible) {
+  if (Context) {
+    if (auto Err = Context->requireDevice(Device))
+      return Err;
+
+    // Allocations made in a user context are not tracked by the device, so
+    // look them up in the context first.
+    auto AllocOrErr = Context->getAllocInfo(Ptr);
+    if (AllocOrErr) {
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t AllocBegin = reinterpret_cast<uintptr_t>(AllocOrErr->Base);
+      size_t Offset = Begin - AllocBegin;
+      bool InRange = Begin >= AllocBegin && Offset <= AllocOrErr->Size &&
+                     Size <= AllocOrErr->Size - Offset;
+      if (InRange && (AllocOrErr->Kind != TARGET_ALLOC_DEVICE ||
+                      AllocOrErr->Device == Device->Device)) {
+        *IsAccessible = true;
+        return Error::success();
+      }
+    } else if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
+                                                    ErrorCode::NOT_FOUND))
+      return Err;
+  }
+
+  auto AccessibleOrErr = Device->Device->isAccessiblePtr(Ptr, Size);
+  if (!AccessibleOrErr)
+    return AccessibleOrErr.takeError();
+
+  *IsAccessible = *AccessibleOrErr;
+  return Error::success();
+}
+
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
@@ -1543,6 +1702,20 @@ GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
+
+plugin::PluginContextTy *
+__ol_tgt_GetPluginContext(ol_context_handle_t Context) {
+  return Context ? Context->PluginCtx.get() : nullptr;
+}
+
+DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
+  return Program->Image;
+}
+
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
+  return Device->Device->getRecordReplay();
+}
+
 } // namespace tmp
 
 } // namespace offload

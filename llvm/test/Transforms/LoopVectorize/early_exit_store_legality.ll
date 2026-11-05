@@ -8,8 +8,9 @@
 ;; uncountable exit condition has a second user (the store).
 define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) !dbg !10 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects.
+; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
 entry:
   br label %loop, !dbg !11
 
@@ -1111,6 +1112,60 @@ exit:
   ret i64 %res
 }
 
+define void @loop_contains_store_condition_load_has_two_users(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_two_users'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, %ee.val
+  store i16 %inc, ptr %st.addr, align 2
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+
+;; The latch exit can be taken early, so the reduction must not be used on it.
+define i64 @combined_exit_conditions_with_reduction(ptr align 1 dereferenceable(1024) %src, ptr noalias %dst) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions_with_reduction'
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ 0, %entry ], [ %rdx.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw i8, ptr %src, i64 %iv
+  %data = load i8, ptr %src.ptr, align 1
+  %ext = zext i8 %data to i64
+  %rdx.next = add i64 %rdx, %ext
+  %dst.ptr = getelementptr inbounds nuw i64, ptr %dst, i64 %iv
+  store i64 %ext, ptr %dst.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 1021
+  %ee.val = load i8, ptr %src.ptr, align 1
+  %ee.cond = icmp eq i8 %ee.val, 0
+  %combined.cond = or i1 %counted.cond, %ee.cond
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret i64 %rdx.next
+}
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

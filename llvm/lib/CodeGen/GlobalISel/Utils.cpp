@@ -455,9 +455,28 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
-                   Reg->Value);
-  return FPValueAndVReg{FloatVal, Reg->VReg};
+  unsigned Width = Reg->Value.getBitWidth();
+  LLT Ty = MRI.getType(VReg);
+  if (Ty.isValid())
+    Ty = Ty.getScalarType();
+  // An FP-typed VReg is the format its users read, which a looked-through
+  // G_ZEXT/G_TRUNC round trip can make differ from the G_FCONSTANT's.
+  if (Ty.isFloat() && Ty.getSizeInBits() == Width)
+    return FPValueAndVReg{APFloat(getFltSemanticForLLT(Ty), Reg->Value),
+                          Reg->VReg};
+
+  // Width alone can't tell half from bfloat, or identify x87/PPC formats.
+  const fltSemantics &CstSem =
+      getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF().getSemantics();
+  if (APFloat::getSizeInBits(CstSem) == Width)
+    return FPValueAndVReg{APFloat(CstSem, Reg->Value), Reg->VReg};
+
+  // Resized by a looked-through G_TRUNC/G_SEXT/G_ZEXT: only the width is left,
+  // and it only identifies IEEE formats.
+  if (Width != 16 && Width != 32 && Width != 64 && Width != 128)
+    return std::nullopt;
+  return FPValueAndVReg{
+      APFloat(getFltSemanticForLLT(LLT::scalar(Width)), Reg->Value), Reg->VReg};
 }
 
 const ConstantFP *
@@ -1443,18 +1462,19 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
   return isBuildVectorConstantSplat(MI, MRI, -1, AllowUndef);
 }
 
-std::optional<RegOrConstant>
-llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+std::optional<Register> llvm::getVectorSplat(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI) {
   unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::G_SPLAT_VECTOR)
+    return MI.getOperand(1).getReg();
+
   if (!isBuildVectorOp(Opc))
     return std::nullopt;
-  if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
-    return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
   if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
-  return RegOrConstant(Reg);
+  return Reg;
 }
 
 static bool isConstantScalar(const MachineInstr &MI,
@@ -1648,6 +1668,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
   DeadInstChain.remove(&MI);
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
   if (LocObserver)
     LocObserver->checkpoint(false);
@@ -1689,6 +1710,10 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to go away, so whatever could not be salvaged would be left
+    // referring to a register without a definition.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 
