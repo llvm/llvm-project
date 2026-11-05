@@ -246,6 +246,9 @@ define void @pointer() {
   ret void
 }
 
+; The generic code prices a bitcast between a vector of i1 and a vector of
+; another element type as element casts of different sizes, for example
+; <32 x i1> -> <2 x i16> as i1 -> i16 casts. These parts are not free.
 define void @i1_mask() {
 ; NO16BIT-LABEL: 'i1_mask'
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I1toV2I16 = bitcast <32 x i1> poison to <2 x i16>
