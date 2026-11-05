@@ -39,10 +39,10 @@ bool RewriteMFMAFormStage::isEnabled() {
 }
 
 void RewriteMFMAFormStage::findReachingDefs(
-    const MachineOperand &UseMO, const LiveIntervals *LIS,
+    Register Reg, const MachineInstr &UseMI, const LiveIntervals *LIS,
     SmallVectorImpl<MachineInstr *> &Defs) {
-  const LiveInterval &LI = LIS->getInterval(UseMO.getReg());
-  SlotIndex UseIdx = LIS->getInstructionIndex(*UseMO.getParent());
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  SlotIndex UseIdx = LIS->getInstructionIndex(UseMI);
 
   SmallPtrSet<const VNInfo *, 8> Seen;
   SmallVector<const VNInfo *, 8> Worklist;
@@ -81,7 +81,7 @@ void RewriteMFMAFormStage::findReachingUses(
       continue;
 
     SmallVector<MachineInstr *, 8> ReachingDefs;
-    findReachingDefs(UseMO, LIS, ReachingDefs);
+    findReachingDefs(UseMO.getReg(), *UseMO.getParent(), LIS, ReachingDefs);
 
     // If we find a use that contains this DefMI in its reachingDefs, then it is
     // a reaching use.
@@ -265,7 +265,7 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
       if (RedefRegs.contains(Src2Reg) ||
           !MFMAToAGPR->canRecolorToAGPR(Src2Reg)) {
         SmallVector<MachineInstr *, 8> ReachingDefs;
-        findReachingDefs(*Src2, DAG.LIS, ReachingDefs);
+        findReachingDefs(Src2->getReg(), *MI, DAG.LIS, ReachingDefs);
         for (MachineInstr *RD : ReachingDefs) {
           if (Plan.MFMASet.contains(RD))
             continue;
@@ -342,7 +342,7 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
         continue;
 
       SmallVector<MachineInstr *, 8> UseReachingDefs;
-      findReachingDefs(*RUOp, DAG.LIS, UseReachingDefs);
+      findReachingDefs(RUOp->getReg(), *UserMI, DAG.LIS, UseReachingDefs);
 
       for (MachineInstr *RD : UseReachingDefs) {
         if (Plan.MFMASet.contains(RD))

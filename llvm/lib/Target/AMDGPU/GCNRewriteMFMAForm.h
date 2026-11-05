@@ -118,12 +118,13 @@ private:
                       SmallPtrSetImpl<MachineInstr *> &AlreadyBridged,
                       DenseMap<MachineInstr *, unsigned> &LastMIToRegion);
 
-  /// Appends every instruction whose def of \p UseMO's register reaches
-  /// \p UseMO to \p Defs, without duplicates.
+  /// Appends every instruction whose def of \p Reg reaches \p UseMI to \p
+  /// Defs, without duplicates.
   ///
   /// This is the last write on each path, not the producer of each lane. One
   /// whole-register copy after it holds every lane.
-  void findReachingDefs(const MachineOperand &UseMO, const LiveIntervals *LIS,
+  void findReachingDefs(Register Reg, const MachineInstr &UseMI,
+                        const LiveIntervals *LIS,
                         SmallVectorImpl<MachineInstr *> &Defs);
 
   /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
