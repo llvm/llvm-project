@@ -37,10 +37,10 @@ cc_test(
         "IR/*.cpp",
     ]),
     deps = [
-        "//llvm:config",
         "//llvm:Core",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:config",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
         "//mlir:CallOpInterfaces",
