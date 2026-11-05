@@ -1676,8 +1676,8 @@ define i16 @test_vector_reduce_umax_v4i16(<4 x i16> %v) {
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-SDAG-NEXT:    v_max_u32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    v_max3_u32 v0, v0, v2, v3
+; GFX7-SDAG-NEXT:    v_max3_u32 v0, v0, v1, v2
+; GFX7-SDAG-NEXT:    v_max_u32_e32 v0, v0, v3
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_umax_v4i16:
