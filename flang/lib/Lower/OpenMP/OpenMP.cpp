@@ -6743,6 +6743,112 @@ appendCombiner(const parser::OmpDeclareReductionDirective &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
+// Name the op for a defined-operator reduction identifier: either an intrinsic
+// operator (`declare reduction(+:t)`) or a user-defined one (`.myop.`).
+static std::string getDefinedOperatorOpName(
+    lower::AbstractConverter &converter, const clause::DefinedOperator &defOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::DefinedOperator::IntrinsicOperator &intrOp)
+              -> std::string {
+            // Directive side of the intrinsic-operator USER reduction naming
+            // contract (clause side:
+            // ReductionProcessor::processReductionArguments site 2). A user
+            // `declare reduction(+:t)` is scoped by its owning scope exactly
+            // like the defined-operator and named paths, so two declarations
+            // for the same (operator, type) in different scopes get distinct
+            // ops instead of colliding on the one global builtin name. Only
+            // user reductions reach here (builtins are created directly by
+            // createDeclareReduction), so this always scopes. The
+            // intrinsic-operator parse node carries no reduction symbol: symOpt
+            // supplies it for separate compilation; same-file it is resolved
+            // from the current (declaration) scope under the operator's mangled
+            // name (MakeNameFromOperator), which resolves to the same ultimate
+            // the clause side finds, so both name the op identically.
+            const semantics::Symbol *redSymPtr = symOpt;
+            if (!redSymPtr) {
+              parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
+                  ReductionProcessor::toParserIntrinsicOperator(intrOp));
+              redSymPtr = semantics::omp::FindUserReductionSymbol(
+                  converter.getCurrentScope(), mangledOpName);
+            }
+            if (!redSymPtr)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined intrinsic-operator declare "
+                   "reduction symbol was not found for lowering");
+            const semantics::Symbol &redSym = redSymPtr->GetUltimate();
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+          [&](const clause::DefinedOperator::DefinedOpName &opName)
+              -> std::string {
+            // Directive side of the user-defined operator reduction naming
+            // contract (the clause side is in
+            // ReductionProcessor::processReductionArguments). Name the op via
+            // getScopedUserReductionName from the symbol's ultimate (name,
+            // owner) plus the per-type suffix, byte-identical to the clause
+            // reference. symOpt supplies the source symbol for separate
+            // compilation, else opName.v.sym(). Runs once per listed type (the
+            // enclosing loop walks typeNameList in lockstep with the per-type
+            // combiner/initializer instances), emitting one op per (operator,
+            // type); single-type is N=1.
+            const semantics::Symbol &redSym =
+                symOpt ? symOpt->GetUltimate() : opName.v.sym()->GetUltimate();
+            const auto *userDetails =
+                redSym.detailsIf<semantics::UserReductionDetails>();
+            if (!userDetails)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined operator declare reduction "
+                   "without user reduction details");
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+      },
+      defOp.u);
+}
+
+// Name the op for a procedure-designator reduction identifier, i.e. a named
+// reduction (`declare reduction(myred:t)`).
+static std::string getProcedureDesignatorOpName(
+    lower::AbstractConverter &converter, const clause::ProcedureDesignator &pd,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  // Directive side of the named-reduction naming contract (clause side in
+  // ReductionProcessor::processReductionArguments). Name the op via
+  // getScopedUserReductionName from the source symbol's ultimate (name, owner)
+  // plus the per-type suffix, byte-identical to the clause reference. symOpt
+  // supplies the source symbol for separate compilation, else pd.v.sym();
+  // GetUltimate keeps the name stable across a plain `use`. reductionType is
+  // the declared element type (already canonical), so unlike the clause side it
+  // needs no namingType normalization.
+  const semantics::Symbol &redSym =
+      (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
+  return ReductionProcessor::getScopedUserReductionName(converter, redSym,
+                                                        reductionType, isByRef);
+}
+
+// Compute the canonical omp.declare_reduction op name for one listed type of a
+// `declare reduction` directive, the same way processReductionArguments does on
+// the clause side, so the two name the same op. \p symOpt is the source
+// reduction symbol when materializing an imported declaration, and null for
+// same-file lowering.
+static std::string getDeclareReductionOpName(
+    lower::AbstractConverter &converter, const clause::ReductionOperator &redOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::DefinedOperator &defOp) -> std::string {
+            return getDefinedOperatorOpName(converter, defOp, symOpt,
+                                            reductionType, isByRef);
+          },
+          [&](const clause::ProcedureDesignator &pd) -> std::string {
+            return getProcedureDesignatorOpName(converter, pd, symOpt,
+                                                reductionType, isByRef);
+          },
+      },
+      redOp.u);
+}
+
 // Lower a single declare-reduction directive. Serves both same-file lowering
 // (symOpt null, no filter) and separate-compilation materialization of an
 // imported reduction (symOpt is the source symbol, with a fresh SymMap).
@@ -6827,94 +6933,8 @@ static void genOpenMPDeclareReductionImpl(
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     // Compute the canonical reduction name the same way
     // processReductionArguments does.
-    std::string reductionNameStr = common::visit(
-        common::visitors{
-            [&](const clause::DefinedOperator &defOp) -> std::string {
-              return common::visit(
-                  common::visitors{
-                      [&](const clause::DefinedOperator::IntrinsicOperator
-                              &intrOp) -> std::string {
-                        // Directive side of the intrinsic-operator USER
-                        // reduction naming contract (clause side:
-                        // ReductionProcessor::processReductionArguments site
-                        // 2). A user `declare reduction(+:t)` is scoped by its
-                        // owning scope exactly like the defined-operator and
-                        // named paths, so two declarations for the same
-                        // (operator, type) in different scopes get distinct ops
-                        // instead of colliding on the one global builtin name.
-                        // Only user reductions reach here (builtins are created
-                        // directly by createDeclareReduction), so this always
-                        // scopes. The intrinsic-operator parse node carries no
-                        // reduction symbol: symOpt supplies it for separate
-                        // compilation; same-file it is resolved from the
-                        // current (declaration) scope under the operator's
-                        // mangled name (MakeNameFromOperator), which resolves
-                        // to the same ultimate the clause side finds, so both
-                        // name the op identically.
-                        const semantics::Symbol *redSymPtr = symOpt;
-                        if (!redSymPtr) {
-                          parser::CharBlock mangledOpName =
-                              semantics::MakeNameFromOperator(
-                                  ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp));
-                          redSymPtr = semantics::omp::FindUserReductionSymbol(
-                              converter.getCurrentScope(), mangledOpName);
-                        }
-                        if (!redSymPtr)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined intrinsic-operator declare "
-                               "reduction symbol was not found for lowering");
-                        const semantics::Symbol &redSym =
-                            redSymPtr->GetUltimate();
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                      [&](const clause::DefinedOperator::DefinedOpName &opName)
-                          -> std::string {
-                        // Directive side of the user-defined operator reduction
-                        // naming contract (the clause side is in
-                        // ReductionProcessor::processReductionArguments). Name
-                        // the op via getScopedUserReductionName from the
-                        // symbol's ultimate (name, owner) plus the per-type
-                        // suffix, byte-identical to the clause reference.
-                        // symOpt supplies the source symbol for separate
-                        // compilation, else opName.v.sym(). Runs once per
-                        // listed type (the enclosing loop walks typeNameList in
-                        // lockstep with the per-type combiner/initializer
-                        // instances), emitting one op per (operator, type);
-                        // single-type is N=1.
-                        const semantics::Symbol &redSym =
-                            symOpt ? symOpt->GetUltimate()
-                                   : opName.v.sym()->GetUltimate();
-                        const auto *userDetails =
-                            redSym.detailsIf<semantics::UserReductionDetails>();
-                        if (!userDetails)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined operator declare reduction "
-                               "without user reduction details");
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                  },
-                  defOp.u);
-            },
-            [&](const clause::ProcedureDesignator &pd) -> std::string {
-              // Directive side of the named-reduction naming contract (clause
-              // side in ReductionProcessor::processReductionArguments). Name
-              // the op via getScopedUserReductionName from the source symbol's
-              // ultimate (name, owner) plus the per-type suffix, byte-identical
-              // to the clause reference. symOpt supplies the source symbol for
-              // separate compilation, else pd.v.sym(); GetUltimate keeps the
-              // name stable across a plain `use`. reductionType is the declared
-              // element type (already canonical), so unlike the clause side it
-              // needs no namingType normalization.
-              const semantics::Symbol &redSym =
-                  (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
-              return ReductionProcessor::getScopedUserReductionName(
-                  converter, redSym, reductionType, isByRef);
-            },
-        },
-        redOp.u);
+    std::string reductionNameStr = getDeclareReductionOpName(
+        converter, redOp, symOpt, reductionType, isByRef);
 
     // Lazy path: emit only the op the clause requested, skipping this
     // declaration's other listed types (keeping the per-type iterators in

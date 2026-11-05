@@ -34,7 +34,7 @@ module attributes {
 
   // The callee must not write through a byref pointer, so the CIRGen slot is
   // filled by a copy across address spaces.
-  cir.func @kernel_field(%arg0: !rec_Big) -> !s64i
+  cir.func @kernel_field(%arg0: !rec_Big) -> !s64i requires_call_conv_lowering
       attributes { test_classify = #byref_as4 } {
     %0 = cir.alloca "arg0" align(8) init
         : !cir.ptr<!rec_Big, target_address_space(5)>
@@ -55,7 +55,7 @@ module attributes {
   // CHECK:        cir.get_member %[[SLOT]][0]
 
   // A parameter the body never reads gets nothing at entry.
-  cir.func @kernel_unused(%arg0: !rec_Big) -> !s32i
+  cir.func @kernel_unused(%arg0: !rec_Big) -> !s32i requires_call_conv_lowering
       attributes { test_classify = #byref_as4 } {
     %r = cir.const #cir.int<0> : !s32i
     cir.return %r : !s32i
@@ -66,7 +66,7 @@ module attributes {
   // CHECK-NEXT:   %{{.*}} = cir.const #cir.int<0> : !s32i
 
   // A body that reads the value with no spill loads it at entry.
-  cir.func @kernel_uses_arg(%arg0: !rec_Big) -> !rec_Big
+  cir.func @kernel_uses_arg(%arg0: !rec_Big) -> !rec_Big requires_call_conv_lowering
       attributes { test_classify = #byref_as4 } {
     cir.return %arg0 : !rec_Big
   }
@@ -76,20 +76,20 @@ module attributes {
   // CHECK-NEXT:   cir.return %[[V]] : !rec_Big
 
   // A byref pointer drops llvm.nofpclass, which only describes FP values.
-  cir.func private @kernel_nofpclass(%arg0: !rec_Big {llvm.nofpclass = 3 : i64})
+  cir.func private @kernel_nofpclass(%arg0: !rec_Big {llvm.nofpclass = 3 : i64}) requires_call_conv_lowering
       attributes { test_classify = #byref_as4 }
 
   // CHECK:      cir.func private @kernel_nofpclass(!cir.ptr<!rec_Big, target_address_space(4)>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
 
-  cir.func private @takes_big_as5(%arg0: !rec_Big)
+  cir.func private @takes_big_as5(%arg0: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #byref_as5 }
 
   // CHECK:      cir.func{{.*}} @takes_big_as5(!cir.ptr<!rec_Big, target_address_space(5)>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
 
   // Storage in the parameter's own address space is handed on.
-  cir.func @caller_forward(%s: !rec_Big)
+  cir.func @caller_forward(%s: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     %tmp = cir.alloca "agg.tmp" align(8)
         : !cir.ptr<!rec_Big, target_address_space(5)>
@@ -108,7 +108,7 @@ module attributes {
 
   // An operand that names no storage is stored into a slot in the alloca
   // address space.
-  cir.func @caller_no_storage(%s: !rec_Big)
+  cir.func @caller_no_storage(%s: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     cir.call @takes_big_as5(%s) : (!rec_Big) -> ()
     cir.return
@@ -121,7 +121,7 @@ module attributes {
 
   // A store between the load and the call stops the storage from being handed
   // on, so the copy is taken where the load was.
-  cir.func @caller_store_between(%s: !rec_Big, %t: !rec_Big)
+  cir.func @caller_store_between(%s: !rec_Big, %t: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     %tmp = cir.alloca "agg.tmp" align(8)
         : !cir.ptr<!rec_Big, target_address_space(5)>
@@ -164,13 +164,13 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  cir.func private @takes_big(%arg0: !rec_Big)
+  cir.func private @takes_big(%arg0: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #byref_as0 }
 
   // CHECK:      cir.func{{.*}} @takes_big(!cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
 
-  cir.func @caller_forward(%s: !rec_Big)
+  cir.func @caller_forward(%s: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
     cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
@@ -185,7 +185,7 @@ module attributes {
   // CHECK:        cir.call @takes_big(%[[TMP]]) : (!cir.ptr<!rec_Big>
 
   // Storage aligned below what the callee expects gets a slot of its own.
-  cir.func @caller_underaligned(%s: !rec_Big)
+  cir.func @caller_underaligned(%s: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     %tmp = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
     cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
@@ -224,7 +224,7 @@ module attributes {
     long_double_size = 0, enable_noundef_attrs = false>
 } {
 
-  cir.func private @takes_big_no_noundef(%arg0: !rec_Big)
+  cir.func private @takes_big_no_noundef(%arg0: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #byref }
 
   // CHECK:      cir.func private @takes_big_no_noundef(!cir.ptr<!rec_Big>
