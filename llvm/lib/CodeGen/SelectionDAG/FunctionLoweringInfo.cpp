@@ -94,10 +94,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   ExceptionModel = Fn->getParent()->getExceptionModel();
-  if (ExceptionModel == ExceptionHandling::Default)
-    ExceptionModel = MF->getTarget().getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -150,8 +147,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
                                     .value_or(TypeSize::getZero());
           uint64_t TySize = AllocaSize.getKnownMinValue();
-          if (TySize == 0)
-            TySize = 1; // Don't create zero-sized stack objects.
+          // Don't create zero-sized stack objects.
+          if (TySize == 0) {
+            TySize = 1;
+            // The frame object links to original AllocaInst for alias analysis,
+            // so adjust that as well.
+            auto *MutableAI = const_cast<AllocaInst *>(AI);
+            MutableAI->setAllocatedType(Type::getInt8Ty(Fn->getContext()));
+            MutableAI->setOperand(
+                0, ConstantInt::get(MutableAI->getArraySize()->getType(), 1));
+          }
           int FrameIndex = INT_MAX;
           auto Iter = CatchObjects.find(AI);
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {

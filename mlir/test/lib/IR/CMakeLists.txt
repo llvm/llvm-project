@@ -30,19 +30,13 @@ add_mlir_library(MLIRTestIR
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAnalysisBase
   MLIRTestDialect
   )
 
 mlir_target_link_libraries(MLIRTestIR PUBLIC
-  MLIRPass
+  MLIRAnalysisBase
   MLIRBytecodeReader
   MLIRBytecodeWriter
   MLIRFunctionInterfaces
-  )
-
-target_include_directories(MLIRTestIR
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
+  MLIRPass
   )

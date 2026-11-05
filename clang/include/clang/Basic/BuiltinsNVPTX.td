@@ -203,6 +203,23 @@ let Attributes = [NoThrow] in {
   def __nvvm_pm_event_mask : NVPTXBuiltin<"void(_Constant unsigned short)">;
 }
 
+let Attributes = [NoThrow] in {
+  def __nvvm_idp4a_s_s : NVPTXBuiltinSM<"int(int, int, int)", SM_61>;
+  def __nvvm_idp4a_s_u : NVPTXBuiltinSM<"int(int, unsigned int, int)", SM_61>;
+  def __nvvm_idp4a_u_s : NVPTXBuiltinSM<"int(unsigned int, int, int)", SM_61>;
+  def __nvvm_idp4a_u_u : NVPTXBuiltinSM<"unsigned int(unsigned int, unsigned int, unsigned int)", SM_61>;
+
+  def __nvvm_idp2a_lo_s_s : NVPTXBuiltinSM<"int(int, int, int)", SM_61>;
+  def __nvvm_idp2a_lo_s_u : NVPTXBuiltinSM<"int(int, unsigned int, int)", SM_61>;
+  def __nvvm_idp2a_lo_u_s : NVPTXBuiltinSM<"int(unsigned int, int, int)", SM_61>;
+  def __nvvm_idp2a_lo_u_u : NVPTXBuiltinSM<"unsigned int(unsigned int, unsigned int, unsigned int)", SM_61>;
+
+  def __nvvm_idp2a_hi_s_s : NVPTXBuiltinSM<"int(int, int, int)", SM_61>;
+  def __nvvm_idp2a_hi_s_u : NVPTXBuiltinSM<"int(int, unsigned int, int)", SM_61>;
+  def __nvvm_idp2a_hi_u_s : NVPTXBuiltinSM<"int(unsigned int, int, int)", SM_61>;
+  def __nvvm_idp2a_hi_u_u : NVPTXBuiltinSM<"unsigned int(unsigned int, unsigned int, unsigned int)", SM_61>;
+}
+
 // Min Max
 
 def __nvvm_fmin_f16 : NVPTXBuiltinSMAndPTX<"__fp16(__fp16, __fp16)", SM_80, PTX70>;

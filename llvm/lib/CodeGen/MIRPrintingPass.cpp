@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

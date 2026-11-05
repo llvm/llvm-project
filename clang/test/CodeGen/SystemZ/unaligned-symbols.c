@@ -1,11 +1,14 @@
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
 // RUN:    | FileCheck %s -check-prefixes=CHECK,ALIGNED
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple s390x-linux-gnu %s -o - -emit-llvm    | FileCheck %s -check-prefixes=CHECK,ALIGNED %}
 
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
 // RUN:    -target-feature -unaligned-symbols | FileCheck %s -check-prefixes=CHECK,ALIGNED
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple s390x-linux-gnu %s -o - -emit-llvm    -target-feature -unaligned-symbols | FileCheck %s -check-prefixes=CHECK,ALIGNED %}
 
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
 // RUN:    -target-feature +unaligned-symbols | FileCheck %s -check-prefixes=CHECK,UNALIGN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple s390x-linux-gnu %s -o - -emit-llvm    -target-feature +unaligned-symbols | FileCheck %s -check-prefixes=CHECK,UNALIGN %}
 
 
 // With -munaligned-symbols, the external and unaligned ("ExtUnal...")

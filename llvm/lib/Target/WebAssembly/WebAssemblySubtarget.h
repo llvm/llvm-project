@@ -40,6 +40,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
     RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
+  bool HasAcquireReleaseAtomics = false;
   bool HasAtomics = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
@@ -51,13 +52,12 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasGC = false;
   bool HasCooperativeMultithreading = false;
   bool HasLibcallThreadContext = false;
+  bool HasMemtag = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
-  bool HasMemtag = false;
-  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -109,6 +109,7 @@ public:
   bool useAA() const override;
 
   // Predicates used by WebAssemblyInstrInfo.td.
+  bool hasAcquireReleaseAtomics() const { return HasAcquireReleaseAtomics; }
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasAtomics() const { return HasAtomics; }
   bool hasBulkMemory() const { return HasBulkMemory; }
@@ -123,13 +124,12 @@ public:
     return HasCooperativeMultithreading;
   }
   bool hasLibcallThreadContext() const { return HasLibcallThreadContext; }
+  bool hasMemtag() const { return HasMemtag; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }
   bool hasMutableGlobals() const { return HasMutableGlobals; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
-  bool hasMemtag() const { return HasMemtag; }
-  bool hasRelaxedAtomics() const { return HasRelaxedAtomics; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasSignExt() const { return HasSignExt; }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }

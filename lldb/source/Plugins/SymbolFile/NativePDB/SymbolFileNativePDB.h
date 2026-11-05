@@ -13,6 +13,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -248,6 +249,8 @@ private:
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
   Block *GetOrCreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
+                                                  PdbCompilandSymId var_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param,
@@ -314,6 +317,10 @@ private:
 
   std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
 
+  /// Append the function referenced by the S_PROCREF/S_LPROCREF \p global.
+  void AppendFunctionForProcRef(PdbGlobalSymId global,
+                                SymbolContextList &sc_list);
+
   /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
   /// \p method_type.
   std::optional<PdbCompilandSymId>
@@ -358,6 +365,8 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
   /// typedef basename -> Global ID(s) of its S_UDT
   lldb_private::UniqueCStringMap<uint32_t> m_typedef_base_names;
+  /// Qualified name of a scope of a typedef -> Global ID of a typedef in it.
+  llvm::StringMap<uint32_t> m_typedef_scopes;
 
   /// mangled name/full function name -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;

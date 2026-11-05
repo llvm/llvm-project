@@ -18,6 +18,7 @@
 ...
 ---
 name:            test
+tracksRegLiveness: false
 frameInfo:
   maxAlignment:    8
 # CHECK: stack:

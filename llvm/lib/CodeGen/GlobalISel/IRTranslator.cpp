@@ -124,8 +124,6 @@ class IRTranslatorImpl {
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
-    using const_offset_iterator =
-        DenseMap<const Value *, OffsetListT *>::const_iterator;
 
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
@@ -1033,7 +1031,15 @@ int IRTranslatorImpl::getOrCreateFrameIndex(const AllocaInst &AI) {
   uint64_t Size = TySize.getKnownMinValue();
 
   // Always allocate at least one byte.
-  Size = std::max<uint64_t>(Size, 1u);
+  if (Size == 0) {
+    Size = 1;
+    // The frame object links to original AllocaInst for alias analysis, so
+    // adjust that as well.
+    auto &MutableAI = const_cast<AllocaInst &>(AI);
+    MutableAI.setAllocatedType(Type::getInt8Ty(AI.getContext()));
+    MutableAI.setOperand(
+        0, ConstantInt::get(MutableAI.getArraySize()->getType(), 1));
+  }
 
   int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
@@ -3630,7 +3636,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3850,8 +3856,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -4044,8 +4050,8 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     return true;
   }
 
-  // FIXME: support stack probing for Windows.
-  if (MF->getTarget().getTargetTriple().isOSWindows())
+  // FIXME: support stack probing for Windows and UEFI.
+  if (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI())
     return false;
 
   // Now we're in the harder dynamic case.
@@ -4170,8 +4176,9 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
-      // in LLT.
-      return translateCopy(U, Vec, MIRBuilder);
+      // in LLT. Since inserting a <1 x Ty> at index 0 replaces the whole
+      // destination, the result is the source operand.
+      return translateCopy(U, Elt, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed
@@ -5053,14 +5060,20 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
-    Register GuardPtr = getOrCreateVReg(*IRGuard);
+    if (IRGuard) {
+      Register GuardPtr = getOrCreateVReg(*IRGuard);
 
-    Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
-                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
-                            MachineMemOperand::MOLoad |
-                                MachineMemOperand::MOVolatile)
-                .getReg(0);
+      Guard = CurBuilder
+                  ->buildLoad(PtrMemTy, GuardPtr,
+                              MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                              MachineMemOperand::MOLoad |
+                                  MachineMemOperand::MOVolatile)
+                  .getReg(0);
+    } else {
+      LLVMContext &Ctx = CurBuilder->getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = CurBuilder->buildUndef(PtrMemTy).getReg(0);
+    }
   }
 
   // Perform the comparison.
@@ -5184,10 +5197,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
-  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
-    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();
