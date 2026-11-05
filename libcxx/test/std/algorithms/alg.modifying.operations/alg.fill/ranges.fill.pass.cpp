@@ -130,7 +130,7 @@ constexpr bool test_vector_bool(std::size_t N) {
 }
 #endif
 
-/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+TEST_CONSTEXPR_CXX26 void test_deque() {
   std::deque<int> in(20);
   std::deque<int> expected(in.size(), 42);
   std::ranges::fill(in, 42);
@@ -236,7 +236,7 @@ constexpr bool test() {
   }
 #endif
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED)
     test_deque();
 
 #if TEST_STD_VER >= 20
