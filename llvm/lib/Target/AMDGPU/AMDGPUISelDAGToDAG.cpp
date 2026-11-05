@@ -2924,7 +2924,7 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    ISD::CondCode CC = Cond.getOperandCondCode(2);
     return (CC == ISD::SETEQ || CC == ISD::SETNE) &&
            Subtarget->hasScalarCompareEq64();
   }
@@ -2946,7 +2946,7 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
   // Cond becomes a i(WaveSize) full mask value.
   // Note that ballot doesn't use SETEQ condition but its easy to support it
   // here for completeness, so in this case Negate is set true on return.
-  auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
+  auto VCMP_CC = VCMP.getOperandCondCode(2);
   if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) &&
       isNullConstant(VCMP.getOperand(1))) {
 
@@ -2980,7 +2980,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
     SDValue VCMP = Cond->getOperand(0);
-    auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
+    auto CC = Cond->getOperandCondCode(2);
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
         // We may encounter ballot.i64 in wave32 mode on -O0.
@@ -4932,33 +4932,6 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
     }
     CurDAG->RemoveDeadNodes();
   } while (IsModified);
-}
-
-bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
-    std::vector<SDValue> &OutOps) {
-  switch (ConstraintID) {
-  case InlineAsm::ConstraintCode::m:
-    OutOps.push_back(Op);
-    return false;
-  case InlineAsm::ConstraintCode::RF: {
-    // flat_load/flat_store require the address in a VGPR. Always force a copy
-    // to the appropriate VGPR class.
-    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    MVT VT = Op.getSimpleValueType();
-    const TargetRegisterClass *VRC =
-        TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
-    assert(VRC && "Expected valid VGPR class for RF constraint operand");
-    SDLoc DL(Op);
-    SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
-    SDNode *Copy =
-        CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
-    OutOps.push_back(SDValue(Copy, 0));
-    return false;
-  }
-  default:
-    return true;
-  }
 }
 
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,

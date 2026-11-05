@@ -25,7 +25,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -2438,7 +2437,7 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
           Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
           /*FMFSource=*/nullptr, "rel_load");
     } else {
-      Value *PtrAdd = IRB.CreatePtrAdd(Ptr, Offset);
+      Value *PtrAdd = IRB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
       Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
     }
 

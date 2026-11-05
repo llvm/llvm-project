@@ -1661,7 +1661,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
   auto *Poison = PoisonValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -10767,14 +10767,8 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
-
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(
-                       DAG.getDataLayout(),
-                       OpInfo.CallOperandVal
-                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
-                                 ->getAddressSpace()
-                           : 0) &&
+                   TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =

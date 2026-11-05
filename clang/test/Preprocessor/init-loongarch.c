@@ -744,6 +744,8 @@
 // RUN:   | FileCheck --match-full-lines --check-prefix=LA32-FPU0-ILP32S %s
 // RUN: %clang --target=loongarch32 -msoft-float -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=LA32-FPU0-ILP32S %s
+// RUN: %clang --target=loongarch32 -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=LA32-FPU0-ILP32S %s
 // LA32-FPU0-ILP32S-NOT: #define __loongarch_double_float
 // LA32-FPU0-ILP32S: #define __loongarch_frlen 0
 // LA32-FPU0-ILP32S: #define __loongarch_grlen 32

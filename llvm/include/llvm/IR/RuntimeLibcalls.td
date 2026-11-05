@@ -426,9 +426,12 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
   defvar IntVT = VT.IntType;
+  defvar EltVT = VT.ElementType;
   defm ACOS : VectorMathLibcall<S, VT, [VT]>;
   defm ACOSH : VectorMathLibcall<S, VT, [VT]>;
   defm ASIN : VectorMathLibcall<S, VT, [VT]>;
@@ -468,15 +471,20 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOG1P : VectorMathLibcall<S, VT, [VT]>;
   defm LOG2 : VectorMathLibcall<S, VT, [VT]>;
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
-  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr]>;
+  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr], ArgMemWriteOnly,
+                                 [[], OutPtrAttrs], [NoneType, EltVT]>;
   defm MODF_STRET : VectorMathLibcall<S>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW_FINITE : VectorMathLibcall<S, VT, [VT, VT]>;
   defm REMAINDER : VectorMathLibcall<S, VT, [VT, VT]>;
-  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                   [[], OutPtrAttrs, OutPtrAttrs],
+                                   [NoneType, EltVT, EltVT]>;
   defm SINCOS_STRET : VectorMathLibcall<S>;
-  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                     [[], OutPtrAttrs, OutPtrAttrs],
+                                     [NoneType, EltVT, EltVT]>;
   defm SINCOSPI_STRET : VectorMathLibcall<S>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
@@ -497,26 +505,26 @@ def FESETENV : RuntimeLibcall<Int, [Ptr]>;
 def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
 def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
 
-def FPEXT_BF16_F32 : RuntimeLibcall;
+def FPEXT_BF16_F32 : RuntimeLibcall<Flt, [BFloat]>;
 def FPEXT_F32_PPCF128 : RuntimeLibcall<PPCFP128, [Flt]>;
 def FPEXT_F64_PPCF128 : RuntimeLibcall<PPCFP128, [Dbl]>;
 def FPEXT_F80_F128 : RuntimeLibcall<FP128, [X86FP80]>;
 def FPEXT_F64_F128 : RuntimeLibcall<FP128, [Dbl]>;
 def FPEXT_F32_F128 : RuntimeLibcall<FP128, [Flt]>;
-def FPEXT_F16_F128 : RuntimeLibcall;
-def FPEXT_F16_F80 : RuntimeLibcall;
+def FPEXT_F16_F128 : RuntimeLibcall<FP128, [Half]>;
+def FPEXT_F16_F80 : RuntimeLibcall<X86FP80, [Half]>;
 def FPEXT_F32_F64 : RuntimeLibcall<Dbl, [Flt]>;
-def FPEXT_F16_F64 : RuntimeLibcall;
-def FPEXT_F16_F32 : RuntimeLibcall;
-def FPROUND_F32_F16 : RuntimeLibcall;
-def FPROUND_F64_F16 : RuntimeLibcall;
-def FPROUND_F80_F16 : RuntimeLibcall;
-def FPROUND_F128_F16 : RuntimeLibcall;
-def FPROUND_PPCF128_F16 : RuntimeLibcall;
-def FPROUND_F32_BF16 : RuntimeLibcall;
-def FPROUND_F64_BF16 : RuntimeLibcall;
-def FPROUND_F80_BF16 : RuntimeLibcall;
-def FPROUND_F128_BF16 : RuntimeLibcall;
+def FPEXT_F16_F64 : RuntimeLibcall<Dbl, [Half]>;
+def FPEXT_F16_F32 : RuntimeLibcall<Flt, [Half]>;
+def FPROUND_F32_F16 : RuntimeLibcall<Half, [Flt]>;
+def FPROUND_F64_F16 : RuntimeLibcall<Half, [Dbl]>;
+def FPROUND_F80_F16 : RuntimeLibcall<Half, [X86FP80]>;
+def FPROUND_F128_F16 : RuntimeLibcall<Half, [FP128]>;
+def FPROUND_PPCF128_F16 : RuntimeLibcall<Half, [PPCFP128]>;
+def FPROUND_F32_BF16 : RuntimeLibcall<BFloat, [Flt]>;
+def FPROUND_F64_BF16 : RuntimeLibcall<BFloat, [Dbl]>;
+def FPROUND_F80_BF16 : RuntimeLibcall<BFloat, [X86FP80]>;
+def FPROUND_F128_BF16 : RuntimeLibcall<BFloat, [FP128]>;
 def FPROUND_F64_F32 : RuntimeLibcall<Flt, [Dbl]>;
 def FPROUND_F80_F32 : RuntimeLibcall<Flt, [X86FP80]>;
 def FPROUND_F128_F32 : RuntimeLibcall<Flt, [FP128]>;
@@ -525,9 +533,9 @@ def FPROUND_F80_F64 : RuntimeLibcall<Dbl, [X86FP80]>;
 def FPROUND_F128_F64 : RuntimeLibcall<Dbl, [FP128]>;
 def FPROUND_PPCF128_F64 : RuntimeLibcall<Dbl, [PPCFP128]>;
 def FPROUND_F128_F80 : RuntimeLibcall<X86FP80, [FP128]>;
-def FPTOSINT_F16_I32 : RuntimeLibcall;
-def FPTOSINT_F16_I64 : RuntimeLibcall;
-def FPTOSINT_F16_I128 : RuntimeLibcall;
+def FPTOSINT_F16_I32 : RuntimeLibcall<Int32, [Half]>;
+def FPTOSINT_F16_I64 : RuntimeLibcall<Int64, [Half]>;
+def FPTOSINT_F16_I128 : RuntimeLibcall<Int128, [Half]>;
 def FPTOSINT_F32_I32 : RuntimeLibcall<Int32, [Flt]>;
 def FPTOSINT_F32_I64 : RuntimeLibcall<Int64, [Flt]>;
 def FPTOSINT_F32_I128 : RuntimeLibcall<Int128, [Flt]>;
@@ -543,9 +551,9 @@ def FPTOSINT_F128_I128 : RuntimeLibcall<Int128, [FP128]>;
 def FPTOSINT_PPCF128_I32 : RuntimeLibcall<Int32, [PPCFP128]>;
 def FPTOSINT_PPCF128_I64 : RuntimeLibcall<Int64, [PPCFP128]>;
 def FPTOSINT_PPCF128_I128 : RuntimeLibcall<Int128, [PPCFP128]>;
-def FPTOUINT_F16_I32 : RuntimeLibcall;
-def FPTOUINT_F16_I64 : RuntimeLibcall;
-def FPTOUINT_F16_I128 : RuntimeLibcall;
+def FPTOUINT_F16_I32 : RuntimeLibcall<UInt32, [Half]>;
+def FPTOUINT_F16_I64 : RuntimeLibcall<UInt64, [Half]>;
+def FPTOUINT_F16_I128 : RuntimeLibcall<UInt128, [Half]>;
 def FPTOUINT_F32_I32 : RuntimeLibcall<UInt32, [Flt]>;
 def FPTOUINT_F32_I64 : RuntimeLibcall<UInt64, [Flt]>;
 def FPTOUINT_F32_I128 : RuntimeLibcall<UInt128, [Flt]>;
@@ -561,39 +569,39 @@ def FPTOUINT_F128_I128 : RuntimeLibcall<UInt128, [FP128]>;
 def FPTOUINT_PPCF128_I32 : RuntimeLibcall<UInt32, [PPCFP128]>;
 def FPTOUINT_PPCF128_I64 : RuntimeLibcall<UInt64, [PPCFP128]>;
 def FPTOUINT_PPCF128_I128 : RuntimeLibcall<UInt128, [PPCFP128]>;
-def SINTTOFP_I32_F16 : RuntimeLibcall;
+def SINTTOFP_I32_F16 : RuntimeLibcall<Half, [Int32]>;
 def SINTTOFP_I32_F32 : RuntimeLibcall<Flt, [Int32]>;
 def SINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [Int32]>;
 def SINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [Int32]>;
 def SINTTOFP_I32_F128 : RuntimeLibcall<FP128, [Int32]>;
 def SINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [Int32]>;
-def SINTTOFP_I64_BF16 : RuntimeLibcall;
-def SINTTOFP_I64_F16 : RuntimeLibcall;
+def SINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [Int64]>;
+def SINTTOFP_I64_F16 : RuntimeLibcall<Half, [Int64]>;
 def SINTTOFP_I64_F32 : RuntimeLibcall<Flt, [Int64]>;
 def SINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [Int64]>;
 def SINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [Int64]>;
 def SINTTOFP_I64_F128 : RuntimeLibcall<FP128, [Int64]>;
 def SINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [Int64]>;
-def SINTTOFP_I128_F16 : RuntimeLibcall;
+def SINTTOFP_I128_F16 : RuntimeLibcall<Half, [Int128]>;
 def SINTTOFP_I128_F32 : RuntimeLibcall<Flt, [Int128]>;
 def SINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [Int128]>;
 def SINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [Int128]>;
 def SINTTOFP_I128_F128 : RuntimeLibcall<FP128, [Int128]>;
 def SINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [Int128]>;
-def UINTTOFP_I32_F16 : RuntimeLibcall;
+def UINTTOFP_I32_F16 : RuntimeLibcall<Half, [UInt32]>;
 def UINTTOFP_I32_F32 : RuntimeLibcall<Flt, [UInt32]>;
 def UINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [UInt32]>;
 def UINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [UInt32]>;
 def UINTTOFP_I32_F128 : RuntimeLibcall<FP128, [UInt32]>;
 def UINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [UInt32]>;
-def UINTTOFP_I64_BF16 : RuntimeLibcall;
-def UINTTOFP_I64_F16 : RuntimeLibcall;
+def UINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [UInt64]>;
+def UINTTOFP_I64_F16 : RuntimeLibcall<Half, [UInt64]>;
 def UINTTOFP_I64_F32 : RuntimeLibcall<Flt, [UInt64]>;
 def UINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [UInt64]>;
 def UINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [UInt64]>;
 def UINTTOFP_I64_F128 : RuntimeLibcall<FP128, [UInt64]>;
 def UINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [UInt64]>;
-def UINTTOFP_I128_F16 : RuntimeLibcall;
+def UINTTOFP_I128_F16 : RuntimeLibcall<Half, [UInt128]>;
 def UINTTOFP_I128_F32 : RuntimeLibcall<Flt, [UInt128]>;
 def UINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [UInt128]>;
 def UINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [UInt128]>;
@@ -609,23 +617,26 @@ def CONVERT_PPCF128_F128 : RuntimeLibcall<FP128, [PPCFP128]>;
 // The FCMP3_PRED_*_F* libcalls return a three-way (-1/0/1) result, one symbol
 // per predicate. FCMP3_F* is a generic three-way compare for ABIs with one
 // symbol serving every predicate (e.g. MSP430's __mspabi_cmpd).
-foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
-  def OEQ_#FPTy : RuntimeLibcall;
-  def UNE_#FPTy : RuntimeLibcall;
-  def OGE_#FPTy : RuntimeLibcall;
-  def OLT_#FPTy : RuntimeLibcall;
-  def OLE_#FPTy : RuntimeLibcall;
-  def OGT_#FPTy : RuntimeLibcall;
-  def UO_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F128, PPCF128] in {
+  defvar Ty = FPTy.Type;
+  defvar CmpTy = !if(!eq(FPTy, PPCF128), Int, CmpResult);
 
-  def FCMP3_PRED_OEQ_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_UNE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLT_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGT_#FPTy : RuntimeLibcall;
+  def OEQ_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UNE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UO_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
 
-  def FCMP3_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OEQ_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_UNE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+
+  def FCMP3_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
 }
 
 // Memory
@@ -786,7 +797,7 @@ def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
-def DEOPTIMIZE : RuntimeLibcall;
+def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 
 // Return address
 def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
@@ -2757,8 +2768,14 @@ def __aeabi_f2h : RuntimeLibcallImpl<FPROUND_F32_F16>; // CallingConv::ARM_AAPCS
 def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 
 // !isTargetMachO()
-def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
-def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
+def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16> {
+  let ReturnType = UInt16;
+  let ArgumentTypes = [UInt32];
+}
+def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32> {
+  let ReturnType = UInt32;
+  let ArgumentTypes = [UInt16];
+}
 
 // The half <-> float conversion functions are always soft-float on
 // non-watchos platforms, but are needed for some targets which use a
@@ -4801,6 +4818,12 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 // AMD vector math library (AMDLIBM) functions
 //===----------------------------------------------------------------------===//
 
+class VectorAlignedOutPtrsImpl<RuntimeLibcall P, string Name = NAME>
+    : RuntimeLibcallImpl<P, Name> {
+  let ParamPointeeTypes = !foreach(T, P.ArgumentTypes,
+                                 !if(!eq(T, Ptr), P.ArgumentTypes[0], NoneType));
+}
+
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_asin : RuntimeLibcallImpl<ASIN_V2F64>;
@@ -4819,7 +4842,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
-  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def amd_vrd2_sincos : VectorAlignedOutPtrsImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
   def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
@@ -4836,7 +4859,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
   def amd_vrd4_pow : RuntimeLibcallImpl<POW_V4F64>;
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
-  def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
+  def amd_vrd4_sincos : VectorAlignedOutPtrsImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
   def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
   def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
@@ -4853,7 +4876,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
   def amd_vrd8_pow : RuntimeLibcallImpl<POW_V8F64>;
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
-  def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
+  def amd_vrd8_sincos : VectorAlignedOutPtrsImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
   def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
   def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
@@ -4881,7 +4904,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs16_log2f : RuntimeLibcallImpl<LOG2_V16F32>;
   def amd_vrs16_logf : RuntimeLibcallImpl<LOG_V16F32>;
   def amd_vrs16_powf : RuntimeLibcallImpl<POW_V16F32>;
-  def amd_vrs16_sincosf : RuntimeLibcallImpl<SINCOS_V16F32>;
+  def amd_vrs16_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V16F32>;
   def amd_vrs16_sinf : RuntimeLibcallImpl<SIN_V16F32>;
   def amd_vrs16_tanf : RuntimeLibcallImpl<TAN_V16F32>;
   def amd_vrs16_tanhf : RuntimeLibcallImpl<TANH_V16F32>;
@@ -4901,7 +4924,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs4_log2f : RuntimeLibcallImpl<LOG2_V4F32>;
   def amd_vrs4_logf : RuntimeLibcallImpl<LOG_V4F32>;
   def amd_vrs4_powf : RuntimeLibcallImpl<POW_V4F32>;
-  def amd_vrs4_sincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
+  def amd_vrs4_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V4F32>;
   def amd_vrs4_sinf : RuntimeLibcallImpl<SIN_V4F32>;
   def amd_vrs4_tanf : RuntimeLibcallImpl<TAN_V4F32>;
   def amd_vrs4_tanhf : RuntimeLibcallImpl<TANH_V4F32>;
@@ -4919,7 +4942,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_log2f : RuntimeLibcallImpl<LOG2_V8F32>;
   def amd_vrs8_logf : RuntimeLibcallImpl<LOG_V8F32>;
   def amd_vrs8_powf : RuntimeLibcallImpl<POW_V8F32>;
-  def amd_vrs8_sincosf : RuntimeLibcallImpl<SINCOS_V8F32>;
+  def amd_vrs8_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V8F32>;
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
