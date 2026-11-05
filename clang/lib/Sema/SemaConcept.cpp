@@ -30,6 +30,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1707,6 +1708,222 @@ bool Sema::EnsureTemplateArgumentListConstraints(
     DiagnoseUnsatisfiedConstraint(Satisfaction);
     return true;
   }
+  return false;
+}
+
+static TemplateArgumentLoc getTrivialTypeArgLoc(ASTContext &Context,
+                                                QualType T) {
+  return TemplateArgumentLoc(TemplateArgument(T),
+                             Context.getTrivialTypeSourceInfo(T));
+}
+
+static TemplateArgumentLoc getTrivialSizeArgLoc(ASTContext &Context,
+                                                uint64_t Value) {
+  QualType SizeT = Context.getSizeType();
+  llvm::APSInt V = Context.MakeIntValue(Value, SizeT);
+  Expr *E = IntegerLiteral::Create(Context, V, SizeT, SourceLocation());
+  return TemplateArgumentLoc(TemplateArgument(Context, V, SizeT), E);
+}
+
+/// Looks up a type in namespace std by name. For a class template, returns its
+/// specialization for \p Args, with defaulted arguments filled in. Returns a
+/// null QualType if the name is not declared in this translation unit or the
+/// arguments are not accepted.
+static QualType lookupStdType(Sema &S, StringRef Name,
+                              ArrayRef<TemplateArgumentLoc> Args = {}) {
+  NamespaceDecl *Std = S.getStdNamespace();
+  if (!Std)
+    return {};
+  for (NamedDecl *D : Std->lookup(&S.Context.Idents.get(Name))) {
+    D = D->getUnderlyingDecl();
+    if (auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+      if (Args.empty())
+        return TND->getUnderlyingType();
+    } else if (auto *TD = dyn_cast<TagDecl>(D)) {
+      if (Args.empty())
+        return S.Context.getCanonicalTagType(TD);
+    } else if (auto *CTD = dyn_cast<ClassTemplateDecl>(D)) {
+      TemplateArgumentListInfo ArgInfo;
+      for (const TemplateArgumentLoc &A : Args)
+        ArgInfo.addArgument(A);
+      Sema::SFINAETrap Trap(S);
+      QualType T =
+          S.CheckTemplateIdType(ElaboratedTypeKeyword::None, TemplateName(CTD),
+                                SourceLocation(), ArgInfo, /*Scope=*/nullptr,
+                                /*ForNestedNameSpecifier=*/false);
+      if (Trap.hasErrorOccurred())
+        return {};
+      return T;
+    }
+  }
+  return {};
+}
+
+bool Sema::constraintsAdmitNonProgramDefinedType(
+    const ClassTemplatePartialSpecializationDecl *PartialSpec) {
+  llvm::SmallVector<AssociatedConstraint, 4> AC;
+  PartialSpec->getAssociatedConstraints(AC);
+  if (AC.empty())
+    return true; // Unconstrained: admits everything.
+
+  // Probing may instantiate templates whose definitions are not valid for a
+  // probe type. Such errors are not SFINAE errors, so keep every diagnostic
+  // away from the user. A probe that causes an error cannot be used with the
+  // specialization either, so it counts as not satisfying the constraints.
+  bool OldSuppress = Diags.getSuppressAllDiagnostics();
+  Diags.setSuppressAllDiagnostics(true);
+  llvm::scope_exit RestoreSuppress(
+      [&] { Diags.setSuppressAllDiagnostics(OldSuppress); });
+
+  // Representative non-program-defined probe types: fundamental types and a
+  // selection of standard library types. The standard library types are only
+  // used when declared in this translation unit.
+  //
+  // The result is "does not admit" only when no combination of probe arguments
+  // satisfies the constraints. A specialization that is satisfiable only by a
+  // non-program-defined type outside this probe set is not detected.
+  ASTContext &C = Context;
+  llvm::SmallVector<QualType, 20> Probes = {
+      C.IntTy,
+      C.UnsignedIntTy,
+      C.LongTy,
+      C.DoubleTy,
+      C.BoolTy,
+      C.CharTy,
+      C.VoidTy,
+      C.NullPtrTy,
+      C.getPointerType(C.IntTy),
+      C.getLValueReferenceType(C.IntTy),
+      C.getRValueReferenceType(C.IntTy),
+      C.getConstType(C.IntTy),
+      C.getConstantArrayType(C.IntTy, llvm::APInt(32, 1), nullptr,
+                             ArraySizeModifier::Normal, 0),
+      C.getFunctionType(C.VoidTy, {}, FunctionProtoType::ExtProtoInfo()),
+  };
+  TemplateArgumentLoc IntArg = getTrivialTypeArgLoc(C, C.IntTy);
+  for (QualType T : {
+           lookupStdType(*this, "byte"),
+           lookupStdType(*this, "true_type"),
+           lookupStdType(*this, "string"),
+           lookupStdType(*this, "vector", {IntArg}),
+           lookupStdType(*this, "tuple", {IntArg}),
+           lookupStdType(*this, "pair", {IntArg, IntArg}),
+           lookupStdType(*this, "optional", {IntArg}),
+           lookupStdType(*this, "map", {IntArg, IntArg}),
+           lookupStdType(*this, "array", {IntArg, getTrivialSizeArgLoc(C, 1)}),
+       })
+    if (!T.isNull())
+      Probes.push_back(T);
+
+  // Candidate arguments for each template parameter. A type parameter takes
+  // every probe type, a pack takes an empty pack or one probe, and an integral
+  // or enumeration non-type parameter takes 0 or 1. Other parameter kinds are
+  // not supported; report "admits".
+  TemplateParameterList *TPL = PartialSpec->getTemplateParameters();
+  llvm::SmallVector<llvm::SmallVector<TemplateArgument, 0>, 4> Candidates;
+  for (const NamedDecl *Param : *TPL) {
+    llvm::SmallVector<TemplateArgument, 0> &Cands = Candidates.emplace_back();
+    llvm::SmallVector<TemplateArgument, 20> Values;
+    if (isa<TemplateTypeParmDecl>(Param)) {
+      for (QualType P : Probes)
+        Values.push_back(TemplateArgument(P));
+    } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      QualType T = NTTP->getType();
+      if (T->isDependentType() || T->isUndeducedType() ||
+          !T->isIntegralOrEnumerationType())
+        return true;
+      for (uint64_t V : {0, 1})
+        Values.push_back(TemplateArgument(C, C.MakeIntValue(V, T), T));
+    } else {
+      return true;
+    }
+    if (Param->isParameterPack()) {
+      Cands.push_back(TemplateArgument::getEmptyPack());
+      for (const TemplateArgument &V : Values)
+        Cands.push_back(TemplateArgument::CreatePackCopy(C, V));
+    } else {
+      Cands.append(Values.begin(), Values.end());
+    }
+  }
+
+  // Evaluates the associated constraints for one argument list. Returns
+  // std::nullopt if satisfaction could not be decided.
+  auto Satisfies =
+      [&](ArrayRef<TemplateArgument> Innermost) -> std::optional<bool> {
+    DiagnosticErrorTrap ErrorTrap(Diags);
+    SFINAETrap Trap(*this);
+    MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
+        PartialSpec, PartialSpec->getDeclContext(), /*Final=*/false, Innermost,
+        /*RelativeToPrimary=*/true, /*Pattern=*/nullptr,
+        /*ForConstraintInstantiation=*/true);
+    ConstraintSatisfaction Satisfaction;
+    InstantiatingTemplate Inst(
+        *this, PartialSpec->getLocation(),
+        InstantiatingTemplate::ConstraintsCheck{},
+        const_cast<ClassTemplatePartialSpecializationDecl *>(PartialSpec),
+        Innermost, PartialSpec->getSourceRange());
+    if (Inst.isInvalid())
+      return std::nullopt;
+    bool Failed = CheckConstraintSatisfaction(
+        PartialSpec, AC, MLTAL, PartialSpec->getSourceRange(), Satisfaction);
+    if (Trap.hasErrorOccurred() || ErrorTrap.hasErrorOccurred())
+      return false; // The probe is not usable: not satisfied.
+    if (Failed)
+      return std::nullopt;
+    return Satisfaction.IsSatisfied;
+  };
+
+  // Tries every combination of candidates if there are few enough. Otherwise
+  // tries each parameter's candidates with the other parameters at their first
+  // candidate, and the "diagonal" where all parameters use the same index.
+  constexpr uint64_t MaxCombinations = 1024;
+  uint64_t Combinations = 1;
+  size_t MaxCands = 0;
+  for (const auto &Cands : Candidates) {
+    Combinations =
+        std::min<uint64_t>(Combinations * Cands.size(), MaxCombinations + 1);
+    MaxCands = std::max<size_t>(MaxCands, Cands.size());
+  }
+
+  const size_t N = Candidates.size();
+  llvm::SmallVector<unsigned, 4> Idx(N, 0);
+  llvm::SmallVector<TemplateArgument, 4> Args(N);
+  // Returns true if the argument list selected by Idx admits a
+  // non-program-defined type or is undecidable.
+  auto Admits = [&] {
+    for (size_t I = 0; I != N; ++I)
+      Args[I] = Candidates[I][Idx[I]];
+    std::optional<bool> Sat = Satisfies(Args);
+    return !Sat || *Sat;
+  };
+
+  if (Combinations <= MaxCombinations) {
+    while (true) {
+      if (Admits())
+        return true;
+      size_t I = 0;
+      for (; I != N && ++Idx[I] == Candidates[I].size(); ++I)
+        Idx[I] = 0;
+      if (I == N)
+        break;
+    }
+  } else {
+    for (size_t P = 0; P != N; ++P) {
+      std::fill(Idx.begin(), Idx.end(), 0);
+      for (Idx[P] = 0; Idx[P] != Candidates[P].size(); ++Idx[P])
+        if (Admits())
+          return true;
+    }
+    for (size_t K = 0; K != MaxCands; ++K) {
+      for (size_t I = 0; I != N; ++I)
+        Idx[I] = std::min<size_t>(K, Candidates[I].size() - 1);
+      if (Admits())
+        return true;
+    }
+  }
+
+  // No probed combination satisfies the constraints. Treat the specialization
+  // as restricted to program-defined types.
   return false;
 }
 

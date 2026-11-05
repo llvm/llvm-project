@@ -32,6 +32,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
+#include "clang/Sema/SemaConsumer.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
@@ -349,6 +350,18 @@ private:
   void anchor() override {}
 };
 
+/// Makes the \c Sema of the current translation unit available to checks
+/// through \c ClangTidyContext::getSema() while it is alive.
+class ClangTidySemaTracker : public SemaConsumer {
+public:
+  explicit ClangTidySemaTracker(ClangTidyContext &Context) : Context(Context) {}
+  void InitializeSema(Sema &S) override { Context.setSema(&S); }
+  void ForgetSema() override { Context.setSema(nullptr); }
+
+private:
+  ClangTidyContext &Context;
+};
+
 } // namespace
 
 ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
@@ -473,8 +486,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
-  if (!Checks.empty())
+  if (!Checks.empty()) {
+    Consumers.push_back(std::make_unique<ClangTidySemaTracker>(Context));
     Consumers.push_back(Finder->newASTConsumer());
+  }
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   AnalyzerOptions &AnalyzerOptions = Compiler.getAnalyzerOpts();
