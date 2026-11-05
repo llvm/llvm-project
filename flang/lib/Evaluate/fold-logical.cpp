@@ -88,57 +88,38 @@ static Expr<SomeReal> RealToIntBound(
       Constant<Type<TypeCategory::Real>>{xRKind, std::move(result)});
 }
 
-class RealToIntLimitHelper {
-public:
-  using Result = std::optional<Expr<SomeReal>>;
-  using Types = RealTypes;
-  RealToIntLimitHelper(
-      FoldingContext &context, Expr<SomeReal> &&hi, Expr<SomeReal> &lo)
-      : context_{context}, hi_{std::move(hi)}, lo_{lo} {}
-  template <typename T> Result Test(int kind) {
-    if (UnwrapExpr<Expr<T>>(kind, hi_)) {
-      bool promote{kind < 16};
-      Result constResult;
-      if (auto hiV{GetScalarConstantValue<T>(kind, hi_)}) {
-        auto loV{GetScalarConstantValue<T>(kind, lo_)};
-        CHECK(loV.has_value());
-        auto diff{hiV->Subtract(*loV, Rounding{common::RoundingMode::ToZero})};
-        promote = promote &&
-            (diff.flags.test(RealFlag::Overflow) ||
-                diff.flags.test(RealFlag::Inexact));
-        constResult = AsCategoryExpr(Constant<T>{kind, std::move(diff.value)});
-      }
-      if (promote) {
-        const int nextKind{kind < 4 ? 4 : kind == 4 ? 8 : 16};
-        using T2 = Type<TypeCategory::Real>;
-        hi_ = Expr<SomeReal>{
-            Fold(context_, ConvertToType<T2>(nextKind, std::move(hi_)))};
-        lo_ = Expr<SomeReal>{
-            Fold(context_, ConvertToType<T2>(nextKind, std::move(lo_)))};
-        if (constResult) {
-          // Use promoted constants on next iteration of SearchTypes
-          return std::nullopt;
-        }
-      }
-      if (constResult) {
-        return constResult;
-      } else {
-        return AsCategoryExpr(std::move(hi_) - Expr<SomeReal>{lo_});
-      }
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  FoldingContext &context_;
-  Expr<SomeReal> hi_;
-  Expr<SomeReal> &lo_;
-};
-
 static std::optional<Expr<SomeReal>> RealToIntLimit(
     FoldingContext &context, Expr<SomeReal> &&hi, Expr<SomeReal> &lo) {
-  return SearchTypes(RealToIntLimitHelper{context, std::move(hi), lo});
+  using T = Type<TypeCategory::Real>;
+  const int kind{hi.kind()};
+  bool promote{kind < 16};
+  std::optional<Expr<SomeReal>> constResult;
+  if (auto hiV{GetScalarConstantValue<T>(kind, hi)}) {
+    auto loV{GetScalarConstantValue<T>(kind, lo)};
+    CHECK(loV.has_value());
+    auto diff{hiV->Subtract(*loV, Rounding{common::RoundingMode::ToZero})};
+    promote = promote &&
+        (diff.flags.test(RealFlag::Overflow) ||
+            diff.flags.test(RealFlag::Inexact));
+    constResult = AsCategoryExpr(Constant<T>{kind, std::move(diff.value)});
+  }
+  if (promote) {
+    const int nextKind{kind < 4 ? 4 : kind == 4 ? 8 : 16};
+    hi = Expr<SomeReal>{
+        Fold(context, ConvertToType<T>(nextKind, std::move(hi)))};
+    lo = Expr<SomeReal>{
+        Fold(context, ConvertToType<T>(nextKind, std::move(lo)))};
+    if (constResult) {
+      // Retry with both constant bounds widened to nextKind; kind 16 is never
+      // promoted which terminates this recursive tail call.
+      return RealToIntLimit(context, std::move(hi), lo);
+    }
+  }
+  if (constResult) {
+    return constResult;
+  } else {
+    return AsCategoryExpr(std::move(hi) - Expr<SomeReal>{lo});
+  }
 }
 
 // RealToRealBounds() returns a pair (HUGE(x),REAL(HUGE(mold),KIND(x)))
@@ -225,40 +206,21 @@ static std::optional<Expr<SomeInteger>> IntToIntBound(
 
 // ApplyIntrinsic() constructs the typed expression representation
 // for a specific intrinsic function reference.
-// TODO: maybe move into tools.h?
-class IntrinsicCallHelper {
-public:
-  explicit IntrinsicCallHelper(SpecificCall &&call) : call_{call} {
-    CHECK(proc_.IsFunction());
-    typeAndShape_ = proc_.functionResult->GetTypeAndShape();
-    CHECK(typeAndShape_ != nullptr);
-  }
-  using Result = std::optional<Expr<SomeType>>;
-  using Types = LengthlessIntrinsicTypes;
-  template <typename T> Result Test(int kind) {
-    if (T::category == typeAndShape_->type().category() &&
-        kind == typeAndShape_->type().kind()) {
-      return AsGenericExpr(FunctionRef<T>{kind,
-          ProcedureDesignator{std::move(call_.specificIntrinsic)},
-          std::move(call_.arguments)});
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  SpecificCall call_;
-  const characteristics::Procedure &proc_{
-      call_.specificIntrinsic.characteristics.value()};
-  const characteristics::TypeAndShape *typeAndShape_{nullptr};
-};
-
 static Expr<SomeType> ApplyIntrinsic(
     FoldingContext &context, const std::string &func, ActualArguments &&args) {
   auto found{
       context.intrinsics().Probe(CallCharacteristics{func}, args, context)};
   CHECK(found.has_value());
-  auto result{SearchTypes(IntrinsicCallHelper{std::move(*found)})};
+  const characteristics::Procedure &proc{
+      found->specificIntrinsic.characteristics.value()};
+  CHECK(proc.IsFunction());
+  const auto *typeAndShape{proc.functionResult->GetTypeAndShape()};
+  CHECK(typeAndShape != nullptr);
+  DynamicType type{typeAndShape->type()};
+  CHECK(type.IsLengthlessIntrinsicType());
+  auto result{TypedWrapper<FunctionRef>(type,
+      ProcedureRef{ProcedureDesignator{std::move(found->specificIntrinsic)},
+          std::move(found->arguments)})};
   CHECK(result.has_value());
   return *result;
 }
