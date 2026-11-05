@@ -98,9 +98,8 @@ class Compilation {
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
-  /// The Intel GPUs that each SYCL device compile for an IGCA target is
-  /// compiled ahead of time for, sorted, e.g. xe-mtl-h and xe-mtl-u for the
-  /// igca_30r compile.
+  /// For each SYCL device compile for an IGCA target, the Intel GPUs to compile
+  /// it ahead of time for, sorted, e.g. xe-mtl-h and xe-mtl-u for igca_30r.
   llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
                  llvm::SmallVector<StringRef, 2>>
       SYCLIGCADevices;

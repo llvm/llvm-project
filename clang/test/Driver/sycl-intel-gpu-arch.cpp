@@ -35,6 +35,15 @@
 // RUN:   | FileCheck -check-prefixes=CHK-IGCA-ONLY %s
 // CHK-IGCA-ONLY: "--image=file={{.*}},arch=igca_30r,kind=sycl"
 
+/// -Xarch_ names the IGCA target of the device compile, not an Intel GPU, as
+/// one device compile can be for several Intel GPUs.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc -Xarch_igca_20ca -DFOO -Xarch_xe-pvc -DBAR \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-XARCH %s
+// CHK-XARCH-NOT: "-D" "BAR"
+// CHK-XARCH: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-D" "FOO"
+// CHK-XARCH-NOT: "-D" "BAR"
+
 /// Static libraries are searched for the IGCA target of an Intel GPU.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-u,xe-mtl-h %s 2>&1 \
