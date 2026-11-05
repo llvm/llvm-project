@@ -10,7 +10,7 @@
 define i32 @atexit(ptr %func) {
 ; CHECK-PIC-LABEL: atexit:
 ; CHECK-PIC:       @ %bb.0: @ %entry
-; CHECK-PIC-NEXT:    str lr, [sp, #-4]!
+; CHECK-PIC-NEXT:    push.w {lr}
 ; CHECK-PIC-NEXT:    sub sp, #12
 ; CHECK-PIC-NEXT:    movw r1, :lower16:(L___dso_handle$non_lazy_ptr-(LPC0_0+4))
 ; CHECK-PIC-NEXT:    movs r2, #0
@@ -22,12 +22,12 @@ define i32 @atexit(ptr %func) {
 ; CHECK-PIC-NEXT:    ldr r1, [r1]
 ; CHECK-PIC-NEXT:    bl _atexit_common
 ; CHECK-PIC-NEXT:    add sp, #12
-; CHECK-PIC-NEXT:    ldr lr, [sp], #4
+; CHECK-PIC-NEXT:    pop.w {lr}
 ; CHECK-PIC-NEXT:    bx lr
 ;
 ; CHECK-NOMOVT-LABEL: atexit:
 ; CHECK-NOMOVT:       @ %bb.0: @ %entry
-; CHECK-NOMOVT-NEXT:    str lr, [sp, #-4]!
+; CHECK-NOMOVT-NEXT:    push.w {lr}
 ; CHECK-NOMOVT-NEXT:    sub sp, #12
 ; CHECK-NOMOVT-NEXT:    str r0, [sp]
 ; CHECK-NOMOVT-NEXT:    movs r0, #0
@@ -39,7 +39,7 @@ define i32 @atexit(ptr %func) {
 ; CHECK-NOMOVT-NEXT:    mov r0, sp
 ; CHECK-NOMOVT-NEXT:    bl _atexit_common
 ; CHECK-NOMOVT-NEXT:    add sp, #12
-; CHECK-NOMOVT-NEXT:    ldr lr, [sp], #4
+; CHECK-NOMOVT-NEXT:    pop.w {lr}
 ; CHECK-NOMOVT-NEXT:    bx lr
 ; CHECK-NOMOVT-NEXT:    .p2align 2
 ; CHECK-NOMOVT-NEXT:  @ %bb.1:

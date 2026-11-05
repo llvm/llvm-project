@@ -42,8 +42,8 @@ define void @leaf_highreg_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: leaf_highreg_nofpelim:
 ; CHECK: push {r6, r7, lr}
 ; CHECK: add r7, sp, #4
-; CHECK: str r8, [sp, #-4]!
-; CHECK: ldr r8, [sp], #4
+; CHECK: push.w {r8}
+; CHECK: pop.w {r8}
 ; CHECK: pop {r6, r7, pc}
   call void asm sideeffect "", "~{r8}" ()
   ret void
@@ -119,9 +119,9 @@ define void @highreg_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: highreg_nofpelim:
 ; CHECK: push {[[DUMMYREG:r[0-9]+]], r7, lr}
 ; CHECK: add r7, sp, #4
-; CHECK: str r8, [sp, #-4]!
+; CHECK: push.w {r8}
 ; CHECK: bl foo
-; CHECK: ldr r8, [sp], #4
+; CHECK: pop.w {r8}
 ; CHECK: pop {[[DUMMYREG]], r7, pc}
   call void asm sideeffect "", "~{r8}" ()
   call void @foo()
@@ -149,9 +149,9 @@ define void @highreg_alloca_nofpelim(i32 %a) "frame-pointer"="all" {
 ; CHECK-LABEL: highreg_alloca_nofpelim:
 ; CHECK: push {[[SOMEREGS:.*]], r7, lr}
 ; CHECK: add r7, sp, #{{[0-9]+}}
-; CHECK: str r8, [sp, #-4]!
+; CHECK: push.w {r8}
 ; CHECK: bl foo
-; CHECK: ldr r8, [sp], #4
+; CHECK: pop.w {r8}
 ; CHECK: pop {[[SOMEREGS]], r7, pc}
   %alloca = alloca i32, i32 %a, align 4
   call void @foo()

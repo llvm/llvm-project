@@ -19,7 +19,7 @@ define i32 @test(i32 %a, i32 %a2, ptr %p, ptr %p2) "frame-pointer"="all" {
 ; CHECK:         push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    add r7, sp, #12
 ; CHECK-NEXT:    push.w {r8, r10, r11}
-; CHECK-NEXT:    str r3, [sp, #-4]!
+; CHECK-NEXT:    push.w {r3}
 ; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    mov r5, r0

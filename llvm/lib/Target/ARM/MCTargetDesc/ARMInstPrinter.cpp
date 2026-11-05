@@ -201,6 +201,21 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     } else
       break;
 
+  case ARM::t2STR_PRE:
+    if (MI->getOperand(2).getReg() == ARM::SP &&
+        MI->getOperand(3).getImm() == -4 &&
+        MI->getOperand(1).getReg() != ARM::SP &&
+        MI->getOperand(1).getReg() != ARM::PC) {
+      O << '\t' << "push";
+      printPredicateOperand(MI, 4, STI, O);
+      O << ".w\t{";
+      printRegName(O, MI->getOperand(1).getReg());
+      O << "}";
+      printAnnotation(O, Annot);
+      return;
+    } else
+      break;
+
   // A8.6.122 POP
   case ARM::LDMIA_UPD:
   case ARM::t2LDMIA_UPD:
@@ -223,6 +238,20 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       O << '\t' << "pop";
       printPredicateOperand(MI, 5, STI, O);
       O << "\t{";
+      printRegName(O, MI->getOperand(0).getReg());
+      O << "}";
+      printAnnotation(O, Annot);
+      return;
+    } else
+      break;
+
+  case ARM::t2LDR_POST:
+    if (MI->getOperand(2).getReg() == ARM::SP &&
+        MI->getOperand(3).getImm() == 4 &&
+        MI->getOperand(0).getReg() != ARM::SP) {
+      O << '\t' << "pop";
+      printPredicateOperand(MI, 4, STI, O);
+      O << ".w\t{";
       printRegName(O, MI->getOperand(0).getReg());
       O << "}";
       printAnnotation(O, Annot);

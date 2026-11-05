@@ -17,7 +17,7 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:  @ %bb.0: @ %bb
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    add r7, sp, #12
-; CHECK-NEXT:    str r8, [sp, #-4]!
+; CHECK-NEXT:    push.w {r8}
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    mov.w r9, #1
 ; CHECK-NEXT:    movw r12, #4100
