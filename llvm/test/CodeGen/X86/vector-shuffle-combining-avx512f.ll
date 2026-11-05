@@ -1260,7 +1260,8 @@ define double @max_splat1_v8f64(<8 x double> %v) #0 {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmaxsd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -1271,7 +1272,8 @@ define double @max_splat1_v8f64(<8 x double> %v) #0 {
 ;
 ; X64-LABEL: max_splat1_v8f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmaxsd %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %c = shufflevector <8 x double> %v, <8 x double> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
