@@ -14,6 +14,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllExtensions.h"
 #include "mlir/InitAllPasses.h"
@@ -22,6 +23,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 
 using namespace mlir;
@@ -42,9 +44,18 @@ static llvm::cl::opt<std::string> PipelineSlug(
     llvm::cl::desc("Pipeline slug from MlirOptFuzzerPipelines.def"),
     llvm::cl::init(""));
 
+static void handleLLVMFatalError(void *, const char *Message, bool) {
+  llvm::dbgs() << "LLVM ERROR: " << Message << "\n"
+               << "Aborting to trigger fuzzer exit handling.\n";
+  abort();
+}
+
 extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
                                                         char ***argv) {
   registerAllPasses();
+
+  // Route LLVM/MLIR fatal errors through abort() so libFuzzer records them.
+  llvm::install_fatal_error_handler(handleLLVMFatalError, nullptr);
 
   static llvm::cl::LibraryOptionsContext LibraryOptions;
   llvm::parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
@@ -113,6 +124,12 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerTestOneInput(const uint8_t *data,
 
   // A pass signalling failure is a polite exit, not a finding.
   (void)pm.run(*module);
+
+  // Check that the pipeline resulted in a valid module.
+  if (failed(verify(*module))) {
+    llvm::errs() << "mlir-opt-fuzzer: post-pipeline verification failed\n";
+    abort();
+  }
 
   return 0;
 }
