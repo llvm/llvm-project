@@ -3444,35 +3444,36 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   emitOMPSimdDirective(S, *this, CGM);
 }
 
+/// Emit a loop-nest transformation followed by its loop variable finalization,
+/// which restores the loop-exit values as required by OpenMP 6.0.
+static void emitLoopNestTransformation(
+    CodeGenFunction &CGF,
+    const OMPCanonicalLoopNestTransformationDirective &S) {
+  OMPTransformDirectiveScopeRAII Scope(CGF, &S);
+  CGF.EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    CGF.EmitStmt(Finals);
+}
+
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII TileScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
-  // Emit the de-sugared statement (the split loops).
-  OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
@@ -3485,7 +3486,10 @@ void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
+
   EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
