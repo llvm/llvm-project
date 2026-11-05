@@ -28,6 +28,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -67,8 +68,8 @@ public:
   mlir::Block *tryGetBlock() const { return tryGetPtr<mlir::Block>(); }
 
   /// Get whether the stack should be saved/restored. If yes, an llvm.stacksave
-  /// intrinsic should be added before the alloca, and an llvm.stackrestore
-  /// intrinsic should be added where the freemem is
+  /// intrinsic should be added at the start of the allocation block, and an
+  /// llvm.stackrestore intrinsic should be added before its terminator.
   bool shouldSaveRestoreStack() const { return saveRestoreStack; }
 
   operator bool() const { return tryGetOperation() || tryGetBlock(); }
@@ -122,9 +123,10 @@ public:
 
   /// Determine where to insert the alloca operation. The returned value should
   /// be checked to see if it is inside a loop
-  static InsertionPoint
-  findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc,
-                           const llvm::SmallVector<mlir::Operation *> &freeOps);
+  static InsertionPoint findAllocaInsertionPoint(
+      fir::AllocMemOp &oldAlloc,
+      const llvm::SmallVector<mlir::Operation *> &freeOps,
+      llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore);
 
 private:
   /// Handle to the DFA (already run)
@@ -132,19 +134,21 @@ private:
 
   const std::optional<mlir::DataLayout> &dl;
   const std::optional<fir::KindMapping> &kindMap;
+  mutable llvm::DenseSet<mlir::Block *> blocksWithStackSaveRestore;
 
   /// If we failed to find an insertion point not inside a loop, see if it would
   /// be safe to use an llvm.stacksave/llvm.stackrestore inside the loop
   static InsertionPoint findAllocaLoopInsertionPoint(
       fir::AllocMemOp &oldAlloc,
-      const llvm::SmallVector<mlir::Operation *> &freeOps);
+      const llvm::SmallVector<mlir::Operation *> &freeOps,
+      llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore);
 
   /// Returns the alloca if it was successfully inserted, otherwise {}
   std::optional<fir::AllocaOp>
   insertAlloca(fir::AllocMemOp &oldAlloc,
                mlir::PatternRewriter &rewriter) const;
 
-  /// Inserts a stacksave before oldAlloc and a stackrestore after each freemem
+  /// Insert one stacksave/stackrestore pair for the entire allocation block.
   void insertStackSaveRestore(fir::AllocMemOp oldAlloc,
                               mlir::PatternRewriter &rewriter) const;
   /// Emit lifetime markers for newAlloc between oldAlloc and each freemem.

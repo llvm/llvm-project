@@ -133,8 +133,10 @@ public:
     llvm::SmallVector<mlir::Value, 1> typeParams;
     hlfir::genLengthParameters(loc, builder, array, typeParams);
 
-    auto genKernel = [&array](mlir::Location loc, fir::FirOpBuilder &builder,
-                              mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&array](
+            mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       assert(inputIndices.size() == 2 && "checked in TransposeOp::validate");
       const std::initializer_list<mlir::Value> initList = {inputIndices[1],
                                                            inputIndices[0]};
@@ -142,7 +144,7 @@ public:
       hlfir::Entity element =
           hlfir::getElementAt(loc, builder, array, transposedIndices);
       hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, element);
-      return val;
+      return {val, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, typeParams, genKernel,
@@ -1179,8 +1181,9 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
       maskValue = genMaskValue(mask, isPresentPred, {});
   }
 
-  auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                       mlir::ValueRange inputIndices) -> hlfir::Entity {
+  auto genKernel =
+      [&](mlir::Location loc, fir::FirOpBuilder &builder,
+          mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
     // Loop over all indices in the DIM dimension, and reduce all values.
     // If DIM is not present, do total reduction.
 
@@ -1247,11 +1250,11 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
     llvm::SmallVector<mlir::Value, 1> reductionFinalValues =
         hlfir::genLoopNestWithReductions(
             loc, builder, extents, reductionInitValues, genBody, isUnordered());
-    return genFinalResult(reductionFinalValues);
+    return {genFinalResult(reductionFinalValues), std::nullopt};
   };
 
   if (isTotalReduce) {
-    hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{});
+    hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{}).first;
     rewriter.replaceOp(op, result);
     return mlir::success();
   }
@@ -1766,8 +1769,9 @@ private:
       std::tie(boundaryVal, boundaryIsScalarPred) =
           genScalarBoundaryForEOShift(loc, builder, op);
 
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       llvm::SmallVector<mlir::Value, maxRank> indices{inputIndices};
       if (!shiftVal) {
         // When the array is not a vector, section
@@ -1831,7 +1835,7 @@ private:
                 .genElse(
                     [&]() { fir::ResultOp::create(builder, loc, boundaryVal); })
                 .getResults()[0];
-        return hlfir::Entity{result};
+        return {hlfir::Entity{result}, std::nullopt};
       } else {
         // CSHIFT:
         // Element i of the result (1-based) is element
@@ -1861,7 +1865,7 @@ private:
         indices[dimVal - 1] = newIndex;
         hlfir::Entity element =
             hlfir::getElementAt(loc, builder, array, indices);
-        return hlfir::loadTrivialScalar(loc, builder, element);
+        return {hlfir::loadTrivialScalar(loc, builder, element), std::nullopt};
       }
     };
 
@@ -2942,8 +2946,9 @@ private:
                      mlir::Value innerProductExtent) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Type resultElementType = resultType.getElementType();
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange resultIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange resultIndices) -> hlfir::ElementalKernelResult {
       mlir::Value initValue =
           fir::factory::createZeroValue(builder, loc, resultElementType);
       // The inner product loop may be unordered if FastMathFlags::reassoc
@@ -2996,7 +3001,7 @@ private:
       llvm::SmallVector<mlir::Value, 1> innerProductValue =
           hlfir::genLoopNestWithReductions(loc, builder, {innerProductExtent},
                                            {initValue}, genBody, isUnordered);
-      return hlfir::Entity{innerProductValue[0]};
+      return {hlfir::Entity{innerProductValue[0]}, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, resultElementType, resultShape, /*typeParams=*/{},
@@ -3145,8 +3150,9 @@ public:
           builder.createIntegerConstant(loc, indexType, idx + 1)));
     auto resultShape = fir::ShapeOp::create(builder, loc, resultExtents);
 
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       mlir::Value linearIndex =
           computeLinearIndex(loc, builder, resultExtents, inputIndices);
       fir::IfOp ifOp;
@@ -3195,7 +3201,7 @@ public:
         arrayElement = ifOp.getResult(0);
       }
 
-      return hlfir::Entity{arrayElement};
+      return {hlfir::Entity{arrayElement}, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, typeParams, genKernel,

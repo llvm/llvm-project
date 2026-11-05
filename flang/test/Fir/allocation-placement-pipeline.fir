@@ -5,8 +5,8 @@
 
 // RUN: tco -enable-allocation-placement %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline -o /dev/null 2>&1 | FileCheck %s --check-prefix=PASSES
 // RUN: tco %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline -o /dev/null 2>&1 | FileCheck %s --check-prefix=PASSES
-// RUN: tco -enable-allocation-placement %s | FileCheck %s --check-prefix=NEW
-// RUN: tco %s | FileCheck %s --check-prefix=OLD
+// RUN: tco -enable-allocation-placement %s | FileCheck %s --check-prefixes=NEW,CHAR
+// RUN: tco %s | FileCheck %s --check-prefixes=OLD,CHAR
 
 // REQUIRES: asserts
 
@@ -31,5 +31,30 @@ func.func @small_temp() {
   %1 = fir.convert %0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
   fir.call @use(%1) : (!fir.ref<!fir.array<10xi32>>) -> ()
   fir.freemem %0 : !fir.heap<!fir.array<10xi32>>
+  return
+}
+
+// Character expression buffers go on the stack in both cases, and their
+// storage is reclaimed in each iteration of an unstructured loop.
+// CHAR-LABEL: define void @character_in_cfg_loop
+// CHAR: call ptr @llvm.stacksave
+// CHAR-NOT: @malloc
+// CHAR: alloca i8, i64
+// CHAR-NOT: @malloc
+// CHAR: call void @llvm.stackrestore
+
+func.func private @extent() -> index
+func.func private @use_char(!fir.ref<!fir.char<1,?>>)
+
+func.func @character_in_cfg_loop(%again: i1) {
+  cf.br ^loop
+^loop:
+  %n = fir.call @extent() : () -> index
+  %0 = fir.allocmem !fir.char<1,?>(%n : index)
+  %1 = fir.convert %0 : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+  fir.call @use_char(%1) : (!fir.ref<!fir.char<1,?>>) -> ()
+  fir.freemem %0 : !fir.heap<!fir.char<1,?>>
+  cf.cond_br %again, ^loop, ^exit
+^exit:
   return
 }

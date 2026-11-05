@@ -6,12 +6,15 @@ func.func @no_reassoc_expr(%addr: !fir.ref<!fir.char<1,?>>, %len: index) {
   %0:2 = hlfir.declare %addr typeparams %len uniq_name("c") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %1 = hlfir.as_expr %0#0 : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   %2 = hlfir.no_reassoc %1 : !hlfir.expr<!fir.char<1,?>>
+  hlfir.destroy %1 : !hlfir.expr<!fir.char<1,?>>
   return
 }
-// CHECK:  %[[VAL_4:.*]] = fir.alloca !fir.char<1,?>
+// CHECK-LABEL: func.func @no_reassoc_expr
+// CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.char<1,?>
 // CHECK:  %[[VAL_5:.*]] = fir.declare %[[VAL_4]] {{.*}}
 // CHECK:  %[[VAL_6:.*]] = fir.emboxchar %[[VAL_5]], %{{.*}}
 // CHECK:  fir.no_reassoc %[[VAL_6]] : !fir.boxchar<1>
+// CHECK:  fir.freemem
 
 func.func @no_reassoc_var(%addr: !fir.ref<!fir.char<1,?>>, %len: index) {
   %0:2 = hlfir.declare %addr typeparams %len uniq_name("c") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)

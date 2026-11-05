@@ -116,6 +116,12 @@ static fir::AllocationPlacement
 decideLegacyPlacement(const fir::AllocationInfo &info, bool stackArrays,
                       bool dynamicArrayOnHeap) {
   using P = fir::AllocationPlacement;
+  // Character expression buffers retain their historical stack storage, unless
+  // -fdynamic-heap-array asks for runtime-sized allocations to be on the heap,
+  // which the memory-allocation-opt pass applied to them.
+  if (fir::isCharacterTemporary(info))
+    return !stackArrays && dynamicArrayOnHeap && info.isDynamic ? P::Leave
+                                                                : P::Stack;
   if (stackArrays)
     return info.isCurrentlyOnStack || fir::isInOffloadRegion(info.context)
                ? P::Leave
@@ -207,11 +213,17 @@ void AllocationPlacementPass::runOnOperation() {
         return;
     }
 
-    // Only array allocations are considered, except that, like the
-    // memory-allocation-opt pass, legacy mode may move any allocation with a
-    // runtime size to the heap.
+    // Only array allocations are considered, with two exceptions. Character
+    // expression buffers carry explicit lifetimes, just like array
+    // temporaries, but retain their historical preference for stack storage
+    // independently of the array size policy. Only move them when the shared
+    // analysis can prove that their stack storage is safely reclaimed. And,
+    // like the memory-allocation-opt pass, legacy mode may move any allocation
+    // with a runtime size to the heap.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();
-    if (!mlir::isa<fir::SequenceType>(inTy) &&
+    bool isCharacterTemp = allocmem && mlir::isa<fir::CharacterType>(inTy) &&
+                           isTemporaryAllocation(op);
+    if (!mlir::isa<fir::SequenceType>(inTy) && !isCharacterTemp &&
         !(legacy && alloca && alloca.isDynamic()))
       return;
 
