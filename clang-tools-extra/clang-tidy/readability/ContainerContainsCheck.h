@@ -23,6 +23,8 @@ class ContainerContainsCheck : public ClangTidyCheck {
 public:
   ContainerContainsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   bool isLanguageVersionSupported(const LangOptions &LO) const final {
@@ -31,6 +33,9 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  Preprocessor *PP = nullptr;
 };
 
 } // namespace clang::tidy::readability
