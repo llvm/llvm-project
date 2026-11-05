@@ -1,4 +1,4 @@
-; RUN: opt -S -debugify -codegenprepare %s -o - | FileCheck %s --check-prefix=DEBUGIFY
+; RUN: opt -S -passes='debugify,require<profile-summary>,function(codegenprepare)' %s -o - | FileCheck %s --check-prefix=DEBUGIFY
 ;
 ; Copied from codegen-prepare-addrmode-sext.ll -- for the twoArgsNoPromotion
 ; function, CGP attempts a type promotion transaction on the sext to replace
