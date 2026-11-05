@@ -111,6 +111,9 @@ Check also doesn't fire if any argument of the constructor call would be:
 
   - a bit-field (bit-fields can't bind to rvalue/universal reference)
 
+  - ``0`` or ``NULL`` converted to a null pointer (a universal reference
+    deduces them as integers, which don't convert to pointers)
+
   - a ``new`` expression (to avoid leak)
 
   - if the argument would be converted via derived-to-base cast.
