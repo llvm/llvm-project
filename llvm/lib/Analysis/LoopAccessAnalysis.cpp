@@ -1655,6 +1655,11 @@ public:
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
   }
 
+  /// Record unannotated accesses, including stores omitted by deduplication.
+  void markNonParallelPtr(const Value *Ptr) { NonParallelPtrs.insert(Ptr); }
+
+  void markParallelAccess() { HasParallelAccesses = true; }
+
   /// Check if we can emit a run-time no-alias check for \p Access.
   ///
   /// Returns true if we can emit a run-time no alias check for \p Access.
@@ -1686,6 +1691,11 @@ public:
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
   void buildDependenceSets();
+
+  /// Records the same-iteration dependences of the alias sets that
+  /// buildDependenceSets() skipped because they are parallel.
+  void addParallelAliasSetDependences(MemoryDepChecker &DepChecker,
+                                      AAResults &AA);
 
   /// Initial processing of memory accesses determined that we need to
   /// perform dependency checking.
@@ -1733,6 +1743,15 @@ private:
     return ScopeList;
   }
 
+  /// All accesses in this set are mutually free of loop-carried dependences by
+  /// annotation; accesses in other sets are already known not to alias them.
+  bool isParallelAliasSet(ArrayRef<const Value *> ASPointers) const {
+    return HasParallelAccesses && !ASPointers.empty() &&
+           none_of(ASPointers, [this](const Value *Ptr) {
+             return NonParallelPtrs.contains(Ptr);
+           });
+  }
+
   const AnalysisOptions &Opts;
 
   /// Map of all accesses. Values are the types used to access memory pointed to
@@ -1747,6 +1766,11 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Pointers with at least one access not annotated as parallel.
+  SmallPtrSet<const Value *, 16> NonParallelPtrs;
+
+  bool HasParallelAccesses = false;
 
   /// Capture analysis for BAA.
   EarliestEscapeAnalysis EEA;
@@ -2242,6 +2266,9 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     ++ASId;
     auto ASPointers = AS.getPointers();
 
+    if (isParallelAliasSet(ASPointers))
+      continue;
+
     // We assign consecutive id to access from different dependence sets.
     // Accesses within the same set don't need a runtime check.
     unsigned RunningDepId = 1;
@@ -2422,6 +2449,14 @@ void AccessAnalysis::buildDependenceSets() {
   // only need to check for potential pointer dependencies within each alias
   // set.
   for (const auto &AS : AST) {
+    auto ASPointers = AS.getPointers();
+
+    if (isParallelAliasSet(ASPointers)) {
+      LLVM_DEBUG(dbgs() << "LAA: Skipping parallel alias set: ";
+                 AS.print(dbgs()));
+      continue;
+    }
+
     bool AliasSetHasWrite = false;
 
     // Map of (pointer to underlying objects, accessed address space) to last
@@ -2442,7 +2477,7 @@ void AccessAnalysis::buildDependenceSets() {
       // Note that both the alias-set tracker and the alias sets themselves used
       // ordered collections internally and so the iteration order here is
       // deterministic.
-      for (const Value *ConstPtr : AS.getPointers()) {
+      for (const Value *ConstPtr : ASPointers) {
         Value *Ptr = const_cast<Value *>(ConstPtr);
 
         // For a single memory access in AliasSetTracker, Accesses may contain
@@ -2698,6 +2733,24 @@ MemoryDepChecker::MemoryDepChecker(PredicatedScalarEvolution &PSE,
       SymbolicStrides(SymbolicStrides),
       MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
       LoopGuards(LoopGuards) {}
+
+void AccessAnalysis::addParallelAliasSetDependences(
+    MemoryDepChecker &DepChecker, AAResults &AA) {
+  for (const auto &AS : AST) {
+    auto ASPointers = AS.getPointers();
+    if (!isParallelAliasSet(ASPointers))
+      continue;
+
+    SmallVector<unsigned> AccessIdxs;
+    for (const Value *ConstPtr : ASPointers) {
+      Value *Ptr = const_cast<Value *>(ConstPtr);
+      append_range(AccessIdxs, DepChecker.getOrderForAccess(Ptr, true));
+      append_range(AccessIdxs, DepChecker.getOrderForAccess(Ptr, false));
+    }
+    sort(AccessIdxs);
+    DepChecker.addSameIterationDependences(AA, AccessIdxs);
+  }
+}
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
   visitPointers(SI->getPointerOperand(), *InnermostLoop,
@@ -3387,6 +3440,43 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
   return isSafeForVectorization();
 }
 
+void MemoryDepChecker::addSameIterationDependences(
+    AAResults &AA, ArrayRef<unsigned> AccessIdxs) {
+  if (!RecordDependences)
+    return;
+
+  // An access through a forked pointer has one index per pointer; the
+  // instruction only needs to be considered once.
+  SmallVector<unsigned> UniqueIdxs;
+  SmallPtrSet<Instruction *, 16> SeenInsts;
+  for (unsigned Idx : AccessIdxs)
+    if (SeenInsts.insert(InstMap[Idx]).second)
+      UniqueIdxs.push_back(Idx);
+
+  // Unlike the alias sets, this query is about a single iteration, so it must
+  // not use cross-iteration AA.
+  BatchAAResults BatchAA(AA);
+  for (auto [Pos, SrcIdx] : enumerate(UniqueIdxs)) {
+    Instruction *Src = InstMap[SrcIdx];
+    if (!Src->mayWriteToMemory())
+      continue;
+
+    MemoryLocation SrcLoc = MemoryLocation::get(Src);
+    for (unsigned DstIdx : drop_begin(UniqueIdxs, Pos + 1)) {
+      if (BatchAA.isNoAlias(SrcLoc, MemoryLocation::get(InstMap[DstIdx])))
+        continue;
+
+      Dependences.emplace_back(SrcIdx, DstIdx, Dependence::Forward);
+      if (Dependences.size() >= Opts.max_dependences) {
+        RecordDependences = false;
+        Dependences.clear();
+        LLVM_DEBUG(dbgs() << "Too many dependences, stopped recording\n");
+        return;
+      }
+    }
+  }
+}
+
 SmallVector<Instruction *, 4>
 MemoryDepChecker::getInstructionsForAccess(Value *Ptr, bool IsWrite) const {
   MemAccessInfo Access(Ptr, IsWrite);
@@ -3609,6 +3699,22 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   AccessAnalysis Accesses(Opts, TheLoop, AA, LI, *DT, DepCands, *PSE,
                           LoopAliasScopes);
 
+  SmallPtrSet<MDNode *, 4> ParallelAccessGroups;
+  TheLoop->getParallelAccessGroups(ParallelAccessGroups);
+  MDNode *LoopID = TheLoop->getLoopID();
+  bool MayHaveParallelAccesses = !ParallelAccessGroups.empty() || LoopID;
+  auto RecordParallelAccess = [&](Instruction *I) {
+    if (!MayHaveParallelAccesses)
+      return;
+    if (Loop::isParallelAccess(*I, ParallelAccessGroups, LoopID)) {
+      Accesses.markParallelAccess();
+      return;
+    }
+    visitPointers(
+        getLoadStorePointerOperand(I), *TheLoop,
+        [&Accesses](Value *Ptr) { Accesses.markNonParallelPtr(Ptr); });
+  };
+
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
   // for read and once for write, it will only appear once (on the write
@@ -3622,6 +3728,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
+    RecordParallelAccess(ST);
 
     if (isInvariant(Ptr)) {
       // Record store instructions to loop invariant addresses
@@ -3657,11 +3764,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
+    auto AccessIdxs =
+        to_vector(seq<unsigned>(DepChecker->getMemoryInstructions().size()));
+    DepChecker->addSameIterationDependences(*AA, AccessIdxs);
     return true;
   }
 
   for (LoadInst *LD : Loads) {
     Value *Ptr = LD->getPointerOperand();
+    RecordParallelAccess(LD);
     // If we did *not* see this pointer before, insert it to the read list. If
     // we *did* see it before, then it is already in the read-write list. This
     // allows us to vectorize expressions such as A[i] += x; Because the address
@@ -3766,6 +3877,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       DepsAreSafe = true;
     }
   }
+
+  Accesses.addParallelAliasSetDependences(*DepChecker, *AA);
 
   // Update the invariant address dependence flags based on dependences found
   // by the dep checker. Even if dependences were not recorded (too many to

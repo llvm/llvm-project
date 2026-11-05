@@ -299,6 +299,14 @@ public:
              [](const Dependence &D) { return D.Type == Dependence::Unknown; });
   }
 
+  /// Record a Forward dependence from each write in \p AccessIdxs, which must
+  /// be sorted, to every later access in \p AccessIdxs it may overlap with in
+  /// the same iteration. Parallel annotations only rule out loop-carried
+  /// dependences, so clients that reorder accesses within an iteration still
+  /// need these, even though no dependence analysis ran for the accesses.
+  LLVM_ABI void addSameIterationDependences(AAResults &AA,
+                                            ArrayRef<unsigned> AccessIdxs);
+
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
   const SmallVectorImpl<Instruction *> &getMemoryInstructions() const {
