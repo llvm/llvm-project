@@ -345,6 +345,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.sendfile.sendfile
 
     # sys/shm.h entrypoints
+    libc.src.sys.shm.shmat
     libc.src.sys.shm.shmget
 
     # sys/socket.h entrypoints
