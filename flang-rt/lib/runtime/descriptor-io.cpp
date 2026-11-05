@@ -453,9 +453,8 @@ inline RT_API_ATTRS bool FormattedLogicalIO(
 
 // F2023 enumeration type formatted I/O.  The item is edited as its INTEGER(4)
 // ordinal.  Only the I, B, O, and Z edit descriptors are allowed (12.6.3),
-// plus G as an extension, and an input value must be positive and not greater
-// than the number of enumerators (13.7.2.2 p6).  On an input error the item
-// is left unchanged.
+// and an input value must be positive and not greater than the number of
+// enumerators (13.7.2.2 p6).  On an input error the item is left unchanged.
 template <Direction DIR>
 static RT_API_ATTRS bool FormattedEnumerationIO(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
@@ -482,7 +481,6 @@ static RT_API_ATTRS bool FormattedEnumerationIO(IoStatementState &io,
     case 'B':
     case 'O':
     case 'Z':
-    case 'G':
       break;
     case DataEdit::DefinedDerivedType:
       handler.SignalError(IostatErrorInFormat,
