@@ -440,7 +440,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+  assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
          "Unexpected ABI");
   bool IsDoubleFPABI = RISCVABI::isDoubleFP(ABI);
   if (IsDoubleFPABI || RISCVABI::isSingleFP(ABI))
@@ -527,7 +527,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
   if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
-      ABI != RISCVABI::ABI_ILP32E) {
+      ABI != RISCVABI::ABI::ILP32E) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
     if (RegIdx != std::size(ArgGPRs) && RegIdx % 2 == 1)

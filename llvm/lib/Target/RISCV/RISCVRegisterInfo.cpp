@@ -89,7 +89,7 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       Subtarget.hasVInstructions();
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+  assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
          "Unrecognized ABI");
   if (RISCVABI::isRVE(ABI))
     return CSR_ILP32E_LP64E_SaveList;
@@ -886,7 +886,7 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+  assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
          "Unrecognized ABI");
   if (CC == CallingConv::PreserveMost) {
     if (RISCVABI::isRVE(ABI))
