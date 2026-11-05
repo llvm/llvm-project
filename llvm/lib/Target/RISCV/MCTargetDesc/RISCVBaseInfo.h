@@ -734,20 +734,79 @@ enum ABI {
   ABI_Unknown
 };
 
-// Returns true for the ABIs that pass floating point values in integer
+// Returns true for the ABIs that pass all floating point values in integer
 // registers.
 inline bool isSoftFP(ABI TargetABI) {
-  return TargetABI == ABI_ILP32 || TargetABI == ABI_ILP32E ||
-         TargetABI == ABI_LP64 || TargetABI == ABI_LP64E;
+  switch (TargetABI) {
+  case ABI_ILP32:
+  case ABI_ILP32E:
+  case ABI_IL32PC64:
+  case ABI_IL32PC64E:
+  case ABI_LP64:
+  case ABI_LP64E:
+  case ABI_L64PC128:
+  case ABI_CHERIOT:
+    return true;
+  default:
+    return false;
+  }
 }
 
-// Returns true for the ABIs that use the reduced 16 register integer file.
+// Returns true for the ABIs that pass half, bfloat, or single precision
+// floating point values in FP registers. Double and quad precision FP values
+// are passed in integer registers.
+inline bool isSingleFP(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI_ILP32F:
+  case ABI_IL32PC64F:
+  case ABI_LP64F:
+  case ABI_L64PC128F:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that pass half, bfloat, single, or double precision
+// floating point values in FP registers. Quad precision FP values are passed
+// in integer registers.
+inline bool isDoubleFP(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI_ILP32D:
+  case ABI_IL32PC64D:
+  case ABI_LP64D:
+  case ABI_L64PC128D:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that only use the reduced 16 register integer file.
 inline bool isRVE(ABI TargetABI) {
   return TargetABI == ABI_ILP32E || TargetABI == ABI_IL32PC64E ||
          TargetABI == ABI_LP64E || TargetABI == ABI_CHERIOT;
 }
 
+// Returns true for the ABIs in which pointers are capabilities.
+inline bool isPurecap(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI_IL32PC64:
+  case ABI_IL32PC64F:
+  case ABI_IL32PC64D:
+  case ABI_IL32PC64E:
+  case ABI_L64PC128:
+  case ABI_L64PC128F:
+  case ABI_L64PC128D:
+  case ABI_CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Returns the stack alignment required by the ABI.
+// FIXME: Add the purecap variants of the E ABIs?
 inline Align getStackAlignment(ABI TargetABI) {
   if (TargetABI == ABI_ILP32E)
     return Align(4);

@@ -440,23 +440,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  switch (ABI) {
-  default:
-    llvm_unreachable("Unexpected ABI");
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_LP64E:
-    break;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    AllowFPRForF64 = !ArgFlags.isVarArg();
-    [[fallthrough]];
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
+  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+         "Unexpected ABI");
+  bool IsDoubleFPABI = RISCVABI::isDoubleFP(ABI);
+  if (IsDoubleFPABI || RISCVABI::isSingleFP(ABI))
     AllowFPRForF16_F32 = !ArgFlags.isVarArg();
-    break;
-  }
+  if (IsDoubleFPABI)
+    AllowFPRForF64 = !ArgFlags.isVarArg();
 
   if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {

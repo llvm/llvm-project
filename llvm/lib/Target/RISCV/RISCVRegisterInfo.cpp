@@ -88,28 +88,18 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
       Subtarget.hasVInstructions();
 
-  switch (Subtarget.getTargetABI()) {
-  default:
-    llvm_unreachable("Unrecognized ABI");
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64E:
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+         "Unrecognized ABI");
+  if (RISCVABI::isRVE(ABI))
     return CSR_ILP32E_LP64E_SaveList;
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_LP64:
-    if (HasVectorCSR)
-      return CSR_ILP32_LP64_V_SaveList;
-    return CSR_ILP32_LP64_SaveList;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
-    if (HasVectorCSR)
-      return CSR_ILP32F_LP64F_V_SaveList;
-    return CSR_ILP32F_LP64F_SaveList;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    if (HasVectorCSR)
-      return CSR_ILP32D_LP64D_V_SaveList;
-    return CSR_ILP32D_LP64D_SaveList;
-  }
+  if (RISCVABI::isSoftFP(ABI))
+    return HasVectorCSR ? CSR_ILP32_LP64_V_SaveList : CSR_ILP32_LP64_SaveList;
+  if (RISCVABI::isSingleFP(ABI))
+    return HasVectorCSR ? CSR_ILP32F_LP64F_V_SaveList
+                        : CSR_ILP32F_LP64F_SaveList;
+  assert(RISCVABI::isDoubleFP(ABI) && "Unrecognized ABI");
+  return HasVectorCSR ? CSR_ILP32D_LP64D_V_SaveList : CSR_ILP32D_LP64D_SaveList;
 }
 
 const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForReg(
@@ -896,33 +886,22 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  assert(ABI != RISCVABI::ABI_Unknown && !RISCVABI::isPurecap(ABI) &&
+         "Unrecognized ABI");
   if (CC == CallingConv::PreserveMost) {
     if (RISCVABI::isRVE(ABI))
       return CSR_RT_MostRegs_RVE_RegMask;
     return CSR_RT_MostRegs_RegMask;
   }
-  switch (ABI) {
-  default:
-    llvm_unreachable("Unrecognized ABI");
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64E:
+  if (RISCVABI::isRVE(ABI))
     return CSR_ILP32E_LP64E_RegMask;
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_LP64:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32_LP64_V_RegMask;
-    return CSR_ILP32_LP64_RegMask;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32F_LP64F_V_RegMask;
-    return CSR_ILP32F_LP64F_RegMask;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32D_LP64D_V_RegMask;
-    return CSR_ILP32D_LP64D_RegMask;
-  }
+  bool IsVectorCall = CC == CallingConv::RISCV_VectorCall;
+  if (RISCVABI::isSoftFP(ABI))
+    return IsVectorCall ? CSR_ILP32_LP64_V_RegMask : CSR_ILP32_LP64_RegMask;
+  if (RISCVABI::isSingleFP(ABI))
+    return IsVectorCall ? CSR_ILP32F_LP64F_V_RegMask : CSR_ILP32F_LP64F_RegMask;
+  assert(RISCVABI::isDoubleFP(ABI) && "Unrecognized ABI");
+  return IsVectorCall ? CSR_ILP32D_LP64D_V_RegMask : CSR_ILP32D_LP64D_RegMask;
 }
 
 const TargetRegisterClass *

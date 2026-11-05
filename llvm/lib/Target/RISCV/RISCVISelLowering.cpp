@@ -73,19 +73,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // rejected/ by RISCVABI::computeTargetABI() during subtarget construction.
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
 
-  switch (ABI) {
-  default:
+  if (RISCVABI::isPurecap(ABI))
     reportFatalUsageError("Don't know how to lower this ABI");
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64E:
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_LP64F:
-  case RISCVABI::ABI_LP64D:
-    break;
-  }
 
   MVT XLenVT = Subtarget.getXLenVT();
 
