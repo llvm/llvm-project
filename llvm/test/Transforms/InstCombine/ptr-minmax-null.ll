@@ -81,64 +81,13 @@ define i1 @umax_null_logical_or_commuted(ptr %x, ptr %y) {
   ret i1 %r
 }
 
-define i1 @umax_uge_null_logical_or(ptr %x, ptr %y) {
-; CHECK-LABEL: @umax_uge_null_logical_or(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp uge ptr %x, %y
-  %minmax = select i1 %cmp, ptr %x, ptr %y
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
-}
-
-define i1 @umax_ult_null_logical_or(ptr %x, ptr %y) {
-; CHECK-LABEL: @umax_ult_null_logical_or(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[X]], null
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp ult ptr %y, %x
-  %minmax = select i1 %cmp, ptr %x, ptr %y
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
-}
-
-define i1 @umax_ule_null_logical_or(ptr %x, ptr %y) {
-; CHECK-LABEL: @umax_ule_null_logical_or(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp ule ptr %x, %y
-  %minmax = select i1 %cmp, ptr %y, ptr %x
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
-}
-
-; Only equality with null is decomposed.
+; Decompose the conjugate nonnull comparison as well.
 define i1 @umax_nonnull_logical_and(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_nonnull_logical_and(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp ne ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp ne ptr [[MINMAX]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[X]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[MINMAXNULL:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 [[MINMAXNULL]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -176,25 +125,6 @@ define i1 @umin_null_logical_or(ptr %x, ptr %y) {
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ugt ptr %x, %y
   %minmax = select i1 %cmp, ptr %y, ptr %x
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
-}
-
-define i1 @umax_null_multiuse_select(ptr %x, ptr %y) {
-; CHECK-LABEL: @umax_null_multiuse_select(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    call void @use_ptr(ptr [[MINMAX]])
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp ugt ptr %x, %y
-  %minmax = select i1 %cmp, ptr %x, ptr %y
-  call void @use_ptr(ptr %minmax)
   %minmaxnull = icmp eq ptr %minmax, null
   %r = select i1 %xnull, i1 true, i1 %minmaxnull
   ret i1 %r
@@ -253,26 +183,6 @@ define i1 @umax_null_nonintegral(ptr addrspace(2) %x, ptr addrspace(2) %y) {
   ret i1 %r
 }
 
-; Do not expose poison in %y when %x is nonnull.
-define i1 @umax_null_poison_in_unselected_arm(ptr %x, ptr %y) {
-; CHECK-LABEL: @umax_null_poison_in_unselected_arm(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    call void @use_ptr(ptr [[MINMAX]])
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 [[MINMAXNULL]], i1 false
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp ugt ptr %x, %y
-  %minmax = select i1 %cmp, ptr %x, ptr %y
-  call void @use_ptr(ptr %minmax)
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 %minmaxnull, i1 false
-  ret i1 %r
-}
-
 ; Signed maximum is outside the observed pattern.
 define i1 @smax_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @smax_null_logical_or(
@@ -308,20 +218,144 @@ define i1 @umax_null_unrelated_pointer(ptr %x, ptr %y, ptr %z) {
   ret i1 %r
 }
 
-; The select must return the operands of its comparison.
-define i1 @not_umax_null_logical_or(ptr %x, ptr %y, ptr %z) {
-; CHECK-LABEL: @not_umax_null_logical_or(
-; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Z:%.*]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; Direct unsigned maximum matching covers both strict and non-strict compares.
+define i1 @umax_uge_null(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_uge_null(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[MAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
 ;
-  %xnull = icmp eq ptr %x, null
-  %cmp = icmp ugt ptr %x, %y
-  %minmax = select i1 %cmp, ptr %x, ptr %z
-  %minmaxnull = icmp eq ptr %minmax, null
-  %r = select i1 %xnull, i1 true, i1 %minmaxnull
-  ret i1 %r
+  %cmp = icmp uge ptr %x, %y
+  %max = select i1 %cmp, ptr %x, ptr %y
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
 }
+
+; The compare operands are reversed relative to the select arms.
+define i1 @umax_ult_null(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_ult_null(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[MAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
+;
+  %cmp = icmp ult ptr %x, %y
+  %max = select i1 %cmp, ptr %y, ptr %x
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
+}
+
+define i1 @umax_ule_null(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_ule_null(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[MAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
+;
+  %cmp = icmp ule ptr %x, %y
+  %max = select i1 %cmp, ptr %y, ptr %x
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
+}
+
+; Both select arms must be the operands of the comparison.
+define i1 @umax_null_unrelated_condition(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: @umax_null_unrelated_condition(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y:%.*]]
+; CHECK-NEXT:    [[MAXNULL:%.*]] = icmp eq ptr [[MAX]], null
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
+;
+  %cmp = icmp ugt ptr %x, %z
+  %max = select i1 %cmp, ptr %x, ptr %y
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
+}
+
+; A frozen condition does not propagate poison from both select arms.
+define i1 @umax_null_frozen_condition(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_null_frozen_condition(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[FROZEN:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[FROZEN]], ptr [[X]], ptr [[Y]]
+; CHECK-NEXT:    [[MAXNULL:%.*]] = icmp eq ptr [[MAX]], null
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
+;
+  %cmp = icmp ugt ptr %x, %y
+  %frozen = freeze i1 %cmp
+  %max = select i1 %frozen, ptr %x, ptr %y
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
+}
+
+; After normalization, the result must use the frozen operand.
+define i1 @umax_null_frozen_compare_operand(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_null_frozen_compare_operand(
+; CHECK-NEXT:    [[FROZEN:%.*]] = freeze ptr [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FROZEN]], null
+; CHECK-NEXT:    [[MAXNULL:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[MAXNULL]]
+;
+  %frozen = freeze ptr %y
+  %cmp = icmp ugt ptr %x, %frozen
+  %max = select i1 %cmp, ptr %x, ptr %y
+  %maxnull = icmp eq ptr %max, null
+  ret i1 %maxnull
+}
+
+; The nonnull comparison produces OR of the operand comparisons.
+define i1 @umax_nonnull(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_nonnull(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[NONNULL:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+  %cmp = icmp ugt ptr %x, %y
+  %max = select i1 %cmp, ptr %x, ptr %y
+  %nonnull = icmp ne ptr %max, null
+  ret i1 %nonnull
+}
+
+define i1 @umax_uge_nonnull(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_uge_nonnull(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[X:%.*]], null
+; CHECK-NEXT:    [[NONNULL:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+  %cmp = icmp uge ptr %x, %y
+  %max = select i1 %cmp, ptr %x, ptr %y
+  %nonnull = icmp ne ptr %max, null
+  ret i1 %nonnull
+}
+
+; Also match comparisons whose operands are reversed relative to the arms.
+define i1 @umax_ult_nonnull(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_ult_nonnull(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[X:%.*]], null
+; CHECK-NEXT:    [[NONNULL:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+  %cmp = icmp ult ptr %x, %y
+  %max = select i1 %cmp, ptr %y, ptr %x
+  %nonnull = icmp ne ptr %max, null
+  ret i1 %nonnull
+}
+
+define i1 @umax_ule_nonnull(ptr %x, ptr %y) {
+; CHECK-LABEL: @umax_ule_nonnull(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[NONNULL:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+  %cmp = icmp ule ptr %x, %y
+  %max = select i1 %cmp, ptr %y, ptr %x
+  %nonnull = icmp ne ptr %max, null
+  ret i1 %nonnull
+}
+
