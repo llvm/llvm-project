@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -144,6 +145,9 @@ private:
   char *customPassID;
 
   RegSet VRegsToAlloc, EmptyIntervalVRegs;
+
+  /// The allocation orders that failVReg() picks a register from.
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   /// Inst which is a def of an original reg and whose defs are already all
   /// dead after remat is saved in DeadRemats. The deletion of such inst is
@@ -549,6 +553,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(RegAllocPBQP, "regallocpbqp", "PBQP Register Allocator",
                     false, false)
 
@@ -570,6 +575,7 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMapWrapperLegacy>();
   au.addPreserved<VirtRegMapWrapperLegacy>();
+  au.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(au);
 }
 
@@ -730,11 +736,7 @@ void RegAllocPBQP::spillVReg(Register VReg,
 void RegAllocPBQP::failVReg(Register VReg, MachineFunction &MF,
                             LiveIntervals &LIS, VirtRegMap &VRM) {
   VRegsToAlloc.erase(VReg);
-
-  // Only an error needs the allocation orders.
-  RegisterClassInfo RCI;
-  RCI.runOnMachineFunction(MF);
-  MCRegister PReg = assignFailedVirtReg(VReg, RCI, LIS, VRM);
+  MCRegister PReg = assignFailedVirtReg(VReg, *RegClassInfo, LIS, VRM);
   (void)PReg;
   LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg) << " -> FAILED, rewritten to "
                     << printReg(PReg, MF.getSubtarget().getRegisterInfo())
@@ -847,6 +849,10 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
+
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  RegClassInfo->updateReservedRegs(MF.getRegInfo().getReservedRegs());
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 
