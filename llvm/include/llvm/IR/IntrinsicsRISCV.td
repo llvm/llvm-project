@@ -2184,6 +2184,15 @@ class RVPBinaryIntrinsic
   def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
 
+  // Scalar Comparison. The result is a 0/-1 mask; the derived forms
+  // (msne/msgt/msge/...) are composed in the header.
+  class RVPScalarCmpIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mseq  : RVPScalarCmpIntrinsic;
+  def int_riscv_mslt  : RVPScalarCmpIntrinsic;
+  def int_riscv_msltu : RVPScalarCmpIntrinsic;
+
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic

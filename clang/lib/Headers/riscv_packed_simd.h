@@ -470,6 +470,67 @@ __packed_binary_builtin(aaddu_u32, uint32_t, __builtin_riscv_aaddu_u32)
 __packed_binary_builtin(asub_i32, int32_t, __builtin_riscv_asub_i32)
 __packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
 
+/* Scalar Comparison */
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mseq_i32_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mseq((uint32_t)__rs1, (uint32_t)__rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mseq_u32_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_mseq(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mslt_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mslt(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgt_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mslt(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msltu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_msltu(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgtu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_msltu(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msne_i32_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mseq((uint32_t)__rs1, (uint32_t)__rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msne_u32_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_mseq(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msge_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mslt(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msle_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mslt(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgeu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_msltu(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msleu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_msltu(__rs2, __rs1);
+}
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
