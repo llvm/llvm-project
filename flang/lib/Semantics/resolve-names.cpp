@@ -8572,7 +8572,7 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
   } else {
-    // A name in a locality-spec must be a variable (F'2023 C1126). An entity
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
     // declared in an enclosing BLOCK is not classified as an object or a
     // procedure until the end of the BLOCK, so classify it now; the locality
     // checks then diagnose a name that cannot be a variable.
