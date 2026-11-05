@@ -54,12 +54,12 @@ entry:
 
   %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefromimplicitbinding.tspirv.Image_f32_5_2_0_0_2_1t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %1 = tail call i32 @llvm.spv.thread.id.i32(i32 0)
+; CHECK: %[[IDX:[0-9]+]] = OpBitwiseAnd {{.*}}
   %rem.i = and i32 %1, 3
 
-; CHECK: %[[IDX_CONV:[0-9]+]] = OpUConvert {{.*}}
   %idxprom.i = zext nneg i32 %rem.i to i64
 
-; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX_CONV]]
+; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX]]
   %cbufferidx.i = getelementptr <{ %OrigType, target("spirv.Padding", 12) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] %[[ZERO]] %[[ZERO]]

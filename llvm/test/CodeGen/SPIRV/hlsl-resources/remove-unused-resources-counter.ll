@@ -27,7 +27,7 @@
 ; CHECK: store float 1.000000e+00
 ; CHECK: ret void
 
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 target triple = "spirv1.6-unknown-vulkan1.3-compute"
 
 @_ZL6unused.0 = internal unnamed_addr global target("spirv.VulkanBuffer", [0 x float], 12, 1) poison, align 8
