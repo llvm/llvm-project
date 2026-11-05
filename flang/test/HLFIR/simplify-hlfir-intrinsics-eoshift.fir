@@ -2102,7 +2102,9 @@ func.func @_QPeoshift17c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
     %23 = hlfir.designate %13#0 (%arg2, %arg3)  typeparams %c10 : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, index, index) -> !fir.ref<!fir.char<1,10>>
     %24 = hlfir.designate %13#0 (%arg2, %arg3)  typeparams %c10 : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, index, index) -> !fir.ref<!fir.char<1,10>>
     %25 = hlfir.concat %23, %24 len %c20 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>, index) -> !hlfir.expr<!fir.char<1,20>>
-    hlfir.yield_element %25 : !hlfir.expr<!fir.char<1,20>>
+    hlfir.yield_element %25 : !hlfir.expr<!fir.char<1,20>> cleanup {
+      hlfir.destroy %25 : !hlfir.expr<!fir.char<1,20>>
+    }
   }
   %15:2 = hlfir.declare %1#0 uniq_name("_QFeoshift17cFcharc_boundaryEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %16 = fir.load %15#0 : !fir.ref<i32>

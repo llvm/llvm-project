@@ -62,6 +62,7 @@ add_flang_library(FIRBuilder
   ${extension_libs}
 
   MLIR_LIBS
+  MLIRTransformUtils
   ${dialect_libs}
   ${extension_libs}
 )

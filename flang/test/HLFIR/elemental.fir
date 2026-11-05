@@ -38,7 +38,9 @@ func.func @char_type(%x: !fir.box<!fir.array<?x!fir.char<1,?>>>, %n: index, %l :
   ^bb0(%i: index):
     %4 = hlfir.designate %x (%i) typeparams %l0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
     %6 = hlfir.concat %4, %4 len %l : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
-    hlfir.yield_element %6 : !hlfir.expr<!fir.char<1,?>>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.char<1,?>> cleanup {
+      hlfir.destroy %6 : !hlfir.expr<!fir.char<1,?>>
+    }
   }
   return
 }
@@ -62,7 +64,9 @@ func.func @parametrized_derived_transpose(%x: !fir.box<!fir.array<?x?x!pdt>>, %n
   ^bb0(%j: index, %i: index):
     %4 = hlfir.designate %x (%j, %i) typeparams %l : (!fir.box<!fir.array<?x?x!pdt>>, index, index, i32) -> !fir.box<!pdt>
     %5 = hlfir.as_expr %4 : (!fir.box<!pdt>) -> !hlfir.expr<!pdt>
-    hlfir.yield_element %5 : !hlfir.expr<!pdt>
+    hlfir.yield_element %5 : !hlfir.expr<!pdt> cleanup {
+      hlfir.destroy %5 : !hlfir.expr<!pdt>
+    }
   }
   return
 }
@@ -105,7 +109,9 @@ func.func @polymorphic_mold_var(%arg0: !fir.class<!fir.array<?x!fir.type<_QMtype
   %4 = hlfir.elemental %3 mold %arg0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
   ^bb0(%arg2: index):
     %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
-    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?> cleanup {
+      hlfir.destroy %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    }
   }
   return
 }
@@ -126,7 +132,9 @@ func.func @polymorphic_mold_expr(%shape : index) {
   %4 = hlfir.elemental %3 mold %mold unordered : (!fir.shape<1>, !hlfir.expr<?x!fir.type<_QMtypesTt>?>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
   ^bb0(%arg2: index):
     %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
-    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?> cleanup {
+      hlfir.destroy %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    }
   }
   return
 }

@@ -292,9 +292,13 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
     auto [lhsExv, c1] = hlfir::translateToExtendedValue(loc, builder, lhs);
     auto [rhsExv, c2] = hlfir::translateToExtendedValue(loc, builder, rhs);
     assert(!c1 && !c2 && "expected variables");
-    fir::ExtendedValue res =
+    bool useHeap = !mlir::cast<fir::CharacterType>(
+                        hlfir::getFortranElementType(concat.getType()))
+                        .hasConstantLen();
+    fir::CharBoxValue temp =
         fir::factory::CharacterExprHelper{builder, loc}.createConcatenate(
-            *lhsExv.getCharBox(), *rhsExv.getCharBox());
+            *lhsExv.getCharBox(), *rhsExv.getCharBox(), useHeap);
+    fir::ExtendedValue res = temp;
     // Ensure the memory type is the same as the result type.
     mlir::Type addrType = fir::ReferenceType::get(
         hlfir::getFortranElementType(concat.getResult().getType()));
@@ -304,8 +308,9 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
         hlfir::Entity{hlfir::genDeclare(loc, builder, res, "tmp",
                                         fir::FortranVariableFlagsAttr{})
                           .getBase()};
-    mlir::Value bufferizedExpr =
-        packageBufferizedExpr(loc, builder, hlfirTempRes, false);
+    mlir::Value bufferizedExpr = packageBufferizedExpr(
+        loc, builder, hlfirTempRes,
+        mlir::isa<fir::HeapType>(temp.getBuffer().getType()));
     rewriter.replaceOp(concat, bufferizedExpr);
     return mlir::success();
   }
@@ -326,8 +331,12 @@ struct SetLengthOpConversion
     auto charType = hlfir::getFortranElementType(setLength.getType());
     llvm::StringRef tmpName{".tmp"};
     llvm::SmallVector<mlir::Value, 1> lenParams{adaptor.getLength()};
-    auto alloca = builder.createTemporary(loc, charType, tmpName,
-                                          /*shape=*/{}, lenParams);
+    bool mustFree = !mlir::cast<fir::CharacterType>(charType).hasConstantLen();
+    auto alloca = mustFree
+                      ? builder.createHeapTemporary(loc, charType, tmpName,
+                                                    /*shape=*/{}, lenParams)
+                      : builder.createTemporary(loc, charType, tmpName,
+                                                /*shape=*/{}, lenParams);
     auto declareOp = hlfir::DeclareOp::create(
         builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams);
     hlfir::Entity temp{declareOp.getBase()};
@@ -337,7 +346,7 @@ struct SetLengthOpConversion
                             /*keep_lhs_length_if_realloc=*/false,
                             /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
-        packageBufferizedExpr(loc, builder, temp, false);
+        packageBufferizedExpr(loc, builder, temp, mustFree);
     rewriter.replaceOp(setLength, bufferizedExpr);
     return mlir::success();
   }
@@ -774,21 +783,33 @@ struct ElementalOpConversion
     auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                           loopNest.oneBasedIndices);
     hlfir::Entity elementValue(yield.getElementValue());
+    hlfir::AsExprOp skippedAsExpr;
+    auto onlyYieldAndCleanupUses = [&](mlir::Value expr) {
+      return llvm::all_of(expr.getUsers(), [&](mlir::Operation *user) {
+        if (user == yield)
+          return true;
+        auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(user);
+        // Only direct cleanup destroys are omitted when replaying the region
+        // below. A destroy nested in another operation would retain a use of
+        // the as_expr we want to erase. Finalization must also be preserved.
+        return destroy && !destroy.mustFinalizeExpr() &&
+               destroy->getParentOp() == yield;
+      });
+    };
     // Skip final AsExpr if any. It would create an element temporary,
     // which is no needed since the element will be assigned right away in
     // the array temporary. An hlfir.as_expr may have been added if the
     // elemental is a "view" over a variable (e.g parentheses or transpose).
     if (auto asExpr = elementValue.getDefiningOp<hlfir::AsExprOp>()) {
-      if (asExpr->hasOneUse() && !asExpr.isMove()) {
+      if (onlyYieldAndCleanupUses(asExpr.getResult()) && !asExpr.isMove()) {
         // Check that the asExpr is the final operation before the yield,
         // otherwise, clean-ups could impact the memory being re-used.
         if (asExpr->getNextNode() == yield.getOperation()) {
+          skippedAsExpr = asExpr;
           elementValue = hlfir::Entity{asExpr.getVar()};
-          rewriter.eraseOp(asExpr);
         }
       }
     }
-    rewriter.eraseOp(yield);
     // Assign the element value to the temp element for this iteration.
     auto tempElement =
         hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
@@ -801,26 +822,31 @@ struct ElementalOpConversion
     auto elemType = hlfir::getFortranElementType(elementValue.getType());
     if (asExpr && asExpr.isMove() && mlir::isa<fir::RecordType>(elemType) &&
         hlfir::mayHaveAllocatableComponent(elemType) &&
-        wasCreatedInCurrentBlock(elementValue, builder)) {
+        wasCreatedInCurrentBlock(elementValue, builder) &&
+        onlyYieldAndCleanupUses(elementValue)) {
       auto load = fir::LoadOp::create(builder, loc, asExpr.getVar());
       fir::StoreOp::create(builder, loc, load, tempElement);
+      skippedAsExpr = asExpr;
     } else {
       hlfir::AssignOp::create(builder, loc, elementValue, tempElement,
                               /*realloc=*/false,
                               /*keep_lhs_length_if_realloc=*/false,
                               /*temporary_lhs=*/true);
-
-      // hlfir.yield_element implicitly marks the end-of-life its operand if
-      // it is an expression created in the hlfir.elemental (since it is its
-      // last use and an hlfir.destroy could not be created afterwards)
-      // Now that this node has been removed and the expression has been used in
-      // the assign, insert an hlfir.destroy to mark the expression end-of-life.
-      // If the expression creation allocated a buffer on the heap inside the
-      // loop, this will ensure the buffer properly deallocated.
-      if (mlir::isa<hlfir::ExprType>(elementValue.getType()) &&
-          wasCreatedInCurrentBlock(elementValue, builder))
-        hlfir::DestroyOp::create(builder, loc, elementValue);
     }
+    // Cleanup is explicit in HLFIR. When a copy is elided or its components
+    // are moved into the array result, omit only that expression's destroy.
+    if (!yield.getCleanup().empty()) {
+      mlir::IRMapping cleanupMapper;
+      for (auto &op : yield.getCleanup().front().without_terminator()) {
+        if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(op))
+          if (skippedAsExpr && destroy.getExpr() == skippedAsExpr.getResult())
+            continue;
+        builder.clone(op, cleanupMapper);
+      }
+    }
+    rewriter.eraseOp(yield);
+    if (skippedAsExpr)
+      rewriter.eraseOp(skippedAsExpr);
     builder.restoreInsertionPoint(insPt);
 
     mlir::Value bufferizedExpr =
@@ -870,7 +896,8 @@ struct CharExtremumOpConversion
 
     fir::ExtendedValue res =
         fir::factory::CharacterExprHelper{builder, loc}.createCharExtremum(
-            predIsMin, opCBVs);
+            predIsMin, opCBVs, /*useHeap=*/true);
+    bool mustFree = mlir::isa<fir::HeapType>(fir::getBase(res).getType());
     mlir::Type addrType = fir::ReferenceType::get(
         hlfir::getFortranElementType(char_extremum.getResult().getType()));
     mlir::Value cast = builder.createConvert(loc, addrType, fir::getBase(res));
@@ -880,7 +907,7 @@ struct CharExtremumOpConversion
                                         fir::FortranVariableFlagsAttr{})
                           .getBase()};
     mlir::Value bufferizedExpr =
-        packageBufferizedExpr(loc, builder, hlfirTempRes, false);
+        packageBufferizedExpr(loc, builder, hlfirTempRes, mustFree);
     rewriter.replaceOp(char_extremum, bufferizedExpr);
     return mlir::success();
   }

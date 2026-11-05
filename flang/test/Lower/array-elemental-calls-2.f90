@@ -43,8 +43,9 @@ subroutine check_binary_ops()
 ! CHECK:    %[[VAL_37:.*]] = hlfir.apply %[[VAL_29]], %[[ARG0]] : (!hlfir.expr<10xi32>, index) -> i32
 ! CHECK:    %[[VAL_38:.*]]:3 = hlfir.associate %[[VAL_37]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:    %[[VAL_39:.*]] = fir.call @_QPelem_func(%[[VAL_38]]#0) {{.*}} : (!fir.ref<i32>) -> i32
+! CHECK:    hlfir.yield_element %[[VAL_39]] : i32 cleanup {
 ! CHECK:    hlfir.end_associate %[[VAL_38]]#1, %[[VAL_38]]#2 : !fir.ref<i32>, i1
-! CHECK:    hlfir.yield_element %[[VAL_39]] : i32
+! CHECK:             }
 ! CHECK:  }
 end subroutine
 
@@ -294,8 +295,9 @@ subroutine check_parentheses_derived(a)
 ! CHECK:    %[[VAL_50:.*]] = hlfir.apply %[[VAL_42]], %[[ARG1]] : (!hlfir.expr<?x!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, index) -> !hlfir.expr<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>
 ! CHECK:    %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_50]] {adapt.valuebyref} : (!hlfir.expr<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, !fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, i1)
 ! CHECK:    %[[VAL_52:.*]] = fir.call @_QPelem_func_derived(%[[VAL_51]]#0) {{.*}} : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> i32
+! CHECK:    hlfir.yield_element %[[VAL_52]] : i32 cleanup {
 ! CHECK:    hlfir.end_associate %[[VAL_51]]#1, %[[VAL_51]]#2 : !fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, i1
-! CHECK:    hlfir.yield_element %[[VAL_52]] : i32
+! CHECK:             }
 ! CHECK:  }
 end subroutine
 end module

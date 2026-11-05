@@ -13,7 +13,9 @@ func.func @_QMmPbug(%val: !fir.char<1>, %var: !fir.ref<!fir.array<10x!fir.char<1
     %addr = fir.convert %alloc: (!fir.heap<!fir.char<1>>) -> !fir.ref<!fir.char<1>>
     %9 = hlfir.as_expr %addr : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
     fir.freemem  %alloc : !fir.heap<!fir.char<1>>
-    hlfir.yield_element %9 : !hlfir.expr<!fir.char<1>>
+    hlfir.yield_element %9 : !hlfir.expr<!fir.char<1>> cleanup {
+      hlfir.destroy %9 : !hlfir.expr<!fir.char<1>>
+    }
   }
   hlfir.assign %expr to %var : !hlfir.expr<10x!fir.char<1>>, !fir.ref<!fir.array<10x!fir.char<1>>>
   hlfir.destroy %expr : !hlfir.expr<10x!fir.char<1>>

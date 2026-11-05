@@ -121,31 +121,31 @@ func.func @small_char_temp() {
   return
 }
 
-// Big constant-length scalar character temporary -> stays on the heap.
+// Big constant-length scalar character temporary -> stack: character
+// temporaries are placed independently of the size threshold.
 // CHECK-LABEL: func.func @big_char_temp
-// CHECK: fir.allocmem !fir.char<1,100>
-// CHECK: fir.freemem
+// CHECK-NOT: fir.allocmem
+// CHECK: return
 func.func @big_char_temp() {
   %0 = fir.allocmem !fir.char<1,100>
   fir.freemem %0 : !fir.heap<!fir.char<1,100>>
   return
 }
 
-// The size accounts for the character kind: 20 characters of kind 4 are 80
-// bytes, above the 64-byte threshold -> stays on the heap.
+// 20 characters of kind 4 are 80 bytes, above the 64-byte threshold -> stack.
 // CHECK-LABEL: func.func @big_char4_temp
-// CHECK: fir.allocmem !fir.char<4,20>
-// CHECK: fir.freemem
+// CHECK-NOT: fir.allocmem
+// CHECK: return
 func.func @big_char4_temp() {
   %0 = fir.allocmem !fir.char<4,20>
   fir.freemem %0 : !fir.heap<!fir.char<4,20>>
   return
 }
 
-// Runtime-length scalar character temporary -> stays on the heap.
+// Runtime-length scalar character temporary -> stack.
 // CHECK-LABEL: func.func @dyn_char_temp
-// CHECK: fir.allocmem !fir.char<1,?>
-// CHECK: fir.freemem
+// CHECK-NOT: fir.allocmem
+// CHECK: return
 func.func @dyn_char_temp(%len: index) {
   %0 = fir.allocmem !fir.char<1,?>(%len : index)
   fir.freemem %0 : !fir.heap<!fir.char<1,?>>
