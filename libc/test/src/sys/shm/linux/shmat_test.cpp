@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/sys_ipc_macros.h"
 #include "hdr/sys_shm_macros.h"
 #include "hdr/sys_stat_macros.h"
@@ -62,10 +63,11 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
   ASSERT_ERRNO_SUCCESS();
   ASSERT_NE(addr, SHM_FAILED);
 
-  // Unaligned shmaddr without SHM_RND must fail with EINVAL.
-  EXPECT_THAT(
-      LIBC_NAMESPACE::shmat(shmid, static_cast<const char *>(addr) + 1, 0),
-      Fails(EINVAL, SHM_FAILED));
+  // Unaligned shmaddr without SHM_RND must fail with EINVAL (even with
+  // SHM_REMAP allowing replacement of the existing mapping at addr).
+  EXPECT_THAT(LIBC_NAMESPACE::shmat(shmid, static_cast<const char *>(addr) + 1,
+                                    SHM_REMAP),
+              Fails(EINVAL, SHM_FAILED));
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
@@ -77,13 +79,14 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   void *addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_NE(addr, SHM_FAILED);
-
+  
   // With SHM_RND, the unaligned address (addr + 1) is rounded down to the
   // nearest multiple of SHMLBA (addr). SHM_REMAP replaces the existing mapping
   // at addr since shmdt is not yet used to detach it first.
   void *rounded_addr = LIBC_NAMESPACE::shmat(
       shmid, static_cast<const char *>(addr) + 1, SHM_RND | SHM_REMAP);
   ASSERT_ERRNO_SUCCESS();
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(rounded_addr) % SHMLBA, uintptr_t(0));
   EXPECT_EQ(rounded_addr, addr);
 }
 

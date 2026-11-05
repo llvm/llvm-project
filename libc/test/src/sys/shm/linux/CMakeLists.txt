@@ -8,6 +8,7 @@ add_libc_test(
     shmat_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_shm_macros
     libc.hdr.sys_stat_macros
