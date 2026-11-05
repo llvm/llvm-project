@@ -63,9 +63,8 @@ LLVM_ABI std::optional<FPFoldResult>
 tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms);
 
 /// Try to evaluate a floating-point operation with an explicit rounding mode.
-/// Invalid and Dynamic modes are evaluated using RN, but folding is declined
-/// if evaluation is inexact. Fixed-rounding operations still select their own
-/// rounding mode.
+/// Dynamic is evaluated using RN, but folding is declined if evaluation is
+/// inexact. Fixed-rounding operations still select their own rounding mode.
 LLVM_ABI std::optional<FPFoldResult> tryFoldFPWithRM(FPOp Opcode,
                                                      ArrayRef<APFloat> Args,
                                                      RoundingMode RM,

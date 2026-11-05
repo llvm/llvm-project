@@ -44,7 +44,6 @@ static bool mayHaveBeenRoundedFromSubnormal(const APFloat &Result,
   case RoundingMode::NearestTiesToEven:
   case RoundingMode::NearestTiesToAway:
   case RoundingMode::Dynamic:
-  case RoundingMode::Invalid:
     return true;
   case RoundingMode::TowardPositive:
     return !Result.isNegative();
@@ -52,6 +51,8 @@ static bool mayHaveBeenRoundedFromSubnormal(const APFloat &Result,
     return Result.isNegative();
   case RoundingMode::TowardZero:
     return false;
+  case RoundingMode::Invalid:
+    llvm_unreachable("invalid rounding mode");
   }
   llvm_unreachable("unknown rounding mode");
 }
@@ -164,16 +165,17 @@ std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
 }
 
 // Fold FPOps that do require a rounding mode. Handle the possibility
-// that the RM is dynamic/invalid (fold with RN and allow the fold
+// that the RM is dynamic (fold with RN and allow the fold
 // only if no rounding is required).
 std::optional<FPFoldResult> llvm::tryFoldFPWithRM(FPOp Opcode,
                                                   ArrayRef<APFloat> Args,
                                                   RoundingMode RM,
                                                   DenormalMode Denorms) {
-  bool RMUnknown = RM == RoundingMode::Invalid || RM == RoundingMode::Dynamic;
-  RoundingMode EvalRM = RMUnknown ? RoundingMode::NearestTiesToEven : RM;
+  assert(RM != RoundingMode::Invalid && "invalid rounding mode");
+  RoundingMode EvalRM =
+      RM == RoundingMode::Dynamic ? RoundingMode::NearestTiesToEven : RM;
   auto Res = tryFoldFPOpImpl(Opcode, Args, EvalRM, Denorms);
-  if (RMUnknown && Res && (Res->Status & APFloat::opInexact))
+  if (RM == RoundingMode::Dynamic && Res && (Res->Status & APFloat::opInexact))
     return std::nullopt;
   return Res;
 }
