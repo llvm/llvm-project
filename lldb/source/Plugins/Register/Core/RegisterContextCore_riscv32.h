@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_riscv64.h --------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_RISCV64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_RISCV64_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV32_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV32_H
 
 #include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Register/Common/RegisterInfo_riscv32.h"
 #include "Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextPOSIX_riscv64 : public lldb_private::RegisterContext {
+class RegisterContextCore_riscv32 : public lldb_private::RegisterContext {
 public:
-  RegisterContextPOSIX_riscv64(
+  RegisterContextCore_riscv32(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_riscv64> register_info);
+      std::unique_ptr<RegisterInfo_riscv32> register_info);
 
-  ~RegisterContextPOSIX_riscv64() override;
+  ~RegisterContextCore_riscv32() override;
 
   void invalidate();
 
@@ -42,7 +42,7 @@ public:
   const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
 
 protected:
-  std::unique_ptr<RegisterInfo_riscv64> m_register_info_up;
+  std::unique_ptr<RegisterInfo_riscv32> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -50,7 +50,7 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  size_t GetFPRSize() { return sizeof(RegisterInfo_riscv64::FPR); }
+  size_t GetFPRSize() { return sizeof(RegisterInfo_riscv32::FPR); }
 
   uint32_t GetRegNumFCSR() const { return fpr_fcsr_riscv; }
 
@@ -60,4 +60,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_RISCV64_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV32_H
