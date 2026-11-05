@@ -454,7 +454,6 @@ define <4 x i32> @bitselect_v4i32(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %c) {
   ret <4 x i32> %a
 }
 
-; NO-CHECK-NOT: f32x4
 declare <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float>)
 define <4 x i32> @trunc_sat_s_v4i32(<4 x float> %x) {
 ; CHECK-LABEL: trunc_sat_s_v4i32:
@@ -465,7 +464,6 @@ define <4 x i32> @trunc_sat_s_v4i32(<4 x float> %x) {
   ret <4 x i32> %a
 }
 
-; NO-CHECK-NOT: f32x4
 declare <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float>)
 define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
 ; CHECK-LABEL: trunc_sat_u_v4i32:
@@ -536,7 +534,6 @@ define <4 x i32> @laneselect_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
   ret <4 x i32> %v
 }
 
-; NO-CHECK-NOT: f32x4
 declare <4 x i32> @llvm.wasm.relaxed.trunc.signed(<4 x float>)
 define <4 x i32> @relaxed_trunc_s(<4 x float> %x) {
 ; CHECK-LABEL: relaxed_trunc_s:
@@ -547,7 +544,6 @@ define <4 x i32> @relaxed_trunc_s(<4 x float> %x) {
   ret <4 x i32> %a
 }
 
-; NO-CHECK-NOT: f32x4
 declare <4 x i32> @llvm.wasm.relaxed.trunc.unsigned(<4 x float>)
 define <4 x i32> @relaxed_trunc_u(<4 x float> %x) {
 ; CHECK-LABEL: relaxed_trunc_u:
