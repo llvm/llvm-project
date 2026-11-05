@@ -1902,6 +1902,15 @@ def hlsl_wave_multi_prefix_bit_xor :
   let Availability = SM6_5;
 }
 
+def hlsl_wave_multi_prefix_count_bits :
+    HLSLBuiltin<"WaveMultiPrefixCountBits",
+                "__builtin_hlsl_wave_multi_prefix_count_bits"> {
+  let Args = [BoolTy, VectorType<UIntTy, 4>];
+  let ReturnType = UIntTy;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
 // Returns the count of bits set to 1 on prior lanes.
 def hlsl_wave_prefix_count_bits :
     HLSLBuiltin<"WavePrefixCountBits",

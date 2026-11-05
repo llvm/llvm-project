@@ -5801,6 +5801,12 @@ def HLSLWaveMultiPrefixBitXor : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveMultiPrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool, _ExtVector<4, unsigned int>)";
+}
+
 def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_prefix_product"];
   let Attributes = [NoThrow, Const];
