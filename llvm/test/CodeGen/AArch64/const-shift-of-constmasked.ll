@@ -1103,9 +1103,8 @@ define i1 @scan(i64 %l) {
 ; CHECK-NEXT:    mov x8, #434041037028460038 // =0x606060606060606
 ; CHECK-NEXT:    and x9, x0, #0xf0f0f0f0f0f0f0f0
 ; CHECK-NEXT:    add x8, x0, x8
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    and x8, x8, #0xf0f0f0f0f0f0f0f
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    and x8, x8, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    orr x8, x9, x8, lsr #4
 ; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, eq
@@ -1123,11 +1122,10 @@ entry:
 define i1 @scan_or(i64 %l, i64 %y) {
 ; CHECK-LABEL: scan_or:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsr x9, x0, #4
-; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f
-; CHECK-NEXT:    orr x9, x9, x1
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    and x8, x0, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    orr x8, x1, x8, lsr #4
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -1141,11 +1139,10 @@ entry:
 define i1 @scan_xor(i64 %l, i64 %y) {
 ; CHECK-LABEL: scan_xor:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsr x9, x0, #4
-; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f
-; CHECK-NEXT:    eor x9, x9, x1
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    and x8, x0, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    eor x8, x1, x8, lsr #4
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -1176,11 +1173,10 @@ entry:
 define i1 @scan_orshl(i64 %l, i64 %y) {
 ; CHECK-LABEL: scan_orshl:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsl x9, x0, #3
-; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f0
-; CHECK-NEXT:    orr x9, x9, x1
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    and x8, x0, #0x1e1e1e1e1e1e1e1e
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    orr x8, x1, x8, lsl #3
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -1194,11 +1190,10 @@ entry:
 define i1 @scan_xorshl(i64 %l, i64 %y) {
 ; CHECK-LABEL: scan_xorshl:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsl x9, x0, #3
-; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f0
-; CHECK-NEXT:    eor x9, x9, x1
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    and x8, x0, #0x1e1e1e1e1e1e1e1e
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    eor x8, x1, x8, lsl #3
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
