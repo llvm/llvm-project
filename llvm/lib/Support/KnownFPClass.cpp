@@ -1017,10 +1017,6 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc_,
   // The only negative value that can be returned is -0.0 for -0.0 inputs.
   Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
 
-  // Only sqrt(+0.0) == +0.0.
-  if (KnownSrc.isKnownNever(fcPosZero))
-    Known.knownNot(fcPosZero);
-
   // Only sqrt(-0.0) == -0.0.
   if (KnownSrc.isKnownNever(fcNegZero))
     Known.knownNot(fcNegZero);
