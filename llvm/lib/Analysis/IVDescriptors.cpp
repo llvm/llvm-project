@@ -865,6 +865,9 @@ bool RecurrenceDescriptor::AddReductionVar(
 //     %cmp = icmp sgt i32 %5, 3
 //     %spec.select = select i1 %cmp, i32 3, i32 %r
 //     ...
+// The condition doesn't have to be a compare; an and of two compares works
+// too. It can't be a phi, since that may be the reduction phi, which the
+// vectorizer replaces.
 // In general we can support vectorization of loops where 'r' flips between
 // any two non-constants, provided they are loop invariant. The only thing
 // we actually care about at the end of the loop is whether or not any lane
@@ -882,8 +885,11 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  // A phi condition may be the reduction phi or another phi in the reduction
-  // chain, which the vectorized select cannot use.
+  // The condition can't read the reduction phi, because the vectorizer
+  // replaces it. The one exception is a compare of the phi, which is rewritten
+  // to compare the start value. The reduction walk rejects any other value
+  // computed from the phi, like or(phi, false), but not the phi itself or
+  // another phi in the chain, so reject phis here.
   Value *Cond;
   if (!match(I, m_Select(m_Value(Cond), m_Value(), m_Value())) ||
       isa<PHINode>(Cond))
