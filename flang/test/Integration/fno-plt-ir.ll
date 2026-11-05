@@ -10,6 +10,8 @@
 ; input unchanged, and Flang applies the flag only while lowering Fortran.
 ; -emit-llvm is required to check that the loaded module is not modified.
 
+; REQUIRES: target=aarch64{{.*}} || target=arm{{.*}} || target=x86{{.*}}
+
 ; RUN: %flang_fc1 -x ir -emit-llvm -fno-plt -o - %s | FileCheck %s
 
 ; The loaded functions are still emitted, and neither nonlazybind nor the
