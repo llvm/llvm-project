@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -disable-O0-optnone -emit-llvm -o - %s 2>&1 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple arm64-none-linux-gnu -target-feature +neon  -disable-O0-optnone -emit-llvm -o - %s 2>&1 | FileCheck %s %}
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

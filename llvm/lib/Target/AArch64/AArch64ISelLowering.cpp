@@ -1560,7 +1560,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
-      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Custom);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
@@ -7375,6 +7375,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
     return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
   }
+  case Intrinsic::aarch64_sve_brkb_z:
+    return DAG.getNode(AArch64ISD::BRKB_Z, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
 }
 
@@ -28441,11 +28444,28 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SmallVector<SDValue, 4> ValueInterleaveOps;
   if (isSequentialConcatOfVectorInterleave(WideValue.getNode(),
                                            ValueInterleaveOps)) {
-    // Bail out if the stored value has an unexpected number of uses, since
-    // we'll have to perform manual interleaving and may as well just use normal
-    // masked stores.
-    if (!WideValue.hasOneUse())
-      return SDValue();
+    // Multiple ordinary stores can each fold the interleave if no other user
+    // needs the wide value.
+    if (!WideValue.hasOneUse()) {
+      // Single Zip pair + multiple stp is often preferable to multiple st2
+      if ((WideValue.getValueType().isFixedLengthVector() &&
+           ValueInterleaveOps.size() == 2 && !DAG.shouldOptForSize()) ||
+          !llvm::all_of(WideValue->users(), [&](SDNode *User) {
+            auto *Store = dyn_cast<StoreSDNode>(User);
+            return Store && ISD::isNormalStore(Store) && Store->isSimple() &&
+                   Store->getValue() == WideValue;
+          }))
+        return SDValue();
+
+      // Reusing the wide vector is cheaper than duplicating structured stores
+      // when every fixed-length input is already a splat.
+      if (WideValue.getValueType().isFixedLengthVector() &&
+          ValueInterleaveOps.size() == 4 &&
+          llvm::all_of(ValueInterleaveOps, [&](SDValue Op) {
+            return DAG.isSplatValue(Op, /*AllowUndefs=*/true);
+          }))
+        return SDValue();
+    }
   } else if (!isSplatVectorInterleaveOps(DAG, DL, WideValue,
                                          ValueInterleaveOps)) {
     return SDValue();
@@ -29713,6 +29733,96 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
                      AnyPred, Default, LastB.getOperand(1));
 }
 
+// Optimize CSEL of a CSEL with the same flags:
+// (CSEL (CSEL a b  cc F) d cc F) => (CSEL a d cc F)
+// (CSEL (CSEL a b !cc F) d cc F) => (CSEL b d cc F)
+// (CSEL d (CSEL a b  cc F) cc F) => (CSEL d b cc F)
+// (CSEL d (CSEL a b !cc F) cc F) => (CSEL d a cc F)
+// (CSEL (OP x.. (CSEL a b  cc F) y..) d cc F) => (CSEL (OP x.. a y..) d cc F)
+// (CSEL (OP x.. (CSEL a b !cc F) y..) d cc F) => (CSEL (OP x.. b y..) d cc F)
+// (CSEL d (OP x.. (CSEL a b  cc F) y..) cc F) => (CSEL d (OP x.. b y..) cc F)
+// (CSEL d (OP x.. (CSEL a b !cc F) y..) cc F) => (CSEL d (OP x.. a y..) cc F)
+// CSINC/CSINV/CSNEG absorb (ADD x 1), (XOR x -1), (SUB 0 x), respectively.
+static SDValue foldCSELOfCSELSameFlags(SDNode *N, SelectionDAG &DAG) {
+  SDValue Flags = N->getOperand(3);
+  auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+  // AArch64CC::getInvertedCondCode for AL returns NV and vice versa. Which may
+  // select the wrong value. So ignore those cases entirely as they rarely used.
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+    return SDValue();
+
+  auto GetSelectedInnerCSELValue = [](SDValue Inner, unsigned ValNo,
+                                      AArch64CC::CondCode CC,
+                                      SDValue Flags) -> SDValue {
+    if (Inner.getOpcode() != AArch64ISD::CSEL || Inner.getOperand(3) != Flags)
+      return SDValue();
+    auto ICC =
+        static_cast<AArch64CC::CondCode>(Inner->getConstantOperandVal(2));
+    bool TakesTVal;
+    if (ICC == CC)
+      TakesTVal = (ValNo == 0);
+    else if (ICC == AArch64CC::getInvertedCondCode(CC))
+      TakesTVal = (ValNo != 0);
+    else
+      return SDValue();
+    return Inner.getOperand(TakesTVal ? 0 : 1);
+  };
+
+  for (unsigned OperandNo : {0, 1}) {
+    SDValue Val = N->getOperand(OperandNo);
+
+    // The expression is the inner CSEL itself, so directly substitute.
+    if (SDValue SelectedVal =
+            GetSelectedInnerCSELValue(Val, OperandNo, CC, Flags)) {
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = SelectedVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+
+    unsigned Opc = Val.getOpcode();
+    if (Val->getNumValues() != 1 || Val.getNumOperands() == 0 ||
+        !DAG.isSafeToSpeculativelyExecuteNode(Val.getNode()) ||
+        any_of(Val->op_values(), [](SDValue Operand) {
+          EVT VT = Operand.getValueType();
+          return VT == MVT::Other || VT == MVT::Glue;
+        }))
+      continue;
+
+    // Only profitable to duplicate forms that can be folded back into the CSEL
+    // as CSINC/CSINV/CSNEG: (ADD x 1), (XOR x -1), and (SUB 0 x).
+    if (!Val.hasOneUse()) {
+      bool IsProfitableFormToFold =
+          Val.getNumOperands() == 2 &&
+          ((Opc == ISD::ADD && isOneConstant(Val.getOperand(1))) ||
+           (Opc == ISD::XOR && isAllOnesConstant(Val.getOperand(1))) ||
+           (Opc == ISD::SUB && isNullConstant(Val.getOperand(0))));
+      if (!IsProfitableFormToFold)
+        continue;
+    }
+
+    // The inner CSEL is an operand of the OP expression, so the expression has
+    // to be rebuilt around the substituted value.
+    for (unsigned InnerOperandNo = 0; InnerOperandNo != Val.getNumOperands();
+         ++InnerOperandNo) {
+      SDValue Inner = Val.getOperand(InnerOperandNo);
+      SDValue SelectedInner =
+          GetSelectedInnerCSELValue(Inner, OperandNo, CC, Flags);
+      if (!SelectedInner)
+        continue;
+      SmallVector<SDValue, 4> Ops(Val->op_values());
+      Ops[InnerOperandNo] = SelectedInner;
+      SDNodeFlags ValFlags =
+          Val->getFlags() & ~SDNodeFlags::PoisonGeneratingFlags;
+      SDValue NewVal =
+          DAG.getNode(Opc, SDLoc(Val), Val.getValueType(), Ops, ValFlags);
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = NewVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+  }
+  return SDValue();
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -29720,6 +29830,9 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL x, x, cc -> x
   if (N->getOperand(0) == N->getOperand(1))
     return N->getOperand(0);
+
+  if (SDValue R = foldCSELOfCSELSameFlags(N, DAG))
+    return R;
 
   if (SDValue R = foldCSELOfCSEL(N, DAG))
     return R;
@@ -35983,13 +36096,27 @@ SDValue AArch64TargetLowering::LowerMASK_BEFOREFIRST(SDValue Op,
 
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-  EVT PredVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
 
-  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
-  SDValue Brk = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, PredVT, Mask);
-  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Brk);
+  SDValue Mask = Op.getOperand(0);
+  if (VT.isFixedLengthVector())
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  EVT PredVT = Mask.getValueType();
+
+  // mask_beforefirst(mask) -> brkb_z(ptrue(VT.ElementCount), mask)
+  // NOTE: brkb_z only supports the "byte" predicate type.
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
+
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+  Mask = DAG.getNode(AArch64ISD::BRKB_Z, DL, MVT::nxv16i1, Pg, Mask);
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PredVT, Mask);
+
+  if (VT.isScalableVector())
+    return Mask;
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return convertFromScalableVector(DAG, VT, MaskAsInt);
 }
 

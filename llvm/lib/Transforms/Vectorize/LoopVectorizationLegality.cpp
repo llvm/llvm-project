@@ -137,7 +137,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 }
 
 bool LoopVectorizeHints::allowVectorization(
-    Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
+    Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
     if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
