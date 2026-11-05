@@ -5061,17 +5061,51 @@ TEST_F(DIExpressionTest, foldConstant) {
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
   EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 0);
 
-  // Get non-foldable operations back in the new Expr.
-  uint64_t Elements[] = {dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
+  // Do not fold conversions when non-foldable operations remain.
+  uint64_t Elements[] = {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
   ArrayRef<uint64_t> Expected = Elements;
-  Expr = DIExpression::get(
-      Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
-  Expr = DIExpression::append(Expr, Expected);
+  Expr = DIExpression::get(Context, Expected);
   ASSERT_EQ(Expr->getNumElements(), 5u);
-  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 2);
-  EXPECT_EQ(NewExpr->getElements(), Expected);
+  EXPECT_FOLD_CONST(16, -1, true, 16, -1, true, 5);
+  EXPECT_EQ(NewExpr, Expr);
+  EXPECT_EQ(NewInt, Int);
 
 #undef EXPECT_FOLD_CONST
+}
+
+TEST_F(DIExpressionTest, foldConstantWithTypedComparison) {
+  const auto *Int = ConstantInt::get(Context, APInt(64, -1, true));
+  for (unsigned BitSize : {8, 64}) {
+    for (auto Encoding : {dwarf::DW_ATE_signed, dwarf::DW_ATE_unsigned}) {
+      auto SourceEncoding = Encoding == dwarf::DW_ATE_signed
+                                ? dwarf::DW_ATE_unsigned
+                                : dwarf::DW_ATE_signed;
+      auto *Expr = DIExpression::get(
+          Context, {dwarf::DW_OP_LLVM_convert, 64, SourceEncoding,
+                    dwarf::DW_OP_LLVM_convert, BitSize, Encoding,
+                    dwarf::DW_OP_consts, 0, dwarf::DW_OP_LLVM_convert, BitSize,
+                    Encoding, dwarf::DW_OP_eq, dwarf::DW_OP_stack_value});
+
+      auto [NewExpr, NewInt] = Expr->constantFold(Int);
+      EXPECT_EQ(NewExpr, Expr);
+      EXPECT_EQ(NewInt, Int);
+    }
+  }
+}
+
+TEST_F(DIExpressionTest, foldConstantWithLocationMarkers) {
+  const auto *Int = ConstantInt::get(Context, APInt(32, -1, true));
+  uint64_t Markers[] = {dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 0,
+                        16};
+  auto *Expr = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_convert, 8, dwarf::DW_ATE_unsigned,
+                dwarf::DW_OP_LLVM_convert, 16, dwarf::DW_ATE_unsigned});
+  Expr = DIExpression::append(Expr, Markers);
+
+  auto [NewExpr, NewInt] = Expr->constantFold(Int);
+  EXPECT_EQ(NewInt->getValue(), APInt(16, 0xff));
+  EXPECT_EQ(NewExpr->getElements(), ArrayRef<uint64_t>(Markers));
 }
 
 TEST_F(DIExpressionTest, appendToStackAssert) {
