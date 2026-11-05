@@ -11,7 +11,7 @@
 ; fptoui (floor x) -> fptoui x, since flooring agrees with truncation for
 ; non-negative inputs and negative inputs make the original conversion poison.
 
-define i32 @fptoui_floor_f32_to_u32(float %x) {
+define i32 @fptoui_floor_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -64,7 +64,7 @@ define i32 @fptoui_floor_f32_to_u32(float %x) {
   ret i32 %cvt
 }
 
-define i32 @fptoui_floor_fneg_f32_to_u32(float %x) {
+define i32 @fptoui_floor_fneg_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_fneg_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -118,7 +118,7 @@ define i32 @fptoui_floor_fneg_f32_to_u32(float %x) {
   ret i32 %cvt
 }
 
-define i32 @fptoui_floor_fabs_f32_to_u32(float %x) {
+define i32 @fptoui_floor_fabs_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_fabs_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -172,7 +172,7 @@ define i32 @fptoui_floor_fabs_f32_to_u32(float %x) {
   ret i32 %cvt
 }
 
-define i32 @fptoui_floor_fneg_fabs_f32_to_u32(float %x) {
+define i32 @fptoui_floor_fneg_fabs_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_fneg_fabs_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -228,7 +228,7 @@ define i32 @fptoui_floor_fneg_fabs_f32_to_u32(float %x) {
 }
 
 ; SI has no v_floor_f64, so the floor must be removed before it is expanded.
-define i32 @fptoui_floor_f64_to_u32(double %x) {
+define i32 @fptoui_floor_f64_to_u32(double %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f64_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -281,7 +281,7 @@ define i32 @fptoui_floor_f64_to_u32(double %x) {
   ret i32 %cvt
 }
 
-define i32 @fptoui_floor_fneg_f64_to_u32(double %x) {
+define i32 @fptoui_floor_fneg_f64_to_u32(double %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_fneg_f64_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -335,7 +335,7 @@ define i32 @fptoui_floor_fneg_f64_to_u32(double %x) {
   ret i32 %cvt
 }
 
-define i16 @fptoui_floor_f16_to_u16(half %x) {
+define i16 @fptoui_floor_f16_to_u16(half %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f16_to_u16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -390,7 +390,7 @@ define i16 @fptoui_floor_f16_to_u16(half %x) {
   ret i16 %cvt
 }
 
-define i16 @fptoui_floor_fabs_f16_to_u16(half %x) {
+define i16 @fptoui_floor_fabs_f16_to_u16(half %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_fabs_f16_to_u16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -446,7 +446,7 @@ define i16 @fptoui_floor_fabs_f16_to_u16(half %x) {
   ret i16 %cvt
 }
 
-define i32 @fptoui_floor_f16_to_u32(half %x) {
+define i32 @fptoui_floor_f16_to_u32(half %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f16_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -511,15 +511,15 @@ define i32 @fptoui_floor_f16_to_u32(half %x) {
   ret i32 %cvt
 }
 
-define i64 @fptoui_floor_f32_to_u64(float %x) {
+define i64 @fptoui_floor_f32_to_u64(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f32_to_u64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; SI-SDAG-NEXT:    v_floor_f32_e32 v1, v1
+; SI-SDAG-NEXT:    v_floor_f32_e32 v2, v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0xcf800000
-; SI-SDAG-NEXT:    v_fma_f32 v0, v1, s4, v0
+; SI-SDAG-NEXT:    v_fma_f32 v0, v2, s4, v0
 ; SI-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -529,9 +529,9 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; SI-GISEL-NEXT:    v_floor_f32_e32 v1, v1
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; SI-GISEL-NEXT:    v_fma_f32 v0, v1, v2, v0
+; SI-GISEL-NEXT:    v_floor_f32_e32 v2, v1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0xcf800000
+; SI-GISEL-NEXT:    v_fma_f32 v0, v2, v3, v0
 ; SI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -541,9 +541,9 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; VI-SDAG-NEXT:    v_floor_f32_e32 v1, v1
+; VI-SDAG-NEXT:    v_floor_f32_e32 v2, v1
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0xcf800000
-; VI-SDAG-NEXT:    v_fma_f32 v0, v1, s4, v0
+; VI-SDAG-NEXT:    v_fma_f32 v0, v2, s4, v0
 ; VI-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-SDAG-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -553,9 +553,9 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_trunc_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; VI-GISEL-NEXT:    v_floor_f32_e32 v1, v1
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; VI-GISEL-NEXT:    v_fma_f32 v0, v1, v2, v0
+; VI-GISEL-NEXT:    v_floor_f32_e32 v2, v1
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, 0xcf800000
+; VI-GISEL-NEXT:    v_fma_f32 v0, v2, v3, v0
 ; VI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -566,10 +566,10 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; GFX11-TRUE16-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-SDAG-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX11-TRUE16-SDAG-NEXT:    v_floor_f32_e32 v1, v1
-; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-SDAG-NEXT:    v_fmamk_f32 v0, v1, 0xcf800000, v0
+; GFX11-TRUE16-SDAG-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-SDAG-NEXT:    v_fmamk_f32 v0, v2, 0xcf800000, v0
 ; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -579,10 +579,10 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; GFX11-TRUE16-GISEL-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-GISEL-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX11-TRUE16-GISEL-NEXT:    v_floor_f32_e32 v1, v1
-; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-GISEL-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX11-TRUE16-GISEL-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-GISEL-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
 ; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -592,10 +592,10 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; GFX11-FAKE16-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-SDAG-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX11-FAKE16-SDAG-NEXT:    v_floor_f32_e32 v1, v1
-; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-SDAG-NEXT:    v_fmamk_f32 v0, v1, 0xcf800000, v0
+; GFX11-FAKE16-SDAG-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-SDAG-NEXT:    v_fmamk_f32 v0, v2, 0xcf800000, v0
 ; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -605,10 +605,10 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
 ; GFX11-FAKE16-GISEL-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-GISEL-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX11-FAKE16-GISEL-NEXT:    v_floor_f32_e32 v1, v1
-; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-GISEL-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX11-FAKE16-GISEL-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-GISEL-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
 ; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %floor = call float @llvm.floor.f32(float %x)
@@ -616,7 +616,7 @@ define i64 @fptoui_floor_f32_to_u64(float %x) {
   ret i64 %cvt
 }
 
-define i64 @fptoui_floor_f64_to_u64(double %x) {
+define i64 @fptoui_floor_f64_to_u64(double %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_f64_to_u64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -644,9 +644,9 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
-; SI-SDAG-NEXT:    v_add_f64 v[2:3], v[2:3], -v[4:5]
+; SI-SDAG-NEXT:    v_add_f64 v[4:5], v[2:3], -v[4:5]
 ; SI-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
-; SI-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]
+; SI-SDAG-NEXT:    v_fma_f64 v[0:1], v[4:5], s[4:5], v[0:1]
 ; SI-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; SI-SDAG-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -696,8 +696,8 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
-; VI-SDAG-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
-; VI-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]
+; VI-SDAG-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[0:1], v[4:5], s[4:5], v[0:1]
 ; VI-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; VI-SDAG-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -708,11 +708,11 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; VI-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3df00000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
+; VI-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v7, 0xc1f00000
 ; VI-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
-; VI-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], v[4:5], v[0:1]
+; VI-GISEL-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], v[6:7], v[0:1]
 ; VI-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; VI-GISEL-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -723,9 +723,9 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; GFX11-TRUE16-SDAG-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
-; GFX11-TRUE16-SDAG-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
+; GFX11-TRUE16-SDAG-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
 ; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
+; GFX11-TRUE16-SDAG-NEXT:    v_fma_f64 v[0:1], v[4:5], 0xc1f00000, v[0:1]
 ; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -736,9 +736,9 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; GFX11-TRUE16-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
-; GFX11-TRUE16-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
+; GFX11-TRUE16-GISEL-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
 ; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
+; GFX11-TRUE16-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], 0xc1f00000, v[0:1]
 ; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -749,9 +749,9 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; GFX11-FAKE16-SDAG-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
-; GFX11-FAKE16-SDAG-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
+; GFX11-FAKE16-SDAG-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
 ; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
+; GFX11-FAKE16-SDAG-NEXT:    v_fma_f64 v[0:1], v[4:5], 0xc1f00000, v[0:1]
 ; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; GFX11-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -762,9 +762,9 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
 ; GFX11-FAKE16-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
-; GFX11-FAKE16-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
+; GFX11-FAKE16-GISEL-NEXT:    v_floor_f64_e32 v[4:5], v[2:3]
 ; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
+; GFX11-FAKE16-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], 0xc1f00000, v[0:1]
 ; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
 ; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f64_e32 v1, v[2:3]
 ; GFX11-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -773,7 +773,7 @@ define i64 @fptoui_floor_f64_to_u64(double %x) {
   ret i64 %cvt
 }
 
-define <2 x i32> @fptoui_floor_v2f32_to_v2u32(<2 x float> %x) {
+define <2 x i32> @fptoui_floor_v2f32_to_v2u32(<2 x float> %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_v2f32_to_v2u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -837,7 +837,7 @@ define <2 x i32> @fptoui_floor_v2f32_to_v2u32(<2 x float> %x) {
 ; fptoui.sat (floor x) -> fptoui.sat x, since both forms saturate negative
 ; inputs and NaN to 0.
 
-define i32 @fptoui_sat_floor_f32_to_u32(float %x) {
+define i32 @fptoui_sat_floor_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_sat_floor_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -890,7 +890,7 @@ define i32 @fptoui_sat_floor_f32_to_u32(float %x) {
   ret i32 %cvt
 }
 
-define i32 @fptoui_sat_floor_f64_to_u32(double %x) {
+define i32 @fptoui_sat_floor_f64_to_u32(double %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_sat_floor_f64_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -943,7 +943,7 @@ define i32 @fptoui_sat_floor_f64_to_u32(double %x) {
   ret i32 %cvt
 }
 
-define i16 @fptoui_sat_floor_f16_to_u16(half %x) {
+define i16 @fptoui_sat_floor_f16_to_u16(half %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_sat_floor_f16_to_u16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1000,28 +1000,28 @@ define i16 @fptoui_sat_floor_f16_to_u16(half %x) {
   ret i16 %cvt
 }
 
-; Negative tests.
-
-; The floor has another use, so it is kept.
-define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
+; The floor is kept for the store, but the conversion bypasses it.
+define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) nounwind {
 ; SI-SDAG-LABEL: fptoui_floor_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_floor_f32_e32 v3, v0
-; SI-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; SI-SDAG-NEXT:    v_cvt_u32_f32_e32 v3, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s6
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s6
-; SI-SDAG-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-SDAG-NEXT:    v_floor_f32_e32 v0, v0
+; SI-SDAG-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
+; SI-SDAG-NEXT:    s_waitcnt expcnt(0)
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, v3
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-LABEL: fptoui_floor_multi_use:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_floor_f32_e32 v3, v0
-; SI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; SI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], 0
@@ -1032,18 +1032,20 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
 ; VI-SDAG-LABEL: fptoui_floor_multi_use:
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_floor_f32_e32 v3, v0
-; VI-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v3
-; VI-SDAG-NEXT:    flat_store_dword v[1:2], v3
+; VI-SDAG-NEXT:    v_cvt_u32_f32_e32 v3, v0
+; VI-SDAG-NEXT:    v_floor_f32_e32 v0, v0
+; VI-SDAG-NEXT:    flat_store_dword v[1:2], v0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-LABEL: fptoui_floor_multi_use:
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_floor_f32_e32 v3, v0
-; VI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v3
-; VI-GISEL-NEXT:    flat_store_dword v[1:2], v3
+; VI-GISEL-NEXT:    v_cvt_u32_f32_e32 v3, v0
+; VI-GISEL-NEXT:    v_floor_f32_e32 v0, v0
+; VI-GISEL-NEXT:    flat_store_dword v[1:2], v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1051,8 +1053,7 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-SDAG-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; GFX11-TRUE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-TRUE16-SDAG-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1060,8 +1061,7 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
 ; GFX11-TRUE16-GISEL:       ; %bb.0:
 ; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-GISEL-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; GFX11-TRUE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-TRUE16-GISEL-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1069,8 +1069,7 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
 ; GFX11-FAKE16-SDAG:       ; %bb.0:
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-SDAG-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; GFX11-FAKE16-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-FAKE16-SDAG-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX11-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1078,8 +1077,7 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
 ; GFX11-FAKE16-GISEL:       ; %bb.0:
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-GISEL-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v3
+; GFX11-FAKE16-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-FAKE16-GISEL-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX11-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %floor = call float @llvm.floor.f32(float %x)
@@ -1088,8 +1086,10 @@ define i32 @fptoui_floor_multi_use(float %x, ptr addrspace(1) %p) {
   ret i32 %cvt
 }
 
+; Negative tests.
+
 ; Signed conversion of floor(-0.5) is -1, not 0.
-define i32 @fptosi_floor_f32_to_i32(float %x) {
+define i32 @fptosi_floor_f32_to_i32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptosi_floor_f32_to_i32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1155,7 +1155,7 @@ define i32 @fptosi_floor_f32_to_i32(float %x) {
 }
 
 ; Unsigned conversion of ceil(0.5) is 1, not 0.
-define i32 @fptoui_ceil_f32_to_u32(float %x) {
+define i32 @fptoui_ceil_f32_to_u32(float %x) nounwind {
 ; SI-SDAG-LABEL: fptoui_ceil_f32_to_u32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

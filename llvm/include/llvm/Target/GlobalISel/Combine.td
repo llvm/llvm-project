@@ -1995,8 +1995,7 @@ def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, t
 def fptoui_ffloor_fold : GICombineRule<
   (defs root:$dst),
   (match (G_FFLOOR $floor, $x),
-         (G_FPTOUI $dst, $floor),
-         (GIHasOneUse $floor)),
+         (G_FPTOUI $dst, $floor)),
   (apply (G_FPTOUI $dst, $x))>;
 
 // Fold (fptoui_sat (ffloor x)) -> (fptoui_sat x). Both forms saturate negative
@@ -2004,8 +2003,7 @@ def fptoui_ffloor_fold : GICombineRule<
 def fptouisat_ffloor_fold : GICombineRule<
   (defs root:$dst),
   (match (G_FFLOOR $floor, $x),
-         (G_FPTOUI_SAT $dst, $floor),
-         (GIHasOneUse $floor)),
+         (G_FPTOUI_SAT $dst, $floor)),
   (apply (G_FPTOUI_SAT $dst, $x))>;
 
 def fptoui_ffloor_combines : GICombineGroup<[fptoui_ffloor_fold,
