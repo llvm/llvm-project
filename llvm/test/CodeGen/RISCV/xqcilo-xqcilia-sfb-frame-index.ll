@@ -57,10 +57,9 @@ define i32 @sfb_lb_far(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 4096
 ; CHECK-NEXT:    c.beqz s0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lb s1, -2036(a0)
+; CHECK-NEXT:    qc.e.lb s1, 2060(sp)
 ; CHECK-NEXT:  .LBB1_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -93,10 +92,9 @@ define i32 @sfb_lbu_far(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 4096
 ; CHECK-NEXT:    c.beqz s0, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lbu s1, -2036(a0)
+; CHECK-NEXT:    qc.e.lbu s1, 2060(sp)
 ; CHECK-NEXT:  .LBB2_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -129,10 +127,9 @@ define i32 @sfb_lh_far(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 4096
 ; CHECK-NEXT:    c.beqz s0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lh s1, -2036(a0)
+; CHECK-NEXT:    qc.e.lh s1, 2060(sp)
 ; CHECK-NEXT:  .LBB3_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -165,10 +162,9 @@ define i32 @sfb_lhu_far(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 4096
 ; CHECK-NEXT:    c.beqz s0, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lhu s1, -2036(a0)
+; CHECK-NEXT:    qc.e.lhu s1, 2060(sp)
 ; CHECK-NEXT:  .LBB4_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -201,10 +197,9 @@ define i32 @sfb_lw_far(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 4096
 ; CHECK-NEXT:    c.beqz s0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lw s1, -2036(a0)
+; CHECK-NEXT:    qc.e.lw s1, 2060(sp)
 ; CHECK-NEXT:  .LBB5_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -236,10 +231,9 @@ define i32 @sfb_lb_large(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
 ; CHECK-NEXT:    c.beqz s0, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lb s1, 1828(a0)
+; CHECK-NEXT:    qc.e.lb s1, 10020(sp)
 ; CHECK-NEXT:  .LBB6_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -272,10 +266,9 @@ define i32 @sfb_lbu_large(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
 ; CHECK-NEXT:    c.beqz s0, .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lbu s1, 1828(a0)
+; CHECK-NEXT:    qc.e.lbu s1, 10020(sp)
 ; CHECK-NEXT:  .LBB7_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -308,10 +301,9 @@ define i32 @sfb_lh_large(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
 ; CHECK-NEXT:    c.beqz s0, .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lh s1, 1828(a0)
+; CHECK-NEXT:    qc.e.lh s1, 10020(sp)
 ; CHECK-NEXT:  .LBB8_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -344,10 +336,9 @@ define i32 @sfb_lhu_large(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
 ; CHECK-NEXT:    c.beqz s0, .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lhu s1, 1828(a0)
+; CHECK-NEXT:    qc.e.lhu s1, 10020(sp)
 ; CHECK-NEXT:  .LBB9_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160
@@ -380,10 +371,9 @@ define i32 @sfb_lw_large(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi4spn a0, sp, 20
 ; CHECK-NEXT:    c.addi4spn a1, sp, 4
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
 ; CHECK-NEXT:    c.beqz s0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lw s1, 1828(a0)
+; CHECK-NEXT:    qc.e.lw s1, 10020(sp)
 ; CHECK-NEXT:  .LBB10_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 16160

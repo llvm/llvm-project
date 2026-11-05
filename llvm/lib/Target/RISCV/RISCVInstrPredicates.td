@@ -254,6 +254,17 @@ def isBaseQCLoad
                               QC_E_LW
                             ]>;
 
+// Predicated Xqcilo 26-bit offset Loads
+def isBaseQCCCLoad
+    : OpcodeSwitchPredicate<"isBaseQCCCLoad",
+                            [
+                              PseudoCCQC_E_LB,
+                              PseudoCCQC_E_LBU,
+                              PseudoCCQC_E_LH,
+                              PseudoCCQC_E_LHU,
+                              PseudoCCQC_E_LW
+                            ]>;
+
 // Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
 def isBaseQCStore
     : OpcodeSwitchPredicate<"isBaseQCStore",

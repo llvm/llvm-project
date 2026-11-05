@@ -578,6 +578,16 @@ static unsigned getXqciloWideOpcode(unsigned Opc) {
     return RISCV::QC_E_SB;
   case RISCV::SH:
     return RISCV::QC_E_SH;
+  case RISCV::PseudoCCLW:
+    return RISCV::PseudoCCQC_E_LW;
+  case RISCV::PseudoCCLB:
+    return RISCV::PseudoCCQC_E_LB;
+  case RISCV::PseudoCCLBU:
+    return RISCV::PseudoCCQC_E_LBU;
+  case RISCV::PseudoCCLH:
+    return RISCV::PseudoCCQC_E_LH;
+  case RISCV::PseudoCCLHU:
+    return RISCV::PseudoCCQC_E_LHU;
   default:
     return 0;
   }
@@ -651,7 +661,8 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
                                 Offset.getScalable());
     } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
-               RISCVInstrInfo::isBaseQCStore(MI)) {
+               RISCVInstrInfo::isBaseQCStore(MI) ||
+               RISCVInstrInfo::isBaseQCCCLoad(MI)) {
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
       Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
                                 Offset.getScalable());
