@@ -86,6 +86,28 @@ struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
   }
 };
 
+/// The parameter whose default argument holds the lambda, if any. An unnumbered
+/// lambda has no context declaration, so it is found by its location.
+static const ParmVarDecl *getLambdaDefaultArgParm(const CXXRecordDecl *Lambda) {
+  if (const auto *Parm =
+          dyn_cast_or_null<ParmVarDecl>(Lambda->getLambdaContextDecl()))
+    return Parm;
+  if (Lambda->getLambdaManglingNumber())
+    return nullptr;
+
+  const auto *Func = dyn_cast<FunctionDecl>(Lambda->getDeclContext());
+  if (!Func)
+    return nullptr;
+  const SourceManager &SM = Lambda->getASTContext().getSourceManager();
+  for (const ParmVarDecl *Parm : Func->parameters()) {
+    SourceRange Range = Parm->getDefaultArgRange();
+    if (Range.isValid() && SM.isPointWithin(Lambda->getLocation(),
+                                            Range.getBegin(), Range.getEnd()))
+      return Parm;
+  }
+  return nullptr;
+}
+
 static const DeclContext *
 getLambdaDefaultArgumentDeclContext(const Decl *D) {
   if (const auto *RD = dyn_cast<CXXRecordDecl>(D))
@@ -250,10 +272,9 @@ public:
     assert(Lambda->isLambda() && "RD must be a lambda!");
     std::string Name("<lambda_");
 
-    Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
     unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
     unsigned LambdaId;
-    const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
+    const ParmVarDecl *Parm = getLambdaDefaultArgParm(Lambda);
     const FunctionDecl *Func =
         Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
 
@@ -1245,8 +1266,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
           Decl *LambdaContextDecl = Record->getLambdaContextDecl();
           unsigned LambdaManglingNumber = Record->getLambdaManglingNumber();
           unsigned LambdaId;
-          const ParmVarDecl *Parm =
-              dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
+          const ParmVarDecl *Parm = getLambdaDefaultArgParm(Record);
           const FunctionDecl *Func =
               Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
 
