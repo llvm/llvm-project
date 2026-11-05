@@ -302,6 +302,21 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  2, // RTLIB::impl_sqrtl_f80
 // CHECK-NEXT:};
 // CHECK-EMPTY:
+// CHECK-NEXT:static ArrayRef<RTLIB::FuncArgTypeID>
+// CHECK-NEXT:getStructElementTypes(RTLIB::FuncArgTypeID ID) {
+// CHECK-NEXT:  switch (ID) {
+// CHECK-NEXT:  default:
+// CHECK-NEXT:    return {};
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:static bool isInRegStruct(RTLIB::FuncArgTypeID ID) {
+// CHECK-NEXT:  switch (ID) {
+// CHECK-NEXT:  default:
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
+// CHECK-EMPTY:
 // CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 
 // CHECK:      RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getUnmaskedVectorLibcall(RTLIB::Libcall LC) {
