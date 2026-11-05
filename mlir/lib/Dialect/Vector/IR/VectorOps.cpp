@@ -7000,7 +7000,6 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 }
 
 namespace {
-
 /// Helper function that computes a new vector type based on the input vector
 /// type by removing the _trailing_ unit dims:
 ///
@@ -7131,9 +7130,8 @@ public:
                        shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
     }
 
-    int64_t numMaskDimsToDrop = allowRank0
-                                    ? shapeOpSrcTy.getRank() - 1
-                                    : numDimsToDrop;
+    int64_t numMaskDimsToDrop =
+        allowRank0 ? shapeOpSrcTy.getRank() - 1 : numDimsToDrop;
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
