@@ -17,9 +17,8 @@ define <4 x i16> @test_concat_truncate_v2i64_to_v4i16(<2 x i64> %a, <2 x i64> %b
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
-; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-BE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -42,9 +41,8 @@ define <8 x i8> @test_concat_truncate_v4i32_to_v8i8(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
-; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ret
 entry:
