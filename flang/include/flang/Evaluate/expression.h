@@ -1030,24 +1030,14 @@ struct GenericAssignmentWrapper {
   std::optional<Assignment> v; // vacant if error
 };
 
-// Only the partial specialization Expr<SomeKind<CAT>> needs instantiation; the
-// other Expr<> types are explicit specializations.
-extern template class Expr<SomeInteger>;
-extern template class Expr<SomeReal>;
-extern template class Expr<SomeComplex>;
-extern template class Expr<SomeLogical>;
-extern template class Expr<SomeUnsigned>;
+FOR_EACH_CATEGORY_TYPE(extern template class Expr, )
 FOR_EACH_TYPE_AND_KIND(extern template class ExpressionBase, )
 FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructorValues, )
 FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
 
 // Template instantiations to resolve these "extern template" declarations.
 #define INSTANTIATE_EXPRESSION_TEMPLATES \
-  template class Expr<SomeInteger>; \
-  template class Expr<SomeReal>; \
-  template class Expr<SomeComplex>; \
-  template class Expr<SomeLogical>; \
-  template class Expr<SomeUnsigned>; \
+  FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
   template class Relational<Type<TypeCategory::Integer>>; \
   template class Relational<Type<TypeCategory::Unsigned>>; \
   template class Relational<Type<TypeCategory::Real>>; \
