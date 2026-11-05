@@ -17,6 +17,7 @@
 #include "hdr/pthread_macros.h"
 #include "hdr/types/pthread_attr_t.h"
 #include "hdr/types/pthread_t.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
