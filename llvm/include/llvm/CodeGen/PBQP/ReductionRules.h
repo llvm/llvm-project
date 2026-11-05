@@ -194,9 +194,11 @@ namespace PBQP {
       // Although a conservatively allocatable node can be allocated to a
       // register, spilling it may provide a lower cost solution. Assert here
       // that spilling is done by choice, not because there were no registers
-      // available. The exception is a problem with no solution of finite cost
-      // (e.g. two unspillable ranges that need the one register left), where no
-      // option of a node, not even spilling, has a finite cost.
+      // available. The exception is a node with no option of finite cost, not
+      // even spilling. R1 and R2 fold costs exactly, so that only happens when
+      // the problem has no solution of finite cost, e.g. when two unspillable
+      // ranges need the one register left. The infinite costs then reach
+      // nodes that were conservatively allocatable when they were classified.
       if (G.getNodeMetadata(NId).wasConservativelyAllocatable())
         assert((hasRegisterOptions(v) ||
                 v[0] == std::numeric_limits<PBQP::PBQPNum>::infinity()) &&
