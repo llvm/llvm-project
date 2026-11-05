@@ -204,7 +204,6 @@ define void @ds_atomic_xchg_i32_ret_av_av_no_agprs(ptr addrspace(3) %ptr) #0 {
 ; CHECK-NEXT:    ; def v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
@@ -765,7 +764,6 @@ define void @ds_atomic_xor_i32_ret_av_av_no_agprs(ptr addrspace(3) %ptr) #0 {
 ; CHECK-NEXT:    ; def v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill

@@ -453,7 +453,6 @@ define void @ds_write2_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ; def v[0:31]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
@@ -1002,7 +1001,6 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ; def v[0:31]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill

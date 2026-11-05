@@ -1292,8 +1292,13 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          iterator_range<MachineInstr::const_mop_iterator> Ops,
                          BitVector &DefSet, BitVector &UseSet) {
   for (const MachineOperand &Op : Ops) {
-    if (Op.isReg())
-      addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
+    if (!Op.isReg())
+      continue;
+    // SMEM/VMEM GPR writes are explicit. Split spills also carry implicit
+    // super-register defs for liveness.
+    if (Op.isDef() && Op.isImplicit())
+      continue;
+    addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
   }
 }
 

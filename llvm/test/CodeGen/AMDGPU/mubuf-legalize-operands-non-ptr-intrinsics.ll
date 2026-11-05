@@ -150,7 +150,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    v_mov_b32_e32 v2, v5
 ; W64-O0-NEXT:    v_mov_b32_e32 v3, v4
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
@@ -499,7 +498,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_waitcnt vmcnt(2)
 ; W64-O0-NEXT:    v_mov_b32_e32 v16, v3
 ; W64-O0-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
@@ -508,7 +506,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    v_mov_b32_e32 v4, v7
 ; W64-O0-NEXT:    v_mov_b32_e32 v5, v6
 ; W64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
@@ -516,13 +513,11 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    v_mov_b32_e32 v2, v12
 ; W64-O0-NEXT:    s_waitcnt vmcnt(9)
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v1, v10
 ; W64-O0-NEXT:    s_waitcnt vmcnt(10)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b32 s4, 0
 ; W64-O0-NEXT:    ; implicit-def: $vgpr17 : SGPR spill to VGPR lane
@@ -1008,7 +1003,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_mov_b32_e32 v7, v10
 ; W64-O0-NEXT:    v_mov_b32_e32 v8, v9
 ; W64-O0-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
@@ -1016,11 +1010,9 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_mov_b32_e32 v5, v12
 ; W64-O0-NEXT:    s_waitcnt vmcnt(6)
 ; W64-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_waitcnt vmcnt(6)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill

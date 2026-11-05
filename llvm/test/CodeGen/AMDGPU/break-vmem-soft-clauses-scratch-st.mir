@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 --amdgpu-xnack=true -run-pass post-RA-hazard-rec %s -o - | FileCheck %s
+---
+# Split-spill component stores (ST mode, as spilled on gfx950): the first
+# store's implicit super-register def must not break the clause.
+name: no_break_clause_split_spill_scratch_store_st
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: no_break_clause_split_spill_scratch_store_st
+    ; CHECK: SCRATCH_STORE_DWORDX4_ST killed $vgpr0_vgpr1_vgpr2_vgpr3, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_ST killed $vgpr4_vgpr5_vgpr6_vgpr7, 48, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_ST killed $vgpr8_vgpr9_vgpr10_vgpr11, 64, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_ST killed $vgpr12_vgpr13_vgpr14_vgpr15, 80, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_ENDPGM 0
+
+    SCRATCH_STORE_DWORDX4_ST killed $vgpr0_vgpr1_vgpr2_vgpr3, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    SCRATCH_STORE_DWORDX4_ST killed $vgpr4_vgpr5_vgpr6_vgpr7, 48, 0, implicit $exec, implicit $flat_scr
+    SCRATCH_STORE_DWORDX4_ST killed $vgpr8_vgpr9_vgpr10_vgpr11, 64, 0, implicit $exec, implicit $flat_scr
+    SCRATCH_STORE_DWORDX4_ST killed $vgpr12_vgpr13_vgpr14_vgpr15, 80, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_ENDPGM 0
+...

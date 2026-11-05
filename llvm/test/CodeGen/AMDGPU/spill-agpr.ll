@@ -434,7 +434,6 @@ define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
 ; GFX90A-NEXT:    ; def a[0:3]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[8:11], 0 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword a1, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a2, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a3, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill

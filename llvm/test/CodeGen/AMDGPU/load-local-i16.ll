@@ -3350,7 +3350,6 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v54, 0xffff, v6
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v56 offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v8, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-NO-DS128-NEXT:    s_nop 0
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
@@ -3939,7 +3938,6 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v3
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v9, 0xffff, v2
 ; GFX9-DS128-NEXT:    buffer_store_dword v9, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
@@ -3960,12 +3958,10 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    ds_read_b128 v[39:42], v8 offset:64
 ; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v8 offset:96
 ; GFX9-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
@@ -4368,7 +4364,6 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v54, v6, 0, 16
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v56 offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v8, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-NO-DS128-NEXT:    s_nop 0
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v0
@@ -4991,7 +4986,6 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_bfe_i32 v11, v3, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v9, v2, 0, 16
 ; GFX9-DS128-NEXT:    buffer_store_dword v9, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
@@ -5012,12 +5006,10 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    ds_read_b128 v[39:42], v8 offset:64
 ; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v8 offset:96
 ; GFX9-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill

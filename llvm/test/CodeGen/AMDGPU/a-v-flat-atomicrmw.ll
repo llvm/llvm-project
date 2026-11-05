@@ -375,7 +375,6 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-NEXT:    ; def v[0:31]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
@@ -502,7 +501,6 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; def v[0:31]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 ; 16-byte Folded Spill
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[4:7], s32 offset:16 ; 16-byte Folded Spill
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[8:11], s32 offset:32 ; 16-byte Folded Spill
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[12:15], s32 offset:48 ; 16-byte Folded Spill
@@ -4124,7 +4122,6 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-NEXT:    ; def v[0:31]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
@@ -4249,7 +4246,6 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; def v[0:31]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 ; 16-byte Folded Spill
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[4:7], s32 offset:16 ; 16-byte Folded Spill
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[8:11], s32 offset:32 ; 16-byte Folded Spill
 ; GFX950-NEXT:    scratch_store_dwordx4 off, v[12:15], s32 offset:48 ; 16-byte Folded Spill

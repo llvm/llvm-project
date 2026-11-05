@@ -1640,16 +1640,12 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX9DAGISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX9DAGISEL-NEXT:    s_nop 0
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX9DAGISEL-NEXT:    s_nop 0
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; GFX9DAGISEL-NEXT:    s_nop 0
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; GFX9DAGISEL-NEXT:    s_nop 0
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
 ; GFX9DAGISEL-NEXT:    s_mov_b64 exec, s[4:5]
@@ -1732,16 +1728,12 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX9GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9GISEL-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX9GISEL-NEXT:    s_nop 0
 ; GFX9GISEL-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX9GISEL-NEXT:    s_nop 0
 ; GFX9GISEL-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; GFX9GISEL-NEXT:    s_nop 0
 ; GFX9GISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; GFX9GISEL-NEXT:    s_nop 0
 ; GFX9GISEL-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
 ; GFX9GISEL-NEXT:    s_mov_b64 exec, s[4:5]

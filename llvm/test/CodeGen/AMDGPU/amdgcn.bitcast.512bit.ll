@@ -24210,7 +24210,6 @@ define inreg <64 x i8> @bitcast_v16f32_to_v64i8_scalar(<16 x float> inreg %a, i3
 ; GFX9-NEXT:    s_lshr_b64 s[42:43], s[18:19], 24
 ; GFX9-NEXT:    s_lshr_b64 s[44:45], s[16:17], 24
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s17
@@ -24282,7 +24281,6 @@ define inreg <64 x i8> @bitcast_v16f32_to_v64i8_scalar(<16 x float> inreg %a, i3
 ; GFX9-NEXT:    v_add_f32_e64 v4, s29, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v3, s28, 1.0
 ; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_add_f32_e64 v6, s27, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v5, s26, 1.0
@@ -62608,7 +62606,6 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; GFX9-NEXT:    s_lshr_b64 s[42:43], s[18:19], 24
 ; GFX9-NEXT:    s_lshr_b64 s[44:45], s[16:17], 24
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s17
@@ -62680,7 +62677,6 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; GFX9-NEXT:    v_pk_add_u16 v4, s29, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v3, s28, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_pk_add_u16 v6, s27, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v5, s26, 3 op_sel_hi:[1,0]
@@ -74214,7 +74210,6 @@ define inreg <64 x i8> @bitcast_v32f16_to_v64i8_scalar(<32 x half> inreg %a, i32
 ; GFX9-NEXT:    s_lshr_b64 s[42:43], s[18:19], 24
 ; GFX9-NEXT:    s_lshr_b64 s[44:45], s[16:17], 24
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s17
@@ -74299,7 +74294,6 @@ define inreg <64 x i8> @bitcast_v32f16_to_v64i8_scalar(<32 x half> inreg %a, i32
 ; GFX9-NEXT:    v_pk_add_f16 v1, s4, v1 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_lshrrev_b64 v[17:18], 24, v[1:2]
 ; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[18:19], 24, v[3:4]
 ; GFX9-NEXT:    v_lshrrev_b64 v[19:20], 24, v[5:6]

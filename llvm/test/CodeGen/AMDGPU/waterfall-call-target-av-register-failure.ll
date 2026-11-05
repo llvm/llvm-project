@@ -44,7 +44,6 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:  ; %bb.1: ; %bb1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[34:35], -1

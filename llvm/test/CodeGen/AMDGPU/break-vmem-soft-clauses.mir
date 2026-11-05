@@ -610,3 +610,23 @@ body: |
     $vgpr11 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
+---
+# Split-spill component stores: the first store's implicit super-register
+# def is liveness bookkeeping and must not break the clause.
+name: no_break_clause_split_spill_scratch_store
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; GCN-LABEL: name: no_break_clause_split_spill_scratch_store
+    ; GCN: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr8_vgpr9_vgpr10_vgpr11, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr12_vgpr13_vgpr14_vgpr15, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: S_ENDPGM 0
+
+    SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    SCRATCH_STORE_DWORDX4_SADDR killed $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    SCRATCH_STORE_DWORDX4_SADDR killed $vgpr8_vgpr9_vgpr10_vgpr11, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    SCRATCH_STORE_DWORDX4_SADDR killed $vgpr12_vgpr13_vgpr14_vgpr15, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_ENDPGM 0
+...

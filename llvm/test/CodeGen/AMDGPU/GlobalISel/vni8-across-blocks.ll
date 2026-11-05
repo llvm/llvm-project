@@ -264,7 +264,6 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    buffer_store_dword v5, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
@@ -289,7 +288,6 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
@@ -312,7 +310,6 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX906-NEXT:    s_waitcnt vmcnt(1)
 ; GFX906-NEXT:    buffer_store_dword v57, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
-; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_store_dword v58, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v59, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v60, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
