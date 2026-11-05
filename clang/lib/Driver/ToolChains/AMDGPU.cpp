@@ -614,29 +614,34 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  // When ROCm is installed in a non-system directory (e.g. /opt/rocm),
-  // use -internal-isystem so the selected ROCm headers take precedence
-  // over any distro-installed HIP headers in /usr/include.
-  // When installed under /usr, keep -idirafter to avoid prepending
-  // /usr/include before C++ standard library headers, which would
-  // break #include_next chains (see cd597588).
-  StringRef IncPath = getIncludePath();
-  SmallString<128> SysUsr(D.SysRoot);
-  SysUsr.append("/usr/");
-  const char *IncFlag =
-      IncPath.starts_with(SysUsr) ? "-idirafter" : "-internal-isystem";
-  CC1Args.push_back(IncFlag);
-  CC1Args.push_back(DriverArgs.MakeArgString(IncPath));
-  SmallString<128> LibHipCxxPath(IncPath);
-  llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
-  if (D.getVFS().exists(LibHipCxxPath)) {
-    CC1Args.push_back(IncFlag);
-    CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
-  }
+  // The ROCm toolkit include path (e.g. /opt/rocm/include) is added later
+  // by AddHIPIncludeArgsLate, which is called after C++ stdlib headers but
+  // before C system headers. This positional ordering ensures ROCm headers
+  // beat distro-installed HIP headers in /usr/include without breaking
+  // C++ #include_next chains.
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
   if (HasHipStdPar)
     HandleHipStdPar();
+}
+
+void RocmInstallationDetector::AddHIPIncludeArgsLate(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
+    return;
+  if (!hasHIPRuntime())
+    return;
+
+  StringRef IncPath = getIncludePath();
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(IncPath));
+  SmallString<128> LibHipCxxPath(IncPath);
+  llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
+  if (D.getVFS().exists(LibHipCxxPath)) {
+    CC1Args.push_back("-internal-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
+  }
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1348,6 +1353,13 @@ void AMDGPUToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
+void AMDGPUToolChain::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args) const {
+  if (getTriple().getEnvironment() == llvm::Triple::LLVM)
+    return;
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
 }
 
 VersionTuple AMDGPUToolChain::computeMSVCVersion(const Driver *D,
