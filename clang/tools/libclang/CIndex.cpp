@@ -46,6 +46,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
@@ -5281,6 +5282,28 @@ static const Decl *getDeclFromExpr(const Stmt *E) {
   return nullptr;
 }
 
+// Resolve a reference through a dependent name, such as 'this->size()' in a
+// class template deriving from 'A<T>'. The AST doesn't bind these to a
+// declaration until instantiation, so use the same heuristics as clangd to look
+// the name up in the primary template. Return null unless exactly one
+// declaration is found, since the cursor can only name one.
+static const Decl *getDeclFromDependentExpr(const Expr *E, ASTContext &Ctx) {
+  // Look through a call to its callee, as getDeclFromExpr() does. Only the
+  // dependent names themselves are resolved: HeuristicResolver's handling of
+  // other callees (e.g., returning the class a call returns) doesn't name what
+  // the call refers to.
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    return getDeclFromDependentExpr(CE->getCallee(), Ctx);
+
+  HeuristicResolver Resolver(Ctx);
+  std::vector<const NamedDecl *> Decls;
+  if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E))
+    Decls = Resolver.resolveMemberExpr(ME);
+  else if (const auto *RE = dyn_cast<DependentScopeDeclRefExpr>(E))
+    Decls = Resolver.resolveDeclRefExpr(RE);
+  return Decls.size() == 1 ? Decls.front() : nullptr;
+}
+
 static SourceLocation getLocationFromExpr(const Expr *E) {
   if (const ImplicitCastExpr *CE = dyn_cast<ImplicitCastExpr>(E))
     return getLocationFromExpr(CE->getSubExpr());
@@ -7173,6 +7196,8 @@ CXCursor clang_getCursorReferenced(CXCursor C) {
   if (clang_isExpression(C.kind)) {
     const Expr *E = getCursorExpr(C);
     const Decl *D = getDeclFromExpr(E);
+    if (!D && E)
+      D = getDeclFromDependentExpr(E, getCursorContext(C));
     if (D) {
       CXCursor declCursor = MakeCXCursor(D, tu);
       declCursor = getSelectorIdentifierCursor(getSelectorIdentifierIndex(C),
