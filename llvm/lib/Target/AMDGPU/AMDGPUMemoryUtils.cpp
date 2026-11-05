@@ -401,8 +401,8 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     }
   }
 
-  // Ignore non-acquire atomics not aliasing with the original load, any atomic
-  // is a universal MemoryDef from MSSA's point of view too, just like a fence.
+  // Ignore non-acquire fences/atomics not aliasing with the original load; MSSA
+  // counts any atomic or fence as a universal MemoryDef.
   // Acquire (or stronger) fences/atomics act as clobbers because they can bring
   // in effects from other threads.
   const auto MayAlias = [AA, Ptr](auto I) -> bool {
