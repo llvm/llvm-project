@@ -27,7 +27,6 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, sigtimedwait,
                    (const sigset_t *__restrict set, siginfo_t *__restrict info,
                     const struct timespec *__restrict timeout)) {
-  LIBC_CRASH_ON_NULLPTR(set);
   auto result = linux_syscalls::rt_sigtimedwait(set, info, timeout);
   if (!result.has_value()) {
     libc_errno = result.error();

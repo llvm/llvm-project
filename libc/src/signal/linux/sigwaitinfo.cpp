@@ -26,7 +26,6 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, sigwaitinfo,
                    (const sigset_t *__restrict set,
                     siginfo_t *__restrict info)) {
-  LIBC_CRASH_ON_NULLPTR(set);
   // Linux kernel specifically design rt_sigtimedwait syscall with a nullptr
   // as sigwaitinfo behaviour, even if it was left unspecified by POSIX norm.
   // See in the notes section of:

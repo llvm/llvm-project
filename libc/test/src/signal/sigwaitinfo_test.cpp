@@ -93,5 +93,6 @@ constexpr int signal = SIGILL;
 // This tests that a null set pointer returns EFAULT.
 TEST_F(LlvmLibcSigwaitinfoTest, NullSet) {
   siginfo_t info{};
-  EXPECT_DEATH([&] { LIBC_NAMESPACE::sigwaitinfo(nullptr, &info); }, signal);
+  EXPECT_THAT(LIBC_NAMESPACE::sigwaitinfo(nullptr, &info),
+              Fails(EFAULT));
 }
