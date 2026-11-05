@@ -829,12 +829,18 @@ static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
 void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
                                                 MachineBasicBlock &MBB,
                                                 RegScavenger *) const {
-  // Keep register zeroing before return address authentication so that the
-  // authentication can stay next to the return and combine with it.
-  MachineBasicBlock::iterator MBBI =
-      llvm::find_if(MBB, [](const MachineInstr &MI) {
-        return MI.getOpcode() == AArch64::PAUTH_EPILOGUE || MI.isTerminator();
-      });
+  // Zero registers before PAUTH_EPILOGUE where possible, so its expansion can
+  // combine authentication with the return. Authentication scratch registers
+  // must be cleared after the pseudo instead (see below).
+  MachineBasicBlock::iterator FirstTerminator = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator MBBI = FirstTerminator;
+  // Unwind directives may separate the pseudo from the terminator.
+  for (MachineInstr &MI : reverse(make_range(MBB.begin(), FirstTerminator))) {
+    if (MI.getOpcode() == AArch64::PAUTH_EPILOGUE) {
+      MBBI = MI.getIterator();
+      break;
+    }
+  }
 
   // Fake a debug loc.
   DebugLoc DL;
@@ -864,16 +870,17 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 
   const AArch64InstrInfo &TII = *STI.getInstrInfo();
-  bool NeedsWinCFI = MF.hasWinCFI() && MBBI != MBB.end() &&
-                     MBBI->getOpcode() == AArch64::PAUTH_EPILOGUE;
+  bool IsPAuthEpilogue =
+      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::PAUTH_EPILOGUE;
+  bool NeedsWinCFI = MF.hasWinCFI() && IsPAuthEpilogue;
 
   auto ClearReg = [&](MCRegister Reg) {
     auto InsertPt = MBBI;
-    // Some authentication sequences need scratch registers. Clear those after
-    // authentication so that they are still zero on return.
-    if (MBBI != MBB.end() && MBBI->getOpcode() == AArch64::PAUTH_EPILOGUE &&
-        MBBI->modifiesRegister(Reg, &TRI))
-      InsertPt = MBB.getFirstTerminator();
+    // Clear authentication scratch registers after the pseudo but before the
+    // return, so they are still zero on return. These intervening instructions
+    // prevent authenticateLR from combining authentication with the return.
+    if (IsPAuthEpilogue && MBBI->modifiesRegister(Reg, &TRI))
+      InsertPt = FirstTerminator;
     TII.buildClearRegister(Reg, MBB, InsertPt, DL);
     // Zeroing inside a Windows epilogue needs matching unwind codes.
     if (NeedsWinCFI && InsertPt == MBBI)
