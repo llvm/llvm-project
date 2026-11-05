@@ -559,13 +559,17 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
     // the copy runs, so the copied EFLAGS don't reach them along that edge.
     // They read the EFLAGS at the asm instead.
     SmallPtrSet<MachineBasicBlock *, 2> IndirectTargetsBeforeCopy;
-    if (MBB.mayHaveInlineAsmBr())
+    if (MBB.mayHaveInlineAsmBr()) {
       for (MachineInstr &MI :
-           make_range(MBB.instr_begin(), CopyI->getIterator()))
-        if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
-          for (const MachineOperand &MO : MI.operands())
-            if (MO.isMBB())
-              IndirectTargetsBeforeCopy.insert(MO.getMBB());
+           make_range(MBB.instr_begin(), CopyI->getIterator())) {
+        if (MI.getOpcode() != TargetOpcode::INLINEASM_BR)
+          continue;
+
+        for (const MachineOperand &MO : MI.operands())
+          if (MO.isMBB())
+            IndirectTargetsBeforeCopy.insert(MO.getMBB());
+      }
+    }
 
     do {
       MachineBasicBlock &UseMBB = *Blocks.pop_back_val();
