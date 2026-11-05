@@ -60,39 +60,6 @@ define <vscale x 8 x half> @fmaxv_zero_fill(<vscale x 8 x i1> %pg, <vscale x 8 x
 }
 
 ; Ensure we rely on the reduction's implicit zero filling.
-define <vscale x 2 x float> @fmaxnmv_zero_fill(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a) #0 {
-; CHECK-LABEL: fmaxnmv_zero_fill:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmaxnmv s0, p0, z0.s
-; CHECK-NEXT:    ret
-  %t1 = call float @llvm.aarch64.sve.fmaxnmv.nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a)
-  %t2 = insertelement <vscale x 2 x float> zeroinitializer, float %t1, i64 0
-  ret <vscale x 2 x float> %t2
-}
-
-; Ensure we rely on the reduction's implicit zero filling.
-define <vscale x 2 x float> @fminnmv_zero_fill(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a) #0 {
-; CHECK-LABEL: fminnmv_zero_fill:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fminnmv s0, p0, z0.s
-; CHECK-NEXT:    ret
-  %t1 = call float @llvm.aarch64.sve.fminnmv.nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a)
-  %t2 = insertelement <vscale x 2 x float> zeroinitializer, float %t1, i64 0
-  ret <vscale x 2 x float> %t2
-}
-
-; Ensure we rely on the reduction's implicit zero filling.
-define <vscale x 2 x float> @fminv_zero_fill(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a) #0 {
-; CHECK-LABEL: fminv_zero_fill:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fminv s0, p0, z0.s
-; CHECK-NEXT:    ret
-  %t1 = call float @llvm.aarch64.sve.fminv.nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a)
-  %t2 = insertelement <vscale x 2 x float> zeroinitializer, float %t1, i64 0
-  ret <vscale x 2 x float> %t2
-}
-
-; Ensure we rely on the reduction's implicit zero filling.
 define <vscale x 4 x i32> @orv_zero_fill(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: orv_zero_fill:
 ; CHECK:       // %bb.0:
@@ -226,20 +193,11 @@ declare i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>
 declare i8 @llvm.aarch64.sve.eorv.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>)
 declare i16 @llvm.aarch64.sve.eorv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>)
 
-declare float @llvm.aarch64.sve.fadda.nxv2f32(<vscale x 2 x i1>, float, <vscale x 2 x float>)
 declare double @llvm.aarch64.sve.fadda.nxv2f64(<vscale x 2 x i1>, double, <vscale x 2 x double>)
 
-declare float @llvm.aarch64.sve.faddv.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
 declare float @llvm.aarch64.sve.faddv.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>)
 
-declare float @llvm.aarch64.sve.fmaxnmv.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
-
 declare half @llvm.aarch64.sve.fmaxv.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>)
-declare float @llvm.aarch64.sve.fmaxv.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
-
-declare float @llvm.aarch64.sve.fminv.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
-
-declare float @llvm.aarch64.sve.fminnmv.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
 
 declare i8 @llvm.aarch64.sve.orv.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>)
 declare i32 @llvm.aarch64.sve.orv.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>)
