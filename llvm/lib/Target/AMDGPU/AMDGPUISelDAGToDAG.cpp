@@ -4405,7 +4405,7 @@ bool AMDGPUDAGToDAGISel::SelectHi16ZeroSrc(SDValue In, SDValue &Src,
   }
 
   for (const SDValue &Op : In->op_values()) {
-    if (Op.getOpcode() != ISD::TRUNCATE || !Op.hasOneUse())
+    if (Op.getOpcode() != ISD::TRUNCATE)
       continue;
     // An extract of the high half is free as a hi16 operand; using the shift
     // result as the hi16 source would force the shift to be materialized.
@@ -4413,9 +4413,18 @@ bool AMDGPUDAGToDAGISel::SelectHi16ZeroSrc(SDValue In, SDValue &Src,
     if (isExtractHiElt(Op, Unused))
       continue;
     SDValue X = Op.getOperand(0);
-    // Require X to die at the truncate so that In can reuse the low half of
-    // X's register; otherwise the REG_SEQUENCE may need extra copies.
-    if (X.getValueType() != MVT::i32 || !X->isDivergent() || !X.hasOneUse())
+    if (X.getValueType() != MVT::i32 || !X->isDivergent())
+      continue;
+    // Require X to be read only through its low half so that In can reuse the
+    // low half of X's register; otherwise the REG_SEQUENCE may need extra
+    // copies.
+    if (!all_of(X->uses(), [&X](const SDUse &U) {
+          if (U.getResNo() != X.getResNo())
+            return true;
+          const SDNode *User = U.getUser();
+          return User->getOpcode() == ISD::TRUNCATE &&
+                 User->getValueType(0) == MVT::i16;
+        }))
       continue;
     if (CurDAG->computeKnownBits(X).countMinLeadingZeros() < 16)
       continue;

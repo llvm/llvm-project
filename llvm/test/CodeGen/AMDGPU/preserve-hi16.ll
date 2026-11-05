@@ -1227,6 +1227,58 @@ define i32 @urem_sub_i16_zext_i32(i32 %x) {
   ret i32 %zext
 }
 
+; The truncate has multiple uses, but the shift result is only read through
+; its low half.
+define i32 @add_mul_i16_zext_i32_hi16_zero_trunc_multi_use(i32 %x, i16 %y) {
+; GFX8-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_add_u16_e32 v1, v0, v1
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_add_u16_e32 v1, v0, v1
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v0, v1, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_add_nc_u16 v1, v0, v1
+; GFX10-NEXT:    v_mul_lo_u16 v0, v1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v1.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_add_nc_u16 v1, v0, v1
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v0, v1, v0
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 17
+  %trunc = trunc i32 %shr to i16
+  %add = add i16 %trunc, %y
+  %mul = mul i16 %add, %trunc
+  %zext = zext i16 %mul to i32
+  ret i32 %zext
+}
+
 ; Negative test: bit 16 of the shift result may be set.
 define i32 @mul_i16_zext_i32_hi16_not_zero(i32 %x) {
 ; GFX8-LABEL: mul_i16_zext_i32_hi16_not_zero:
