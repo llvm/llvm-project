@@ -1,3 +1,5 @@
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -force-streaming < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2,+sme -force-streaming-compatible < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
 
 ;
