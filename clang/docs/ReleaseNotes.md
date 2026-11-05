@@ -784,9 +784,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
   Safe Buffers warning enabled.
 
-- Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers.
-  Or limit is now effectively 2^32-1.
-
+- Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
