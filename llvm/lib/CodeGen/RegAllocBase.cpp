@@ -158,46 +158,6 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
-static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
-                              MCRegister PhysReg, LiveIntervals *LIS,
-                              const VirtRegMap &VRM);
-
-/// Perform cleanups on a register that failed to allocate. This hacks on the
-/// liveness in order to avoid spurious verifier errors in later passes.
-static void cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
-                              LiveIntervals *LIS, const VirtRegMap &VRM) {
-  MachineRegisterInfo *MRI = &VRM.getRegInfo();
-  const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
-
-  // We still should produce valid IR. Kill all the uses and reduce the live
-  // ranges so that we don't think it's possible to introduce kill flags later
-  // which will fail the verifier.
-  for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
-    if (MO.readsReg())
-      MO.setIsUndef(true);
-    if (MO.isDef())
-      cleanupFailedDefs(*MO.getParent(), FailedReg, PhysReg, LIS, VRM);
-  }
-
-  if (!MRI->isReserved(PhysReg)) {
-    // Physical liveness for any aliasing registers is now unreliable, so delete
-    // the uses.
-    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
-         ++Aliases) {
-      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
-        if (MO.readsReg())
-          MO.setIsUndef(true);
-      }
-    }
-  }
-
-  // Directly perform the rewrite, and do not leave it to VirtRegRewriter as
-  // usual. This avoids trying to manage illegal overlapping assignments in
-  // LiveRegMatrix.
-  MRI->replaceRegWith(FailedReg, PhysReg);
-  LIS->removeInterval(FailedReg);
-}
-
 /// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live ranges,
 /// and make the defs of \p PhysReg on \p MI consistently dead or live.
 static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
@@ -247,6 +207,42 @@ static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
     if (IsErrorDef(MO))
       MO.setIsDead(IsDead);
   }
+}
+
+/// Perform cleanups on a register that failed to allocate. This hacks on the
+/// liveness in order to avoid spurious verifier errors in later passes.
+static void cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
+                              LiveIntervals *LIS, const VirtRegMap &VRM) {
+  MachineRegisterInfo *MRI = &VRM.getRegInfo();
+  const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
+
+  // We still should produce valid IR. Kill all the uses and reduce the live
+  // ranges so that we don't think it's possible to introduce kill flags later
+  // which will fail the verifier.
+  for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
+    if (MO.readsReg())
+      MO.setIsUndef(true);
+    if (MO.isDef())
+      cleanupFailedDefs(*MO.getParent(), FailedReg, PhysReg, LIS, VRM);
+  }
+
+  if (!MRI->isReserved(PhysReg)) {
+    // Physical liveness for any aliasing registers is now unreliable, so delete
+    // the uses.
+    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
+         ++Aliases) {
+      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
+        if (MO.readsReg())
+          MO.setIsUndef(true);
+      }
+    }
+  }
+
+  // Directly perform the rewrite, and do not leave it to VirtRegRewriter as
+  // usual. This avoids trying to manage illegal overlapping assignments in
+  // LiveRegMatrix.
+  MRI->replaceRegWith(FailedReg, PhysReg);
+  LIS->removeInterval(FailedReg);
 }
 
 void RegAllocBase::enqueue(const LiveInterval *LI) {
