@@ -154,7 +154,7 @@ stp	q0, q1, [x2, #128]!
 # CHECK-NEXT:  3      2     0.50           *            str	h0, [x1, x2, sxtx #1]
 # CHECK-NEXT:  2      2     0.50           *            str	s0, [x1, x2, sxtx #2]
 # CHECK-NEXT:  2      2     0.50           *            str	d0, [x1, x2, sxtx #3]
-# CHECK-NEXT:  2      2     0.50           *            str	q0, [x1, x2, sxtx #4]
+# CHECK-NEXT:  3      2     0.50           *            str	q0, [x1, x2, sxtx #4]
 # CHECK-NEXT:  2      2     0.50           *            stp	s0, s1, [x2, #128]
 # CHECK-NEXT:  2      2     0.50           *            stnp	s0, s1, [x2, #128]
 # CHECK-NEXT:  2      2     0.50           *            stp	d0, d1, [x2, #128]
@@ -192,7 +192,7 @@ stp	q0, q1, [x2, #128]!
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     25.00  25.00  8.25   8.25   8.25   8.25   26.00  26.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     25.00  25.00  8.50   8.50   8.50   8.50   26.00  26.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
@@ -233,7 +233,7 @@ stp	q0, q1, [x2, #128]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.50   0.50   str	h0, [x1, x2, sxtx #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   str	s0, [x1, x2, sxtx #2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   str	d0, [x1, x2, sxtx #3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   str	q0, [x1, x2, sxtx #4]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.50   0.50   str	q0, [x1, x2, sxtx #4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   stp	s0, s1, [x2, #128]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   stnp	s0, s1, [x2, #128]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   stp	d0, d1, [x2, #128]

@@ -1222,8 +1222,14 @@ def : InstRW<[A78Write_ScaledSTRH, ReadAdrBase],
              (instregex "^STRHro[WX]$")>;
 
 // Store vector reg, register offset, scale, Q-form
+// Store vector reg, register offset, extend, Q-form
 // Store vector reg, register offset, extend, scale, Q-form
-def : InstRW<[A78Write_2c_1L01_1V, ReadAdrBase],
+def A78Write_ScaledExtendedSTRQ : SchedWriteVariant<[
+  SchedVar<AllOfSchedPreds<[A78IsScaledLoadStore, A78IsExtendedLoadStore]>,
+           [A78Write_2c_1L01_1V_1I]>,
+  SchedVar<NoSchedPred, [A78Write_2c_1L01_1V]>]>;
+
+def : InstRW<[A78Write_ScaledExtendedSTRQ, ReadAdrBase],
              (instregex "^STRQro[WX]$")>;
 
 // Store vector pair, immed offset, S-form
