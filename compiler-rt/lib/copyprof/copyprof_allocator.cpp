@@ -72,8 +72,8 @@ using AllocatorCache = Allocator::AllocatorCache;
 // Per-thread allocator cache. It is mmap()ed, and thus zero-initialized as
 // `AllocatorCache` requires, and committed back to `allocator` when its thread
 // exits. As CopyProf does not intercept thread creation, the cache is created
-// by the thread's first (de)allocation, which also arms the TSD destructor that
-// commits it back.
+// by the thread's first (de)allocation, which also arms the thread-specific
+// data (TSD) destructor that commits it back.
 pthread_key_t thread_cache_key;
 __attribute__((
     tls_model("initial-exec"))) THREADLOCAL AllocatorCache* thread_cache;
@@ -227,7 +227,7 @@ void* CopyProfAllocate(uptr size, uptr align) {
   return SetErrnoOnNull(instance.Allocate(size, align));
 }
 
-void CopyProfDeallocate(void* ptr, uptr size, uptr align) {
+void CopyProfDeallocate(void* ptr, uptr /*size*/, uptr /*align*/) {
   instance.Deallocate(ptr);
 }
 
