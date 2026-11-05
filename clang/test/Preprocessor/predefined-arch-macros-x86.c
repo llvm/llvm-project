@@ -37,6 +37,8 @@
 // X86_64_V3-NEXT: #define __BMI__ 1
 // X86_64_V3:      #define __F16C__ 1
 // X86_64_V3:      #define __FMA__ 1
+// X86_64_V3:      #define __FP_FAST_FMA 1
+// X86_64_V3-NEXT: #define __FP_FAST_FMAF 1
 // X86_64_V3:      #define __LZCNT__ 1
 // X86_64_V3:      #define __MOVBE__ 1
 // X86_64_V3:      #define __XSAVE__ 1

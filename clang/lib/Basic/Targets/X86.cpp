@@ -836,6 +836,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasFMA)
     Builder.defineMacro("__FMA__");
 
+  if (HasFMA || XOPLevel >= FMA4) {
+    Builder.defineMacro("__FP_FAST_FMA");
+    Builder.defineMacro("__FP_FAST_FMAF");
+    if (&getLongDoubleFormat() == &llvm::APFloat::IEEEdouble())
+      Builder.defineMacro("__FP_FAST_FMAL");
+  }
+
   if (HasF16C)
     Builder.defineMacro("__F16C__");
 
