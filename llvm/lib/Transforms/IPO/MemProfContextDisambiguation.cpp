@@ -7207,8 +7207,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               addAmbiguousAttribute(CBClone);
             } else {
               removeAnyExistingAmbiguousAttribute(CBClone);
-              CBClone->addFnAttr(llvm::Attribute::get(
-                  F.getContext(), "memprof", AllocTypeString));
+              CBClone->addFnAttr(llvm::Attribute::get(F.getContext(), "memprof",
+                                                      AllocTypeString));
             }
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "
