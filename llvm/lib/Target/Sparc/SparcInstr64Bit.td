@@ -390,7 +390,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
 // 64-bit Floating Point Conversions.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasV9] in {
+let Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1 in {
 
 def FXTOS : F3_3u<2, 0b110100, 0b010000100,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
@@ -420,7 +420,7 @@ def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  "fqtox $rs2, $rd",
                  [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
 
-} // Predicates = [HasV9]
+} // Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1
 
 // Conditional move patterns.
 let Predicates = [Is64Bit] in {
