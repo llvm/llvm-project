@@ -129,7 +129,7 @@ void RISCVTargetELFStreamer::finish() {
   else if (RISCVABI::isDoubleFP(ABI))
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
   else
-    llvm_unreachable("Unexpected ABI");
+    assert(ABI == RISCVABI::ABI_Unknown);
 
   W.setELFHeaderEFlags(EFlags);
 }
