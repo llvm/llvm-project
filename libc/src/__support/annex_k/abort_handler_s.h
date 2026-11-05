@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_ABORT_HANDLER_S_H
 
 #include "hdr/types/errno_t.h"
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/abort.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,7 +33,11 @@ LIBC_INLINE static void abort_handler_s(const char *__restrict msg,
 of a bug present in the software. Please reach out to your\
 software's vendor to get more help.\n");
 
-  abort();
+  // The standard specifies that abort_handler_s calls abort. Code under
+  // __support must stay free of public entrypoints and OS specific code, so
+  // terminate through the OS abstraction layer instead, as libc_assert.h does,
+  // using the exit status abort itself falls back to.
+  internal::exit(127);
 }
 
 } // namespace annex_k

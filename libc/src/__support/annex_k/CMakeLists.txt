@@ -7,5 +7,4 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
-    libc.src.stdlib.abort
 )
