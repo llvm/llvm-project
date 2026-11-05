@@ -10,10 +10,12 @@
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#S:]] = OpTypeStruct %[[#F32]]{{$}}
 ; CHECK-DAG: %[[#PTR:]] = OpTypePointer PushConstant %[[#S]]
+; CHECK-DAG: %[[#PTRF:]] = OpTypePointer PushConstant %[[#F32]]
 ; CHECK-DAG: %[[#PCS:]] = OpVariable %[[#PTR]] PushConstant
 ; CHECK: OpFunction
 ; CHECK: OpFunctionParameter
-; CHECK: OpLoad %[[#F32]]
+; CHECK: %[[#AC:]] = OpAccessChain %[[#PTRF]] %[[#PCS]]
+; CHECK: OpLoad %[[#F32]] %[[#AC]]
 
 %struct.S = type <{ float }>
 %struct.P = type { float, float }
