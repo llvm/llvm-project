@@ -1015,9 +1015,11 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         Elts && Src->isIntegerTy(*Elts))
       return InstructionCost(MaskUnpackCostPerElt) * *Elts *
              getFullRateInstrCost();
-    // Integer and FP values share registers. The sizes differ for the parts of
-    // a split vector, and a legalized vector may need its lanes repacked.
+    // The generic code scalarizes a vector cast into element casts, which for
+    // a bitcast may pair elements of different sizes.
     if (Src->getPrimitiveSizeInBits() == Dst->getPrimitiveSizeInBits()) {
+      // Integer and FP values share registers. A legalized vector may need its
+      // lanes repacked.
       if (TLI->isTypeLegal(TLI->getValueType(DL, Src)) &&
           TLI->isTypeLegal(TLI->getValueType(DL, Dst)))
         return 0;
