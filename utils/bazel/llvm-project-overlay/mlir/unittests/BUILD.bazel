@@ -457,6 +457,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:config",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:RemarkStreamer",
