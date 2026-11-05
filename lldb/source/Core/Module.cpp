@@ -305,11 +305,12 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
       if (bytes_read < size_to_read)
         data_sp->SetByteSize(bytes_read);
       if (data_sp->GetByteSize() > 0) {
-        m_objfile_sp =
-            ObjectFile::FindPlugin(shared_from_this(), process_sp, header_addr,
-                                   data_sp, disable_memory_symtab_caching);
+        m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
+                                              header_addr, data_sp);
         if (m_objfile_sp) {
           m_memory_module_addr = header_addr;
+          m_objfile_sp->SetDisableMemorySymtabCaching(
+              disable_memory_symtab_caching);
 
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some

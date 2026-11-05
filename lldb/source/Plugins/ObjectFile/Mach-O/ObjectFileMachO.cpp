@@ -844,14 +844,12 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 
 ObjectFile *ObjectFileMachO::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
-    const ProcessSP &process_sp, lldb::addr_t header_addr,
-    bool disable_memory_symtab_caching) {
+    const ProcessSP &process_sp, lldb::addr_t header_addr) {
   DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
   if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     std::unique_ptr<ObjectFile> objfile_up(
         new ObjectFileMachO(module_sp, data_sp, process_sp, header_addr));
-    objfile_up->SetDisableMemorySymtabCaching(disable_memory_symtab_caching);
     if (objfile_up.get() && objfile_up->ParseHeader())
       return objfile_up.release();
   }

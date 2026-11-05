@@ -59,8 +59,7 @@ public:
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
-      const lldb::ProcessSP &process_sp, lldb::addr_t header_addr,
-      bool disable_memory_symtab_caching);
+      const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,

@@ -169,16 +169,10 @@ public:
   ///
   /// \param[in] header_addr
   ///     The address of the header for the object file in memory.
-  ///
-  /// \param[in] disable_memory_symtab_caching
-  ///     If true, the symbol table for this object file will not be loaded
-  ///     from or saved to the index cache, even if caching of memory modules
-  ///     is enabled. This is used for binaries read out of a corefile.
   static lldb::ObjectFileSP FindPlugin(const lldb::ModuleSP &module_sp,
                                        const lldb::ProcessSP &process_sp,
                                        lldb::addr_t header_addr,
-                                       lldb::WritableDataBufferSP file_data_sp,
-                                       bool disable_memory_symtab_caching);
+                                       lldb::WritableDataBufferSP file_data_sp);
 
   static ModuleSpecList
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,

@@ -158,8 +158,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                                     const ProcessSP &process_sp,
                                     lldb::addr_t header_addr,
-                                    WritableDataBufferSP data_sp,
-                                    bool disable_memory_symtab_caching) {
+                                    WritableDataBufferSP data_sp) {
   ObjectFileSP object_file_sp;
 
   if (module_sp) {
@@ -174,9 +173,8 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
       if (!cbs.create_memory_callback)
         continue;
-      object_file_sp.reset(cbs.create_memory_callback(
-          module_sp, data_sp, process_sp, header_addr,
-          disable_memory_symtab_caching));
+      object_file_sp.reset(cbs.create_memory_callback(module_sp, data_sp,
+                                                      process_sp, header_addr));
       if (object_file_sp.get())
         return object_file_sp;
     }

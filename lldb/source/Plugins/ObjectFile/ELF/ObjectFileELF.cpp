@@ -475,8 +475,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
 ObjectFile *ObjectFileELF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
-    const lldb::ProcessSP &process_sp, lldb::addr_t header_addr,
-    bool disable_memory_symtab_caching) {
+    const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
   if (!data_sp || data_sp->GetByteSize() < (llvm::ELF::EI_NIDENT))
     return nullptr;
   const uint8_t *magic = data_sp->GetBytes();
@@ -502,7 +501,6 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
 
   std::unique_ptr<ObjectFileELF> objfile_up(
       new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
-  objfile_up->SetDisableMemorySymtabCaching(disable_memory_symtab_caching);
   ArchSpec spec = objfile_up->GetArchitecture();
   if (spec && objfile_up->SetModulesArchitecture(spec))
     return objfile_up.release();

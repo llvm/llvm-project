@@ -14,6 +14,15 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
+    def setUp(self):
+        TestBase.setUp(self)
+        # Set the cache path before anything can touch the index cache,
+        # which latches the path on first use.
+        self.cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
+        self.runCmd(
+            'settings set -g symbols.lldb-index-cache-path "%s"' % self.cache_dir
+        )
+
     @requireDarwin
     @skipIfRemote
     def test_corefile_memory_module_not_cached(self):
@@ -59,8 +68,6 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         if os.path.exists(dsym):
             shutil.rmtree(dsym)
 
-        cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
-        self.runCmd('settings set -g symbols.lldb-index-cache-path "%s"' % cache_dir)
         self.runCmd("settings set -g symbols.enable-lldb-index-cache false")
         self.runCmd(
             "settings set -g symbols.enable-lldb-index-cache-memory-modules true"
@@ -82,5 +89,5 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         self.assertGreater(exe_module.GetNumSymbols(), 0)
 
         # Confirm no symbol table was saved in the index cache for the binary.
-        module_file_glob = os.path.join(cache_dir, "llvmcache-*a.out*-symtab-*")
+        module_file_glob = os.path.join(self.cache_dir, "llvmcache-*a.out*-symtab-*")
         self.assertEqual(len(glob.glob(module_file_glob)), 0)
