@@ -145,6 +145,10 @@ private:
 
   DenseMap<const MCSection *, uint64_t> SectionAddress;
 
+  // Offset of each section's data from the start of all section data. Equal to
+  // the section's address, unless relocatable DWARF numbers it from 0.
+  DenseMap<const MCSection *, uint64_t> SectionDataOffset;
+
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
   SmallVector<MCSection *, 0> SectionOrder;

@@ -57,6 +57,7 @@ MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
+MCOPT(bool, MachORelocatableDwarf)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
 MCOPT(bool, DisableIntegratedAS)
@@ -161,6 +162,12 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                "object files using this option"));
   MCBINDOPT(ImplicitMapSyms);
 
+  static cl::opt<bool> MachORelocatableDwarf(
+      "macho-relocatable-dwarf", cl::Hidden,
+      cl::desc(
+          "Use relocations for cross-section offsets in the __DWARF segment"));
+  MCBINDOPT(MachORelocatableDwarf);
+
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
       cl::desc("Emit GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX instead of "
@@ -228,6 +235,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
   Options.ImplicitMapSyms = getImplicitMapSyms();
+  Options.MachORelocatableDwarf = getMachORelocatableDwarf();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.DisableIntegratedAS = getDisableIntegratedAS();
