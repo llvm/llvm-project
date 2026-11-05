@@ -60,7 +60,9 @@ def check_api(header: Header, api: Dict):
 
     # Validate macros
     if "macros" in api:
-        if not header.macro_file_exists():
+        if not header.macro_file_exists() and not any(
+            header.implements_macro(m) for m in api["macros"]
+        ):
             print(
                 f"warning: Macro definitions are listed for {header.name}, but no macro file can be found in the directory tree rooted at {header.macros_dir}. All macros will be listed as not implemented.",
                 file=sys.stderr,
@@ -160,7 +162,7 @@ def print_macros_rst(header: Header, macros: Dict):
     for name in sorted(macros.keys()):
         print(f"  * - {name}")
 
-        if header.macro_file_exists() and header.implements_macro(name):
+        if header.implements_macro(name):
             print("    - |check|")
         else:
             print("    -")

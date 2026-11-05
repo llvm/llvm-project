@@ -49,6 +49,8 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
+        self.assertFalse(Header("sys/syscall.h").macro_file_exists())
+        self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
         self.assertTrue(Header("float.h").implements_macro("NAN"))

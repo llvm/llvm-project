@@ -32,10 +32,7 @@ CLANG_FREESTANDING_HEADERS = {
 
 
 def _is_stub_file(path: Path) -> bool:
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return False
+    text = path.read_text(encoding="utf-8")
     if "todo" not in text.lower() and "unimplemented" not in text.lower():
         return False
 
@@ -98,15 +95,12 @@ def _load_implemented_functions(libc_root: Path) -> Set[str]:
     config_dir = libc_root / "config"
     if config_dir.exists():
         for ep_file in config_dir.rglob("entrypoints.txt"):
-            try:
-                for line in ep_file.read_text(encoding="utf-8").splitlines():
-                    line = line.strip()
-                    if line.startswith("libc.src."):
-                        sym = line.split(".")[-1]
-                        if sym not in stub_only:
-                            _IMPLEMENTED_FUNCTIONS.add(sym)
-            except Exception:
-                pass
+            for line in ep_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("libc.src."):
+                    sym = line.split(".")[-1]
+                    if sym not in stub_only:
+                        _IMPLEMENTED_FUNCTIONS.add(sym)
     return _IMPLEMENTED_FUNCTIONS
 
 
@@ -171,8 +165,6 @@ class Header:
     def macro_file_exists(self) -> bool:
         if self.is_clang_provided() or any(self.__get_macro_files()):
             return True
-        if (self.libc_root / "include" / f"{self.name}.def").exists():
-            return True
         return bool(self.include_data.get("macros"))
 
     def fns_dir_exists(self) -> bool:
@@ -197,11 +189,8 @@ class Header:
             return True
 
         for f in self.__get_macro_files():
-            try:
-                if f"#define {m_name}" in f.read_text(encoding="utf-8"):
-                    return True
-            except Exception:
-                pass
+            if f"#define {m_name}" in f.read_text(encoding="utf-8"):
+                return True
 
         if any(
             m.get("macro_name") == m_name
