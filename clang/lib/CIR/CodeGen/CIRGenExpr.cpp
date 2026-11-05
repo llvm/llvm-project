@@ -453,6 +453,26 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
+static std::optional<LValue> emitDeclTargetVarDeclLValue(CIRGenFunction &cgf,
+                                                         const Expr *e,
+                                                         const VarDecl *vd) {
+  std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> res =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(vd);
+  if (!res)
+    return std::nullopt;
+  // MT_Local uses direct access.
+  if (*res == OMPDeclareTargetDeclAttr::MT_Local)
+    return std::nullopt;
+  // MT_To/MT_Enter without unified memory use direct access.
+  if ((*res == OMPDeclareTargetDeclAttr::MT_To ||
+       *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+      !cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())
+    return std::nullopt;
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "emitDeclTargetVarDeclLValue: indirect access");
+  return std::nullopt;
+}
+
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
   QualType t = e->getType();
@@ -463,8 +483,9 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
+  if (cgf.getLangOpts().OpenMPIsTargetDevice)
+    if (std::optional<LValue> lv = emitDeclTargetVarDeclLValue(cgf, e, vd))
+      return *lv;
 
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar.
@@ -860,10 +881,17 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
-  if (getLangOpts().HLSL && !mlir::isa<cir::VectorType>(vec.getType())) {
-    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
-    return {};
+  if (getLangOpts().HLSL &&
+      !mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) {
+    auto dstTy = cir::VectorType::get(
+        vec.getType(), llvm::ElementCount::get(1, /*Scalable=*/false));
+    cir::ConstantOp poison =
+        builder.getConstant(loc, cir::PoisonAttr::get(dstTy));
+    vec = builder.createInsertElement(loc, poison, vec, /*idx=*/0);
   }
+
+  assert((mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) &&
+         "ExtVecElement with non vector or matrix type on non-HLSL mode");
 
   const mlir::ArrayAttr elts = lv.getExtVectorElts();
 
@@ -874,7 +902,14 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
     cir::ConstantOp index =
         builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
-    return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+    if (mlir::isa<cir::VectorType>(vec.getType()))
+      return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+
+    cir::ConstantOp columnIdx =
+        builder.getConstInt(loc, builder.getSInt64Ty(), 0);
+    mlir::Value element =
+        cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
+    return RValue::get(element);
   }
 
   // Always use shuffle vector to try to retain the original program structure
@@ -938,9 +973,11 @@ Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
   return Address(elementValue, vectorElementTy, alignment);
 }
 
-static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::weakRefReference());
-  return cgm.getAddrOfFunction(gd);
+cir::FuncOp CIRGenModule::getRawFunctionPointer(GlobalDecl gd) {
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  if (fd->hasAttr<WeakRefAttr>())
+    return cast_or_null<cir::FuncOp>(getWeakRefReference(fd));
+  return getAddrOfFunction(gd);
 }
 
 static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
@@ -1002,7 +1039,7 @@ LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field) {
 static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                      GlobalDecl gd) {
   const FunctionDecl *fd = cast<FunctionDecl>(gd.getDecl());
-  cir::FuncOp funcOp = emitFunctionDeclPointer(cgf.cgm, gd);
+  cir::FuncOp funcOp = cgf.cgm.getFunctionPointer(gd);
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   CharUnits align = cgf.getContext().getDeclAlign(fd);
 
@@ -1159,8 +1196,20 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           !e->getLocation().isValid()) &&
          "Should not use decl without marking it used!");
 
-  if (nd->hasAttr<WeakRefAttr>())
-    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+  // A weakref variable refers to its alias target. Weakref functions are
+  // handled by getRawFunctionPointer.
+  if (const auto *vd = dyn_cast<VarDecl>(nd);
+      vd && vd->hasAttr<WeakRefAttr>()) {
+    auto aliasee =
+        mlir::cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(vd));
+    if (!aliasee)
+      return LValue();
+    mlir::Value v =
+        builder.createGetGlobal(getLoc(e->getSourceRange()), aliasee);
+    Address addr(v, convertTypeForMem(vd->getType()),
+                 getContext().getDeclAlign(vd));
+    return makeAddrLValue(addr, ty, AlignmentSource::Decl);
+  }
 
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
@@ -1657,6 +1706,60 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
                                   base.getBaseInfo());
 }
 
+LValue CIRGenFunction::emitMatrixElementExpr(const MatrixElementExpr *e) {
+  LValue base;
+  if (e->getBase()->isGLValue()) {
+    base = emitLValue(e->getBase());
+  } else {
+    cgm.errorNYI(e->getSourceRange(), "emitMatrixElementExpr base not GLValue");
+    return {};
+  }
+
+  QualType resultType =
+      e->getType().withCVRQualifiers(base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  // getEncodedElementAccess returns row-major linearized indices.
+  SmallVector<uint32_t, 4> indices;
+  e->getEncodedElementAccess(indices);
+
+  // getEncodedElementAccess returns row-major linearized indices
+  // If the matrix memory layout is column-major, convert indices
+  // to column-major indices.
+  bool isRowMajor = isMatrixRowMajor(getLangOpts(), e->getBase()->getType());
+  if (!isRowMajor) {
+    const auto *matrixTy =
+        e->getBase()->getType()->castAs<ConstantMatrixType>();
+    unsigned numCols = matrixTy->getNumColumns();
+    for (uint32_t &idx : indices) {
+      // Decompose row-major index: Row = Idx / NumCols, Col = Idx % NumCols
+      unsigned row = idx / numCols;
+      unsigned column = idx % numCols;
+      // Re-linearize as column-major
+      idx = matrixTy->getColumnMajorFlattenedIndex(row, column);
+    }
+  }
+
+  if (base.isSimple()) {
+    Address matrixAddr = base.getAddress();
+    if (getLangOpts().HLSL &&
+        e->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      cgm.errorNYI(
+          e->getSourceRange(),
+          "emitMatrixElementExpr simple & HLSL address space hlsl_constant");
+      return {};
+    }
+
+    SmallVector<int64_t> attrElts(indices.begin(), indices.end());
+    mlir::ArrayAttr elts = builder.getI64ArrayAttr(attrElts);
+    return LValue::makeExtVectorElt(matrixAddr, elts, resultType,
+                                    base.getBaseInfo());
+  }
+
+  cgm.errorNYI(e->getSourceRange(), "emitMatrixElementExpr not simple");
+  return {};
+}
+
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
                                                llvm::StringRef name) {
   cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e, name);
@@ -1762,11 +1865,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat: {
-    cgm.errorNYI(e->getSourceRange(),
-                 std::string("emitCastLValue for unhandled cast kind: ") +
-                     e->getCastKindName());
-
-    return {};
+    return emitLValue(e->getSubExpr());
   }
 
   case CK_AddressSpaceConversion: {
@@ -2344,7 +2443,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       if (!clone) {
         // Create a forward declaration - the body will be generated in
         // generateCode when the function definition is processed
-        cir::FuncOp calleeFunc = emitFunctionDeclPointer(cgm, gd);
+        cir::FuncOp calleeFunc = cgm.getRawFunctionPointer(gd);
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(cgm.getModule().getBody());
 
@@ -2369,7 +2468,9 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       return CIRGenCallee::forBuiltin(builtinID, fd);
   }
 
-  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+  cir::FuncOp callee = cgm.getRawFunctionPointer(gd);
+  if (!callee)
+    return CIRGenCallee();
 
   if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
       !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
@@ -2601,6 +2702,10 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());
+
+  // emitCallee has already diagnosed (errorNYI) why there is no callee.
+  if (callee.isInvalid())
+    return getUndefRValue(e->getType());
 
   if (callee.isBuiltin())
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,

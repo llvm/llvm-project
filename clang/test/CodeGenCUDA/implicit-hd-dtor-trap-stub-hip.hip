@@ -7,12 +7,16 @@
 
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip   -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -DWITH_DEVICE_CALLER -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip   -DWITH_DEVICE_CALLER -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip   -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip \
 // RUN:   -DWITH_DEVICE_CALLER -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip   -DWITH_DEVICE_CALLER -emit-llvm -o - %s | FileCheck %s %}
 
 #include "Inputs/cuda.h"
 

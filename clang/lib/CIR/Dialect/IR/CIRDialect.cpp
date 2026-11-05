@@ -2854,6 +2854,10 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
   result.addAttribute(getCallingConvAttrName(result.name),
                       CallingConvAttr::get(builder.getContext(), callingConv));
+  // A function starts out written in source-level types, and CallConvLowering
+  // rewrites it to the target ABI later.
+  result.addAttribute(getRequiresCallConvLoweringAttrName(result.name),
+                      builder.getUnitAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2882,6 +2886,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
+  mlir::StringAttr requiresCallConvLoweringNameAttr =
+      getRequiresCallConvLoweringAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
   mlir::StringAttr preferredAlignmentNameAttr =
@@ -3129,6 +3135,10 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       annotationsAttr)
     state.addAttribute(annotationsNameAttr, annotationsAttr);
 
+  if (parser.parseOptionalKeyword(requiresCallConvLoweringNameAttr).succeeded())
+    state.addAttribute(requiresCallConvLoweringNameAttr,
+                       parser.getBuilder().getUnitAttr());
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   llvm::SMLoc attrsLoc = parser.getCurrentLocation();
@@ -3328,6 +3338,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ' ';
     p.printAttribute(annotations);
   }
+
+  if (getRequiresCallConvLowering())
+    p << ' ' << getRequiresCallConvLoweringAttrName().getValue();
 
   // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
