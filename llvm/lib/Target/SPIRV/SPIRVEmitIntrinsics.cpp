@@ -1805,13 +1805,10 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
     for (unsigned Idx = 0, E = AggrTy->getNumElements(); Idx != E; ++Idx) {
       Value *Field = B.CreateExtractValue(Op, Idx);
       Composite = B.CreateInsertValue(Composite, Field, Idx);
-      // The chain starts from poison, and this runs after
-      // preprocessUndefsAndPoisons, which gives an aggregate poison a typed
-      // placeholder. Left bare, visitInsertValueInst replaces it by one i32
-      // constant, and constants are uniqued: a second such chain in the
-      // function, or another use of that constant, then shares the first
-      // chain's SPIR-V type. So lower it here as preprocessUndefsAndPoisons
-      // would have.
+      // preprocessUndefsAndPoisons already ran, so give the poison at the start
+      // of the chain a typed placeholder here, the way it would have. A bare
+      // poison turns into i32 undef in visitInsertValueInst. That is one shared
+      // constant, so every chain would take the struct type of the first one.
       if (auto *First = dyn_cast<InsertValueInst>(Composite); First && !Idx) {
         B.SetInsertPoint(First);
         First->setOperand(0, lowerUndefOrPoison(First->getAggregateOperand(), B,

@@ -4,17 +4,19 @@
 ; uniqued i32 value, so the second struct got the first one's type. With
 ; SPV_KHR_poison_freeze the placeholders are OpPoisonKHR instead of OpUndef.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - | FileCheck %s --check-prefixes=CHECK,EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Pair:]] = OpTypeStruct %[[#Float]] %[[#Float]]
 ; CHECK-DAG: %[[#Frexp:]] = OpTypeStruct %[[#Float]] %[[#Int]]
-; CHECK-DAG: %[[#PairInit:]] = {{OpUndef|OpPoisonKHR}} %[[#Pair]]
-; CHECK-DAG: %[[#FrexpInit:]] = {{OpUndef|OpPoisonKHR}} %[[#Frexp]]
+; NOEXT-DAG: %[[#PairInit:]] = OpUndef %[[#Pair]]
+; NOEXT-DAG: %[[#FrexpInit:]] = OpUndef %[[#Frexp]]
+; EXT-DAG: %[[#PairInit:]] = OpPoisonKHR %[[#Pair]]
+; EXT-DAG: %[[#FrexpInit:]] = OpPoisonKHR %[[#Frexp]]
 ; CHECK: OpCompositeInsert %[[#Pair]] %[[#]] %[[#PairInit]] 0
 ; CHECK: OpSelect %[[#Pair]]
 ; CHECK: OpCompositeInsert %[[#Frexp]] %[[#]] %[[#FrexpInit]] 0
