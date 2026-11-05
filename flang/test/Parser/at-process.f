@@ -19,6 +19,7 @@
       @process
       @processopt(3)
                      @process opt(3)
+     0@process
 ! tab
 	@process opt(3)
 	@process
@@ -32,15 +33,21 @@ c@process
 
 !--- apd2.f
 ! CHECK: error: Could not parse {{.*}}apd2.f
-! CHECK: apd2.f:{{[0-9]+}}:6: warning: {{.*}}
-! CHECK: apd2.f:{{[0-9]+}}:19: error: {{.*}}
+! CHECK: apd2.f:{{[0-9]+}}:6: warning: Statement should not begin with a continuation line [-Wscanning]
+! CHECK: apd2.f:[[@LINE+1]]:19: error: expected ')'
      @process opt(3)
-! CHECK: apd2.f:{{[0-9]+}}:8: error: {{.*}}
-      @
-! CHECK: apd2.f:{{[0-9]+}}:15: error: {{.*}}
-! CHECK: apd2.f:{{[0-9]+}}:21: error: {{.*}}
-        @proce
+! CHECK: apd2.f:[[@LINE+1]]:21: error: expected '('
+ 100  @process fixed
+! CHECK: apd2.f:[[@LINE+1]]:21: error: expected '='
       subroutine g()
+      end
+      subroutine h()
+! CHECK: apd2.f:[[@LINE+1]]:8: error: expected '('
+      @
+      end
+      subroutine i()
+! CHECK: apd2.f:[[@LINE+1]]:15: error: expected '('
+        @proce
       end
 
 !--- apd3.f
