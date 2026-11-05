@@ -436,6 +436,10 @@ public:
                  const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
 
+  const cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LibraryOptions;
+  }
+
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
   ///   1. Text sections, including the main code section and the PLT

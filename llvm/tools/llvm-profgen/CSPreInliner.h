@@ -89,6 +89,8 @@ private:
   getICPRejectedCallees(ContextTrieNode *CallerNode,
                         const FunctionSamples *CallerSamples);
   bool UseContextCost;
+  unsigned ProfileICPRelativeHotness;
+  unsigned ProfileICPRelativeHotnessSkip;
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;

@@ -80,6 +80,11 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
     SampleColdCallSiteThreshold = 0;
   if (!ProfileInlineLimitMax.getNumOccurrences())
     ProfileInlineLimitMax = 50000;
+
+  ProfileICPRelativeHotness =
+      getSampleProfileICPRelativeHotness(Binary.getLibraryOptions());
+  ProfileICPRelativeHotnessSkip =
+      getSampleProfileICPRelativeHotnessSkip(Binary.getLibraryOptions());
 }
 
 std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
@@ -134,10 +139,6 @@ DenseSet<const ContextTrieNode *>
 CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
                                     const FunctionSamples *CallerSamples) {
   DenseSet<const ContextTrieNode *> Rejected;
-  LLVMContext C;
-  unsigned ProfileICPRelativeHotness = getSampleProfileICPRelativeHotness(C);
-  unsigned ProfileICPRelativeHotnessSkip =
-      getSampleProfileICPRelativeHotnessSkip(C);
   // Only a pseudo probe identifies a single call instruction. With line-based
   // profiles, distinct direct calls on one source line share a call site, so
   // several targets there do not imply an indirect call.

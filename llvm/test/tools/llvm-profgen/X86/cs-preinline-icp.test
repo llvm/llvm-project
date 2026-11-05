@@ -13,6 +13,10 @@
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-icp-relative-hotness=20 --output=%t3
 ; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-ALL
 
+; Exempting all three targets from the percentage check also keeps them inlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-icp-relative-hotness-skip=3 --output=%t-skip
+; RUN: FileCheck %s --input-file %t-skip --check-prefix=CHECK-ALL
+
 ; The nested profile consumed by the compiler keeps the full samples of the
 ; rejected targets in their own profiles.
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t4
