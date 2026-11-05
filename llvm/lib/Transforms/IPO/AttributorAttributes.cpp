@@ -6033,7 +6033,22 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     return checkUse(A, T, U, Follow);
   };
 
-  if (!A.checkForAllUses(UseCheck, *this, *V))
+  // Looking through memory must not hide a capture beyond this invocation.
+  // Global storage can survive a return, and a callback can use a copy loaded
+  // from a local slot after this function returns. Only follow copies through
+  // stack slots and uses belonging to this function.
+  auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+    const auto *SI = dyn_cast<StoreInst>(OldU.getUser());
+    const auto *NewI = dyn_cast<Instruction>(NewU.getUser());
+    if (!SI || !NewI || NewI->getFunction() != F)
+      return false;
+    const auto *Slot =
+        dyn_cast<AllocaInst>(getUnderlyingObject(SI->getPointerOperand()));
+    return Slot && Slot->getFunction() == F;
+  };
+  if (!A.checkForAllUses(UseCheck, *this, *V, /*CheckBBLivenessOnly=*/false,
+                         DepClassTy::OPTIONAL, /*IgnoreDroppableUses=*/true,
+                         EquivalentUseCB))
     return indicatePessimisticFixpoint();
 
   AANoCapture::StateType &S = getState();

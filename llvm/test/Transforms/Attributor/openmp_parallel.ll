@@ -12,6 +12,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 ; %a is write only, %b is read only, neither is captured or freed, or ...
 ; FIXME: %a and %b are *not* readnone!
+; FIXME: Recover readonly/nocapture for %b after proving the callback completes
+; before func returns. Callback metadata alone also permits asynchronous calls.
 
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
@@ -21,7 +23,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr #0 {
 ; TUNIT: Function Attrs: nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@func
-; TUNIT-SAME: (ptr nofree writeonly captures(none) [[A:%.*]], ptr nofree readonly captures(none) [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[A:%.*]], ptr nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 ; TUNIT-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
