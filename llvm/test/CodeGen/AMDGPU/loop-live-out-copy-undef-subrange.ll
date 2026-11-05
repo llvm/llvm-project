@@ -11,19 +11,29 @@ define <3 x float> @liveout_undef_subrange(<3 x float> %arg) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_f32_e32 v0, v2, v2
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  .LBB0_1: ; %bb1
+; CHECK-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:  .LBB0_1: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
+; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
+; CHECK-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_cbranch_execz .LBB0_4
+; CHECK-NEXT:  .LBB0_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v2
-; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
-; CHECK-NEXT:  ; %bb.2: ; %bb2
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; CHECK-NEXT:    s_or_b64 s[6:7], s[6:7], vcc
+; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; CHECK-NEXT:    s_cbranch_execz .LBB0_1
+; CHECK-NEXT:  ; %bb.3: ; %bb2
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    v_mul_f32_e32 v2, v0, v2
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
-; CHECK-NEXT:  ; %bb.3: ; %DummyReturnBlock
+; CHECK-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; CHECK-NEXT:    s_branch .LBB0_1
+; CHECK-NEXT:  .LBB0_4: ; %DummyReturnBlock
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   br label %bb1
