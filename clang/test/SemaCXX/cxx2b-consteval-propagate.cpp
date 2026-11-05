@@ -724,3 +724,13 @@ void test() {
                                  // ok, (outer) call to a (non-immediate) function template instantiation
 }
 }
+
+namespace GH219272 {
+consteval int f() { return 1; }
+struct M { consteval int m(int (&p)()) const { return p(); } };
+constexpr M gm{};
+// The instantiation reuses the immediate invocation; the reference to f
+// inside it must not escalate cg<int>.
+template <typename T> constexpr int cg(T) { return gm.m(f); }
+int (*p)(int) = cg<int>;
+}
