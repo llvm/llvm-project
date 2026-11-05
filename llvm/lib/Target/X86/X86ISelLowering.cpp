@@ -36841,13 +36841,6 @@ bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   return NumBits1 > NumBits2;
 }
 
-bool X86TargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
-  if (ISD::isExtOpcode(Val.getOpcode()) &&
-      Val.getOperand(0).getValueType() == VT2)
-    return true;
-  return TargetLowering::isTruncateFree(Val, VT2);
-}
-
 bool X86TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
   // x86-64 implicitly zero-extends 32-bit results in 64-bit registers.
   return Ty1->isIntegerTy(32) && Ty2->isIntegerTy(64) && Subtarget.is64Bit();
