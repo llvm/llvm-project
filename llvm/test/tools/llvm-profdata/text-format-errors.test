@@ -35,3 +35,14 @@ VP: error: {{.+}}: malformed instrumentation profile data
 6- Detect truncated value profile data
 RUN: not llvm-profdata show %p/Inputs/vp-truncate.proftext 2>&1 | FileCheck %s --check-prefix=VPTRUNC
 VPTRUNC: error: {{.+}}: truncated profile data
+
+7- Detect reserved counter values used as internal counters
+RUN: not llvm-profdata show %p/Inputs/reserved-internal-count.proftext 2>&1 | FileCheck %s --check-prefix=RESERVED-INTERNAL-COUNT-SHOW
+RESERVED-INTERNAL-COUNT-SHOW: error: {{.+}}: malformed instrumentation profile data: internal counter value exceeds the maximum count value
+
+RUN: not llvm-profdata merge %p/Inputs/reserved-internal-count.proftext -o %t.reserved.out 2>&1 | FileCheck %s --check-prefix=RESERVED-INTERNAL-COUNT-MERGE
+RESERVED-INTERNAL-COUNT-MERGE: warning: {{.+}}: malformed instrumentation profile data: internal counter value exceeds the maximum count value
+RESERVED-INTERNAL-COUNT-MERGE-NEXT: error: no profile can be merged
+
+8- Accept the maximum internal counter value
+RUN: llvm-profdata merge %p/Inputs/max-internal-count.proftext -o %t.max.out
