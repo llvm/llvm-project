@@ -349,9 +349,9 @@ void OMPLoopDirective::setHelperExprs(const HelperExprs &Exprs) {
   setFinalsConditions(Exprs.FinalsConditions);
   setPreInits(Exprs.PreInits);
 
-  const OpenMPDirectiveKind Kind = getDirectiveKind();
+  const unsigned ArraysOffset = getArraysOffset(getDirectiveKind());
   // Simd directives have no worksharing helpers.
-  if (getArraysOffset(Kind) == DefaultEnd)
+  if (ArraysOffset == DefaultEnd)
     return;
   setIsLastIterVariable(Exprs.IL);
   setLowerBoundVariable(Exprs.LB);
@@ -362,7 +362,7 @@ void OMPLoopDirective::setHelperExprs(const HelperExprs &Exprs) {
   setNextUpperBound(Exprs.NUB);
   setNumIterations(Exprs.NumIterations);
 
-  if (!isOpenMPLoopBoundSharingDirective(Kind))
+  if (ArraysOffset == WorksharingEnd)
     return;
   setPrevLowerBoundVariable(Exprs.PrevLB);
   setPrevUpperBoundVariable(Exprs.PrevUB);
