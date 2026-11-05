@@ -76,6 +76,7 @@
 # ARCHS-CPU: Architectures in the fat file: [[FILE]] are: ppc armv6
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         [[TYPE]]

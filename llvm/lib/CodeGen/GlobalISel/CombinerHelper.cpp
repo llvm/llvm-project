@@ -5641,7 +5641,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
+    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
     if (Opcode == TargetOpcode::G_SREM &&

@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64 %}
 // RUN: %clang_cc1 -ffreestanding %s -triple=i686-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=i686-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64 %}
 // RUN: %clang_cc1 -ffreestanding %s -triple=i686-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=i686-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 
 #include <x86intrin.h>
 

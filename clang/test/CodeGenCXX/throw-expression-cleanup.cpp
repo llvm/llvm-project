@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-none-linux-gnu -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-none-linux-gnu -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - | FileCheck %s %}
 // PR13359
 
 struct X {
