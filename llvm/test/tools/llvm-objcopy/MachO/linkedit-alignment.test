@@ -150,6 +150,7 @@
 # ARMV7: datasize:        [[#mul(div(ARMV7_DATA_IN_CODE_SIZE, 4), 4)]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

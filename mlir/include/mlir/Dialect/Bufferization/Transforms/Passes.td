@@ -194,6 +194,7 @@ def StaticMemoryPlannerAnalysisPass
     envelope:
     - Static memref shape.
     - Integer or floating-point element type.
+    - Identity layout.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry
@@ -202,6 +203,12 @@ def StaticMemoryPlannerAnalysisPass
       `BufferViewFlowAnalysis`; a dealloc nested inside an entry-block op
       (e.g. an `scf.if` body) is accepted and bounds the lifetime
       conservatively.
+
+    If a dealloc may also free an ineligible allocation, all candidates that
+    share that dealloc are skipped to preserve the ineligible allocation's
+    release. This exclusion propagates through other shared deallocs until
+    the remaining candidates can be rewritten together safely. Independent
+    eligible allocations can still be planned.
 
     Eligible allocations are packed into a single arena using a configurable
     planning algorithm (see the `algorithm` option). The arena is an i8 byte

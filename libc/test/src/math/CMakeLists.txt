@@ -2688,6 +2688,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    sinhbf16_test.cpp
+  DEPENDS
+    libc.src.math.sinhbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   sinhf16_test
   NEED_MPFR
   SUITE
@@ -2836,6 +2849,19 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.src.math.acoshf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acoshbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    acoshbf16_test.cpp
+  DEPENDS
+    libc.src.math.acoshbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

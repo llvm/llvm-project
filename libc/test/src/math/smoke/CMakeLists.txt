@@ -176,6 +176,7 @@ add_fp_unittest(
     lgammaf16_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.lgammaf16
 )
 
@@ -5033,6 +5034,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinhbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.sinhbf16
+)
+
+add_fp_unittest(
   sinhf16_test
   SUITE
     libc-math-smoke-tests
@@ -5188,6 +5203,19 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.src.math.acoshf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acoshbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acoshbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.acoshbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

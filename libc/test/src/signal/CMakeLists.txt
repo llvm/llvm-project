@@ -82,6 +82,7 @@ add_libc_test(
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
     libc.src.signal.sigismember
+    libc.src.signal.signal
     libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.test.UnitTest.ErrnoSetterMatcher
