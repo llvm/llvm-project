@@ -150,6 +150,7 @@ def IsDestructible : UnaryTrait {
 
 def IsTriviallyDestructible : UnaryTrait {
   let Spelling = "__is_trivially_destructible";
+  let StdName = "is_trivially_destructible";
 }
 
 def IsNothrowDestructible : UnaryTrait {
