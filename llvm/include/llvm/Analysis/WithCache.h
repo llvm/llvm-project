@@ -87,9 +87,10 @@ public:
 /// to bind to it, allowing similar implicit conversion semantics as T* has when
 /// passed to an API taking a const T*.
 template <typename Arg>
-class WithCache<Arg, std::enable_if_t<!std::is_const_v<std::remove_pointer_t<Arg>>>>
-    :  public WithCache<std::add_pointer_t<
-          std::add_const_t<std::remove_pointer_t<Arg>>>> {
+class WithCache<Arg,
+                std::enable_if_t<!std::is_const_v<std::remove_pointer_t<Arg>>>>
+    : public WithCache<
+          std::add_pointer_t<std::add_const_t<std::remove_pointer_t<Arg>>>> {
   using UnderlyingType = std::remove_pointer_t<Arg>;
   using Base = WithCache<const UnderlyingType *>;
   using PointerType = Arg;
@@ -97,7 +98,8 @@ class WithCache<Arg, std::enable_if_t<!std::is_const_v<std::remove_pointer_t<Arg
 
 public:
   WithCache(PointerType Pointer) : Base(Pointer) {}
-  WithCache(PointerType Pointer, const KnownBits &Known) : Base(Pointer, Known) {}
+  WithCache(PointerType Pointer, const KnownBits &Known)
+      : Base(Pointer, Known) {}
 
   [[nodiscard]] PointerType getValue() const {
     return const_cast<PointerType>(Base::getValue());
