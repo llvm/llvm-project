@@ -425,6 +425,9 @@ public:
   using binary_data_const_iterator = BinaryDataMapType::const_iterator;
   BinaryDataMapType BinaryDataMap;
 
+  /// Subset of BinaryDataMap holding vtables, see BinaryData::isVTable().
+  BinaryDataMapType VTableMap;
+
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
   using FilteredBinaryDataIterator = FilterIterator<binary_data_iterator>;
@@ -1064,6 +1067,7 @@ public:
     for (auto &Entry : BinaryDataMap)
       delete Entry.second;
     BinaryDataMap.clear();
+    VTableMap.clear();
   }
 
   /// Process \p Address reference from code in function \BF.
@@ -1138,6 +1142,11 @@ public:
     return const_cast<BinaryData *>(
         getBinaryDataContainingAddressImpl(Address));
   }
+
+  /// Return the vtable containing \p Address or nullptr. Unlike
+  /// getBinaryDataContainingAddress(), symbols that start inside the vtable,
+  /// such as WPD __typeid_* aliases, do not hide it.
+  const BinaryData *getVTableContainingAddress(uint64_t Address) const;
 
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.

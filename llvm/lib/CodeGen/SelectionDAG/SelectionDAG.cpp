@@ -6101,7 +6101,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // nonan condition codes to be used. Those condition codes may be preserved
     // even if the nonan flag is dropped somewhere.
     unsigned CCOp = Opcode == ISD::SETCC ? 2 : 4;
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(CCOp))->get();
+    ISD::CondCode CCCode = Op.getOperandCondCode(CCOp);
     return (unsigned)CCCode & 0x10U;
   }
 
@@ -8417,6 +8417,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                     getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
                    Flags);
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    APInt Lo = V1 * V2;
+    APInt Hi = (Opcode == ISD::SMUL_LOHI) ? APIntOps::mulhs(V1, V2)
+                                          : APIntOps::mulhu(V1, V2);
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Lo, DL, VTList.VTs[0]),
+                    getConstant(Hi, DL, VTList.VTs[1])},
+                   Flags);
   }
   return SDValue();
 }
@@ -12281,28 +12297,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            VTList.VTs[0] == Ops[0].getValueType() &&
            VTList.VTs[0] == Ops[1].getValueType() &&
            "Binary operator types must match!");
-    // Constant fold.
-    ConstantSDNode *LHS = dyn_cast<ConstantSDNode>(Ops[0]);
-    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Ops[1]);
-    if (LHS && RHS) {
-      unsigned Width = VTList.VTs[0].getScalarSizeInBits();
-      unsigned OutWidth = Width * 2;
-      APInt Val = LHS->getAPIntValue();
-      APInt Mul = RHS->getAPIntValue();
-      if (Opcode == ISD::SMUL_LOHI) {
-        Val = Val.sext(OutWidth);
-        Mul = Mul.sext(OutWidth);
-      } else {
-        Val = Val.zext(OutWidth);
-        Mul = Mul.zext(OutWidth);
-      }
-      Val *= Mul;
-
-      SDValue Hi =
-          getConstant(Val.extractBits(Width, Width), DL, VTList.VTs[0]);
-      SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
-      return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
-    }
     break;
   }
   case ISD::FFREXP: {
@@ -14811,8 +14805,9 @@ std::pair<SDValue, SDValue> SelectionDAG::SplitEVL(SDValue N, EVT VecVT,
 /// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
 SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
   EVT VT = N.getValueType();
-  EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
-                                NextPowerOf2(VT.getVectorNumElements()));
+  EVT WideVT = VT.changeElementCount(
+      *getContext(),
+      ElementCount::getFixed(NextPowerOf2(VT.getVectorNumElements())));
   return getInsertSubvector(DL, getPOISON(WideVT), N, 0);
 }
 

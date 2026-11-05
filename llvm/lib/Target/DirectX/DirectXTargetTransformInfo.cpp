@@ -20,6 +20,8 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
     return ScalarOpdIdx == 1;
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+    return ScalarOpdIdx >= 1 && ScalarOpdIdx <= 4;
   default:
     return false;
   }

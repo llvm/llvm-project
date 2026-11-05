@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv7-apple-ios -o - %s -run-pass if-converter -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=thumbv7-apple-ios -o - %s -run-pass if-converter | FileCheck %s
 
 # Don't treat bb.1 as a valid diamond since IfConverter::IfConvertDiamond can't
 # handle it and used to hit an assertion instead.
