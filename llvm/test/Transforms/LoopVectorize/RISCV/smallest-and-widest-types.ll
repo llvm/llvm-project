@@ -15,7 +15,7 @@
 
 define i32 @find_first_ge(i32 %n, i32 %target) {
 ; CHECK-LABEL: 'find_first_ge'
-; CHECK:  LV: The Smallest and Widest types: 8 / 8 bits.
+; CHECK:  LV: The smallest and widest types: 8 / 8 bits (smallest type for maximizing bandwidth: 8 bits)
 ; CHECK:  LV: Selecting VF: vscale x 16.
 ;
 entry:
