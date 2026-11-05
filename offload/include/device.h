@@ -25,6 +25,7 @@
 
 #include "ExclusiveAccess.h"
 #include "OffloadEntry.h"
+#include "OpenMP/BackendConfig.h"
 #include "omptarget.h"
 #include "rtl.h"
 
@@ -48,6 +49,8 @@ struct __tgt_target_table;
 /// Kernel launch-geometry properties.
 struct KernelLaunchInfoTy {
   const char *Name = nullptr;
+  llvm::MemoryBufferRef Image;
+  llvm::MemoryBufferRef IRImage;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -138,11 +141,13 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  /// Whether this device executes kernels on the host CPU.
-  bool isHostDevice() const { return IsHostDevice; }
-
   /// Get this device's backend.
   ol_platform_backend_t getBackend() const { return Backend; }
+
+  /// Get the constants of this device's backend.
+  const llvm::omp::target::BackendConfig &getConfig() const {
+    return llvm::omp::target::BackendConfig::get(Backend);
+  }
 
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
@@ -152,6 +157,9 @@ struct DeviceTy {
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
                                                    const char *Name,
                                                    size_t ExpectedSize);
+
+  /// The plugin-side context backing this device's context handle.
+  llvm::omp::target::plugin::PluginContextTy *getPluginContext();
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -201,6 +209,15 @@ struct DeviceTy {
                          MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                          const ident_t *Loc = nullptr,
                          const char *Name = nullptr);
+
+  /// Copy data from host to device, assuming that no pending operation in the
+  /// queue associated with \p AsyncInfo accesses this memory. E.g., a fresh
+  /// allocation. If the device can write \p Size bytes directly, the copy is
+  /// synchronous so that the host can write the memory directly. Otherwise, it
+  /// is enqueued as asynchronous operation.
+  int32_t submitDataIndependently(void *TgtPtrBegin, void *HstPtrBegin,
+                                  int64_t Size, AsyncInfoTy &AsyncInfo,
+                                  const char *Name = nullptr);
 
   // Copy data from device back to host synchronously
   int32_t
@@ -375,11 +392,11 @@ private:
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
 
-  /// Whether this is a host device.
-  bool IsHostDevice = false;
-
   /// The backend of this device.
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+
+  /// The maximum size of a direct write, see submitDataIndependently.
+  uint64_t MaxDirectWriteSize = 0;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

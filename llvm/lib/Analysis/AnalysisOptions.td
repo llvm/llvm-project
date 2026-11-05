@@ -44,6 +44,26 @@ defm : BoolField<"basic-aa-separate-storage", "true", "">;
 // BlockFrequencyInfo.cpp
 defm : BoolField<"print-bfi", "false",
   "Print the block frequency info">;
+defm : ValueField<"view-bfi-func-name", "StringRef", "",
+  "The option to specify the name of the function whose CFG will be displayed">;
+defm : EnumField<"view-block-freq-propagation-dags", "GVDAGType", "", "none,fraction,integer,count", ["GVDAGType::None", "GVDAGType::Fraction", "GVDAGType::Integer", "GVDAGType::Count"],
+  "Pop up a window to show a dag displaying how block frequencies propagation through the CFG">;
+defm : ValueField<"view-hot-freq-percent", "unsigned", "10",
+  "An integer in percent used to specify the hot blocks/edges to be displayed in red: a block or edge whose frequency is no less than the max frequency of the function multiplied by this percent">;
+defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "",
+  "none,graph,text",
+  ["PGOViewCountsType::None", "PGOViewCountsType::Graph", "PGOViewCountsType::Text"],
+  "A boolean option to show CFG dag or text with block profile counts and branch probabilities right after PGO profile annotation step. The profile counts are computed using branch probabilities from the runtime profile data and block frequency propagation algorithm. To view the raw counts from the profile, use option -pgo-view-raw-counts instead. To limit graph display to only one function, use filtering option -view-bfi-func-name">;
+defm : ValueField<"print-bfi-func-name", "StringRef", "",
+  "The option to specify the name of the function whose block frequency info is printed">;
+
+// BlockFrequencyInfoImpl.cpp
+defm : BoolField<"check-bfi-unknown-block-queries", "false",
+  "Check if block frequency is queried for an unknown block for debugging missed BFI updates">;
+defm : ValueField<"iterative-bfi-max-iterations-per-block", "unsigned", "1000",
+  "Iterative inference: maximum number of update iterations per block">;
+defm : ValueField<"iterative-bfi-precision", "double", "1e-12",
+  "Iterative inference: delta convergence precision; smaller values typically lead to better results at the cost of worsen runtime">;
 
 // BranchProbabilityInfo.cpp
 defm : BoolField<"print-bpi", "false",
@@ -71,6 +91,9 @@ defm : BoolField<"cfg-weights", "false",
 defm : BoolField<"abort-on-max-devirt-iterations-reached", "false",
   "Abort when the max iterations for devirtualization CGSCC repeat pass is reached">;
 
+// CallGraphSCCPass.cpp
+defm : ValueField<"max-devirt-iterations", "unsigned", "4", "">;
+
 // CallPrinter.cpp
 defm : ValueField<"callgraph-dot-filename-prefix", "StringRef", "",
   "The prefix used for the CallGraph dot file names">;
@@ -92,6 +115,8 @@ defm : EnumField<"intrinsic-cost-strategy", "IntrinsicCostStrategy", "IntrinsicC
 // CtxProfAnalysis.cpp
 defm : OptionalBoolField<"ctx-profile-force-is-specialized",
   "Treat the given module as-if it were containing the post-thinlink module containing the root">;
+defm : EnumField<"ctx-profile-printer-level", "CtxProfPrintMode", "CtxProfPrintMode::YAML", "everything,yaml", ["CtxProfPrintMode::Everything", "CtxProfPrintMode::YAML"],
+  "Verbosity level of the contextual profile printer pass">;
 
 // DDG.cpp
 defm : BoolField<"ddg-pi-blocks", "true",
@@ -124,6 +149,8 @@ defm : ValueField<"big-basic-block-instruction-threshold", "unsigned", "500",
   "The minimum number of instructions a basic block should contain before being considered big">;
 defm : ValueField<"call-with-many-arguments-threshold", "unsigned", "4",
   "The minimum number of arguments a function call must have before it is considered having many arguments">;
+defm : BoolField<"enable-detailed-function-properties", "false",
+  "Whether or not to compute detailed function properties">;
 defm : ValueField<"medium-basic-block-instruction-threshold", "unsigned", "15",
   "The minimum number of instructions a basic block should contain before being considered medium-sized">;
 
@@ -140,9 +167,28 @@ defm : ValueField<"medium-basic-block-instruction-threshold", "unsigned", "15",
 // results.
 defm : BoolField<"enable-unsafe-globalsmodref-alias-results", "false", "">;
 
+// IR2Vec.cpp
+// FIXME: Use a default vocab when not specified
+defm : ValueField<"ir2vec-vocab-path", "StringRef", "",
+  "Path to the vocabulary file for IR2Vec">;
+defm : ValueField<"ir2vec-opc-weight", "float", "1.0f",
+  "Weight for opcode embeddings">;
+defm : ValueField<"ir2vec-type-weight", "float", "0.5f",
+  "Weight for type embeddings">;
+defm : ValueField<"ir2vec-arg-weight", "float", "0.2f",
+  "Weight for argument embeddings">;
+defm : EnumField<"ir2vec-kind", "IR2VecKind", "", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
+  "IR2Vec embedding kind">;
+
+// ImportedFunctionsInliningStatistics.cpp
+defm : EnumField<"inliner-function-import-stats", "InlinerFunctionImportStatsOpts", "", "basic,verbose", ["InlinerFunctionImportStatsOpts::Basic", "InlinerFunctionImportStatsOpts::Verbose"],
+  "Enable inliner stats for imported functions">;
+
 // IndirectCallPromotionAnalysis.cpp
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.
+defm : ValueField<"icp-max-num-vtables", "unsigned", "6",
+  "Max number of vtables annotated for a vtable load instruction">;
 defm : ValueField<"icp-max-prom", "unsigned", "3",
   "Max number of promotions for a single indirect call callsite">;
 // Set the minimum absolute count threshold for indirect call promotion.
@@ -237,6 +283,10 @@ defm : BoolField<"ipt-expensive-asserts", "false",
 defm : BoolField<"interactive-model-runner-echo-reply", "false",
   "The InteractiveModelRunner will echo back to stderr the data received from the host (for debugging purposes)">;
 
+// LastRunTrackingAnalysis.cpp
+defm : BoolField<"enable-last-run-tracking", "true",
+  "Enable last run tracking">;
+
 // LazyValueInfo.cpp
 defm : BoolField<"lvi-per-pred-ranges", "false",
   "Enable tracking of ranges for a value in a block for each block predecessor">;
@@ -290,7 +340,7 @@ defm : BoolField<"inliner-interactive-include-default", "false",
   "In interactive mode, also send the default policy decision: inlining_default">;
 defm : BoolField<"ml-advisor-keep-fpi-cache", "false",
   "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache">;
-defm : ValueField<"ml-advisor-size-increase-threshold", "float", "2.0",
+defm : ValueField<"ml-advisor-size-increase-threshold", "float", "2.0f",
   "Maximum factor by which expected native size may increase before blocking any further inlining">;
 defm : ValueField<"ml-inliner-model-selector", "StringRef", "", "">;
 defm : EnumField<"ml-inliner-skip-policy", "SkipMLPolicyCriteria", "SkipMLPolicyCriteria::Never", "never,if-caller-not-cold", ["SkipMLPolicyCriteria::Never", "SkipMLPolicyCriteria::IfCallerIsNotCold"], "">;
@@ -320,12 +370,23 @@ defm : EnumField<"force-summary-edges-cold", "ForceSummaryHotness", "ForceSummar
   "Force all edges in the function summary to cold">;
 defm : ValueField<"module-summary-dot-file", "StringRef", "",
   "File to emit dot graph of new summary into">;
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+defm : ValueField<"module-summary-max-indirect-edges", "unsigned", "0",
+  "Max number of summary edges added from indirect call profile metadata">;
 
 // PHITransAddr.cpp
 defm : BoolField<"gvn-add-phi-translation", "false",
   "Enable phi-translation of add instructions">;
 
 // ProfileSummaryInfo.cpp
+defm : BoolField<"scale-partial-sample-profile-working-set-size", "true",
+  "If true, scale the working set size of the partial sample profile by the partial profile ratio to reflect the size of the program being compiled">;
 defm : BoolField<"partial-profile", "false",
   "Specify the current profile is used as a partial profile">;
 defm : ValueField<"partial-sample-profile-working-set-size-scale-factor", "double", "0.008",
@@ -375,10 +436,32 @@ defm : BoolField<"scev-verify-ir", "false",
 defm : BoolField<"verify-scev-strict", "false",
   "Enable stricter verification with -verify-scev is passed">;
 
+// ScopedNoAliasAA.cpp
+// A handy option for disabling scoped no-alias functionality. The same effect
+// can also be achieved by stripping the associated metadata tags from IR, but
+// this option is sometimes more convenient.
+defm : BoolField<"enable-scoped-noalias", "true", "">;
+
 // StackSafetyAnalysis.cpp
 defm : ValueField<"stack-safety-max-iterations", "int", "20", "">;
 defm : BoolField<"stack-safety-print", "false", "">;
 defm : BoolField<"stack-safety-run", "false", "">;
+
+// StaticDataProfileInfo.cpp
+// FIXME: This option is added for incremental rollout purposes.
+// After the option, string literal partitioning should be implied by
+// AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
+// cleaned up.
+defm : BoolField<"memprof-annotate-string-literal-section-prefix", "true",
+  "If true, annotate the string literal data section prefix">;
+defm : BoolField<"preserve-hot-data-section-prefix", "true",
+  "If true, hot data section prefixes are preserved">;
+
+// TypeBasedAliasAnalysis.cpp
+// A handy option for disabling TBAA functionality. The same effect can also be
+// achieved by stripping the !tbaa tags from IR, but this option is sometimes
+// more convenient.
+defm : BoolField<"enable-tbaa", "true", "">;
 
 // VectorUtils.cpp
 // Maximum factor for an interleaved memory access.
@@ -388,3 +471,6 @@ defm : ValueField<"max-interleave-group-factor", "unsigned", "8",
 // TODO: Remove the old spellings after 2027-04.
 def : AliasOf<"da-disable-delinearization-checks", "da-delinearization-checks=false">;
 def : AliasOf<"disable-gep-const-evaluation", "gep-const-evaluation=false">;
+
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-last-run-tracking", "enable-last-run-tracking=false">;

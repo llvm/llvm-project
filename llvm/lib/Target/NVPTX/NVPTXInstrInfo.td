@@ -1960,6 +1960,7 @@ let mayLoad=1, hasSideEffects=0 in {
   def LD_i16 : LD<B16>;
   def LD_i32 : LD<B32>;
   def LD_i64 : LD<B64>;
+  def LD_i128 : LD<B128>;
 }
 
 class ST<DAGOperand O>
@@ -1977,6 +1978,7 @@ let mayStore=1, hasSideEffects=0 in {
   def ST_i16 : ST<B16Op>;
   def ST_i32 : ST<B32Op>;
   def ST_i64 : ST<B64Op>;
+  def ST_i128 : ST<B128>;
 }
 
 // The following is used only in and after vector elementizations.  Vector
@@ -2416,11 +2418,19 @@ foreach RT = [I32RT, I64RT] in {
   // Population count
   def POPCr # RT.Size : BasicNVPTXInst<(outs B32:$d), (ins RT.RegOrImm:$a),
                                      "popc.b" # RT.Size>;
-  def : Pat<(i32 (ctlz RT.Ty:$a)),
-            (!cast<Instruction>("CLZr" # RT.Size) reg_or_imm:$a)>;
-  def : Pat<(i32 (ctpop RT.Ty:$a)),
-            (!cast<Instruction>("POPCr" # RT.Size) reg_or_imm:$a)>;
 }
+
+// clz.b64 and popc.b64 return a 32-bit count, but the result of the generic
+// ctlz and ctpop nodes is as wide as their operand.
+def SDTIntBitCount64 :
+  SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i64>]>;
+def clz_b64 : SDNode<"NVPTXISD::CLZ_B64", SDTIntBitCount64>;
+def popc_b64 : SDNode<"NVPTXISD::POPC_B64", SDTIntBitCount64>;
+
+def : Pat<(i32 (ctlz i32:$a)), (CLZr32 reg_or_imm:$a)>;
+def : Pat<(i32 (ctpop i32:$a)), (POPCr32 reg_or_imm:$a)>;
+def : Pat<(clz_b64 i64:$a), (CLZr64 reg_or_imm:$a)>;
+def : Pat<(popc_b64 i64:$a), (POPCr64 reg_or_imm:$a)>;
 
 def : Pat<(f16 (fpround (f32 (fpextend bf16:$a)))),
           (CVT_f16_bf16 $a, CvtRN)>, Requires<[SM90]>;

@@ -43,6 +43,7 @@ libc_test(
     srcs = ["functional_test.cpp"],
     deps = [
         "//libc:__support_cpp_functional",
+        "//libc:__support_cpp_nullptr_t",
         "//libc:__support_cpp_type_traits",
     ],
 )

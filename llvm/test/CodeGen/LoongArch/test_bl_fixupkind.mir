@@ -1,5 +1,5 @@
 # RUN: llc --mtriple=loongarch64 -mattr=+d --filetype=obj %s -o - | \
-# RUN: llvm-objdump -d - | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 # REQUIRES: asserts
 
