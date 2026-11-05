@@ -293,10 +293,10 @@ Expected<std::string> PerfJITUnwindInfo::emitEHFrame(uint64_t CodeAddr,
       NewPC = TextAddress + (F.InitialLocation - CodeAddr);
     }
     const CIE &C = CIEs[F.CIEIndex];
-    if (!EmittedCIEs.count(F.CIEIndex)) {
+    auto [It, Inserted] = EmittedCIEs.try_emplace(F.CIEIndex, Result.size());
+    if (Inserted) {
       if (auto Err = checkProgram(C.Instructions))
         return std::move(Err);
-      EmittedCIEs[F.CIEIndex] = Result.size();
       std::string Body(4, '\0');
       Body += char(C.Version);
       Body.append("zR\0", 3);
@@ -313,7 +313,7 @@ Expected<std::string> PerfJITUnwindInfo::emitEHFrame(uint64_t CodeAddr,
     if (Magnitude > uint64_t(INT32_MAX) + 1)
       return invalidCFI("perf FDE address is out of range");
     std::string Body;
-    append32(Body, Offset + 4 - EmittedCIEs.lookup(F.CIEIndex));
+    append32(Body, Offset + 4 - It->second);
     append32(Body, uint32_t(-Magnitude));
     append32(Body, F.Range);
     Body += '\0'; // No LSDA in profiler-only CFI.
