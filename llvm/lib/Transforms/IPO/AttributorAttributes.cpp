@@ -6754,7 +6754,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     // The new allocas may escape into tail calls.
     SmallVector<CallInst *, 16> TailCalls;
     if (any_of(AllocationInfos,
-               [](const auto &It) {
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
                  return It.second->Status != AllocationInfo::INVALID;
                }) &&
         !collectTailCalls(A, *this, TailCalls))
@@ -7584,11 +7584,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // The new alloca may escape into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    if (!collectTailCalls(A, *this, TailCalls))
-      return ChangeStatus::UNCHANGED;
-
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
     // determine the best alignment of loads.
@@ -7615,8 +7610,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          // The new alloca may escape into tail calls. Find them here, as calls
+          // may have been replaced or deleted since manifest.
+          for (Instruction &I : instructions(ReplacementFn)) {
+            auto *CI = dyn_cast<CallInst>(&I);
+            if (CI && CI->isTailCall() && !CI->isMustTailCall())
+              CI->setTailCall(false);
+          }
         };
 
     // Callback to repair a call site of the associated function. The elements
