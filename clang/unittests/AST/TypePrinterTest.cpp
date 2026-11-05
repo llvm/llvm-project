@@ -13,6 +13,7 @@
 #include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
@@ -406,4 +407,95 @@ TEST(TypePrinter, NestedNameSpecifiersTypedef) {
         Policy.AnonymousTagNameStyle =
             llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
+}
+
+TEST(TypePrinter, TypePrintLimitTemplateArguments) {
+  // Each level uses the previous one twice, so the type is 2^40 'int's when
+  // spelled out in full.
+  constexpr char Code[] = R"cpp(
+    template <class A, class B> struct F {};
+    template <int N> struct Chain {
+      using type = F<typename Chain<N - 1>::type, typename Chain<N - 1>::type>;
+    };
+    template <> struct Chain<0> { using type = int; };
+    Chain<40>::type huge;
+  )cpp";
+  auto Matcher = varDecl(hasName("huge"), hasType(qualType().bind("id")));
+
+  // Arguments are printed left to right until the limit is reached. After
+  // that, the ones that would open another list are omitted.
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {"-std=c++11", "-ftemplate-depth=100"}, Matcher,
+      "F<F<F<F<F<F<[2 args omitted]>, [arg omitted]>, [arg omitted]>, [arg "
+      "omitted]>, [arg omitted]>, [arg omitted]>",
+      [](PrintingPolicy &Policy) {
+        Policy.PrintAsCanonical = true;
+        Policy.TypePrintLimit = 5;
+      }));
+
+  // The limit applies to the whole type, however it is nested.
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {"-std=c++11", "-ftemplate-depth=100"}, Matcher,
+      "F<F<F<F<[2 args omitted]>, [arg omitted]>, [arg omitted]>, [arg "
+      "omitted]>",
+      [](PrintingPolicy &Policy) {
+        Policy.PrintAsCanonical = true;
+        Policy.TypePrintLimit = 3;
+      }));
+}
+
+TEST(TypePrinter, TypePrintLimitLeavesArePrinted) {
+  // The arguments that don't open another list are printed, whatever the limit.
+  constexpr char Code[] = R"cpp(
+    template <class A, class B> struct F {};
+    template <class... Ts> struct G {};
+    G<int, F<int, int>, char, F<int, int>, F<int, int>> mixed;
+  )cpp";
+  auto Matcher = varDecl(hasName("mixed"), hasType(qualType().bind("id")));
+
+  ASSERT_TRUE(PrintedTypeMatches(Code, {"-std=c++11"}, Matcher,
+                                 "G<int, F<int, int>, char, [2 args omitted]>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.PrintAsCanonical = true;
+                                   Policy.TypePrintLimit = 3;
+                                 }));
+
+  // And without a limit, nothing is omitted.
+  ASSERT_TRUE(
+      PrintedTypeMatches(Code, {"-std=c++11"}, Matcher,
+                         "G<int, F<int, int>, char, F<int, int>, F<int, int>>",
+                         [](PrintingPolicy &Policy) {
+                           Policy.PrintAsCanonical = true;
+                           Policy.TypePrintLimit = 0;
+                         }));
+}
+
+TEST(TypePrinter, TypePrintLimitFunctionParameters) {
+  // Build the type directly, as a function type that uses the previous one for
+  // both of its parameters, so that the test does not depend on how well Sema
+  // copes with it. It would be 2^40 function types if spelled out in full.
+  auto AST = tooling::buildASTFromCode("");
+  ASSERT_TRUE(AST);
+  ASTContext &Ctx = AST->getASTContext();
+
+  QualType T =
+      Ctx.getFunctionType(Ctx.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
+  for (int I = 0; I < 40; ++I) {
+    QualType Param = Ctx.getPointerType(T);
+    T = Ctx.getFunctionType(Ctx.VoidTy, {Param, Param},
+                            FunctionProtoType::ExtProtoInfo());
+  }
+
+  PrintingPolicy Policy = Ctx.getPrintingPolicy();
+  Policy.TypePrintLimit = 5;
+  EXPECT_EQ(T.getAsString(Policy),
+            "void (void (*)(void (*)(void (*)(void (*)(void (*)([2 args "
+            "omitted]), [arg omitted]), [arg omitted]), [arg omitted]), [arg "
+            "omitted]), [arg omitted])");
+}
+
+TEST(TypePrinter, TypePrintLimitDefault) {
+  auto AST = tooling::buildASTFromCode("");
+  ASSERT_TRUE(AST);
+  EXPECT_EQ(AST->getASTContext().getPrintingPolicy().TypePrintLimit, 32768u);
 }

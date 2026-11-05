@@ -95,7 +95,8 @@ struct PrintingPolicy {
         CleanUglifiedParameters(false), ResolveDecltype(false),
         EntireContentsOfLargeArray(true), PrettyEnums(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL),
-        SuppressDeclAttributes(false), SuppressLambdaBody(false) {}
+        SuppressDeclAttributes(false), SuppressLambdaBody(false),
+        TypePrintLimit(LO.TypePrintLimit) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -388,8 +389,32 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressLambdaBody : 1;
 
+  /// How many template arguments/function parameters to print when spelling a
+  /// type, or 0 for 'unlimited'. Once that many arguments/parameters have been
+  /// printed, the TypePrinter will stop entering 'new' lists.
+  unsigned TypePrintLimit;
+
+  /// A pointer to the variable counting the number of elements that have been
+  /// printed so far. This is a pointer to allow this type to stay a 'trivially
+  /// copyable' type without losing the sharedness of this value while printing,
+  /// and lets us reset it properly at entry points.
+  unsigned *TypePrintCount = nullptr;
+
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;
+
+  /// An element of a list of template arguments or function parameters is
+  /// about to be printed.
+  void countTypeListElement() const {
+    if (TypePrintCount)
+      ++*TypePrintCount;
+  }
+
+  /// Whether enough elements have been printed to use up the TypePrintLimit.
+  bool isTypePrintLimitReached() const {
+    return TypePrintLimit && TypePrintCount &&
+           *TypePrintCount >= TypePrintLimit;
+  }
 };
 
 } // end namespace clang

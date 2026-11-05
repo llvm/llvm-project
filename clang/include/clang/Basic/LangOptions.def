@@ -387,6 +387,9 @@ LANGOPT(ArrowDepth, 32, 256, Benign,
         "maximum number of operator->s to follow")
 LANGOPT(InstantiationDepth, 32, 1024, Benign,
         "maximum template instantiation depth")
+LANGOPT(TypePrintLimit, 32, 32768, Benign,
+        "maximum number of template arguments and function parameters printed "
+        "when spelling a type, 0 for no limit")
 LANGOPT(ConstexprCallDepth, 32, 512, Benign,
         "maximum constexpr call depth")
 LANGOPT(ConstexprStepLimit, 32, 1048576, Benign,

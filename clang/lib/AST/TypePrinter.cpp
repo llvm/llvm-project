@@ -46,6 +46,45 @@
 
 using namespace clang;
 
+/// Whether printing the type 'opens' another list of template
+/// arguments/function parameters. If we've already hit our 'print limit', these
+/// types are 'omitted'.
+static bool typeOpensList(QualType T) {
+  const Type *Ty = T.getNonReferenceType().getCanonicalType().getTypePtr();
+  while (const Type *Inner = Ty->getPointeeOrArrayElementType()) {
+    if (Inner == Ty)
+      break;
+    Ty = Inner;
+  }
+  if (Ty->isFunctionType() || isa<TemplateSpecializationType>(Ty))
+    return true;
+  return isa_and_nonnull<ClassTemplateSpecializationDecl>(
+      Ty->getAsCXXRecordDecl());
+}
+
+/// Whether we have hit our TypePrintLimit, AND the current type is a non 'leaf'
+/// printed node.
+static bool shouldOmitListElement(const PrintingPolicy &Policy, QualType T) {
+  if (Policy.isTypePrintLimitReached() && !T.isNull() && typeOpensList(T))
+    return true;
+  Policy.countTypeListElement();
+  return false;
+}
+
+static void printOmittedRun(raw_ostream &OS, unsigned &Omitted, bool &First,
+                            const char *Sep) {
+  if (!Omitted)
+    return;
+  if (!First)
+    OS << Sep;
+  if (Omitted == 1)
+    OS << "[arg omitted]";
+  else
+    OS << '[' << Omitted << " args omitted]";
+  Omitted = 0;
+  First = false;
+}
+
 namespace {
 
 /// RAII object that enables printing of the ARC __strong lifetime
@@ -999,8 +1038,24 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   OS << '(';
   {
     ParamPolicyRAII ParamPolicy(Policy);
+
+    // Install the new 'print count' if we don't have one already.
+    unsigned PrintCount = 0;
+    SaveAndRestore<unsigned *> RestorePrintCount(
+        Policy.TypePrintCount,
+        Policy.TypePrintCount ? Policy.TypePrintCount : &PrintCount);
+
+    unsigned Omitted = 0;
+    bool First = true;
     for (unsigned i = 0, e = T->getNumParams(); i != e; ++i) {
-      if (i) OS << ", ";
+      if (shouldOmitListElement(Policy, T->getParamType(i))) {
+        ++Omitted;
+        continue;
+      }
+      printOmittedRun(OS, Omitted, First, ", ");
+      if (!First)
+        OS << ", ";
+      First = false;
 
       auto EPI = T->getExtParameterInfo(i);
       if (EPI.isConsumed()) OS << "__attribute__((ns_consumed)) ";
@@ -1022,6 +1077,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
       print(T->getParamType(i), OS, StringRef());
     }
+    printOmittedRun(OS, Omitted, First, ", ");
   }
 
   if (T->isVariadic()) {
@@ -2567,11 +2623,31 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
   bool NeedSpace = false;
   bool FirstArg = true;
+
+  unsigned Omitted = 0;
   for (const auto &Arg : Args) {
+    const TemplateArgument &Argument = getArgument(Arg);
+
+    // A pack is a list of arguments itself, whose elements are considered
+    // individually.
+    if (Argument.getKind() != TemplateArgument::Pack &&
+        shouldOmitListElement(Policy,
+                              Argument.getKind() == TemplateArgument::Type
+                                  ? Argument.getAsType()
+                                  : QualType())) {
+      ++Omitted;
+      if (!IsPack)
+        ParmIndex++;
+      continue;
+    }
+    if (Omitted) {
+      printOmittedRun(OS, Omitted, FirstArg, Comma);
+      NeedSpace = false;
+    }
+
     // Print the argument into a string.
     SmallString<128> Buf;
     llvm::raw_svector_ostream ArgOS(Buf);
-    const TemplateArgument &Argument = getArgument(Arg);
     if (Argument.getKind() == TemplateArgument::Pack) {
       if (Argument.pack_size() && !FirstArg)
         OS << Comma;
@@ -2606,12 +2682,31 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     if (!IsPack)
       ParmIndex++;
   }
+  if (Omitted) {
+    printOmittedRun(OS, Omitted, FirstArg, Comma);
+    NeedSpace = false;
+  }
 
   if (!IsPack) {
     if (NeedSpace)
       OS << ' ';
     OS << '>';
   }
+}
+
+/// Print a template argument list. If this is the outermost list, it tracks the
+/// TypePrintLimit for everything inside it.
+template <typename TA>
+static void printTemplateArgs(raw_ostream &OS, ArrayRef<TA> Args,
+                              PrintingPolicy &Policy,
+                              const TemplateParameterList *TPL) {
+  unsigned PrintCount = 0;
+
+  // Install the new 'print count' if we don't have one already.
+  SaveAndRestore<unsigned *> RestorePrintCount(
+      Policy.TypePrintCount,
+      Policy.TypePrintCount ? Policy.TypePrintCount : &PrintCount);
+  printTo(OS, Args, Policy, TPL, /*IsPack=*/false, /*ParmIndex=*/0);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
@@ -2627,7 +2722,7 @@ void clang::printTemplateArgumentList(raw_ostream &OS,
                                       const TemplateParameterList *TPL) {
   PrintingPolicy InnerPolicy = Policy;
   InnerPolicy.SuppressScope = false;
-  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  printTemplateArgs(OS, Args, InnerPolicy, TPL);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
@@ -2636,7 +2731,7 @@ void clang::printTemplateArgumentList(raw_ostream &OS,
                                       const TemplateParameterList *TPL) {
   PrintingPolicy InnerPolicy = Policy;
   InnerPolicy.SuppressScope = false;
-  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  printTemplateArgs(OS, Args, InnerPolicy, TPL);
 }
 
 std::string PointerAuthQualifier::getAsString() const {
