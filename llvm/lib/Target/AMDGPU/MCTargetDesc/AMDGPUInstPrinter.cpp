@@ -45,6 +45,17 @@ void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
   printInstruction(MI, Address, STI, OS);
+  // printVOPDst prints the encoding suffix along with the destination
+  // operand. Instructions without operands, such as v_nop, never reach it,
+  // so print the suffix for their VOP3 and SDWA forms here. Otherwise
+  // v_nop_e64 and v_nop_sdwa are printed as v_nop, which reassembles to the
+  // shorter VOP1 encoding.
+  if (MI->getNumOperands() == 0) {
+    if (SIInstrFlags::isVOP3(MII, *MI) && !getVOP3IsSingle(MI->getOpcode()))
+      OS << "_e64";
+    else if (SIInstrFlags::isSDWA(MII, *MI))
+      OS << "_sdwa";
+  }
   printAnnotation(OS, Annot);
 }
 
@@ -171,6 +182,11 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     if (Imm & CPol::NV)
       O << " nv";
 
+    if (STI.hasFeature(AMDGPU::FeatureCacheFillSize)) {
+      const int64_t CFS = Imm & CPol::CFS;
+      printCFS(CFS, O);
+    }
+
     return;
   }
 
@@ -262,6 +278,27 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
     O << "SCOPE_SYS";
   else
     llvm_unreachable("unexpected scope policy value");
+}
+
+void AMDGPUInstPrinter::printCFS(int64_t CFS, raw_ostream &O) {
+  if (CFS == CPol::CFS_256B)
+    return;
+
+  O << " cfs:";
+
+  switch (CFS) {
+  case CPol::CFS_128B:
+    O << "CFS_128B";
+    break;
+  case CPol::CFS_64B:
+    O << "CFS_64B";
+    break;
+  case CPol::CFS_32B:
+    O << "CFS_32B";
+    break;
+  default:
+    llvm_unreachable("unexpected cache fill size value");
+  }
 }
 
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
@@ -598,7 +635,7 @@ void AMDGPUInstPrinter::printImmediateBF16(uint32_t Imm,
   if (printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
     return;
 
-  O << formatHex(static_cast<uint64_t>(Imm));
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 void AMDGPUInstPrinter::printImmediateF16(uint32_t Imm,
@@ -1105,6 +1142,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
+      STI.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
       AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
@@ -1958,16 +1996,6 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
-}
-
-void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
-
-  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

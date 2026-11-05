@@ -2971,8 +2971,30 @@ INTERCEPTOR(int, getaddrinfo, char *node, char *service,
   if (node) COMMON_INTERCEPTOR_READ_RANGE(ctx, node, internal_strlen(node) + 1);
   if (service)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, service, internal_strlen(service) + 1);
-  if (hints)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, hints, sizeof(__sanitizer_addrinfo));
+  if (hints) {
+    // Check individual members instead of the whole structure to avoid
+    // requiring callers to initialize padding bytes.
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_flags,
+                                  sizeof(hints->ai_flags));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_family,
+                                  sizeof(hints->ai_family));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_socktype,
+                                  sizeof(hints->ai_socktype));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_protocol,
+                                  sizeof(hints->ai_protocol));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_addrlen,
+                                  sizeof(hints->ai_addrlen));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_addr,
+                                  sizeof(hints->ai_addr));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_canonname,
+                                  sizeof(hints->ai_canonname));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_next,
+                                  sizeof(hints->ai_next));
+#if SANITIZER_AIX
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_eflags,
+                                  sizeof(hints->ai_eflags));
+#endif
+  }
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
@@ -7708,7 +7730,8 @@ INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
         ctx, src, Min(internal_strnlen(src, size), size - 1) + 1);
   }
   res = REAL(strlcpy)(dst, src, size);
-  COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, internal_strlen(dst) + 1);
+  if (size > 0)
+    COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, Min(res, size - 1));
   return res;
 }
 

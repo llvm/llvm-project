@@ -15,6 +15,7 @@
 #include "mlir/Conversion/OpenACCToLLVM/ACCToLLVMUtils.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/PatternMatch.h"
@@ -26,6 +27,20 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
+static Value castToI32(Location loc, Value value, bool isUnsigned,
+                       ConversionPatternRewriter &rewriter) {
+  Type i32Ty = rewriter.getI32Type();
+  unsigned bitwidth = value.getType().getIntOrFloatBitWidth();
+  if (bitwidth > 32)
+    return arith::TruncIOp::create(rewriter, loc, i32Ty, value);
+  if (bitwidth < 32) {
+    if (isUnsigned)
+      return arith::ExtUIOp::create(rewriter, loc, i32Ty, value);
+    return arith::ExtSIOp::create(rewriter, loc, i32Ty, value);
+  }
+  return value;
+}
+
 template <typename OpTy>
 struct ACCExecutableDirectivePattern : public ConvertOpToLLVMPattern<OpTy> {
   ACCExecutableDirectivePattern(const LLVMTypeConverter &converter,
@@ -46,7 +61,7 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
   using ACCExecutableDirectivePattern<WaitOp>::ACCExecutableDirectivePattern;
 
   LogicalResult
-  matchAndRewrite(WaitOp op, WaitOp::Adaptor,
+  matchAndRewrite(WaitOp op, WaitOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
 
@@ -59,8 +74,16 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
       SmallVector<Value> waitValues;
       for (Value operand : op.getWaitOperands())
         waitValues.push_back(rewriter.getRemappedValue(operand));
+
+      Value deviceNum = adaptor.getWaitDevnum();
+      if (deviceNum) {
+        // The converted operand is signless, so inspect the original type.
+        bool isUnsigned = op.getWaitDevnum().getType().isUnsignedInteger();
+        deviceNum = castToI32(loc, deviceNum, isUnsigned, rewriter);
+      }
+
       return emitWaitCall(loc, waitValues, asyncQueue, rewriter,
-                          globalSymbolRegion, symbolTable, config);
+                          globalSymbolRegion, symbolTable, config, deviceNum);
     };
 
     if (failed(emitGuardedByIfCond(loc, op.getIfCond(), rewriter, emitWait)))

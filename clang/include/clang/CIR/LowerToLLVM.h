@@ -28,6 +28,9 @@ class ModuleOp;
 namespace cir {
 
 namespace direct {
+/// Lowers \p mlirModule, a CIR module, to an LLVM module in \p llvmCtx.
+/// Returns null if lowering fails; the error has then been reported through
+/// the MLIR diagnostic engine of \p mlirModule's context.
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
                              llvm::LLVMContext &llvmCtx, bool enableOpenMP,

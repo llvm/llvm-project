@@ -6,6 +6,7 @@ add_lldb_unittest(LLDBMinidumpTests
     ObjectYAML
     Support
   LINK_LIBS
+    lldbRegister
     lldbCore
     lldbHost
     lldbTarget

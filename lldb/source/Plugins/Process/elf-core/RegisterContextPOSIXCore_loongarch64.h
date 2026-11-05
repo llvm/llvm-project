@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_LOONGARCH64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_LOONGARCH64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_loongarch64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Register/Core/RegisterContextCore_loongarch64.h"
+#include "Register/Common/RegisterInfo_loongarch64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -20,7 +20,7 @@
 #include <memory>
 
 class RegisterContextCorePOSIX_loongarch64
-    : public RegisterContextPOSIX_loongarch64 {
+    : public RegisterContextCore_loongarch64 {
 public:
   static std::unique_ptr<RegisterContextCorePOSIX_loongarch64>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
@@ -38,7 +38,7 @@ public:
 protected:
   RegisterContextCorePOSIX_loongarch64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info,
+      std::unique_ptr<RegisterInfo_loongarch64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 

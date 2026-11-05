@@ -56,25 +56,13 @@ __attribute__((target_clones("sve2;priority=4", "aes+sve2;priority=3", "lse;prio
 // CHECK-NEXT:    ret ptr @unreachable_versions._Msve
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 69793284352
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 69793284352
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 128
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 128
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 69793317632
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 69793317632
-// CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
-// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 128
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 128
-// CHECK-NEXT:    [[TMP15:%.*]] = and i1 true, [[TMP14]]
-// CHECK-NEXT:    br i1 [[TMP15]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
+// CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @unreachable_versions._Mlse
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 576460752303423616
-// CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[TMP17]], 576460752303423616
-// CHECK-NEXT:    [[TMP19:%.*]] = and i1 true, [[TMP18]]
 // CHECK-NEXT:    ret ptr @unreachable_versions.default
 //
 //.

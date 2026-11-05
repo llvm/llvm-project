@@ -14,6 +14,8 @@
 #include <memory>
 #include <utility>
 
+namespace orc_rt::test {
+
 /// Make calls and call result handlers directly on the current thread.
 class DirectCaller {
 private:
@@ -21,14 +23,14 @@ private:
   public:
     virtual ~DirectResultSender() {}
     virtual void send(orc_rt_SessionRef S,
-                      orc_rt::WrapperFunctionBuffer ResultBytes) = 0;
+                      WrapperFunctionBuffer ResultBytes) = 0;
     static void send(orc_rt_SessionRef S,
                      orc_rt_WrapperFunctionBuffer ResultBytes,
                      uint64_t CallId) {
       std::unique_ptr<DirectResultSender>(
           reinterpret_cast<DirectResultSender *>(
               static_cast<uintptr_t>(CallId)))
-          ->send(S, orc_rt::WrapperFunctionBuffer(ResultBytes));
+          ->send(S, WrapperFunctionBuffer(ResultBytes));
     }
   };
 
@@ -36,8 +38,7 @@ private:
   class DirectResultSenderImpl : public DirectResultSender {
   public:
     DirectResultSenderImpl(ImplFn &&Fn) : Fn(std::forward<ImplFn>(Fn)) {}
-    void send(orc_rt_SessionRef S,
-              orc_rt::WrapperFunctionBuffer ResultBytes) override {
+    void send(orc_rt_SessionRef S, WrapperFunctionBuffer ResultBytes) override {
       Fn(std::move(ResultBytes));
     }
 
@@ -57,7 +58,7 @@ public:
 
   template <typename HandleResultFn>
   void operator()(HandleResultFn &&HandleResult,
-                  orc_rt::WrapperFunctionBuffer ArgBytes) {
+                  WrapperFunctionBuffer ArgBytes) {
     auto DR =
         makeDirectResultSender(std::forward<HandleResultFn>(HandleResult));
     Fn(S, ArgBytes.release(), DirectResultSender::send,
@@ -68,5 +69,7 @@ private:
   orc_rt_SessionRef S;
   orc_rt_WrapperFunction Fn;
 };
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_DIRECTCALLER_H

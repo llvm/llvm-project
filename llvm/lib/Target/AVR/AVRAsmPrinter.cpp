@@ -172,7 +172,7 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   assert(MO.isReg() && "Unexpected inline asm memory operand");
 
   // TODO: We should be able to look up the alternative name for
-  // the register if it's given.
+  //       the register if it's given.
   // TableGen doesn't expose a way of getting retrieving names
   // for registers.
   if (MI->getOperand(OpNum).getReg() == AVR::R31R30) {

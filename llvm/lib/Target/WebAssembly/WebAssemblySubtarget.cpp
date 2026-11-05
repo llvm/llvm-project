@@ -52,10 +52,11 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT, StringRef CPU,
                                            StringRef FS,
-                                           const TargetMachine &TM)
+                                           const TargetMachine &TM,
+                                           StringRef ABIName)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this) {
+      TargetTriple(TT), TargetABI(WebAssembly::getABI(ABIName)),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
   Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
   auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());

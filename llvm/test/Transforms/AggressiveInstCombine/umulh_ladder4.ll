@@ -6,11 +6,7 @@ define i32 @mul_ladder4(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD19:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:
@@ -40,11 +36,7 @@ define <2 x i32> @mul_ladder4_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @mul_ladder4_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i32> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <2 x i64> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], splat (i64 32)
-; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw <2 x i64> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[ADD19:%.*]] = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    ret <2 x i32> [[ADD19]]
 ;
 entry:
@@ -74,11 +66,7 @@ define i128 @mul_ladder4_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @mul_ladder4_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i128 [[X]] to i256
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[Y]] to i256
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i256 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i256 [[TMP2]], 128
-; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i256 [[TMP3]] to i128
+; CHECK-NEXT:    [[ADD19:%.*]] = call i128 @llvm.umulh.i128(i128 [[X]], i128 [[Y]])
 ; CHECK-NEXT:    ret i128 [[ADD19]]
 ;
 entry:
@@ -108,11 +96,7 @@ define i32 @mul_ladder4_commutted(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4_commutted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD19:%.*]] = call i32 @llvm.umulh.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:
@@ -142,11 +126,7 @@ define i32 @mul_ladder4_swap_hl_lh(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4_swap_hl_lh(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD19:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:

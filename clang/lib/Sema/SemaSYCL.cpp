@@ -278,6 +278,18 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
   return false;
 }
 
+void SemaSYCL::handleSYCLExternalAttr(Decl *D, const ParsedAttr &AL) {
+  // SYCL 2020 section 5.4 prohibits calling a variadic function from device
+  // code, so the attribute cannot be honored; declaring one is not prohibited,
+  // so ignore the attribute rather than reject the declaration.
+  if (cast<FunctionDecl>(D)->isVariadic()) {
+    Diag(AL.getLoc(), diag::warn_sycl_external_ignored_variadic_function) << AL;
+    return;
+  }
+
+  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
+}
+
 void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
   const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
   assert(SEAttr && "Missing sycl_external attribute");
@@ -676,7 +688,7 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
 
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
-      if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
+      if (auto *FD = dyn_cast<const FieldDecl *>(Parent)) {
         const CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(FD->getParent());
         if (ParentRD->isLambda()) {
           SemaSYCLRef.Diag(ParentRD->getLocation(), diag::note_within_capture)
@@ -686,7 +698,7 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                            diag::note_within_field_of_type)
               << ParentRD;
         }
-      } else if (auto *BS = Parent.dyn_cast<const CXXBaseSpecifier *>()) {
+      } else if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(Parent)) {
         CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
         assert(RD);
         SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)

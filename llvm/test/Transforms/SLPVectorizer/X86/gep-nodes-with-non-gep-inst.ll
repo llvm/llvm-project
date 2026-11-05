@@ -9,9 +9,17 @@ define void @test() {
 ; CHECK-NEXT:    [[COND_IN_V:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr align 8 [[COND_IN_V]], <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <13 x i64> [[TMP0]], <13 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[COND_IN_V]], align 8
+; CHECK-NEXT:    [[BV:%.*]] = icmp eq i64 [[V]], 0
+; CHECK-NEXT:    [[IN_1:%.*]] = getelementptr i64, ptr [[COND_IN_V]], i64 4
+; CHECK-NEXT:    [[V_1:%.*]] = load i64, ptr [[IN_1]], align 8
+; CHECK-NEXT:    [[BV_1:%.*]] = icmp eq i64 [[V_1]], 0
+; CHECK-NEXT:    [[IN_2:%.*]] = getelementptr i64, ptr [[COND_IN_V]], i64 8
+; CHECK-NEXT:    [[V_2:%.*]] = load i64, ptr [[IN_2]], align 8
+; CHECK-NEXT:    [[BV_2:%.*]] = icmp eq i64 [[V_2]], 0
+; CHECK-NEXT:    [[IN_3:%.*]] = getelementptr i64, ptr [[COND_IN_V]], i64 12
+; CHECK-NEXT:    [[V_3:%.*]] = load i64, ptr [[IN_3]], align 8
+; CHECK-NEXT:    [[BV_3:%.*]] = icmp eq i64 [[V_3]], 0
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-SLP-THRESHOLD-LABEL: define void @test
@@ -20,9 +28,15 @@ define void @test() {
 ; CHECK-SLP-THRESHOLD-NEXT:    [[COND_IN_V:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-SLP-THRESHOLD-NEXT:    br label [[BB:%.*]]
 ; CHECK-SLP-THRESHOLD:       bb:
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr align 8 [[COND_IN_V]], <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <13 x i64> [[TMP0]], <13 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-SLP-THRESHOLD-NEXT:    [[IN_2:%.*]] = getelementptr i64, ptr [[COND_IN_V]], i64 8
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[COND_IN_V]], <5 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true>, <5 x i64> poison)
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <5 x i64> [[TMP0]], <5 x i64> poison, <2 x i32> <i32 4, i32 0>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[IN_2]], <5 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true>, <5 x i64> poison)
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP3:%.*]] = shufflevector <5 x i64> [[TMP2]], <5 x i64> poison, <2 x i32> <i32 4, i32 0>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP6:%.*]] = shufflevector <5 x i64> [[TMP2]], <5 x i64> [[TMP0]], <4 x i32> <i32 4, i32 0, i32 9, i32 5>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[TMP6]], zeroinitializer
 ; CHECK-SLP-THRESHOLD-NEXT:    ret void
 ;
 entry:
