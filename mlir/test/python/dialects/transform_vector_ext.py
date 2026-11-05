@@ -148,6 +148,10 @@ def enum_configurable_patterns():
         avx2_lowering_strategy=True,
     )
 
+    # CHECK: transform.apply_patterns.vector.lower_transpose_to_scalable
+    # CHECK-SAME: target_vector_bitwidth = 128
+    vector.ApplyLowerTransposeToScalablePatternsOp(target_vector_bitwidth=128)
+
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     vector.ApplySplitTransferFullPartialPatternsOp()
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial

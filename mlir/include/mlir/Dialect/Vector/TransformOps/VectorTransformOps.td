@@ -490,6 +490,28 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerTransposeToScalablePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_transpose_to_scalable",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that lower fixed-size `vector.transpose` operations
+    swapping the final two dimensions to runtime-sized scalable vector
+    operations. Any leading dimensions are treated as batch dimensions.
+
+    The lowering processes the fixed-size input in chunks whose runtime size
+    is derived from `vector.vscale` and `target_vector_bitwidth`. It uses
+    `vector.interleave` and `vector.deinterleave`, so one of the transposed
+    dimensions must be exactly 2.
+
+    This is an opt-in transformation because its profitability depends on the
+    target and it introduces stack allocations and an `scf.for` loop.
+  }];
+
+  let arguments = (ins
+      ConfinedAttr<I64Attr, [IntPositive]>:$target_vector_bitwidth);
+  let assemblyFormat = "`target_vector_bitwidth` `=` $target_vector_bitwidth attr-dict";
+}
+
 def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_interleave",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

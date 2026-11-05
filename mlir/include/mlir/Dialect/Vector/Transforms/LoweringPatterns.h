@@ -155,6 +155,15 @@ void populateVectorTransposeLoweringPatterns(
     VectorTransposeLowering vectorTransposeLowering,
     PatternBenefit benefit = 1);
 
+/// Populate patterns that lower fixed-size `vector.transpose` operations that
+/// swap the final two dimensions to runtime-sized scalable vector operations.
+/// The pattern uses binary `vector.interleave` and `vector.deinterleave`
+/// operations, so one of the two transposed dimensions must be exactly 2.
+void populateVectorTransposeToScalableLoweringPatterns(
+    RewritePatternSet &patterns,
+    const VectorTransposeToScalableLoweringOptions &options,
+    PatternBenefit benefit = 1);
+
 /// Populate the pattern set with the following patterns:
 ///
 /// [TransferReadToVectorLoadLowering]

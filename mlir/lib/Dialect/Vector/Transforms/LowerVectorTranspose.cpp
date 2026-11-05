@@ -11,7 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -489,6 +491,183 @@ private:
   /// Options to control the vector patterns.
   vector::VectorTransposeLowering vectorTransposeLowering;
 };
+
+/// Lower a fixed-size transpose of the final two dimensions using scalable
+/// vector operations.
+///
+/// The input and output are staged through scoped stack allocations because a
+/// fixed-size vector cannot be directly cast to a runtime-sized scalable
+/// vector. Each loop iteration processes one scalable chunk and masks its
+/// tail.
+///
+/// This lowering requires one dimension to be exactly 2. That restriction is
+/// inherent in its use of the binary `vector.interleave` and
+/// `vector.deinterleave` constructs: the dimension of size 2 identifies the
+/// two streams that are joined or split by those operations.
+class TransposeOpToScalableLowering
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  TransposeOpToScalableLowering(
+      MLIRContext *context,
+      const vector::VectorTransposeToScalableLoweringOptions &options,
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit),
+        targetVectorBitWidth(options.targetVectorBitWidth) {}
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType srcType = op.getSourceVectorType();
+    int64_t rank = srcType.getRank();
+    if (targetVectorBitWidth == 0 || srcType.isScalable() || rank < 2)
+      return failure();
+
+    ArrayRef<int64_t> permutation = op.getPermutation();
+    for (int64_t dim = 0; dim < rank - 2; ++dim) {
+      if (permutation[dim] != dim)
+        return rewriter.notifyMatchFailure(
+            op, "expected only the final two dimensions to be transposed");
+    }
+    if (permutation[rank - 2] != rank - 1 || permutation[rank - 1] != rank - 2)
+      return rewriter.notifyMatchFailure(
+          op, "expected the final two dimensions to be transposed");
+
+    ArrayRef<int64_t> shape = srcType.getShape();
+    // Interleave and deinterleave operate on exactly two streams. Therefore,
+    // this lowering is applicable only when one of the final two dimensions
+    // is 2. Any preceding dimensions are handled as independent batches.
+    bool rowsToColumns = shape[rank - 1] == 2;
+    bool columnsToRows = shape[rank - 2] == 2;
+    if (!rowsToColumns && !columnsToRows)
+      return rewriter.notifyMatchFailure(
+          op, "expected one of the final two dimensions to have size 2");
+
+    Type elementType = srcType.getElementType();
+    if (!elementType.isIntOrFloat())
+      return rewriter.notifyMatchFailure(op,
+                                         "expected integer or float elements");
+    unsigned elementBitWidth = elementType.getIntOrFloatBitWidth();
+    if (elementBitWidth == 0 || targetVectorBitWidth % elementBitWidth != 0)
+      return rewriter.notifyMatchFailure(
+          op, "target vector bit width must be divisible by element bit width");
+
+    Location loc = op.getLoc();
+    VectorType dstType = op.getResultVectorType();
+    int64_t streamLength = rowsToColumns ? shape[rank - 2] : shape[rank - 1];
+    int64_t numElements = srcType.getNumElements();
+    int64_t sliceSize = 2 * streamLength;
+    int64_t batchCount = numElements / sliceSize;
+    int64_t minLanes = targetVectorBitWidth / elementBitWidth;
+    auto flatType = VectorType::get({numElements}, elementType);
+    auto bufferType = MemRefType::get({numElements}, elementType);
+    auto laneType = VectorType::get({minLanes}, elementType, {true});
+    auto pairType = VectorType::get({2 * minLanes}, elementType, {true});
+    auto laneMaskType = laneType.cloneWith(std::nullopt, rewriter.getI1Type());
+    auto pairMaskType = pairType.cloneWith(std::nullopt, rewriter.getI1Type());
+
+    auto scope =
+        memref::AllocaScopeOp::create(rewriter, loc, TypeRange{dstType});
+    Block *scopeBody = rewriter.createBlock(&scope.getBodyRegion());
+    rewriter.setInsertionPointToStart(scopeBody);
+
+    Value input = memref::AllocaOp::create(rewriter, loc, bufferType);
+    Value output = memref::AllocaOp::create(rewriter, loc, bufferType);
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value two = arith::ConstantIndexOp::create(rewriter, loc, 2);
+    Value upper = arith::ConstantIndexOp::create(rewriter, loc, streamLength);
+    Value minLaneCount =
+        arith::ConstantIndexOp::create(rewriter, loc, minLanes);
+    Value vscale = vector::VectorScaleOp::create(rewriter, loc);
+    Value step = arith::MulIOp::create(rewriter, loc, minLaneCount, vscale);
+    Value flat =
+        vector::ShapeCastOp::create(rewriter, loc, flatType, op.getVector());
+    vector::StoreOp::create(rewriter, loc, flat, input, ValueRange{zero});
+
+    Value lanePassthru = arith::ConstantOp::create(
+        rewriter, loc,
+        SplatElementsAttr::get(laneType, rewriter.getZeroAttr(elementType)));
+    Value pairPassthru = arith::ConstantOp::create(
+        rewriter, loc,
+        SplatElementsAttr::get(pairType, rewriter.getZeroAttr(elementType)));
+
+    auto createTransposeLoop = [&](Value sliceBase) {
+      auto loop = scf::ForOp::create(rewriter, loc, zero, upper, step);
+      {
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(loop.getBody());
+        Value index = loop.getInductionVar();
+        Value remaining = arith::SubIOp::create(rewriter, loc, upper, index);
+        Value laneMask = vector::CreateMaskOp::create(
+            rewriter, loc, laneMaskType, ValueRange{remaining});
+        Value pairCount = arith::MulIOp::create(rewriter, loc, remaining, two);
+        Value pairMask = vector::CreateMaskOp::create(
+            rewriter, loc, pairMaskType, ValueRange{pairCount});
+        Value pairOffset = arith::MulIOp::create(rewriter, loc, index, two);
+        Value firstIndex =
+            arith::AddIOp::create(rewriter, loc, sliceBase, index);
+        Value secondOffset = arith::AddIOp::create(rewriter, loc, upper, index);
+        Value secondIndex =
+            arith::AddIOp::create(rewriter, loc, sliceBase, secondOffset);
+
+        if (rowsToColumns) {
+          Value pairIndex =
+              arith::AddIOp::create(rewriter, loc, sliceBase, pairOffset);
+          Value interleaved = vector::MaskedLoadOp::create(
+              rewriter, loc, pairType, input, ValueRange{pairIndex}, pairMask,
+              pairPassthru);
+          auto deinterleaved =
+              vector::DeinterleaveOp::create(rewriter, loc, interleaved);
+          vector::MaskedStoreOp::create(rewriter, loc, output,
+                                        ValueRange{firstIndex}, laneMask,
+                                        deinterleaved.getRes1());
+          vector::MaskedStoreOp::create(rewriter, loc, output,
+                                        ValueRange{secondIndex}, laneMask,
+                                        deinterleaved.getRes2());
+        } else {
+          Value lhs = vector::MaskedLoadOp::create(
+              rewriter, loc, laneType, input, ValueRange{firstIndex}, laneMask,
+              lanePassthru);
+          Value rhs = vector::MaskedLoadOp::create(
+              rewriter, loc, laneType, input, ValueRange{secondIndex}, laneMask,
+              lanePassthru);
+          Value interleaved =
+              vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
+          Value pairIndex =
+              arith::AddIOp::create(rewriter, loc, sliceBase, pairOffset);
+          vector::MaskedStoreOp::create(rewriter, loc, output,
+                                        ValueRange{pairIndex}, pairMask,
+                                        interleaved);
+        }
+      }
+      return loop;
+    };
+
+    if (batchCount == 1) {
+      createTransposeLoop(zero);
+    } else {
+      Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+      Value batchUpper =
+          arith::ConstantIndexOp::create(rewriter, loc, batchCount);
+      Value sliceSizeValue =
+          arith::ConstantIndexOp::create(rewriter, loc, sliceSize);
+      auto batchLoop = scf::ForOp::create(rewriter, loc, zero, batchUpper, one);
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(batchLoop.getBody());
+      Value sliceBase = arith::MulIOp::create(
+          rewriter, loc, batchLoop.getInductionVar(), sliceSizeValue);
+      createTransposeLoop(sliceBase);
+    }
+
+    Value result = vector::LoadOp::create(rewriter, loc, flatType, output,
+                                          ValueRange{zero});
+    result = vector::ShapeCastOp::create(rewriter, loc, dstType, result);
+    memref::AllocaScopeReturnOp::create(rewriter, loc, ValueRange{result});
+    rewriter.replaceOp(op, scope.getResults());
+    return success();
+  }
+
+private:
+  unsigned targetVectorBitWidth;
+};
 } // namespace
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
@@ -498,4 +677,12 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
                                                   benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
       vectorTransposeLowering, patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateVectorTransposeToScalableLoweringPatterns(
+    RewritePatternSet &patterns,
+    const VectorTransposeToScalableLoweringOptions &options,
+    PatternBenefit benefit) {
+  patterns.add<TransposeOpToScalableLowering>(patterns.getContext(), options,
+                                              benefit);
 }

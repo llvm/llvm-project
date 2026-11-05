@@ -284,6 +284,13 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
   }
 }
 
+void transform::ApplyLowerTransposeToScalablePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransposeToScalableLoweringOptions options;
+  options.setTargetVectorBitWidth(getTargetVectorBitwidth());
+  vector::populateVectorTransposeToScalableLoweringPatterns(patterns, options);
+}
+
 void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorInterleaveLoweringPatterns(patterns);
