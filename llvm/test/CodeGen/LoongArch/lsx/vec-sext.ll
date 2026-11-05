@@ -276,3 +276,188 @@ entry:
   store <4 x i64> %B, ptr %dst
   ret void
 }
+
+; Each source element below is all-ones or all-zeros, so interleaving it with
+; itself is already the sign extension.
+
+define void @load_sext_mask_8i8_to_8i16(ptr %ptr, ptr %dst) {
+; LA32-LABEL: load_sext_mask_8i8_to_8i16:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    ld.w $a2, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vsrai.b $vr0, $vr0, 7
+; LA32-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; LA32-NEXT:    vst $vr0, $a1, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_sext_mask_8i8_to_8i16:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vsrai.b $vr0, $vr0, 7
+; LA64-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    ret
+entry:
+  %A = load <8 x i8>, ptr %ptr
+  %M = ashr <8 x i8> %A, splat (i8 7)
+  %B = sext <8 x i8> %M to <8 x i16>
+  store <8 x i16> %B, ptr %dst
+  ret void
+}
+
+define void @load_sext_mask_4i16_to_4i32(ptr %ptr, ptr %dst) {
+; LA32-LABEL: load_sext_mask_4i16_to_4i32:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    ld.w $a2, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vsrai.h $vr0, $vr0, 15
+; LA32-NEXT:    vslti.h $vr1, $vr0, 0
+; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vst $vr0, $a1, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_sext_mask_4i16_to_4i32:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vsrai.h $vr0, $vr0, 15
+; LA64-NEXT:    vslti.h $vr1, $vr0, 0
+; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    ret
+entry:
+  %A = load <4 x i16>, ptr %ptr
+  %M = ashr <4 x i16> %A, splat (i16 15)
+  %B = sext <4 x i16> %M to <4 x i32>
+  store <4 x i32> %B, ptr %dst
+  ret void
+}
+
+define void @load_sext_mask_2i32_to_2i64(ptr %ptr, ptr %dst) {
+; LA32-LABEL: load_sext_mask_2i32_to_2i64:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    ld.w $a2, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vsrai.w $vr0, $vr0, 31
+; LA32-NEXT:    vilvl.w $vr0, $vr0, $vr0
+; LA32-NEXT:    vst $vr0, $a1, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_sext_mask_2i32_to_2i64:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vsrai.w $vr0, $vr0, 31
+; LA64-NEXT:    vslti.w $vr1, $vr0, 0
+; LA64-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    ret
+entry:
+  %A = load <2 x i32>, ptr %ptr
+  %M = ashr <2 x i32> %A, splat (i32 31)
+  %B = sext <2 x i32> %M to <2 x i64>
+  store <2 x i64> %B, ptr %dst
+  ret void
+}
+
+define void @load_sext_mask_4i8_to_4i32(ptr %ptr, ptr %dst) {
+; CHECK-LABEL: load_sext_mask_4i8_to_4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld.w $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vsrai.b $vr0, $vr0, 7
+; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
+; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %A = load <4 x i8>, ptr %ptr
+  %M = ashr <4 x i8> %A, splat (i8 7)
+  %B = sext <4 x i8> %M to <4 x i32>
+  store <4 x i32> %B, ptr %dst
+  ret void
+}
+
+define void @load_sext_mask_16i8_to_16i16(ptr %ptr, ptr %dst) {
+; CHECK-LABEL: load_sext_mask_16i8_to_16i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vsrai.b $vr0, $vr0, 7
+; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
+; CHECK-NEXT:    vilvh.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vst $vr0, $a1, 16
+; CHECK-NEXT:    vst $vr1, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %A = load <16 x i8>, ptr %ptr
+  %M = ashr <16 x i8> %A, splat (i8 7)
+  %B = sext <16 x i8> %M to <16 x i16>
+  store <16 x i16> %B, ptr %dst
+  ret void
+}
+
+define void @load_sext_mask_16i8_to_16i32(ptr %ptr, ptr %dst) {
+; CHECK-LABEL: load_sext_mask_16i8_to_16i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vsrai.b $vr0, $vr0, 7
+; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
+; CHECK-NEXT:    vslti.h $vr2, $vr1, 0
+; CHECK-NEXT:    vilvl.h $vr3, $vr2, $vr1
+; CHECK-NEXT:    vilvh.h $vr1, $vr2, $vr1
+; CHECK-NEXT:    vilvh.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr4, $vr2, $vr0
+; CHECK-NEXT:    vilvh.h $vr0, $vr2, $vr0
+; CHECK-NEXT:    vst $vr0, $a1, 48
+; CHECK-NEXT:    vst $vr4, $a1, 32
+; CHECK-NEXT:    vst $vr1, $a1, 16
+; CHECK-NEXT:    vst $vr3, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %A = load <16 x i8>, ptr %ptr
+  %M = ashr <16 x i8> %A, splat (i8 7)
+  %B = sext <16 x i8> %M to <16 x i32>
+  store <16 x i32> %B, ptr %dst
+  ret void
+}
+
+; The top two bits are sign bits here, not all eight, so VSLLWIL is still used.
+define void @load_sext_notmask_8i8_to_8i16(ptr %ptr, ptr %dst) {
+; LA32-LABEL: load_sext_notmask_8i8_to_8i16:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    ld.w $a2, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vsrai.b $vr0, $vr0, 6
+; LA32-NEXT:    vslti.b $vr1, $vr0, 0
+; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA32-NEXT:    vst $vr0, $a1, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_sext_notmask_8i8_to_8i16:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vsrai.b $vr0, $vr0, 6
+; LA64-NEXT:    vslti.b $vr1, $vr0, 0
+; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    ret
+entry:
+  %A = load <8 x i8>, ptr %ptr
+  %M = ashr <8 x i8> %A, splat (i8 6)
+  %B = sext <8 x i8> %M to <8 x i16>
+  store <8 x i16> %B, ptr %dst
+  ret void
+}
