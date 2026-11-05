@@ -8,6 +8,7 @@
 
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/IR/DIBuilder.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -84,6 +85,35 @@ static void collectNonCopyMI(SmallVectorImpl<MachineInstr *> &MIList,
       if (MI.getOpcode() != TargetOpcode::COPY)
         MIList.push_back(&MI);
     }
+}
+
+TEST_F(AArch64GISelMITest, SalvageConstantDebugValue) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DIBuilder DIB(*ModuleMMIPair.first, /*AllowUnresolved=*/false);
+  auto *File = DIB.createFile("test.c", "/");
+  auto *SubroutineType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto *Subprogram =
+      DIB.createFunction(File, "func", "", File, 1, SubroutineType, 1);
+  auto *Variable = DIB.createAutoVariable(Subprogram, "x", File, 1, nullptr);
+  auto *Expression = DIB.createExpression();
+  DIB.finalize();
+  B.setDebugLoc(DILocation::get(Context, 1, 0, Subprogram));
+  auto CheckConstant = [&](LLT Ty, const APInt &Value, int64_t Expected) {
+    MachineInstrBuilder Constant = B.buildConstant(Ty, Value);
+    MachineInstrBuilder DbgValue =
+        B.buildDirectDbgValue(Constant.getReg(0), Variable, Expression);
+
+    salvageDebugInfo(*MRI, *Constant);
+
+    EXPECT_TRUE(DbgValue->getOperand(0).isImm());
+    EXPECT_EQ(Expected, DbgValue->getOperand(0).getImm());
+  };
+
+  CheckConstant(S1, APInt(1, 1), 1);
+  CheckConstant(S8, APInt(8, 200), -56);
 }
 
 TEST(GISelUtilsTest, getGCDType) {
