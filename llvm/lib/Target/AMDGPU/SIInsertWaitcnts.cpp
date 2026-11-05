@@ -586,8 +586,7 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
-                         Context->getWaitEvents(AMDGPU::STORE_CNT));
+        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
