@@ -6574,6 +6574,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [&](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          TailCalls.push_back(&CI);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
+
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
@@ -6735,6 +6751,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const auto &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6823,6 +6848,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7556,19 +7584,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
+    // The new alloca may escape into tail calls.
     SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
+    if (!collectTailCalls(A, *this, TailCalls))
       return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
