@@ -406,11 +406,14 @@ static ObjectList makeIteratorObjects(const parser::OmpObjectList &objects,
   });
 }
 
-DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
-                                    semantics::SemanticsContext &semaCtx) {
+// If the DefinedOperator refers to an intrinsic operator, create the
+// corresponding IntrinsicOperator, otherwise return nullopt.
+std::optional<IntrinsicOperator>
+makeIntrinsicOperator(const parser::DefinedOperator &inp,
+                      semantics::SemanticsContext &semaCtx) {
   CLAUSET_ENUM_CONVERT( //
       convert, parser::DefinedOperator::IntrinsicOperator,
-      DefinedOperator::IntrinsicOperator,
+      IntrinsicOperator::Operator,
       // clang-format off
       MS(Add,      Add)
       MS(AND,      AND)
@@ -432,17 +435,22 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
       // clang-format on
   );
 
-  return Fortran::common::visit(
-      common::visitors{
-          [&](const parser::DefinedOpName &s) {
-            return DefinedOperator{
-                DefinedOperator::DefinedOpName{makeObject(s.v, semaCtx)}};
-          },
-          [&](const parser::DefinedOperator::IntrinsicOperator &s) {
-            return DefinedOperator{convert(s)};
-          },
-      },
-      inp.u);
+  if (auto *intOp =
+          std::get_if<parser::DefinedOperator::IntrinsicOperator>(&inp.u)) {
+    return IntrinsicOperator{convert(*intOp)};
+  }
+  return std::nullopt;
+}
+
+DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
+                                    semantics::SemanticsContext &semaCtx) {
+  // All intrinsic operators from parser::DefinedOperator are covered here.
+  if (auto &&intOp = makeIntrinsicOperator(inp, semaCtx)) {
+    return DefinedOperator{std::move(*intOp)};
+  }
+
+  return DefinedOperator{DefinedOperator::DefinedOpName{
+      makeObject(std::get<parser::DefinedOpName>(inp.u).v, semaCtx)}};
 }
 
 ProcedureDesignator
@@ -786,8 +794,9 @@ Doacross makeDoacross(const parser::OmpDoacross &doa,
     auto convert3 = [&](const IterOffset &u) {
       auto &s0 = std::get<parser::DefinedOperator>(u.t);
       auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
-      return Iteration::Distance{
-          {makeDefinedOperator(s0, semaCtx), makeExpr(s1, semaCtx)}};
+      auto &&intOp = makeIntrinsicOperator(s0, semaCtx);
+      assert(intOp && "Expecting intrinsic operator");
+      return Iteration::Distance{{std::move(*intOp), makeExpr(s1, semaCtx)}};
     };
     return Iteration{{makeObject(t0, semaCtx), maybeApply(convert3, t1)}};
   };
