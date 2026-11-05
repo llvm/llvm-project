@@ -1822,3 +1822,18 @@ dead:
 exit:
   ret void
 }
+
+; callbr with duplicate indirect unreachable label - causes
+; isAlreadyStructuredIsland to return false so handleIsland gets called, which
+; calls isUnreachableTarget
+define void @callbr_duplicate_indirect_unreachable() {
+entry:
+  callbr void asm sideeffect "nop", "!i,!i"() to label %exit [label %unreachable_target, label %unreachable_target]
+
+unreachable_target:
+  call void @llvm.amdgcn.unreachable()
+  br label %exit
+
+exit:
+  ret void
+}
