@@ -18,7 +18,9 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cctype>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -299,11 +301,6 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   // Capture initial state as starting point for unwinding.
   UnwindState State(Sample, Binary);
 
-  // Sanity check - making sure leaf of LBR aligns with leaf of stack sample
-  // Stack sample sometimes can be unreliable, so filter out bogus ones.
-  if (!State.validateInitialState())
-    return false;
-
   NumTotalBranches += State.LBRStack.size();
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
@@ -466,7 +463,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   if (!PerfExecutable) {
     exitWithError("Perf not found.");
   }
-  std::string PerfPath = *PerfExecutable;
+  std::string PerfExecutablePath = *PerfExecutable;
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
@@ -477,12 +474,53 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
+  auto RunPerfScript = [&](ArrayRef<StringRef> Args) {
+    // ExecuteAndWait does not truncate redirected output files on Unix. Remove
+    // both files so a shorter invocation cannot retain output from the
+    // previous perf script invocation.
+    for (StringRef Path : {StringRef(PerfTraceFile), StringRef(ErrorFile)}) {
+      if (std::error_code EC = sys::fs::remove(Path))
+        exitWithError(EC, Path);
+    }
+
+    std::string ExecutionError;
+    bool ExecutionFailed = false;
+    int ExitCode =
+        sys::ExecuteAndWait(PerfExecutablePath, Args, std::nullopt, Redirects,
+                            /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                            &ExecutionError, &ExecutionFailed);
+    if (!ExecutionFailed && ExitCode == 0)
+      return;
+
+    std::string Message;
+    raw_string_ostream OS(Message);
+    if (ExecutionFailed || ExitCode == -1)
+      OS << "Failed to execute perf script";
+    else if (ExitCode == -2)
+      OS << "Perf script terminated abnormally";
+    else
+      OS << "Perf script failed with exit code " << ExitCode;
+    if (!ExecutionError.empty())
+      OS << ": " << ExecutionError;
+
+    if (auto ErrorBuffer = MemoryBuffer::getFile(ErrorFile)) {
+      StringRef Stderr = ErrorBuffer.get()->getBuffer().trim();
+      if (!Stderr.empty())
+        OS << "\n" << Stderr;
+    }
+    exitWithError(OS.str());
+  };
+
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                  "-F",     "comm,pid", "-i",
+    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
+                                  "script",
+                                  "--show-mmap-events",
+                                  "-F",
+                                  "comm,pid",
+                                  "-i",
                                   PerfData};
-    sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+    RunPerfScript(ScriptMMapArgs);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
@@ -509,7 +547,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   // Run perf script again to retrieve events for PIDs collected above
   SmallVector<StringRef, 8> ScriptSampleArgs;
-  ScriptSampleArgs.push_back(PerfPath);
+  ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
@@ -520,7 +558,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
-  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
+  RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
@@ -552,30 +590,48 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
-  // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary->getBaseAddress()) {
-    Binary->setIsLoadedByMMap(true);
-    return;
-  }
+  Binary->addMMapRange(Event.Address, Event.Size);
 
-  if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
+  // Check if the FileOffset falls within the [Event.Offset, Event.Offset +
+  // Event.Size) range.
+  auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
+    return Event.Offset <= FileOffset &&
+           (FileOffset - Event.Offset) < Event.Size;
+  };
+
+  if (IsKernel || MMapContainsFileOffset(Binary->getTextSegmentOffset())) {
+    // For ELF, subtract the file offset to get the runtime address
+    // corresponding to file offset zero. Kernel mmap events report the text
+    // address as Event.Offset, so use the text segment offset from the ELF
+    // instead.
+    const uint64_t RuntimeBaseAddress =
+        Binary->isCOFF()
+            ? Event.Address
+            : Event.Address -
+                  (IsKernel ? Binary->getTextSegmentOffset() : Event.Offset);
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    Binary->setBaseAddress(Event.Address);
+    Binary->setBaseAddress(RuntimeBaseAddress);
     Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
-    auto It = llvm::lower_bound(Offsets, Event.Offset);
-    if (It != Offsets.end() && *It == Event.Offset) {
-      // The event is for loading a separate executable segment.
-      auto I = std::distance(Offsets.begin(), It);
+    auto IsContiguousMMapForSegment = [&](auto SegmentIt, uint64_t FileOffset,
+                                          uint64_t RuntimeAddress) {
+      auto I = std::distance(Offsets.begin(), SegmentIt);
       const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
-      if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-          Event.Address - Binary->getBaseAddress())
+      return PreferredAddrs[I] + (FileOffset - *SegmentIt) ==
+             Binary->canonicalizeVirtualAddress(RuntimeAddress);
+    };
+
+    auto It = llvm::lower_bound(Offsets, Event.Offset);
+    if (It != Offsets.end() && MMapContainsFileOffset(*It)) {
+      // The event is for loading a separate executable segment.
+      uint64_t RuntimeSegmentAddress = Event.Address + (*It - Event.Offset);
+      if (!IsContiguousMMapForSegment(It, *It, RuntimeSegmentAddress))
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -585,7 +641,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
+        if (!IsContiguousMMapForSegment(It, Event.Offset, Event.Address))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
@@ -662,10 +718,19 @@ void HybridPerfReader::unwindSamples() {
                      Unwinder.NumExtCallBranch,
                      "of artificial call branches but doesn't have an external "
                      "frame to match.");
+
+  emitWarningSummary(NumBogusTrace, NumTotalHybridSample,
+                     "of hybrid samples had a callchain leaf that disagreed "
+                     "with the newest LBR target (bogus trace).");
+  if (NumBogusTrace * 100 > NumTotalHybridSample)
+    WithColor::warning() << "Bogus trace rate exceeds 1%: the profile has high "
+                            "sample skid and may not be suitable for "
+                            "optimization.\n";
 }
 
 /// Parse a hex address from \p Str.
 static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
+  Str = Str.take_while([](char C) { return !isspace(C); });
   if (Str.consume_front("0x") != HasPrefix)
     return true;
   return Str.getAsInteger(16, Addr);
@@ -821,6 +886,15 @@ void PerfScriptReader::warnIfMissingMMap() {
   }
 }
 
+// The unwinder requires that LBR tip belong to the leaf frame.
+// External addresses are not checked.
+static bool isValidTrace(ProfiledBinary *Binary, uint64_t StackLeaf,
+                         uint64_t LBRLeaf) {
+  if (StackLeaf == ExternalAddr || LBRLeaf == ExternalAddr)
+    return true;
+  return Binary->findFuncRange(LBRLeaf) == Binary->findFuncRange(StackLeaf);
+}
+
 void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
@@ -851,6 +925,19 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
+        NumTotalHybridSample++;
+        // Drop samples whose callchain and LBR disagree before the
+        // canonicalization below hides the disagreement.
+        uint64_t StackLeaf = Sample->CallStack.front();
+        uint64_t LBRLeaf = Sample->LBRStack[0].Target;
+        if (!isValidTrace(Binary, StackLeaf, LBRLeaf)) {
+          NumBogusTrace++;
+          if (ShowDetailedWarning)
+            WithColor::warning()
+                << "Bogus trace: stack tip = " << format_hex(StackLeaf, 10)
+                << ", LBR tip = " << format_hex(LBRLeaf, 10) << "\n";
+          return;
+        }
         // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
         // ranges
         Sample->CallStack.front() = Sample->LBRStack[0].Target;
@@ -1222,6 +1309,7 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
     // Detect sample with call stack
     int32_t Count = 0;
     while (!TraceIt.isAtEoF() &&
+           !isLBRSample(TraceIt.getCurrentLine(), false) &&
            !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false)) {
       Count++;
       TraceIt.advance();

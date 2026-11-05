@@ -21,12 +21,21 @@
 // DRIVER-SAME: "--emit-fatbin-only" "-o" "{{.*}}.hipfb"
 // DRIVER-SAME: "{{.*}}.x.bundle.bc" "{{.*}}.y.bundle.bc"
 
+/// Request the canonical target ID that device images are labeled with.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
+// RUN:   -fgpu-rdc --hip-link --cuda-device-only \
+// RUN:   --offload-arch=gfx908:xnack+:sramecc- \
+// RUN:   %t.x.bundle.bc -o %t.hipfb 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TARGET-ID
+// TARGET-ID: "{{.*}}clang-linker-wrapper"
+// TARGET-ID-SAME: "--should-extract=gfx908:sramecc-:xnack+"
+
 // RUN: %clang -### -v --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --hip-link --cuda-device-only \
 // RUN:   --offload-arch=gfx906 %t.x.bundle.bc -o %t.hipfb 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=VERBOSE
 // VERBOSE: "{{.*}}clang-linker-wrapper"
-// VERBOSE-SAME: "--device-compiler=amdgcn-amd-amdhsa=-v"
+// VERBOSE-SAME: "--device-compiler=amdgpu-amd-amdhsa=-v"
 // VERBOSE-SAME: "--wrapper-verbose"
 // VERBOSE-SAME: "--emit-fatbin-only"
 

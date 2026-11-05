@@ -13,7 +13,6 @@
 
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/putenv.h"
-#include "src/string/strcmp.h"
 #include "src/unistd/environ.h"
 
 #include "test/IntegrationTest/test.h"
@@ -31,7 +30,7 @@ TEST_MAIN() {
     ASSERT_EQ(LIBC_NAMESPACE::putenv(set_var), 0);
     char *value = LIBC_NAMESPACE::getenv("PUTENV_TEST");
     ASSERT_TRUE(value != nullptr);
-    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "hello"), 0);
+    ASSERT_STREQ(value, "hello");
   }
 
   // Test: Overwrite existing variable
@@ -39,7 +38,7 @@ TEST_MAIN() {
     ASSERT_EQ(LIBC_NAMESPACE::putenv(replace_var), 0);
     char *value = LIBC_NAMESPACE::getenv("PUTENV_TEST");
     ASSERT_TRUE(value != nullptr);
-    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "world"), 0);
+    ASSERT_STREQ(value, "world");
   }
 
   // Test: The pointer itself is used (not a copy)
@@ -54,7 +53,7 @@ TEST_MAIN() {
     ASSERT_EQ(LIBC_NAMESPACE::putenv(empty_value), 0);
     char *value = LIBC_NAMESPACE::getenv("PUTENV_EMPTY");
     ASSERT_TRUE(value != nullptr);
-    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, ""), 0);
+    ASSERT_STREQ(value, "");
   }
 
   // Test: Special characters in value
@@ -62,7 +61,7 @@ TEST_MAIN() {
     ASSERT_EQ(LIBC_NAMESPACE::putenv(special_chars), 0);
     char *value = LIBC_NAMESPACE::getenv("PUTENV_SPECIAL");
     ASSERT_TRUE(value != nullptr);
-    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "!@#$%^&*()"), 0);
+    ASSERT_STREQ(value, "!@#$%^&*()");
   }
 
   // Test: No '=' removes the variable (POSIX behavior)

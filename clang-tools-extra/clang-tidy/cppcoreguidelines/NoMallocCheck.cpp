@@ -31,14 +31,14 @@ void NoMallocCheck::registerMatchers(MatchFinder *Finder) {
   // Registering realloc calls, suggest std::vector or std::string.
   Finder->addMatcher(
       callExpr(callee(functionDecl(
-                   hasAnyName(utils::options::parseStringList((ReallocList))))))
+                   hasAnyName(utils::options::parseStringList(ReallocList)))))
           .bind("realloc"),
       this);
 
   // Registering free calls, will suggest RAII instead.
   Finder->addMatcher(
       callExpr(callee(functionDecl(
-                   hasAnyName(utils::options::parseStringList((DeallocList))))))
+                   hasAnyName(utils::options::parseStringList(DeallocList)))))
           .bind("free"),
       this);
 }

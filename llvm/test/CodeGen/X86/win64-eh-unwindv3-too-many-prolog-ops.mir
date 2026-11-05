@@ -53,7 +53,7 @@ body:             |
     frame-setup SEH_StackAlloc 8
     frame-setup SEH_StackAlloc 8
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...

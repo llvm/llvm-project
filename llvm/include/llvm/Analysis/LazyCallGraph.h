@@ -34,7 +34,6 @@
 #ifndef LLVM_ANALYSIS_LAZYCALLGRAPH_H
 #define LLVM_ANALYSIS_LAZYCALLGRAPH_H
 
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -44,6 +43,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -1255,6 +1255,10 @@ template <> struct GraphTraits<LazyCallGraph *> {
   static ChildIteratorType child_end(NodeRef N) { return (*N)->end(); }
 };
 
+template <> struct IRUnitKindTraits<LazyCallGraph::SCC> {
+  static constexpr IRUnitKind Kind = IRUnitKind::LazyCallGraphSCC;
+};
+
 /// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
@@ -1304,9 +1308,6 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-
-extern template struct LLVM_TEMPLATE_ABI
-    Any::TypeId<const LazyCallGraph::SCC *>;
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_LAZYCALLGRAPH_H

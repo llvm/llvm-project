@@ -26,7 +26,8 @@ func.func @func2(%arg0: i1) -> f32 {
 // CHECK-LABEL: func @func2
 // CHECK-SAME: (%arg0: i1) -> f32
 // CHECK-DAG: %[[C22:.*]] = arith.constant 2.200000e+00 : f32
-// CHECK-DAG: %[[C75:.*]] = arith.constant 7.500000e+00 : f32
-// CHECK: %[[SEL:.*]] = arith.select %arg0, %[[C75]], %[[C22]] : f32
-// CHECK: %[[ADD:.*]] = arith.addf %[[SEL]], %[[C22]] : f32
-// CHECK: return %[[ADD]] : f32
+// CHECK-DAG: %[[C53:.*]] = arith.constant 5.300000e+00 : f32
+// CHECK: %[[ADD1:.*]] = arith.addf %[[C22]], %[[C53]] : f32
+// CHECK: %[[SEL:.*]] = arith.select %arg0, %[[ADD1]], %[[C22]] : f32
+// CHECK: %[[ADD2:.*]] = arith.addf %[[C22]], %[[SEL]] : f32
+// CHECK: return %[[ADD2]] : f32

@@ -429,9 +429,7 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
     O << "\t{disp32}";
 
   // Determine where the memory operand starts, if present
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
-  if (MemoryOperand != -1)
-    MemoryOperand += X86II::getOperandBias(Desc);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
 
   // Address-Size override prefix
   if (Flags & X86::IP_HAS_AD_SIZE &&

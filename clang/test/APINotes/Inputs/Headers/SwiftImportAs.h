@@ -20,6 +20,10 @@ struct CopyableType { int value; };
 struct NonEscapableType { int value; };
 struct EscapableType { int value; };
 
+struct __attribute__((swift_attr("Escapable"))) EscapableAnnotatedInHeader { int value; };
+struct __attribute__((swift_attr("~Copyable"))) NoncopyableAnnotatedInHeader { int value; };
+struct __attribute__((swift_attr("Escapable"))) EscapabilityConflict { int value; };
+
 struct RefCountedTypeWithDefaultConvention {};
 inline void retain(RefCountedType *x) {}
 inline void release(RefCountedType *x) {}

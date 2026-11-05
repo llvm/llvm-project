@@ -9,4 +9,4 @@
 #include "RoundEvenTest.h"
 #include "src/math/roundevenf.h"
 
-LIST_ROUNDEVEN_TESTS(float, LIBC_NAMESPACE::roundevenf)
+LIST_ROUNDEVEN_TESTS(Roundevenf, float, LIBC_NAMESPACE::roundevenf)

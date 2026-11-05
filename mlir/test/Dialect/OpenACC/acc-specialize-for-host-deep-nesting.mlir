@@ -30,36 +30,36 @@ func.func @deeply_nested_orphan_loops(%arg0 : memref<i32>) attributes {acc.routi
                                 acc.loop control(%iv15 : i32) = (%c0 : i32) to (%c10 : i32) step (%c1 : i32) {
                                   memref.store %iv15, %arg0[] : memref<i32>
                                 acc.yield
-                                } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                                } inclusiveUpperbound(array<i1: true>) seq
                               acc.yield
-                              } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                              } inclusiveUpperbound(array<i1: true>) seq
                             acc.yield
-                            } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                            } inclusiveUpperbound(array<i1: true>) seq
                           acc.yield
-                          } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                          } inclusiveUpperbound(array<i1: true>) seq
                         acc.yield
-                        } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                        } inclusiveUpperbound(array<i1: true>) seq
                       acc.yield
-                      } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                      } inclusiveUpperbound(array<i1: true>) seq
                     acc.yield
-                    } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                    } inclusiveUpperbound(array<i1: true>) seq
                   acc.yield
-                  } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                  } inclusiveUpperbound(array<i1: true>) seq
                 acc.yield
-                } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+                } inclusiveUpperbound(array<i1: true>) seq
               acc.yield
-              } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+              } inclusiveUpperbound(array<i1: true>) seq
             acc.yield
-            } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+            } inclusiveUpperbound(array<i1: true>) seq
           acc.yield
-          } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+          } inclusiveUpperbound(array<i1: true>) seq
         acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+        } inclusiveUpperbound(array<i1: true>) seq
       acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) seq
     acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) seq
   acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) seq
   return
 }

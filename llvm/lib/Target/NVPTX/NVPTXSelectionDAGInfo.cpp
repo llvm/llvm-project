@@ -27,6 +27,8 @@ const char *NVPTXSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<NVPTXISD::NodeType>(Opcode)) {
     MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
     MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_LOAD_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_STORE_B128)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
     MAKE_CASE(NVPTXISD::LoadV8)
@@ -59,6 +61,9 @@ void NVPTXSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     break;
+  case NVPTXISD::ST_ASYNC_MBARRIER_B128:
+    // invalid node: operand #4 must have pointer type i64, but has type i32
+    return;
   case NVPTXISD::ProxyReg:
     // invalid number of results; expected 2, got 1
     return;

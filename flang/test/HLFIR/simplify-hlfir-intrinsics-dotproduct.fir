@@ -11,7 +11,7 @@ func.func @dot_product_integer(%arg0: !hlfir.expr<?xi16>, %arg1: !hlfir.expr<?xi
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xi16>) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.do_loop %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_2]] unordered iter_args(%[[VAL_8:.*]] = %[[VAL_3]]) -> (i32) {
 // CHECK:             %[[VAL_9:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_7]] : (!hlfir.expr<?xi16>, index) -> i16
 // CHECK:             %[[VAL_10:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_7]] : (!hlfir.expr<?xi32>, index) -> i32
@@ -33,7 +33,7 @@ func.func @dot_product_real(%arg0: !hlfir.expr<?xf32>, %arg1: !hlfir.expr<?xf16>
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xf32>) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.do_loop %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_2]] iter_args(%[[VAL_8:.*]] = %[[VAL_3]]) -> (f32) {
 // CHECK:             %[[VAL_9:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_7]] : (!hlfir.expr<?xf32>, index) -> f32
 // CHECK:             %[[VAL_10:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_7]] : (!hlfir.expr<?xf16>, index) -> f16
@@ -55,7 +55,7 @@ func.func @dot_product_complex(%arg0: !hlfir.expr<?xcomplex<f32>>, %arg1: !hlfir
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xcomplex<f32>>) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.undefined complex<f32>
 // CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 // CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_3]], [1 : index] : (complex<f32>, f32) -> complex<f32>
@@ -83,7 +83,7 @@ func.func @dot_product_real_complex(%arg0: !hlfir.expr<?xf32>, %arg1: !hlfir.exp
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xf32>) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.undefined complex<f32>
 // CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 // CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_3]], [1 : index] : (complex<f32>, f32) -> complex<f32>
@@ -115,7 +115,7 @@ func.func @dot_product_logical(%arg0: !hlfir.expr<?x!fir.logical<1>>, %arg1: !hl
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant false
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x!fir.logical<1>>) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_3]] : (i1) -> !fir.logical<4>
 // CHECK:           %[[VAL_7:.*]] = fir.do_loop %[[VAL_8:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_2]] unordered iter_args(%[[VAL_9:.*]] = %[[VAL_6]]) -> (!fir.logical<4>) {
 // CHECK:             %[[VAL_10:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_8]] : (!hlfir.expr<?x!fir.logical<1>>, index) -> !fir.logical<1>

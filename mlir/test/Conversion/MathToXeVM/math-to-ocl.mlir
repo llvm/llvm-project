@@ -1,5 +1,7 @@
-// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm | FileCheck %s -check-prefixes='CHECK,CHECK-NO-OCL' 
-// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm='convert-to-ocl=true convert-arith=true' | FileCheck %s -check-prefixes='CHECK,CHECK-OCL' 
+// Lowering to the precise OCL intrinsics is on by default, so the first line
+// has to turn it off to check the ops are left alone:
+// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm='convert-to-ocl=false' | FileCheck %s -check-prefixes='CHECK,CHECK-NO-OCL'
+// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm | FileCheck %s -check-prefixes='CHECK,CHECK-OCL'
 
 module @test_module {
   // CHECK-OCL: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_copysignf(f32, f32) -> f32
@@ -529,5 +531,35 @@ module @test_module {
     %result = arith.divf %arg, %sqrt fastmath<afn> : f32
     // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_divideff(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
     func.return %result : f32
+  }
+}
+
+// -----
+
+// The fastmath flag alone picks the intrinsic: only `afn` gets the native one,
+// everything else gets the precise one. Both pattern sets are live in the same
+// run, so the native pattern has to win the benefit tie on the `afn` ops.
+// `fastmath<fast>` is a group that expands to include `afn`, so it is native
+// too; other fastmath flags without `afn` are not.
+
+module @test_module {
+  // CHECK-DAG: llvm.func @_Z{{.*}}__spirv_ocl_native_expf(f32) -> f32
+  // CHECK-OCL-DAG: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_expf(f32) -> f32
+  // CHECK-LABEL: func @math_exp_fastmath_routing
+  func.func @math_exp_fastmath_routing(%arg : f32) -> (f32, f32, f32, f32, f32) {
+    %no_flag = math.exp %arg : f32
+    // CHECK-OCL: llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expf(%{{.*}}) : (f32) -> f32
+    // CHECK-NO-OCL: math.exp
+    %none = math.exp %arg fastmath<none> : f32
+    // CHECK-OCL: llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expf(%{{.*}}) : (f32) -> f32
+    // CHECK-NO-OCL: math.exp
+    %no_afn = math.exp %arg fastmath<nnan,ninf,reassoc> : f32
+    // CHECK-OCL: llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expf(%{{.*}}) : (f32) -> f32
+    // CHECK-NO-OCL: math.exp
+    %afn = math.exp %arg fastmath<afn> : f32
+    // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_expf(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
+    %fast = math.exp %arg fastmath<fast> : f32
+    // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_expf(%{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+    func.return %no_flag, %none, %no_afn, %afn, %fast : f32, f32, f32, f32, f32
   }
 }

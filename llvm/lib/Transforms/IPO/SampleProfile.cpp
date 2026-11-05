@@ -344,7 +344,6 @@ namespace {
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
 using EquivalenceClassMap = DenseMap<const BasicBlock *, const BasicBlock *>;
 using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
-using EdgeWeightMap = DenseMap<Edge, uint64_t>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
@@ -572,15 +571,6 @@ protected:
   // GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   // all the function symbols defined or declared in current module.
   DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
-
-  // All the Names used in FunctionSamples including outline function
-  // names, inline instance names and call target names.
-  StringSet<> NamesInProfile;
-  // MD5 version of NamesInProfile. Either NamesInProfile or GUIDsInProfile is
-  // populated, depends on whether the profile uses MD5. Because the name table
-  // generally contains several magnitude more entries than the number of
-  // functions, we do not want to convert all names from one form to another.
-  llvm::DenseSet<uint64_t> GUIDsInProfile;
 
   // For symbol in profile symbol list, whether to regard their profiles
   // to be accurate. It is mainly decided by existance of profile symbol
@@ -993,12 +983,11 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (!ProfileSizeInline)
     return false;
 
-  Function *Callee = CallInst.getCalledFunction();
-  if (Callee == nullptr)
+  if (CallInst.getCalledFunction() == nullptr)
     return false;
 
-  InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
-                                  GetAC, GetTLI);
+  InlineCost Cost = getInlineCost(CallInst, getInlineParams(),
+                                  GetTTI(*CallInst.getCaller()), GetAC, GetTLI);
 
   if (Cost.isNever())
     return false;
@@ -1353,6 +1342,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getNever("cold callsite");
   }
 
+  Function *Caller = Candidate.CallInstr->getCaller();
   Function *Callee = Candidate.CallInstr->getCalledFunction();
   assert(Callee && "Expect a definition for inline candidate of direct call");
 
@@ -1367,7 +1357,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
   InlineCost Cost = getInlineCost(*Candidate.CallInstr, Callee, Params,
-                                  GetTTI(*Callee), GetAC, GetTLI);
+                                  GetTTI(*Caller), GetAC, GetTLI);
 
   // Honor always inline and never inline from call analyzer
   if (Cost.isNever() || Cost.isAlways())
@@ -1419,11 +1409,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   CandidateQueue CQueue;
   InlineCandidate NewCandidate;
   for (auto &BB : F) {
-    for (auto &I : BB) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-      if (getInlineCandidate(&NewCandidate, CB))
+    for (CallBase &CB : make_isa_range<CallBase>(BB)) {
+      if (getInlineCandidate(&NewCandidate, &CB))
         CQueue.push(NewCandidate);
     }
   }
@@ -1741,7 +1728,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrLifetime();
         }
       }
     }
@@ -1986,19 +1973,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
   // While profile-sample-accurate is on, ignore symbol list.
   ProfAccForSymsInList =
       ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
-  if (ProfAccForSymsInList) {
-    NamesInProfile.clear();
-    GUIDsInProfile.clear();
-    auto NameTable = Reader->getNameTable();
-    if (FunctionSamples::UseMD5) {
-      for (FunctionId Name : NameTable)
-        GUIDsInProfile.insert(Name.getHashCode());
-    } else {
-      for (FunctionId Name : NameTable)
-        NamesInProfile.insert(Name.stringRef());
-    }
+  if (ProfAccForSymsInList)
     CoverageTracker.setProfAccForSymsInList(true);
-  }
 
   if (FAM && !ProfileInlineReplayFile.empty()) {
     ExternalInlineAdvisor = getReplayInlineAdvisor(
@@ -2225,9 +2201,8 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
 
   // Account for cold calls not inlined....
   if (!FunctionSamples::ProfileIsCS)
-    for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
-         notInlinedCallInfo)
-      updateProfileCallee(pair.first, pair.second.entryCount);
+    for (const auto &[Fn, Info] : notInlinedCallInfo)
+      updateProfileCallee(Fn, Info.entryCount);
 
   if (RemoveProbeAfterProfileAnnotation &&
       FunctionSamples::ProfileIsProbeBased) {
@@ -2280,10 +2255,10 @@ bool SampleProfileLoader::runOnFunction(Function &F,
     // but not cold accumulatively...), so the outline function showing up as
     // cold in sampled binary will actually not be cold after current build.
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    if ((FunctionSamples::UseMD5 &&
-         GUIDsInProfile.count(
-             Function::getGUIDAssumingExternalLinkage(CanonName))) ||
-        (!FunctionSamples::UseMD5 && NamesInProfile.count(CanonName)))
+    if (FunctionSamples::UseMD5
+            ? Reader->contains(
+                  Function::getGUIDAssumingExternalLinkage(CanonName))
+            : Reader->contains(CanonName))
       initialEntryCount = -1;
   }
 

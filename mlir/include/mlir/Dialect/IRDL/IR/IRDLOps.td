@@ -32,7 +32,8 @@ class AtMostOneChildOf<string op> : ParamNativeOpTrait<"AtMostOneChildOf", op>;
 //===----------------------------------------------------------------------===//
 
 def IRDL_DialectOp : IRDL_Op<"dialect",
-    [IsolatedFromAbove, NoTerminator, Symbol, SymbolTable]> {
+    [IsolatedFromAbove, NoTerminator, SymbolName, SymbolVisibility, Symbol,
+     SymbolTable]> {
   let summary = "Define a new dialect";
   let description = [{
     The `irdl.dialect` operation defines a dialect. All operations, attributes,
@@ -49,10 +50,12 @@ def IRDL_DialectOp : IRDL_Op<"dialect",
     The above program defines a `cmath` dialect.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+    "($sym_visibility^)? $sym_name attr-dict-with-keyword "
+    "custom<SingleBlockRegion>($body)";
   let hasVerifier = 1;
 }
 
@@ -62,7 +65,8 @@ def IRDL_DialectOp : IRDL_Op<"dialect",
 
 def IRDL_TypeOp : IRDL_Op<"type",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-     AtMostOneChildOf<"ParametersOp">, Symbol, IsolatedFromAbove]> {
+     AtMostOneChildOf<"ParametersOp">, SymbolName, Symbol,
+     SymbolVisibility, IsolatedFromAbove]> {
   let summary = "Define a new type";
   let description = [{
     `irdl.type` defines a new type belonging to the `irdl.dialect` parent.
@@ -87,16 +91,19 @@ def IRDL_TypeOp : IRDL_Op<"type",
     type has a single parameter that should be either `i32` or `i64`.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+    "($sym_visibility^)? $sym_name attr-dict-with-keyword "
+    "custom<SingleBlockRegion>($body)";
   let hasVerifier = 1;
 }
 
 def IRDL_AttributeOp : IRDL_Op<"attribute",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-     AtMostOneChildOf<"ParametersOp">, Symbol, IsolatedFromAbove]> {
+     AtMostOneChildOf<"ParametersOp">, SymbolName, Symbol,
+     SymbolVisibility, IsolatedFromAbove]> {
   let summary = "Define a new attribute";
   let description = [{
     `irdl.attribute` defines a new attribute belonging to the `irdl.dialect`
@@ -123,10 +130,12 @@ def IRDL_AttributeOp : IRDL_Op<"attribute",
     either a `"foo"` or a `"bar"`.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+    "($sym_visibility^)? $sym_name attr-dict-with-keyword "
+    "custom<SingleBlockRegion>($body)";
 
   let hasVerifier = 1;
 }
@@ -169,7 +178,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
     AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp, RegionsOp">,
-    Symbol, IsolatedFromAbove]> {
+    SymbolName, SymbolVisibility, Symbol, IsolatedFromAbove]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`
@@ -200,10 +209,12 @@ def IRDL_OperationOp : IRDL_Op<"operation",
     returns a single result of the element type of the operand.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+    "($sym_visibility^)? $sym_name attr-dict-with-keyword "
+    "custom<SingleBlockRegion>($body)";
   let hasRegionVerifier = true;
   let hasVerifier = 1;
 }

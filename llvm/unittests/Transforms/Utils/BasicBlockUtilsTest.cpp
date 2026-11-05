@@ -651,11 +651,10 @@ bb4:
 )IR");
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
-  LoopInfo LI(DT);
   CycleInfo CI;
   CI.compute(*F);
   BranchProbabilityInfo BPI(*F, CI);
-  BlockFrequencyInfo BFI(*F, BPI, LI);
+  BlockFrequencyInfo BFI(*F, BPI, CI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/true,
                                            &BPI, &BFI));
@@ -695,11 +694,10 @@ bb4:
 )IR");
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
-  LoopInfo LI(DT);
   CycleInfo CI;
   CI.compute(*F);
   BranchProbabilityInfo BPI(*F, CI);
-  BlockFrequencyInfo BFI(*F, BPI, LI);
+  BlockFrequencyInfo BFI(*F, BPI, CI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/false,
                                            &BPI, &BFI));

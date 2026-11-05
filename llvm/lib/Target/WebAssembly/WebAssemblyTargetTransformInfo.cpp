@@ -56,7 +56,7 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
 InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   if (ST->hasSIMD128()) {
     static const CostTblEntry ArithCostTbl[]{
@@ -82,7 +82,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
 
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     switch (Opcode) {
     case Instruction::LShr:
     case Instruction::AShr:
@@ -92,7 +92,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       // approximation.
       if (!Op2Info.isUniform())
         Cost =
-            cast<FixedVectorType>(VTy)->getNumElements() *
+            VTy->getNumElements() *
             (TargetTransformInfo::TCC_Basic +
              getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
              TargetTransformInfo::TCC_Basic);
@@ -242,7 +242,7 @@ WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.LoadSizes.append({8, 4, 2, 1});
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
 
   return Options;
 }
@@ -301,9 +301,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args,
-    const Instruction *CxtI) const {
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
   //  Otherwise, we might end up with the wrong ShuffleKind to match against.
 
@@ -314,8 +314,8 @@ InstructionCost WebAssemblyTTIImpl::getShuffleCost(
       isa<FixedVectorType>(SrcTy))
     return 1;
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
-                               Args, CxtI);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CtxI);
 }
 
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(

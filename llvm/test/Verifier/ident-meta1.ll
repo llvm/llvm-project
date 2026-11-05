@@ -8,5 +8,5 @@
 !1 = !{!"string1", !"string2"}
 ; CHECK: assembly parsed, but does not verify as correct!
 ; CHECK-NEXT: incorrect number of operands in llvm.ident metadata
-; CHECK-NEXT: !1
+; CHECK-NEXT: !{{[0-9]+}}
 

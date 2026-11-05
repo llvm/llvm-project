@@ -8,6 +8,8 @@
 ; RUN: llvm-as < %t/ieeedouble.ll | llvm-dis | FileCheck %s --check-prefix=IEEEDOUBLE
 ; RUN: llvm-as < %t/unrecognized.ll | llvm-dis | FileCheck %s --check-prefix=UNRECOGNIZED
 ; RUN: llvm-as < %t/arm.ll | llvm-dis | FileCheck %s --check-prefix=ARM
+; RUN: llvm-as < %t/ppc-hard.ll | llvm-dis | FileCheck %s --check-prefix=HARD
+; RUN: llvm-as < %t/ppc-soft.ll | llvm-dis | FileCheck %s --check-prefix=SOFT
 
 ;; All the old PowerPC long double format spellings are upgraded to the new key
 ;; and IR type-name values.
@@ -43,3 +45,17 @@ target triple = "armv7-unknown-linux-gnueabihf"
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"hard"}
 ; ARM: !0 = !{i32 1, !"float-abi", !"hard"}
+
+;; The "float-abi" key now also names the target-independent soft/hard ABI flag;
+;; those values are valid and must be left untouched, even on PowerPC.
+;--- ppc-hard.ll
+target triple = "powerpc64le-unknown-linux-gnu"
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"float-abi", !"hard"}
+; HARD: !0 = !{i32 1, !"float-abi", !"hard"}
+
+;--- ppc-soft.ll
+target triple = "powerpc64le-unknown-linux-gnu"
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"float-abi", !"soft"}
+; SOFT: !0 = !{i32 1, !"float-abi", !"soft"}

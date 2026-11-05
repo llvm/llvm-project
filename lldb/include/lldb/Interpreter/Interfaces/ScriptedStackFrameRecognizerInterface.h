@@ -37,6 +37,10 @@ public:
   virtual std::string GetStopDescription(lldb::StackFrameSP frame_sp) {
     return "";
   }
+
+  virtual lldb::ThreadPlanSP GetStepThroughPlan(lldb::ThreadSP thread_sp) {
+    return {};
+  }
 };
 } // namespace lldb_private
 

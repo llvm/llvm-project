@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -299,6 +300,8 @@ public:
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Member->getSourceRange());
+    if (auto *EnclosingCtx = Member->getDeclContext())
+      Report->setDeclWithIssue(Decl::castFromDeclContext(EnclosingCtx));
     BR->emitReport(std::move(Report));
   }
 

@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 class TestMSVCRTCException(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessPlatform(["windows"])
+    @requireWindows
     @skipUnlessMSVC
     def test_msvc_runtime_checks(self):
         """Test that lldb prints MSVC's runtime checks exceptions as stop reasons."""

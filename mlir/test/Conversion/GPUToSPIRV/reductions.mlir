@@ -20,18 +20,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
-    %reduced = gpu.all_reduce add %arg {} : (f32) -> (f32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce add %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -60,18 +60,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIAdd <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
-    %reduced = gpu.all_reduce add %arg {} : (i32) -> (i32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce add %arg {} : (i32) -> (i32)
     gpu.return
   }
 }
@@ -180,18 +180,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
-    %reduced = gpu.all_reduce mul %arg {} : (f32) -> (f32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce mul %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -220,18 +220,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIMul <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
-    %reduced = gpu.all_reduce mul %arg {} : (i32) -> (i32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce mul %arg {} : (i32) -> (i32)
     gpu.return
   }
 }
@@ -340,18 +340,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMin <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
-    %reduced = gpu.all_reduce minnumf %arg {} : (f32) -> (f32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce minnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -382,18 +382,39 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: i32)
-  gpu.func @test(%arg : i32) kernel
+  gpu.func @minsi(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMin <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
     %r0 = gpu.all_reduce minsi %arg {} : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @minui(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
     %r1 = gpu.all_reduce minui %arg {} : (i32) -> (i32)
     gpu.return
   }
@@ -507,18 +528,18 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
-
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
-    %reduced = gpu.all_reduce maxnumf %arg {} : (f32) -> (f32)
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce maxnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -549,19 +570,39 @@ gpu.module @kernels {
 
 // -----
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
-  //  CHECK-SAME: (%[[ARG:.*]]: i32)
-  gpu.func @test(%arg : i32) kernel
+  gpu.func @maxsi(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMax <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
     %r0 = gpu.all_reduce maxsi %arg {} : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @maxui(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
     %r1 = gpu.all_reduce maxui %arg {} : (i32) -> (i32)
     gpu.return
   }

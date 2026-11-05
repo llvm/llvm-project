@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
+#include "Block.h"
 #include "Frame.h"
-#include "InterpBlock.h"
 #include "Pointer.h"
 
 namespace clang {
@@ -26,9 +26,6 @@ class Pointer;
 /// Frame storing local variables.
 class InterpFrame final : public Frame {
 public:
-  /// The frame of the previous function.
-  InterpFrame *Caller;
-
   /// Bottom Frame.
   InterpFrame(InterpState &S);
 
@@ -59,22 +56,11 @@ public:
     return Func->getName();
   }
 
-  static void free(InterpFrame *F) {
-    if (!F->isBottomFrame()) {
-      F->~InterpFrame();
-      delete[] reinterpret_cast<char *>(F);
-    } else {
-      F->~InterpFrame();
-    }
-  }
-
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
-  void initScope(unsigned Idx);
-  void destroyScopes();
-  void enableLocal(unsigned Idx);
-  bool isLocalEnabled(unsigned Idx) const {
-    return localInlineDesc(Idx)->IsActive;
+  void enableLocal(unsigned Offset);
+  bool isLocalEnabled(unsigned Offset) const {
+    return getLocalBlock(Offset)->getBlockDesc<InlineDescriptor>().IsActive;
   }
 
   /// Describes the frame with arguments for diagnostic purposes.
@@ -104,14 +90,27 @@ public:
 
   /// Mutates a local variable.
   template <typename T> void setLocal(unsigned Offset, const T &Value) {
-    localRef<T>(Offset) = Value;
-    localInlineDesc(Offset)->IsInitialized = true;
-    localInlineDesc(Offset)->LifeState = Lifetime::Started;
+    Block *B = getLocalBlock(Offset);
+
+    B->deref<T>() = Value;
+    auto &LID = B->getBlockDesc<InlineDescriptor>();
+    LID.IsInitialized = true;
+    LID.LifeState = Lifetime::Started;
   }
 
   /// Returns a pointer to a local variables.
-  Pointer getLocalPointer(unsigned Offset) const;
-  Block *getLocalBlock(unsigned Offset) const;
+  Pointer getLocalPointer(unsigned Offset) const {
+    assert(Offset < Func->getFrameSize() && "Invalid local offset.");
+    return Pointer(getLocalBlock(Offset));
+  }
+  Block *getLocalBlock(unsigned Offset) const {
+    Block *B = localBlock(Offset);
+    if (LLVM_UNLIKELY(!B->isInitialized())) {
+      B->invokeCtor();
+      new (localInlineDesc(Offset)) InlineDescriptor(B->getDescriptor());
+    }
+    return B;
+  };
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Index) const {
@@ -146,10 +145,6 @@ public:
     return stackRef<Pointer>(0);
   }
 
-  /// Checks if the frame is a root frame - return should quit the interpreter.
-  bool isRoot() const { return !Func; }
-
-  /// Returns the return address of the frame.
   CodePtr getRetPC() const { return RetPC; }
   /// Returns the return address of the opcode in the caller frame.
   CodePtr getRetOpPC() const {
@@ -161,11 +156,12 @@ public:
 
   /// Map a location to a source.
   SourceInfo getSource(CodePtr PC) const;
-  const Expr *getExpr(CodePtr PC) const;
-  SourceLocation getLocation(CodePtr PC) const;
-  SourceRange getRange(CodePtr PC) const;
+  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
+  SourceLocation getLocation(CodePtr PC) const {
+    return getSource(PC).getLoc();
+  }
+  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
-  unsigned getDepth() const { return Depth; }
   unsigned getArgSize() const { return ArgSize; }
 
   bool isStdFunction() const;
@@ -203,6 +199,7 @@ private:
   }
 
   /// Returns a pointer to a local's block.
+  /// Will NOT initialize the block.
   Block *localBlock(unsigned Offset) const {
     return reinterpret_cast<Block *>(locals() + Offset - sizeof(Block));
   }
@@ -218,23 +215,25 @@ private:
     return reinterpret_cast<InlineDescriptor *>(locals() + Offset);
   }
 
+public:
+  /// The frame of the previous function.
+  InterpFrame *Caller;
+
 private:
   /// Reference to the interpreter state.
   InterpState &S;
-  /// Depth of this frame.
-  unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
   /// Return address.
   CodePtr RetPC;
-  /// The size of all the arguments.
-  const unsigned ArgSize;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
 #ifndef NDEBUG
   /// Offset on the stack at entry.
   size_t FrameOffset = 0;
 #endif
+  /// The size of all the arguments.
+  const unsigned ArgSize;
 
 public:
   unsigned MSVCConstexprAllowed = 0;

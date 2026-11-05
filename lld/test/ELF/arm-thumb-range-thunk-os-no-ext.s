@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv4t-none-linux-gnueabi %s -o %t.o
-// RUN: ld.lld -z nosort-thunks %t.o -o %t2
+// RUN: ld.lld %t.o -o %t2
 /// The output file is large, most of it zeroes. We dissassemble only the
 /// parts we need to speed up the test and avoid a large output file.
 // RUN: llvm-objdump --no-show-raw-insn -d %t2 --start-address=0x100000 --stop-address=0x10000c | FileCheck --check-prefix=CHECK1 %s
@@ -46,7 +46,7 @@ _start:
 // CHECK1-LABEL: <_start>:
 // CHECK1-NEXT:   100000:       bl      0x200000 <tfunc00>      @ imm = #0xffffc
 // CHECK1-NEXT:                 bl      0x500000 <tfunc03>      @ imm = #0x3ffff8
-// CHECK1-NEXT:                 bl      0x400008 <__Thumbv4ABSLongThunk_tfunc04> @ imm = #0x2ffffc
+// CHECK1-NEXT:                 bl      0x400018 <__Thumbv4ABSLongThunk_tfunc04> @ imm = #0x30000c
 
 FUNCTION 00
 // CHECK2-LABEL: <tfunc00>:
@@ -61,22 +61,22 @@ FUNCTION 02
   /// The thunks should not generate a v7-style short thunk.
 // CHECK4-LABEL: <tfunc02>:
 // CHECK4-NEXT:   400000:       bx      lr
-// CHECK4-NEXT:                 bl      0x400018 <__Thumbv4ABSLongThunk_tfunc07> @ imm = #0x12
+// CHECK4-NEXT:                 bl      0x400008 <__Thumbv4ABSLongThunk_tfunc07> @ imm = #0x2
 // CHECK4-NEXT:                 bmi     0x3fffb2 <tfunc01+0xfffb2> @ imm = #-0x58
 // CHECK4-EMPTY:
-// CHECK4-NEXT:  <__Thumbv4ABSLongThunk_tfunc04>:
-// CHECK4-NEXT:   400008:      	bx      pc
-// CHECK4-NEXT:                 b       0x400008 <__Thumbv4ABSLongThunk_tfunc04> @ imm = #-0x6
-// CHECK4-NEXT:  40000c:        ldr	    r12, [pc]               @ 0x400014 <__Thumbv4ABSLongThunk_tfunc04+0xc>
-// CHECK4-NEXT:                 bx	    r12
-// CHECK4-NEXT:   400014: 01 00 60 00  	.word	0x00600001
-// CHECK4-EMPTY:
 // CHECK4-NEXT:  <__Thumbv4ABSLongThunk_tfunc07>:
+// CHECK4-NEXT:   400008:      	bx      pc
+// CHECK4-NEXT:                 b       0x400008 <__Thumbv4ABSLongThunk_tfunc07> @ imm = #-0x6
+// CHECK4-NEXT:  40000c:        ldr	    r12, [pc]               @ 0x400014 <__Thumbv4ABSLongThunk_tfunc07+0xc>
+// CHECK4-NEXT:                 bx	    r12
+// CHECK4-NEXT:   400014: 01 00 90 00  	.word	0x00900001
+// CHECK4-EMPTY:
+// CHECK4-NEXT:  <__Thumbv4ABSLongThunk_tfunc04>:
 // CHECK4-NEXT:   400018:      	bx	    pc
-// CHECK4-NEXT:             	b	    0x400018 <__Thumbv4ABSLongThunk_tfunc07> @ imm = #-0x6
-// CHECK4-NEXT:   40001c:      	ldr	r12, [pc]                   @ 0x400024 <__Thumbv4ABSLongThunk_tfunc07+0xc>
+// CHECK4-NEXT:             	b	    0x400018 <__Thumbv4ABSLongThunk_tfunc04> @ imm = #-0x6
+// CHECK4-NEXT:   40001c:      	ldr	r12, [pc]                   @ 0x400024 <__Thumbv4ABSLongThunk_tfunc04+0xc>
 // CHECK4-NEXT:             	bx	r12
-// CHECK4-NEXT:   400024: 01 00 90 00  	.word	0x00900001
+// CHECK4-NEXT:   400024: 01 00 60 00  	.word	0x00600001
 
 FUNCTION 03
 FUNCTION 04

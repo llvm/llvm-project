@@ -33,7 +33,7 @@ define void @cond_invar_load_gate(ptr noalias %a, ptr noalias %cond, ptr noalias
 ; REJECT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; REJECT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; REJECT:       [[VECTOR_PH]]:
-; REJECT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; REJECT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; REJECT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; REJECT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; REJECT:       [[VECTOR_BODY]]:
@@ -92,7 +92,7 @@ define void @cond_invar_load_gate(ptr noalias %a, ptr noalias %cond, ptr noalias
 ; ACCEPT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; ACCEPT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ACCEPT:       [[VECTOR_PH]]:
-; ACCEPT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; ACCEPT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; ACCEPT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; ACCEPT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ACCEPT:       [[VECTOR_BODY]]:
@@ -100,8 +100,7 @@ define void @cond_invar_load_gate(ptr noalias %a, ptr noalias %cond, ptr noalias
 ; ACCEPT-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
 ; ACCEPT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; ACCEPT-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; ACCEPT-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
-; ACCEPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; ACCEPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; ACCEPT-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[TMP3]], i32 0
 ; ACCEPT-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[INV]], <4 x i1> [[TMP4]], <4 x i32> poison)
 ; ACCEPT-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[WIDE_MASKED_LOAD]], i64 0
@@ -142,7 +141,7 @@ define void @cond_invar_load_gate(ptr noalias %a, ptr noalias %cond, ptr noalias
 ; NOMASK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; NOMASK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOMASK:       [[VECTOR_PH]]:
-; NOMASK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; NOMASK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; NOMASK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NOMASK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOMASK:       [[VECTOR_BODY]]:

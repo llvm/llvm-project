@@ -56,9 +56,9 @@ func.func @vector_maskedload(%arg0 : memref<4x5xf32>) -> vector<4xf32> {
 
 // CHECK-LABEL:  @vector_maskedload_with_alignment
 //       CHECK:       memref.load
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 //       CHECK:       memref.load
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 func.func @vector_maskedload_with_alignment(%arg0 : memref<4x5xf32>) -> vector<4xf32> {
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
@@ -66,7 +66,7 @@ func.func @vector_maskedload_with_alignment(%arg0 : memref<4x5xf32>) -> vector<4
   %mask = vector.create_mask %idx_1 : vector<4xi1>
   %s = arith.constant 0.0 : f32
   %pass_thru = vector.broadcast %s : f32 to vector<4xf32>
-  %0 = vector.maskedload %arg0[%idx_0, %idx_4], %mask, %pass_thru {alignment = 8}: memref<4x5xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  %0 = vector.maskedload %arg0[%idx_0, %idx_4], %mask, %pass_thru alignment = 8: memref<4x5xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -112,15 +112,15 @@ func.func @vector_maskedstore(%arg0 : memref<4x5xf32>, %arg1 : vector<4xf32>) {
 
 // CHECK-LABEL:  @vector_maskedstore_with_alignment
 //       CHECK:       memref.store
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 //       CHECK:       memref.store
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 func.func @vector_maskedstore_with_alignment(%arg0 : memref<4x5xf32>, %arg1 : vector<4xf32>) {
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
   %idx_4 = arith.constant 4 : index
   %mask = vector.create_mask %idx_1 : vector<4xi1>
-  vector.maskedstore %arg0[%idx_0, %idx_4], %mask, %arg1 { alignment = 8 } : memref<4x5xf32>, vector<4xi1>, vector<4xf32>
+  vector.maskedstore %arg0[%idx_0, %idx_4], %mask, %arg1 alignment = 8 : memref<4x5xf32>, vector<4xi1>, vector<4xf32>
   return
 }
 
@@ -143,5 +143,21 @@ func.func @vector_maskedload_rank0(%arg0: memref<f32>, %arg3: vector<1xi1>, %arg
 // CHECK-NEXT:  memref.store %[[VAL1]], %[[ARG0]][]
 func.func @vector_maskedstore_rank0(%arg0: memref<f32>, %arg3: vector<1xi1>, %arg4: vector<1xf32>) {
   vector.maskedstore %arg0[], %arg3, %arg4 : memref<f32>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL:  @negative_maskedload_scalable_mask
+//       CHECK:  vector.maskedload
+func.func @negative_maskedload_scalable_mask(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %pass_thru: vector<[4]xf32>) -> vector<[4]xf32> {
+  %idx_0 = arith.constant 0 : index
+  %0 = vector.maskedload %arg0[%idx_0], %mask, %pass_thru : memref<?xf32>, vector<[4]xi1>, vector<[4]xf32> into vector<[4]xf32>
+  return %0 : vector<[4]xf32>
+}
+
+// CHECK-LABEL:  @negative_maskedstore_scalable_mask
+//       CHECK:  vector.maskedstore
+func.func @negative_maskedstore_scalable_mask(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %value: vector<[4]xf32>) {
+  %idx_0 = arith.constant 0 : index
+  vector.maskedstore %arg0[%idx_0], %mask, %value : memref<?xf32>, vector<[4]xi1>, vector<[4]xf32>
   return
 }

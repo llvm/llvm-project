@@ -1,12 +1,12 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld -z nosort-thunks --shared --script=lds a.o -o out.so --defsym absolute=0xf0000000
+// RUN: ld.lld --shared --script=lds a.o -o out.so --defsym absolute=0xf0000000
 // RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s --check-prefix=CHECK-PADS
 // RUN: llvm-mc -filetype=obj -triple=aarch64 shared -o shared.o
-// RUN: ld.lld -z nosort-thunks --shared -o shared.so shared.o
-// RUN: ld.lld -z nosort-thunks shared.so --script=lds a.o -o exe --defsym absolute=0xf0000000
+// RUN: ld.lld --shared -o shared.so shared.o
+// RUN: ld.lld shared.so --script=lds a.o -o exe --defsym absolute=0xf0000000
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-EXE
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-PADS
 
@@ -57,91 +57,108 @@ _start:
  .balign 8
  .space 0x1000
 
-// CHECK-PADS-LABEL: <_start>:
-// CHECK-PADS-NEXT: 10001000: bl      0x10002040
-// CHECK-PADS-NEXT:           bl      0x10002044
-// CHECK-PADS-NEXT:           bl      0x10002048
-// CHECK-PADS-NEXT:           bl      0x1000204c
-// CHECK-PADS-NEXT:           bl      0x10002050
-// CHECK-PADS-NEXT:           bl      0x10002054
-// CHECK-PADS-NEXT:           b       0x10002054
-// CHECK-PADS-NEXT:           bl      0x10002058
-// CHECK-PADS-NEXT:           b       0x10002058
-// CHECK-PADS-NEXT:           bl      0x1000205c
-// CHECK-PADS-NEXT:           b       0x1000205c
-// CHECK-PADS-NEXT:           bl      0x10002060
-// CHECK-PADS-NEXT:           b       0x10002060
-// CHECK-PADS-NEXT:           bl      0x10002064
-// CHECK-PADS-NEXT:           bl      0x10002068
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002040: b       0x18001000 <bti_c_target>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002044: b       0x18001008 <bti_j_target>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002048: b       0x18001010 <bti_jc_target>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 1000204c: b       0x18001018 <paciasp_target>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002050: b       0x18001020 <pacibsp_target>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002054: b       0x18001038 <fn2>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002058:       b       0x18001034 <fn1>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 1000205c:       b       0x18001040 <fn3>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_>:
-// CHECK-NEXT: 10002060:       b       0x18001050 <fn4>
-
-// CHECK-LABEL: <__AArch64ADRPThunk_via_plt>:
-// CHECK-NEXT: 10002064:       b       0x18001080 <via_plt@plt>
+// CHECK-LABEL: <_start>:
+// CHECK-NEXT: 10001000: bl      0x10002068 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002064 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002060 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x1000205c <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002058 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002050 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           b       0x10002050 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002054 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           b       0x10002054 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x1000204c <__AArch64ADRPThunk_>
+// CHECK-NEXT:           b       0x1000204c <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002048 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           b       0x10002048 <__AArch64ADRPThunk_>
+// CHECK-NEXT:           bl      0x10002044 <__AArch64ADRPThunk_via_plt>
+// CHECK-NEXT:           bl      0x10002040 <__AArch64ADRPThunk_absolute>
 
 // CHECK-LABEL: <__AArch64ADRPThunk_absolute>:
-// CHECK-NEXT: 10002068:       b       0x18001098 <absolute@plt>
+// CHECK-NEXT: 10002040: b       0x18001098 <absolute@plt>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002040: b       0x18001000 <bti_c_target>
+// CHECK-LABEL: <__AArch64ADRPThunk_via_plt>:
+// CHECK-NEXT: 10002044: b       0x18001080 <via_plt@plt>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002044: b       0x18001008 <bti_j_target>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002048: b       0x18001050 <fn4>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002048: b       0x18001010 <bti_jc_target>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 1000204c: b       0x18001040 <fn3>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 1000204c: b       0x18001018 <paciasp_target>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002050: b       0x18001038 <fn2>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002050: b       0x18001020 <pacibsp_target>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002054: b       0x18001034 <fn1>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002054: b       0x18001038 <fn2>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002058: b       0x18001020 <pacibsp_target>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002058: b       0x18001034 <fn1>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 1000205c: b       0x18001018 <paciasp_target>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 1000205c: b       0x18001040 <fn3>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002060: b       0x18001010 <bti_jc_target>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
-// CHECK-EXE-NEXT: 10002060: b       0x18001050 <fn4>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002064: b       0x18001008 <bti_j_target>
 
-// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_via_plt>:
-// CHECK-EXE-NEXT: 10002064: b       0x18001080 <via_plt@plt>
+// CHECK-LABEL: <__AArch64ADRPThunk_>:
+// CHECK-NEXT: 10002068: b       0x18001000 <bti_c_target>
+
+// CHECK-EXE-LABEL: <_start>:
+// CHECK-EXE-NEXT: 10001000: bl      0x10002074 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002070 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x1000206c <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002068 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002064 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x1000205c <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           b       0x1000205c <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002060 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           b       0x10002060 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002058 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           b       0x10002058 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002054 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           b       0x10002054 <__AArch64AbsLongThunk_>
+// CHECK-EXE-NEXT:           bl      0x10002050 <__AArch64AbsLongThunk_via_plt>
+// CHECK-EXE-NEXT:           bl      0x10002040 <__AArch64AbsLongThunk_absolute>
 
 // CHECK-EXE-LABEL: <__AArch64AbsLongThunk_absolute>:
-// CHECK-EXE-NEXT: 10002068:   ldr     x16, 0x10002070 <__AArch64AbsLongThunk_absolute+0x8>
+// CHECK-EXE-NEXT: 10002040:   ldr     x16, 0x10002048 <__AArch64AbsLongThunk_absolute+0x8>
 // CHECK-EXE-NEXT:             br      x16
 // CHECK-EXE-NEXT: 00 00 00 f0 .word   0xf0000000
 // CHECK-EXE-NEXT: 00 00 00 00 .word   0x00000000
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_via_plt>:
+// CHECK-EXE-NEXT: 10002050: b       0x18001080 <via_plt@plt>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002054: b       0x18001050 <fn4>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002058: b       0x18001040 <fn3>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 1000205c: b       0x18001038 <fn2>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002060: b       0x18001034 <fn1>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002064: b       0x18001020 <pacibsp_target>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002068: b       0x18001018 <paciasp_target>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 1000206c: b       0x18001010 <bti_jc_target>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002070: b       0x18001008 <bti_j_target>
+
+// CHECK-EXE-LABEL: <__AArch64AbsLongThunk_>:
+// CHECK-EXE-NEXT: 10002074: b       0x18001000 <bti_c_target>
 
 .section .text.1, "ax", %progbits
 /// These indirect branch targets already have a BTI compatible landing pad,

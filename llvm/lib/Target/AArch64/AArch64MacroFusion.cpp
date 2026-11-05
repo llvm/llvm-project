@@ -223,33 +223,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// Literal generation.
-static bool isLiteralsPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  // 32 bit immediate.
-  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
-      (SecondMI.getOpcode() == AArch64::MOVKWi &&
-       SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
-      (SecondMI.getOpcode() == AArch64::MOVKXi &&
-       SecondMI.getOperand(3).getImm() == 48))
-    return true;
-
-  return false;
-}
-
 /// Fuse address generation and loads or stores.
 static bool isAddressLdStPair(const MachineInstr *FirstMI,
                               const MachineInstr &SecondMI) {
@@ -556,19 +529,41 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
-static bool definesRegInClass(const MachineInstr &MI,
-                              const TargetRegisterInfo *TRI,
-                              const TargetRegisterClass &Class) {
-  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
-    return MI.definesRegister(Reg, TRI);
+// Checks whether RegMO's class is Class, or a subclass of it. Supports both
+// physical and virtual registers.
+static bool isRegInClass(const MachineOperand &RegMO,
+                         const TargetRegisterClass &Class,
+                         const MachineRegisterInfo &MRI) {
+  Register Reg = RegMO.getReg();
+  if (Reg.isVirtual())
+    return Class.hasSubClassEq(MRI.getRegClass(Reg));
+  return Class.contains(Reg.asMCReg());
+}
+
+// Checks whether MI defines any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+definesRegInClass(const MachineInstr &MI,
+                  const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_defs(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
   });
 }
 
-static bool readsRegInClass(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI,
-                            const TargetRegisterClass &Class) {
-  return llvm::any_of(
-      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+// Checks whether MI reads/uses any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+readsRegInClass(const MachineInstr &MI,
+                const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
+  });
 }
 
 static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
@@ -578,7 +573,9 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
                              MI.definesRegister(AArch64::ZA, TRI);
 
   // (read/write ZA or read/write Z)
-  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+  if (!ReadOrWriteZA &&
+      !definesRegInClass(MI, {&AArch64::ZPRRegClass, &AArch64::ZPR2RegClass,
+                              &AArch64::ZPR3RegClass, &AArch64::ZPR4RegClass}))
     return false;
 
   // (NOT load/store)
@@ -586,12 +583,12 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
     return false;
 
   // (NOT write GPR)
-  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
-                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool WriteGPR =
+      definesRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
   if (WriteGPR)
     return false;
 
@@ -600,8 +597,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
       MI.definesRegister(AArch64::NZCV, TRI))
     return false;
 
-  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
-                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool ReadGPR =
+      readsRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
 
   // ( (NOT read GPR) or read/write ZA )
   if (ReadGPR && !ReadOrWriteZA)
@@ -672,11 +669,25 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
+
+  // FuseAppleSMECompute does not require a specific dependency kind
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
+    ++NumFusedAppleSMECompute;
+    return true;
+  }
+
+  // All the other fusions require RAW dependency
+  if (isNonDataDep(Dep))
+    return false;
+
   if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
     bool CmpOnly = !ST.hasArithmeticBccFusion();
     if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly)) {
@@ -700,7 +711,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
     return true;
   }
@@ -727,12 +738,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseAddSub2RegAndConstOne() &&
       isAddSub2RegAndConstOnePair(FirstMI, SecondMI)) {
     ++NumFusedAddSub2RegAndConstOne;
-    return true;
-  }
-  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
-  if (ST.hasFuseAppleSMECompute() &&
-      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
-    ++NumFusedAppleSMECompute;
     return true;
   }
   if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {

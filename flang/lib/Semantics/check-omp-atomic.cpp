@@ -59,8 +59,7 @@ template <typename...> struct IsIntegral {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsIntegral<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsIntegral<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
       C == common::TypeCategory::Unsigned};
@@ -72,8 +71,7 @@ template <typename...> struct IsFloatingPoint {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsFloatingPoint<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsFloatingPoint<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
 };
@@ -88,8 +86,7 @@ template <typename...> struct IsLogical {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsLogical<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsLogical<evaluate::Type<C>> {
   static constexpr bool value{C == common::TypeCategory::Logical};
 };
 
@@ -160,7 +157,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
     using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
-        evaluate::LogicalOperation<T::kind>>;
+        evaluate::LogicalOperation>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -205,6 +202,7 @@ private:
   evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
       evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
     using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    const int kindS{op.kind()};
     // This function has to be semantically correct for all possible types
     // of S even though at runtime s will only be one of the matched types.
     // Limit the construction to the operation types that we tried to match
@@ -212,8 +210,10 @@ private:
     if constexpr (!common::HasMember<TypeS, MatchTypes>) {
       return evaluate::Expr<T>(TypeS(op));
     } else if constexpr (is_logical_v<T>) {
-      constexpr int K{T::kind};
-      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+      CHECK(op1.kind() == op2.kind());
+      const int K{op1.kind()};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation>) {
+        CHECK(K == kindS);
         // Logical operators take an extra argument in their constructor,
         // so they need their own reconstruction code.
         common::LogicalOperator opCode{op.logicalOperator};
@@ -224,9 +224,9 @@ private:
       }
     } else {
       // Generic reconstruction.
-      return evaluate::Expr<T>(TypeS( //
+      return evaluate::Expr<T>(TypeS(kindS, //
           std::move(atom),
-          evaluate::Expr<T>(TypeS( //
+          evaluate::Expr<T>(TypeS(kindS, //
               std::move(op1), std::move(op2)))));
     }
   }
@@ -417,6 +417,22 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   // This ignores function calls, so it will accept "f(x) = f(x) + 1"
   // for example.
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
+}
+
+// Determine whether two designators refer to the same atomic variable.
+// The comparison tolerates OpenMP host-association: a shared variable
+// referenced inside a parallel region may be designated through a
+// host-associated symbol in one statement and through its ultimate symbol
+// in another, even though both denote the same storage. Comparing the
+// (ultimate) symbol vectors together with the source form distinguishes
+// different variables and different constant subscripts (e.g. a(1) vs a(2))
+// while treating host-associated and ultimate references as equal.
+static bool IsSameAtomicVariable(const SomeExpr &x, const SomeExpr &y) {
+  if (x == y) {
+    return true;
+  }
+  return evaluate::GetSymbolVector(x) == evaluate::GetSymbolVector(y) &&
+      x.AsFortran() == y.AsFortran();
 }
 
 static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
@@ -612,10 +628,12 @@ void OmpStructureChecker::CheckAtomicVariable(
 
 void OmpStructureChecker::CheckStorageOverlap(const SomeExpr &base,
     llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>> exprs,
-    parser::CharBlock source) {
+    parser::CharBlock source, bool isError) {
   if (auto *expr{HasStorageOverlap(base, exprs)}) {
     context_.Say(source,
-        "Within atomic operation %s and %s access the same storage"_warn_en_US,
+        isError
+            ? "Within atomic operation %s and %s access the same storage"_err_en_US
+            : "Within atomic operation %s and %s access the same storage"_warn_en_US,
         base.AsFortran(), expr->AsFortran());
   }
 }
@@ -822,9 +840,13 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     CheckAtomicVariable(
         atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
-    assert(*GetConvertInput(capture.rhs) == atom &&
+    assert(GetConvertInput(capture.rhs) &&
+        IsSameAtomicVariable(*GetConvertInput(capture.rhs), atom) &&
         "This cannot be a capture assignment");
-    CheckStorageOverlap(atom, {cap}, source);
+    // [6.0:194:32-33]
+    // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+    // same storage location as any other symbol in the list.
+    CheckStorageOverlap(atom, {cap}, source, /*isError=*/true);
   }
 }
 
@@ -841,7 +863,10 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     } else {
       CheckAtomicVariable(
           atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
-      CheckStorageOverlap(atom, {read.lhs}, source);
+      // [6.0:194:32-33]
+      // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+      // same storage location as any other symbol in the list.
+      CheckStorageOverlap(atom, {read.lhs}, source, /*isError=*/true);
     }
   } else {
     ErrorShouldBeVariable(read.rhs, rsrc);
@@ -1388,6 +1413,15 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
     const SomeExpr &atom{maybeWrite->lhs};
     CheckAtomicWriteAssignment(*maybeWrite, update.ift.source);
     if (auto maybeCapture{GetEvaluateAssignment(capture.stmt())}) {
+      // [6.0:192:26-28], [6.0:193:9-14]
+      // The capture statement has the form v = x or v => x.
+      if (auto rhs{GetConvertInput(maybeCapture->rhs)};
+          !rhs || !IsSameAtomicVariable(*rhs, atom)) {
+        context_.Say(capture.source,
+            "In ATOMIC UPDATE COMPARE CAPTURE the right-hand side of the capture assignment should read %s"_err_en_US,
+            atom.AsFortran());
+        return;
+      }
       CheckAtomicCaptureAssignment(*maybeCapture, atom, capture.source);
 
       if (IsPointerAssignment(*maybeWrite) !=
@@ -1395,6 +1429,26 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
         context_.Say(capture.source,
             "The update and capture assignments should both be pointer-assignments or both be non-pointer-assignments"_err_en_US);
         return;
+      }
+
+      // [6.0:195:1-2] (since OpenMP 5.2)
+      // In forms that capture the original value of x in v, v may not access
+      // the same storage location as e.
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+      if (version >= 52 && captureFirst && captureAlways) {
+        auto top{GetTopLevelOperationIgnoreResizing(update.cond)};
+        if (top.first == operation::Operator::Eq ||
+            top.first == operation::Operator::Eqv) {
+          const SomeExpr &expected{IsSameOrConvertOf(top.second[0], atom)
+                  ? top.second[1]
+                  : top.second[0]};
+          if (HasStorageOverlap(maybeCapture->lhs, {expected})) {
+            context_.Say(capture.source,
+                "The capture variable %s and the expected value %s should not access the same storage when the original value of %s is captured"_err_en_US,
+                maybeCapture->lhs.AsFortran(), expected.AsFortran(),
+                atom.AsFortran());
+          }
+        }
       }
     } else {
       if (!IsAssignment(capture.stmt())) {
@@ -1554,7 +1608,7 @@ static void checkIncompatibleMemoryOrderClause(SemanticsContext &context,
   llvm::omp::Clause kind{x.GetKind()};
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
 
-  unsigned version{context.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context.langOptions().getOpenMPVersion()};
   if (version < 50)
     return;
 
@@ -1612,41 +1666,25 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
       llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_relaxed,
       llvm::omp::Clause::OMPC_release, llvm::omp::Clause::OMPC_seq_cst};
 
-  auto checkExclusive{[&](llvm::ArrayRef<llvm::omp::Clause> group,
-                          std::string_view name,
-                          const parser::OmpClauseList &clauses) {
-    const parser::OmpClause *present{nullptr};
-    for (const parser::OmpClause &clause : clauses.v) {
-      llvm::omp::Clause id{clause.Id()};
-      if (!llvm::is_contained(group, id)) {
-        continue;
-      }
-      if (present == nullptr) {
-        present = &clause;
-        continue;
-      } else if (id == present->Id()) {
-        // Ignore repetitions of the same clause, those will be diagnosed
-        // separately.
-        continue;
-      }
-      parser::MessageFormattedText txt(
-          "At most one clause from the '%s' group is allowed on ATOMIC construct"_err_en_US,
-          name.data());
-      parser::Message message(clause.source, txt);
-      message.Attach(present->source,
-          "Previous clause from this group provided here"_en_US);
-      context_.Say(std::move(message));
-      return;
-    }
-  }};
-
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Clause kind{x.GetKind()};
 
-  checkExclusive(atomic, "atomic", dirSpec.Clauses());
-  checkExclusive(memoryOrder, "memory-order", dirSpec.Clauses());
-
   checkIncompatibleMemoryOrderClause(context_, x, atomic, memoryOrder);
+
+  // OpenMP 5.2 [15.8.3] extended-atomic Clauses: acq_rel and release cannot
+  // be specified as arguments to the fail clause, so its memory order argument
+  // must be SEQ_CST, ACQUIRE, or RELAXED.
+  for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+    if (const auto *fail{std::get_if<parser::OmpClause::Fail>(&clause.u)}) {
+      common::OmpMemoryOrderType ord{fail->v.v};
+      if (ord != common::OmpMemoryOrderType::Seq_Cst &&
+          ord != common::OmpMemoryOrderType::Acquire &&
+          ord != common::OmpMemoryOrderType::Relaxed) {
+        context_.Say(clause.source,
+            "The argument of the FAIL clause must be SEQ_CST, ACQUIRE, or RELAXED"_err_en_US);
+      }
+    }
+  }
 
   switch (kind) {
   case llvm::omp::Clause::OMPC_read:
@@ -1707,6 +1745,7 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
   template <typename T>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const evaluate::FunctionRef<T> &f) {
+    const int kind{f.kind()};
     const evaluate::ProcedureDesignator &proc = f.proc();
     if (!IsMinMax(proc) || f.arguments().size() <= 2) {
       return Id::operator()(std::move(x), f);
@@ -1762,10 +1801,10 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
     }
 
     SomeExpr tmp = evaluate::AsGenericExpr(
-        evaluate::FunctionRef<T>(AsRvalue(proc), AsRvalue(nonAtoms)));
+        evaluate::FunctionRef<T>{kind, AsRvalue(proc), AsRvalue(nonAtoms)});
 
-    return evaluate::Expr<T>(evaluate::FunctionRef<T>(
-        AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}));
+    return evaluate::Expr<T>{evaluate::FunctionRef<T>{
+        kind, AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}}};
   }
 
 private:

@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
+#include "lldb/Core/dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <optional>
 
@@ -72,6 +73,7 @@ public:
                         lldb::offset_t *offset_ptr, const DWARFUnit *unit);
   static bool IsBlockForm(const dw_form_t form);
   static bool IsDataForm(const dw_form_t form);
+  static bool IsFlagForm(const dw_form_t form);
   static int Compare(const DWARFFormValue &a, const DWARFFormValue &b);
   void Clear();
   static bool FormIsSupported(dw_form_t form);

@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/ufromfpxbf16.h"
 
-LIST_UFROMFPX_TESTS(bfloat16, LIBC_NAMESPACE::ufromfpxbf16)
+LIST_UFROMFPX_TESTS(Ufromfpxbf16, bfloat16, LIBC_NAMESPACE::ufromfpxbf16)
