@@ -138,6 +138,25 @@ subroutine write_guarded_subscript(a, j, n)
   write(10) (a(j(1), i), i=1,n)
 end subroutine
 
+! Input twin of write_guarded_subscript: a READ also evaluates j(1) in the guard.
+! CHECK-LABEL: func @_QPread_guarded_subscript(
+subroutine read_guarded_subscript(a, j, n)
+  integer :: n, j(:)
+  real :: a(10, n)
+  ! CHECK: fir.call @_FortranAioBeginUnformattedInput
+  ! CHECK-NOT: hlfir.designate
+  ! CHECK: %[[TRIP:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[TRIP]], %{{.*}} : index
+  ! CHECK-NEXT: fir.if %[[NE]] {
+  ! CHECK:   %[[JELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+  ! CHECK:   fir.load %[[JELT]]
+  ! CHECK:   hlfir.designate
+  ! CHECK:   fir.call @_FortranAioInputDescriptor
+  ! CHECK: }
+  ! CHECK-NOT: fir.do_loop
+  read(10) (a(j(1), i), i=1,n)
+end subroutine
+
 ! Cleanups of a retained subscript (here freeing an allocatable function result)
 ! belong to the section, so they must also be emitted inside the guard.
 ! CHECK-LABEL: func @_QPwrite_subscript_cleanup(
