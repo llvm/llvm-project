@@ -16,6 +16,8 @@ add_mlir_library(MLIRSupport
 )
 
 # Create a tablegen "version" of MLIRSupport to be used by MLIR TableGen tools.
+# It does not link to libLLVM.so so it can be used in tools statically linking
+# libLLVMSupport.
 # This is necessary to prevent ODR violations when linking MLIR TableGen tools
 # with MLIRSupport.
 if(LLVM_LINK_LLVM_DYLIB)
