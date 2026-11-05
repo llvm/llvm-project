@@ -9759,9 +9759,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    // List the Intel GPUs that a SYCL device compile for an IGCA target is
-    // compiled ahead of time for, one "code=" each. llvm-offload-binary joins
-    // repeated keys, so the image gets "code=xe-mtl-h,xe-mtl-u".
+    // Add one "code=" per Intel GPU of the IGCA target. llvm-offload-binary
+    // joins them, so the image gets "code=xe-mtl-h,xe-mtl-u".
     if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
       for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
         Parts.emplace_back("code=" + Device.str());

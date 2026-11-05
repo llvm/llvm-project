@@ -597,7 +597,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
 
-  // Pass the devices to compile ahead of time for on to clang-sycl-linker.
+  // Pass the devices on to clang-sycl-linker.
   for (const std::string &Device : Devices)
     CmdArgs.append({"-Xlinker", Args.MakeArgString("--device=" + Device)});
 
@@ -1021,8 +1021,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
-  // Record the Intel GPUs that a SYCL image lists in "code", which
-  // clang-sycl-linker compiles the image ahead of time for.
+  // Get the Intel GPUs that a SYCL image lists in "code". clang-sycl-linker
+  // compiles the image ahead of time for them.
   const OffloadBinary &Binary = *Input.front().getBinary();
   if (Binary.getOffloadKind() == OFK_SYCL)
     for (StringRef Device : llvm::split(Binary.getString("code"), ','))
@@ -1462,9 +1462,9 @@ getDeviceInput(const ArgList &Args) {
                              B.getBinary()->getArch().count(':');
                     });
 
-  // A SYCL image can also list the Intel GPUs to compile it ahead of time for,
-  // e.g. "code=xe-mtl-u,xe-mtl-h". Images with different lists are linked
-  // separately, so the key of an image is its target and its "code" value.
+  // A SYCL image can list Intel GPUs in "code", e.g. "code=xe-mtl-h,xe-mtl-u".
+  // Images with different lists are linked separately, so the key of an image
+  // is its target and its "code".
   using ImageID = std::pair<OffloadFile::TargetID, StringRef>;
   auto GetImageID = [](const OffloadFile &Binary) -> ImageID {
     return {Binary, Binary.getBinary()->getString("code")};

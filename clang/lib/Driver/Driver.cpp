@@ -4151,9 +4151,9 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
   Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
 
-  // For SYCL, compile once per IGCA target rather than once per Intel GPU,
-  // e.g. once for igca_30r for xe-mtl-u and xe-mtl-h, and record the GPUs so
-  // that the compile is also done ahead of time for them.
+  // For SYCL, compile once per IGCA target, e.g. once for igca_30r for both
+  // xe-mtl-u and xe-mtl-h, and record its Intel GPUs for ahead-of-time
+  // compilation.
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {
