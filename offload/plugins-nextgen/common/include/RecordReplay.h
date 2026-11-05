@@ -20,15 +20,20 @@
 
 #include "Shared/APITypes.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/RecordReplayBlocks.h"
+#include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 
 #include "OffloadError.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -102,7 +107,8 @@ public:
     Descriptor,
     Globals,
     Program,
-    IRImage
+    IRImage,
+    Pointers
   };
 
   struct HandleTy {
@@ -144,8 +150,30 @@ protected:
   /// List of all globals mapped to the device.
   SmallVector<GlobalEntryTy> GlobalEntries;
 
-  /// Mutex that protects dynamic allocations and globals.
+  /// The offsets, within the record replay memory, of the locations where the
+  /// runtime stored a device pointer while recording.
+  SmallVector<uint64_t> PointerLocations;
+
+  /// Mutex that protects dynamic allocations, globals and pointer locations.
   std::mutex AllocationLock;
+
+  /// Whether the input snapshots are recorded into the block store rather than
+  /// as full copies (LIBOMPTARGET_RECORD_BLOCK_STORE).
+  bool UseBlockStore = true;
+
+  /// Whether the record output snapshots are stored compressed
+  /// (LIBOMPTARGET_RECORD_COMPRESS_OUTPUT).
+  bool CompressOutput = true;
+
+  /// The block store file shared by the input snapshots, its generation and
+  /// size, the stored block of each distinct block content, by its 128-bit
+  /// hash, and the descriptor of the locked lock file of the directory.
+  std::unique_ptr<raw_fd_ostream> BlockStore;
+  uint64_t BlockStoreGeneration = 0;
+  uint64_t BlockStoreSize = 0;
+  int BlockLockFD = -1;
+  DenseMap<std::pair<uint64_t, uint64_t>, RecordReplayBlockTy> StoredBlocks;
+  std::mutex BlockStoreLock;
 
   // An instance of a kernel record replay.
   struct InstanceTy {
@@ -171,6 +199,17 @@ protected:
 
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
+
+    /// The device memory just before the kernel execution. It is kept until
+    /// the epilogue to store the output snapshot as a diff against it.
+    mutable std::unique_ptr<MemoryBuffer> InputSnapshot;
+
+    /// When recording, the sorted offsets of the logged pointer locations that
+    /// point into the record replay memory before the kernel execution, and the
+    /// number of unknown pointers in the input and the output.
+    mutable SmallVector<uint64_t, 0> PointerOffsets;
+    mutable uint64_t NumUnknownInputPointers = 0;
+    mutable uint64_t NumUnknownOutputPointers = RecordReplayUnknownCount;
 
     InstanceTy(const KernelInfoTy &Kernel, uint32_t NumTeams,
                uint32_t NumThreads, uint32_t SharedMemorySize,
@@ -218,6 +257,12 @@ public:
       OutputDirectory = std::filesystem::current_path();
     else
       OutputDirectory = OutputDirectoryStr.data();
+
+    BoolEnvar OMPX_RecordBlockStore("LIBOMPTARGET_RECORD_BLOCK_STORE", true);
+    UseBlockStore = OMPX_RecordBlockStore;
+    BoolEnvar OMPX_RecordCompressOutput("LIBOMPTARGET_RECORD_COMPRESS_OUTPUT",
+                                        true);
+    CompressOutput = OMPX_RecordCompressOutput;
   }
 
   virtual ~RecordReplayTy() = default;
@@ -232,9 +277,18 @@ public:
   bool isRecording() const { return Status == StatusTy::Recording; }
   bool isReplaying() const { return Status == StatusTy::Replaying; }
   bool isRecordingOrReplaying() const { return isRecording() || isReplaying(); }
-  bool shouldRecordPrologue() const { return isRecording(); }
-  bool shouldRecordEpilogue() const {
-    return isRecordingOrReplaying() && SaveOutput;
+  bool shouldRecordPrologue(const InstanceTy &Instance) const {
+    return isRecording() || shouldRecordEpilogue(Instance);
+  }
+  bool shouldRecordEpilogue(const InstanceTy &Instance) const {
+    return (isRecordingOrReplaying() && SaveOutput) ||
+           shouldVerifyOutput(Instance);
+  }
+  /// Whether the replay of \p Instance compares the device memory after the
+  /// kernel execution with an expected output.
+  bool shouldVerifyOutput(const InstanceTy &Instance) const {
+    return isReplaying() && Instance.ReplayOutcome &&
+           Instance.ReplayOutcome->ExpectedOutput;
   }
 
   /// Add information about a global.
@@ -242,6 +296,11 @@ public:
     std::lock_guard<std::mutex> Lock(AllocationLock);
     GlobalEntries.emplace_back(GlobalEntryTy{Name, Size, Addr});
   }
+
+  /// Log that the runtime stored a device pointer at \p TgtPtrAddr, which is
+  /// needed to relocate the replay. Only locations within the record replay
+  /// memory are logged, and only when recording.
+  void addPointerLocation(void *TgtPtrAddr);
 
   /// Register a record replay instance, record the prologue data if necessary,
   /// and return the instance's handle. The prologue is the phase just before
@@ -282,6 +341,26 @@ private:
   void populateReplayOutcome(const InstanceTy &Instance,
                              KernelReplayOutcomeTy &Outcome);
 
+protected:
+  /// Whether \p Value is an address within the first \p MemorySize bytes of
+  /// the record replay memory, i.e., the memory in use, or just past them.
+  /// Checking only the memory in use, rather than the whole reservation, makes
+  /// it unlikely that other data, such as two 32-bit integers, looks like a
+  /// pointer.
+  bool pointsToMemory(uint64_t Value, uint64_t MemorySize) const {
+    uint64_t Start = reinterpret_cast<uintptr_t>(StartAddr);
+    return Value >= Start && Value <= Start + MemorySize;
+  }
+
+  /// Count the 8-byte aligned values in \p Data that point into the first
+  /// \p MemorySize bytes of the record replay memory and whose location is not
+  /// in the sorted \p Known list. \p Offset is the offset of \p Data within
+  /// the record replay memory.
+  uint64_t countUnknownPointers(const char *Data, uint64_t Size,
+                                uint64_t Offset, ArrayRef<uint64_t> Known,
+                                uint64_t MemorySize) const;
+
+private:
   /// Record the prologue data.
   virtual Error recordPrologueImpl(const KernelInfoTy &Kernel,
                                    const InstanceTy &Instance) = 0;
@@ -294,6 +373,9 @@ private:
   virtual Error recordDescImpl(const KernelInfoTy &Kernel,
                                const InstanceTy &Instance,
                                const KernelRecordArgsTy &RecordArgs) = 0;
+
+  /// Record the pointers needed to relocate the replay.
+  virtual Error recordPointersImpl(const InstanceTy &Instance) = 0;
 
   /// Get a string with the filename.
   virtual SmallString<128> getFilenameImpl(const InstanceTy &Instance,
@@ -316,6 +398,7 @@ private:
                            const InstanceTy &Instance) override;
   Error recordDescImpl(const KernelInfoTy &Kernel, const InstanceTy &Instance,
                        const KernelRecordArgsTy &RecordArgs) override;
+  Error recordPointersImpl(const InstanceTy &Instance) override;
 
   /// Get a string with the filename.
   SmallString<128> getFilenameImpl(const InstanceTy &Instance, FileTy FileType,
@@ -324,11 +407,49 @@ private:
   /// Get the extension for a recording file type.
   StringRef getExtension(FileTy FileType);
 
-  /// Record a memory snapshot to a file.
-  Error recordSnapshot(StringRef Filename);
+  /// Retrieve the device memory currently in use, or null if there is none.
+  Expected<std::unique_ptr<WritableMemoryBuffer>> retrieveSnapshot();
 
-  /// Record the globals to a file.
-  Error recordGlobals(StringRef Filename);
+  /// Record a memory snapshot to a file.
+  Error recordSnapshot(StringRef Filename, const MemoryBuffer *Snapshot);
+
+  /// Open the latest block store of the output directory, and index the
+  /// blocks it holds.
+  Error openBlockStore();
+
+  /// Record a memory snapshot to a file as a list of blocks, adding the blocks
+  /// not stored yet to the block store.
+  Error recordSnapshotBlocks(StringRef Filename, const MemoryBuffer *Snapshot);
+
+  /// Retrieve the first \p Size bytes of the device memory in chunks, to bound
+  /// the host memory usage, and call \p Callback with each chunk and its
+  /// offset until it returns false.
+  Error retrieveSnapshotChunks(
+      uint64_t Size,
+      function_ref<bool(const char *Chunk, uint64_t Offset, uint64_t Size)>
+          Callback);
+
+  /// Write the device memory currently in use to \p OS, as a diff against the
+  /// input snapshot of \p Instance.
+  Error writeSnapshotDiff(raw_pwrite_stream &OS, const InstanceTy &Instance);
+
+  /// Record the device memory currently in use to a file, as a diff against
+  /// the input snapshot of \p Instance, compressed if \p Compress is set and
+  /// compression makes it smaller.
+  Error recordSnapshotDiff(StringRef Filename, const InstanceTy &Instance,
+                           bool Compress);
+
+  /// Compare the device memory currently in use with the expected output of
+  /// the replay of \p Instance, and store the result in its replay outcome.
+  Error verifySnapshot(const InstanceTy &Instance);
+
+  /// Record the globals to a file, and count the unknown pointers in them.
+  Error recordGlobals(StringRef Filename, uint64_t &NumUnknownPointers);
+
+  /// Find the logged pointer locations that point into the record replay
+  /// memory in the input \p Snapshot, and count the unknown pointers.
+  void findInputPointers(const InstanceTy &Instance,
+                         const MemoryBuffer *Snapshot);
 
   /// Record the device image to a file.
   Error recordImage(const KernelInfoTy &Kernel, StringRef Filename,

@@ -135,6 +135,24 @@ struct KernelReplayOutcomeTy {
   /// The pointer to the device memory allocation used to replay. This can be
   /// reused for future replays of the same kernel.
   void *ReplayDeviceAlloc = nullptr;
+  /// The host copy of the input memory snapshot that initialized the device
+  /// allocation before the replay. If it covers the whole replay memory, the
+  /// output snapshot is recorded as a diff against it, which avoids retrieving
+  /// the device memory before the kernel execution.
+  const void *InputSnapshot = nullptr;
+  uint64_t InputSnapshotSize = 0;
+  /// The output memory snapshot that the replay is expected to produce, as a
+  /// diff against the input snapshot (see Shared/RecordReplayDiff.h). If set,
+  /// the device memory is compared with it after the kernel execution, and the
+  /// result is stored in Verification.
+  const void *ExpectedOutput = nullptr;
+  uint64_t ExpectedOutputSize = 0;
+  /// The result of comparing the device memory with ExpectedOutput.
+  enum class VerificationTy { None, Match, Mismatch };
+  VerificationTy Verification = VerificationTy::None;
+  /// On a mismatch, the offset of the first differing byte within the replay
+  /// memory.
+  uint64_t MismatchOffset = 0;
 };
 }
 
