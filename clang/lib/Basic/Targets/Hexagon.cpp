@@ -23,70 +23,25 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__qdsp6__", "1");
   Builder.defineMacro("__hexagon__", "1");
 
-  // The macro __HVXDBL__ is deprecated.
-  bool DefineHvxDbl = false;
+  StringRef CPUSuffix = CPU;
+  CPUSuffix.consume_front("hexagonv");
 
-  if (CPU == "hexagonv5") {
-    Builder.defineMacro("__HEXAGON_V5__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "5");
-    if (Opts.HexagonQdsp6Compat) {
-      Builder.defineMacro("__QDSP6_V5__");
-      Builder.defineMacro("__QDSP6_ARCH__", "5");
-    }
-  } else if (CPU == "hexagonv55") {
-    Builder.defineMacro("__HEXAGON_V55__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "55");
-    Builder.defineMacro("__QDSP6_V55__");
-    Builder.defineMacro("__QDSP6_ARCH__", "55");
-  } else if (CPU == "hexagonv60") {
-    DefineHvxDbl = true;
-    Builder.defineMacro("__HEXAGON_V60__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "60");
-    Builder.defineMacro("__QDSP6_V60__");
-    Builder.defineMacro("__QDSP6_ARCH__", "60");
-  } else if (CPU == "hexagonv62") {
-    DefineHvxDbl = true;
-    Builder.defineMacro("__HEXAGON_V62__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "62");
-  } else if (CPU == "hexagonv65") {
-    DefineHvxDbl = true;
-    Builder.defineMacro("__HEXAGON_V65__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "65");
-  } else if (CPU == "hexagonv66") {
-    DefineHvxDbl = true;
-    Builder.defineMacro("__HEXAGON_V66__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "66");
-  } else if (CPU == "hexagonv67") {
-    Builder.defineMacro("__HEXAGON_V67__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "67");
-  } else if (CPU == "hexagonv67t") {
-    Builder.defineMacro("__HEXAGON_V67T__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "67");
-  } else if (CPU == "hexagonv68") {
-    Builder.defineMacro("__HEXAGON_V68__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "68");
-  } else if (CPU == "hexagonv69") {
-    Builder.defineMacro("__HEXAGON_V69__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "69");
-  } else if (CPU == "hexagonv71") {
-    Builder.defineMacro("__HEXAGON_V71__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "71");
-  } else if (CPU == "hexagonv71t") {
-    Builder.defineMacro("__HEXAGON_V71T__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "71");
-  } else if (CPU == "hexagonv73") {
-    Builder.defineMacro("__HEXAGON_V73__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "73");
-  } else if (CPU == "hexagonv75") {
-    Builder.defineMacro("__HEXAGON_V75__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "75");
-  } else if (CPU == "hexagonv79") {
-    Builder.defineMacro("__HEXAGON_V79__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "79");
-  } else if (CPU == "hexagonv81") {
-    Builder.defineMacro("__HEXAGON_V81__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "81");
-  }
+  StringRef ArchVersion = CPUSuffix;
+  ArchVersion.consume_back("t");
+
+  // The macro __HVXDBL__ is deprecated.
+  bool DefineHvxDbl = ArchVersion == "60" || ArchVersion == "62" ||
+                      ArchVersion == "65" || ArchVersion == "66";
+
+  auto DefineArchMacros = [=, &Builder](StringRef Prefix) {
+    Builder.defineMacro(Prefix + "V" + CPUSuffix.upper() + "__");
+    Builder.defineMacro(Prefix + "ARCH__", ArchVersion);
+  };
+
+  DefineArchMacros("__HEXAGON_");
+  if ((Opts.HexagonQdsp6Compat && ArchVersion == "5") || ArchVersion == "55" ||
+      ArchVersion == "60")
+    DefineArchMacros("__QDSP6_");
 
   if (hasFeature("hvx-length64b")) {
     Builder.defineMacro("__HVX__");
