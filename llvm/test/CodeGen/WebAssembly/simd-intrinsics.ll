@@ -151,7 +151,6 @@ define <16 x i8> @narrow_unsigned_v16i8(<8 x i16> %low, <8 x i16> %high) {
   ret <16 x i8> %a
 }
 
-; NO-CHECK-NOT: i8x16
 declare <16 x i8> @llvm.wasm.shuffle(
   <16 x i8>, <16 x i8>, i32 immarg, i32 immarg, i32 immarg, i32 immarg,
   i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg,
