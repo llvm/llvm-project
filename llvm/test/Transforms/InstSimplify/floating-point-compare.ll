@@ -2175,10 +2175,12 @@ define i1 @sqrt_nsz_maybe_negzero_or_normal_une_zero(float nofpclass(nan inf pze
   ret i1 %cmp
 }
 
-; A positive normal source cannot produce a zero result, so this one does fold.
+; A positive normal source cannot produce a zero result.
 define i1 @sqrt_nsz_posnormal_une_zero(float nofpclass(nan inf zero sub nnorm) %only.posnormal) {
 ; CHECK-LABEL: @sqrt_nsz_posnormal_une_zero(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_POSNORMAL:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sqrt = call nsz float @llvm.sqrt.f32(float %only.posnormal)
   %cmp = fcmp une float %sqrt, 0.0
