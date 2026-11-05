@@ -6612,8 +6612,9 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
   let summary = "Compare two floating point vectors";
   let description = [{
     The `cir.vec.fcmp` operation does an element-wise comparison of two vectors
-    of the same floating type. The result is a vector of the same size as the operands
-    whose element type is signed integral type. The values in the result are 0 or -1.
+    of the same floating type. The result is a vector of the same size as the
+    operands whose element type is signed integral type. The values in the
+    result are 0 or -1.
 
     The optional `fenv` attribute describes constraints on the floating-point
     handling of the operation.
@@ -6623,14 +6624,15 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
     attribute is present.
 
     ```
-    %ogt = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<>
+    %ogt = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>,
+        !cir.vector<4 x !s32i> signaling fenv<>
     ```
   }];
 
   let arguments = (ins
     CIR_FCmpOpKindAttr:$kind,
-    CIR_VectorType:$lhs,
-    CIR_VectorType:$rhs,
+    CIR_VectorOfFloatType:$lhs,
+    CIR_VectorOfFloatType:$rhs,
     UnitAttr:$signaling,
     OptionalAttr<CIR_FenvAttr>:$fenv
   );
@@ -6651,7 +6653,6 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
     }]>
   ];
 
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
