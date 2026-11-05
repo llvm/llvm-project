@@ -125,19 +125,26 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
     int UserISD = TLI->InstructionOpcodeToISD(SingleUser->getOpcode());
 
     // extmul_low support
-    if (UserISD == ISD::MUL &&
-        (ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND)) {
-      // Free low extensions.
-      if ((SrcVT == MVT::v8i8 && DstVT == MVT::v8i16) ||
-          (SrcVT == MVT::v4i16 && DstVT == MVT::v4i32) ||
-          (SrcVT == MVT::v2i32 && DstVT == MVT::v2i64)) {
-        return 0;
-      }
-      // Will require an additional extlow operation for the intermediate
-      // i16/i32 value.
-      if ((SrcVT == MVT::v4i8 && DstVT == MVT::v4i32) ||
-          (SrcVT == MVT::v2i16 && DstVT == MVT::v2i64)) {
-        return 1;
+    if (UserISD == ISD::MUL) {
+      if (auto Op0 = dyn_cast<CastInst>(SingleUser->getOperand(0))) {
+        if (auto Op1 = dyn_cast<CastInst>(SingleUser->getOperand(1))) {
+          if (Op0->getOpcode() == Op1->getOpcode() &&
+              Op0->getOperand(0)->getType() == Op1->getOperand(0)->getType() &&
+              (ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND)) {
+            // Free low extensions.
+            if ((SrcVT == MVT::v8i8 && DstVT == MVT::v8i16) ||
+                (SrcVT == MVT::v4i16 && DstVT == MVT::v4i32) ||
+                (SrcVT == MVT::v2i32 && DstVT == MVT::v2i64)) {
+              return 0;
+            }
+            // Will require an additional extlow operation for the intermediate
+            // i16/i32 value.
+            if ((SrcVT == MVT::v4i8 && DstVT == MVT::v4i32) ||
+                (SrcVT == MVT::v2i16 && DstVT == MVT::v2i64)) {
+              return 1;
+            }
+          }
+        }
       }
     }
   }
