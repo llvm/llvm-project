@@ -926,6 +926,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginDLanguage",
+    srcs = glob(["Language/D/*.cpp"]),
+    hdrs = glob(["Language/D/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Demangle",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
     strip_include_prefix = "Language/CPlusPlus",
