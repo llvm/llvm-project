@@ -1416,10 +1416,17 @@ static bool regClassIsYGPR(const MCRegisterClass &RC) {
 }
 
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                    unsigned Kind) {
+                                                    unsigned MatchKind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
+
+  // In RVY mode, classes such as BasePtrRC register class should select
+  // capability registers for the base pointer operands, otherwise we use GPRs.
+  // This uses RegClassByHwMode kinds, so we must resolve it to the real MCK_*.
+  // The generic validateOperandClass already handled ones remapped to a GPR
+  // type, but if we are coercing from GPR this needs to be done manually here.
+  MatchClassKind Kind = remapRegClassByHwMode(MatchKind, *STI);
 
   MCRegister Reg = Op.getReg();
   bool IsRegFPR64 =
@@ -1431,8 +1438,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // YGPR and GPR use the same register names in assembly, so convert GPR
   // operands to YGPR when matching a YGPR register class (such as YGPRNoX0).
   if (Op.isGPR()) {
-    const MCRegisterClass *RC =
-        getRegClassFromMatchKind(static_cast<MatchClassKind>(Kind));
+    const MCRegisterClass *RC = getRegClassFromMatchKind(Kind);
     if (RC && regClassIsYGPR(*RC)) {
       MCRegister YReg = convertGPRToYGPR(Reg);
       if (RC->contains(YReg)) {
@@ -1606,6 +1612,9 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidUImm9Lsb000:
     return Range(0, (1 << 9) - 8,
                  "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidUImm9Lsb0000:
+    return Range(0, (1 << 9) - 16,
+                 "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm8PLI_B:
     return Range(-(1 << 7), (1 << 8) - 1);
   case Match_InvalidSImm10:
@@ -1617,6 +1626,9 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidUImm10Lsb00NonZero:
     return Range(4, (1 << 10) - 4,
                  "immediate must be a multiple of 4 bytes in the range");
+  case Match_InvalidUImm10Lsb0000:
+    return Range(0, (1 << 10) - 16,
+                 "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm10Lsb0000NonZero:
     return Range(
         -(1 << 9), (1 << 9) - 16,
