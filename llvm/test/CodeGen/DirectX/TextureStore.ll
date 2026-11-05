@@ -236,3 +236,28 @@ define void @store_texture2d_repeated_index(float %x, float %y, float %z, float 
 
   ret void
 }
+
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those components come from the base rather than an insert.
+; CHECK-LABEL: define void @store_texture2d_constant_base(
+define void @store_texture2d_constant_base(float %y, i32 %cy) {
+  %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 12, i32 1, i32 0, ptr null)
+
+  %vec.1 = insertelement <4 x float> <float 1.0, float poison, float poison, float poison>, float %y, i32 1
+  %vec.2 = insertelement <4 x float> %vec.1, float 2.0, i32 2
+  %vec.3 = insertelement <4 x float> %vec.2, float 3.0, i32 3
+  %coords = insertelement <2 x i32> <i32 0, i32 poison>, i32 %cy, i32 1
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 0, i32 %cy, i32 undef, float 1.000000e+00, float %y, float 2.000000e+00, float 3.000000e+00, i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, <4 x float> %vec.3)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: ret void
+  ret void
+}
