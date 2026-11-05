@@ -1571,6 +1571,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PACSignLR:
     case AArch64::SEH_SaveAnyRegI:
     case AArch64::SEH_SaveAnyRegIP:
+    case AArch64::SEH_SaveAnyRegQ:
+    case AArch64::SEH_SaveAnyRegQX:
     case AArch64::SEH_SaveAnyRegQP:
     case AArch64::SEH_SaveAnyRegQPX:
     case AArch64::SEH_AllocZ:
@@ -5541,6 +5543,8 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   case AArch64::HLT:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIASPPC:
+  case AArch64::PACIBSPPC:
     // Implicit BTI behavior.
     return true;
   case AArch64::PAUTH_PROLOGUE:

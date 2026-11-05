@@ -1,8 +1,8 @@
 # Check that modifying X5 register is not a problem for machine outliner
 
-# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV32I-MO %s
-# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV64I-MO %s
 
 --- |

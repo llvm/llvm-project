@@ -22,7 +22,7 @@ using namespace lldb_private;
 RegisterContextCorePOSIX_ppc64le::RegisterContextCorePOSIX_ppc64le(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_ppc64le(thread, 0, register_info) {
+    : RegisterContextCore_ppc64le(thread, 0, register_info) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
