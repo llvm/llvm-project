@@ -2847,7 +2847,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 // caches of the header bytes in the DataFileCache, relying on the
 // DFC expiration policies to remove the previous versions.
 static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
-                                               UUID uuid) {
+                                               const UUID &uuid) {
   return llvm::formatv("{0}-{1}-headerbytes", file_spec.GetFilename(),
                        uuid.GetAsString());
 }
@@ -2857,30 +2857,34 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
                                               const UUID &uuid,
                                               lldb::addr_t header_addr,
                                               size_t size_to_read) {
-  // Cache nothing when we're working with corefiles.
-  if (!IsLiveDebugSession())
-    return;
-
   // If no UUID, the cache_key name may not be unique.  Don't cache.
   if (!uuid.IsValid())
     return;
 
+  const std::string cache_key = get_memory_binary_cache_key(file_spec, uuid);
+
   // Read the memory bytes out of the DataFileCache, if it is there.
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
-      cache.GetCachedData(get_memory_binary_cache_key(file_spec, uuid));
+      cache.GetCachedData(cache_key);
   if (mem_buffer_up && mem_buffer_up->getBufferSize() >= size_to_read) {
     // Stuff the header bytes into the Process memory cache.
     // The ObjectFile will read the bytes from there at this
-    // same stop.
+    // same stop.  ReadMemory strips non-addressable bits before
+    // looking in the memory cache, so do the same here.
+    lldb::addr_t cache_addr = FixAnyAddress(header_addr);
     WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
         mem_buffer_up->getBufferStart(), mem_buffer_up->getBufferSize());
-    AddCacheData(header_addr, databuf_sp);
+    AddCacheData(cache_addr, databuf_sp);
     return;
   }
 
+  // SetCachedData won't overwrite an existing entry, so remove
+  // one that is too small to use.
+  if (mem_buffer_up)
+    cache.RemoveCacheFile(cache_key);
+
   // The headerbytes are not yet in the DataFileCache.
   // Read the bytes and cache them.
-
   ProcessAddress header_address(header_addr);
   std::vector<uint8_t> data(size_to_read);
   Status error;
@@ -2894,16 +2898,17 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
   llvm::ArrayRef<uint8_t> data_ref(data.data(), size_to_read);
   file.AppendData(data_ref);
 
-  cache.SetCachedData(get_memory_binary_cache_key(file_spec, uuid),
-                      file.GetData());
+  cache.SetCachedData(cache_key, file.GetData());
 }
 
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
-    const FileSpec &file_spec, UUID uuid, lldb::addr_t header_addr,
+    const FileSpec &file_spec, const UUID &uuid, lldb::addr_t header_addr,
     size_t size_to_read) {
   // Don't cache the headerbytes when corefile debugging; reading
-  // from the corefile is just as fast.
-  if (IsLiveDebugSession()) {
+  // from the corefile is just as fast.  The cached bytes are handed
+  // to the ObjectFile through the process memory cache, so they are
+  // of no use when that is disabled.
+  if (IsLiveDebugSession() && !GetDisableMemoryCache()) {
     DataFileCache *cache = Module::GetIndexCache(/*memory_module=*/true);
     if (cache)
       GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,

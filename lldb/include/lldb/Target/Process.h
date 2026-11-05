@@ -25,7 +25,6 @@
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Breakpoint/StopPointSiteList.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
-#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceManager.h"
@@ -2084,10 +2083,9 @@ public:
   /// ObjectFile from live memory, if it is cached on the debug host
   /// already.  Create the 'headerbytes' cache file if it did not exist
   /// yet.
-  llvm::Expected<lldb::ModuleSP>
-  ReadModuleFromMemoryWithCachedHeader(const FileSpec &file_spec, UUID uuid,
-                                       lldb::addr_t header_addr,
-                                       size_t size_to_read = 512);
+  llvm::Expected<lldb::ModuleSP> ReadModuleFromMemoryWithCachedHeader(
+      const FileSpec &file_spec, const UUID &uuid, lldb::addr_t header_addr,
+      size_t size_to_read = 512);
 
   /// Attempt to get the attributes for a region of memory in the process.
   ///
