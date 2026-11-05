@@ -698,13 +698,13 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0, [0], ["st
       // Mark the end of an async operation group in every stage.
       rocdl.asyncmark
       // Mark the end of a group of tensor loads and stores alone.
-      rocdl.asyncmark stages tensor
+      rocdl.asyncmark stages = tensor
       ```
 
       Available on gfx9 and later.
   }];
   let results = (outs);
-  let assemblyFormat = "(`stages` enum($stages)^)? attr-dict";
+  let assemblyFormat = "(`stages` `=` enum($stages)^)? attr-dict";
 }
 
 def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0, 1], ["count", "stages"]>,
@@ -734,7 +734,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       // Wait until at most N async groups remain outstanding.
       rocdl.wait.asyncmark 1
       // The same, counting the tensor groups alone.
-      rocdl.wait.asyncmark 1 stages tensor
+      rocdl.wait.asyncmark 1 stages = tensor
       ```
 
       Usage example:
@@ -753,7 +753,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```
   }];
   let results = (outs);
-  let assemblyFormat = "$count (`stages` enum($stages)^)? attr-dict";
+  let assemblyFormat = "$count (`stages` `=` enum($stages)^)? attr-dict";
 }
 
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
