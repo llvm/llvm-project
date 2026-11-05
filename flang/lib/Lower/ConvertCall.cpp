@@ -2247,7 +2247,14 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
                                                  resultSym);
       });
-      return hlfir::EntityWithAttributes{resultEntity};
+      // As for a finalized result below, drop the lower bounds: this is not a
+      // variable from the Fortran point of view, so the lower bounds are ones
+      // when inquired on the caller side.
+      fir::ExtendedValue loadedResult = fir::factory::genMutableBoxRead(
+          builder, loc, *allocatable, /*mayBePolymorphic=*/true,
+          /*preserveLowerBounds=*/false);
+      return extendedValueToHlfirEntity(loc, builder, loadedResult,
+                                        tempResultName);
     }
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {

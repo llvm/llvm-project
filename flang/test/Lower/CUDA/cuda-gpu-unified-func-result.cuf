@@ -59,6 +59,12 @@ contains
     allocate(r)
     r%a = [n]
   end function
+  function shifted_result(n) result(r)
+    integer, intent(in) :: n
+    integer, allocatable :: r(:)
+    allocate(r(-n:n))
+    r = 42
+  end function
 end module
 
 subroutine use_char(n)
@@ -105,7 +111,7 @@ end subroutine
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
 ! CHECK: fir.call @_QMmParray_result(
 ! CHECK-NOT: hlfir.as_expr
-! CHECK: hlfir.sum %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> i32
+! CHECK: hlfir.sum %{{.*}} : (!fir.box<!fir.array<?xi32>>) -> i32
 ! CHECK: fir.if
 ! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[DESC]],
@@ -126,6 +132,43 @@ end subroutine
 ! IMPLICIT: fir.if
 ! IMPLICIT: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr([[ATTR]])
 ! IMPLICIT-NOT: fir.freemem
+! IMPLICIT: return
+
+subroutine use_bounds(n, dim, lb)
+  use m
+  integer :: n, dim, lb
+  lb = lbound(shifted_result(n), dim)
+end subroutine
+
+! A function reference is not a variable: the result kept as a variable is
+! declared without the lower bounds of its descriptor, so LBOUND gives one.
+! CHECK-LABEL: func.func @_QPuse_bounds(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPshifted_result(
+! CHECK: %[[LOAD:.*]] = fir.load %[[RES]]
+! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[LOAD]], %{{.*}}
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]]
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
+! CHECK: hlfir.declare %[[ADDR]](%[[SHAPE]]) uniq_name(".tmp.func_result")
+! CHECK: fir.call @_FortranALboundDim(
+! CHECK: fir.call @_FortranAAllocatableDeallocate(
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_bounds(
+! DEFAULT: fir.call @_QMmPshifted_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT: return
+
+! IMPLICIT-LABEL: func.func @_QPuse_bounds(
+! IMPLICIT: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! IMPLICIT: fir.call @_QMmPshifted_result(
+! IMPLICIT: %[[LOAD:.*]] = fir.load %[[RES]]
+! IMPLICIT: %[[DIMS:.*]]:3 = fir.box_dims %[[LOAD]], %{{.*}}
+! IMPLICIT: %[[ADDR:.*]] = fir.box_addr %[[LOAD]]
+! IMPLICIT: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
+! IMPLICIT: hlfir.declare %[[ADDR]](%[[SHAPE]]) uniq_name(".tmp.func_result")
+! IMPLICIT: fir.call @_FortranALboundDim(
+! IMPLICIT: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr([[ATTR]])
 ! IMPLICIT: return
 
 subroutine use_derived(n)
