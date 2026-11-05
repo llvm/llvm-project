@@ -6,6 +6,10 @@
 ; but soft-float ABI. This configuration triggers the special handling for
 ; big-endian.
 
+; Under the base integer calling convention, floating-point reals use
+; aggregate-style memory-layout ordering. Thus, on RV32BE, an f64 value has
+; its high word in the lower-numbered GPR and its low word in the next GPR.
+
 define double @fneg(double %a) nounwind {
 ; RV32IFD-LE-LABEL: fneg:
 ; RV32IFD-LE:       # %bb.0:

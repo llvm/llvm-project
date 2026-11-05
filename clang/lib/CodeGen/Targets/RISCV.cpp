@@ -870,10 +870,16 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       return ABIArgInfo::getDirect(
           llvm::IntegerType::get(getVMContext(), Size));
     }
-    // Use 2*XLen if 2*XLen alignment is required.
-    if (Alignment == 2 * XLen)
-      return ABIArgInfo::getDirect(
-          llvm::IntegerType::get(getVMContext(), 2 * XLen));
+    // Use 2*XLen if 2*XLen alignment is required. On big-endian targets,
+    // preserve the fact that this is an aggregate so the backend can apply
+    // memory-layout ordering rather than the significance ordering used for
+    // 2*XLen scalars.
+    if (Alignment == 2 * XLen) {
+      llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), 2 * XLen);
+      if (getDataLayout().isBigEndian())
+        CoerceTy = llvm::ArrayType::get(CoerceTy, 1);
+      return ABIArgInfo::getDirect(CoerceTy);
+    }
     // Use 2-element XLen array if only XLen alignment is required.
     return ABIArgInfo::getDirect(
         llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), XLen), 2));
