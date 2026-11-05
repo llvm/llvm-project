@@ -3079,6 +3079,22 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to a named enum, or an anonymous enum with
+a typedef name. A use of its enumerator is then treated like
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, BPF_ENUMVAL_VALUE)`,
+so it is not a constant expression, and if -g is specified, its value is
+relocated. An enum defined in a struct or union with the attribute does not
+get the attribute.
+
+Where a constant is required, e.g., in an array bound, a case label, an array
+designator, the initializer of a global, static local or constexpr variable or
+an `"i"` operand of inline asm, the enumerator is not relocated and its value in
+the local enum is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an
+error by default; `-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+
+The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
+attribute is supported on enum declarations.
   }];
 }
 

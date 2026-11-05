@@ -28,6 +28,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
@@ -3672,6 +3673,11 @@ MultiExprArg Sema::getInitsWithEmbedExpanded(InitListExpr *ILE,
 static ExprResult
 CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
   SourceLocation Loc = Index->getBeginLoc();
+
+  // An array designator must be a constant, so keep BPF enumerators in Index
+  // constants.
+  if (S.Context.getTargetInfo().getTriple().isBPF())
+    Index = S.BPF().keepPreserveAIEnumeratorsConstant(Index);
 
   // Make sure this is an integer constant expression.
   ExprResult Result =
