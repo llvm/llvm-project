@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -351,6 +350,11 @@ public:
     return (Imm & 0x780) ? nullptr : DelayAlu;
   }
 
+  // Return true if MO is an SGPR def of MI that the hardware can
+  // fast-forward to a matching consumer. These are VALU carry-out / compare
+  // producers whose result can be consumed without an s_delay_alu wait.
+  //   V_CMP -> V_CNDMASK or V_CMPX -> VALU
+  //   V_ADD/SUB with carry out -> V_ADD/SUB with carry in
   bool isFastForwardProducer(const MachineInstr &MI, const MachineOperand &MO) {
     assert((MO.isReg() && MO.isDef()) && "Expected a register definition");
     if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
@@ -365,8 +369,6 @@ public:
       case AMDGPU::V_ADDC_U32_e64:
       case AMDGPU::V_SUBB_U32_e64:
       case AMDGPU::V_SUBBREV_U32_e64:
-      case AMDGPU::V_DIV_SCALE_F32_e64:
-      case AMDGPU::V_DIV_SCALE_F64_e64:
         return true;
       default:
         if (MI.isCompare())
@@ -376,13 +378,19 @@ public:
     return false;
   }
 
+  // Return true if operand OpNo (MO) of MI is an SGPR use that can receive
+  // fast-forwarded data from a matching producer, letting the s_delay_alu
+  // wait be skipped. These are VALU carry-in / condition-mask consumers that
+  // read the forwarded value
+  //   V_CMP -> V_CNDMASK or V_CMPX -> VALU
+  //   V_ADD/SUB with carry out -> V_ADD/SUB with carry in
   bool isFastForwardConsumer(const MachineInstr &MI, const MachineOperand &MO,
-                             Register VccReg, Register ExecReg, unsigned OpNo) {
+                             unsigned OpNo) {
     assert((MO.isReg() && MO.isUse()) && "Expected a register use");
     if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
       return false;
     Register Reg = MO.getReg();
-    auto MIOpCode = MI.getOpcode();
+    unsigned MIOpCode = MI.getOpcode();
 
     if (AMDGPU::isSGPR(Reg, TRI)) {
       switch (MIOpCode) {
@@ -454,8 +462,6 @@ public:
         State = DelayState();
       } else if (ConsumerType != OTHER) {
         DelayInfo Delay;
-        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
-        Register ExecReg = AMDGPU::LaneMaskConstants::get(*ST).ExecReg;
         // C-reuse: back-to-back WMMAs into the same C register forward the
         // accumulator in place, so the tied srcC read has no dependency. WMMA
         // implies GFX11+, so no explicit subtarget check is needed.
@@ -478,7 +484,7 @@ public:
 
             // Suppress the delay for SGPR operands when both producer and
             // consumer are in the hardware valu data fast-forward set.
-            if (isFastForwardConsumer(MI, Op, VccReg, ExecReg, OperandNo) &&
+            if (isFastForwardConsumer(MI, Op, OperandNo) &&
                 llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
                   auto It = State.find(Unit);
                   if (It != State.end())
@@ -522,7 +528,7 @@ public:
               &MI, Op.getOperandNo(), nullptr, 0);
           for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
             State[Unit] =
-                DelayInfo(ProducerType, Latency, isFastForwardProducer(MI, Op));
+                DelayInfo{ProducerType, Latency, isFastForwardProducer(MI, Op)};
         }
       }
 
