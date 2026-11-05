@@ -154,7 +154,7 @@ public:
   /// need to synthesize a nested-name-specifier. Most code should instead use
   /// \c Adopt() with a proper \c NestedNameSpecifierLoc.
   void MakeTrivial(ASTContext &Context, NestedNameSpecifier Qualifier,
-                    SourceRange R);
+                   SourceRange R);
 
   /// Adopt an existing nested-name-specifier (with source-range
   /// information).
@@ -221,8 +221,8 @@ typedef SmallVector<Token, 4> CachedTokens;
 class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
 public:
   LateParsedAttrList(bool PSoon = false,
-                      bool LateAttrParseExperimentalExtOnly = false,
-                      bool LateAttrParseTypeAttrOnly = false)
+                     bool LateAttrParseExperimentalExtOnly = false,
+                     bool LateAttrParseTypeAttrOnly = false)
       : ParseSoon(PSoon),
         LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
         LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
