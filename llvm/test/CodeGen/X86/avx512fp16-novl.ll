@@ -26,18 +26,8 @@ define <2 x half> @vector_sint64ToHalf_strict(<2 x i64> %int64) strictfp {
 define <4 x half> @vector_sint64x4ToHalf_strict(<4 x i64> %int64) strictfp {
 ; CHECK-LABEL: vector_sint64x4ToHalf_strict:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpextrq $1, %xmm1, %rax
-; CHECK-NEXT:    vcvtsi2sh %rax, %xmm31, %xmm2
-; CHECK-NEXT:    vmovq %xmm1, %rax
-; CHECK-NEXT:    vcvtsi2sh %rax, %xmm31, %xmm1
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
-; CHECK-NEXT:    vcvtsi2sh %rax, %xmm31, %xmm2
-; CHECK-NEXT:    vmovq %xmm0, %rax
-; CHECK-NEXT:    vcvtsi2sh %rax, %xmm31, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    vcvtqq2ph %zmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %fp16 = call <4 x half> @llvm.experimental.constrained.sitofp.v4f16.v4i64(<4 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -127,18 +117,8 @@ define <2 x half> @vector_uint64ToHalf_strict(<2 x i64> %int64) strictfp {
 define <4 x half> @vector_uint64x4ToHalf_strict(<4 x i64> %int64) strictfp {
 ; CHECK-LABEL: vector_uint64x4ToHalf_strict:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpextrq $1, %xmm1, %rax
-; CHECK-NEXT:    vcvtusi2sh %rax, %xmm31, %xmm2
-; CHECK-NEXT:    vmovq %xmm1, %rax
-; CHECK-NEXT:    vcvtusi2sh %rax, %xmm31, %xmm1
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
-; CHECK-NEXT:    vcvtusi2sh %rax, %xmm31, %xmm2
-; CHECK-NEXT:    vmovq %xmm0, %rax
-; CHECK-NEXT:    vcvtusi2sh %rax, %xmm31, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    vcvtuqq2ph %zmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %fp16 = call <4 x half> @llvm.experimental.constrained.uitofp.v4f16.v4i64(<4 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp

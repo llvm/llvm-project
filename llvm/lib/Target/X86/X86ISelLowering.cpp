@@ -2443,10 +2443,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
            {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
         setOperationAction(Opc, VT, Legal);
 
-    // Without VLX, v2i64 to v2f16 uses 512-bit conversions during isel.
+    // Without VLX, v2i64/v4i64 to v2f16/v4f16 use 512-bit conversions during
+    // isel.
     for (unsigned Opc : {ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP,
                          ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP})
-      setOperationAction(Opc, MVT::v2f16, Custom);
+      setOperationAction(Opc, {MVT::v2f16, MVT::v4f16}, Custom);
 
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
@@ -36200,7 +36201,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     if (VT.getVectorElementType() == MVT::f16 && Subtarget.hasFP16() &&
-        (Subtarget.hasVLX() || Src.getValueType() == MVT::v2i64)) {
+        (Subtarget.hasVLX() ||
+         Src.getValueType().getScalarType() == MVT::i64)) {
       if (Src.getValueType().getVectorElementType() == MVT::i16)
         return;
 

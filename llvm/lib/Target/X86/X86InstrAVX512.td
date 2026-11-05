@@ -13764,7 +13764,7 @@ let Predicates = [HasFP16, HasVLX] in {
             (VCVTUQQ2PHZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
-// Use the 512-bit instructions to implement v2i64 without VLX. For strict
+// Use the 512-bit instructions to implement v2i64/v4i64 without VLX. For strict
 // conversions, set the upper elements to zero so that they raise no extra
 // exceptions.
 let Predicates = [HasFP16, NoVLX] in {
@@ -13780,6 +13780,19 @@ let Predicates = [HasFP16, NoVLX] in {
   def : Pat<(v8f16 (X86strict_VUintToFP (v2i64 VR128:$src))),
             (VCVTUQQ2PHZrr (SUBREG_TO_REG (v2i64 (VMOVDQArr VR128:$src)),
                                           sub_xmm))>;
+
+  def : Pat<(v8f16 (X86VSintToFP (v4i64 VR256X:$src))),
+            (VCVTQQ2PHZrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                         VR256X:$src, sub_ymm))>;
+  def : Pat<(v8f16 (X86VUintToFP (v4i64 VR256X:$src))),
+            (VCVTUQQ2PHZrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                          VR256X:$src, sub_ymm))>;
+  def : Pat<(v8f16 (X86strict_VSintToFP (v4i64 VR256:$src))),
+            (VCVTQQ2PHZrr (SUBREG_TO_REG (v4i64 (VMOVDQAYrr VR256:$src)),
+                                         sub_ymm))>;
+  def : Pat<(v8f16 (X86strict_VUintToFP (v4i64 VR256:$src))),
+            (VCVTUQQ2PHZrr (SUBREG_TO_REG (v4i64 (VMOVDQAYrr VR256:$src)),
+                                          sub_ymm))>;
 }
 
 let Constraints = "@earlyclobber $dst, $src1 = $dst" in {
