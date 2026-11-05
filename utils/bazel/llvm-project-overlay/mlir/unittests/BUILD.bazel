@@ -37,6 +37,7 @@ cc_test(
         "IR/*.cpp",
     ]),
     deps = [
+        "//llvm:config",
         "//llvm:Core",
         "//llvm:Remarks",
         "//llvm:Support",
