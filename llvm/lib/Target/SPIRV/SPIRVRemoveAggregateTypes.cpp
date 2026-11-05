@@ -17,9 +17,6 @@
 // SPIR-V pass of addISelPrepare. It clones functions, so it also runs before
 // any pass that records instructions in SPIRVGlobalRegistry.
 //
-// NOTE: this pass is a module-level one due to the necessity to modify
-// functions.
-//
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
