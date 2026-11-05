@@ -1195,6 +1195,12 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       continue;
 
+    // Don't sink convergent calls: moving them below the loop moves them
+    // across the loop's exit branches, which can change the set of threads
+    // that execute them together.
+    if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isConvergent())
+      continue;
+
     // Skip eh pad instructions.
     if (I.isEHPad())
       continue;
