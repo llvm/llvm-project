@@ -93,10 +93,10 @@ void LoongArchSubtarget::initializeProperties(StringRef TuneCPU) {
   MinPrefetchStride = 1;
   MaxPrefetchIterationsAhead = UINT_MAX;
 
-  if (TuneCPU == "la664") {
-    // The LA664 hardware prefetchers cover strides of up to 1 KiB, but stop
-    // tracking streams with a stride of 2 KiB or more. Only prefetch those, as
-    // software prefetches for smaller strides just add instructions.
+  if (TuneCPU == "la464" || TuneCPU == "la664") {
+    // The LA464/LA664 hardware prefetchers cover strides of up to 1 KiB, but
+    // stop tracking streams with a stride of 2 KiB or more. Only prefetch
+    // those, as software prefetches for smaller strides just add instructions.
     PrefetchDistance = 200;
     MinPrefetchStride = 2048;
   }
