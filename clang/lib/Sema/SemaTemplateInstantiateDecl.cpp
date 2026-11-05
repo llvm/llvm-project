@@ -6447,6 +6447,12 @@ VarTemplateSpecializationDecl *Sema::CompleteVarTemplateSpecializationDecl(
   // Update the type of this variable template specialization.
   VarSpec->setType(TSI->getType());
 
+  if (VarSpec->hasAttr<WebAssemblyGlobalAttr>()) {
+    CheckVariableDeclarationType(VarSpec);
+    if (VarSpec->isInvalidDecl())
+      return nullptr;
+  }
+
   // Convert the declaration into a definition now.
   VarSpec->setCompleteDefinition();
 

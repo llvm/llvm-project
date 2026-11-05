@@ -49,3 +49,36 @@ extern int module_z_var __attribute__((import_module("bar"))); //expected-warnin
 // Explicit 'used' on non-definition still warns, while 'export_name' (implicit 'used') does not
 extern int explicit_used_var __attribute__((used)); //expected-warning {{'used' attribute ignored on a non-definition declaration}}
 
+struct WasmGlobalRecord {
+	int value;
+};
+
+extern struct WasmGlobalRecord wasm_global_record
+		__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute requires a scalar type}}
+extern int wasm_global_array[2]
+		__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute requires a scalar type}}
+extern int wasm_global_value __attribute__((wasm_global));
+extern int wasm_global_value;
+int wasm_global_value = 0;
+extern int *wasm_global_pointer __attribute__((wasm_global));
+extern long long wasm_global_integer __attribute__((wasm_global));
+extern unsigned _BitInt(64) wasm_global_bitint __attribute__((wasm_global));
+extern double wasm_global_double __attribute__((wasm_global));
+extern _Complex double wasm_global_complex
+	__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute does not support type}}
+extern long double wasm_global_long_double
+	__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute does not support type}}
+extern unsigned _BitInt(65) wasm_global_wide_bitint
+	__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute does not support type}}
+extern int __attribute__((address_space(1))) wasm_global_address_space
+	__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute cannot be used with an explicit address space}}
+
+_Thread_local int wasm_global_c_tls
+		__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute cannot be applied to a thread-local variable}}
+__thread int wasm_global_gnu_tls
+		__attribute__((wasm_global)); // expected-error {{'wasm_global' attribute cannot be applied to a thread-local variable}}
+
+void wasm_global_address_test(void) {
+	int *pointer = &wasm_global_value; // expected-error {{cannot take the address of a WebAssembly global}}
+}
+
