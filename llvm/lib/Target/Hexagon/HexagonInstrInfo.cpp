@@ -959,12 +959,10 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Unimplemented");
 }
 
-void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator I,
-                                           Register SrcReg, bool isKill, int FI,
-                                           const TargetRegisterClass *RC,
-                                           Register VReg,
-                                           MachineInstr::MIFlag Flags) const {
+void HexagonInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool isKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
