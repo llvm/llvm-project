@@ -2702,6 +2702,17 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
   }
+
+  // An out-of-range dimension must not reach RankedTensorType::get(). Fall back
+  // to dynamic dimensions and let tosa-validate diagnose the shape.
+  if (llvm::any_of(newShapeValue,
+                   [](int64_t dim) { return dim < kInferableDimSize; })) {
+    auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  }
+
   newShapeValue = convertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
