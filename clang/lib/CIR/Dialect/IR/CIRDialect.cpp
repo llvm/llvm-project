@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -2744,7 +2745,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
 
-  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+  // A function address may also be taken in the program address space.
+  auto targetAS =
+      dyn_cast_if_present<TargetAddressSpaceAttr>(resultType.getAddrSpace());
+  bool isProgramAS =
+      isa<FuncOp>(op) && targetAS &&
+      targetAS.getValue() ==
+          CIRDataLayout(getOperation()->getParentOfType<ModuleOp>())
+              .getProgramAddressSpace();
+  if (!isProgramAS && symAddrSpaceAttr != resultType.getAddrSpace()) {
     return emitOpError()
            << "result type address space does not match the address "
               "space of the global @"
