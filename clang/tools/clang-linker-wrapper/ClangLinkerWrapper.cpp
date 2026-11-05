@@ -664,15 +664,24 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   return Error::success();
 }
 
+/// \return the name to extract \p Binary to. The Intel GPUs in "code" are part
+/// of the name, e.g. "-igca_30r.xe-mtl-h.xe-mtl-u", so that images that only
+/// differ in "code" do not overwrite each other.
+std::string getExtractedFileName(const OffloadBinary &Binary) {
+  std::string Name =
+      (sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier()) +
+       "-" + Binary.getTriple() + "-" + Binary.getArch())
+          .str();
+  for (StringRef Device : llvm::split(Binary.getString("code"), ','))
+    if (!Device.empty())
+      Name += ("." + Device).str();
+  return Name;
+}
+
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   const OffloadBinary &Binary = *File.getBinary();
 
-  StringRef Prefix =
-      sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-  SmallString<128> Filename;
-  (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
-      .toVector(Filename);
-  auto TempFileOrErr = createOutputFile(Filename, "o");
+  auto TempFileOrErr = createOutputFile(getExtractedFileName(Binary), "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -918,15 +927,48 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleSYCL(ArrayRef<OffloadingImage> Images) {
+  // clang-sycl-linker packs its outputs into one offload binary, which is
+  // passed to the offload wrapper as is.
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  for (const OffloadingImage &Image : Images) {
-    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
-    // passed to Offload Wrapper as is.
-    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
-    Buffers.emplace_back(
-        MemoryBuffer::getMemBufferCopy(S, Image.Image->getBufferIdentifier()));
+  if (Images.size() <= 1) {
+    for (const OffloadingImage &Image : Images)
+      Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(
+          Image.Image->getBuffer(), Image.Image->getBufferIdentifier()));
+    return std::move(Buffers);
   }
 
+  // Images with different "code" are linked separately, but the SYCL runtime
+  // registers a single offload binary, so merge their device images into one.
+  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  for (const OffloadingImage &Image : Images) {
+    // A dry run has no linked output to read.
+    if (Image.Image->getBufferSize() == 0)
+      continue;
+    auto BinariesOrErr = OffloadBinary::create(Image.Image->getMemBufferRef());
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+    for (std::unique_ptr<OffloadBinary> &Binary : *BinariesOrErr)
+      Binaries.push_back(std::move(Binary));
+  }
+
+  SmallVector<OffloadingImage> Merged;
+  for (const std::unique_ptr<OffloadBinary> &Binary : Binaries) {
+    OffloadingImage Image;
+    Image.TheImageKind = Binary->getImageKind();
+    Image.TheOffloadKind = Binary->getOffloadKind();
+    Image.Flags = Binary->getFlags();
+    for (const auto &[Key, Value] : Binary->strings())
+      Image.StringData[Key] = Value;
+    Image.Image = MemoryBuffer::getMemBuffer(Binary->getImage(), "",
+                                             /*RequiresNullTerminator=*/false);
+    Merged.push_back(std::move(Image));
+  }
+
+  SmallString<0> Data;
+  if (!Merged.empty())
+    Data = OffloadBinary::write(Merged);
+  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(
+      Data, Images.front().Image->getBufferIdentifier()));
   return std::move(Buffers);
 }
 
@@ -1336,10 +1378,7 @@ Error emitExtractCommands(
       if (Source.empty())
         Source = Identifier;
 
-      auto OutputOrErr =
-          createOutputFile(sys::path::stem(Identifier) + "-" +
-                               Binary.getTriple() + "-" + Binary.getArch(),
-                           "o");
+      auto OutputOrErr = createOutputFile(getExtractedFileName(Binary), "o");
       if (!OutputOrErr)
         return OutputOrErr.takeError();
 
@@ -1349,6 +1388,9 @@ Error emitExtractCommands(
               .str();
       if (!Binary.getArch().empty())
         ImageArg += (",arch=" + Binary.getArch()).str();
+      for (StringRef Device : llvm::split(Binary.getString("code"), ','))
+        if (!Device.empty())
+          ImageArg += (",code=" + Device).str();
       file_magic Magic;
       if (!identify_magic(Source, Magic) && Magic == file_magic::archive)
         ImageArg += (",member=" + sys::path::filename(Identifier)).str();
