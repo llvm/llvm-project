@@ -158,7 +158,9 @@ public:
   /// This does the promotion.
   ///
   /// Insts is a list of loads and stores to promote, and Name is the basename
-  /// for the PHIs to insert. After this is complete, the loads and stores are
+  /// for the PHIs to insert. After its first element, which must be a load or
+  /// a store, it may also contain other instructions that define the value, see
+  /// getValueToUseForDef. After this is complete, the loads and stores are
   /// removed from the code.
   LLVM_ABI void run(const SmallVectorImpl<Instruction *> &Insts);
 
@@ -180,12 +182,13 @@ public:
   /// after the SSA construction.
   virtual bool shouldDelete(Instruction *I) const { return true; }
 
-  /// Return the value to use for the point in the code that the alloca is
-  /// positioned. This will only be used if an Alloca is included in Insts,
-  /// otherwise the value of a uninitialized load will be assumed to be poison.
-  virtual Value *getValueToUseForAlloca(Instruction *AI) const {
-    return nullptr;
-  }
+  /// Return the value defined at \p I, an instruction in Insts that is neither
+  /// a load nor a store. This is the value of uninitialized memory if \p I is
+  /// the alloca, or the value written by \p I if it is another instruction that
+  /// writes the memory, such as a memset. It is called once for each such
+  /// instruction, and the value must be available at \p I. Without the alloca
+  /// in Insts, a load of uninitialized memory is assumed to read poison.
+  virtual Value *getValueToUseForDef(Instruction *I) const { return nullptr; }
 };
 
 } // end namespace llvm

@@ -85,6 +85,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/VNCoercion.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -6307,39 +6308,65 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
-/// Return the value a load of type \p Ty reads from bytes written by \p MSI,
-/// or nullptr if that value can't be expressed as a constant.
-static Constant *getMemSetValue(const MemSetInst &MSI, Type *Ty,
-                                const DataLayout &DL) {
-  auto *Byte = dyn_cast<ConstantInt>(MSI.getValue());
-  if (!Byte)
-    return nullptr;
-  if (Byte->isZero() && (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy() ||
-                         Ty->isPtrOrPtrVectorTy()))
-    return Constant::getNullValue(Ty);
-  if (Ty->isIntegerTy() &&
-      DL.getTypeSizeInBits(Ty) == DL.getTypeStoreSizeInBits(Ty))
-    return ConstantInt::get(
-        Ty, APInt::getSplat(Ty->getIntegerBitWidth(), Byte->getValue()));
-  return nullptr;
+static bool isForwardableMemSet(const Instruction *I) {
+  const auto *MSI = dyn_cast<MemSetInst>(I);
+  return MSI && !MSI->isVolatile() && isa<ConstantInt>(MSI->getLength());
 }
 
-/// A basic LoadAndStorePromoter that does not remove store nodes.
+/// Add the memsets in \p MemSets that overlap the slice range
+/// [\p BeginOffset, \p EndOffset) to \p Insts. Return false if one of them
+/// doesn't define the whole range with a value of type \p Ty, as GVN would
+/// forward it to a load from \p LoadPtr.
+static bool addMemSetsDefiningRange(ArrayRef<const Slice *> MemSets,
+                                    uint64_t BeginOffset, uint64_t EndOffset,
+                                    Type *Ty, Value *LoadPtr,
+                                    const DataLayout &DL,
+                                    SmallVectorImpl<Instruction *> &Insts) {
+  for (const Slice *M : MemSets) {
+    if (M->endOffset() <= BeginOffset || M->beginOffset() >= EndOffset)
+      continue;
+    auto *MSI = cast<MemSetInst>(M->getUse()->getUser());
+    if (VNCoercion::analyzeLoadFromClobberingMemInst(Ty, LoadPtr, MSI, DL) <
+        0) {
+      LLVM_DEBUG(dbgs() << "Memset does not define range [" << BeginOffset
+                        << ", " << EndOffset << "): " << *MSI << "\n");
+      return false;
+    }
+    Insts.push_back(MSI);
+  }
+  return true;
+}
+
+/// A basic LoadAndStorePromoter that only removes the loads. Besides loads and
+/// stores, the promoted instructions can include the alloca and memsets that
+/// fully define the promoted range.
 class BasicLoadAndStorePromoter : public LoadAndStorePromoter {
 public:
   BasicLoadAndStorePromoter(ArrayRef<const Instruction *> Insts, SSAUpdater &S,
-                            Type *ZeroType)
-      : LoadAndStorePromoter(Insts, S), ZeroType(ZeroType) {}
-  bool shouldDelete(Instruction *I) const override {
-    return !isa<StoreInst>(I) && !isa<AllocaInst>(I);
-  }
+                            Type *ValueTy,
+                            SmallVectorImpl<Instruction *> &MemSetValues)
+      : LoadAndStorePromoter(Insts, S), ValueTy(ValueTy),
+        MemSetValues(MemSetValues) {}
+  bool shouldDelete(Instruction *I) const override { return isa<LoadInst>(I); }
 
-  Value *getValueToUseForAlloca(Instruction *I) const override {
-    return UndefValue::get(ZeroType);
+  Value *getValueToUseForDef(Instruction *I) const override {
+    auto *MSI = dyn_cast<MemSetInst>(I);
+    if (!MSI)
+      return UndefValue::get(ValueTy);
+    // A variable byte is splatted by instructions inserted before the memset.
+    Value *V = VNCoercion::getMemInstValueForLoad(MSI, 0, ValueTy, MSI,
+                                                  MSI->getDataLayout());
+    // A byte-sized value can be the memset's own operand, which may be a load
+    // that this promoter deletes.
+    auto *NewI = dyn_cast<Instruction>(V);
+    if (NewI && NewI != MSI->getValue())
+      MemSetValues.push_back(NewI);
+    return V;
   }
 
 private:
-  Type *ZeroType;
+  Type *ValueTy;
+  SmallVectorImpl<Instruction *> &MemSetValues;
 };
 
 bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
@@ -6347,19 +6374,11 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   // that do not overlap with any before them. The slices are sorted by
   // increasing beginOffset. We don't use AS.partitions(), as it will use a more
   // sophisticated algorithm that takes splittable slices into account.
-  // Constant-length memsets are kept out of that grouping and instead act as a
-  // store of their value in each slice range they fully cover.
+  // Constant-length memsets are kept out of that grouping and instead define
+  // each slice range they fully cover with a known value.
   LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
   const DataLayout &DL = AI.getDataLayout();
-  auto IsForwardableMemSet = [](const Instruction *I) {
-    auto *MSI = dyn_cast<MemSetInst>(I);
-    return MSI && !MSI->isVolatile() && isa<ConstantInt>(MSI->getLength());
-  };
   SmallVector<const Slice *, 4> MemSets;
-  for (const Slice &S : AS)
-    if (IsForwardableMemSet(cast<Instruction>(S.getUse()->getUser())))
-      MemSets.push_back(&S);
-
   bool AllSameAndValid = true;
   Type *PartitionType = nullptr;
   SmallVector<Instruction *> Insts;
@@ -6367,29 +6386,15 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   uint64_t EndOffset = 0;
 
   auto Flush = [&]() {
-    SmallVector<StoreInst *, 2> MemSetStores;
-    if (AllSameAndValid && !Insts.empty()) {
-      for (const Slice *M : MemSets) {
-        if (M->endOffset() <= BeginOffset || M->beginOffset() >= EndOffset)
-          continue;
-        auto &MSI = *cast<MemSetInst>(M->getUse()->getUser());
-        Constant *V = nullptr;
-        if (M->beginOffset() <= BeginOffset && EndOffset <= M->endOffset())
-          V = getMemSetValue(MSI, PartitionType, DL);
-        if (!V) {
-          LLVM_DEBUG(dbgs() << "Memset does not define range [" << BeginOffset
-                            << ", " << EndOffset << "): " << MSI << "\n");
-          AllSameAndValid = false;
-          break;
-        }
-        // LoadAndStorePromoter only treats stores as definitions, so model the
-        // memset with a store of the same bytes, removed again below.
-        IRBuilderTy IRB(MSI.getNextNode());
-        Value *Ptr = IRB.CreateInBoundsPtrAdd(
-            &AI, ConstantInt::get(DL.getIndexType(AI.getType()), BeginOffset));
-        MemSetStores.push_back(IRB.CreateStore(V, Ptr));
-        Insts.push_back(MemSetStores.back());
-      }
+    // Later ranges start after this one, so a memset that ends before it
+    // doesn't overlap them either.
+    erase_if(MemSets,
+             [&](const Slice *M) { return M->endOffset() <= BeginOffset; });
+    auto *LoadIt = find_if(Insts, IsaPred<LoadInst>);
+    if (AllSameAndValid && LoadIt != Insts.end()) {
+      AllSameAndValid = addMemSetsDefiningRange(
+          MemSets, BeginOffset, EndOffset, PartitionType,
+          cast<LoadInst>(*LoadIt)->getPointerOperand(), DL, Insts);
     }
     if (AllSameAndValid && !Insts.empty()) {
       LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
@@ -6397,14 +6402,14 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       SmallVector<PHINode *, 4> NewPHIs;
       SSAUpdater SSA(&NewPHIs);
       Insts.push_back(&AI);
-      BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
+      SmallVector<Instruction *, 1> MemSetValues;
+      BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType,
+                                         MemSetValues);
       Promoter.run(Insts);
-    }
-    for (StoreInst *SI : MemSetStores) {
-      auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand());
-      SI->eraseFromParent();
-      if (Ptr && Ptr != &AI && Ptr->use_empty())
-        Ptr->eraseFromParent();
+      for (Instruction *I : MemSetValues) {
+        if (isInstructionTriviallyDead(I))
+          DeadInsts.push_back(I);
+      }
     }
     AllSameAndValid = true;
     PartitionType = nullptr;
@@ -6420,8 +6425,10 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       });
       continue;
     }
-    if (IsForwardableMemSet(User))
+    if (isForwardableMemSet(User)) {
+      MemSets.push_back(&S);
       continue;
+    }
     if (S.beginOffset() >= EndOffset) {
       Flush();
       BeginOffset = S.beginOffset();
