@@ -1564,7 +1564,61 @@ define amdgpu_kernel void @fence_release_global_mmra_after(ptr addrspace(1) noal
   ret void
 }
 
+define amdgpu_kernel void @external_call(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define amdgpu_kernel void @external_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]]) {
+; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    call void @external_func()
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LD0]], [[LD1]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: external_call:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GCN-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; GCN-NEXT:    s_mov_b32 s50, -1
+; GCN-NEXT:    s_mov_b32 s51, 0xe00000
+; GCN-NEXT:    s_add_u32 s48, s48, s11
+; GCN-NEXT:    s_addc_u32 s49, s49, 0
+; GCN-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
+; GCN-NEXT:    s_mov_b32 s12, s8
+; GCN-NEXT:    s_add_u32 s8, s4, 52
+; GCN-NEXT:    s_mov_b32 s13, s9
+; GCN-NEXT:    s_addc_u32 s9, s5, 0
+; GCN-NEXT:    s_getpc_b64 s[4:5]
+; GCN-NEXT:    s_add_u32 s4, s4, external_func@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s5, s5, external_func@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s33, s[38:39], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    s_mov_b32 s14, s10
+; GCN-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GCN-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; GCN-NEXT:    s_mov_b64 s[2:3], s[50:51]
+; GCN-NEXT:    s_mov_b32 s32, 0
+; GCN-NEXT:    v_mov_b32_e32 v40, 0
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GCN-NEXT:    global_load_dword v0, v40, s[38:39]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_u32_e32 v0, s33, v0
+; GCN-NEXT:    global_store_dword v40, v0, s[36:37]
+; GCN-NEXT:    s_endpgm
+  %ld0 = load i32, ptr addrspace(1) %p1, align 4
+  call void @external_func()
+  %ld1 = load i32, ptr addrspace(1) %p1, align 4
+  %add = add i32 %ld0, %ld1
+  store i32 %add, ptr addrspace(1) %out, align 4
+  ret void
+}
 
+declare void @external_func()
 declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.amdgcn.wave.barrier()
 ;.
