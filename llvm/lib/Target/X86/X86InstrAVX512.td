@@ -13764,6 +13764,23 @@ let Predicates = [HasFP16, HasVLX] in {
             (VCVTUQQ2PHZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
+// Use the 512-bit instructions to implement v2i64 in case NoVLX. Strict
+// conversions zero the upper elements so that they raise no extra exceptions.
+let Predicates = [HasFP16, NoVLX] in {
+  def : Pat<(v8f16 (X86VSintToFP (v2i64 VR128X:$src))),
+            (VCVTQQ2PHZrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                         VR128X:$src, sub_xmm))>;
+  def : Pat<(v8f16 (X86VUintToFP (v2i64 VR128X:$src))),
+            (VCVTUQQ2PHZrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                          VR128X:$src, sub_xmm))>;
+  def : Pat<(v8f16 (X86strict_VSintToFP (v2i64 VR128:$src))),
+            (VCVTQQ2PHZrr (SUBREG_TO_REG (v2i64 (VMOVDQArr VR128:$src)),
+                                         sub_xmm))>;
+  def : Pat<(v8f16 (X86strict_VUintToFP (v2i64 VR128:$src))),
+            (VCVTUQQ2PHZrr (SUBREG_TO_REG (v2i64 (VMOVDQArr VR128:$src)),
+                                          sub_xmm))>;
+}
+
 let Constraints = "@earlyclobber $dst, $src1 = $dst" in {
   multiclass avx512_cfmaop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode, X86VectorVTInfo _, bit IsCommutable> {
     defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),

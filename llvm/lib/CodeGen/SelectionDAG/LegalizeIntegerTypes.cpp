@@ -6088,6 +6088,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   if (MinIntBits < NBits) {
     SDLoc dl(N);
     unsigned OpBits = OpVT.getScalarSizeInBits();
+    // Max is positive, so it is also the right bound for UMIN.
     SDValue Max =
         DAG.getConstant(APInt::getSignedMaxValue(NBits).sext(OpBits), dl, OpVT);
     SDValue Clamped;
