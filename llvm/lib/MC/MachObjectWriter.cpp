@@ -46,6 +46,7 @@ void MachObjectWriter::reset() {
   IndirectSymbols.clear();
   DataRegions.clear();
   SectionAddress.clear();
+  SectionDataOffset.clear();
   SectionOrder.clear();
   StringTable.clear();
   LocalSymbolData.clear();
@@ -125,7 +126,8 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S) const {
 
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
                                           const MCSection *Sec) const {
-  uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
+  uint64_t EndOffset =
+      SectionDataOffset.lookup(Sec) + Asm.getSectionAddressSize(*Sec);
   unsigned Next =
       static_cast<const MCSectionMachO *>(Sec)->getLayoutOrder() + 1;
   if (Next >= SectionOrder.size())
@@ -134,7 +136,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
   const MCSection &NextSec = *SectionOrder[Next];
   if (NextSec.isBssSection())
     return 0;
-  return offsetToAlignment(EndAddr, NextSec.getAlign());
+  return offsetToAlignment(EndOffset, NextSec.getAlign());
 }
 
 static bool isSymbolLinkerVisible(const MCSymbol &Symbol) {
@@ -701,16 +703,36 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
     }
   }
 
-  uint64_t StartAddress = 0;
+  uint64_t StartOffset = 0;
   for (const MCSection *Sec : SectionOrder) {
-    StartAddress = alignTo(StartAddress, Sec->getAlign());
-    SectionAddress[Sec] = StartAddress;
-    StartAddress += Asm.getSectionAddressSize(*Sec);
+    StartOffset = alignTo(StartOffset, Sec->getAlign());
+    SectionDataOffset[Sec] = StartOffset;
+    StartOffset += Asm.getSectionAddressSize(*Sec);
 
     // Explicitly pad the section to match the alignment requirements of the
     // following one. This is for 'gas' compatibility, it shouldn't
     /// strictly be necessary.
-    StartAddress += getPaddingSize(Asm, Sec);
+    StartOffset += getPaddingSize(Asm, Sec);
+  }
+
+  if (!getContext().getAsmInfo().doesDwarfUseRelocationsAcrossSections()) {
+    for (const MCSection *Sec : SectionOrder)
+      SectionAddress[Sec] = SectionDataOffset[Sec];
+    return;
+  }
+
+  // A relocated reference into a DWARF section has to hold an offset into
+  // that section, so every __DWARF section starts at address 0.
+  uint64_t StartAddress = 0;
+  for (const MCSection *Sec : SectionOrder) {
+    if (static_cast<const MCSectionMachO *>(Sec)->getSegmentName() ==
+        "__DWARF") {
+      SectionAddress[Sec] = 0;
+      continue;
+    }
+    StartAddress = alignTo(StartAddress, Sec->getAlign());
+    SectionAddress[Sec] = StartAddress;
+    StartAddress += Asm.getSectionAddressSize(*Sec);
   }
 }
 
@@ -895,6 +917,7 @@ uint64_t MachObjectWriter::writeObject() {
   uint64_t VMSize = 0;
   for (const MCSection &Sec : Asm) {
     uint64_t Address = getSectionAddress(&Sec);
+    uint64_t Offset = SectionDataOffset.lookup(&Sec);
     uint64_t Size = Asm.getSectionAddressSize(Sec);
     uint64_t FileSize = Asm.getSectionFileSize(Sec);
     FileSize += getPaddingSize(Asm, &Sec);
@@ -904,9 +927,12 @@ uint64_t MachObjectWriter::writeObject() {
     if (Sec.isBssSection())
       continue;
 
-    SectionDataSize = std::max(SectionDataSize, Address + Size);
-    SectionDataFileSize = std::max(SectionDataFileSize, Address + FileSize);
+    SectionDataSize = std::max(SectionDataSize, Offset + Size);
+    SectionDataFileSize = std::max(SectionDataFileSize, Offset + FileSize);
   }
+  // A segment's file size can't exceed its VM size, even when sections at
+  // overlapping addresses take more space in the file than in memory.
+  VMSize = std::max(VMSize, SectionDataSize);
 
   // The section data is padded to pointer size bytes.
   //
@@ -929,7 +955,7 @@ uint64_t MachObjectWriter::writeObject() {
     const auto &Sec = static_cast<const MCSectionMachO &>(Section);
     std::vector<RelAndSymbol> &Relocs = Relocations[&Sec];
     unsigned NumRelocs = Relocs.size();
-    uint64_t SectionStart = SectionDataStart + getSectionAddress(&Sec);
+    uint64_t SectionStart = SectionDataStart + SectionDataOffset.lookup(&Sec);
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
