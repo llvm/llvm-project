@@ -31,17 +31,17 @@ using StmtVec = llvm::SmallVector<AncestorStmt>;
 
 class AccessStmt {
     llvm::PointerIntPair<const Stmt*, 1, bool> StmtAndIsStore;
-    const StackFrameContext* StackFrame;
+    const StackFrame* Frame;
     friend bool operator==(const AccessStmt& A, const AccessStmt& B);
 public:
     AccessStmt(const Stmt* Stmt, bool isStore,
-               const StackFrameContext* StackFrame)
-        : StmtAndIsStore(Stmt, isStore), StackFrame(StackFrame) {}
+               const StackFrame* StackFrame)
+        : StmtAndIsStore(Stmt, isStore), Frame(StackFrame) {}
 
     bool isStore() const { return StmtAndIsStore.getInt(); }
     const Stmt* getStmt() const { return StmtAndIsStore.getPointer(); }
     const Expr* getExpr() const { return dyn_cast<Expr>(getStmt()); }
-    const StackFrameContext* getFrame() const { return StackFrame; }
+    const StackFrame* getFrame() const { return Frame; }
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
         ID.AddBoolean(isStore());
@@ -52,7 +52,7 @@ public:
 
 bool operator==(const AccessStmt& A, const AccessStmt& B) {
     return A.StmtAndIsStore == B.StmtAndIsStore &&
-           A.StackFrame == B.StackFrame;
+           A.Frame == B.Frame;
 }
 
 bool operator<(const AccessStmt& A, const AccessStmt& B) {
@@ -68,7 +68,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(Stores, const MemRegion*, AccessStmtSet);
 
 // Keep these around to make sure we don't walk too far up the stack too often.
 // These are also useful for state resets.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(HighestUnseqFrame, const StackFrameContext*);
+REGISTER_TRAIT_WITH_PROGRAMSTATE(HighestUnseqFrame, const StackFrame*);
 REGISTER_TRAIT_WITH_PROGRAMSTATE(HighestUnseqStmt, const Stmt*);
 
 namespace {
@@ -77,9 +77,9 @@ class UnsequencedAccessChecker
     : public Checker<check::Location> {
 
     static StmtVec getAllASTAncestors(
-            const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
+            const Stmt* CurrentS, const StackFrame* CurrentFrame,
             ParentMapContext& ParentMap, const Stmt* HighestS,
-            const StackFrameContext* HighestFrame, const LangOptions& Opts,
+            const StackFrame* HighestFrame, const LangOptions& Opts,
             bool* DidHitHighest = nullptr);
     static int findCommonAncestorIdx(const StmtVec& A, const StmtVec& B);
 
@@ -87,16 +87,16 @@ class UnsequencedAccessChecker
 
     void checkAgainstSet(const AccessStmtSet* Set, AccessStmt CurrentAccess,
                          const StmtVec& Ancestors, const Stmt* HighestStmt,
-                         const StackFrameContext* HighestFrame,
+                         const StackFrame* HighestFrame,
                          CheckerContext& C, bool* FoundSame) const;
 
     bool checkAncestors(int Common, AccessStmt A, const StmtVec& AVec,
                         AccessStmt B, const StmtVec& BVec,
                         const LangOptions& Opts) const;
 
-    std::pair<const Stmt*, const StackFrameContext*>
+    std::pair<const Stmt*, const StackFrame*>
     findHighestUnsequencedStmt(const Stmt* CurrentS,
-                               const StackFrameContext* CurrentFrame,
+                               const StackFrame* CurrentFrame,
                                const LangOptions& Opts, 
                                ParentMapContext& ParentMap) const;
 
@@ -107,11 +107,16 @@ class UnsequencedAccessChecker
 
     ProgramStateRef resetState(ProgramStateRef S) const;
 
+    void checkAccess(SVal *L, SVal *V, const Stmt *S, CheckerContext &C) const;
+
     BugType BT{this, "Unsequenced-access", categories::LogicError};
 
 public:
     void checkLocation(SVal Location, bool isLoad, const Stmt *S,
                        CheckerContext &C) const;
+
+    void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
+                   CheckerContext &C) const;
 
     // Checker Options
     bool PrintDebugLog;
@@ -119,9 +124,9 @@ public:
 } // namespace
 
 StmtVec UnsequencedAccessChecker::getAllASTAncestors(
-            const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
+            const Stmt* CurrentS, const StackFrame* CurrentFrame,
             ParentMapContext& ParentMap, const Stmt* HighestS,
-            const StackFrameContext* HighestFrame, const LangOptions& Opts,
+            const StackFrame* HighestFrame, const LangOptions& Opts,
             bool* DidHitHighest) {
 
     assert(CurrentS != nullptr);
@@ -160,7 +165,7 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
             }
 
             ParentS = CurrentFrame->getCallSite();
-            CurrentFrame = CurrentFrame->getParent()->getStackFrame();
+            CurrentFrame = CurrentFrame->getParent();
             IsIndeterminate = true;
         }
         assert(ParentS != nullptr);
@@ -178,16 +183,16 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
     return Ancestors;
 }
 
-std::pair<const Stmt*, const StackFrameContext*>
+std::pair<const Stmt*, const StackFrame*>
 UnsequencedAccessChecker::findHighestUnsequencedStmt(
-        const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
+        const Stmt* CurrentS, const StackFrame* CurrentFrame,
         const LangOptions& Opts, ParentMapContext& ParentMap) const {
 
     assert(CurrentS != nullptr);
     assert(CurrentFrame != nullptr);
 
     const Stmt* HighestUnseqS = CurrentS;
-    const StackFrameContext* HighestUnseqFrame = CurrentFrame;
+    const StackFrame* HighestUnseqFrame = CurrentFrame;
 
     while (true) {
 
@@ -214,7 +219,7 @@ UnsequencedAccessChecker::findHighestUnsequencedStmt(
                 break;
 
             ParentS = CurrentFrame->getCallSite();
-            CurrentFrame = CurrentFrame->getParent()->getStackFrame();
+            CurrentFrame = CurrentFrame->getParent();
         }
 
         assert(ParentS != nullptr);
@@ -279,7 +284,7 @@ void UnsequencedAccessChecker::checkLocation(
     AccessStmt CurrentAccess(S, !isLoad, C.getStackFrame());
 
     const Stmt* HighestStmt = State->get<HighestUnseqStmt>();
-    const StackFrameContext* HighestFrame = State->get<HighestUnseqFrame>();
+    const StackFrame* HighestFrame = State->get<HighestUnseqFrame>();
 
     bool DidHitHighest = false;
 
@@ -288,7 +293,7 @@ void UnsequencedAccessChecker::checkLocation(
                                            C.getLangOpts(), &DidHitHighest);
 
     if (!DidHitHighest) {
-        std::pair<const Stmt*, const StackFrameContext*> Highest =
+        std::pair<const Stmt*, const StackFrame*> Highest =
             findHighestUnsequencedStmt(S, C.getStackFrame(), C.getLangOpts(),
                                        ParentMap);
         HighestStmt = Highest.first;
@@ -367,7 +372,7 @@ void UnsequencedAccessChecker::checkLocation(
 void UnsequencedAccessChecker::checkAgainstSet(
         const AccessStmtSet* Set, AccessStmt CurrentAccess,
         const StmtVec& Ancestors, const Stmt* HighestStmt,
-        const StackFrameContext* HighestFrame, CheckerContext& C,
+        const StackFrame* HighestFrame, CheckerContext& C,
         bool* FoundSame) const {
 
     ASTContext& ASTCtx = C.getASTContext();
@@ -560,13 +565,13 @@ bool UnsequencedAccessChecker::isStmtPreStore(
 void UnsequencedAccessChecker::reportBug(CheckerContext& C, const Stmt* Common,
                                          AccessStmt A, AccessStmt B) const {
     PathDiagnosticLocation CommonLoc(Common, C.getSourceManager(),
-                                     C.getLocationContext());
+                                     C.getStackFrame());
 
     PathDiagnosticLocation ALoc(A.getStmt(), C.getSourceManager(),
-                                C.getLocationContext());
+                                C.getStackFrame());
 
     PathDiagnosticLocation BLoc(B.getStmt(), C.getSourceManager(),
-                                C.getLocationContext());
+                                C.getStackFrame());
 
     bool bothStore = A.isStore() && B.isStore();
 
