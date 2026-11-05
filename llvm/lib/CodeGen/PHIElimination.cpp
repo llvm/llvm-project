@@ -650,17 +650,28 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           };
 
           // Each lane dies at its own last read, which can be earlier than the
-          // last read of the whole register. Several terminators can read
-          // different lanes after the inserted copies, so record a kill for
-          // each of them, not just for the last one.
+          // last read of the whole register, so record a kill for every read
+          // after the first inserted copy, not just for the last one. A copy
+          // for a landing pad goes before the call, so this can include
+          // ordinary instructions and the copies themselves.
+          MachineBasicBlock::iterator ScanStart = InsertPos;
+          if (KillsIt != PHISrcLaneKills.end()) {
+            SlotIndex FirstCopyIndex = KillsIt->second.front().Index;
+            if (InsertPos == opBlock.end() ||
+                FirstCopyIndex <= SI->getIndexBefore(*InsertPos).getRegSlot()) {
+              ScanStart = std::next(MachineBasicBlock::iterator(
+                  LIS->getInstructionFromIndex(FirstCopyIndex)));
+            }
+          }
+
           MachineBasicBlock::iterator KillInst = opBlock.end();
-          for (MachineBasicBlock::iterator Term = InsertPos;
-               Term != opBlock.end(); ++Term) {
-            if (!Term->readsRegister(SrcReg, /*TRI=*/nullptr))
+          for (MachineBasicBlock::iterator MI = ScanStart; MI != opBlock.end();
+               ++MI) {
+            if (!MI->readsRegister(SrcReg, /*TRI=*/nullptr))
               continue;
-            KillInst = Term;
+            KillInst = MI;
             if (KillsIt != PHISrcLaneKills.end())
-              RecordLaneKill(*Term);
+              RecordLaneKill(*MI);
           }
 
           if (KillInst == opBlock.end()) {
