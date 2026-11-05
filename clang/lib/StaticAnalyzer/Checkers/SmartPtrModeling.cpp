@@ -573,6 +573,16 @@ ProgramStateRef SmartPtrModeling::checkRegionChanges(
     ArrayRef<const MemRegion *> ExplicitRegions,
     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
+  // Preempt conservative invalidation. If the invalidation is triggered by a
+  // modeled smart pointer method (e.g., get(), release(), swap()), the handler
+  // has already executed the precise, deterministic memory transitions via
+  // TrackedRegionMap. The ExprEngine's post-call PSK_EscapeOutParameters scan
+  // fires unconditionally for any object with a non-trivial destructor, which
+  // causes removeTrackedSubregions to blindly wipe our established state. If
+  // we own the CallEvent, we trust the state our handler produced.
+  if (Call && SmartPtrMethodHandlers.lookup(*Call))
+    return State;
+
   TrackedRegionMapTy RegionMap = State->get<TrackedRegionMap>();
   TrackedRegionMapTy::Factory &RegionMapFactory =
       State->get_context<TrackedRegionMap>();
