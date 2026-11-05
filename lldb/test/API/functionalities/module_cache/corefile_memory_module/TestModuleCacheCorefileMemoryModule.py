@@ -23,6 +23,12 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
             'settings set -g symbols.lldb-index-cache-path "%s"' % self.cache_dir
         )
 
+    def get_symtab_cache_files(self, basename):
+        module_file_glob = os.path.join(
+            self.cache_dir, "llvmcache-*%s*-symtab-*" % basename
+        )
+        return glob.glob(module_file_glob)
+
     @requireDarwin
     @skipIfRemote
     def test_corefile_memory_module_not_cached(self):
@@ -34,9 +40,22 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         corefile = self.getBuildArtifact("process.core")
 
+        # Enable the index cache for the live session as a positive control:
+        # it shows that this cache path and glob do find the binary's symbol
+        # table when it is cached.
+        self.runCmd("settings set -g symbols.enable-lldb-index-cache true")
+
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
+        exe_module = target.FindModule(lldb.SBFileSpec("a.out"))
+        self.assertGreater(exe_module.GetNumSymbols(), 0)
+        cache_files = self.get_symtab_cache_files("a.out")
+        self.assertEqual(
+            len(cache_files), 1, "expected a symtab cache file for the live binary"
+        )
+        for cache_file in cache_files:
+            os.unlink(cache_file)
 
         # Save a stack-only corefile, plus the binary's __TEXT and
         # __LINKEDIT so it can be read from the corefile's memory. A
@@ -44,7 +63,6 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         options = lldb.SBSaveCoreOptions()
         options.SetOutputFile(lldb.SBFileSpec(corefile))
         options.SetStyle(lldb.eSaveCoreStackOnly)
-        exe_module = target.FindModule(lldb.SBFileSpec("a.out"))
         for segname in ["__TEXT", "__LINKEDIT"]:
             segment = exe_module.FindSection(segname)
             self.assertTrue(segment.IsValid())
@@ -89,5 +107,4 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         self.assertGreater(exe_module.GetNumSymbols(), 0)
 
         # Confirm no symbol table was saved in the index cache for the binary.
-        module_file_glob = os.path.join(self.cache_dir, "llvmcache-*a.out*-symtab-*")
-        self.assertEqual(len(glob.glob(module_file_glob)), 0)
+        self.assertEqual(len(self.get_symtab_cache_files("a.out")), 0)
