@@ -114,9 +114,8 @@ define i64 @rotate_needed_to_vectorize(ptr noalias %scan, ptr noalias %match) {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[GEP2]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <16 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <16 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i1> [[TMP3]] to i16
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[EXIT]], label %[[VECTOR_EARLY_EXIT:.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[LEN]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
