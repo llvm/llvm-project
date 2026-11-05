@@ -690,6 +690,7 @@ void macho::parseLCLinkerOption(
 }
 
 void macho::resolveLCLinkerOptions() {
+  parsePendingExtracts();
   while (!unprocessedLCLinkerOptions.empty()) {
     SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
     unprocessedLCLinkerOptions.clear();
@@ -743,6 +744,8 @@ void macho::resolveLCLinkerOptions() {
                          file.isReexport);
       checkAndCacheFramework(inputFile, file.path);
     }
+
+    parsePendingExtracts();
   }
 }
 
@@ -2468,6 +2471,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     initLLVM(); // must be run before any call to addFile()
     createFiles(args);
+    parsePendingExtracts();
 
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
@@ -2513,6 +2517,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     handleExplicitExports();
 
     bool didCompileBitcodeFiles = compileBitcodeFiles();
+    parsePendingExtracts();
 
     resolveLCLinkerOptions();
 

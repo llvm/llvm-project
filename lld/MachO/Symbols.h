@@ -97,7 +97,7 @@ protected:
   Symbol(Kind k, StringRef name, InputFile *file)
       : symbolKind(k), nameData(name.data()), file(file), nameSize(name.size()),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
-        used(!config->deadStrip) {}
+        used(!config->deadStrip), hasPendingDefinition(false) {}
 
   Kind symbolKind;
   const char *nameData;
@@ -110,6 +110,12 @@ public:
 
   // True if this symbol is used from a live section.
   bool used : 1;
+
+  // True if a file that has already been pulled into the link defines this
+  // symbol, but has not been parsed yet, so the definition is not in the
+  // symbol table yet. Keeps a second archive member that defines the same name
+  // from also being pulled in. See SymbolTable::addLazyObject().
+  bool hasPendingDefinition : 1;
 };
 
 class Defined : public Symbol {

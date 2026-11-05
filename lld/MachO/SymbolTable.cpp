@@ -104,9 +104,18 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
-                                 bool isWeakDefCanBeHidden, bool isCold) {
+                                 bool isWeakDefCanBeHidden, bool isCold,
+                                 Symbol *known) {
   bool overridesWeakDef = false;
-  auto [s, wasInserted] = insert(name, file);
+  Symbol *s;
+  bool wasInserted;
+  if (known) {
+    s = known;
+    s->isUsedInRegularObj |= !file || isa<ObjFile>(file);
+    wasInserted = false;
+  } else {
+    std::tie(s, wasInserted) = insert(name, file);
+  }
 
   assert(!file || !isa<BitcodeFile>(file) || !isec);
 
@@ -307,7 +316,8 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, file, sym);
   } else if (isa<Undefined>(s)) {
-    file->fetch(sym);
+    if (!s->hasPendingDefinition)
+      file->fetch(sym);
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
     if (dysym->isWeakDef()) {
       if (dysym->getRefState() != RefState::Unreferenced)
@@ -325,7 +335,10 @@ Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, file, name);
   } else if (isa<Undefined>(s)) {
-    extract(file, name);
+    if (!s->hasPendingDefinition) {
+      extract(file, name);
+      s->hasPendingDefinition = true;
+    }
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
     if (dysym->isWeakDef()) {
       if (dysym->getRefState() != RefState::Unreferenced)

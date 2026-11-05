@@ -40,7 +40,7 @@ public:
                       uint64_t value, uint64_t size, bool isWeakDef,
                       bool isPrivateExtern, bool isReferencedDynamically,
                       bool noDeadStrip, bool isWeakDefCanBeHidden,
-                      bool isCold = false);
+                      bool isCold = false, Symbol *known = nullptr);
 
   Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
                         bool makePrivateExtern = false);
