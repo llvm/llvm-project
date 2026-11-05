@@ -315,12 +315,15 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 static void propagateLoopAttrs(Operation *from, Operation *to) {
   SmallVector<NamedAttribute> loopAttrs;
-  llvm::copy_if(from->getDiscardableAttrs(), std::back_inserter(loopAttrs),
-                [](NamedAttribute attr) {
-                  auto *interface = attr.getValue().getDialect()
-                    .getRegisteredInterface<LoopAnnotationDialectInterface>();
-                  return interface && interface->shouldPropagateLoopAttribute(attr);
-                });
+  llvm::copy_if(
+      from->getDiscardableAttrs(), std::back_inserter(loopAttrs),
+      [](NamedAttribute attr) {
+        auto *interface =
+            attr.getValue()
+                .getDialect()
+                .getRegisteredInterface<LoopAnnotationDialectInterface>();
+        return interface && interface->shouldPropagateLoopAttribute(attr);
+      });
   to->setDiscardableAttrs(loopAttrs);
 }
 
