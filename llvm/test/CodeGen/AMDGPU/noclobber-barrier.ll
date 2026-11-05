@@ -2,8 +2,10 @@
 ; RUN: opt -mtriple=amdgpu9.00 -amdgpu-aa -amdgpu-aa-wrapper -amdgpu-annotate-uniform -S < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgpu9.00 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -check-prefix=GCN %s
 
-; Check that barrier or fence in between of loads is not considered a clobber
-; for the purpose of converting vector loads into scalar.
+; Check that various operations are correctly considered as clobbering or not
+; clobbering, for the purpose of converting vector loads into scalar.
+; For example, barriers should not be considered clobbering, but global acquire
+; fences should.
 
 @LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 poison
 
