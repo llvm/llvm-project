@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>

@@ -29,7 +29,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "BPFInstrInfo.h"
 #include "BPFSubtarget.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"

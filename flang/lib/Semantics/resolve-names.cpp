@@ -11505,6 +11505,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11590,7 +11592,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }

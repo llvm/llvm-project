@@ -2405,10 +2405,22 @@ expand_template(
     template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
+gentbl_cc_library(
+    name = "IPOOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/IPO",
+    tbl_outs = {
+        "lib/Transforms/IPO/IPOOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/IPO/IPOOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
         "lib/Transforms/IPO/*.cpp",
+        "lib/Transforms/IPO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
@@ -2429,6 +2441,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOpenMP",
+        ":IPOOptionsTableGen",
         ":IRPrinter",
         ":IRReader",
         ":InstCombine",
@@ -2436,6 +2449,7 @@ cc_library(
         ":Linker",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",

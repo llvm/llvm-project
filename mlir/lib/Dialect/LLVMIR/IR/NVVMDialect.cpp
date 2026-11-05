@@ -3593,7 +3593,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
 }
 
 template <typename OpType>
-static LogicalResult verifyAddSubFOp(OpType op) {
+static LogicalResult verifyFloatBinaryOp(OpType op, StringRef opKind) {
   mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
   mlir::NVVM::SaturationMode satMode = op.getSat();
   bool isFTZ = op.getFtz();
@@ -3604,30 +3604,41 @@ static LogicalResult verifyAddSubFOp(OpType op) {
                               : opType;
 
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return op.emitOpError("FTZ and saturation are not supported for "
-                          "additions/subtractions involving f64 type");
+    return op.emitOpError("FTZ and saturation are not supported for ")
+           << opKind << " involving f64 type";
 
   if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
                               rndMode == NVVM::FPRoundingMode::NONE))
     return op.emitOpError("only RN rounding mode is supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
+                          "vector<2xf16> ")
+           << opKind;
 
   if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
         rndMode != NVVM::FPRoundingMode::NONE)
       return op.emitOpError("only RN rounding mode is supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
       return op.emitOpError("FTZ and saturation are not supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
   }
 
   return success();
 }
 
-LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+LogicalResult NVVM::AddFOp::verify() {
+  return verifyFloatBinaryOp(*this, "additions");
+}
 
-LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+LogicalResult NVVM::SubFOp::verify() {
+  return verifyFloatBinaryOp(*this, "subtractions");
+}
+
+LogicalResult NVVM::MulFOp::verify() {
+  return verifyFloatBinaryOp(*this, "multiplications");
+}
 
 LogicalResult NVVM::FmaOp::verify() {
   auto opType = getRes().getType();

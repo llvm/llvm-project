@@ -329,6 +329,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
+- A relative `directory` in a JSON compilation database is now resolved against the directory containing the compilation database file.
+
 - On musl targets, the driver now links ``libssp_nonshared.a`` when stack
   protection is enabled and the library is present in the toolchain library
   paths, matching what musl distributions configure GCC to do.
@@ -1568,6 +1570,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
   inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
   `order(concurrent)`) were incorrectly accepted.
+- Fixed a crash when a `tile` or `stripe` `sizes` argument has type `bool` or
+  `_BitInt`. (#GH229039)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
