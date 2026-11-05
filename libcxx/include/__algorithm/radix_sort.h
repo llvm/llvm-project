@@ -361,12 +361,13 @@ constexpr auto __to_ordered_integral(_Integral __n) {
 // The only exception from this rule is `NaN`, which is unordered by definition.
 
 // Based on the above, to obtain correctly ordered integral representation of floating-point numbers, we need to:
-// 1. Invert the bit representation (including the sign bit) of negative floats to switch from reverse order to direct
+// 1. Negate (in two's complement) the bit representation of negative floats to switch from reverse order to direct
 //    order;
 // 2. Invert the sign bit for positive floats.
 
 // Thus, in final integral representation, we have reversed the order for negative floats and made all negative floats
-// smaller than all positive numbers (by inverting the sign bit).
+// smaller than all positive numbers (by inverting the sign bit). Using negation rather than bitwise inversion in step 1
+// maps -0.0 to the same value as +0.0, which is required since they are equivalent and the sort must be stable.
 template <class _Floating, enable_if_t< numeric_limits<_Floating>::is_iec559, int> = 0>
 constexpr auto __to_ordered_integral(_Floating __f) {
   using __integral_type          = __unsigned_representation_for_t<_Floating>;
@@ -375,7 +376,11 @@ constexpr auto __to_ordered_integral(_Floating __f) {
 
   const auto __u = std::__bit_cast<__integral_type>(__f);
 
-  return static_cast<__integral_type>(__u & __sign_bit_mask ? ~__u : __u ^ __sign_bit_mask);
+  // All ones for negative floats, zero otherwise. The result is `~__u + 1`, i.e. `-__u`, for negative floats and
+  // `__u ^ __sign_bit_mask` for positive floats, computed without a conditional select.
+  const auto __negative_mask = static_cast<__integral_type>(-(__u >> (__bit_count - 1)));
+
+  return static_cast<__integral_type>((__u ^ (__negative_mask | __sign_bit_mask)) - __negative_mask);
 }
 
 // There may exist user-defined comparison for enum, so we cannot compare enums just like integers.
