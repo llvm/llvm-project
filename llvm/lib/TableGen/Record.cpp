@@ -872,14 +872,21 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
 
   case HEAD:
     if (const auto *LHSl = dyn_cast<ListInit>(LHS)) {
-      assert(!LHSl->empty() && "Empty list in head");
+      // The parser rejects a literal empty list, but a list built by a
+      // template argument or !filter/!foreach/!listremove is only known to be
+      // empty after resolution.
+      if (LHSl->empty())
+        PrintFatalError(CurRec ? CurRec->getLoc() : SMLoc(),
+                        "!head requires a non-empty list");
       return LHSl->getElement(0);
     }
     break;
 
   case TAIL:
     if (const auto *LHSl = dyn_cast<ListInit>(LHS)) {
-      assert(!LHSl->empty() && "Empty list in tail");
+      if (LHSl->empty())
+        PrintFatalError(CurRec ? CurRec->getLoc() : SMLoc(),
+                        "!tail requires a non-empty list");
       // Note the slice(1). We can't just pass the result of getElements()
       // directly.
       return ListInit::get(LHSl->getElements().slice(1),
