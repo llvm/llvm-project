@@ -370,8 +370,8 @@ bool CVPImpl::processICmp(ICmpInst *Cmp) {
 
     // Since the instruction changed, all debug users of
     // this value must be poisoned
-    for (auto *record : DebugUsers)
-      record->setKillLocation();
+    for (auto *Record : DebugUsers)
+      Record->setKillLocation();
 
     ++NumSICmps;
     Cmp->setPredicate(UnsignedPred);

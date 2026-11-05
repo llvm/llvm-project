@@ -5,6 +5,11 @@
 ; since the value they are based on may have changed.
 ; See issue #218620
 
+; In this test, the slt becomes utl, changing the computed value
+; of %cmp. This also changes the computed value of %conv, which
+; relies on %cmp, and %conv is then used in a debug value. Since
+; the value has changed, that debug value must now be poisoned
+
 define dso_local i32 @icmp_signed_to_unsigned(i32 noundef %x) #0 !dbg !9 {
 ; CHECK:      entry:
 ; CHECK-NEXT: %cmp = icmp samesign ult i32 %x, 10
