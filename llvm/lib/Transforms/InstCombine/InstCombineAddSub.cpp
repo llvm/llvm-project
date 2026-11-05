@@ -2031,6 +2031,21 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldDivCeil(I))
     return Res;
 
+  // Fold ((VarX + A1) & A2) + A3 -> VarX & A2 when:
+  // 1. A1 == -A3
+  // 2. ((A1 | A3) & A2) == (A1 | A3)
+  Value *VarX;
+  const APInt *A1, *A2, *A3;
+  if(match(&I, m_c_Add(m_c_And(m_c_Add(m_Value(VarX), m_APInt(A1)), m_APInt(A2)), m_APInt(A3)))) {
+    if(*A1 == -(*A3)) {
+      APInt A1OrA3 = *A1 | *A3;
+      if ((A1OrA3 & *A2) == A1OrA3)
+        return replaceInstUsesWith(I,
+          Builder.CreateAnd(VarX, ConstantInt::get(I.getType(), *A2))
+        );
+    }
+  }
+
   // (A | -2) + A -> (A - 1) & -2
   APInt NegTwo(Ty->getScalarSizeInBits(), -2, /*isSigned=*/true);
   if (match(&I, m_c_BinOp(m_OneUse(m_Or(m_Value(A), m_SpecificInt(NegTwo))),
