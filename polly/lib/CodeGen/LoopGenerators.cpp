@@ -35,6 +35,11 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
+cl::opt<bool> PollyAnnotateMetadataVectorize(
+    "polly-annotate-metadata-vectorize",
+    cl::desc("Append vectorization metadata to Polly-generated loops"),
+    cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
     cl::desc("Scheduling type of parallel OpenMP for loops"),
@@ -167,7 +172,9 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     std::optional<bool> EnableVectorizeMetadata;
     if (LoopVectDisabled)
       EnableVectorizeMetadata = false;
-    else if (PollyVectorizeMetadata && !SkipVectorizeEnableMetadata)
+    else if ((PollyAnnotateMetadataVectorize ||
+              PollyOptimizeForVectorization) &&
+             !SkipVectorizeEnableMetadata)
       EnableVectorizeMetadata = true;
     Annotator->annotateLoopLatch(B, Parallel, EnableVectorizeMetadata);
   }

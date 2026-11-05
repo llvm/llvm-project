@@ -1,10 +1,11 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-vectorize \
+; RUN:   -plugin-arg=Polly,-polly-optimize-for-vectorization \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
-; Verify that -polly-vectorize bypasses the low-compute detection check.
+; Verify that -polly-optimize-for-vectorization bypasses the low-compute
+; detection check.
 ; VECTORIZED-LABEL: define{{.*}} @simple_add(
 ; VECTORIZED: polly.stmt.for.body:
 ; VECTORIZED: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
@@ -14,6 +15,7 @@
 ; NO-VECTORIZE-LABEL: define{{.*}} @simple_add(
 ; NO-VECTORIZE: {{^}}for.body:
 ; NO-VECTORIZE-NOT: polly.stmt.
+;
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"

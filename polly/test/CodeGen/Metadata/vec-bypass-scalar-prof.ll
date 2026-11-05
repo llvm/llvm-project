@@ -1,5 +1,5 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-vectorize \
+; RUN:   -plugin-arg=Polly,-polly-optimize-for-vectorization \
 ; RUN:   -plugin-arg=Polly,-polly-detect-profitability-min-per-loop-insts=0 \
 ; RUN:   -plugin-arg=Polly,-polly-unprofitable-scalar-accs=true \
 ; RUN:   -plugin-arg=Polly,-polly-enable-prune-unprofitable=false \
@@ -12,7 +12,8 @@
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false \
 ; RUN:   < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
-; Verify that -polly-vectorize bypasses the scalar-access profitability check.
+; Verify that -polly-optimize-for-vectorization bypasses the scalar-access
+; profitability check.
 ; VECTORIZED-LABEL: define{{.*}} @scalar_loop(
 ; VECTORIZED: polly.stmt.for.body:
 ; VECTORIZED: polly.stmt.for.body1:

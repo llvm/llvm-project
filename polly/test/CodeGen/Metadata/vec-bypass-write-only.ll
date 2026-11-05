@@ -1,10 +1,11 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-vectorize \
+; RUN:   -plugin-arg=Polly,-polly-optimize-for-vectorization \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
-; Verify that -polly-vectorize bypasses the write-only detection check.
+; Verify that -polly-optimize-for-vectorization bypasses the write-only
+; detection check.
 ; VECTORIZED-LABEL: define{{.*}} @write_only(
 ; VECTORIZED: polly.stmt.body1:
 ; VECTORIZED: polly.stmt.body2:

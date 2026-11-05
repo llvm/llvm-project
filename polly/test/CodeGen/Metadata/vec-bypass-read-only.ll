@@ -1,12 +1,13 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-vectorize \
+; RUN:   -plugin-arg=Polly,-polly-optimize-for-vectorization \
 ; RUN:   -plugin-arg=Polly,-polly-detect-profitability-min-per-loop-insts=0 \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
 ; RUN:   -plugin-arg=Polly,-polly-detect-profitability-min-per-loop-insts=0 \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
-; Verify that -polly-vectorize bypasses the read-only detection check.
+; Verify that -polly-optimize-for-vectorization bypasses the read-only
+; detection check.
 ; VECTORIZED-LABEL: define{{.*}} @read_only_sum(
 ; VECTORIZED: polly.stmt.for.body2:
 ; VECTORIZED: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]

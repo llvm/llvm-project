@@ -1,5 +1,5 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-vectorize \
+; RUN:   -plugin-arg=Polly,-polly-optimize-for-vectorization \
 ; RUN:   -plugin-arg=Polly,-polly-detect-profitability-min-per-loop-insts=0 \
 ; RUN:   -plugin-arg=Polly,-polly-enable-prune-unprofitable=false \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
@@ -8,7 +8,8 @@
 ; RUN:   -plugin-arg=Polly,-polly-enable-prune-unprofitable=false \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
-; Verify that -polly-vectorize bypasses the SCoP profitability check.
+; Verify that -polly-optimize-for-vectorization bypasses the SCoP
+; profitability check.
 ; VECTORIZED-LABEL: define{{.*}} @one_iterator(
 ; VECTORIZED: polly.stmt.for.body:
 ; VECTORIZED: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
@@ -18,6 +19,7 @@
 ; NO-VECTORIZE-LABEL: define{{.*}} @one_iterator(
 ; NO-VECTORIZE: {{^}}for.body:
 ; NO-VECTORIZE-NOT: polly.stmt.
+;
 
 target datalayout = "e-m:e-i8:8:32-i16:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
