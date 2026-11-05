@@ -190,9 +190,12 @@ let SubtargetPredicate = HasLerpInst in
 
 let SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
   let SubtargetPredicate = HasMadU32Inst in
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
   let SubtargetPredicate = HasMadNC64_32Insts in {
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_NC_U64_U32 : VOP3Inst<"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_NC_I64_I32 : VOP3Inst<"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
   }
 }
@@ -214,12 +217,16 @@ defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_l
 } // End SchedRW = [WriteDoubleAdd], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 let SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
+let IsDPMACCInstruction = 1 in
 defm V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", V_MUL_PROF<VOP_I32_I32_I32>, DivergentBinFrag<mul>>;
+let IsDPMACCInstruction = 1 in
 defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu>;
+let IsDPMACCInstruction = 1 in
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
 } // End SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
 let SchedRW = [WriteIntMul] in {
+let IsDPMACCInstruction = 1 in
 defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 } // End SchedRW = [WriteIntMul]
 
@@ -237,9 +244,13 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 
 let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd],
     GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
+let IsDPMACCInstruction = 1 in
 defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
+let IsDPMACCInstruction = 1 in
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
+let IsDPMACCInstruction = 1 in
 defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
+let IsDPMACCInstruction = 1 in
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
 } // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
@@ -392,11 +403,14 @@ let SchedRW = [Write64Bit] in {
   } // End SubtargetPredicate = isGFX6GFX7
 
   let SubtargetPredicate = isGFX8Plus, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
+  let IsDPMACCInstruction = 1 in
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
+  let IsDPMACCInstruction = 1 in
   defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
   } // End SubtargetPredicate = isGFX8Plus, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
   let SubtargetPredicate = isGFX8GFX9GFX10GFX11, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
+  let IsDPMACCInstruction = 1 in
   defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
   } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 } // End SchedRW = [Write64Bit]
@@ -442,12 +456,16 @@ let SubtargetPredicate = HasMqsadInsts in
 
 let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
   let SubtargetPredicate = isGFX7Plus in {
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
   }
   let SubtargetPredicate = isGFX11Only, OtherPredicates = [HasMADIntraFwdBug],
       Constraints = "@earlyclobber $vdst" in {
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
+    let IsDPMACCInstruction = 1 in
     defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
   }
 } // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
@@ -823,6 +841,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use "0" to get ADD_U64).
 let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
+let IsDPMACCInstruction = 1 in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,

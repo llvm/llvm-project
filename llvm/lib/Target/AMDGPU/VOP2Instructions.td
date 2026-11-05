@@ -945,13 +945,16 @@ let isAdd = 1 in {
 let isReMaterializable = 1 in {
 let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit],
     GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
+let IsDPMACCInstruction = 1 in
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 // We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
 let isCommutable = 0 in
+let IsDPMACCInstruction = 1 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 let SubtargetPredicate = HasVMulU64Inst, SchedRW = [WriteDouble],
     GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
+let IsDPMACCInstruction = 1 in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
@@ -1290,6 +1293,7 @@ let SubtargetPredicate = HasFmacF64Inst,
     isConvertibleToThreeAddress = 1,
     isCommutable = 1,
     SchedRW = [WriteDoubleAdd] in
+let IsDPMACCInstruction = 1 in
 defm V_FMAC_F64 : VOP2Inst <"v_fmac_f64", VOP_MAC_F64>;
 
 let Constraints = "$vdst = $src2",
@@ -1354,9 +1358,11 @@ def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Compon
 
 let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
     FixedSize = 1, Size = 12, SchedRW = [Write64Bit] in {
+let IsDPMACCInstruction = 1 in
 def V_FMAMK_F64 : VOP2_Pseudo<"v_fmamk_f64", VOP_MADMK_F64, [], "">;
 
 let isCommutable = 1 in
+let IsDPMACCInstruction = 1 in
 def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
@@ -1516,6 +1522,7 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
     defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", any_fmul>;
   } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
   let SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
+    let IsDPMACCInstruction = 1 in
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
   } // End SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
