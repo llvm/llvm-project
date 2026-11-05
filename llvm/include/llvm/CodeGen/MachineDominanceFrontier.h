@@ -38,7 +38,10 @@ class LLVM_ABI MachineDominanceFrontierWrapperPass
     : public MachineFunctionPass {
 private:
   MachineDominanceFrontier MDF;
-  MachineDominatorTree *PendingMDT = nullptr;
+
+  // TODO: This is to make the computation lazy and is unnecessary after the
+  // switch to new pass manager.
+  const MachineDominatorTree *PendingMDT = nullptr;
 
 public:
   MachineDominanceFrontierWrapperPass();
