@@ -28,9 +28,11 @@ struct S { uint value; };
 void test_value_types(float f, float2 fv, bool b, bool2 bv, S s,
                       float2x2 fm, bool2x2 bm, uint4 mask) {
   __builtin_hlsl_wave_multi_prefix_bit_xor(f, mask);
-  // expected-error@-1 {{1st argument must be a scalar or vector of integer}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of \
+integer types (was 'double')}}
   __builtin_hlsl_wave_multi_prefix_bit_xor(fv, mask);
-  // expected-error@-1 {{1st argument must be a scalar or vector of integer}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of \
+integer types (was 'float2' (aka 'vector<float, 2>'))}}
   __builtin_hlsl_wave_multi_prefix_bit_xor(b, mask);
   // expected-error@-1 {{invalid operand of type 'bool'}}
   __builtin_hlsl_wave_multi_prefix_bit_xor(bv, mask);
@@ -38,11 +40,13 @@ void test_value_types(float f, float2 fv, bool b, bool2 bv, S s,
   __builtin_hlsl_wave_multi_prefix_bit_xor(s, mask);
   // expected-error@-1 {{invalid operand of type 'S'}}
   __builtin_hlsl_wave_multi_prefix_bit_xor(fm, mask);
-  // expected-error@-1 {{1st argument must be a matrix integer type}}
-  // expected-error@-2 {{cannot pass object of non-trivial type 'float2x2'}}
+  // expected-error@-1 {{1st argument must be a matrix integer type \
+(was 'float2x2' (aka 'matrix<float, 2, 2>'))}}
+  // expected-error@-3 {{cannot pass object of non-trivial type 'float2x2'}}
   __builtin_hlsl_wave_multi_prefix_bit_xor(bm, mask);
-  // expected-error@-1 {{1st argument must be a matrix integer type}}
-  // expected-error@-2 {{cannot pass object of non-trivial type 'bool2x2'}}
+  // expected-error@-1 {{1st argument must be a matrix integer type \
+(was 'bool2x2' (aka 'matrix<bool, 2, 2>'))}}
+  // expected-error@-3 {{cannot pass object of non-trivial type 'bool2x2'}}
 }
 
 void test_mask_types(uint value, uint scalar, uint3 short_mask,
