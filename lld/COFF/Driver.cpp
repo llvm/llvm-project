@@ -967,6 +967,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
+    case OPT_lto_sample_profile:
     case OPT_wholearchive_file:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
@@ -1722,6 +1723,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Err(ctx) << "/linkrepro: failed to open " << *path << ": "
                  << toString(errOrWriter.takeError());
       }
+    }
+
+    // LTO reads the sample profile directly, so collect it explicitly.
+    if (tar) {
+      StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+      if (!ltoSampleProfile.empty())
+        takeBuffer(CHECK(MemoryBuffer::getFile(ltoSampleProfile),
+                         "could not open " + ltoSampleProfile));
     }
   }
   // Handle /linkreprofullpathrsp
