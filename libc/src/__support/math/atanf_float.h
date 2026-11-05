@@ -66,7 +66,7 @@ LIBC_INLINE_VAR constexpr float ATANF_REDUCED_ARG[17] = {
 // Approximating atan( u / (1 + u * k/16) )
 //   atan( u / (1 + u * k/16) ) / u ~ 1 - k/16 * u + (k^2/256 - 1/3) * u^2 +
 //                                    + (k/16 - (k/16)^3) * u^3 + O(u^4)
-LIBC_INLINE float atanf_eval(float u, float k_over_16) {
+LIBC_INLINE LIBC_CONSTEXPR float atanf_eval(float u, float k_over_16) {
   // (k/16)^2
   float c2 = k_over_16 * k_over_16;
   // -(k/16)^3
@@ -85,7 +85,7 @@ LIBC_INLINE float atanf_eval(float u, float k_over_16) {
 // There are several range reduction steps we can take for atan2(y, x) as
 // follow:
 
-LIBC_INLINE float atanf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float atanf(float x) {
   using namespace atanf_internal;
   using FPBits = typename fputil::FPBits<float>;
   using FPBits = typename fputil::FPBits<float>;

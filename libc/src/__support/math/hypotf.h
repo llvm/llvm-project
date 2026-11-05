@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float hypotf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR float hypotf(float x, float y) {
   using DoubleBits = fputil::FPBits<double>;
   using FPBits = fputil::FPBits<float>;
   using fputil::DoubleDouble;
@@ -51,7 +51,7 @@ LIBC_INLINE float hypotf(float x, float y) {
   // x^2 and y^2 are exact in double precision.
   double x_sq = xd * xd;
 
-  double sum_sq;
+  double sum_sq{};
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   sum_sq = fputil::multiply_add(yd, yd, x_sq);
 #else

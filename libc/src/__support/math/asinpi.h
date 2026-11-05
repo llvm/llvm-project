@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE double asinpi(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double asinpi(double x) {
   using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
 

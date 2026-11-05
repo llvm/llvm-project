@@ -30,7 +30,7 @@ namespace hypot_internal {
 // inverse of the smallest normal number: 2^-1022, so that the correct "hidden"
 // bit position is now 1.  And by adding and subtracting 1 from the results, we
 // can emulate the rounding behavior in the denormal range.
-LIBC_INLINE double hypot_denorm(double a, double b) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double hypot_denorm(double a, double b) {
   using fputil::DoubleDouble;
   constexpr double SCALE = 0x1.0p1022;
   constexpr double SCALE_BACK = 0x1.0p-1022;
@@ -95,7 +95,7 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
 
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE double hypot(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double hypot(double x, double y) {
   using FPBits = fputil::FPBits<double>;
   using DoubleDouble = fputil::DoubleDouble;
 
@@ -109,8 +109,8 @@ LIBC_INLINE double hypot(double x, double y) {
 
   // a = maximum_mag(x, y);
   // b = minimum_mag(x, y);
-  double a, b;
-  uint32_t a_e, b_e;
+  double a{}, b{};
+  uint32_t a_e{}, b_e{};
 
   if (x_e >= y_e) {
     a_e = x_e;

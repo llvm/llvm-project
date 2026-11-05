@@ -18,7 +18,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -90,7 +90,8 @@ namespace internal {
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>,
+                                       bool>
 shift_mantissa(int shift_length, T &mant) {
   if (shift_length >= cpp::numeric_limits<T>::digits) {
     mant = 0;
