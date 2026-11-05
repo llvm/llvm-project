@@ -4415,9 +4415,8 @@ bool AMDGPUDAGToDAGISel::SelectHi16ZeroSrc(SDValue In, SDValue &Src,
     SDValue X = Op.getOperand(0);
     if (X.getValueType() != MVT::i32 || !X->isDivergent())
       continue;
-    // Require X to be read only through its low half so that In can reuse the
-    // low half of X's register; otherwise the REG_SEQUENCE may need extra
-    // copies.
+    // Require only the low half of X is used; not strictly have to
+    // be only one use of low half ofX.
     if (!all_of(X->uses(), [&X](const SDUse &U) {
           if (U.getResNo() != X.getResNo())
             return true;
