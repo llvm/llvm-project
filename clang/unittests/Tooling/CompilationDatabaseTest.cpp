@@ -235,6 +235,7 @@ static std::string native(StringRef Path) {
 TEST(JSONCompilationDatabase, RelativeDirectory) {
   StringRef JSONDatabase = R"([
     {"directory": ".", "command": "cc a.cc", "file": "a.cc"},
+    {"directory": ".", "command": "cc a2.cc", "file": "a2.cc"},
     {"directory": "../out", "command": "cc b.cc", "file": "b.cc"},
     {"directory": "//net/abs/.", "command": "cc c.cc", "file": "c.cc"},
     {"directory": "", "command": "cc d.cc", "file": "d.cc"}
@@ -245,11 +246,12 @@ TEST(JSONCompilationDatabase, RelativeDirectory) {
           "//net/db", JSONDatabase, ErrorMessage, JSONCommandLineSyntax::Gnu);
   ASSERT_TRUE(Database) << ErrorMessage;
   std::vector<CompileCommand> Commands = Database->getAllCompileCommands();
-  ASSERT_EQ(4u, Commands.size());
+  ASSERT_EQ(5u, Commands.size());
   EXPECT_EQ(native("//net/db"), Commands[0].Directory);
-  EXPECT_EQ(native("//net/db/../out"), Commands[1].Directory);
-  EXPECT_EQ("//net/abs/.", Commands[2].Directory);
-  EXPECT_EQ("", Commands[3].Directory);
+  EXPECT_EQ(native("//net/db"), Commands[1].Directory);
+  EXPECT_EQ(native("//net/db/../out"), Commands[2].Directory);
+  EXPECT_EQ("//net/abs/.", Commands[3].Directory);
+  EXPECT_EQ("", Commands[4].Directory);
   EXPECT_EQ(1u, Database->getCompileCommands("//net/out/b.cc").size());
 
   Database = JSONCompilationDatabase::loadFromBuffer(

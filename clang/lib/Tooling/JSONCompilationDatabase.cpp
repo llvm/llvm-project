@@ -339,6 +339,8 @@ bool JSONCompilationDatabase::parse(StringRef BaseDirectory,
     ErrorMessage = "Expected array.";
     return false;
   }
+  // Most entries share a directory, so avoid recomputing it for each one.
+  StringRef PrevRawDirectory, DirectoryName;
   for (auto &NextObject : *Array) {
     auto *Object = dyn_cast<llvm::yaml::MappingNode>(&NextObject);
     if (!Object) {
@@ -412,14 +414,17 @@ bool JSONCompilationDatabase::parse(StringRef BaseDirectory,
       ErrorMessage = "Missing key: \"directory\".";
       return false;
     }
-    SmallString<8> DirectoryStorage;
-    SmallString<128> DirectoryPath(Directory->getValue(DirectoryStorage));
-    if (!BaseDirectory.empty() && !DirectoryPath.empty() &&
-        !llvm::sys::path::is_absolute(DirectoryPath)) {
-      llvm::sys::path::make_absolute(BaseDirectory, DirectoryPath);
-      llvm::sys::path::remove_dots(DirectoryPath);
+    if (Directory->getRawValue() != PrevRawDirectory) {
+      PrevRawDirectory = Directory->getRawValue();
+      SmallString<8> DirectoryStorage;
+      SmallString<128> DirectoryPath(Directory->getValue(DirectoryStorage));
+      if (!BaseDirectory.empty() && !DirectoryPath.empty() &&
+          !llvm::sys::path::is_absolute(DirectoryPath)) {
+        llvm::sys::path::make_absolute(BaseDirectory, DirectoryPath);
+        llvm::sys::path::remove_dots(DirectoryPath);
+      }
+      DirectoryName = Directories.insert(DirectoryPath).first->getKey();
     }
-    StringRef DirectoryName = Directories.insert(DirectoryPath).first->getKey();
     SmallString<8> FileStorage;
     StringRef FileName = File->getValue(FileStorage);
     SmallString<128> NativeFilePath;
