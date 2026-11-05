@@ -2218,15 +2218,17 @@ static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
   return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
 }
 
-bool GCNTTIImpl::hasUniformPointerOperand(const Instruction *I) const {
+static bool hasUniformPointerOperand(const Instruction *I) {
   const auto *LI = dyn_cast_or_null<LoadInst>(I);
   if (!LI)
     return false;
   const Value *Ptr = LI->getPointerOperand();
-  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
-  Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
-                                               /*AllowNonInbounds=*/true);
-  return isa<Argument, Constant>(Ptr) && !isSourceOfDivergence(Ptr);
+  while (const auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    if (!GEP->hasAllConstantIndices())
+      break;
+    Ptr = GEP->getPointerOperand();
+  }
+  return AMDGPU::isTriviallyUniform(Ptr, LI);
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,

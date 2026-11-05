@@ -1049,6 +1049,21 @@ define void @loads_addrspace_4_function_arg(ptr addrspace(4) %p, ptr addrspace(4
   ret void
 }
 
+define void @loads_addrspace_4_readfirstlane(ptr addrspace(4) %p) {
+; CHECK-LABEL: 'loads_addrspace_4_readfirstlane'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rfl = call ptr addrspace(4) @llvm.amdgcn.readfirstlane.p4(ptr addrspace(4) %p)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <16 x i32>, ptr addrspace(4) %rfl, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %rfl, i64 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  %rfl = call ptr addrspace(4) @llvm.amdgcn.readfirstlane.p4(ptr addrspace(4) %p)
+  load <16 x i32>, ptr addrspace(4) %rfl, align 64
+  %gep = getelementptr inbounds i8, ptr addrspace(4) %rfl, i64 64
+  load <16 x i32>, ptr addrspace(4) %gep, align 64
+  ret void
+}
+
 define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) {
 ; GFX8-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
