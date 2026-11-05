@@ -1175,8 +1175,7 @@ define i1 @splat_mul_unknown_lz(i32 %x) {
 
 define i1 @mul_oddC_overflow_eq(i8 %v) {
 ; CHECK-LABEL: @mul_oddC_overflow_eq(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[V:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL]], 101
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[V:%.*]], -31
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %v, 5
@@ -1186,8 +1185,7 @@ define i1 @mul_oddC_overflow_eq(i8 %v) {
 
 define i1 @mul_oddC_eq_nomod(i8 %v) {
 ; CHECK-LABEL: @mul_oddC_eq_nomod(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[V:%.*]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL]], 34
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[V:%.*]], -74
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %v, 3
@@ -1197,11 +1195,21 @@ define i1 @mul_oddC_eq_nomod(i8 %v) {
 
 define i1 @mul_evenC_ne(i8 %v) {
 ; CHECK-LABEL: @mul_evenC_ne(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[V:%.*]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[MUL]], 36
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[V:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 6
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %v, 6
+  %cmp = icmp ne i8 %mul, 36
+  ret i1 %cmp
+}
+
+define i1 @mul_evenC_ne_nuw(i8 %v) {
+; CHECK-LABEL: @mul_evenC_ne_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1:%.*]], 6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %v, 6
   %cmp = icmp ne i8 %mul, 36
   ret i1 %cmp
 }
@@ -1445,6 +1453,62 @@ entry:
   ret i1 %cmp
 }
 
+define <2 x i1> @mul_oddC_ne_nomod_vec(<2 x i8> %v) {
+; CHECK-LABEL: @mul_oddC_ne_nomod_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[V:%.*]], splat (i8 -83)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = mul <2 x i8> %v, splat (i8 3)
+  %cmp = icmp ne <2 x i8> %mul, splat (i8 7)
+  ret <2 x i1> %cmp
+}
+
+define i1 @mul_oddC_eq_nomod_uses(i8 %v) {
+; CHECK-LABEL: @mul_oddC_eq_nomod_uses(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[V:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[MUL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[V]], -31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %v, 5
+  call void @use(i8 %mul)
+  %cmp = icmp eq i8 %mul, 101
+  ret i1 %cmp
+}
+
+define i1 @mul_evenC_eq_nomod(i8 %v) {
+; CHECK-LABEL: @mul_evenC_eq_nomod(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[V:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 45
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %v, 6
+  %cmp = icmp eq i8 %mul, 14
+  ret i1 %cmp
+}
+
+define i1 @mul_evenC_ne_zero(i8 %v) {
+; CHECK-LABEL: @mul_evenC_ne_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[V:%.*]], 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %v, 12
+  %cmp = icmp ne i8 %mul, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @mul_negevenC_eq_vec(<2 x i8> %v) {
+; CHECK-LABEL: @mul_negevenC_eq_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[V:%.*]], splat (i8 31)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[TMP1]], splat (i8 29)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = mul <2 x i8> %v, splat (i8 -8)
+  %cmp = icmp eq <2 x i8> %mul, splat (i8 24)
+  ret <2 x i1> %cmp
+}
+
 ; Negative tests
 
 define i1 @icmp_eq_mul_nsw_mayequal(i8 %a, i8 %b, i8 %c) {
@@ -1493,6 +1557,19 @@ entry:
   %mul1 = mul nsw i8 %a, %c
   %mul2 = mul nsw i8 %b, %c
   %cmp = icmp ult i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @mul_evenC_eq_uses(i8 %v) {
+; CHECK-LABEL: @mul_evenC_eq_uses(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[V:%.*]], 6
+; CHECK-NEXT:    call void @use(i8 [[MUL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL]], 12
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %v, 6
+  call void @use(i8 %mul)
+  %cmp = icmp eq i8 %mul, 12
   ret i1 %cmp
 }
 

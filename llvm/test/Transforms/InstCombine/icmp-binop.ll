@@ -15,8 +15,7 @@ define i1 @mul_unkV_oddC_eq(i32 %v) {
 
 define i1 @mul_unkV_oddC_eq_nonzero(i32 %v) {
 ; CHECK-LABEL: @mul_unkV_oddC_eq_nonzero(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[V:%.*]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], -1431655764
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i32 %v, 3
