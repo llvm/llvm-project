@@ -5292,46 +5292,9 @@ static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
 // N is an 8- or 16-bit ATOMIC_LOAD_* operation.  Lower it into the fullword
 // ATOMIC_LOADW_* operation.
 void SystemZTargetLowering::lowerATOMIC_LOAD_OP(
-    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG,
+    unsigned Opcode) const {
   auto *Node = cast<AtomicSDNode>(N);
-  unsigned Opcode;
-  switch (Node->getOpcode()) {
-  case ISD::ATOMIC_SWAP:
-    Opcode = SystemZISD::ATOMIC_SWAPW;
-    break;
-  case ISD::ATOMIC_LOAD_ADD:
-    Opcode = SystemZISD::ATOMIC_LOADW_ADD;
-    break;
-  case ISD::ATOMIC_LOAD_SUB:
-    Opcode = SystemZISD::ATOMIC_LOADW_SUB;
-    break;
-  case ISD::ATOMIC_LOAD_AND:
-    Opcode = SystemZISD::ATOMIC_LOADW_AND;
-    break;
-  case ISD::ATOMIC_LOAD_OR:
-    Opcode = SystemZISD::ATOMIC_LOADW_OR;
-    break;
-  case ISD::ATOMIC_LOAD_XOR:
-    Opcode = SystemZISD::ATOMIC_LOADW_XOR;
-    break;
-  case ISD::ATOMIC_LOAD_NAND:
-    Opcode = SystemZISD::ATOMIC_LOADW_NAND;
-    break;
-  case ISD::ATOMIC_LOAD_MIN:
-    Opcode = SystemZISD::ATOMIC_LOADW_MIN;
-    break;
-  case ISD::ATOMIC_LOAD_MAX:
-    Opcode = SystemZISD::ATOMIC_LOADW_MAX;
-    break;
-  case ISD::ATOMIC_LOAD_UMIN:
-    Opcode = SystemZISD::ATOMIC_LOADW_UMIN;
-    break;
-  case ISD::ATOMIC_LOAD_UMAX:
-    Opcode = SystemZISD::ATOMIC_LOADW_UMAX;
-    break;
-  default:
-    llvm_unreachable("Unexpected atomic operation");
-  }
 
   EVT NarrowVT = Node->getMemoryVT();
   EVT WideVT = MVT::i32;
@@ -7636,17 +7599,37 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     break;
   }
   case ISD::ATOMIC_SWAP:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_SWAPW);
+    break;
   case ISD::ATOMIC_LOAD_ADD:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_ADD);
+    break;
   case ISD::ATOMIC_LOAD_SUB:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_SUB);
+    break;
   case ISD::ATOMIC_LOAD_AND:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_AND);
+    break;
   case ISD::ATOMIC_LOAD_OR:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_OR);
+    break;
   case ISD::ATOMIC_LOAD_XOR:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_XOR);
+    break;
   case ISD::ATOMIC_LOAD_NAND:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_NAND);
+    break;
   case ISD::ATOMIC_LOAD_MIN:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_MIN);
+    break;
   case ISD::ATOMIC_LOAD_MAX:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_MAX);
+    break;
   case ISD::ATOMIC_LOAD_UMIN:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_UMIN);
+    break;
   case ISD::ATOMIC_LOAD_UMAX:
-    lowerATOMIC_LOAD_OP(N, Results, DAG);
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_UMAX);
     break;
   default:
     llvm_unreachable("Unexpected node to lower");
