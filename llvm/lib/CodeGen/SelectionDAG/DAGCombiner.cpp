@@ -6168,6 +6168,11 @@ SDValue DAGCombiner::visitSMUL_LOHI(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // fold (smul_lohi c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(N->getOpcode(), DL, N->getVTList(),
+                                             {N0, N1}))
+    return C;
+
   // canonicalize constant to RHS (vector doesn't have to splat)
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -6204,6 +6209,11 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+
+  // fold (umul_lohi c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(N->getOpcode(), DL, N->getVTList(),
+                                             {N0, N1}))
+    return C;
 
   // canonicalize constant to RHS (vector doesn't have to splat)
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&

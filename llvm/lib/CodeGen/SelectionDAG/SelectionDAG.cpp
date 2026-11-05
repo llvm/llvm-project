@@ -8417,6 +8417,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                     getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
                    Flags);
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    APInt Lo = V1 * V2;
+    APInt Hi = (Opcode == ISD::SMUL_LOHI) ? APIntOps::mulhs(V1, V2)
+                                          : APIntOps::mulhu(V1, V2);
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Lo, DL, VTList.VTs[0]),
+                    getConstant(Hi, DL, VTList.VTs[1])},
+                   Flags);
   }
   return SDValue();
 }
