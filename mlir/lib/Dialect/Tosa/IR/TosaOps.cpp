@@ -28,6 +28,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
 #include <type_traits>

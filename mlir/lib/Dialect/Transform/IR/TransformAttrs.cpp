@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;
 

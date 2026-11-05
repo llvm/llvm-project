@@ -15,6 +15,7 @@
 #include "TestDialect.h"
 #include "TestTypes.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"

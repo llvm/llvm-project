@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 

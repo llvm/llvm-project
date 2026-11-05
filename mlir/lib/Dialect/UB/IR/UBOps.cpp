@@ -10,6 +10,8 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
+#include "mlir/IR/Builders.h"
+
 #include "mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc"
 
 using namespace mlir;
