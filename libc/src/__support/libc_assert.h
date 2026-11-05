@@ -53,7 +53,7 @@ namespace LIBC_NAMESPACE_DECL {
 #define LIBC_REQUIRE(COND, MSG)                                                \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND)))                                                \
-      LIBC_NAMESPACE::__assert_fail(MSG, __FILE__, __LINE__,                  \
+      LIBC_NAMESPACE::__assert_fail(MSG, __FILE__, __LINE__,                   \
                                     __PRETTY_FUNCTION__);                      \
   } while (false)
 #endif // LIBC_FULL_BUILD

@@ -259,7 +259,7 @@ TEST(LlvmLibcUniquePtrTest, BaseDerivedConversion) {
   ASSERT_EQ(base_ptr->val, 100);
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(SIGABRT)
 #define EXPECT_ASSERT_FAILURE(FUNC) EXPECT_DEATH(FUNC, WITH_SIGNAL(SIGABRT))
 
 // Test that dereferencing a null unique_ptr asserts.
@@ -274,4 +274,4 @@ TEST(LlvmLibcUniquePtrTest, NullDereferenceDeath) {
   unique_ptr<int[]> arr;
   EXPECT_ASSERT_FAILURE([&] { (void)arr[0]; });
 }
-#endif // NDEBUG
+#endif // !defined(NDEBUG) && defined(SIGABRT)
