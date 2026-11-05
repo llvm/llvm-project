@@ -227,16 +227,19 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       if (hasInZp && hasOutZp) {
         // Compute the maximum value that can occur in the intermediate buffer.
+        // Zero points can only be non-zero for int8, so their sum fits in
+        // int64_t. The bound is computed with 128 bits so that it cannot
+        // overflow for 64-bit inputs.
         const int64_t zpAdd = inZp + outZp;
-        const int64_t maxValue =
-            APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
+        const APInt maxValue =
+            APInt::getSignedMaxValue(inputBitWidth).sext(128) +
             std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
         // represent it.
-        if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+        if (maxValue.sle(APInt::getSignedMaxValue(16).getSExtValue())) {
           intermediateBitWidth = 16;
-        } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+        } else if (maxValue.sle(APInt::getSignedMaxValue(32).getSExtValue())) {
           intermediateBitWidth = 32;
         }
 

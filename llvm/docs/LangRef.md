@@ -2297,6 +2297,15 @@ define void @f() "no-sse" { ... }
     on function-pointer identity can break. So, any function annotated with
     `jumptable` must also be `unnamed_addr`.
 
+`likely_module_local`
+:   This attribute indicates that the function is likely not referenced from
+    outside of the current module, even though its linkage does not guarantee
+    that. It is only meaningful on functions with `linkonce_odr` linkage and is
+    ignored otherwise. Optimizations may use it as a profitability hint. It is
+    just a hint; it imposes no requirements on the inliner or other
+    optimizations, and furthermore it must not be relied upon for correctness,
+    as the function may still be referenced from another module.
+
 `memory(...)`
 :   This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (`none`,
@@ -2969,6 +2978,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     required integer value, which should be a non-negative integer, and less
     than `UINT_MAX`.  It's unspecified which threshold will be used when
     duplicate definitions are linked together with differing values.
+
+`"unsafe-stack-size"="<size>"`
+:   This attribute records the size in bytes of the static unsafe stack frame
+    of a function with the `safestack` attribute. The SafeStack pass sets it,
+    and code generation adds it to the frame size when reporting stack usage.
+    It is ignored on functions without `safestack`. It takes one required
+    integer value, which should be a non-negative integer, and less than
+    `UINT_MAX`. This attribute is only used internally by LLVM and should not
+    be set by frontends.
 
 `vscale_range(<min>[, <max>])`
 :   This function attribute indicates `vscale` is a power-of-two within a

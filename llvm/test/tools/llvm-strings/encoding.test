@@ -4,14 +4,14 @@ RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
 # UTF-8 encoding of U+00A0 NON-BREAKING SPACE (which we treat as printable)
-RUN: printf 'bcde\302\240\n' >> %t
+RUN: echo -e 'bcde\302\240' >> %t
 # UTF-8 encoding of U+009F APPLICATION PROGRAM COMMAND (non-printable)
-RUN: printf 'cdef\302\240\302\237\n' >> %t
+RUN: echo -e 'cdef\302\240\302\237' >> %t
 
 # Check that partial and invalid UTF-8 characters do not interfere with
 # preceding and subsequent strings.
-RUN: printf '\342defg\342\n' >> %t
-RUN: printf '\342\200efgh\342\200\n' >> %t
+RUN: echo -e '\342defg\342' >> %t
+RUN: echo -e '\342\200efgh\342\200' >> %t
 
 # Check that long form options work.
 RUN: llvm-strings --encoding s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
@@ -70,22 +70,28 @@ CHECK-ERROR: error: 'x' is not a valid value for '--encoding='
 # already be reached before the chunk boundary, and the character that crosses
 # the boundary may or may not be printable.
 #
-#                                v chunk boundary
-RUN: printf "%16380s\302\240e\302\240e\302\240e\302\240" | \
-RUN: tr " " "\0" | llvm-strings -e utf8 | \
+RUN: printf "%16380s" | tr " " "\0" > %t
+#                             v chunk boundary
+RUN: echo -n -e "\302\240e\302\240e\302\240e\302\240" >> %t
+RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-#                       v chunk boundary
-RUN: printf "%16383s\302\240e\302\240e\302\240e\302\240" | \
-RUN: tr " " "\0" | llvm-strings -e utf8 | \
+
+RUN: printf "%16383s" | tr " " "\0" > %t
+#                    v chunk boundary
+RUN: echo -n -e "\302\240e\302\240e\302\240e\302\240" >> %t
+RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 CHECK-UTF8-CHUNK-A:{{\xc2\xa0e\xc2\xa0e\xc2\xa0e\xc2\xa0}}
 
-#                                 v chunk boundary
-RUN: printf "%16379se\302\240e\302\237e\302\240e\302\240e" | \
-RUN: tr " " "\0" | llvm-strings -e utf8 | \
+RUN: printf "%16379s" | tr " " "\0" > %t
+#                              v chunk boundary
+RUN: echo -n -e "e\302\240e\302\237e\302\240e\302\240e" >> %t
+RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-#                        v chunk boundary
-RUN: printf "%16382se\302\237e\302\240e\302\240e\342" | \
-RUN: tr " " "\0" | llvm-strings -e utf8 | \
+
+RUN: printf "%16382s" | tr " " "\0" > %t
+#                     v chunk boundary
+RUN: echo -n -e "e\302\237e\302\240e\302\240e\342" >> %t
+RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 CHECK-UTF8-CHUNK-B:{{e\xc2\xa0e\xc2\xa0e}}

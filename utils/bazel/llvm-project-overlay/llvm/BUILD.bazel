@@ -63,6 +63,7 @@ exports_files([
     "include/llvm/Frontend/Directive/DirectiveBase.td",
     "include/llvm/Frontend/OpenACC/ACC.td",
     "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Attributes.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
@@ -1322,6 +1323,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitReaderOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Reader",
+    tbl_outs = {"lib/Bitcode/Reader/BitReaderOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Reader/BitReaderOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitReader",
     srcs = glob([
@@ -1338,8 +1348,10 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":BitReaderOptionsTableGen",
         ":BitstreamReader",
         ":Core",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1636,6 +1648,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitWriterOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Writer",
+    tbl_outs = {"lib/Bitcode/Writer/BitWriterOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Writer/BitWriterOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitWriter",
     srcs = glob([
@@ -1655,10 +1676,12 @@ cc_library(
         ":Analysis",
         ":BinaryFormat",
         ":BitReader",
+        ":BitWriterOptionsTableGen",
         ":BitstreamWriter",
         ":Core",
         ":MC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -1695,7 +1718,7 @@ filegroup(
         "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/IR/*.td",
         "include/llvm/TableGen/*.td",
         "include/llvm/Target/*.td",
         "include/llvm/Target/GlobalISel/*.td",
@@ -1769,7 +1792,7 @@ gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/RISCV/RISCV.td",
+    td_file = "lib/Target/RISCV/RISCVTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
@@ -2382,10 +2405,22 @@ expand_template(
     template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
+gentbl_cc_library(
+    name = "IPOOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/IPO",
+    tbl_outs = {
+        "lib/Transforms/IPO/IPOOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/IPO/IPOOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
         "lib/Transforms/IPO/*.cpp",
+        "lib/Transforms/IPO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
@@ -2406,6 +2441,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOpenMP",
+        ":IPOOptionsTableGen",
         ":IRPrinter",
         ":IRReader",
         ":InstCombine",
@@ -2413,6 +2449,7 @@ cc_library(
         ":Linker",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -4674,6 +4711,7 @@ cc_library(
         ":Core",
         ":LTO",
         ":Object",
+        ":Passes",
         ":Support",
     ],
 )

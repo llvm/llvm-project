@@ -2023,8 +2023,8 @@ std::optional<std::int64_t> ToInt64(const ActualArgument &arg) {
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_INTEGER_KIND(template class ExpressionBase, )
-FOR_EACH_UNSIGNED_KIND(template class ExpressionBase, )
+template class ExpressionBase<Type<TypeCategory::Integer>>;
+template class ExpressionBase<Type<TypeCategory::Unsigned>>;
 template class ExpressionBase<SomeInteger>;
 template class ExpressionBase<SomeUnsigned>;
 } // namespace Fortran::evaluate

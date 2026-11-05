@@ -557,12 +557,12 @@ public:
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
   bool isVSrc_v2b64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::i64) ||
            isLiteralImm(MVT::i64);
   }
 
   bool isVSrc_v2f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::f64) ||
            isLiteralImm(MVT::f64);
   }
 
@@ -6266,11 +6266,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      if (!getFeatureBits().test(AMDGPU::FeatureSupportsWave32) ||
-          !getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
-        return Error(IDRange.Start,
-                     "directive unsupported on " + getSTI().getCPU(), IDRange);
-      }
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,

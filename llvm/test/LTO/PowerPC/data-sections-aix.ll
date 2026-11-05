@@ -16,7 +16,7 @@
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol var -O0 %t/bc.bc -thinlto-save-objects=%t/default
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol var -O0 --data-sections=1 %t/bc.bc -thinlto-save-objects=%t/data-sections
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol var -O0 --data-sections=0 %t/bc.bc -thinlto-save-objects=%t/no-data-sections
-; RUN: llvm-objdump -t %t/default/0.powerpc.thinlto.o | FileCheck --check-prefix CHECK-NO-DATA-SECTIONS %s
+; RUN: llvm-objdump -t %t/default/0.powerpc.thinlto.o | FileCheck %s
 ; RUN: llvm-objdump -t %t/data-sections/0.powerpc.thinlto.o | FileCheck %s
 ; RUN: llvm-objdump -t %t/no-data-sections/0.powerpc.thinlto.o | FileCheck --check-prefix CHECK-NO-DATA-SECTIONS %s
 
