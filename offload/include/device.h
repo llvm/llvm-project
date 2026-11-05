@@ -158,9 +158,6 @@ struct DeviceTy {
                                                    const char *Name,
                                                    size_t ExpectedSize);
 
-  /// The plugin-side context backing this device's context handle.
-  llvm::omp::target::plugin::PluginContextTy *getPluginContext();
-
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
   /// (depending on \p Kind) and returns the address/nullptr when
