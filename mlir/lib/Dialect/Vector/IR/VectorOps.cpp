@@ -7005,6 +7005,7 @@ namespace {
 /// type by removing the _trailing_ unit dims:
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
+///   vector<1x1xi1>   --> vector<i1> (if allowRank0 = true)
 ///
 static VectorType trimTrailingUnitDims(VectorType oldType,
                                        bool allowRank0 = false) {
@@ -7019,8 +7020,7 @@ static VectorType trimTrailingUnitDims(VectorType oldType,
     newScalableDims = newScalableDims.drop_back(1);
   }
 
-  // Make sure we have at least 1 dimension.
-  // TODO: Add support for 0-D vectors.
+  // Make sure we have at least 1 dimension unless 0-D vectors are allowed.
   if (newShape.empty() && !allowRank0) {
     newShape = oldShape.take_back();
     newScalableDims = oldScalableDims.take_back();
@@ -7033,6 +7033,7 @@ static VectorType trimTrailingUnitDims(VectorType oldType,
 /// type by removing the _leading_ unit dims:
 ///
 ///   vector<1x1x4xi1> --> vector<4x1xi1>
+///   vector<1x1xi1>   --> vector<i1> (if allowRank0 = true)
 ///
 static VectorType trimLeadingUnitDims(VectorType oldType,
                                       bool allowRank0 = false) {
@@ -7048,8 +7049,7 @@ static VectorType trimLeadingUnitDims(VectorType oldType,
     newScalableDims = newScalableDims.drop_front(1);
   }
 
-  // Make sure we have at least 1 dimension.
-  // TODO: Add support for 0-D vectors.
+  // Make sure we have at least 1 dimension unless 0-D vectors are allowed.
   if (newShape.empty() && !allowRank0) {
     newShape = oldShape.take_back();
     newScalableDims = oldScalableDims.take_back();
@@ -7060,13 +7060,15 @@ static VectorType trimLeadingUnitDims(VectorType oldType,
 
 enum class UnitDimSide { Leading, Trailing };
 
-/// Folds qualifying shape_cast(create_mask) into a new create_mask
+/// Folds qualifying shape_cast(create_mask) / shape_cast(constant_mask) into a
+/// new create_mask / constant_mask
 ///
 /// Looks at `vector.shape_cast` Ops that simply "drop" either the _trailing_ or
-/// the _leading_unit dimension (configured with the template parameter). If the
-/// input vector comes from `vector.create_mask` for which the corresponding
-/// mask input value is 1 (e.g. `%c1` below), then it is safe to fold shape_cast
-/// into create_mask.
+/// the _leading_ unit dimension (configured with the template parameter),
+/// including trimming all unit dimensions down to a 0-D vector. If the input
+/// vector comes from `vector.create_mask` for which the corresponding mask
+/// input value is 1 (e.g. `%c1` below), then it is safe to fold shape_cast into
+/// create_mask.
 ///
 /// EX 1 (trailing unit dims)
 /// BEFORE:
@@ -7081,6 +7083,13 @@ enum class UnitDimSide { Leading, Trailing };
 ///    %2 = vector.shape_cast %1 : vector<1x1x[4]x1xi1> to vector<[4]x1xi1>
 /// AFTER:
 ///    %0 = vector.create_mask %c1, %dim : vector<[4]xi1>
+///
+/// EX 3 (trailing unit dims to 0-D)
+/// BEFORE:
+///    %1 = vector.create_mask %dim, %c1 : vector<1x1xi1>
+///    %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+/// AFTER:
+///    %0 = vector.create_mask %dim : vector<i1>
 template <UnitDimSide Side>
 class ShapeCastCreateMaskFolderBoundaryUnitDim final
     : public OpRewritePattern<ShapeCastOp> {
@@ -7122,7 +7131,7 @@ public:
                        shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
     }
 
-    int64_t numMaskDimsToDrop = shapeOpResTy.getRank() == 0
+    int64_t numMaskDimsToDrop = allowRank0
                                     ? shapeOpSrcTy.getRank() - 1
                                     : numDimsToDrop;
 
