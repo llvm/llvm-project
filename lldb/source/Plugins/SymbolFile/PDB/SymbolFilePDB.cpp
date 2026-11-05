@@ -79,24 +79,8 @@ enum PDBReader {
   ePDBReaderNative,
 };
 
-constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
-    {
-        ePDBReaderDefault,
-        "default",
-        "Use native PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
-        "is set to 0",
-    },
-    {
-        ePDBReaderDIA,
-        "dia",
-        "Use DIA PDB reader",
-    },
-    {
-        ePDBReaderNative,
-        "native",
-        "Use native PDB reader",
-    },
-};
+#define LLDB_ENUMS_pdb_reader_enums
+#include "SymbolFilePDBEnums.inc"
 
 #define LLDB_PROPERTIES_symbolfilepdb
 #include "SymbolFilePDBProperties.inc"
