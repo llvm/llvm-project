@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/FuzzMutate/MLIRMutator.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -18,13 +19,13 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllExtensions.h"
 #include "mlir/InitAllPasses.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LibraryOptionsContext.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 
@@ -44,10 +45,31 @@ static llvm::cl::opt<std::string> PipelineSlug(
     llvm::cl::desc("Pipeline slug from MlirOptFuzzerPipelines.def"),
     llvm::cl::init(""));
 
+static std::unique_ptr<MLIRMutator> Mutator;
+
+static std::unique_ptr<MLIRMutator> createMutator() {
+  std::vector<std::unique_ptr<MLIRMutationStrategy>> Strategies;
+  Strategies.push_back(std::make_unique<TopLevelOpDuplicationStrategy>());
+  Strategies.push_back(std::make_unique<PoisonAppendStrategy>());
+  return std::make_unique<MLIRMutator>(std::move(Strategies));
+}
+
 static void handleLLVMFatalError(void *, const char *Message, bool) {
   llvm::dbgs() << "LLVM ERROR: " << Message << "\n"
                << "Aborting to trigger fuzzer exit handling.\n";
   abort();
+}
+
+// Per-input context: quiet (hot-path diag noise is not a finding —
+// triage re-runs the artifact for detail) and deterministic (serial).
+static std::unique_ptr<MLIRContext> makeInputContext() {
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerAllExtensions(registry);
+  auto context = std::make_unique<MLIRContext>(registry);
+  context->disableMultithreading();
+  context->getDiagEngine().registerHandler([](Diagnostic &) {});
+  return context;
 }
 
 extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
@@ -86,6 +108,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
                  << "'\n";
     std::exit(1);
   }
+
+  // Create mutator
+  Mutator = createMutator();
+
   return 0;
 }
 
@@ -102,23 +128,13 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerTestOneInput(const uint8_t *data,
   // Validated at startup.
   llvm::StringRef pipelineText = *getPipeline(PipelineSlug);
 
-  DialectRegistry registry;
-  registerAllDialects(registry);
-  registerAllExtensions(registry);
-  MLIRContext context(registry);
-  // Sequential pass execution for deterministic replay.
-  context.disableMultithreading();
-  // Register diagnostic handler to avoid triggering exit behavior.
-  context.getDiagEngine().registerHandler(
-      [](mlir::Diagnostic &diag) { return; });
-
-  PassManager pm(&context, kModuleAnchor, PassManager::Nesting::Implicit);
+  auto context = makeInputContext();
+  PassManager pm(context.get(), kModuleAnchor, PassManager::Nesting::Implicit);
   // Validated at startup; the parse cannot fail.
   (void)parsePassPipeline(pipelineText, pm, llvm::nulls());
 
   // An unparseable module is a rejected input, not a finding.
-  OwningOpRef<ModuleOp> module =
-      parseSourceString<ModuleOp>(str, ParserConfig(&context));
+  auto module = parseAndVerify(str, *context);
   if (!module)
     return 0;
 
@@ -134,9 +150,37 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerTestOneInput(const uint8_t *data,
   return 0;
 }
 
-extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
-                                                              size_t MaxSize, unsigned Seed) {
-  return 0;
+extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(uint8_t *Data,
+                                                              size_t Size,
+                                                              size_t MaxSize,
+                                                              unsigned Seed) {
+  assert(Mutator &&
+         "MLIR mutator should have been created during fuzzer initialization");
+
+  auto context = makeInputContext();
+  auto owned = parseAndVerify(
+      llvm::StringRef(reinterpret_cast<const char *>(Data), Size), *context);
+  if (!owned)
+    // Dead input — nothing structural to mutate.
+    return 0;
+
+  ModuleOp module = *owned;
+  Mutator->mutateModule(module, Seed, MaxSize);
+
+  std::string out;
+  llvm::raw_string_ostream os(out);
+  module.print(os);
+  if (out.empty() || out.size() > MaxSize)
+    // Mutation aborted — no corpus poisoning.
+    return 0;
+
+  // Corpus hygiene (llvm-opt-fuzzer discipline): only re-admit units
+  // that survive the target's own front door — the alternative is a
+  // corpus full of parser-error junk instead of pass behavior.
+  if (!parseAndVerify(out, *context))
+    return 0;
+  std::memcpy(Data, out.data(), out.size());
+  return out.size();
 }
 
 extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomCrossOver(const uint8_t *Data1, size_t Size1,
