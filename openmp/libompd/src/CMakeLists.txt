@@ -18,6 +18,18 @@ openmp_register_meta_dep(ompd)
 # libompd must not link against libomp, there is no code dependency.
 add_dependencies(ompd omp) # ensure generated import library is created first
 
+if(TARGET cxx-headers)
+   add_dependencies(ompd cxx-headers)
+endif()
+
+if(TARGET cxx_shared)
+   add_dependencies(ompd cxx_shared)
+endif()
+
+if(TARGET cxxabi_shared)
+   add_dependencies(ompd cxxabi_shared)
+endif()
+
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(LIBOMPD_LD_STD_FLAGS FALSE CACHE BOOL
