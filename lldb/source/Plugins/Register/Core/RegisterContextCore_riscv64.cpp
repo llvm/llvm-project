@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_riscv32.cpp ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIX_riscv32.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -17,65 +16,66 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
+#include "RegisterContextCore_riscv64.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
-RegisterContextPOSIX_riscv32::RegisterContextPOSIX_riscv32(
+RegisterContextCore_riscv64::RegisterContextCore_riscv64(
     lldb_private::Thread &thread,
-    std::unique_ptr<RegisterInfo_riscv32> register_info)
+    std::unique_ptr<RegisterInfo_riscv64> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
-RegisterContextPOSIX_riscv32::~RegisterContextPOSIX_riscv32() = default;
+RegisterContextCore_riscv64::~RegisterContextCore_riscv64() = default;
 
-void RegisterContextPOSIX_riscv32::invalidate() {}
+void RegisterContextCore_riscv64::invalidate() {}
 
-void RegisterContextPOSIX_riscv32::InvalidateAllRegisters() {}
+void RegisterContextCore_riscv64::InvalidateAllRegisters() {}
 
-size_t RegisterContextPOSIX_riscv32::GetRegisterCount() {
+size_t RegisterContextCore_riscv64::GetRegisterCount() {
   return m_register_info_up->GetRegisterCount();
 }
 
-size_t RegisterContextPOSIX_riscv32::GetGPRSize() {
+size_t RegisterContextCore_riscv64::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-unsigned RegisterContextPOSIX_riscv32::GetRegisterSize(unsigned int reg) {
+unsigned RegisterContextCore_riscv64::GetRegisterSize(unsigned int reg) {
   return m_register_info_up->GetRegisterInfo()[reg].byte_size;
 }
 
-unsigned RegisterContextPOSIX_riscv32::GetRegisterOffset(unsigned int reg) {
+unsigned RegisterContextCore_riscv64::GetRegisterOffset(unsigned int reg) {
   return m_register_info_up->GetRegisterInfo()[reg].byte_offset;
 }
 
 const lldb_private::RegisterInfo *
-RegisterContextPOSIX_riscv32::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_riscv64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < GetRegisterCount())
     return &GetRegisterInfo()[reg];
 
   return nullptr;
 }
 
-size_t RegisterContextPOSIX_riscv32::GetRegisterSetCount() {
-  return m_register_info_up->GetRegisterCount();
+size_t RegisterContextCore_riscv64::GetRegisterSetCount() {
+  return m_register_info_up->GetRegisterSetCount();
 }
 
 const lldb_private::RegisterSet *
-RegisterContextPOSIX_riscv32::GetRegisterSet(size_t set) {
+RegisterContextCore_riscv64::GetRegisterSet(size_t set) {
   return m_register_info_up->GetRegisterSet(set);
 }
 
 const lldb_private::RegisterInfo *
-RegisterContextPOSIX_riscv32::GetRegisterInfo() {
+RegisterContextCore_riscv64::GetRegisterInfo() {
   return m_register_info_up->GetRegisterInfo();
 }
 
-bool RegisterContextPOSIX_riscv32::IsGPR(unsigned int reg) {
+bool RegisterContextCore_riscv64::IsGPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfo_riscv32::eRegsetMaskDefault;
+         RegisterInfo_riscv64::GPRegSet;
 }
 
-bool RegisterContextPOSIX_riscv32::IsFPR(unsigned int reg) {
-  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfo_riscv32::eRegsetMaskFP;
+bool RegisterContextCore_riscv64::IsFPR(unsigned int reg) {
+  return m_register_info_up->IsFPReg(reg);
 }

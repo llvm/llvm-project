@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_ppc64le.cpp ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextPOSIX_ppc64le.h"
+#include "RegisterContextCore_ppc64le.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -95,51 +95,51 @@ static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
     {"VSX Registers", "vsx", k_num_vsx_registers_ppc64le, g_vsx_regnums},
 };
 
-bool RegisterContextPOSIX_ppc64le::IsGPR(unsigned reg) {
+bool RegisterContextCore_ppc64le::IsGPR(unsigned reg) {
   return (reg <= k_last_gpr_ppc64le); // GPR's come first.
 }
 
-bool RegisterContextPOSIX_ppc64le::IsFPR(unsigned reg) {
+bool RegisterContextCore_ppc64le::IsFPR(unsigned reg) {
   return (reg >= k_first_fpr_ppc64le) && (reg <= k_last_fpr_ppc64le);
 }
 
-bool RegisterContextPOSIX_ppc64le::IsVMX(unsigned reg) {
+bool RegisterContextCore_ppc64le::IsVMX(unsigned reg) {
   return (reg >= k_first_vmx_ppc64le) && (reg <= k_last_vmx_ppc64le);
 }
 
-bool RegisterContextPOSIX_ppc64le::IsVSX(unsigned reg) {
+bool RegisterContextCore_ppc64le::IsVSX(unsigned reg) {
   return (reg >= k_first_vsx_ppc64le) && (reg <= k_last_vsx_ppc64le);
 }
 
-RegisterContextPOSIX_ppc64le::RegisterContextPOSIX_ppc64le(
+RegisterContextCore_ppc64le::RegisterContextCore_ppc64le(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 }
 
-void RegisterContextPOSIX_ppc64le::InvalidateAllRegisters() {}
+void RegisterContextCore_ppc64le::InvalidateAllRegisters() {}
 
-unsigned RegisterContextPOSIX_ppc64le::GetRegisterOffset(unsigned reg) {
+unsigned RegisterContextCore_ppc64le::GetRegisterOffset(unsigned reg) {
   assert(reg < k_num_registers_ppc64le && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
-unsigned RegisterContextPOSIX_ppc64le::GetRegisterSize(unsigned reg) {
+unsigned RegisterContextCore_ppc64le::GetRegisterSize(unsigned reg) {
   assert(reg < k_num_registers_ppc64le && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
-size_t RegisterContextPOSIX_ppc64le::GetRegisterCount() {
+size_t RegisterContextCore_ppc64le::GetRegisterCount() {
   size_t num_registers = k_num_registers_ppc64le;
   return num_registers;
 }
 
-size_t RegisterContextPOSIX_ppc64le::GetGPRSize() {
+size_t RegisterContextCore_ppc64le::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-const RegisterInfo *RegisterContextPOSIX_ppc64le::GetRegisterInfo() {
+const RegisterInfo *RegisterContextCore_ppc64le::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
@@ -147,14 +147,14 @@ const RegisterInfo *RegisterContextPOSIX_ppc64le::GetRegisterInfo() {
 }
 
 const RegisterInfo *
-RegisterContextPOSIX_ppc64le::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_ppc64le::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_registers_ppc64le)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
 }
 
-size_t RegisterContextPOSIX_ppc64le::GetRegisterSetCount() {
+size_t RegisterContextCore_ppc64le::GetRegisterSetCount() {
   size_t sets = 0;
   for (size_t set = 0; set < k_num_register_sets; ++set) {
     if (IsRegisterSetAvailable(set))
@@ -164,19 +164,19 @@ size_t RegisterContextPOSIX_ppc64le::GetRegisterSetCount() {
   return sets;
 }
 
-const RegisterSet *RegisterContextPOSIX_ppc64le::GetRegisterSet(size_t set) {
+const RegisterSet *RegisterContextCore_ppc64le::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set))
     return &g_reg_sets_ppc64le[set];
   else
     return nullptr;
 }
 
-const char *RegisterContextPOSIX_ppc64le::GetRegisterName(unsigned reg) {
+const char *RegisterContextCore_ppc64le::GetRegisterName(unsigned reg) {
   assert(reg < k_num_registers_ppc64le && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
-bool RegisterContextPOSIX_ppc64le::IsRegisterSetAvailable(size_t set_index) {
+bool RegisterContextCore_ppc64le::IsRegisterSetAvailable(size_t set_index) {
   size_t num_sets = k_num_register_sets;
 
   return (set_index < num_sets);
