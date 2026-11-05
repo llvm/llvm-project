@@ -983,6 +983,31 @@ __riscv_wzip16p_64(uint32_t __rs1, uint32_t __rs2) {
   return (uint64_t)__riscv_pzip_u16x4((uint16x2_t)__rs1, (uint16x2_t)__rs2);
 }
 
+/* Scalar Merge */
+static __inline__ int32_t __DEFAULT_FN_ATTRS
+__riscv_merge_i32(int32_t __rs1, int32_t __rs2, uint32_t __rd) {
+  return (int32_t)__builtin_riscv_merge_u32((uint32_t)__rs1, (uint32_t)__rs2,
+                                            __rd);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_merge_u32(uint32_t __rs1, uint32_t __rs2, uint32_t __rd) {
+  return __builtin_riscv_merge_u32(__rs1, __rs2, __rd);
+}
+
+#if __riscv_xlen == 64
+static __inline__ int64_t __DEFAULT_FN_ATTRS
+__riscv_merge_i64(int64_t __rs1, int64_t __rs2, uint64_t __rd) {
+  return (int64_t)__builtin_riscv_merge_u64((uint64_t)__rs1, (uint64_t)__rs2,
+                                            __rd);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_merge_u64(uint64_t __rs1, uint64_t __rs2, uint64_t __rd) {
+  return __builtin_riscv_merge_u64(__rs1, __rs2, __rd);
+}
+#endif
+
 /* Packed Unzip */
 __packed_unzipe4(punzipe_i8x4, int8x4_t, int8x8_t)
 __packed_unzipo4(punzipo_i8x4, int8x4_t, int8x8_t)

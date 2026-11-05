@@ -4638,3 +4638,32 @@ define i64 @srxi_i64_103(i64 %a, i64 %b) {
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 103)
   ret i64 %1
 }
+
+declare i32 @llvm.riscv.merge.i32(i32, i32, i32)
+
+define i32 @merge_intrinsic_i32_merge(i32 %rd, i32 %rs1, i32 %rs2) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_merge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}
+
+define i32 @merge_intrinsic_i32_mvm(i32 %rs1, i32 %rd, i32 %rs2) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_mvm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}
+
+define i32 @merge_intrinsic_i32_mvmn(i32 %rs2, i32 %rs1, i32 %rd) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_mvmn:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}

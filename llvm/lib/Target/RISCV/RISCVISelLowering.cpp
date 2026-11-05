@@ -13781,6 +13781,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           : RISCVISD::PM4ADDA;
     return DAG.getNode(AccOpc, DL, MVT::i64, Rd, A, B);
   }
+  case Intrinsic::riscv_merge:
+    // Scalar merge: (rs1, rs2, rd) -> MERGE(mask=rd, rs1, rs2).
+    return DAG.getNode(RISCVISD::MERGE, DL, Op.getValueType(), Op.getOperand(3),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
     // 64-bit packed types on RV32: split into two 32-bit halves.
@@ -18384,6 +18388,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                       {RdLo, RdHi, N->getOperand(2), N->getOperand(3)});
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
                                     Acc.getValue(0), Acc.getValue(1)));
+      return;
+    }
+    case Intrinsic::riscv_merge: {
+      // Scalar merge on RV64 i32: the operands are already in GPRs, so
+      // any-extend to i64, merge, and truncate. Bitwise select is exact on the
+      // extended bits, so the low 32 bits of the result are correct. RV32 i64
+      // is not supported.
+      EVT VT = N->getValueType(0);
+      if (VT != MVT::i32 || !Subtarget.is64Bit())
+        return;
+      SDValue Rd = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3));
+      SDValue Rs1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Rs2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = DAG.getNode(RISCVISD::MERGE, DL, MVT::i64, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
     case Intrinsic::riscv_pnclipp:
