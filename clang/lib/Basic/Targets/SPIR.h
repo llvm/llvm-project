@@ -316,7 +316,7 @@ public:
 
   // The LLVM SPIR-V backend defines no processors and accepts only "generic";
   // The -target-cpu value used in BaseSPIRTargetInfo is only used by the
-  // frontend, and the backend / createTargetMachine should not use this 
+  // frontend, and the backend / createTargetMachine should not use this
   // -target-cpu value to (attempt to) construct an LLVM TargetMachine.
   StringRef getBackendCPU() const override { return StringRef(); }
 
