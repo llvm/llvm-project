@@ -413,12 +413,14 @@ def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
                            [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 
 def tlsadd        : SDNode<"SPISD::TLS_ADD", SDTSPtlsadd>;
-def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld>;
+def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def tlscall       : SDNode<"SPISD::TLS_CALL", SDT_SPCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;
 
-def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop>;
+def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 def getPCX        : Operand<iPTR> {
   let PrintMethod = "printGetPCX";
@@ -753,6 +755,11 @@ let mayLoad = 1, isAsmParserOnly = 1 in {
                       [(set i32:$rd,
                           (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
+
+def : Pat<(i32 (load_gdop ADDRrr:$addr, tconstpool:$sym)),
+          (GDOP_LDrr ADDRrr:$addr, tconstpool:$sym)>;
+def : Pat<(i32 (load_gdop ADDRrr:$addr, tblockaddress:$sym)),
+          (GDOP_LDrr ADDRrr:$addr, tblockaddress:$sym)>;
 
 // Section B.4 - Store Integer Instructions, p. 95
 defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
@@ -1352,6 +1359,7 @@ let rd = 0 in {
 }
 
 // Section B.33 - Floating-point Operate (FPop) Instructions
+let Uses = [FSR], mayRaiseFPException = 1 in {
 
 // Convert Integer to Floating-point Instructions, p. 141
 def FITOS : F3_3u<2, 0b110100, 0b011000100,
@@ -1418,6 +1426,7 @@ def FQTOD : F3_3u<2, 0b110100, 0b011001011,
                  "fqtod $rs2, $rd",
                  [(set f64:$rd, (fpround f128:$rs2))]>,
                  Requires<[HasHardQuad]>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 // Floating-point Move Instructions, p. 144
 def FMOVS : F3_3u<2, 0b110100, 0b000000001,
@@ -1436,6 +1445,7 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 
 // Floating-point Square Root Instructions, p.145
+let Uses = [FSR], mayRaiseFPException = 1 in {
 // FSQRTS generates an erratum on LEON processors, so by disabling this instruction
 // this will be promoted to use FSQRTD with doubles instead.
 let Predicates = [HasNoFdivSqrtFix] in
@@ -1540,6 +1550,7 @@ def FDIVQ  : F3_3<2, 0b110100, 0b001001111,
                  "fdivq $rs1, $rs2, $rd",
                  [(set f128:$rd, (fdiv f128:$rs1, f128:$rs2))]>,
                  Requires<[HasHardQuad]>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 // Floating-point Compare Instructions, p. 148
 // Note: the 2nd template arg is different for these guys.
@@ -1548,7 +1559,7 @@ def FDIVQ  : F3_3<2, 0b110100, 0b001001111,
 // This behavior is modeled with a forced noop after the instruction in
 // DelaySlotFiller.
 
-let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+let Defs = [FCC0], rd = 0, isCodeGenOnly = 1, mayRaiseFPException = 1 in {
   def FCMPS  : F3_3c<2, 0b110101, 0b001010001,
                    (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
                    "fcmps $rs1, $rs2",
@@ -1573,7 +1584,8 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
 // the contents of an FCC, since SPARC v9 doesn't have facilities to spill
 // an individual FCC.
 
-let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1,
+    mayRaiseFPException = 1 in {
   def FCMPS_V9  : F3_3c<2, 0b110101, 0b001010001,
                    (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
                    "fcmps %fcc0, $rs1, $rs2",
@@ -1781,7 +1793,7 @@ let hasSideEffects = 1 in {
                    Requires<[HasHardQuad]>;
 }
 
-// Floating point conditional move instrucitons with %fcc0-%fcc3.
+// Floating point conditional move instructions with %fcc0-%fcc3.
 let Predicates = [HasV9] in {
   let Constraints = "$f = $rd", intcc = 0 in {
     def V9MOVFCCrr
@@ -1973,6 +1985,14 @@ def : Pat<(SPhi tglobaladdr:$in), (SETHIi tglobaladdr:$in)>;
 def : Pat<(SPlo tglobaladdr:$in), (ORri (i32 G0), tglobaladdr:$in)>;
 def : Pat<(SPhi tconstpool:$in), (SETHIi tconstpool:$in)>;
 def : Pat<(SPlo tconstpool:$in), (ORri (i32 G0), tconstpool:$in)>;
+
+// GOTDATA_OP hix22/lox10 pairs.
+def : Pat<(xor (SPhi tglobaladdr:$in1), (SPlo tglobaladdr:$in2)),
+          (XORri (SETHIi tglobaladdr:$in1), (tglobaladdr:$in2))>;
+def : Pat<(xor (SPhi tconstpool:$in1), (SPlo tconstpool:$in2)),
+          (XORri (SETHIi tconstpool:$in1), (tconstpool:$in2))>;
+def : Pat<(xor (SPhi tblockaddress:$in1), (SPlo tblockaddress:$in2)),
+          (XORri (SETHIi tblockaddress:$in1), (tblockaddress:$in2))>;
 
 // GlobalTLS addresses
 def : Pat<(SPhi tglobaltlsaddr:$in), (SETHIi tglobaltlsaddr:$in)>;

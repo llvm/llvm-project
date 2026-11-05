@@ -215,7 +215,7 @@ body: |
     successors: %bb.3
     %0:i32 = CONST_I32 1, implicit-def $arguments
     %1:i32 = LOCAL_TEE_I32 2, %0:i32, implicit-def $arguments
-    DROP_I32 killed %1:i32, implicit-def $arguments
+    DROP_I32 %1:i32, implicit-def $arguments
     BR %bb.3, implicit-def $arguments
 
   bb.2:

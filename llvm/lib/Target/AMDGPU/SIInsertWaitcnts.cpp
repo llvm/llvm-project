@@ -899,7 +899,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
     Increment = 2;
   }
   unsigned CurrScore = UB + Increment;
-  if (CurrScore == 0)
+  if (CurrScore <= UB)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.
@@ -3523,6 +3523,9 @@ bool SIInsertWaitcnts::run() {
         if (!ST.hasImageInsts() &&
             (CT == AMDGPU::EXP_CNT || CT == AMDGPU::SAMPLE_CNT ||
              CT == AMDGPU::BVH_CNT))
+          continue;
+
+        if (!ST.hasAnyBVHInsts() && CT == AMDGPU::BVH_CNT)
           continue;
 
         BuildMI(EntryBB, I, DebugLoc(),
