@@ -2888,6 +2888,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rsqrtbf16
+  SRCS
+    rsqrtbf16.cpp
+  HDRS
+    ../rsqrtbf16.h
+  DEPENDS
+    libc.src.__support.math.rsqrtbf16
+)
+
+
+add_entrypoint_object(
   remquof
   SRCS
     remquof.cpp
