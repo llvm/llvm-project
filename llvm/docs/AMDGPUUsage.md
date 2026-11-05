@@ -13059,11 +13059,11 @@ For GFX12:
 - The wait instructions below must be added before any ``SCOPE_SYS`` store in
   order for the store to remain in order with previous memory operations.
 
-  - ``s_wait_loadcnt 0x0``
-  - ``s_wait_storecnt 0x0``
-  - ``s_wait_kmcnt 0x0``
-  - ``s_wait_samplecnt 0x0``
-  - ``s_wait_bvhcnt 0x0``
+  - `s_wait_loadcnt 0x0`
+  - `s_wait_storecnt 0x0`
+  - `s_wait_kmcnt 0x0`
+  - `s_wait_samplecnt 0x0`
+  - `s_wait_bvhcnt 0x0`
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
@@ -13285,11 +13285,11 @@ the instruction in the code sequence that references the table.
   - - system
   - - global
     - generic
-  - 1. ``s_wait_loadcnt 0x0``\
-       ``s_wait_storecnt 0x0``\
-       ``s_wait_kmcnt 0x0``\
-       ``s_wait_samplecnt 0x0``\
-       ``s_wait_bvhcnt 0x0``
+  - 1. `s_wait_loadcnt 0x0`\
+       `s_wait_storecnt 0x0`\
+       `s_wait_kmcnt 0x0`\
+       `s_wait_samplecnt 0x0`\
+       `s_wait_bvhcnt 0x0`
 
        - The waits can be independently moved as long as the
          counter they wait on is known to be zero before issuing
@@ -13663,11 +13663,11 @@ the instruction in the code sequence that references the table.
     - system
   - - global
     - generic
-  - 1. ``s_wait_loadcnt 0x0``\
-       ``s_wait_storecnt 0x0``\
-       ``s_wait_kmcnt 0x0``\
-       ``s_wait_samplecnt 0x0``\
-       ``s_wait_bvhcnt 0x0``
+  - 1. `s_wait_loadcnt 0x0`\
+       `s_wait_storecnt 0x0`\
+       `s_wait_kmcnt 0x0`\
+       `s_wait_samplecnt 0x0`\
+       `s_wait_bvhcnt 0x0`
 
        - If agent scope, omit.
        - The waits can be independently moved as long as the
