@@ -3,7 +3,7 @@
 ; This checks updating of phi nodes when the transformation is deemed
 ; unprofitable after IV widening.
 
-; RUN: opt < %s -S -passes="loop(loop-flatten),verify" \
+; RUN: opt < %s -S -passes='loop(loop-flatten),verify' \
 ; RUN:     -verify-loop-info -verify-dom-info -verify-scev | \
 ; RUN:     FileCheck %s --check-prefix=CHECK
 
