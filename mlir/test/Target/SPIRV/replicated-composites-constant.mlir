@@ -14,6 +14,22 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ReplicatedCompos
     spirv.ReturnValue %1 : vector<3xi32>
   }
 
+  // CHECK-LABEL: @splat_once_per_block
+  spirv.func @splat_once_per_block() -> (vector<3xi32>) "None" {
+    // CHECK: %[[C1:.*]] = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<3xi32>
+    // CHECK-NEXT: %[[ADD:.*]] = spirv.IAdd %[[C1]], %[[C1]]
+    // CHECK-NEXT: spirv.Branch ^[[BB:.*]]
+    // CHECK-NEXT: ^[[BB]]:
+    // CHECK-NEXT: %[[C2:.*]] = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<3xi32>
+    // CHECK-NEXT: spirv.IAdd %[[ADD]], %[[C2]]
+    %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<3xi32>
+    %1 = spirv.IAdd %0, %0 : vector<3xi32>
+    spirv.Branch ^bb1
+  ^bb1:
+    %2 = spirv.IAdd %1, %0 : vector<3xi32>
+    spirv.ReturnValue %2 : vector<3xi32>
+  }
+
   // CHECK-LABEL: @splat_array_of_i32
   spirv.func @splat_array_of_i32() -> (!spirv.array<3 x i32>) "None" {
     // CHECK: spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.array<3 x i32>
