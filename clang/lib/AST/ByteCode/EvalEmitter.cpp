@@ -147,11 +147,14 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D,
+                                      bool IsConstexprUnknown) {
+
+  BlockFlags Flags = BlockFlags().withConstexprUnknown(IsConstexprUnknown);
   // Allocate memory for a local.
   char *Memory =
       reinterpret_cast<char *>(S.allocate(Block::allocSize(D, Block::Local)));
-  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::Local);
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::Local, Flags);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -301,7 +304,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
       ((DeclDesc->asVarDecl() == S.EvaluatingDecl &&
         S.getLangOpts().CPlusPlus23 &&
         S.EvaluatingDecl->getType()->isReferenceType()) ||
-       DeclDesc->IsConstexprUnknown)) {
+       Ptr.isConstexprUnknown())) {
     S.FFDiag(Info, diag::note_constexpr_var_init_non_constant, 1)
         << DeclDesc->asVarDecl();
     S.Note(DeclDesc->asVarDecl()->getLocation(), diag::note_declared_at);
