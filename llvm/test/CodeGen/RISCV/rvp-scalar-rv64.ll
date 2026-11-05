@@ -1644,32 +1644,3 @@ define i64 @test_usati_u64_w63(i64 %a) {
   %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 63)
   ret i64 %res
 }
-
-declare i64 @llvm.riscv.merge.i64(i64, i64, i64)
-
-define i64 @merge_intrinsic_i64_merge(i64 %rd, i64 %rs1, i64 %rs2) nounwind {
-; CHECK-LABEL: merge_intrinsic_i64_merge:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    merge a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
-  ret i64 %res
-}
-
-define i64 @merge_intrinsic_i64_mvm(i64 %rs1, i64 %rd, i64 %rs2) nounwind {
-; CHECK-LABEL: merge_intrinsic_i64_mvm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    mvm a0, a2, a1
-; CHECK-NEXT:    ret
-  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
-  ret i64 %res
-}
-
-define i64 @merge_intrinsic_i64_mvmn(i64 %rs2, i64 %rs1, i64 %rd) nounwind {
-; CHECK-LABEL: merge_intrinsic_i64_mvmn:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    mvmn a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
-  ret i64 %res
-}

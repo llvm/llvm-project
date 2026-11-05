@@ -286,7 +286,6 @@ uint32_t test_merge_u32(uint32_t rs1, uint32_t rs2, uint32_t rd) {
   return __riscv_merge_u32(rs1, rs2, rd);
 }
 
-#if __riscv_xlen == 64
 // RV64-LABEL: define dso_local i64 @test_merge_i64(
 // RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]], i64 noundef [[RD:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
@@ -306,7 +305,6 @@ int64_t test_merge_i64(int64_t rs1, int64_t rs2, uint64_t rd) {
 uint64_t test_merge_u64(uint64_t rs1, uint64_t rs2, uint64_t rd) {
   return __riscv_merge_u64(rs1, rs2, rd);
 }
-#endif
 
 /* Scalar Saturating Addition and Subtraction */
 

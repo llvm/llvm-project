@@ -267,7 +267,6 @@ def rev16_64 : RISCVBuiltin<"uint64_t(uint64_t)">;
 
 // Scalar Merge
 def merge_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
-let Features = "experimental-p,64bit" in
 def merge_u64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t, uint64_t)">;
 
 // Scalar Averaging Addition and Subtraction

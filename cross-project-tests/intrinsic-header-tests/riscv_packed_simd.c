@@ -6373,40 +6373,49 @@ int32_t test_merge_mvmn_i32(int32_t rs2, int32_t rs1, uint32_t rd) {
   return __riscv_merge_i32(rs1, rs2, rd);
 }
 
-#if __riscv_xlen == 64
-// RV64-LABEL: test_merge_merge_u64:
+// CHECK-LABEL: test_merge_merge_u64:
+// RV32:        merge{{[[:space:]]}}
+// RV32-NEXT:   merge{{[[:space:]]}}
 // RV64:        merge{{[[:space:]]}}
 uint64_t test_merge_merge_u64(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   return __riscv_merge_u64(rs1, rs2, rd);
 }
 
-// RV64-LABEL: test_merge_mvm_u64:
+// CHECK-LABEL: test_merge_mvm_u64:
+// RV32:        mvm{{[[:space:]]}}
+// RV32-NEXT:   mvm{{[[:space:]]}}
 // RV64:        mvm{{[[:space:]]}}
 uint64_t test_merge_mvm_u64(uint64_t rs1, uint64_t rd, uint64_t rs2) {
   return __riscv_merge_u64(rs1, rs2, rd);
 }
 
-// RV64-LABEL: test_merge_mvmn_u64:
+// CHECK-LABEL: test_merge_mvmn_u64:
+// RV32:        mvmn{{[[:space:]]}}
+// RV32-NEXT:   mvmn{{[[:space:]]}}
 // RV64:        mvmn{{[[:space:]]}}
 uint64_t test_merge_mvmn_u64(uint64_t rs2, uint64_t rs1, uint64_t rd) {
   return __riscv_merge_u64(rs1, rs2, rd);
 }
-// RV64-LABEL: test_merge_merge_i64:
+// CHECK-LABEL: test_merge_merge_i64:
+// RV32:        merge{{[[:space:]]}}
+// RV32-NEXT    merge{{[[:space:]]}}
 // RV64:        merge{{[[:space:]]}}
 int64_t test_merge_merge_i64(uint64_t rd, int64_t rs1, int64_t rs2) {
   return __riscv_merge_i64(rs1, rs2, rd);
 }
 
-// RV64-LABEL: test_merge_mvm_i64:
+// CHECK-LABEL: test_merge_mvm_i64:
+// RV32:        mvm{{[[:space:]]}}
+// RV32-NEXT:   mvm{{[[:space:]]}}
 // RV64:        mvm{{[[:space:]]}}
 int64_t test_merge_mvm_i64(int64_t rs1, uint64_t rd, int64_t rs2) {
   return __riscv_merge_i64(rs1, rs2, rd);
 }
 
-// RV64-LABEL: test_merge_mvmn_i64:
+// CHECK-LABEL: test_merge_mvmn_i64:
+// RV32:        mvmn{{[[:space:]]}}
+// RV32-NEXT:   mvmn{{[[:space:]]}}
 // RV64:        mvmn{{[[:space:]]}}
 int64_t test_merge_mvmn_i64(int64_t rs2, int64_t rs1, uint64_t rd) {
   return __riscv_merge_i64(rs1, rs2, rd);
 }
-
-#endif
