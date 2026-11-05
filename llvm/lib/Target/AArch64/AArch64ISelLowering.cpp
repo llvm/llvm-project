@@ -9588,7 +9588,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
         if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
-            Ins[i].ArgVT.getScalarType() == MVT::i1) {
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
           MemVT = VA.getValVT();
           LoadVT = MemVT;
         }
