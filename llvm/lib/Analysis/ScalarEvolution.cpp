@@ -15974,11 +15974,21 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           EnqueueOperands(UMin);
         break;
       case CmpInst::ICMP_SGT:
-      case CmpInst::ICMP_SGE:
+      case CmpInst::ICMP_SGE: {
+        // From s>= RHS s>= 0 implies From u>= RHS, so an earlier
+        // umax(C, From) with C u<= RHS is redundant. Drop it, as the range of
+        // the umax may be much less precise than the one of From.
+        const APInt *C, *RHSC;
+        if (match(RHS, m_scev_APInt(RHSC)) && RHSC->isNonNegative() &&
+            match(FromRewritten,
+                  m_scev_UMax(m_scev_APInt(C), m_scev_Specific(From))) &&
+            C->ule(*RHSC))
+          FromRewritten = From;
         To = SE.getSMaxExpr(FromRewritten, RHS);
         if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
           EnqueueOperands(SMin);
         break;
+      }
       case CmpInst::ICMP_EQ:
         if (isa<SCEVConstant>(RHS))
           To = RHS;
