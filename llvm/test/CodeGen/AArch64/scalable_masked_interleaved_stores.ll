@@ -400,9 +400,18 @@ define void @foo_st4_nxv16i8_splat(<vscale x 16 x i1> %mask, ptr %p) {
 define void @do_not_fold_compressstore_interleave(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, ptr %p) {
 ; CHECK-LABEL: do_not_fold_compressstore_interleave:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    st2d { z0.d, z1.d }, p0, [x0]
+; CHECK-NEXT:    zip2 p1.d, p0.d, p0.d
+; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    cntp x8, p1, p1.d
+; CHECK-NEXT:    cntp x9, p0, p0.d
+; CHECK-NEXT:    compact z1.d, p1, z2.d
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    whilelo p1.d, xzr, x9
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, x9, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %interleaved.value = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2)

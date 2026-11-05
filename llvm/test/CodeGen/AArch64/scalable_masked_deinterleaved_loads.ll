@@ -330,7 +330,18 @@ define { <vscale x 4 x i16>, <vscale x 4 x i16> } @foo_ld2_nxv8i8_exti16(<vscale
 define { <vscale x 2 x i64>, <vscale x 2 x i64> } @do_not_fold_expandload_deinterleave(ptr %base, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: do_not_fold_expandload_deinterleave:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
+; CHECK-NEXT:    zip2 p1.d, p0.d, p0.d
+; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    cntp x8, p1, p1.d
+; CHECK-NEXT:    cntp x9, p0, p0.d
+; CHECK-NEXT:    whilelo p2.d, xzr, x8
+; CHECK-NEXT:    whilelo p3.d, xzr, x9
+; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x0, x9, lsl #3]
+; CHECK-NEXT:    ld1d { z1.d }, p3/z, [x0]
+; CHECK-NEXT:    expand z2.d, p1, z0.d
+; CHECK-NEXT:    expand z1.d, p0, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z1.d, z2.d
+; CHECK-NEXT:    uzp2 z1.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.expand.vec = call <vscale x 4 x i64> @llvm.masked.expandload(ptr %base, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x i64> poison)
