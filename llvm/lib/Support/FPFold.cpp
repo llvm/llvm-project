@@ -67,8 +67,11 @@ static bool containsSNaN(ArrayRef<APFloat> Args) {
 /// The internal helper that dispatches to APFloat, and always produces
 /// a status and result (so RM must be valid and non-dynamic if used, and
 /// input args must already be flushed if necessary).
+/// Result must be initialized with a copy of Args[0].
 static APFloat::opStatus executeFold(FPOp Opcode, APFloat &Result,
                                      ArrayRef<APFloat> Args, RoundingMode RM) {
+  assert(!Args.empty() && Result.bitwiseIsEqual(Args[0]) &&
+         "Result must start as a copy of Args[0]");
   if (Args.size() == 2) {
     switch (Opcode) {
     default:
