@@ -193,9 +193,11 @@ void AllocationPlacementPass::runOnOperation() {
         return;
     }
 
-    // Only array allocations are considered.
+    // Arrays are placed in both directions. Constant-length scalar characters
+    // are only moved from the heap to the stack; scalar allocas are left alone.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();
-    if (!mlir::isa<fir::SequenceType>(inTy))
+    if (!mlir::isa<fir::SequenceType>(inTy) &&
+        !(allocmem && fir::isStackArraysCandidateType(inTy)))
       return;
 
     fir::AllocationInfo info;
