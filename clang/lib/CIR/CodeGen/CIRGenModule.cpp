@@ -4065,16 +4065,12 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
-  bool isNew = !getGlobalValue(name);
+  extraAttrs.set(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
   if (entry) {
-    // Like classic codegen, a runtime function does not get the default
-    // function attributes, unless the source already declared it.
-    if (isNew)
-      entry->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
-                     mlir::UnitAttr::get(&getMLIRContext()));
     // TODO(cir): set the attributes of the function.
     assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
     assert(!cir::MissingFeatures::opFuncCallingConv());
