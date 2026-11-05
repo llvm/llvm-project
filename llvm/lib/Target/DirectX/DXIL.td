@@ -324,6 +324,8 @@ defvar WaveBitOpKind_And = 0;
 defvar WaveBitOpKind_Or = 1;
 defvar WaveBitOpKind_Xor = 2;
 
+defvar WaveMultiPrefixOpKind_And = 1;
+
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
 
@@ -1557,6 +1559,26 @@ def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
   let overloads = [Overloads<DXIL1_4, [Int32Ty]>];
   let stages = [Stages<DXIL1_4, [all_stages]>];
   let attributes = [Attributes<DXIL1_4, [DXILReadNone]>];
+}
+
+def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
+  let Doc = "returns the prefix result for lanes selected by a mask";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_multi_prefix_bit_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_And>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>
+  ];
+  let arguments = [
+    OverloadTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int8Ty, Int8Ty
+  ];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_5, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_5, [all_stages]>];
+  let attributes = [Attributes<DXIL1_5, []>];
 }
 
 def AnnotateHandle : DXILOp<216, annotateHandle> {

@@ -91,7 +91,6 @@ using namespace llvm;
 
 namespace {
 class MacroFusionPredicatorEmitter {
-  const RecordKeeper &Records;
   const CodeGenTarget Target;
 
   void emitMacroFusionDecl(ArrayRef<const Record *> Fusions,
@@ -109,7 +108,7 @@ class MacroFusionPredicatorEmitter {
                          PredicateExpander &PE, raw_ostream &OS);
 
 public:
-  MacroFusionPredicatorEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
+  MacroFusionPredicatorEmitter(const RecordKeeper &R) : Target(R) {}
 
   void run(raw_ostream &OS);
 };
@@ -122,7 +121,8 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   for (const Record *Fusion : Fusions)
-    OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
+    OS << "bool is" << CodeGenTarget::getMacroFusionName(Fusion)
+       << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, const MachineInstr *, "
        << "const MachineInstr &, const SDep *);\n";
 }
@@ -134,6 +134,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   for (const Record *Fusion : Fusions) {
+    StringRef Name = CodeGenTarget::getMacroFusionName(Fusion);
     std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
@@ -142,7 +143,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
     if (!RunPreRA && !RunPostRA)
       PrintFatalError(Fusion->getLoc(),
-                      "Fusion '" + Fusion->getName() +
+                      "Fusion '" + Name +
                           "' must run in at least one of the pre-RA and "
                           "post-RA scheduling stages");
 
@@ -152,13 +153,13 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     // `NoVRegs` property) to avoid conflating the two. A fusion that opts out
     // of a stage only needs the counter for the stage it actually runs in.
     if (RunPreRA)
-      OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
-         << Fusion->getName() << " Triggered (pre-ra)\");\n";
+      OS << "STATISTIC(Num" << Name << "PreRA, \"Times " << Name
+         << " Triggered (pre-ra)\");\n";
     if (RunPostRA)
-      OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
-         << Fusion->getName() << " Triggered (post-ra)\");\n";
+      OS << "STATISTIC(Num" << Name << "PostRA, \"Times " << Name
+         << " Triggered (post-ra)\");\n";
 
-    OS << "bool is" << Fusion->getName() << "(\n";
+    OS << "bool is" << Name << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
@@ -187,13 +188,13 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     // above already established the stage, so a single counter suffices.
     if (RunPreRA && RunPostRA) {
       OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
-      OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
+      OS.indent(4) << "++Num" << Name << "PostRA;\n";
       OS.indent(2) << "else\n";
-      OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
+      OS.indent(4) << "++Num" << Name << "PreRA;\n";
     } else if (RunPreRA) {
-      OS.indent(2) << "++Num" << Fusion->getName() << "PreRA;\n";
+      OS.indent(2) << "++Num" << Name << "PreRA;\n";
     } else {
-      OS.indent(2) << "++Num" << Fusion->getName() << "PostRA;\n";
+      OS.indent(2) << "++Num" << Name << "PostRA;\n";
     }
 
     OS.indent(2) << "return true;\n";
@@ -387,7 +388,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   PE.setByRef(false);
   PE.setExpandForMC(false);
 
-  ArrayRef<const Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
+  ArrayRef<const Record *> Fusions = Target.getMacroFusions();
   emitMacroFusionDecl(Fusions, PE, OS);
   OS << "\n";
   emitMacroFusionImpl(Fusions, PE, OS);

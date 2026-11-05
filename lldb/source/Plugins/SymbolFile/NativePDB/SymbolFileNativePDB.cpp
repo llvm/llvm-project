@@ -1662,8 +1662,10 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
     addr_t file_vm_addr =
         m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
-    if (file_vm_addr == LLDB_INVALID_ADDRESS)
+    if (file_vm_addr == LLDB_INVALID_ADDRESS) {
+      iter = syms.at(getScopeEndOffset(func_record));
       continue;
+    }
 
     Address func_base(file_vm_addr, comp_unit.GetModule()->GetSectionList());
     PdbCompilandSymId func_id{modi, record_offset};

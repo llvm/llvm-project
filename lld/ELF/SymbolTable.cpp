@@ -31,12 +31,16 @@ using namespace lld::elf;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
-  int &idx1 = symMap[CachedHashStringRef(sym->getName())];
-  int &idx2 = symMap[CachedHashStringRef(real->getName())];
-  int &idx3 = symMap[CachedHashStringRef(wrap->getName())];
+  auto lookup = [&](StringRef name) -> Symbol *& {
+    CachedHashStringRef key(name);
+    return getShard(key).map[key];
+  };
+  Symbol *&sym1 = lookup(sym->getName());
+  Symbol *&sym2 = lookup(real->getName());
+  Symbol *&sym3 = lookup(wrap->getName());
 
-  idx2 = idx1;
-  idx1 = idx3;
+  sym2 = sym1;
+  sym1 = sym3;
 
   // Propagate symbol usage information to the redirected symbols.
   if (sym->isUsedInRegularObj)
@@ -82,25 +86,26 @@ Symbol *SymbolTable::insert(StringRef name) {
   if (pos != StringRef::npos && pos + 1 < name.size() && name[pos + 1] == '@')
     stem = name.take_front(pos);
 
-  auto p = symMap.insert({CachedHashStringRef(stem), (int)symVector.size()});
-  if (!p.second) {
-    Symbol *sym = symVector[p.first->second];
-    if (stem.size() != name.size()) {
+  Symbol *sym = insert(intern(CachedHashStringRef(stem)));
+  if (pos != StringRef::npos) {
+    if (stem.size() != name.size())
       sym->setName(name);
-      sym->hasVersionSuffix = true;
-    }
-    return sym;
-  }
-
-  Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  symVector.push_back(sym);
-
-  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
-  // are zero. Set the ones that need a non-zero value.
-  sym->setName(name);
-  sym->versionId = VER_NDX_GLOBAL;
-  if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
+  }
+  return sym;
+}
+
+Symbol *SymbolTable::intern(CachedHashStringRef name) {
+  Shard &shard = getShard(name);
+  auto l = shard.getLock(concurrent);
+  Symbol *&sym = shard.map[name];
+  if (!sym) {
+    // The storage is value-initialized, so the Symbol fields are zero. Set the
+    // ones that need a non-zero value.
+    sym = reinterpret_cast<Symbol *>(makeThreadLocal<SymbolUnion>());
+    sym->setName(name.val());
+    sym->versionId = VER_NDX_GLOBAL;
+  }
   return sym;
 }
 
@@ -116,10 +121,10 @@ Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
 }
 
 Symbol *SymbolTable::find(StringRef name) {
-  auto it = symMap.find(CachedHashStringRef(name));
-  if (it == symMap.end())
-    return nullptr;
-  return symVector[it->second];
+  assert(!concurrent && "find() must not run while workers intern symbols");
+  CachedHashStringRef key(name);
+  Symbol *sym = getShard(key).map.lookup(key);
+  return sym && sym->inserted ? sym : nullptr;
 }
 
 // A version script/dynamic list is only meaningful for a Defined symbol.
