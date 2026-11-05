@@ -110,8 +110,8 @@ define hidden void @variance_8x16(ptr noundef readonly captures(none) %a, ptr no
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr167> = lshr ir<%add166>, ir<7>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
 ; CHECK:  Cost of 66 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%arrayidx17>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
+; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
+; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
 ; CHECK:  Cost for VF 4: 256 (Estimated cost per lane: 64)
 ; CHECK:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
 ; CHECK:  Cost of 1 for VF 8: WIDEN ir<%mul3> = mul ir<%0>, ir<%conv2>
@@ -275,8 +275,8 @@ define hidden void @variance_8x16(ptr noundef readonly captures(none) %a, ptr no
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr167> = lshr ir<%add166>, ir<7>
 ; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
 ; MAX:  Cost of 66 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%arrayidx17>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
 ; MAX:  Cost for VF 4: 256 (Estimated cost per lane: 64)
 ; MAX:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
 ; MAX:  Cost of 1 for VF 8: WIDEN ir<%mul3> = mul ir<%0>, ir<%conv2>

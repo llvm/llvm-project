@@ -157,6 +157,8 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1},
       {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 1},
       {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 1},
+      {ISD::SIGN_EXTEND, MVT::v4i16, MVT::v4i8, 1},
+      {ISD::ZERO_EXTEND, MVT::v4i16, MVT::v4i8, 1},
       // 2 x extend_low
       {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 2},
       {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2},
@@ -169,6 +171,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i16, 2},
       {ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2},
       {ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      // extend_low, extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i8, 3},
+      {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i8, 3},
       // 2x extend_low, extend_high
       {ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i32, 4},
       {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},

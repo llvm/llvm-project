@@ -153,10 +153,10 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>
 ; MAX:  Cost of 20 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
-; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%sub> = add nsw ir<%conv>, ir<-128>
 ; MAX:  Cost of 20 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx1>
-; MAX:  Cost of 5 for VF 8: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%sub3> = add nsw ir<%conv2>, ir<-128>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%sub8> = sub nsw ir<%conv>, ir<%conv2>
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%mul> = mul nsw ir<%sub>, ir<%sub>
@@ -182,7 +182,7 @@ define hidden void @luma_dominant(ptr noundef readonly captures(none) %ub, ptr n
 ; MAX:  Cost of 1 for VF 8: WIDEN ir<%or.cond48> = select ir<%or.cond>, ir<%cmp39>, ir<false>
 ; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%inc42> = zext ir<%or.cond48> to i32
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%neutral_cnt.1> = add ir<%neutral_cnt.076>, ir<%inc42>
-; MAX:  Cost for VF 8: 122 (Estimated cost per lane: 15.3)
+; MAX:  Cost for VF 8: 118 (Estimated cost per lane: 14.8)
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%core_cnt.078> = phi (add) vp<[[VP5]]>, ir<%spec.select>
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%tail_cnt.077> = phi (add) vp<[[VP5]]>, ir<%tail_cnt.1>
 ; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%neutral_cnt.076> = phi (add) vp<[[VP5]]>, ir<%neutral_cnt.1>
