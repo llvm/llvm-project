@@ -13764,8 +13764,9 @@ let Predicates = [HasFP16, HasVLX] in {
             (VCVTUQQ2PHZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
-// Use the 512-bit instructions to implement v2i64 in case NoVLX. Strict
-// conversions zero the upper elements so that they raise no extra exceptions.
+// Use the 512-bit instructions to implement v2i64 without VLX. For strict
+// conversions, set the upper elements to zero so that they raise no extra
+// exceptions.
 let Predicates = [HasFP16, NoVLX] in {
   def : Pat<(v8f16 (X86VSintToFP (v2i64 VR128X:$src))),
             (VCVTQQ2PHZrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
