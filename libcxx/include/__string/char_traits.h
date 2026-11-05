@@ -23,7 +23,9 @@
 #include <__iterator/iterator_traits.h>
 #include <__std_mbstate_t.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/is_pointer_in_range.h>
 #include <cstdint>
 #include <cstdio>
@@ -462,12 +464,138 @@ __str_rfind(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _Si
   return static_cast<_SizeT>(__r - __p);
 }
 
+// The char-set fast paths below compare characters by value. That is only valid
+// when _Traits::eq is plain equality, which we can only guarantee for the
+// standard specializations.
+template <class _CharT, class _Traits>
+struct __can_use_char_set_find : false_type {};
+
+template <>
+struct __can_use_char_set_find<char, char_traits<char> > : true_type {};
+
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+struct __can_use_char_set_find<wchar_t, char_traits<wchar_t> > : true_type {};
+#endif
+
+#if _LIBCPP_HAS_CHAR8_T
+template <>
+struct __can_use_char_set_find<char8_t, char_traits<char8_t> > : true_type {};
+#endif
+
+template <>
+struct __can_use_char_set_find<char16_t, char_traits<char16_t> > : true_type {};
+
+template <>
+struct __can_use_char_set_find<char32_t, char_traits<char32_t> > : true_type {};
+
+// The set of characters in a find_first_of needle. Characters with values below 256 are stored in a bitset. Larger
+// values (only possible for wide character types) are not stored: looking one up searches the needle instead, which is
+// what the plain algorithm does for every character. Typical needles (whitespace, punctuation, delimiters) contain no
+// large characters, in which case large haystack characters are rejected immediately.
+template <class _CharT, class _Traits>
+class __small_char_set {
+  typedef __make_unsigned_t<_CharT> _UCharT;
+
+  const _CharT* __needle_;
+  size_t __needle_size_;
+  uint64_t __words_[4] = {};
+  bool __has_large_    = false;
+
+  // For char and char8_t with 8-bit bytes this is always true, and the compiler removes the checks below.
+  _LIBCPP_HIDE_FROM_ABI static bool __is_small(_UCharT __u) _NOEXCEPT { return (__u >> 8) == 0; }
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __small_char_set(const _CharT* __s, size_t __n) _NOEXCEPT
+      : __needle_(__s),
+        __needle_size_(__n) {
+    for (size_t __i = 0; __i != __n; ++__i) {
+      _UCharT __u = static_cast<_UCharT>(__s[__i]);
+      if (__is_small(__u))
+        __words_[__u >> 6] |= uint64_t(1) << (__u & 63);
+      else
+        __has_large_ = true;
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI bool __contains(_CharT __c) const _NOEXCEPT {
+    _UCharT __u = static_cast<_UCharT>(__c);
+    if (__is_small(__u))
+      return (__words_[__u >> 6] >> (__u & 63)) & 1;
+    return __has_large_ && _Traits::find(__needle_, __needle_size_, __c) != nullptr;
+  }
+};
+
+// Number of haystack characters checked with the plain algorithm before building a __small_char_set, so that early
+// matches don't pay for building the set.
+enum : size_t { __char_set_probe_length = 16 };
+
+// Scans [__pos, __sz) forwards for the first character that is in [__s, __s + __n) (or not in it, if _Negate).
+template <class _SizeT, class _Traits, _SizeT __npos, bool _Negate, class _CharT>
+_LIBCPP_HIDE_FROM_ABI _SizeT
+__char_set_find_forward(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
+  // Check a short prefix with the plain algorithm first. If the rest of the haystack after that is shorter than the
+  // needle, building the set can't pay off, so check all of it that way.
+  _SizeT __rest = __sz - __pos;
+  _SizeT __plain_end =
+      __rest > __char_set_probe_length && __rest - __char_set_probe_length >= __n
+          ? __pos + __char_set_probe_length
+          : __sz;
+  _SizeT __i = __pos;
+  if _LIBCPP_CONSTEXPR (_Negate) {
+    for (; __i < __plain_end; ++__i)
+      if (_Traits::find(__s, __n, __p[__i]) == nullptr)
+        return __i;
+  } else {
+    const _CharT* __r = std::__find_first_of_ce(__p + __pos, __p + __plain_end, __s, __s + __n, _Traits::eq);
+    if (__r != __p + __plain_end)
+      return static_cast<_SizeT>(__r - __p);
+    __i = __plain_end;
+  }
+  if (__i == __sz)
+    return __npos;
+
+  __small_char_set<_CharT, _Traits> __set(__s, __n);
+  for (; __i < __sz; ++__i)
+    if (__set.__contains(__p[__i]) != _Negate)
+      return __i;
+  return __npos;
+}
+
+// Scans [0, min(__pos + 1, __sz)) backwards for the last character that is in [__s, __s + __n) (or not in it, if
+// _Negate).
+template <class _SizeT, class _Traits, _SizeT __npos, bool _Negate, class _CharT>
+_LIBCPP_HIDE_FROM_ABI _SizeT
+__char_set_find_backward(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
+  // See __char_set_find_forward.
+  _SizeT __i = __pos < __sz ? __pos + 1 : __sz;
+  _SizeT __plain_begin =
+      __i > __char_set_probe_length && __i - __char_set_probe_length >= __n ? __i - __char_set_probe_length : 0;
+  for (; __i > __plain_begin; --__i)
+    if ((_Traits::find(__s, __n, __p[__i - 1]) != nullptr) != _Negate)
+      return __i - 1;
+  if (__i == 0)
+    return __npos;
+
+  __small_char_set<_CharT, _Traits> __set(__s, __n);
+  for (; __i > 0; --__i)
+    if (__set.__contains(__p[__i - 1]) != _Negate)
+      return __i - 1;
+  return __npos;
+}
+
 // __str_find_first_of
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
   if (__pos >= __sz || __n == 0)
     return __npos;
+  if (__n == 1)
+    return std::__str_find<_CharT, _SizeT, _Traits, __npos>(__p, __sz, *__s, __pos);
+  if _LIBCPP_CONSTEXPR (__can_use_char_set_find<_CharT, _Traits>::value) {
+    if (!__libcpp_is_constant_evaluated())
+      return std::__char_set_find_forward<_SizeT, _Traits, __npos, /*_Negate=*/false>(__p, __sz, __s, __pos, __n);
+  }
   const _CharT* __r = std::__find_first_of_ce(__p + __pos, __p + __sz, __s, __s + __n, _Traits::eq);
   if (__r == __p + __sz)
     return __npos;
@@ -478,33 +606,27 @@ __str_find_first_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
-  if (__n != 0) {
-    if (__pos < __sz)
-      ++__pos;
-    else
-      __pos = __sz;
-    for (const _CharT* __ps = __p + __pos; __ps != __p;) {
-      const _CharT* __r = _Traits::find(__s, __n, *--__ps);
-      if (__r)
-        return static_cast<_SizeT>(__ps - __p);
-    }
+  if (__n == 0)
+    return __npos;
+  if (__n == 1)
+    return std::__str_rfind<_CharT, _SizeT, _Traits, __npos>(__p, __sz, *__s, __pos);
+  if _LIBCPP_CONSTEXPR (__can_use_char_set_find<_CharT, _Traits>::value) {
+    if (!__libcpp_is_constant_evaluated())
+      return std::__char_set_find_backward<_SizeT, _Traits, __npos, /*_Negate=*/false>(__p, __sz, __s, __pos, __n);
+  }
+  if (__pos < __sz)
+    ++__pos;
+  else
+    __pos = __sz;
+  for (const _CharT* __ps = __p + __pos; __ps != __p;) {
+    const _CharT* __r = _Traits::find(__s, __n, *--__ps);
+    if (__r)
+      return static_cast<_SizeT>(__ps - __p);
   }
   return __npos;
 }
 
 // __str_find_first_not_of
-template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
-__str_find_first_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
-  if (__pos < __sz) {
-    const _CharT* __pe = __p + __sz;
-    for (const _CharT* __ps = __p + __pos; __ps != __pe; ++__ps)
-      if (_Traits::find(__s, __n, *__ps) == nullptr)
-        return static_cast<_SizeT>(__ps - __p);
-  }
-  return __npos;
-}
-
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos) _NOEXCEPT {
@@ -517,20 +639,25 @@ __str_find_first_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos
   return __npos;
 }
 
-// __str_find_last_not_of
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
-__str_find_last_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
-  if (__pos < __sz)
-    ++__pos;
-  else
-    __pos = __sz;
-  for (const _CharT* __ps = __p + __pos; __ps != __p;)
-    if (_Traits::find(__s, __n, *--__ps) == nullptr)
+__str_find_first_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
+  if (__pos >= __sz)
+    return __npos;
+  if (__n == 1)
+    return std::__str_find_first_not_of<_CharT, _SizeT, _Traits, __npos>(__p, __sz, *__s, __pos);
+  if _LIBCPP_CONSTEXPR (__can_use_char_set_find<_CharT, _Traits>::value) {
+    if (!__libcpp_is_constant_evaluated())
+      return std::__char_set_find_forward<_SizeT, _Traits, __npos, /*_Negate=*/true>(__p, __sz, __s, __pos, __n);
+  }
+  const _CharT* __pe = __p + __sz;
+  for (const _CharT* __ps = __p + __pos; __ps != __pe; ++__ps)
+    if (_Traits::find(__s, __n, *__ps) == nullptr)
       return static_cast<_SizeT>(__ps - __p);
   return __npos;
 }
 
+// __str_find_last_not_of
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos) _NOEXCEPT {
@@ -540,6 +667,25 @@ __str_find_last_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos)
     __pos = __sz;
   for (const _CharT* __ps = __p + __pos; __ps != __p;)
     if (!_Traits::eq(*--__ps, __c))
+      return static_cast<_SizeT>(__ps - __p);
+  return __npos;
+}
+
+template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
+__str_find_last_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
+  if (__n == 1)
+    return std::__str_find_last_not_of<_CharT, _SizeT, _Traits, __npos>(__p, __sz, *__s, __pos);
+  if _LIBCPP_CONSTEXPR (__can_use_char_set_find<_CharT, _Traits>::value) {
+    if (!__libcpp_is_constant_evaluated())
+      return std::__char_set_find_backward<_SizeT, _Traits, __npos, /*_Negate=*/true>(__p, __sz, __s, __pos, __n);
+  }
+  if (__pos < __sz)
+    ++__pos;
+  else
+    __pos = __sz;
+  for (const _CharT* __ps = __p + __pos; __ps != __p;)
+    if (_Traits::find(__s, __n, *--__ps) == nullptr)
       return static_cast<_SizeT>(__ps - __p);
   return __npos;
 }
