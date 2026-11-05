@@ -56,9 +56,10 @@ static bool foldEmptyBranch(Block &block) {
   if (dest->getSinglePredecessor() != &block)
     return false;
 
-  for (Block *pred : block.getPredecessors())
-    if (!isa<BranchOpInterface>(pred->getTerminator()))
-      return false;
+  if (!llvm::all_of(block.getPredecessors(), [](Block *pred) {
+        return isa<BranchOpInterface>(pred->getTerminator());
+      }))
+    return false;
 
   SmallVector<Value> operands(br.getDestOperands());
   for (BlockOperand &use : llvm::make_early_inc_range(block.getUses())) {
