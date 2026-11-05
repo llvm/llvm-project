@@ -41,11 +41,28 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_fn(self):
         self.assertTrue(Header("stdio.h").implements_fn("printf"))
-        self.assertFalse(Header("dlfcn.h").implements_fn("dlopen"))
-        self.assertFalse(Header("glob.h").implements_fn("glob"))
-        self.assertFalse(Header("nl_types.h").implements_fn("catopen"))
         self.assertTrue(Header("netinet/in.h").implements_fn("htonl"))
-        self.assertTrue(Header("sys/time.h").implements_fn("select"))
+        self.assertFalse(Header("stdio.h").implements_fn("sqrt"))
+        self.assertFalse(Header("math.h").implements_fn("printf"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src = root / "src" / "foo"
+            cfg = root / "config" / "linux"
+            src.mkdir(parents=True)
+            cfg.mkdir(parents=True)
+            (src / "stub_fn.cpp").write_text(
+                "// TODO\nLLVM_LIBC_FUNCTION(int, stub_fn, ()) { return -1; }\n"
+            )
+            (src / "real_fn.cpp").write_text(
+                "LLVM_LIBC_FUNCTION(int, real_fn, (int x)) { return x + 1; }\n"
+            )
+            (cfg / "entrypoints.txt").write_text(
+                "libc.src.foo.stub_fn\nlibc.src.foo.real_fn\n"
+            )
+            hdr = Header("foo.h", libc_root=root)
+            self.assertFalse(hdr.implements_fn("stub_fn"))
+            self.assertTrue(hdr.implements_fn("real_fn"))
 
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))

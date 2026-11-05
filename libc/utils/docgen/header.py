@@ -5,9 +5,10 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ===----------------------------------------------------------------------===##
+from functools import lru_cache
 from pathlib import Path
 import re
-from typing import Dict, Generator, Optional, Set
+from typing import Dict, Generator, Optional, Set, Tuple
 import yaml
 
 # Standard C freestanding headers (C23 4p6) provided directly by the compiler
@@ -76,14 +77,10 @@ def _is_stub_file(path: Path) -> bool:
     return True
 
 
-_IMPLEMENTED_FUNCTIONS: Optional[Set[str]] = None
-
-
-def _load_implemented_functions(libc_root: Path) -> Set[str]:
-    global _IMPLEMENTED_FUNCTIONS
-    if _IMPLEMENTED_FUNCTIONS is not None:
-        return _IMPLEMENTED_FUNCTIONS
-
+@lru_cache(maxsize=None)
+def _load_implemented_functions(
+    libc_root: Path,
+) -> Tuple[Set[str], Dict[str, Set[str]]]:
     stubs, reals = set(), set()
     src_dir = libc_root / "src"
     if src_dir.exists():
@@ -91,17 +88,33 @@ def _load_implemented_functions(libc_root: Path) -> Set[str]:
             (stubs if _is_stub_file(p) else reals).add(p.stem)
 
     stub_only = stubs - reals
-    _IMPLEMENTED_FUNCTIONS = set()
+    all_fns: Set[str] = set()
+    by_stem: Dict[str, Set[str]] = {}
     config_dir = libc_root / "config"
     if config_dir.exists():
         for ep_file in config_dir.rglob("entrypoints.txt"):
             for line in ep_file.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if line.startswith("libc.src."):
-                    sym = line.split(".")[-1]
+                    parts = line.split(".")
+                    sym = parts[-1]
                     if sym not in stub_only:
-                        _IMPLEMENTED_FUNCTIONS.add(sym)
-    return _IMPLEMENTED_FUNCTIONS
+                        all_fns.add(sym)
+                        stem = "/".join(parts[2:-1])
+                        by_stem.setdefault(stem, set()).add(sym)
+    return all_fns, by_stem
+
+
+def _load_include_yaml(yaml_path: Path) -> Dict:
+    if not yaml_path.exists():
+        return {}
+    data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+    for rel in data.get("merge_yaml_files", []):
+        merged = _load_include_yaml((yaml_path.parent / rel).resolve())
+        for key in ("macros", "types", "enums", "objects", "functions"):
+            if key in merged:
+                data.setdefault(key, []).extend(merged[key])
+    return data
 
 
 class Header:
@@ -123,14 +136,16 @@ class Header:
     ``TODO`` stub.
     """
 
-    def __init__(self, header_name: str):
+    def __init__(self, header_name: str, libc_root: Optional[Path] = None):
         """
         :param header_name: e.g., ``"threads.h"`` or ``"signal.h"``
         """
         self.name = header_name
         self.stem = header_name[:-2] if header_name.endswith(".h") else header_name
         self.docgen_root = Path(__file__).parent
-        self.libc_root = self.docgen_root.parent.parent
+        self.libc_root = (
+            libc_root if libc_root is not None else self.docgen_root.parent.parent
+        )
         self.docgen_yaml = self.docgen_root / Path(header_name).with_suffix(".yaml")
         # Path to libc/include/<name>.yaml
         self.include_yaml = Path(
@@ -155,11 +170,7 @@ class Header:
     @property
     def include_data(self) -> Dict:
         if not hasattr(self, "_include_data"):
-            self._include_data = (
-                yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
-                if self.include_yaml.exists()
-                else {}
-            ) or {}
+            self._include_data = _load_include_yaml(self.include_yaml)
         return self._include_data
 
     def macro_file_exists(self) -> bool:
@@ -173,7 +184,14 @@ class Header:
     def implements_fn(self, fn_name: str) -> bool:
         if self.is_clang_provided():
             return True
-        return fn_name in _load_implemented_functions(self.libc_root)
+        all_fns, by_stem = _load_implemented_functions(self.libc_root)
+        if fn_name in by_stem.get(self.stem, set()):
+            return True
+        if not hasattr(self, "_declared_fns"):
+            self._declared_fns = {
+                f["name"] for f in self.include_data.get("functions", []) if "name" in f
+            }
+        return fn_name in all_fns and fn_name in self._declared_fns
 
     def implements_macro(self, m_name: str) -> bool:
         """
