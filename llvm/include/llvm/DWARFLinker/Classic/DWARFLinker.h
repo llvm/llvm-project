@@ -552,6 +552,27 @@ private:
     DebugDieValuePool &StringOffsetPool;
     DebugDieValuePool AddrPool;
 
+    /// A part of the input which was cloned into .debug_info, and whose
+    /// relocations are to follow it.
+    struct DebugInfoRelocFixup {
+      /// The input section, and range in it, of the relocations.
+      RelocSectionKind InputSection;
+      uint64_t InputStartOffset;
+      uint64_t InputEndOffset;
+      /// What to add to an input offset to get the output offset.
+      int64_t LinkedOffset;
+    };
+
+    /// The relocations to save for the unit being cloned, once
+    /// emitDebugAddrSection() placed its .debug_addr table.
+    /// @{
+    SmallVector<DebugInfoRelocFixup> DebugInfoRelocFixups;
+    /// The input .debug_addr entries cloned into AddrPool.
+    SmallVector<AddressesMap::DebugAddrEntryFixup> DebugAddrFixups;
+    /// The offset of the first entry of the .debug_addr table.
+    std::optional<uint64_t> DebugAddrTableOffset;
+    /// @}
+
     /// Allocator used for all the DIEValue objects.
     BumpPtrAllocator &DIEAlloc;
 
@@ -600,7 +621,7 @@ private:
 
     /// Emit the .debug_addr section for the \p Unit.
     LLVM_ABI Error emitDebugAddrSection(CompileUnit &Unit,
-                                        const uint16_t DwarfVersion) const;
+                                        const uint16_t DwarfVersion);
 
     using ExpressionHandlerRef = function_ref<void(
         SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
@@ -614,6 +635,9 @@ private:
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
+
+    /// Save the relocations of the cloned \p Unit.
+    void saveRelocations(CompileUnit &Unit);
 
     /// Information gathered and exchanged between the various
     /// clone*Attributes helpers about the attributes of a particular DIE.
@@ -643,6 +667,16 @@ private:
       /// Is there a DW_AT_APPLE_origin in the CU?
       bool HasAppleOrigin = false;
 
+      /// The address operands which the last cloned block attribute took out of
+      /// .debug_addr entries: the offset of each input entry, and the offset of
+      /// the operand from the start of the attribute.
+      SmallVector<std::pair<uint64_t, uint64_t>, 1> DebugAddrOperands;
+
+      /// The .debug_addr entry which the last cloned address attribute took
+      /// its address from: the offset of the input entry, and the index of the
+      /// output entry.
+      std::optional<std::pair<uint64_t, uint64_t>> DebugAddrEntry;
+
       AttributesInfo() = default;
     };
 
@@ -670,11 +704,16 @@ private:
                                         const DWARFFile &File,
                                         CompileUnit &Unit);
 
-    /// Clone a DWARF expression that may be referencing another DIE.
+    /// Clone a DWARF expression that may be referencing another DIE. If
+    /// \p DebugAddrOperands is set, it receives the offset of the input
+    /// .debug_addr entry and the offset in \p OutputBuffer of every address
+    /// operand taken out of .debug_addr.
     void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
                          const DWARFFile &File, CompileUnit &Unit,
                          SmallVectorImpl<uint8_t> &OutputBuffer,
-                         int64_t AddrRelocAdjustment, bool IsLittleEndian);
+                         int64_t AddrRelocAdjustment, bool IsLittleEndian,
+                         SmallVectorImpl<std::pair<uint64_t, uint64_t>>
+                             *DebugAddrOperands = nullptr);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.
@@ -683,7 +722,7 @@ private:
                                  const DWARFFile &File, CompileUnit &Unit,
                                  AttributeSpec AttrSpec,
                                  const DWARFFormValue &Val,
-                                 bool IsLittleEndian);
+                                 AttributesInfo &Info, bool IsLittleEndian);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.

@@ -158,6 +158,39 @@ public:
   /// Cleanup unneeded resources after compile unit is cloned.
   void cleanupDataAfterClonning();
 
+  /// A part of the input which was cloned into this unit's .debug_info, and
+  /// whose relocations are to follow it.
+  struct DebugInfoRelocFixup {
+    /// The input section, and range in it, of the relocations.
+    RelocSectionKind InputSection;
+    uint64_t InputStartOffset;
+    uint64_t InputEndOffset;
+    /// Where InputStartOffset was cloned to, from the start of the unit.
+    uint64_t OutputOffset;
+  };
+
+  /// Remember the relocations to save for a cloned DIE.
+  void noteDebugInfoRelocFixups(ArrayRef<DebugInfoRelocFixup> Fixups) {
+    llvm::append_range(DebugInfoRelocFixups, Fixups);
+  }
+
+  /// Remember that the input .debug_addr entry at \p InputOffset was cloned
+  /// into the entry \p OutputIndex of this unit's .debug_addr table.
+  void noteDebugAddrFixup(uint64_t InputOffset, uint64_t OutputIndex,
+                          bool IsLowPC) {
+    DebugAddrFixups.push_back({InputOffset, OutputIndex, IsLowPC});
+  }
+
+  /// Save the relocations of the cloned unit, at offsets relative to the
+  /// unit's contribution to the output sections. Must be called before the
+  /// input file is unloaded.
+  void saveRelocations();
+
+  /// Report where the unit landed in the output sections, for the
+  /// relocations saved by saveRelocations(). Must be called once the section
+  /// offsets are assigned.
+  void reportUnitOffsets();
+
   /// After cloning stage the output DIEs offsets are deallocated.
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
@@ -496,12 +529,16 @@ public:
   // Clone and emit line table.
   Error cloneAndEmitLineTable(const Triple &TargetTriple);
 
-  /// Clone attribute location axpression.
+  /// Clone attribute location axpression. If \p DebugAddrOperands is set, it
+  /// receives the offset of the input .debug_addr entry and the offset in
+  /// \p OutputExpression of every address operand taken out of .debug_addr.
   void cloneDieAttrExpression(const DWARFExpression &InputExpression,
                               SmallVectorImpl<uint8_t> &OutputExpression,
                               SectionDescriptor &Section,
                               std::optional<int64_t> VarAddressAdjustment,
-                              OffsetsPtrVector &PatchesOffsets);
+                              OffsetsPtrVector &PatchesOffsets,
+                              SmallVectorImpl<std::pair<uint64_t, uint64_t>>
+                                  *DebugAddrOperands = nullptr);
 
   /// Returns index(inside .debug_addr) of an address.
   uint64_t getDebugAddrIndex(uint64_t Addr) {
@@ -809,6 +846,19 @@ private:
 
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;
+
+  /// The relocations to save for the cloned unit.
+  /// @{
+  SmallVector<DebugInfoRelocFixup> DebugInfoRelocFixups;
+  SmallVector<AddressesMap::DebugAddrEntryFixup> DebugAddrFixups;
+  /// Offset of the first entry of the .debug_addr table, from the start of
+  /// the unit's contribution.
+  uint64_t DebugAddrTableOffset = 0;
+  /// @}
+
+  /// The input offset of the unit, if saveRelocations() saved any relocation
+  /// relative to it.
+  std::optional<uint64_t> SavedRelocsUnitOffset;
 
   std::unique_ptr<DependencyTracker> Dependencies;
 

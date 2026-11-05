@@ -42,6 +42,9 @@ struct AttributesInfo {
 
   /// Does the DIE have an address base attribute?
   bool HasAddrBaseAttr = false;
+
+  /// Does the DIE have a DW_AT_APPLE_origin attribute?
+  bool HasAppleOrigin = false;
 };
 
 /// This class creates clones of input DIE attributes.
@@ -101,6 +104,11 @@ protected:
         HasLocationExpressionAddress(HasLocationExpressionAddress) {
     InputDIEIdx = InUnit.getDIEIndex(InputDieEntry);
 
+    // A type unit is shared by compile units, so has no relocations of its
+    // own.
+    SaveRelocs = OutUnit.isCompileUnit() &&
+                 InUnit.getContainingFile().Addresses->needToSaveValidRelocs();
+
     // Use DW_FORM_strp form for string attributes for DWARF version less than 5
     // or if output unit is type unit and attributes are cloned in parallel
     // (debug_str_offsets ordering would be non-deterministic otherwise).
@@ -113,6 +121,10 @@ protected:
   size_t
   cloneStringAttr(const DWARFFormValue &Val,
                   const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
+
+  /// Add the attribute \p Attr with the value \p String, as an out of line or
+  /// an indexed string.
+  size_t addStringAttr(dwarf::Attribute Attr, StringEntry *String);
 
   /// Clone attribute referencing another DIE.
   size_t
@@ -183,6 +195,23 @@ protected:
 
   /// Patches for the cloned attributes.
   OffsetsPtrVector PatchesOffsets;
+
+  /// The relocations to save for the cloned attributes. Their output offsets
+  /// lack the size of the abbreviation number until finalizeAbbreviations().
+  SmallVector<CompileUnit::DebugInfoRelocFixup, 2> RelocFixups;
+
+  /// The address operands which the last cloned block attribute took out of
+  /// .debug_addr entries: the offset of each input entry, and the offset of
+  /// the operand from the start of the attribute.
+  SmallVector<std::pair<uint64_t, uint64_t>, 1> DebugAddrOperands;
+
+  /// The .debug_addr entry which the last cloned address attribute took its
+  /// address from: the offset of the input entry, and the index of the output
+  /// entry.
+  std::optional<std::pair<uint64_t, uint64_t>> DebugAddrEntry;
+
+  /// Whether to collect the relocations to save.
+  bool SaveRelocs = false;
 
   /// This flag forces using DW_FORM_strp for string attributes.
   bool Use_DW_FORM_strp = false;

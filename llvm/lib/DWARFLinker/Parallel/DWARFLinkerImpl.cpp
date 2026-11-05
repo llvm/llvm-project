@@ -616,6 +616,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     });
   }
 
+  // Every unit reached its final stage. Save the relocations while the
+  // addresses map is loaded, the output offsets are reported once assigned.
+  for (std::unique_ptr<CompileUnit> &CU : CompileUnits)
+    if (CU->getStage() != CompileUnit::Stage::Skipped)
+      CU->saveRelocations();
+
   if (GlobalData.getOptions().UpdateIndexTablesOnly) {
     // Emit Invariant sections.
 
@@ -979,6 +985,9 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // Go through all object files, all compile units and assign
   // offsets to them.
   assignOffsets();
+
+  // Tell where the units landed, for their saved relocations.
+  forEachCompileUnit([&](CompileUnit *CU) { CU->reportUnitOffsets(); });
 
   // Patch size/offsets fields according to the assigned CU offsets.
   patchOffsetsAndSizes();
