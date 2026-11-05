@@ -68,3 +68,17 @@ define <2 x target("spirv.TypedPointerType", i8, 0)> @memset_nonzero_vector() {
   %ret = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr %val
   ret <2 x target("spirv.TypedPointerType", i8, 0)> %ret
 }
+
+; llvm.test.vectorelement has no zero value, so neither does a vector of it.
+define <2 x target("llvm.test.vectorelement")> @memset_zero_vector_no_zeroinit() {
+; CHECK-LABEL: define <2 x target("llvm.test.vectorelement")> @memset_zero_vector_no_zeroinit() {
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <2 x target("llvm.test.vectorelement")>, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load <2 x target("llvm.test.vectorelement")>, ptr [[VAL]], align 8
+; CHECK-NEXT:    ret <2 x target("llvm.test.vectorelement")> [[RET]]
+;
+  %val = alloca <2 x target("llvm.test.vectorelement")>
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 8, i1 false)
+  %ret = load <2 x target("llvm.test.vectorelement")>, ptr %val
+  ret <2 x target("llvm.test.vectorelement")> %ret
+}

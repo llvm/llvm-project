@@ -20,11 +20,6 @@ bool VNCoercion::canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   if (StoredTy == LoadTy)
     return true;
 
-  if (StoredTy->getScalarType()->isTargetExtTy() ||
-      LoadTy->getScalarType()->isTargetExtTy()) {
-    return false;
-  }
-
   const DataLayout &DL = F->getDataLayout();
   TypeSize MinStoreSize = DL.getTypeSizeInBits(StoredTy);
   TypeSize LoadSize = DL.getTypeSizeInBits(LoadTy);
@@ -78,6 +73,9 @@ bool VNCoercion::canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   // can't allow this for non integral pointers. We could teach it to extract
   // exact subvectors if desired.
   if (StoredNI && (StoredTy->isScalableTy() || MinStoreSize != LoadSize))
+    return false;
+
+  if (StoredTy->isTargetExtTy() || LoadTy->isTargetExtTy())
     return false;
 
   return true;
@@ -285,7 +283,8 @@ int VNCoercion::analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   // of the memset..
   if (const auto *Memset = dyn_cast<MemSetInst>(MI)) {
     // Non-integral pointers and target extension types can't be built from
-    // bytes, so only zero bytes are forwarded to them, as their null value.
+    // bytes, so only zero bytes are forwarded to them, as their null value, if
+    // they have one.
     Type *ScalarTy = LoadTy->getScalarType();
     auto *TETy = dyn_cast<TargetExtType>(ScalarTy);
     if (TETy && !TETy->hasProperty(TargetExtType::HasZeroInit))
