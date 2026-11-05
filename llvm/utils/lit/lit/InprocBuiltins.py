@@ -104,27 +104,26 @@ def executeBuiltinEcho(cmd, cmd_shenv):
             out.write(arg[pos:backslash])
             pos = backslash + 2
             escape = arg[backslash:pos]
-            match escape:
-                case "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\":
-                    out.write(codecs.escape_decode(escape)[0].decode())
-                    continue
-                case "\\c":
-                    return True
-                case "\\0":
-                    base = 8
-                    start = pos - 1
-                    max = pos + 3
-                case "\\1" | "\\2" | "\\3" | "\\4" | "\\5" | "\\6" | "\\7":
-                    base = 8
-                    start = pos - 1
-                    max = pos + 2
-                case "\\x":
-                    base = 16
-                    start = pos
-                    max = pos + 2
-                case _:
-                    out.write(escape)
-                    continue
+            if escape in ("\\a", "\\b", "\\f", "\\n", "\\r", "\\t", "\\v", "\\\\"):
+                out.write(codecs.escape_decode(escape)[0].decode())
+                continue
+            if escape == "\\c":
+                return True
+            if escape == "\\0":
+                base = 8
+                start = pos - 1
+                max = pos + 3
+            elif escape in ("\\1", "\\2", "\\3", "\\4", "\\5", "\\6", "\\7"):
+                base = 8
+                start = pos - 1
+                max = pos + 2
+            elif escape == "\\x":
+                base = 16
+                start = pos
+                max = pos + 2
+            else:
+                out.write(escape)
+                continue
             end = pos
             for n in range(pos, min(max, len(arg))):
                 if base == 8 and not ord("0") <= ord(arg[n]) <= ord("7"):
