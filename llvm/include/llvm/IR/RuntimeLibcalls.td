@@ -454,6 +454,8 @@ defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
   defvar IntVT = VT.IntType;
+  def S#Pair : StructFuncArgType<[VT, VT]>;
+  defvar VTPair = !cast<FuncArgType>(S#"Pair");
   defm ACOS : VectorMathLibcall<S, VT, [VT]>;
   defm ACOSH : VectorMathLibcall<S, VT, [VT]>;
   defm ASIN : VectorMathLibcall<S, VT, [VT]>;
@@ -495,7 +497,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
   defm MODF : VectorMathLibcall<S, VT, [VT, Ptr], ArgMemWriteOnly,
                                  [[], OutPtrAttrs], [NoneType, VT]>;
-  defm MODF_STRET : VectorMathLibcall<S>;
+  defm MODF_STRET : VectorMathLibcall<S, VTPair, [VT]>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW_FINITE : VectorMathLibcall<S, VT, [VT, VT]>;
@@ -503,11 +505,11 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
                                    [[], OutPtrAttrs, OutPtrAttrs],
                                    [NoneType, VT, VT]>;
-  defm SINCOS_STRET : VectorMathLibcall<S>;
+  defm SINCOS_STRET : VectorMathLibcall<S, VTPair, [VT]>;
   defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
                                      [[], OutPtrAttrs, OutPtrAttrs],
                                      [NoneType, VT, VT]>;
-  defm SINCOSPI_STRET : VectorMathLibcall<S>;
+  defm SINCOSPI_STRET : VectorMathLibcall<S, VTPair, [VT]>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
   defm SINPI : VectorMathLibcall<S, VT, [VT]>;
