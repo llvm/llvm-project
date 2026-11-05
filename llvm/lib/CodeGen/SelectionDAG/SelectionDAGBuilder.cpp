@@ -3668,12 +3668,13 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
   // this changes, we might need to enhance
   // Target->setIsInlineAsmBrIndirectTarget or add something similar for
   // intrinsic indirect branches.
-
+  //
   // An asm that failed to lower, which reported an error, has no INLINEASM_BR
   // to branch to the indirect targets.
   if (I.isInlineAsm() && CallBrOutputs.contains(&I)) {
