@@ -91,9 +91,9 @@ module __fortran_ieee_exceptions
   public :: ieee_get_modes
 
   interface ieee_get_status
-    pure subroutine ieee_get_status_0(status)
+    pure subroutine ieee_get_status_0(status_value)
       import ieee_status_type
-      type(ieee_status_type), intent(out) :: status
+      type(ieee_status_type), intent(out) :: status_value
     end subroutine ieee_get_status_0
   end interface
   public :: ieee_get_status
@@ -131,9 +131,9 @@ module __fortran_ieee_exceptions
   public :: ieee_set_modes
 
   interface ieee_set_status
-    pure subroutine ieee_set_status_0(status)
+    pure subroutine ieee_set_status_0(status_value)
       import ieee_status_type
-      type(ieee_status_type), intent(in) :: status
+      type(ieee_status_type), intent(in) :: status_value
     end subroutine ieee_set_status_0
   end interface
   public :: ieee_set_status
