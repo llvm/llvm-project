@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
 ; REQUIRES: x86-registered-target
-; UNSUPPORTED: system-windows
 ;
 ; RUN: rm -rf %t.pre %t.sched
 ; RUN: mkdir -p %t.pre %t.sched
@@ -11,7 +10,7 @@
 ; RUN:   -view-isel-dags \
 ; RUN:   -dag-file-location=%t.pre \
 ; RUN:   -no-open-dag-viewer \
-; RUN:   %s -o /dev/null
+; RUN:   %s -filetype=null
 ; RUN: find %t.pre -name '*.dot' -exec cat {} + | \
 ; RUN:   FileCheck %s --check-prefix=PRE \
 ; RUN:   --implicit-check-not='llvm_is_machine_opcode="true"'
@@ -22,7 +21,7 @@
 ; RUN:   -view-sched-dags \
 ; RUN:   -dag-file-location=%t.sched \
 ; RUN:   -no-open-dag-viewer \
-; RUN:   %s -o /dev/null
+; RUN:   %s -filetype=null
 ; RUN: find %t.sched -name '*.dot' -exec cat {} + | \
 ; RUN:   FileCheck %s --check-prefix=SCHED
 ;
