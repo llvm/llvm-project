@@ -34,3 +34,26 @@ define i1 @dereferenceable(ptr %ptr) {
   %is_nonnull = icmp ne ptr %ptr, null
   ret i1 %is_nonnull
 }
+
+define i1 @outside_range(i64 %i) {
+; CHECK-LABEL: define i1 @outside_range(
+; CHECK-SAME: i64 [[I:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I]], i64 33, i64 44) ]
+; CHECK-NEXT:    ret i1 true
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 33, i64 44) ]
+  %cmp = icmp slt i64 %i, 55
+  ret i1 %cmp
+}
+
+define i1 @inside_range(i64 %i) {
+; CHECK-LABEL: define i1 @inside_range(
+; CHECK-SAME: i64 [[I:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I]], i64 33, i64 44) ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I]], 40
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 33, i64 44) ]
+  %cmp = icmp slt i64 %i, 40
+  ret i1 %cmp
+}

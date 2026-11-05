@@ -897,7 +897,7 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
     return CSR_NoRegs_RegMask;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   if (CC == CallingConv::PreserveMost) {
-    if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    if (RISCVABI::isRVE(ABI))
       return CSR_RT_MostRegs_RVE_RegMask;
     return CSR_RT_MostRegs_RegMask;
   }
