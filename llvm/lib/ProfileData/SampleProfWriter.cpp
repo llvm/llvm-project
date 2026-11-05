@@ -20,6 +20,7 @@
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compression.h"
@@ -941,17 +942,20 @@ std::error_code SampleProfileWriterText::writeDataAccessProfiles() {
   OS << "[DataAccessProfiles]\n";
   LineCount++;
 
+  memprof::YamlDataAccessProfData YamlData;
   for (const auto &[SymHandleRef, RecordRef] :
-       DataAccessProfileData->getRecords()) {
-    OS << std::get<StringRef>(SymHandleRef) << ":" << RecordRef.AccessCount
-       << "\n";
-    LineCount++;
+       DataAccessProfileData->getRecords())
+    YamlData.Records.emplace_back(SymHandleRef, RecordRef.AccessCount,
+                                  RecordRef.Locations);
 
-    for (const auto &Loc : RecordRef.Locations) {
-      OS << " " << Loc.FileName << ":" << Loc.Line << "\n";
-      LineCount++;
-    }
-  }
+  for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+    YamlData.KnownColdSymbols.push_back(ColdSymbol.str());
+
+  for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+    YamlData.KnownColdStrHashes.push_back(Hash);
+
+  yaml::Output Yout(OS);
+  Yout << YamlData;
 
   return sampleprof_error::success;
 }
