@@ -21,8 +21,9 @@
 // CIR type of each symbol before lowering, keyed by symbol name. Built once
 // before conversion: lookups after a replacement find the LLVM symbol, whose
 // type may have been adjusted during lowering (split rows, flexible array),
-// and use this instead. Symbols absent from the map were never CIR and keep
-// the converted-type view.
+// and use this instead, so the answer does not depend on lowering order.
+// Symbols absent from the map were never CIR and keep the converted-type
+// view.
 using CIRPreConversionTypeMap = llvm::StringMap<mlir::Type>;
 
 mlir::DenseElementsAttr

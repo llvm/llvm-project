@@ -291,10 +291,6 @@ static bool globalViewMatchesPointerLeaf(
   mlir::Type sourceType;
   auto sourceSymbol = symbolTables.lookupSymbolIn(moduleOp, gv.getSymbol());
   if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
-    // Prefer the pre-conversion type: the lowered type may have been
-    // adjusted, which would answer differently depending on lowering order.
-    // Globals absent from the map were never CIR and keep the converted-type
-    // view.
     if (mlir::Type preType = preConversionTypes.lookup(llvmSymbol.getSymName()))
       sourceType = converter->convertType(preType);
     else

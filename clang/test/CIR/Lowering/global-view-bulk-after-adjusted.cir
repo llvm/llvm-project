@@ -12,7 +12,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   ], trailing_zeros> : !arr_ty
 
   // Unindexed views of @arr: bulk lowering must see the CIR array type
-  // via the stash, not the adjusted LLVM struct type.
+  // from the pre-conversion map, not the adjusted LLVM struct type.
   cir.global external dso_local @bulk = #cir.const_array<[
       #cir.global_view<@arr> : !cir.ptr<!cir.array<!cir.ptr<!void> x 100>>,
       #cir.global_view<@arr> : !cir.ptr<!cir.array<!cir.ptr<!void> x 100>>
