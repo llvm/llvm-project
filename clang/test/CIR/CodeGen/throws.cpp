@@ -193,12 +193,10 @@ int rethrow_from_block(int a, int b) {
 // LLVM: [[CHECK_COND]]:
 // LLVM:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:  %[[IS_B_ZERO:.*]] = icmp eq i32 %[[TMP_B]], 0
-// LLVM:  br i1 %[[IS_B_ZERO]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+// LLVM:  br i1 %[[IS_B_ZERO]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // LLVM: [[IF_THEN]]:
 // LLVM:  call void @__cxa_rethrow()
 // LLVM:  unreachable
-// LLVM: [[IF_ELSE]]:
-// LLVM:  br label %[[IF_END:.*]]
 // LLVM: [[IF_END]]:
 // LLVM:  %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
