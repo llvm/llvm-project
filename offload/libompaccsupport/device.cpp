@@ -229,6 +229,36 @@ llvm::Error DeviceTy::init() {
   return llvm::Error::success();
 }
 
+ProgramTy &DeviceTy::addProgram(const void *Key, ProgramTy Program) {
+  auto &Slot = (*Programs.getExclusiveAccessor())[Key];
+  Slot = std::make_unique<ProgramTy>(std::move(Program));
+  return *Slot;
+}
+
+void DeviceTy::destroyProgram(
+    const void *Key, llvm::ArrayRef<llvm::offloading::EntryTy> Entries) {
+  std::unique_ptr<ProgramTy> Program;
+  {
+    auto Accessor = Programs.getExclusiveAccessor();
+    auto It = Accessor->find(Key);
+    if (It == Accessor->end())
+      return;
+    Program = std::move(It->second);
+    Accessor->erase(It);
+  }
+
+  {
+    auto Accessor = KernelLaunchInfoMap.getExclusiveAccessor();
+    for (const llvm::offloading::EntryTy &Entry : Entries)
+      if (Entry.Kind == llvm::object::OffloadKind::OFK_OpenMP && !Entry.Size)
+        Accessor->erase(Entry.Address);
+  }
+
+  if (ol_result_t Res = olDestroyProgram(Program->getHandle()))
+    REPORT() << "Failed to destroy program on device " << DeviceID << ": "
+             << Res->Details;
+}
+
 llvm::Error DeviceTy::deinit() {
   OMPT_IF_BUILT_AND_INITIALIZED(
       { performOmptCallback(device_finalize, DeviceID); });
@@ -237,6 +267,17 @@ llvm::Error DeviceTy::deinit() {
   llvm::Error Result =
       RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
   RecordReplay.reset();
+
+  // Programs must go before the context they belong to.
+  for (auto &[Key, Program] : *Programs.getExclusiveAccessor())
+    if (ol_result_t Res = olDestroyProgram(Program->getHandle()))
+      Result = llvm::joinErrors(
+          std::move(Result),
+          createError(ErrorCode::BackendFailure,
+                      "failed to destroy program on device %d: %s", DeviceID,
+                      Res->Details));
+  Programs.getExclusiveAccessor()->clear();
+  KernelLaunchInfoMap.getExclusiveAccessor()->clear();
 
   if (!Context)
     return Result;

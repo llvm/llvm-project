@@ -320,6 +320,16 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Init) << "Done registering entries!";
 }
 
+void PluginManager::destroyPrograms(const void *Key, TranslationTable &TT) {
+  std::lock_guard<std::mutex> LG(TrlTblMtx);
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (size_t DeviceId = 0; DeviceId < TT.TargetsEntries.size(); ++DeviceId) {
+    if (DeviceId < ExclusiveDevicesAccessor->size())
+      (*ExclusiveDevicesAccessor)[DeviceId]->destroyProgram(
+          Key, TT.TargetsEntries[DeviceId]);
+  }
+}
+
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
 
@@ -336,6 +346,7 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   // Remove translation table for this descriptor.
   auto TransTable = HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
   if (TransTable != HostEntriesBeginToTransTable.end()) {
+    destroyPrograms(Desc->HostEntriesBegin, TransTable->second);
     ODBG(ODT_Deinit) << "Removing translation table for descriptor "
                      << Desc->HostEntriesBegin;
     HostEntriesBeginToTransTable.erase(TransTable);
@@ -393,6 +404,10 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
         break;
       }
 
+      // The device keeps the program until the library is unregistered.
+      ProgramTy &Program =
+          Device.addProgram(HostEntriesBegin, std::move(*LoadedOrErr));
+
       // 3) Create the translation table.
       llvm::SmallVector<llvm::offloading::EntryTy> &DeviceEntries =
           TransTable->TargetsEntries[DeviceId];
@@ -400,8 +415,6 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
         if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
           continue;
-
-        ProgramTy &Program = *LoadedOrErr;
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {

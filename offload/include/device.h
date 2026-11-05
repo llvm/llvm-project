@@ -152,6 +152,15 @@ struct DeviceTy {
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
 
+  /// Take ownership of \p Program, the program loaded for the library
+  /// identified by \p Key. It is destroyed by destroyProgram or deinit.
+  ProgramTy &addProgram(const void *Key, ProgramTy Program);
+
+  /// Destroy the program loaded for the library identified by \p Key, if any,
+  /// and forget the launch info of its kernels in \p Entries.
+  void destroyProgram(const void *Key,
+                      llvm::ArrayRef<llvm::offloading::EntryTy> Entries);
+
   /// Enable kernel record (\p IsRecord) or replay on this device by reserving
   /// \p MemorySize bytes of device memory at \p VAddr. While active, device
   /// allocations are served from that region.
@@ -403,6 +412,10 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Programs loaded on this device, by the library they were loaded for.
+  using ProgramMapTy = llvm::DenseMap<const void *, std::unique_ptr<ProgramTy>>;
+  ProtectedObj<ProgramMapTy> Programs;
 
   /// Kernel record/replay state, if enabled.
   std::unique_ptr<RecordReplayTy> RecordReplay;
