@@ -1082,8 +1082,6 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   mlir::Operation *sourceSymbol =
       symbolTables.lookupSymbolIn(parentModule, symbol);
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
-    // Prefer the pre-conversion type: the LLVM global's type may have been
-    // adjusted (split rows, flexible array).
     if (mlir::Type preType =
             preConversionTypes.lookup(llvmSymbol.getSymName())) {
       originalType = preType;
@@ -3253,6 +3251,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
+  // The driver does not invalidate the cached symbol table, so build it
+  // before the replacement exists and maintain it explicitly below.
+  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+  symbolTables.getSymbolTable(modOp);
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
       comdatAttr, attributes);
@@ -3326,9 +3328,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   fn.setAlignment(op.getAlignment());
   assert(!MissingFeatures::opFuncPreferredAlignment());
 
+  symbolTables.getSymbolTable(modOp).remove(op);
   rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
 
   rewriter.eraseOp(op);
+  symbolTables.getSymbolTable(modOp).insert(fn);
 
   return mlir::LogicalResult::success();
 }
@@ -4972,7 +4976,12 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::ModuleOp module = getOperation();
   // CIR type of each symbol before lowering, for lookups that find the
-  // already-lowered LLVM symbol after replacement.
+  // already-lowered LLVM symbol after replacement. This must cover every
+  // symbol kind that can be replaced: a kind missing from this loop
+  // quietly falls back to the adjusted LLVM type in readers (here and in
+  // LoweringHelpers).
+  // Aliases are covered: they are GlobalOp and FuncOp ops with an
+  // aliasee, not separate symbol kinds.
   CIRPreConversionTypeMap preConversionTypes;
   for (mlir::Operation &op : module.getBody()->getOperations()) {
     if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(op))
@@ -5429,8 +5438,6 @@ getValueForVTableSymbol(mlir::Operation *op,
   auto module = op->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *symbol = symbolTables.lookupSymbolIn(module, nameAttr);
   if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
-    // Prefer the pre-conversion type: the LLVM global's type may have been
-    // adjusted (split rows, flexible array).
     if (mlir::Type preType = preConversionTypes.lookup(nameAttr.getValue())) {
       eltType = converter->convertType(preType);
       if (!eltType) {
