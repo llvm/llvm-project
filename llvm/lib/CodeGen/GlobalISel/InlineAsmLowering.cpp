@@ -408,8 +408,8 @@ bool InlineAsmLowering::lowerInlineAsm(
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
 
         // Only one register is tied below, so let SelectionDAG tie each
-        // register of an output that needs several, such as an i128 in two
-        // 64-bit registers.
+        // register of an output that needs several, such as an i128 on a
+        // 64-bit target.
         if (getNumOpRegs(*Inst, InstFlagIdx) != 1) {
           LLVM_DEBUG(dbgs() << "Matching input constraint to an output with "
                                "several registers not supported yet\n");

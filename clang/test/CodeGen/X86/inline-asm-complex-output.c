@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -DERROR -verify %s -o /dev/null
 
-// A _Complex output with a register constraint is returned by value as an
+// A _Complex output with a register-only constraint is returned by value as an
 // integer of the same size, like a struct, and not stored through a pointer
 // ("=*r"). An asm goto then stores it on every path, not only the fallthrough.
 
