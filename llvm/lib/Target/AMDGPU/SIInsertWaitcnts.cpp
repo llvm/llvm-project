@@ -517,8 +517,7 @@ private:
   // TID. Only meaningful while that write is pending.
   unsigned getNumOrderedXDLsAfterWrite(VMEMID TID) const {
     auto It = VMem.find(TID);
-    if (It == VMem.end())
-      return 0;
+    assert(It != VMem.end() && "VA_VDST write is not pending");
     return std::min(OrderedXDLCount - It->second.OrderedXDLCountAtWrite,
                     getLimit(AMDGPU::VA_VDST_WR) - 1);
   }
@@ -669,8 +668,7 @@ private:
 
   using CounterValueArray = std::array<unsigned, AMDGPU::NUM_INST_CNTS>;
 
-  std::optional<unsigned> getWaitForScore(AMDGPU::InstCounterType T,
-                                          unsigned Score) const;
+  unsigned getWaitForScore(AMDGPU::InstCounterType T, unsigned Score) const;
   void determineWaitForScore(AMDGPU::InstCounterType T, unsigned Score,
                              AMDGPU::Waitcnt &Wait) const;
   void determineWaitForVAVDSTWrite(VMEMID ID, AMDGPU::Waitcnt &Wait) const;
@@ -1376,9 +1374,9 @@ void WaitcntBrackets::purgeEmptyTrackingData() {
   SGPRs.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
-std::optional<unsigned>
-WaitcntBrackets::getWaitForScore(AMDGPU::InstCounterType T,
-                                 unsigned ScoreToWait) const {
+// Returns the wait needed for \p ScoreToWait, or ~0u if no wait is needed.
+unsigned WaitcntBrackets::getWaitForScore(AMDGPU::InstCounterType T,
+                                          unsigned ScoreToWait) const {
   const unsigned LB = getScoreLB(T);
   const unsigned UB = getScoreUB(T);
 
@@ -1390,39 +1388,38 @@ WaitcntBrackets::getWaitForScore(AMDGPU::InstCounterType T,
       // waitcnt and the target can report early completion, then we need
       // to force a waitcnt 0.
       return 0;
-    } else if (counterOutOfOrder(T)) {
+    }
+    if (counterOutOfOrder(T)) {
       // Counter can get decremented out-of-order when there
       // are multiple types event in the bracket. Also emit an s_wait counter
       // with a conservative value of 0 for the counter.
       return 0;
-    } else {
-      // If a counter has been maxed out avoid overflow by waiting for
-      // MAX(CounterType) - 1 instead.
-      return std::min(UB - ScoreToWait, getLimit(T) - 1);
     }
+    // If a counter has been maxed out avoid overflow by waiting for
+    // MAX(CounterType) - 1 instead.
+    return std::min(UB - ScoreToWait, getLimit(T) - 1);
   }
-  return std::nullopt;
+  return ~0u;
 }
 
 void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
                                             unsigned ScoreToWait,
                                             AMDGPU::Waitcnt &Wait) const {
-  if (std::optional<unsigned> Count = getWaitForScore(T, ScoreToWait))
-    Wait.add(T, *Count);
+  Wait.add(T, getWaitForScore(T, ScoreToWait));
 }
 
 void WaitcntBrackets::determineWaitForVAVDSTWrite(VMEMID ID,
                                                   AMDGPU::Waitcnt &Wait) const {
-  std::optional<unsigned> Count =
+  unsigned Count =
       getWaitForScore(AMDGPU::VA_VDST_WR, getVMemScore(ID, AMDGPU::VA_VDST_WR));
-  if (!Count)
+  if (Count == ~0u)
     return;
 
   // The ordered-XDL count is a wait bound independent of exact event-class
   // ordering. Combine the bounds for this register unit before Wait.add()
   // takes the minimum across all required register-unit dependencies.
   Wait.add(AMDGPU::VA_VDST_WR,
-           std::max(*Count, getNumOrderedXDLsAfterWrite(ID)));
+           std::max(Count, getNumOrderedXDLsAfterWrite(ID)));
 }
 
 AMDGPU::Waitcnt
@@ -1537,12 +1534,13 @@ void WaitcntBrackets::determineWaitForPhysReg(AMDGPU::InstCounterType T,
     if (IsVGPR)
       Reg = determineVGPR16Dependency(MI, T, Reg);
     for (MCRegUnit RU : regunits(Reg)) {
-      if (IsVGPR && T == AMDGPU::VA_VDST_WR)
+      if (IsVGPR && T == AMDGPU::VA_VDST_WR) {
         determineWaitForVAVDSTWrite(toVMEMID(RU), Wait);
-      else
+      } else {
         determineWaitForScore(
             T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
             Wait);
+      }
     }
   }
 }
