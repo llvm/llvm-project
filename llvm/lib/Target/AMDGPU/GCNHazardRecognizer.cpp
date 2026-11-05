@@ -1972,6 +1972,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixSetRegMode(MI);
   if (ST.hasNeedsTDMDrain())
     fixTDM(MI);
+  if (ST.hasTransF16ToPartialVGPRWriteHazard())
+    fixTransF16ToPartialVGPRWriteHazard(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -4558,5 +4560,94 @@ bool GCNHazardRecognizer::fixTDM(MachineInstr *MI) {
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAIT_TENSORCNT))
       .addImm(10);
+  return true;
+}
+
+bool GCNHazardRecognizer::fixTransF16ToPartialVGPRWriteHazard(
+    MachineInstr *MI) {
+  if (!SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true))
+    return false;
+
+  const int NumVALUNeeded = 4;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  struct StateType {
+    int VALUs = 0;
+
+    static unsigned getHashValue(const StateType &State) { return State.VALUs; }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.VALUs == RHS.VALUs;
+    }
+  };
+
+  StateType State;
+
+  auto IsHazardFn = [&](StateType &State, const MachineInstr &I) {
+    // Too many VALU states have passed
+    if (State.VALUs >= NumVALUNeeded)
+      return HazardExpired;
+
+    // Instructions which cause va_vdst==0 expire hazard
+    if (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+        AMDGPU::DepCtr::decodeFieldVaVdst(
+            static_cast<unsigned>(I.getOperand(0).getImm())) == 0)
+      return HazardExpired;
+
+    // Track registers writes
+    if (!SIInstrInfo::isTRANS(I))
+      return NoHazardFound;
+
+    MCRegister Def = I.getOperand(0).getReg();
+    if (!TRI.isVGPR(MRI, Def))
+      return NoHazardFound;
+
+    unsigned Opc = I.getOpcode();
+    const MCInstrDesc &Desc = TII.get(Opc);
+    // Note: checkling vdst does not work because it is a generic
+    // OPERAND_REGISTER.
+    switch (
+        Desc.operands()[AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0)]
+            .OperandType) {
+    case AMDGPU::OPERAND_REG_IMM_BF16:
+    case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+    case AMDGPU::OPERAND_REG_INLINE_C_BF16:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+      break;
+    default:
+      return NoHazardFound;
+    }
+
+    if (TRI.getRegSizeInBits(Def, MRI) == 16) {
+      // Real True16 case.
+      const auto Sub = AMDGPU::isHi16Reg(Def, TRI)
+                           ? std::make_pair(AMDGPU::hi16, AMDGPU::lo16)
+                           : std::make_pair(AMDGPU::lo16, AMDGPU::hi16);
+      MCRegister Def32 =
+          TRI.getMatchingSuperReg(Def, Sub.first, &AMDGPU::VGPR_32RegClass);
+      MCRegister OffendingDef = TRI.getSubReg(Def32, Sub.second);
+      // Only interested in partial 16-bit write, not any wider register.
+      return MI->modifiesRegister(OffendingDef, nullptr) ? HazardFound
+                                                         : NoHazardFound;
+    }
+
+    // Fake16 case is suboptimal as it checks the whole 32-bit def overlap w/o
+    // analyzing OPSEL bits.
+    return MI->modifiesRegister(Def, nullptr) ? HazardFound : NoHazardFound;
+  };
+
+  auto UpdateStateFn = [](StateType &State, const MachineInstr &MI) {
+    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
+      ++State.VALUs;
+  };
+
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator())))
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0, ST));
+
   return true;
 }
