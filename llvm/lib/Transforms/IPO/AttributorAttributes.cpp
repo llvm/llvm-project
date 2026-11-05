@@ -5795,11 +5795,13 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
   // TODO: Once we have memory behavior attributes we should use them here.
 
   // If we know we cannot communicate or write to memory, we do not care about
-  // ptr2int anymore.
+  // ptr2int anymore. The value can still be captured by whether the function
+  // returns.
   bool ReadOnly = F.onlyReadsMemory();
   bool NoThrow = F.doesNotThrow();
+  bool WillReturn = F.willReturn();
   bool IsVoidReturn = F.getReturnType()->isVoidTy();
-  if (ReadOnly && NoThrow && IsVoidReturn) {
+  if (ReadOnly && NoThrow && WillReturn && IsVoidReturn) {
     State.addKnownBits(NO_CAPTURE);
     return;
   }
@@ -5825,7 +5827,7 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
     if (F.hasParamAttribute(U, Attribute::Returned)) {
       if (U == unsigned(ArgNo))
         State.removeAssumedBits(NOT_CAPTURED_IN_RET);
-      else if (ReadOnly)
+      else if (ReadOnly && WillReturn)
         State.addKnownBits(NO_CAPTURE);
       else
         State.addKnownBits(NOT_CAPTURED_IN_RET);
@@ -6004,11 +6006,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     bool UsedAssumedInformation = false;
     if (IsVoidTy || CheckReturnedArgs(UsedAssumedInformation)) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
-      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+      // If the function only reads memory and does not return the value, the
+      // value can still be captured by whether the function returns.
+      bool IsKnownWillReturn;
+      bool IsAssumedWillReturn = AA::hasAssumedIRAttr<Attribute::WillReturn>(
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownWillReturn);
+      if (IsAssumedWillReturn && T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
       if (IsKnownNoUnwind && (IsVoidTy || !UsedAssumedInformation)) {
         addKnownBits(NOT_CAPTURED_IN_RET);
-        if (isKnown(NOT_CAPTURED_IN_MEM))
+        if (IsKnownWillReturn && isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
       }
     }
