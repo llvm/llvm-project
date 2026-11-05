@@ -360,7 +360,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     Check(Src0Ty->getNumElements() >= GetFormatNumRegs(CBSZ),
           "invalid vector type for format", &Call, Src0, Call.getArgOperand(3));
     Check(Src1Ty->getNumElements() >= GetFormatNumRegs(BLGP),
-          "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
+          "invalid vector type for format", &Call, Src1, Call.getArgOperand(4));
     break;
   }
   case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
