@@ -1725,6 +1725,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_or:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor: {
     Value *ValueOp = EmitScalarExpr(E->getArg(0));
     Value *Mask = EmitScalarExpr(E->getArg(1));
@@ -1754,6 +1755,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return EmitIntrinsicCall(
           CGM.getHLSLRuntime().getWaveMultiPrefixBitAndIntrinsic(),
           {ValueOp->getType()}, Args, "hlsl.wave.multi.prefix.bit.and");
+    if (BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_or)
+      return EmitIntrinsicCall(
+          CGM.getHLSLRuntime().getWaveMultiPrefixBitOrIntrinsic(),
+          {ValueOp->getType()}, Args, "hlsl.wave.multi.prefix.bit.or");
     return EmitIntrinsicCall(
         CGM.getHLSLRuntime().getWaveMultiPrefixBitXorIntrinsic(),
         {ValueOp->getType()}, Args, "hlsl.wave.multi.prefix.bit.xor");

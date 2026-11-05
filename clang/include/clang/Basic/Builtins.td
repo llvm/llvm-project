@@ -5795,6 +5795,12 @@ def HLSLWaveMultiPrefixBitAnd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveMultiPrefixBitOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWaveMultiPrefixBitXor : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_xor"];
   let Attributes = [NoThrow, Const];
