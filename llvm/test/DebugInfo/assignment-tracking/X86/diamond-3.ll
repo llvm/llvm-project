@@ -25,7 +25,8 @@
 
 ; CHECK-DAG: ![[A:[0-9]+]] = !DILocalVariable(name: "a",
 ; CHECK-LABEL: bb.0.entry:
-; CHECK:         DBG_VALUE $edi, $noreg, ![[A]], !DIExpression()
+; CHECK:         DBG_PHI $edi, 1
+; CHECK-NEXT:    DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; CHECK-LABEL: bb.1.if.then:
 ; CHECK:         DBG_VALUE 0, $noreg, ![[A]], !DIExpression()
 

@@ -6449,6 +6449,18 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   }
 }
 
+/// Return true if the first location of the variable \p Var in \p BB is a
+/// dbg_value of \p V.
+static bool isFirstDbgValueOf(const BasicBlock &BB, const DILocalVariable *Var,
+                              const Value *V) {
+  for (const Instruction &I : BB)
+    for (const DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      if (DVR.getVariable() == Var && !DVR.getDebugLoc()->getInlinedAt())
+        return DVR.isDbgValue() && !DVR.hasArgList() &&
+               DVR.getVariableLocationOp(0) == V;
+  return false;
+}
+
 /// If the DbgValueInst is a dbg_value of a function argument, create the
 /// corresponding DBG_VALUE machine instruction for it now.  At the end of
 /// instruction selection, they will be inserted to the entry BB.
@@ -6458,6 +6470,32 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
     DILocation *DL, FuncArgumentDbgValueKind Kind, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
+
+  // A trunc of an argument, or the zext (sext) of a zeroext (signext) one, such
+  // as of the i1 a bool parameter is passed as to the i8 it is stored as, is
+  // the low part of the argument register. If it is the first location of a
+  // parameter, describe it by that register, as the argument would be.
+  Register CastReg;
+  if (const auto *CI = dyn_cast<CastInst>(V);
+      CI && CI->getType()->isIntegerTy() &&
+      Kind == FuncArgumentDbgValueKind::Value && !Expr->isFragment()) {
+    const auto *A = dyn_cast<Argument>(CI->getOperand(0));
+    SmallVector<std::pair<Register, TypeSize>, 1> Regs;
+    if (A &&
+        (isa<TruncInst>(CI) || (isa<ZExtInst>(CI) && A->hasZExtAttr()) ||
+         (isa<SExtInst>(CI) && A->hasSExtAttr())) &&
+        isFirstDbgValueOf(FuncInfo.Fn->getEntryBlock(), Variable, CI))
+      if (SDValue ArgN = NodeMap.lookup(A); ArgN.getNode())
+        getUnderlyingArgRegs(Regs, ArgN);
+    if (Regs.size() == 1 && Regs[0].first.isVirtual() &&
+        TypeSize::isKnownLE(CI->getType()->getPrimitiveSizeInBits(),
+                            Regs[0].second)) {
+      CastReg =
+          DAG.getMachineFunction().getRegInfo().getLiveInPhysReg(Regs[0].first);
+      if (CastReg)
+        Arg = A;
+    }
+  }
   if (!Arg)
     return false;
 
@@ -6559,6 +6597,11 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
         return !NodeMap[V].getNode();
       FuncInfo.DescribedArgs.set(ArgNo);
     }
+  }
+
+  if (CastReg) {
+    FuncInfo.ArgDbgValues.push_back(MakeVRegDbgValue(CastReg, Expr, false));
+    return true;
   }
 
   bool IsIndirect = false;

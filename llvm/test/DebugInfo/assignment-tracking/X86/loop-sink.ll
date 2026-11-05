@@ -23,11 +23,12 @@
 ; CHECK-DAG: ![[A:[0-9]+]] = !DILocalVariable(name: "a",
 
 ; CHECK-LABEL: bb.0.entry:
-; CHECK: DBG_VALUE $edi, $noreg, ![[A]], !DIExpression()
-; CHECK: CALL64pcrel32 @getInt{{.*}}debug-instr-number 1
+; CHECK: DBG_PHI $edi, 1
+; CHECK-NEXT: DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+; CHECK: CALL64pcrel32 @getInt{{.*}}debug-instr-number 2
 
 ; CHECK-LABEL: bb.2.while.body:
-; CHECK: DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 6)
+; CHECK: DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 6)
 
 ; CHECK-LABEL: bb.3.while.end:
 ; CHECK: MOV32mr %stack.0.a.addr, 1, $noreg, 0, $noreg, %1

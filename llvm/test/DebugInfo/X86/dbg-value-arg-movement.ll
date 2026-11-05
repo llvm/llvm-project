@@ -60,7 +60,7 @@
 
 ; INSTRREF-LABEL: body
 ; INSTRREF: DBG_PHI $edi, 1
-; INSTRREF: DBG_VALUE $edi, $noreg, [[BAZVAR]]
+; INSTRREF: DBG_INSTR_REF [[BAZVAR]], {{.+}}, dbg-instr-ref(1, 0)
 ; INSTRREF-LABEL: bb.1.next
 ; INSTRREF: DBG_INSTR_REF [[XYZVAR]], {{.+}}, dbg-instr-ref(1, 0)
 

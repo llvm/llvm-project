@@ -102,14 +102,10 @@ entry:
 ;; 
 ; INSTRREF:      debugValueSubstitutions:
 ; INSTRREF-NEXT: - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 6 }
-; INSTRREF-NEXT: - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 4 }
-; INSTRREF-NEXT: - { srcinst: 6, srcop: 0, dstinst: 5, dstop: 0, subreg: 1 }
+; INSTRREF-NEXT: - { srcinst: 3, srcop: 0, dstinst: 1, dstop: 0, subreg: 4 }
+; INSTRREF-NEXT: - { srcinst: 4, srcop: 0, dstinst: 1, dstop: 0, subreg: 1 }
 
-;; As a slight inefficiency today, multiple DBG_PHIs are created.
-
-; INSTRREF:      DBG_PHI $rdi, 5
-; INSTRREF-NEXT: DBG_PHI $rdi, 3
-; INSTRREF-NEXT: DBG_PHI $rdi, 1
+; INSTRREF:      DBG_PHI $rdi, 1
 ;; Allow arguments to be specified by physreg DBG_VALUEs.
 ; INSTRREF-NEXT: DBG_VALUE $rdi
 
@@ -117,31 +113,28 @@ entry:
 ;; dbg.values become DBG_INSTR_REFs. We previously checked that these numbers
 ;; get substituted, with appropriate subregister qualifiers.
 ; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
 ; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
-; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
 
 ;; In fast-isel, we get four DBG_INSTR_REFs (compared to three and one
 ;; DBG_VALUE with normal isel). We get additional substitutions as a result:
 
 ; FASTISEL-INSTRREF:      debugValueSubstitutions:
-; FASTISEL-INSTRREF-NEXT: - { srcinst: 3, srcop: 0, dstinst: 2, dstop: 0, subreg: 6 }
-; FASTISEL-INSTRREF-NEXT: - { srcinst: 5, srcop: 0, dstinst: 4, dstop: 0, subreg: 6 }
-; FASTISEL-INSTRREF-NEXT: - { srcinst: 6, srcop: 0, dstinst: 5, dstop: 0, subreg: 4 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 6 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 3, srcop: 0, dstinst: 1, dstop: 0, subreg: 6 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 4 }
 ; FASTISEL-INSTRREF-NEXT  - { srcinst: 8, srcop: 0, dstinst: 7, dstop: 0, subreg: 6 }
 ; FASTISEL-INSTRREF-NEXT  - { srcinst: 9, srcop: 0, dstinst: 8, dstop: 0, subreg: 4 }
 ; FASTISEL-INSTRREF-NEXT  - { srcinst: 10, srcop: 0, dstinst: 9, dstop: 0, subreg: 1 }
 
 ;; Those substitutions are anchored against these DBG_PHIs:
 
-; FASTISEL-INSTRREF:      DBG_PHI $rdi, 7
-; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 4
-; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 2
-; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 1
+; FASTISEL-INSTRREF:      DBG_PHI $rdi, 1
 
 ; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
-; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
-; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
-; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(10, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(7, 0)
 
 define i32 @bar(i64 %bar) !dbg !20 {
 entry:

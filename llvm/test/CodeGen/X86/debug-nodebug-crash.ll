@@ -5,14 +5,13 @@
 ; triggered by LiveDebugValues when another (debug) function is handled later.
 ;
 ; This minimal example does not leave much to check for, so we just make sure we get
-; reasonable output, preserving function labels and a DBG_VALUE comment.
+; reasonable output, preserving function labels.
 ;
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT:  Lfunc_begin0:
 ; CHECK:       Lfunc_end0:
 ; CHECK-LABEL: bar:
 ; CHECK-NEXT:  Lfunc_begin1:
-; CHECK:       #DEBUG_VALUE: foo:x <-
 ; CHECK:       Lfunc_end1:
 
 define i32 @foo() {

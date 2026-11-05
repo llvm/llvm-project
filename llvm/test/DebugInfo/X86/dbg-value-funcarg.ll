@@ -56,7 +56,7 @@ define dso_local void @foo_local(i32 %t1a) local_unnamed_addr #0 !dbg !7 {
 ; INSTRREF-LABEL: name:            foo_local
 ; INSTRREF-NOT: DBG_
 ; INSTRREF:      DBG_PHI $edi, 1
-; INSTRREF:      DBG_VALUE $edi, $noreg, ![[T1A]], !DIExpression(),
+; INSTRREF:      DBG_INSTR_REF ![[T1A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),
 ; INSTRREF-NEXT: %0:gr32 = COPY $edi
 ; INSTRREF-NEXT: DBG_VALUE 123, $noreg, ![[LOCAL]], !DIExpression(),
 ; INSTRREF:      CALL64pcrel32 @bar,
@@ -91,8 +91,8 @@ define dso_local void @foo_other_param(i32 %t2a, i32 %t2b) local_unnamed_addr #0
 ; CHECK: TCRETURNdi64 @bar,
 ; INSTRREF-LABEL: name:            foo_other_param
 ; INSTRREF: DBG_PHI $edi, 1
-; INSTRREF: DBG_VALUE $edi, $noreg, ![[T2A]], !DIExpression(),
-; INSTRREF: DBG_VALUE $esi, $noreg, ![[T2B]], !DIExpression(),
+; INSTRREF: DBG_INSTR_REF ![[T2A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),
+; INSTRREF: DBG_INSTR_REF ![[T2B]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0),
 ; INSTRREF: CALL64pcrel32 @bar,
 ; INSTRREF: DBG_VALUE 123, $noreg, ![[T2B]], !DIExpression(),
 ; INSTRREF: CALL64pcrel32 @bar,
@@ -123,7 +123,7 @@ define dso_local void @foo_same_param(i32 %t3a) local_unnamed_addr #0 !dbg !31 {
 ; CHECK: TCRETURNdi64 @bar,
 ; INSTRREF-LABEL: name:            foo_same_param
 ; INSTRREF: DBG_PHI $edi, 1
-; INSTRREF: DBG_VALUE $edi, $noreg, ![[T3A]], !DIExpression(),
+; INSTRREF: DBG_INSTR_REF ![[T3A]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),
 ; INSTRREF: CALL64pcrel32 @bar,
 ; INSTRREF: DBG_INSTR_REF ![[TMP]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),
 ; INSTRREF: DBG_VALUE 123, $noreg, ![[T3A]], !DIExpression(),

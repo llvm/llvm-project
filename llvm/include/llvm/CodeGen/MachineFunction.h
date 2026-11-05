@@ -666,6 +666,13 @@ public:
 
   DebugInstrOperandPair salvageCopySSAImpl(MachineInstr &MI);
 
+  /// Find the instruction defining the value of the physreg \p RegToSeek read
+  /// at \p CurInst, searching backwards through its block. If the value is
+  /// live into the block, refer to a DBG_PHI for it at the start of the block,
+  /// creating one if there is none yet.
+  DebugInstrOperandPair salvageDebugRefToPhysreg(MachineInstr &CurInst,
+                                                 Register RegToSeek);
+
   /// Finalise any partially emitted debug instructions. These are DBG_INSTR_REF
   /// instructions where we only knew the vreg of the value they use, not the
   /// instruction that defines that vreg. Once isel finishes, we should have

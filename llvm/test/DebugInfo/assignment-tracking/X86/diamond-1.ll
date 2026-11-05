@@ -32,7 +32,7 @@
 ; CHECK-DAG: ![[VAR:[0-9]+]] = !DILocalVariable(name: "a",
 
 ; CHECK: bb.0.entry:
-; CHECK: DBG_VALUE $edi, $noreg, ![[VAR]], !DIExpression()
+; CHECK: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 
 ; CHECK: bb.1.if.then:
 ; CHECK: DBG_VALUE 100, $noreg, ![[VAR]], !DIExpression()
