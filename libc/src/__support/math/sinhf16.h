@@ -13,8 +13,6 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
-#include "expxf16_utils.h"
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -23,6 +21,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -129,21 +128,7 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf(x_bits.sign()).get_val();
 
-#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-      return FPBits::inf(x_bits.sign()).get_val();
-#else
-      int rounding_mode = fputil::quick_get_round();
-      if (rounding_mode == FE_TONEAREST ||
-          (x_bits.is_pos() && rounding_mode == FE_UPWARD) ||
-          (x_bits.is_neg() && rounding_mode == FE_DOWNWARD)) {
-        fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-        return FPBits::inf(x_bits.sign()).get_val();
-      }
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      return FPBits::max_normal(x_bits.sign()).get_val();
+      return fputil::set_overflow<float16>(x_bits.sign());
     }
 
     // When -2^(-14) <= x <= -2^(-9).
