@@ -760,6 +760,8 @@ template <class _ExecutionPolicy,
     _ForwardOutIterator2 __out_false,
     _Predicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator1, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator2, "partition_copy requires ForwardIterators");
   _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
       _ForwardOutIterator1, decltype(*__first), "partition_copy requires an OutputIterator");
   _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(

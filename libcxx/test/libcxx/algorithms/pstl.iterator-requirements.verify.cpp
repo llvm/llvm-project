@@ -184,6 +184,10 @@ void f(non_forward_iterator non_fwd,
     (void)std::partition_copy(
         pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
     (void)std::partition_copy(
+        pol, it, it, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
+        pol, it, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
         pol, it, it, non_output, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
     (void)std::partition_copy(
         pol, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: partition_copy}}

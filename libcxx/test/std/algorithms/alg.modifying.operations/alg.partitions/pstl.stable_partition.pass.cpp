@@ -35,8 +35,8 @@
 
 EXECUTION_POLICY_SFINAE_TEST(stable_partition);
 
-static_assert(sfinae_test_stable_partition<int, int*, int*, bool (*)(int, int)>);
-static_assert(!sfinae_test_stable_partition<std::execution::parallel_policy, int*, int*, bool (*)(int, int)>);
+static_assert(sfinae_test_stable_partition<int, int*, int*, bool (*)(int)>);
+static_assert(!sfinae_test_stable_partition<std::execution::parallel_policy, int*, int*, bool (*)(int)>);
 
 template <class Iter>
 struct Test {
