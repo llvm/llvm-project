@@ -884,6 +884,8 @@ void AMDGPUPALMetadata::toLegacyBlob(std::string &Blob) {
 
 void AMDGPUPALMetadata::toMsgPackBlob(std::string &Blob) {
   Blob.clear();
+  if (MsgPackDoc.getRoot().isEmpty())
+    return;
   MsgPackDoc.writeToBlob(Blob);
 }
 
