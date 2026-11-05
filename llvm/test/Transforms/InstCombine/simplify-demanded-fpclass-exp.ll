@@ -463,7 +463,7 @@ define nofpclass(nzero nan) float @source_is_known_inf_or_nan__nnan_result(float
 define nofpclass(pzero) float @source_is_known_zero_or_nan(float nofpclass(inf norm sub) %must.be.zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(pzero) float @source_is_known_zero_or_nan(
 ; CHECK-SAME: float nofpclass(inf sub norm) [[MUST_BE_ZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = fadd float [[MUST_BE_ZERO_OR_NAN]], 1.000000e+00
+; CHECK-NEXT:    [[EXP:%.*]] = fadd ninf float [[MUST_BE_ZERO_OR_NAN]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.zero.or.nan)
@@ -473,7 +473,7 @@ define nofpclass(pzero) float @source_is_known_zero_or_nan(float nofpclass(inf n
 define nofpclass(pzero) <2 x float> @source_is_known_zero_or_nan_vec(<2 x float> nofpclass(inf norm sub) %must.be.zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(pzero) <2 x float> @source_is_known_zero_or_nan_vec(
 ; CHECK-SAME: <2 x float> nofpclass(inf sub norm) [[MUST_BE_ZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = fadd <2 x float> [[MUST_BE_ZERO_OR_NAN]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[EXP:%.*]] = fadd ninf <2 x float> [[MUST_BE_ZERO_OR_NAN]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
   %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> %must.be.zero.or.nan)
