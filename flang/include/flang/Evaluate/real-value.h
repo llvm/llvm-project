@@ -250,7 +250,15 @@ private:
   RealValueImpl &impl();
   const RealValueImpl &impl() const;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Waix-compat"
+#endif
   alignas(detail::kRealObjectAlign) std::byte opaque_[detail::kRealObjectSize];
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 };
 
 } // namespace Fortran::evaluate::value
