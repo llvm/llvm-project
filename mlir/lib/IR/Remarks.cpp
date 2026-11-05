@@ -19,8 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
 
-#include <algorithm>
 #include <mutex>
+#include <vector>
 
 using namespace mlir::remark::detail;
 using namespace mlir::remark;
@@ -296,7 +296,7 @@ RemarkEngine::findRemarks(const RemarkQuery &query) const {
   llvm::sort(result, [](RemarkId lhs, RemarkId rhs) {
     return lhs.getValue() < rhs.getValue();
   });
-  result.erase(std::unique(result.begin(), result.end()), result.end());
+  result.erase(llvm::unique(result), result.end());
   return result;
 }
 
