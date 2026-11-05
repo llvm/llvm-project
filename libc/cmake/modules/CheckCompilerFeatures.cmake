@@ -112,7 +112,7 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(has_feature TRUE)
     endif()
   elseif(LIBC_TARGET_OS_IS_UEFI AND
-         feature IN_LIST UEFI_UNAVAILABLE_COMPILER_FEATURES)
+      feature IN_LIST UEFI_UNAVAILABLE_COMPILER_FEATURES)
     set(has_feature FALSE)
   else()
     try_compile(
