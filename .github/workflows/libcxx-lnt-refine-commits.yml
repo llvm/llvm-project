@@ -61,6 +61,8 @@ jobs:
       MIN_CHANGE: ${{ inputs.min-change }}
       MAX_COMMITS: ${{ inputs.max-commits }}
       LNT_URL: https://lnt.llvm.org
+      LNT_PROJECT: libcxx
+      LNT_TEST_SUITE: microbenchmarks
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
       # It is cached and recomputed every hour instead of every time this workflow is called.
@@ -116,6 +118,7 @@ jobs:
           # Download the data and the runs as of a fixed time point. That way, the commits that we consider
           # "attempted" are exactly those used to find changepoints.
           as_of=$(date -u -d '5 minutes ago' +%FT%TZ)
+          suite_url="${LNT_URL}/api/projects/${LNT_PROJECT}/suites/${LNT_TEST_SUITE}"
 
           # Only download the runs submitted since the last update, if any.
           series="${RUNNER_TEMP}/series"
@@ -126,13 +129,13 @@ jobs:
           else
             rm -f "${series}/series.jsonl"
           fi
-          curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/series"                           \
+          curl -sS --fail --compressed -G "${suite_url}/series"                                           \
                --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                  \
                --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" "${since[@]}" \
                >> "${series}/series.jsonl"
           echo "${as_of}" > "${series}/as-of"
 
-          curl -sS --fail -G "${LNT_URL}/api/suites/libcxx/runs"                                          \
+          curl -sS --fail -G "${suite_url}/runs"                                                          \
                --data-urlencode machine="${MACHINE}" --data-urlencode submitted_before="${as_of}"         \
                --data-urlencode limit=10000                                                               \
             | jq -r 'if .cursor.next then error("more runs than fit in a page") else .items[].commit end' \

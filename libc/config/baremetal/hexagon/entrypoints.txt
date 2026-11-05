@@ -755,6 +755,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
     libc.src.math.canonicalizef128
+    libc.src.math.canonicalizef80
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
@@ -789,8 +790,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.iscanonicalf80
     libc.src.math.isnanf128
+    libc.src.math.isnanf80
     libc.src.math.issignalingf128
+    libc.src.math.issignalingf80
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.llrintf128
@@ -815,7 +819,9 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.setpayloadsigf128
     libc.src.math.sqrtf128
     libc.src.math.totalorderf128
+    libc.src.math.totalorderf80
     libc.src.math.totalordermagf128
+    libc.src.math.totalordermagf80
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
@@ -892,6 +898,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16

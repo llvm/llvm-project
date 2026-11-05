@@ -1,9 +1,11 @@
-# These tests require a functioning GPU device and runtime on the system.
-if "ubsan-standalone" not in config.available_features or (
-    "ubsan-hip" not in config.available_features
-    and "ubsan-openmp-offload" not in config.available_features
-):
+# Discover only tests for GPU frontends that are usable on this system.
+config.suffixes = []
+if "ubsan-hip" in config.available_features:
+    config.suffixes.append(".hip")
+if "ubsan-openmp-offload" in config.available_features:
+    config.suffixes.append(".cpp")
+
+if not config.suffixes:
     config.unsupported = True
 else:
     config.parallelism_group = "gpu"
-    config.suffixes = [".c", ".cpp", ".hip"]
