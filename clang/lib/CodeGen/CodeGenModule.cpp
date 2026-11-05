@@ -3720,10 +3720,13 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
-    F->addMetadata(
+    // A function definition is annotated when its declaration is created and
+    // again when its body is emitted. Replace the attachment instead of adding
+    // a second one, so that a function carries exactly one type identifier.
+    F->setMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(getLLVMContext(),
-                            {CreateMetadataIdentifierForCallGraphType(QT)}));
+        llvm::MDTuple::get(getLLVMContext(),
+                           {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
@@ -6130,7 +6133,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     }
 
     // Make sure the result is of the correct type.
-    if (Entry->getType()->getAddressSpace() != TargetAS)
+    if (Entry->getType()->getAddressSpace() != TargetAS &&
+        (!D || D->getTLSKind() == VarDecl::TLS_None))
       return llvm::ConstantExpr::getAddrSpaceCast(
           Entry, llvm::PointerType::get(Ty->getContext(), TargetAS));
 
@@ -6275,7 +6279,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
-  if (DAddrSpace != ExpectedAS)
+  if (DAddrSpace != ExpectedAS && (!D || D->getTLSKind() == VarDecl::TLS_None))
     return performAddrSpaceCast(
         GV, llvm::PointerType::get(getLLVMContext(), TargetAS));
 

@@ -245,8 +245,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
+    libc.src.math.iscanonicalf80
     libc.src.math.isnanf128
+    libc.src.math.isnanf80
     libc.src.math.issignalingf128
+    libc.src.math.issignalingf80
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpf128
@@ -408,10 +411,12 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderf128
+    libc.src.math.totalorderf80
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagf128
+    libc.src.math.totalordermagf80
     libc.src.math.totalordermagl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
@@ -550,6 +555,7 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
+    libc.src.math.canonicalizef80
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
@@ -646,6 +652,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16

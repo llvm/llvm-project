@@ -706,6 +706,21 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
                                  Float80(0.0), Float80(0.0)));
   EXPECT_FP_EQ(Float80(0.0),
                LIBC_NAMESPACE::shared::fdimf80(Float80(0.0), Float80(0.0)));
+  Float80 totalorderf80_x = Float80(0.0);
+  Float80 totalorderf80_y = Float80(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalorderf80(&totalorderf80_x,
+                                                     &totalorderf80_y));
+  Float80 totalordermagf80_x = Float80(0.0);
+  Float80 totalordermagf80_y = Float80(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf80(&totalordermagf80_x,
+                                                        &totalordermagf80_y));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf80(Float80(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf80(Float80(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf80(Float80(0.0)));
+  Float80 canonicalizef80_cx = Float80(0.0);
+  Float80 canonicalizef80_x = Float80(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef80(&canonicalizef80_cx,
+                                                       &canonicalizef80_x));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -853,6 +868,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::exp2bf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::expbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log_bf16(bfloat16(1.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::sinhbf16(bfloat16(0.0)));
 
   bfloat16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,

@@ -113,6 +113,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i32, MVT::i64}) {
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+    // No atomic sub insn. Expand it into atomic add of the negated value.
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
@@ -583,10 +585,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         break;
       }
 
-      // STORE_STACK_ARG requires i64 operands. With ALU32 mode, the CC
-      // promotion may only extend to i32, so extend to i64 if needed.
-      if (Arg.getValueType() != MVT::i64)
-        Arg = DAG.getNode(ISD::ANY_EXTEND, CLI.DL, MVT::i64, Arg);
+      assert(Arg.getValueType() == MVT::i64 && "stack args are i64");
 
       SDValue OffVal = DAG.getConstant(Off, CLI.DL, MVT::i64);
       Chain = DAG.getNode(BPFISD::STORE_STACK_ARG, CLI.DL, MVT::Other, Chain,

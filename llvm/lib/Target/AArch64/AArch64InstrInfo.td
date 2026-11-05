@@ -597,7 +597,8 @@ def nonext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
          cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-         !cast<MaskedLoadSDNode>(N)->isNonTemporal();
+         !cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Any/Zero extending masked load fragments.
 def azext_masked_load :
@@ -605,44 +606,52 @@ def azext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def),[{
   return (cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
           cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Sign extending masked load fragments.
 def sext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 def non_temporal_load :
@@ -650,7 +659,8 @@ def non_temporal_load :
            (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
    return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
           cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-          cast<MaskedLoadSDNode>(N)->isNonTemporal();
+          cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+          !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 // non-truncating masked store fragment.
