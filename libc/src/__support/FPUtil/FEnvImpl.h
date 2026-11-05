@@ -77,9 +77,13 @@ LIBC_INLINE int enable_except(int) { return 0; }
 
 LIBC_INLINE int disable_except(int) { return 0; }
 
-LIBC_INLINE int get_round() {
-  LIBC_FENV_ACCESS_ON
-  return fegetround();
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int get_round() {
+  if (cpp::is_constant_evaluated()) {
+    return FE_TONEAREST;
+  } else {
+    LIBC_FENV_ACCESS_ON
+    return fegetround();
+  }
 }
 
 LIBC_INLINE int set_round(int rounding_mode) {

@@ -168,7 +168,7 @@ template <> struct TargetHasFmaInstruction<double> {
 // the generated constants to precision <= 51, and splitting it by 2^28 + 1,
 // then a * b = r.hi + r.lo is exact for all rounding modes.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
-LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
+LIBC_INLINE constexpr NumberPair<T> exact_mult(T a, T b) {
   NumberPair<T> r;
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
@@ -185,16 +185,15 @@ LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
 }
 
 template <typename T = double>
-LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> quick_mult(T a,
-                                                    const NumberPair<T> &b) {
+LIBC_INLINE constexpr NumberPair<T> quick_mult(T a, const NumberPair<T> &b) {
   NumberPair<T> r = exact_mult(a, b.hi);
   r.lo = multiply_add(a, b.lo, r.lo);
   return r;
 }
 
 template <size_t SPLIT_B = 27>
-LIBC_INLINE LIBC_CONSTEXPR DoubleDouble quick_mult(const DoubleDouble &a,
-                                                   const DoubleDouble &b) {
+LIBC_INLINE constexpr DoubleDouble quick_mult(const DoubleDouble &a,
+                                              const DoubleDouble &b) {
   DoubleDouble r = exact_mult<double, SPLIT_B>(a.hi, b.hi);
   double t1 = multiply_add(a.hi, b.lo, r.lo);
   double t2 = multiply_add(a.lo, b.hi, t1);
@@ -204,8 +203,9 @@ LIBC_INLINE LIBC_CONSTEXPR DoubleDouble quick_mult(const DoubleDouble &a,
 
 // Assuming |c| >= |a * b|.
 template <>
-LIBC_INLINE LIBC_CONSTEXPR DoubleDouble multiply_add<DoubleDouble>(
-    const DoubleDouble &a, const DoubleDouble &b, const DoubleDouble &c) {
+LIBC_INLINE constexpr DoubleDouble
+multiply_add<DoubleDouble>(const DoubleDouble &a, const DoubleDouble &b,
+                           const DoubleDouble &c) {
   return add(c, quick_mult(a, b));
 }
 
@@ -227,7 +227,8 @@ LIBC_INLINE LIBC_CONSTEXPR DoubleDouble multiply_add<DoubleDouble>(
 // as accurate as possible, then the error is bounded by:
 //   |(ah + al) / (bh + bl) - (rh + rl)| < O(bl/bh) * (2^-52 + al/ah + bl/bh)
 template <typename T>
-LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
+LIBC_INLINE constexpr NumberPair<T> div(const NumberPair<T> &a,
+                                        const NumberPair<T> &b) {
   NumberPair<T> r;
   T q = T(1) / b.hi;
   r.hi = a.hi * q;

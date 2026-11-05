@@ -129,6 +129,7 @@ add_header_library(
     sqrt.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.sqrt
     libc.src.__support.macros.properties.cpu_features
 )
@@ -152,6 +153,7 @@ add_header_library(
     multiply_add.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT

@@ -2582,6 +2582,7 @@ add_header_library(
   HDRS
     round.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -2676,6 +2677,7 @@ add_header_library(
   HDRS
     roundf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -2921,6 +2923,7 @@ add_header_library(
     copysignf16.h
   DEPENDS
     libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
   FLAGS
