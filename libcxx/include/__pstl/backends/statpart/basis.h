@@ -30,6 +30,7 @@
 #include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
 #include <__numeric/reduce.h>
+#include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
 #include <__pstl/backends/statpart/decoupled_lookback.h>
