@@ -447,13 +447,12 @@ define void @load_1byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%edx), %esi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
@@ -477,8 +476,7 @@ define void @load_1byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-SHLD-NEXT:    movl %ecx, %edx
 ; X86-SHLD-NEXT:    shrb $3, %dl
-; X86-SHLD-NEXT:    andb $12, %dl
-; X86-SHLD-NEXT:    movzbl %dl, %edx
+; X86-SHLD-NEXT:    andl $12, %edx
 ; X86-SHLD-NEXT:    movl (%esp,%edx), %ebx
 ; X86-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -503,8 +501,7 @@ define void @load_1byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
@@ -579,13 +576,12 @@ define void @load_2byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%edx), %esi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
@@ -609,8 +605,7 @@ define void @load_2byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-SHLD-NEXT:    movl %ecx, %edx
 ; X86-SHLD-NEXT:    shrb $3, %dl
-; X86-SHLD-NEXT:    andb $12, %dl
-; X86-SHLD-NEXT:    movzbl %dl, %edx
+; X86-SHLD-NEXT:    andl $12, %edx
 ; X86-SHLD-NEXT:    movl (%esp,%edx), %esi
 ; X86-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -635,8 +630,7 @@ define void @load_2byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
@@ -710,13 +704,12 @@ define void @load_4byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%edx), %esi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
@@ -740,8 +733,7 @@ define void @load_4byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-SHLD-NEXT:    movl %ecx, %edx
 ; X86-SHLD-NEXT:    shrb $3, %dl
-; X86-SHLD-NEXT:    andb $12, %dl
-; X86-SHLD-NEXT:    movzbl %dl, %edx
+; X86-SHLD-NEXT:    andl $12, %edx
 ; X86-SHLD-NEXT:    movl (%esp,%edx), %esi
 ; X86-SHLD-NEXT:    movl 4(%esp,%edx), %edx
 ; X86-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -766,8 +758,7 @@ define void @load_4byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
@@ -842,24 +833,23 @@ define void @load_8byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-NO-BMI2-NO-SHLD-NEXT:    xorps %xmm1, %xmm1
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %cl
-; X86-NO-BMI2-NO-SHLD-NEXT:    andb $12, %cl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %bl
+; X86-NO-BMI2-NO-SHLD-NEXT:    andl $12, %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%ebx), %ebp
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%ebx), %esi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %ebp
-; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    orl %ebp, %edi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    andb $24, %al
-; X86-NO-BMI2-NO-SHLD-NEXT:    notb %al
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 8(%esp,%ebx), %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    andb $24, %al
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %al
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %ebx
@@ -889,8 +879,7 @@ define void @load_8byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-SHLD-NEXT:    movl %ecx, %edx
 ; X86-SHLD-NEXT:    shrb $3, %dl
-; X86-SHLD-NEXT:    andb $12, %dl
-; X86-SHLD-NEXT:    movzbl %dl, %edx
+; X86-SHLD-NEXT:    andl $12, %edx
 ; X86-SHLD-NEXT:    movl 8(%esp,%edx), %esi
 ; X86-SHLD-NEXT:    movl (%esp,%edx), %edi
 ; X86-SHLD-NEXT:    movl 4(%esp,%edx), %edx
@@ -924,8 +913,7 @@ define void @load_8byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movdqa %xmm0, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $12, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl

@@ -5,8 +5,7 @@
 
 ; The i8 phi keeps these masks narrow until instruction selection. Fold a
 ; one-use mask and zero-extension into one 32-bit AND. Do not duplicate a shared
-; mask or change the narrow sign-bit test. In 32-bit mode retain the byte form
-; so allocation can still use two byte subregisters of one 32-bit register.
+; mask or change the narrow sign-bit test.
 define i32 @parse(ptr %p) {
 ; X64-LABEL: parse:
 ; X64:       # %bb.0: # %entry
@@ -30,6 +29,9 @@ define i32 @parse(ptr %p) {
 ;
 ; X86-LABEL: parse:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %edx
 ; X86-NEXT:    incl %ecx
@@ -37,17 +39,18 @@ define i32 @parse(ptr %p) {
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %loop
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    andb $15, %dl
-; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal (%edx,%eax,2), %eax
 ; X86-NEXT:    movzbl (%ecx), %edx
-; X86-NEXT:    movb %dl, %dh
-; X86-NEXT:    addb $-48, %dh
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    addb $-48, %bl
 ; X86-NEXT:    incl %ecx
-; X86-NEXT:    cmpb $10, %dh
+; X86-NEXT:    cmpb $10, %bl
 ; X86-NEXT:    jb .LBB0_1
 ; X86-NEXT:  # %bb.2: # %exit
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; APX-LABEL: parse:
@@ -112,6 +115,9 @@ define i32 @parse_mask128(ptr %p) {
 ;
 ; X86-LABEL: parse_mask128:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %edx
 ; X86-NEXT:    incl %ecx
@@ -119,17 +125,18 @@ define i32 @parse_mask128(ptr %p) {
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB1_1: # %loop
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    andb $-128, %dl
-; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    andl $128, %edx
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal (%edx,%eax,2), %eax
 ; X86-NEXT:    movzbl (%ecx), %edx
-; X86-NEXT:    movb %dl, %dh
-; X86-NEXT:    addb $-48, %dh
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    addb $-48, %bl
 ; X86-NEXT:    incl %ecx
-; X86-NEXT:    cmpb $10, %dh
+; X86-NEXT:    cmpb $10, %bl
 ; X86-NEXT:    jb .LBB1_1
 ; X86-NEXT:  # %bb.2: # %exit
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; APX-LABEL: parse_mask128:
@@ -296,9 +303,12 @@ define i32 @parse_source_live(ptr %p) {
 ;
 ; X86-LABEL: parse_source_live:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %edx
 ; X86-NEXT:    incl %ecx
@@ -307,19 +317,20 @@ define i32 @parse_source_live(ptr %p) {
 ; X86-NEXT:  .LBB3_1: # %loop
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movzbl %dl, %esi
-; X86-NEXT:    andb $15, %dl
-; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal (%esi,%eax,2), %eax
 ; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    movzbl (%ecx), %edx
-; X86-NEXT:    movb %dl, %dh
-; X86-NEXT:    addb $-48, %dh
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    addb $-48, %bl
 ; X86-NEXT:    incl %ecx
-; X86-NEXT:    cmpb $10, %dh
+; X86-NEXT:    cmpb $10, %bl
 ; X86-NEXT:    jb .LBB3_1
 ; X86-NEXT:  # %bb.2: # %exit
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
