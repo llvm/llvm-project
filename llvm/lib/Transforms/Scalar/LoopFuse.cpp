@@ -83,6 +83,8 @@ STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
 STATISTIC(ContainsAtomicAccess, "Loop contains an atomic access");
+STATISTIC(ContainsPotentiallySynchronizingCall,
+          "Loop contains a potentially synchronizing call");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
 STATISTIC(UnknownTripCount, "Loop has unknown trip count");
@@ -201,6 +203,20 @@ struct FusionCandidate {
           reportInvalidCandidate("ContainsAtomicAccess",
                                  "Loop contains an atomic access");
           return;
+        }
+        // Calls (even read-only) can contain atomic accesses inside unless
+        // they're annotated with "nosync" attribute.
+        // TODO: Even with `nosync` there might still be unordered atomic reads
+        // which would still be problematic.
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!CB->hasFnAttr(Attribute::AttrKind::NoSync)) {
+            invalidate();
+            ++ContainsPotentiallySynchronizingCall;
+            reportInvalidCandidate(
+                "ContainsPotentiallySynchronizingCall",
+                "Loop contains a potentially synchronizing call");
+            return;
+          }
         }
         if (I.mayWriteToMemory())
           MemWrites.push_back(&I);
