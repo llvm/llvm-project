@@ -45,36 +45,40 @@ define i32 @switch_unreachable_default(i32 signext %x) {
 ; CF-LABEL: switch_unreachable_default:
 ; CF:       # %bb.0: # %entry
 ; CF-NEXT:    lpad 0
+; CF-NEXT:    li a1, 7
+; CF-NEXT:    bltu a1, a0, .LBB0_10
+; CF-NEXT:  # %bb.1: # %entry
 ; CF-NEXT:    lui a1, %hi(.LJTI0_0)
 ; CF-NEXT:    addi a1, a1, %lo(.LJTI0_0)
 ; CF-NEXT:    slli a0, a0, 2
 ; CF-NEXT:    add a0, a1, a0
 ; CF-NEXT:    lw t2, 0(a0)
 ; CF-NEXT:    jr t2
-; CF-NEXT:  .LBB0_1: # %b0
+; CF-NEXT:  .LBB0_2: # %b0
 ; CF-NEXT:    li a0, 10
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_2: # %b4
+; CF-NEXT:  .LBB0_3: # %b4
 ; CF-NEXT:    li a0, 54
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_3: # %b2
+; CF-NEXT:  .LBB0_4: # %b2
 ; CF-NEXT:    li a0, 32
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_4: # %b3
+; CF-NEXT:  .LBB0_5: # %b3
 ; CF-NEXT:    li a0, 43
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_5: # %b7
+; CF-NEXT:  .LBB0_6: # %b7
 ; CF-NEXT:    li a0, 87
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_6: # %b1
+; CF-NEXT:  .LBB0_7: # %b1
 ; CF-NEXT:    li a0, 21
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_7: # %b5
+; CF-NEXT:  .LBB0_8: # %b5
 ; CF-NEXT:    li a0, 65
 ; CF-NEXT:    ret
-; CF-NEXT:  .LBB0_8: # %b6
+; CF-NEXT:  .LBB0_9: # %b6
 ; CF-NEXT:    li a0, 76
 ; CF-NEXT:    ret
+; CF-NEXT:  .LBB0_10: # %def
 entry:
   switch i32 %x, label %def [
     i32 0, label %b0
