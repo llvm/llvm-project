@@ -1372,6 +1372,110 @@ cc_library(
 )
 ```
 
+#### Natural Sharding with Op Partitions
+
+Sharding by index splits the ops arbitrarily: which shard an op ends up in
+depends on the number of shards and on the names of all other ops. As an
+alternative, a dialect can shard its ops "naturally" by grouping them into
+named *op partitions*, such as arithmetic, memory or control flow ops. Each
+partition is generated into its own declaration and definition files, almost as
+if it were a dialect of its own, but all ops are still registered in one
+dialect.
+
+Partitions are `Partition` records with a name, which must be a C++
+identifier. The dialect lists its partitions, and every op sets its `partition`
+to one of these records (a different record with the same name is rejected),
+typically with a `let` around a group of ops:
+
+```tablegen
+def MyDialect_ArithPartition : Partition<"Arith">;
+def MyDialect_MemoryPartition : Partition<"Memory">;
+
+def MyDialect : Dialect {
+  let name = "my_dialect";
+  let opPartitions = [MyDialect_ArithPartition, MyDialect_MemoryPartition];
+}
+
+let partition = MyDialect_ArithPartition in {
+def AddOp : MyDialect_Op<"add"> { ... }
+def MulOp : MyDialect_Op<"mul"> { ... }
+}
+
+def LoadOp : MyDialect_Op<"load"> {
+  let partition = MyDialect_MemoryPartition;
+  ...
+}
+```
+
+A dialect can also name one of its partitions as `defaultOpPartition`. Ops that
+do not set `partition` are then in this partition. This allows partitioning a
+dialect incrementally: initially all ops are in the default partition, and
+groups of ops can move to their own partitions one at a time:
+
+```tablegen
+def MyDialect : Dialect {
+  let name = "my_dialect";
+  let opPartitions = [MyDialect_CorePartition, MyDialect_MemoryPartition];
+  let defaultOpPartition = MyDialect_CorePartition;
+}
+
+// In partition `Core`.
+def AddOp : MyDialect_Op<"add"> { ... }
+```
+
+Passing `-op-partition=<partition>` with a partition name to `-gen-op-decls` and
+`-gen-op-defs` generates only the ops of that partition.
+
+Without `-op-partition`, `-gen-op-defs` generates all ops as before and
+additionally defines the registration hooks of all partitions in
+`GET_OP_CLASSES`. The hooks are private members of the dialect class, and the
+dialect registers the ops of all partitions by calling `registerOperations()`
+in its `initialize()`. A dialect can therefore declare its partitions and
+register its ops with `registerOperations()` first, and split its generated
+files by partition later.
+
+`mlir-tblgen` reports an error if a requested partition does not exist. A
+partition for which no definitions are compiled results in a link error for its
+hook.
+
+In CMake, generate and include the files of each partition:
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS MyDialectOps.td)
+foreach(partition Arith Memory)
+  mlir_tablegen(MyDialect${partition}Ops.h.inc -gen-op-decls -op-partition=${partition})
+  mlir_tablegen(MyDialect${partition}Ops.cpp.inc -gen-op-defs -op-partition=${partition})
+endforeach()
+```
+
+Since the generated declarations of a partition forward declare the ops of all
+other partitions, each partition can get its own header, so that users only
+include the declarations of the ops they use:
+
+```c++
+// MyDialectArithOps.h
+#include "MyDialectBase.h" // The dialect, its attributes and types.
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.h.inc"
+
+// MyDialect.h, for users that want all ops.
+#include "MyDialectArithOps.h"
+#include "MyDialectMemoryOps.h"
+
+// MyDialectArithOps.cpp, a natural home for the C++ implementations of the
+// arithmetic ops as well.
+#include "MyDialectArithOps.h"
+#include "OpUtils.h"
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.cpp.inc"
+```
+
+As with index sharding, utilities shared by the generated op definitions must
+be declared in a header shared by the compilation units. A dialect with op
+partitions cannot use `-op-shard-count`.
+
 ## Constraints
 
 Constraint is a core concept in table-driven operation definition: operation

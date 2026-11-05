@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpGenHelpers.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -35,6 +37,11 @@ static cl::opt<unsigned> opShardCount(
     "op-shard-count",
     cl::desc("The number of shards into which the op classes will be divided"),
     cl::cat(opDefGenCat), cl::init(1));
+static cl::opt<std::string> opPartition(
+    "op-partition",
+    cl::desc("Only consider the ops in this op partition (see `Op::partition`) "
+             "and, for -gen-op-defs, emit its registration hook"),
+    cl::cat(opDefGenCat));
 
 static std::string getOperationName(const Record &def) {
   auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
@@ -44,11 +51,53 @@ static std::string getOperationName(const Record &def) {
   return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
+/// Like `Operator::getPartitionName`, for filtering without constructing an
+/// `Operator`.
+static StringRef getOpPartitionName(const Record &def) {
+  const Record *partition = def.getValueAsOptionalDef("partition");
+  return partition ? partition->getValueAsString("partitionName") : "";
+}
+
+std::string mlir::tblgen::getOpRegistrationHookName(StringRef partition) {
+  return "registerOperations" +
+         convertToCamelFromSnakeCase(partition, /*capitalizeFirst=*/true);
+}
+
+/// Verifies that the partition requested by "op-partition" exists and that
+/// "op-shard-count" is not used with partitions.
+static void verifyOpPartitions(ArrayRef<Dialect> dialects) {
+  for (const Dialect &dialect : dialects)
+    verifyDialectOpPartitions(dialect);
+
+  // The requested partition must belong to a dialect with ops.
+  if (!opPartition.empty() &&
+      llvm::none_of(dialects, [&](const Dialect &dialect) {
+        return llvm::is_contained(dialect.getOpPartitions(), opPartition);
+      }))
+    PrintFatalError("requested op partition '" + opPartition +
+                    "' is not declared in the `opPartitions` of any dialect "
+                    "with ops");
+
+  // Index sharding does not emit the registration hooks of partitions, which
+  // `registerOperations()` of a dialect with partitions calls. This also
+  // rejects -op-partition, as the requested partition belongs to a dialect.
+  if (opShardCount > 1) {
+    for (const Dialect &dialect : dialects)
+      if (!dialect.getOpPartitions().empty())
+        PrintFatalError(dialect.getDef(),
+                        "dialect '" + dialect.getName() +
+                            "' has `opPartitions`, which cannot be combined "
+                            "with -op-shard-count");
+  }
+}
+
 std::vector<const Record *>
 mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
   const Record *classDef = records.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
+
+  verifyOpPartitions(getOpDialects(records));
 
   Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<const Record *> defs;
@@ -60,6 +109,9 @@ mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
       continue;
     // Unless there is an exclude filter and it matches.
     if (!opExcFilter.empty() && excludeRegex.match(getOperationName(*def)))
+      continue;
+    // Only include ops of the requested partition, if any.
+    if (!isRequestedOpPartition(getOpPartitionName(*def)))
       continue;
     defs.push_back(def);
   }
@@ -100,4 +152,31 @@ void mlir::tblgen::shardOpDefinitions(
     shardedDefs.push_back(defs.slice(start, size));
     start += size;
   }
+}
+
+StringRef mlir::tblgen::getRequestedOpPartition() { return opPartition; }
+
+bool mlir::tblgen::isRequestedOpPartition(StringRef partition) {
+  return opPartition.empty() || partition == opPartition;
+}
+
+void mlir::tblgen::verifyDialectOpPartitions(const Dialect &dialect) {
+  StringMap<StringRef> hookNames;
+  for (StringRef partition : dialect.getOpPartitions()) {
+    auto [it, inserted] =
+        hookNames.try_emplace(getOpRegistrationHookName(partition), partition);
+    if (!inserted)
+      PrintFatalError(dialect.getDef(),
+                      "op partitions '" + it->second + "' and '" + partition +
+                          "' of dialect '" + dialect.getName() +
+                          "' have the same registration hook '" + it->first() +
+                          "'");
+  }
+}
+
+std::vector<Dialect> mlir::tblgen::getOpDialects(const RecordKeeper &records) {
+  SetVector<const Record *> dialectDefs;
+  for (const Record *def : records.getAllDerivedDefinitions("Op"))
+    dialectDefs.insert(def->getValueAsDef("opDialect"));
+  return std::vector<Dialect>(dialectDefs.begin(), dialectDefs.end());
 }

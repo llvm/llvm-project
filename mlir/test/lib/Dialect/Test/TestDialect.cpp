@@ -346,9 +346,8 @@ struct TestOpEffectInterfaceFallback
 void TestDialect::initialize() {
   registerAttributes();
   registerTypes();
-  registerOpsSyntax();
   addOperations<ManualCppOpWithFold>();
-  registerTestDialectOperations(this);
+  registerOperations();
   registerDynamicOp(getDynamicGenericOp(this));
   registerDynamicOp(getDynamicTerminatorOp(this));
   registerDynamicOp(getDynamicNoTerminatorOp(this));

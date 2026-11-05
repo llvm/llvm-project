@@ -16,8 +16,12 @@ include "TestTypeDefs.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/OpBase.td"
 
+// The ops of this file are generated separately from TestOps.td, so they are
+// all in `Syntax`, which TestOps.td does not use.
 class TEST_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Test_Dialect, mnemonic, traits>;
+    Op<Test_Dialect, mnemonic, traits> {
+  let partition = Test_SyntaxPartition;
+}
 
 def WrappingRegionOp : TEST_Op<"wrapping_region",
     [SingleBlockImplicitTerminator<"TestReturnOp">]> {

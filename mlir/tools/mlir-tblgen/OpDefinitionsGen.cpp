@@ -4756,11 +4756,28 @@ static void emitOpClassDefs(const RecordKeeper &records,
   os << definitions;
 }
 
+/// When generating the ops of an op partition, forward declare the ops of
+/// all other partitions, so that the declarations can refer to ops of any
+/// partition of their dialect, like they could without partitions.
+static void emitOtherOpPartitionForwardDecls(const RecordKeeper &records,
+                                             raw_ostream &os) {
+  for (const Record *def : records.getAllDerivedDefinitions("Op")) {
+    Operator op(def);
+    StringRef partition = op.getPartitionName();
+    if (partition.empty() || isRequestedOpPartition(partition))
+      continue;
+
+    NamespaceEmitter emitter(os, op.getCppNamespace());
+    os << "class " << op.getCppClassName() << ";\n";
+  }
+}
+
 /// Emit op declarations for all op records.
 static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, records);
 
   std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  emitOtherOpPartitionForwardDecls(records, os);
   emitOpClassDecls(records, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op
@@ -4824,6 +4841,50 @@ static void emitOpDefShard(const RecordKeeper &records,
   emitOpClassDefs(records, defs, os, indexStr);
 }
 
+/// Emit the registration hooks of the op partitions of `dialects` that are
+/// requested by "op-partition", or of all their partitions if none is. A hook
+/// is emitted even if its partition has no ops, because the dialect calls the
+/// hooks of all its partitions.
+static void emitOpPartitionRegistrationHooks(ArrayRef<Dialect> dialects,
+                                             ArrayRef<const Record *> defs,
+                                             raw_ostream &os) {
+  std::vector<Operator> ops(defs.begin(), defs.end());
+  for (const Dialect &dialect : dialects) {
+    for (StringRef partition : dialect.getOpPartitions()) {
+      if (!isRequestedOpPartition(partition))
+        continue;
+
+      os << formatv(opCommentHeader, dialect.getCppClassName(),
+                    (partition + " Op Registration Hook").str())
+         << formatv("void {0}::{1}::{2}() {{\n", dialect.getCppNamespace(),
+                    dialect.getCppClassName(),
+                    getOpRegistrationHookName(partition));
+      // The hooks register each op with a separate call instead of
+      // `addOperations<...>()`, whose single instantiation over all ops of a
+      // partition takes noticeably longer to compile.
+      for (const Operator &op : ops)
+        if (op.getDialect() == dialect && op.getPartitionName() == partition)
+          os << formatv(
+              "  ::mlir::RegisteredOperationName::insert<{0}>(*this);\n",
+              op.getQualCppClassName());
+      os << "}\n";
+    }
+  }
+}
+
+/// Returns the tag that makes the static verifier functions generated for the
+/// requested op partition unique, so that the definitions of several
+/// partitions can be included in one compilation unit. The partition name is
+/// prefixed with its length and the tag ends with `_`, so that the partition
+/// name and the file name that follows the tag cannot run together.
+static std::string getOpPartitionConstraintTag() {
+  StringRef partition = getRequestedOpPartition();
+  if (partition.empty())
+    return "";
+
+  return std::to_string(partition.size()) + partition.str() + "_";
+}
+
 /// Emit op definitions for all op records.
 static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, records);
@@ -4832,9 +4893,11 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 
-  // If no shard was requested, emit the regular op list and class definitions.
+  // If no shard was requested, emit the class definitions and the registration
+  // hooks of the op partitions. Without a requested op partition, also emit the
+  // op list, for dialects that register their ops without hooks.
   if (shardedDefs.size() == 1) {
-    {
+    if (getRequestedOpPartition().empty()) {
       IfDefEmitter scope(os, "GET_OP_LIST");
       interleave(
           defs, os,
@@ -4843,7 +4906,8 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
     }
     {
       IfDefEmitter scope(os, "GET_OP_CLASSES");
-      emitOpClassDefs(records, defs, os);
+      emitOpClassDefs(records, defs, os, getOpPartitionConstraintTag());
+      emitOpPartitionRegistrationHooks(getOpDialects(records), defs, os);
     }
     return false;
   }
