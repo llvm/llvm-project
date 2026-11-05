@@ -5377,6 +5377,36 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (CheckAnyScalarOrVectorOrMatrix(&SemaRef, TheCall, 0) ||
+        CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    QualType ValueTy = TheCall->getArg(0)->getType();
+    QualType ElementTy = getScalarComponentType(ValueTy);
+    if (!ElementTy->isIntegerType() || ElementTy->isBooleanType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << (ValueTy->isMatrixType() ? 3 : 5) << 1 << 0 << ValueTy;
+      return true;
+    }
+
+    QualType MaskTy = TheCall->getArg(1)->getType();
+    QualType UInt4Ty =
+        getASTContext().getExtVectorType(getASTContext().UnsignedIntTy, 4);
+    if (!getASTContext().hasSameUnqualifiedType(MaskTy, UInt4Ty)) {
+      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << MaskTy << UInt4Ty << 1 << 0 << 0;
+      return true;
+    }
+
+    TheCall->setType(ValueTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:
   case Builtin::BI__builtin_hlsl_quad_read_across_y:
   case Builtin::BI__builtin_hlsl_quad_read_across_diagonal: {

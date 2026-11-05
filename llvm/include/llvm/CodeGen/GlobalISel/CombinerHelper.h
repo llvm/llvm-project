@@ -530,10 +530,12 @@ public:
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
-  /// absolute value is a power of 2).
-  LLVM_ABI bool
-  matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
-                                     bool OrNegative = false) const;
+  /// absolute value is a power of 2). When \p OrZero is true, also match
+  /// operands that may be zero (i.e. that are known to be either zero or a
+  /// power of two).
+  LLVM_ABI bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                                   bool OrNegative = false,
+                                                   bool OrZero = false) const;
 
   /// Erase \p MI
   LLVM_ABI void eraseInst(MachineInstr &MI) const;
@@ -773,6 +775,14 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   LLVM_ABI void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine unsigned division by a shifted power of two into a right shift.
+  LLVM_ABI bool matchUDivByShiftedPow2(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
+
+  /// Convert signed division or remainder of nonnegative operands to unsigned.
+  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI,
+                                            unsigned UnsignedOpcode) const;
 
   /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
   LLVM_ABI void applySimplifySRemByPow2(MachineInstr &MI) const;
