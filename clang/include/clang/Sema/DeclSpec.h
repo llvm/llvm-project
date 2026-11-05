@@ -272,710 +272,714 @@ namespace clang {
         : Kind(Kind), NameLoc(NameLoc) {}
   };
 
-/// Captures information about "declaration specifiers".
-///
-/// "Declaration specifiers" encompasses storage-class-specifiers,
-/// type-specifiers, type-qualifiers, and function-specifiers.
-class DeclSpec {
-public:
-  /// storage-class-specifier
-  /// \note The order of these enumerators is important for diagnostics.
-  enum SCS {
-    SCS_unspecified = 0,
-    SCS_typedef,
-    SCS_extern,
-    SCS_static,
-    SCS_auto,
-    SCS_register,
-    SCS_private_extern,
-    SCS_mutable
-  };
-
-  // Import thread storage class specifier enumeration and constants.
-  // These can be combined with SCS_extern and SCS_static.
-  typedef ThreadStorageClassSpecifier TSCS;
-  static const TSCS TSCS_unspecified = clang::TSCS_unspecified;
-  static const TSCS TSCS___thread = clang::TSCS___thread;
-  static const TSCS TSCS_thread_local = clang::TSCS_thread_local;
-  static const TSCS TSCS__Thread_local = clang::TSCS__Thread_local;
-
-  enum TSC {
-    TSC_unspecified,
-    TSC_imaginary, // Unsupported
-    TSC_complex
-  };
-
-  // Import type specifier type enumeration and constants.
-  typedef TypeSpecifierType TST;
-  static const TST TST_unspecified = clang::TST_unspecified;
-  static const TST TST_void = clang::TST_void;
-  static const TST TST_char = clang::TST_char;
-  static const TST TST_wchar = clang::TST_wchar;
-  static const TST TST_char8 = clang::TST_char8;
-  static const TST TST_char16 = clang::TST_char16;
-  static const TST TST_char32 = clang::TST_char32;
-  static const TST TST_int = clang::TST_int;
-  static const TST TST_int128 = clang::TST_int128;
-  static const TST TST_bitint = clang::TST_bitint;
-  static const TST TST_half = clang::TST_half;
-  static const TST TST_BFloat16 = clang::TST_BFloat16;
-  static const TST TST_float = clang::TST_float;
-  static const TST TST_double = clang::TST_double;
-  static const TST TST_float16 = clang::TST_Float16;
-  static const TST TST_accum = clang::TST_Accum;
-  static const TST TST_fract = clang::TST_Fract;
-  static const TST TST_float128 = clang::TST_float128;
-  static const TST TST_ibm128 = clang::TST_ibm128;
-  static const TST TST_bool = clang::TST_bool;
-  static const TST TST_decimal32 = clang::TST_decimal32;
-  static const TST TST_decimal64 = clang::TST_decimal64;
-  static const TST TST_decimal128 = clang::TST_decimal128;
-  static const TST TST_enum = clang::TST_enum;
-  static const TST TST_union = clang::TST_union;
-  static const TST TST_struct = clang::TST_struct;
-  static const TST TST_interface = clang::TST_interface;
-  static const TST TST_class = clang::TST_class;
-  static const TST TST_typename = clang::TST_typename;
-  static const TST TST_typeofType = clang::TST_typeofType;
-  static const TST TST_typeofExpr = clang::TST_typeofExpr;
-  static const TST TST_typeof_unqualType = clang::TST_typeof_unqualType;
-  static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
-  static const TST TST_decltype = clang::TST_decltype;
-  static const TST TST_decltype_auto = clang::TST_decltype_auto;
-  static const TST TST_typename_pack_indexing =
-      clang::TST_typename_pack_indexing;
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
-  static const TST TST_##Trait = clang::TST_##Trait;
-#include "clang/Basic/BuiltinTraits.inc"
-  static const TST TST_auto = clang::TST_auto;
-  static const TST TST_auto_type = clang::TST_auto_type;
-  static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
-  static const TST TST_atomic = clang::TST_atomic;
-#define GENERIC_IMAGE_TYPE(ImgType, Id) \
-  static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
-#include "clang/Basic/OpenCLImageTypes.def"
-#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
-  static const TST TST_##Name = clang::TST_##Name;
-#include "clang/Basic/HLSLIntangibleTypes.def"
-#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
-  static const TST TST_##Name = clang::TST_##Name;
-#include "clang/Basic/HLSLPackedTypes.def"
-  static const TST TST_error = clang::TST_error;
-
-  // type-qualifiers
-  enum TQ {   // NOTE: These flags must be kept in sync with Qualifiers::TQ.
-    TQ_unspecified = 0,
-    TQ_const       = 1,
-    TQ_restrict    = 2,
-    TQ_volatile    = 4,
-    TQ_unaligned   = 8,
-    // This has no corresponding Qualifiers::TQ value, because it's not treated
-    // as a qualifier in our type system.
-    TQ_atomic      = 16
-  };
-
-  /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
-  /// returned by getParsedSpecifiers.
-  enum ParsedSpecifiers {
-    PQ_None                  = 0,
-    PQ_StorageClassSpecifier = 1,
-    PQ_TypeSpecifier         = 2,
-    PQ_TypeQualifier         = 4,
-    PQ_FunctionSpecifier     = 8
-    // FIXME: Attributes should be included here.
-  };
-
-  enum FriendSpecified : bool { No, Yes };
-
-  enum class OverflowBehaviorState {
-    Unspecified, // No overflow behavior specified
-    Wrap,        // __ob_wrap or __attribute__((overflow_behavior(wrap)))
-    Trap         // __ob_trap or __attribute__((overflow_behavior(trap)))
-  };
-
-private:
-  // storage-class-specifier
-  LLVM_PREFERRED_TYPE(SCS)
-  unsigned StorageClassSpec : 3;
-  LLVM_PREFERRED_TYPE(TSCS)
-  unsigned ThreadStorageClassSpec : 2;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SCS_extern_in_linkage_spec : 1;
-
-  // type-specifier
-  LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
-  unsigned TypeSpecWidth : 2;
-  LLVM_PREFERRED_TYPE(TSC)
-  unsigned TypeSpecComplex : 2;
-  LLVM_PREFERRED_TYPE(TypeSpecifierSign)
-  unsigned TypeSpecSign : 2;
-  LLVM_PREFERRED_TYPE(TST)
-  unsigned TypeSpecType : 7;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeAltiVecVector : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeAltiVecPixel : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeAltiVecBool : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeSpecOwned : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeSpecPipe : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned TypeSpecSat : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ConstrainedAuto : 1;
-
-  // type-qualifiers
-  LLVM_PREFERRED_TYPE(TQ)
-  unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
-
-  // overflow behavior qualifiers
-  LLVM_PREFERRED_TYPE(OverflowBehaviorState)
-  unsigned OB_state : 2;
-
-  // function-specifier
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FS_inline_specified : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FS_forceinline_specified: 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FS_virtual_specified : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FS_noreturn_specified : 1;
-
-  // friend-specifier
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FriendSpecifiedFirst : 1;
-
-  // constexpr-specifier
-  LLVM_PREFERRED_TYPE(ConstexprSpecKind)
-  unsigned ConstexprSpecifier : 2;
-
-  union {
-    UnionParsedType TypeRep;
-    Decl *DeclRep;
-    Expr *ExprRep;
-    TemplateIdAnnotation *TemplateIdRep;
-  };
-  Expr *PackIndexingExpr = nullptr;
-
-  /// ExplicitSpecifier - Store information about explicit spicifer.
-  ExplicitSpecifier FS_explicit_specifier;
-
-  // attributes.
-  ParsedAttributes Attrs;
-
-  // late attributes
-  LateParsedAttrList LateParsedAttrs;
-
-  // Scope specifier for the type spec, if applicable.
-  CXXScopeSpec TypeScope;
-
-  // SourceLocation info.  These are null if the item wasn't specified or if
-  // the setting was synthesized.
-  SourceRange Range;
-
-  SourceLocation StorageClassSpecLoc, ThreadStorageClassSpecLoc;
-  SourceRange TSWRange;
-  SourceLocation TSCLoc, TSSLoc, TSTLoc, AltiVecLoc, TSSatLoc, EllipsisLoc;
-  /// TSTNameLoc - If TypeSpecType is any of class, enum, struct, union,
-  /// typename, then this is the location of the named type (if present);
-  /// otherwise, it is the same as TSTLoc. Hence, the pair TSTLoc and
-  /// TSTNameLoc provides source range info for tag types.
-  SourceLocation TSTNameLoc;
-  SourceRange TypeofParensRange;
-  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
-      TQ_unalignedLoc;
-  SourceLocation OB_Loc;
-  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
-  SourceLocation FS_explicitCloseParenLoc;
-  SourceLocation FS_forceinlineLoc;
-  SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
-  SourceLocation TQ_pipeLoc;
-
-  WrittenBuiltinSpecs writtenBS;
-  void SaveWrittenBuiltinSpecs();
-
-  ObjCDeclSpec *ObjCQualifiers;
-
-  static bool isTypeRep(TST T) {
-    return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
-           T == TST_typeof_unqualType || isTransformTypeTrait(T) ||
-           T == TST_typename_pack_indexing;
-  }
-  static bool isExprRep(TST T) {
-    return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
-           T == TST_decltype || T == TST_bitint;
-  }
-  static bool isTemplateIdRep(TST T) {
-    return (T == TST_auto || T == TST_decltype_auto);
-  }
-
-  DeclSpec(const DeclSpec &) = delete;
-  void operator=(const DeclSpec &) = delete;
-public:
-  static bool isDeclRep(TST T) {
-    return (T == TST_enum || T == TST_struct ||
-            T == TST_interface || T == TST_union ||
-            T == TST_class);
-  }
-  static bool isTransformTypeTrait(TST T) {
-    constexpr std::array<TST, 16> Traits = {
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/BuiltinTraits.inc"
+  /// Captures information about "declaration specifiers".
+  ///
+  /// "Declaration specifiers" encompasses storage-class-specifiers,
+  /// type-specifiers, type-qualifiers, and function-specifiers.
+  class DeclSpec {
+  public:
+    /// storage-class-specifier
+    /// \note The order of these enumerators is important for diagnostics.
+    enum SCS {
+      SCS_unspecified = 0,
+      SCS_typedef,
+      SCS_extern,
+      SCS_static,
+      SCS_auto,
+      SCS_register,
+      SCS_private_extern,
+      SCS_mutable
     };
 
-    return T >= Traits.front() && T <= Traits.back();
-  }
+    // Import thread storage class specifier enumeration and constants.
+    // These can be combined with SCS_extern and SCS_static.
+    typedef ThreadStorageClassSpecifier TSCS;
+    static const TSCS TSCS_unspecified = clang::TSCS_unspecified;
+    static const TSCS TSCS___thread = clang::TSCS___thread;
+    static const TSCS TSCS_thread_local = clang::TSCS_thread_local;
+    static const TSCS TSCS__Thread_local = clang::TSCS__Thread_local;
 
-  DeclSpec(AttributeFactory &attrFactory)
-      : StorageClassSpec(SCS_unspecified),
-        ThreadStorageClassSpec(TSCS_unspecified),
-        SCS_extern_in_linkage_spec(false),
-        TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
-        TypeSpecComplex(TSC_unspecified),
-        TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
-        TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
-        TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
-        TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
-        TypeQualifiers(TQ_unspecified),
-        OB_state(static_cast<unsigned>(OverflowBehaviorState::Unspecified)),
-        FS_inline_specified(false), FS_forceinline_specified(false),
-        FS_virtual_specified(false), FS_noreturn_specified(false),
-        FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
-                                         ConstexprSpecKind::Unspecified)),
-        Attrs(attrFactory), LateParsedAttrs(LateParsedAttrList::forTypeAttrs()),
-        writtenBS(), ObjCQualifiers(nullptr) {}
+    enum TSC {
+      TSC_unspecified,
+      TSC_imaginary, // Unsupported
+      TSC_complex
+    };
 
-  // storage-class-specifier
-  SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
-  TSCS getThreadStorageClassSpec() const {
-    return (TSCS)ThreadStorageClassSpec;
-  }
-  bool isExternInLinkageSpec() const { return SCS_extern_in_linkage_spec; }
-  void setExternInLinkageSpec(bool Value) {
-    SCS_extern_in_linkage_spec = Value;
-  }
+    // Import type specifier type enumeration and constants.
+    typedef TypeSpecifierType TST;
+    static const TST TST_unspecified = clang::TST_unspecified;
+    static const TST TST_void = clang::TST_void;
+    static const TST TST_char = clang::TST_char;
+    static const TST TST_wchar = clang::TST_wchar;
+    static const TST TST_char8 = clang::TST_char8;
+    static const TST TST_char16 = clang::TST_char16;
+    static const TST TST_char32 = clang::TST_char32;
+    static const TST TST_int = clang::TST_int;
+    static const TST TST_int128 = clang::TST_int128;
+    static const TST TST_bitint = clang::TST_bitint;
+    static const TST TST_half = clang::TST_half;
+    static const TST TST_BFloat16 = clang::TST_BFloat16;
+    static const TST TST_float = clang::TST_float;
+    static const TST TST_double = clang::TST_double;
+    static const TST TST_float16 = clang::TST_Float16;
+    static const TST TST_accum = clang::TST_Accum;
+    static const TST TST_fract = clang::TST_Fract;
+    static const TST TST_float128 = clang::TST_float128;
+    static const TST TST_ibm128 = clang::TST_ibm128;
+    static const TST TST_bool = clang::TST_bool;
+    static const TST TST_decimal32 = clang::TST_decimal32;
+    static const TST TST_decimal64 = clang::TST_decimal64;
+    static const TST TST_decimal128 = clang::TST_decimal128;
+    static const TST TST_enum = clang::TST_enum;
+    static const TST TST_union = clang::TST_union;
+    static const TST TST_struct = clang::TST_struct;
+    static const TST TST_interface = clang::TST_interface;
+    static const TST TST_class = clang::TST_class;
+    static const TST TST_typename = clang::TST_typename;
+    static const TST TST_typeofType = clang::TST_typeofType;
+    static const TST TST_typeofExpr = clang::TST_typeofExpr;
+    static const TST TST_typeof_unqualType = clang::TST_typeof_unqualType;
+    static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
+    static const TST TST_decltype = clang::TST_decltype;
+    static const TST TST_decltype_auto = clang::TST_decltype_auto;
+    static const TST TST_typename_pack_indexing =
+        clang::TST_typename_pack_indexing;
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                   \
+    static const TST TST_##Trait = clang::TST_##Trait;
+#include "clang/Basic/BuiltinTraits.inc"
+    static const TST TST_auto = clang::TST_auto;
+    static const TST TST_auto_type = clang::TST_auto_type;
+    static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
+    static const TST TST_atomic = clang::TST_atomic;
+#define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
+    static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
+#include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
+    static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                              \
+    static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLPackedTypes.def"
+    static const TST TST_error = clang::TST_error;
 
-  SourceLocation getStorageClassSpecLoc() const { return StorageClassSpecLoc; }
-  SourceLocation getThreadStorageClassSpecLoc() const {
-    return ThreadStorageClassSpecLoc;
-  }
+    // type-qualifiers
+    enum TQ { // NOTE: These flags must be kept in sync with Qualifiers::TQ.
+      TQ_unspecified = 0,
+      TQ_const = 1,
+      TQ_restrict = 2,
+      TQ_volatile = 4,
+      TQ_unaligned = 8,
+      // This has no corresponding Qualifiers::TQ value, because it's not
+      // treated
+      // as a qualifier in our type system.
+      TQ_atomic = 16
+    };
 
-  void ClearStorageClassSpecs() {
-    StorageClassSpec           = DeclSpec::SCS_unspecified;
-    ThreadStorageClassSpec     = DeclSpec::TSCS_unspecified;
-    SCS_extern_in_linkage_spec = false;
-    StorageClassSpecLoc        = SourceLocation();
-    ThreadStorageClassSpecLoc  = SourceLocation();
-  }
+    /// ParsedSpecifiers - Flags to query which specifiers were applied.  This
+    /// is returned by getParsedSpecifiers.
+    enum ParsedSpecifiers {
+      PQ_None = 0,
+      PQ_StorageClassSpecifier = 1,
+      PQ_TypeSpecifier = 2,
+      PQ_TypeQualifier = 4,
+      PQ_FunctionSpecifier = 8
+      // FIXME: Attributes should be included here.
+    };
 
-  void ClearTypeSpecType() {
-    TypeSpecType = DeclSpec::TST_unspecified;
-    TypeSpecOwned = false;
-    TSTLoc = SourceLocation();
-  }
+    enum FriendSpecified : bool { No, Yes };
 
-  // type-specifier
-  TypeSpecifierWidth getTypeSpecWidth() const {
-    return static_cast<TypeSpecifierWidth>(TypeSpecWidth);
-  }
-  TSC getTypeSpecComplex() const { return (TSC)TypeSpecComplex; }
-  TypeSpecifierSign getTypeSpecSign() const {
-    return static_cast<TypeSpecifierSign>(TypeSpecSign);
-  }
-  TST getTypeSpecType() const { return (TST)TypeSpecType; }
-  bool isTypeAltiVecVector() const { return TypeAltiVecVector; }
-  bool isTypeAltiVecPixel() const { return TypeAltiVecPixel; }
-  bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
-  bool isTypeSpecOwned() const { return TypeSpecOwned; }
-  bool isTypeRep() const { return isTypeRep((TST) TypeSpecType); }
-  bool isTypeSpecPipe() const { return TypeSpecPipe; }
-  bool isTypeSpecSat() const { return TypeSpecSat; }
-  bool isConstrainedAuto() const { return ConstrainedAuto; }
+    enum class OverflowBehaviorState {
+      Unspecified, // No overflow behavior specified
+      Wrap,        // __ob_wrap or __attribute__((overflow_behavior(wrap)))
+      Trap         // __ob_trap or __attribute__((overflow_behavior(trap)))
+    };
 
-  ParsedType getRepAsType() const {
-    assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
-    return TypeRep;
-  }
-  Decl *getRepAsDecl() const {
-    assert(isDeclRep((TST) TypeSpecType) && "DeclSpec does not store a decl");
-    return DeclRep;
-  }
-  Expr *getRepAsExpr() const {
-    assert(isExprRep((TST) TypeSpecType) && "DeclSpec does not store an expr");
-    return ExprRep;
-  }
+  private:
+    // storage-class-specifier
+    LLVM_PREFERRED_TYPE(SCS)
+    unsigned StorageClassSpec : 3;
+    LLVM_PREFERRED_TYPE(TSCS)
+    unsigned ThreadStorageClassSpec : 2;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned SCS_extern_in_linkage_spec : 1;
 
-  Expr *getPackIndexingExpr() const {
-    assert(TypeSpecType == TST_typename_pack_indexing &&
-           "DeclSpec is not a pack indexing expr");
-    return PackIndexingExpr;
-  }
+    // type-specifier
+    LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
+    unsigned TypeSpecWidth : 2;
+    LLVM_PREFERRED_TYPE(TSC)
+    unsigned TypeSpecComplex : 2;
+    LLVM_PREFERRED_TYPE(TypeSpecifierSign)
+    unsigned TypeSpecSign : 2;
+    LLVM_PREFERRED_TYPE(TST)
+    unsigned TypeSpecType : 7;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeAltiVecVector : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeAltiVecPixel : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeAltiVecBool : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeSpecOwned : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeSpecPipe : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TypeSpecSat : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ConstrainedAuto : 1;
 
-  TemplateIdAnnotation *getRepAsTemplateId() const {
-    assert(isTemplateIdRep((TST) TypeSpecType) &&
-           "DeclSpec does not store a template id");
-    return TemplateIdRep;
-  }
-  CXXScopeSpec &getTypeSpecScope() { return TypeScope; }
-  const CXXScopeSpec &getTypeSpecScope() const { return TypeScope; }
+    // type-qualifiers
+    LLVM_PREFERRED_TYPE(TQ)
+    unsigned TypeQualifiers : 5; // Bitwise OR of TQ.
 
-  SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
+    // overflow behavior qualifiers
+    LLVM_PREFERRED_TYPE(OverflowBehaviorState)
+    unsigned OB_state : 2;
 
-  SourceLocation getTypeSpecWidthLoc() const { return TSWRange.getBegin(); }
-  SourceRange getTypeSpecWidthRange() const { return TSWRange; }
-  SourceLocation getTypeSpecComplexLoc() const { return TSCLoc; }
-  SourceLocation getTypeSpecSignLoc() const { return TSSLoc; }
-  SourceLocation getTypeSpecTypeLoc() const { return TSTLoc; }
-  SourceLocation getAltiVecLoc() const { return AltiVecLoc; }
-  SourceLocation getTypeSpecSatLoc() const { return TSSatLoc; }
+    // function-specifier
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FS_inline_specified : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FS_forceinline_specified : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FS_virtual_specified : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FS_noreturn_specified : 1;
 
-  SourceLocation getTypeSpecTypeNameLoc() const {
-    assert(isDeclRep((TST)TypeSpecType) || isTypeRep((TST)TypeSpecType) ||
-           isExprRep((TST)TypeSpecType));
-    return TSTNameLoc;
-  }
+    // friend-specifier
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FriendSpecifiedFirst : 1;
 
-  SourceRange getTypeofParensRange() const { return TypeofParensRange; }
-  void setTypeArgumentRange(SourceRange range) { TypeofParensRange = range; }
+    // constexpr-specifier
+    LLVM_PREFERRED_TYPE(ConstexprSpecKind)
+    unsigned ConstexprSpecifier : 2;
 
-  bool hasAutoTypeSpec() const {
-    return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
-            TypeSpecType == TST_decltype_auto);
-  }
+    union {
+      UnionParsedType TypeRep;
+      Decl *DeclRep;
+      Expr *ExprRep;
+      TemplateIdAnnotation *TemplateIdRep;
+    };
+    Expr *PackIndexingExpr = nullptr;
 
-  bool hasTagDefinition() const;
+    /// ExplicitSpecifier - Store information about explicit spicifer.
+    ExplicitSpecifier FS_explicit_specifier;
 
-  /// Turn a type-specifier-type into a string like "_Bool" or "union".
-  static const char *getSpecifierName(DeclSpec::TST T,
-                                      const PrintingPolicy &Policy);
-  static const char *getSpecifierName(DeclSpec::TQ Q);
-  static const char *getSpecifierName(TypeSpecifierSign S);
-  static const char *getSpecifierName(DeclSpec::TSC C);
-  static const char *getSpecifierName(TypeSpecifierWidth W);
-  static const char *getSpecifierName(DeclSpec::SCS S);
-  static const char *getSpecifierName(DeclSpec::TSCS S);
-  static const char *getSpecifierName(ConstexprSpecKind C);
-  static const char *getSpecifierName(OverflowBehaviorState S);
+    // attributes.
+    ParsedAttributes Attrs;
 
-  // type-qualifiers
+    // late attributes
+    LateParsedAttrList LateParsedAttrs;
 
-  /// getTypeQualifiers - Return a set of TQs.
-  unsigned getTypeQualifiers() const { return TypeQualifiers; }
-  SourceLocation getConstSpecLoc() const { return TQ_constLoc; }
-  SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
-  SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
-  SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
-  SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
-  SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
-  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+    // Scope specifier for the type spec, if applicable.
+    CXXScopeSpec TypeScope;
 
-  // overflow behavior qualifiers
-  OverflowBehaviorState getOverflowBehaviorState() const {
-    return static_cast<OverflowBehaviorState>(OB_state);
-  }
-  bool isWrapSpecified() const {
-    return getOverflowBehaviorState() == OverflowBehaviorState::Wrap;
-  }
-  bool isTrapSpecified() const {
-    return getOverflowBehaviorState() == OverflowBehaviorState::Trap;
-  }
-  bool isOverflowBehaviorSpecified() const {
-    return getOverflowBehaviorState() != OverflowBehaviorState::Unspecified;
-  }
-  SourceLocation getOverflowBehaviorLoc() const { return OB_Loc; }
+    // SourceLocation info.  These are null if the item wasn't specified or if
+    // the setting was synthesized.
+    SourceRange Range;
 
-  bool SetOverflowBehavior(OverflowBehaviorType::OverflowBehaviorKind Kind,
-                           SourceLocation Loc, const char *&PrevSpec,
-                           unsigned &DiagID);
+    SourceLocation StorageClassSpecLoc, ThreadStorageClassSpecLoc;
+    SourceRange TSWRange;
+    SourceLocation TSCLoc, TSSLoc, TSTLoc, AltiVecLoc, TSSatLoc, EllipsisLoc;
+    /// TSTNameLoc - If TypeSpecType is any of class, enum, struct, union,
+    /// typename, then this is the location of the named type (if present);
+    /// otherwise, it is the same as TSTLoc. Hence, the pair TSTLoc and
+    /// TSTNameLoc provides source range info for tag types.
+    SourceLocation TSTNameLoc;
+    SourceRange TypeofParensRange;
+    SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
+        TQ_unalignedLoc;
+    SourceLocation OB_Loc;
+    SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
+    SourceLocation FS_explicitCloseParenLoc;
+    SourceLocation FS_forceinlineLoc;
+    SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
+    SourceLocation TQ_pipeLoc;
 
-  /// Clear out all of the type qualifiers.
-  void ClearTypeQualifiers() {
-    TypeQualifiers = 0;
-    TQ_constLoc = SourceLocation();
-    TQ_restrictLoc = SourceLocation();
-    TQ_volatileLoc = SourceLocation();
-    TQ_atomicLoc = SourceLocation();
-    TQ_unalignedLoc = SourceLocation();
-    TQ_pipeLoc = SourceLocation();
-    OB_state = static_cast<unsigned>(OverflowBehaviorState::Unspecified);
-    OB_Loc = SourceLocation();
-  }
+    WrittenBuiltinSpecs writtenBS;
+    void SaveWrittenBuiltinSpecs();
 
-  // function-specifier
-  bool isInlineSpecified() const {
-    return FS_inline_specified | FS_forceinline_specified;
-  }
-  SourceLocation getInlineSpecLoc() const {
-    return FS_inline_specified ? FS_inlineLoc : FS_forceinlineLoc;
-  }
+    ObjCDeclSpec *ObjCQualifiers;
 
-  ExplicitSpecifier getExplicitSpecifier() const {
-    return FS_explicit_specifier;
-  }
+    static bool isTypeRep(TST T) {
+      return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
+             T == TST_typeof_unqualType || isTransformTypeTrait(T) ||
+             T == TST_typename_pack_indexing;
+    }
+    static bool isExprRep(TST T) {
+      return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
+             T == TST_decltype || T == TST_bitint;
+    }
+    static bool isTemplateIdRep(TST T) {
+      return (T == TST_auto || T == TST_decltype_auto);
+    }
 
-  bool isVirtualSpecified() const { return FS_virtual_specified; }
-  SourceLocation getVirtualSpecLoc() const { return FS_virtualLoc; }
+    DeclSpec(const DeclSpec &) = delete;
+    void operator=(const DeclSpec &) = delete;
 
-  bool hasExplicitSpecifier() const {
-    return FS_explicit_specifier.isSpecified();
-  }
-  SourceLocation getExplicitSpecLoc() const { return FS_explicitLoc; }
-  SourceRange getExplicitSpecRange() const {
-    return FS_explicit_specifier.getExpr()
-               ? SourceRange(FS_explicitLoc, FS_explicitCloseParenLoc)
-               : SourceRange(FS_explicitLoc);
-  }
+  public:
+    static bool isDeclRep(TST T) {
+      return (T == TST_enum || T == TST_struct || T == TST_interface ||
+              T == TST_union || T == TST_class);
+    }
+    static bool isTransformTypeTrait(TST T) {
+      constexpr std::array<TST, 16> Traits = {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
+#include "clang/Basic/BuiltinTraits.inc"
+      };
 
-  bool isNoreturnSpecified() const { return FS_noreturn_specified; }
-  SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
+      return T >= Traits.front() && T <= Traits.back();
+    }
 
-  void ClearFunctionSpecs() {
-    FS_inline_specified = false;
-    FS_inlineLoc = SourceLocation();
-    FS_forceinline_specified = false;
-    FS_forceinlineLoc = SourceLocation();
-    FS_virtual_specified = false;
-    FS_virtualLoc = SourceLocation();
-    FS_explicit_specifier = ExplicitSpecifier();
-    FS_explicitLoc = SourceLocation();
-    FS_explicitCloseParenLoc = SourceLocation();
-    FS_noreturn_specified = false;
-    FS_noreturnLoc = SourceLocation();
-  }
+    DeclSpec(AttributeFactory &attrFactory)
+        : StorageClassSpec(SCS_unspecified),
+          ThreadStorageClassSpec(TSCS_unspecified),
+          SCS_extern_in_linkage_spec(false),
+          TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
+          TypeSpecComplex(TSC_unspecified),
+          TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
+          TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
+          TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
+          TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
+          TypeQualifiers(TQ_unspecified),
+          OB_state(static_cast<unsigned>(OverflowBehaviorState::Unspecified)),
+          FS_inline_specified(false), FS_forceinline_specified(false),
+          FS_virtual_specified(false), FS_noreturn_specified(false),
+          FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
+                                           ConstexprSpecKind::Unspecified)),
+          Attrs(attrFactory),
+          LateParsedAttrs(LateParsedAttrList::forTypeAttrs()), writtenBS(),
+          ObjCQualifiers(nullptr) {}
 
-  /// This method calls the passed in handler on each CVRU qual being
-  /// set.
-  /// Handle - a handler to be invoked.
-  void forEachCVRUQualifier(
-      llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle);
+    // storage-class-specifier
+    SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
+    TSCS getThreadStorageClassSpec() const {
+      return (TSCS)ThreadStorageClassSpec;
+    }
+    bool isExternInLinkageSpec() const { return SCS_extern_in_linkage_spec; }
+    void setExternInLinkageSpec(bool Value) {
+      SCS_extern_in_linkage_spec = Value;
+    }
 
-  /// This method calls the passed in handler on each qual being
-  /// set.
-  /// Handle - a handler to be invoked.
-  void forEachQualifier(
-      llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle);
+    SourceLocation getStorageClassSpecLoc() const {
+      return StorageClassSpecLoc;
+    }
+    SourceLocation getThreadStorageClassSpecLoc() const {
+      return ThreadStorageClassSpecLoc;
+    }
 
-  /// Return true if any type-specifier has been found.
-  bool hasTypeSpecifier() const {
-    return getTypeSpecType() != DeclSpec::TST_unspecified ||
-           getTypeSpecWidth() != TypeSpecifierWidth::Unspecified ||
-           getTypeSpecComplex() != DeclSpec::TSC_unspecified ||
-           getTypeSpecSign() != TypeSpecifierSign::Unspecified;
-  }
+    void ClearStorageClassSpecs() {
+      StorageClassSpec = DeclSpec::SCS_unspecified;
+      ThreadStorageClassSpec = DeclSpec::TSCS_unspecified;
+      SCS_extern_in_linkage_spec = false;
+      StorageClassSpecLoc = SourceLocation();
+      ThreadStorageClassSpecLoc = SourceLocation();
+    }
 
-  /// Return a bitmask of which flavors of specifiers this
-  /// DeclSpec includes.
-  unsigned getParsedSpecifiers() const;
+    void ClearTypeSpecType() {
+      TypeSpecType = DeclSpec::TST_unspecified;
+      TypeSpecOwned = false;
+      TSTLoc = SourceLocation();
+    }
 
-  /// isEmpty - Return true if this declaration specifier is completely empty:
-  /// no tokens were parsed in the production of it.
-  bool isEmpty() const {
-    return getParsedSpecifiers() == DeclSpec::PQ_None;
-  }
+    // type-specifier
+    TypeSpecifierWidth getTypeSpecWidth() const {
+      return static_cast<TypeSpecifierWidth>(TypeSpecWidth);
+    }
+    TSC getTypeSpecComplex() const { return (TSC)TypeSpecComplex; }
+    TypeSpecifierSign getTypeSpecSign() const {
+      return static_cast<TypeSpecifierSign>(TypeSpecSign);
+    }
+    TST getTypeSpecType() const { return (TST)TypeSpecType; }
+    bool isTypeAltiVecVector() const { return TypeAltiVecVector; }
+    bool isTypeAltiVecPixel() const { return TypeAltiVecPixel; }
+    bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
+    bool isTypeSpecOwned() const { return TypeSpecOwned; }
+    bool isTypeRep() const { return isTypeRep((TST)TypeSpecType); }
+    bool isTypeSpecPipe() const { return TypeSpecPipe; }
+    bool isTypeSpecSat() const { return TypeSpecSat; }
+    bool isConstrainedAuto() const { return ConstrainedAuto; }
 
-  void SetRangeStart(SourceLocation Loc) { Range.setBegin(Loc); }
-  void SetRangeEnd(SourceLocation Loc) { Range.setEnd(Loc); }
+    ParsedType getRepAsType() const {
+      assert(isTypeRep((TST)TypeSpecType) && "DeclSpec does not store a type");
+      return TypeRep;
+    }
+    Decl *getRepAsDecl() const {
+      assert(isDeclRep((TST)TypeSpecType) && "DeclSpec does not store a decl");
+      return DeclRep;
+    }
+    Expr *getRepAsExpr() const {
+      assert(isExprRep((TST)TypeSpecType) && "DeclSpec does not store an expr");
+      return ExprRep;
+    }
 
-  /// These methods set the specified attribute of the DeclSpec and
-  /// return false if there was no error.  If an error occurs (for
-  /// example, if we tried to set "auto" on a spec with "extern"
-  /// already set), they return true and set PrevSpec and DiagID
-  /// such that
-  ///   Diag(Loc, DiagID) << PrevSpec;
-  /// will yield a useful result.
-  ///
-  /// TODO: use a more general approach that still allows these
-  /// diagnostics to be ignored when desired.
-  bool SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
-                           const char *&PrevSpec, unsigned &DiagID,
-                           const PrintingPolicy &Policy);
-  bool SetStorageClassSpecThread(TSCS TSC, SourceLocation Loc,
-                                 const char *&PrevSpec, unsigned &DiagID);
-  bool SetTypeSpecWidth(TypeSpecifierWidth W, SourceLocation Loc,
-                        const char *&PrevSpec, unsigned &DiagID,
-                        const PrintingPolicy &Policy);
-  bool SetTypeSpecComplex(TSC C, SourceLocation Loc, const char *&PrevSpec,
-                          unsigned &DiagID);
-  bool SetTypeSpecSign(TypeSpecifierSign S, SourceLocation Loc,
-                       const char *&PrevSpec, unsigned &DiagID);
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, const PrintingPolicy &Policy);
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, ParsedType Rep,
-                       const PrintingPolicy &Policy);
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, TypeResult Rep,
-                       const PrintingPolicy &Policy) {
-    if (Rep.isInvalid())
-      return SetTypeSpecError();
-    return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Rep.get(), Policy);
-  }
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, Decl *Rep, bool Owned,
-                       const PrintingPolicy &Policy);
-  bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
-                       SourceLocation TagNameLoc, const char *&PrevSpec,
-                       unsigned &DiagID, ParsedType Rep,
-                       const PrintingPolicy &Policy);
-  bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
-                       SourceLocation TagNameLoc, const char *&PrevSpec,
-                       unsigned &DiagID, Decl *Rep, bool Owned,
-                       const PrintingPolicy &Policy);
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, TemplateIdAnnotation *Rep,
-                       const PrintingPolicy &Policy);
+    Expr *getPackIndexingExpr() const {
+      assert(TypeSpecType == TST_typename_pack_indexing &&
+             "DeclSpec is not a pack indexing expr");
+      return PackIndexingExpr;
+    }
 
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, Expr *Rep,
-                       const PrintingPolicy &policy);
-  bool SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
-                       const char *&PrevSpec, unsigned &DiagID,
-                       const PrintingPolicy &Policy);
-  bool SetTypeAltiVecPixel(bool isAltiVecPixel, SourceLocation Loc,
-                       const char *&PrevSpec, unsigned &DiagID,
-                       const PrintingPolicy &Policy);
-  bool SetTypeAltiVecBool(bool isAltiVecBool, SourceLocation Loc,
-                       const char *&PrevSpec, unsigned &DiagID,
-                       const PrintingPolicy &Policy);
-  bool SetTypePipe(bool isPipe, SourceLocation Loc,
-                       const char *&PrevSpec, unsigned &DiagID,
-                       const PrintingPolicy &Policy);
-  bool SetBitIntType(SourceLocation KWLoc, Expr *BitWidth,
-                     const char *&PrevSpec, unsigned &DiagID,
-                     const PrintingPolicy &Policy);
-  bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
-                      unsigned &DiagID);
+    TemplateIdAnnotation *getRepAsTemplateId() const {
+      assert(isTemplateIdRep((TST)TypeSpecType) &&
+             "DeclSpec does not store a template id");
+      return TemplateIdRep;
+    }
+    CXXScopeSpec &getTypeSpecScope() { return TypeScope; }
+    const CXXScopeSpec &getTypeSpecScope() const { return TypeScope; }
 
-  void SetPackIndexingExpr(SourceLocation EllipsisLoc, Expr *Pack);
+    SourceRange getSourceRange() const LLVM_READONLY { return Range; }
+    SourceLocation getBeginLoc() const LLVM_READONLY {
+      return Range.getBegin();
+    }
+    SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
-  bool SetTypeSpecError();
-  void UpdateDeclRep(Decl *Rep) {
-    assert(isDeclRep((TST) TypeSpecType));
-    DeclRep = Rep;
-  }
-  void UpdateTypeRep(ParsedType Rep) {
-    assert(isTypeRep((TST) TypeSpecType));
-    TypeRep = Rep;
-  }
-  void UpdateExprRep(Expr *Rep) {
-    assert(isExprRep((TST) TypeSpecType));
-    ExprRep = Rep;
-  }
+    SourceLocation getTypeSpecWidthLoc() const { return TSWRange.getBegin(); }
+    SourceRange getTypeSpecWidthRange() const { return TSWRange; }
+    SourceLocation getTypeSpecComplexLoc() const { return TSCLoc; }
+    SourceLocation getTypeSpecSignLoc() const { return TSSLoc; }
+    SourceLocation getTypeSpecTypeLoc() const { return TSTLoc; }
+    SourceLocation getAltiVecLoc() const { return AltiVecLoc; }
+    SourceLocation getTypeSpecSatLoc() const { return TSSatLoc; }
 
-  bool SetTypeQual(TQ T, SourceLocation Loc);
+    SourceLocation getTypeSpecTypeNameLoc() const {
+      assert(isDeclRep((TST)TypeSpecType) || isTypeRep((TST)TypeSpecType) ||
+             isExprRep((TST)TypeSpecType));
+      return TSTNameLoc;
+    }
 
-  bool SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
-                   unsigned &DiagID, const LangOptions &Lang);
+    SourceRange getTypeofParensRange() const { return TypeofParensRange; }
+    void setTypeArgumentRange(SourceRange range) { TypeofParensRange = range; }
 
-  bool setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
+    bool hasAutoTypeSpec() const {
+      return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
+              TypeSpecType == TST_decltype_auto);
+    }
+
+    bool hasTagDefinition() const;
+
+    /// Turn a type-specifier-type into a string like "_Bool" or "union".
+    static const char *getSpecifierName(DeclSpec::TST T,
+                                        const PrintingPolicy &Policy);
+    static const char *getSpecifierName(DeclSpec::TQ Q);
+    static const char *getSpecifierName(TypeSpecifierSign S);
+    static const char *getSpecifierName(DeclSpec::TSC C);
+    static const char *getSpecifierName(TypeSpecifierWidth W);
+    static const char *getSpecifierName(DeclSpec::SCS S);
+    static const char *getSpecifierName(DeclSpec::TSCS S);
+    static const char *getSpecifierName(ConstexprSpecKind C);
+    static const char *getSpecifierName(OverflowBehaviorState S);
+
+    // type-qualifiers
+
+    /// getTypeQualifiers - Return a set of TQs.
+    unsigned getTypeQualifiers() const { return TypeQualifiers; }
+    SourceLocation getConstSpecLoc() const { return TQ_constLoc; }
+    SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
+    SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
+    SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
+    SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
+    SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
+    SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+
+    // overflow behavior qualifiers
+    OverflowBehaviorState getOverflowBehaviorState() const {
+      return static_cast<OverflowBehaviorState>(OB_state);
+    }
+    bool isWrapSpecified() const {
+      return getOverflowBehaviorState() == OverflowBehaviorState::Wrap;
+    }
+    bool isTrapSpecified() const {
+      return getOverflowBehaviorState() == OverflowBehaviorState::Trap;
+    }
+    bool isOverflowBehaviorSpecified() const {
+      return getOverflowBehaviorState() != OverflowBehaviorState::Unspecified;
+    }
+    SourceLocation getOverflowBehaviorLoc() const { return OB_Loc; }
+
+    bool SetOverflowBehavior(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                             SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID);
-  bool setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevSpec,
-                                  unsigned &DiagID);
-  bool setFunctionSpecVirtual(SourceLocation Loc, const char *&PrevSpec,
-                              unsigned &DiagID);
-  bool setFunctionSpecExplicit(SourceLocation Loc, const char *&PrevSpec,
-                               unsigned &DiagID, ExplicitSpecifier ExplicitSpec,
-                               SourceLocation CloseParenLoc);
-  bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
-                               unsigned &DiagID);
 
-  bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
-                     unsigned &DiagID);
-  bool setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
+    /// Clear out all of the type qualifiers.
+    void ClearTypeQualifiers() {
+      TypeQualifiers = 0;
+      TQ_constLoc = SourceLocation();
+      TQ_restrictLoc = SourceLocation();
+      TQ_volatileLoc = SourceLocation();
+      TQ_atomicLoc = SourceLocation();
+      TQ_unalignedLoc = SourceLocation();
+      TQ_pipeLoc = SourceLocation();
+      OB_state = static_cast<unsigned>(OverflowBehaviorState::Unspecified);
+      OB_Loc = SourceLocation();
+    }
+
+    // function-specifier
+    bool isInlineSpecified() const {
+      return FS_inline_specified | FS_forceinline_specified;
+    }
+    SourceLocation getInlineSpecLoc() const {
+      return FS_inline_specified ? FS_inlineLoc : FS_forceinlineLoc;
+    }
+
+    ExplicitSpecifier getExplicitSpecifier() const {
+      return FS_explicit_specifier;
+    }
+
+    bool isVirtualSpecified() const { return FS_virtual_specified; }
+    SourceLocation getVirtualSpecLoc() const { return FS_virtualLoc; }
+
+    bool hasExplicitSpecifier() const {
+      return FS_explicit_specifier.isSpecified();
+    }
+    SourceLocation getExplicitSpecLoc() const { return FS_explicitLoc; }
+    SourceRange getExplicitSpecRange() const {
+      return FS_explicit_specifier.getExpr()
+                 ? SourceRange(FS_explicitLoc, FS_explicitCloseParenLoc)
+                 : SourceRange(FS_explicitLoc);
+    }
+
+    bool isNoreturnSpecified() const { return FS_noreturn_specified; }
+    SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
+
+    void ClearFunctionSpecs() {
+      FS_inline_specified = false;
+      FS_inlineLoc = SourceLocation();
+      FS_forceinline_specified = false;
+      FS_forceinlineLoc = SourceLocation();
+      FS_virtual_specified = false;
+      FS_virtualLoc = SourceLocation();
+      FS_explicit_specifier = ExplicitSpecifier();
+      FS_explicitLoc = SourceLocation();
+      FS_explicitCloseParenLoc = SourceLocation();
+      FS_noreturn_specified = false;
+      FS_noreturnLoc = SourceLocation();
+    }
+
+    /// This method calls the passed in handler on each CVRU qual being
+    /// set.
+    /// Handle - a handler to be invoked.
+    void forEachCVRUQualifier(
+        llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle);
+
+    /// This method calls the passed in handler on each qual being
+    /// set.
+    /// Handle - a handler to be invoked.
+    void forEachQualifier(
+        llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle);
+
+    /// Return true if any type-specifier has been found.
+    bool hasTypeSpecifier() const {
+      return getTypeSpecType() != DeclSpec::TST_unspecified ||
+             getTypeSpecWidth() != TypeSpecifierWidth::Unspecified ||
+             getTypeSpecComplex() != DeclSpec::TSC_unspecified ||
+             getTypeSpecSign() != TypeSpecifierSign::Unspecified;
+    }
+
+    /// Return a bitmask of which flavors of specifiers this
+    /// DeclSpec includes.
+    unsigned getParsedSpecifiers() const;
+
+    /// isEmpty - Return true if this declaration specifier is completely empty:
+    /// no tokens were parsed in the production of it.
+    bool isEmpty() const { return getParsedSpecifiers() == DeclSpec::PQ_None; }
+
+    void SetRangeStart(SourceLocation Loc) { Range.setBegin(Loc); }
+    void SetRangeEnd(SourceLocation Loc) { Range.setEnd(Loc); }
+
+    /// These methods set the specified attribute of the DeclSpec and
+    /// return false if there was no error.  If an error occurs (for
+    /// example, if we tried to set "auto" on a spec with "extern"
+    /// already set), they return true and set PrevSpec and DiagID
+    /// such that
+    ///   Diag(Loc, DiagID) << PrevSpec;
+    /// will yield a useful result.
+    ///
+    /// TODO: use a more general approach that still allows these
+    /// diagnostics to be ignored when desired.
+    bool SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
+                             const char *&PrevSpec, unsigned &DiagID,
+                             const PrintingPolicy &Policy);
+    bool SetStorageClassSpecThread(TSCS TSC, SourceLocation Loc,
+                                   const char *&PrevSpec, unsigned &DiagID);
+    bool SetTypeSpecWidth(TypeSpecifierWidth W, SourceLocation Loc,
+                          const char *&PrevSpec, unsigned &DiagID,
+                          const PrintingPolicy &Policy);
+    bool SetTypeSpecComplex(TSC C, SourceLocation Loc, const char *&PrevSpec,
                             unsigned &DiagID);
-  bool SetConstexprSpec(ConstexprSpecKind ConstexprKind, SourceLocation Loc,
-                        const char *&PrevSpec, unsigned &DiagID);
+    bool SetTypeSpecSign(TypeSpecifierSign S, SourceLocation Loc,
+                         const char *&PrevSpec, unsigned &DiagID);
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, const PrintingPolicy &Policy);
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, ParsedType Rep,
+                         const PrintingPolicy &Policy);
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, TypeResult Rep,
+                         const PrintingPolicy &Policy) {
+      if (Rep.isInvalid())
+        return SetTypeSpecError();
+      return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Rep.get(), Policy);
+    }
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, Decl *Rep, bool Owned,
+                         const PrintingPolicy &Policy);
+    bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
+                         SourceLocation TagNameLoc, const char *&PrevSpec,
+                         unsigned &DiagID, ParsedType Rep,
+                         const PrintingPolicy &Policy);
+    bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
+                         SourceLocation TagNameLoc, const char *&PrevSpec,
+                         unsigned &DiagID, Decl *Rep, bool Owned,
+                         const PrintingPolicy &Policy);
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, TemplateIdAnnotation *Rep,
+                         const PrintingPolicy &Policy);
 
-  FriendSpecified isFriendSpecified() const {
-    return static_cast<FriendSpecified>(FriendLoc.isValid());
-  }
+    bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                         unsigned &DiagID, Expr *Rep,
+                         const PrintingPolicy &policy);
+    bool SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
+                              const char *&PrevSpec, unsigned &DiagID,
+                              const PrintingPolicy &Policy);
+    bool SetTypeAltiVecPixel(bool isAltiVecPixel, SourceLocation Loc,
+                             const char *&PrevSpec, unsigned &DiagID,
+                             const PrintingPolicy &Policy);
+    bool SetTypeAltiVecBool(bool isAltiVecBool, SourceLocation Loc,
+                            const char *&PrevSpec, unsigned &DiagID,
+                            const PrintingPolicy &Policy);
+    bool SetTypePipe(bool isPipe, SourceLocation Loc, const char *&PrevSpec,
+                     unsigned &DiagID, const PrintingPolicy &Policy);
+    bool SetBitIntType(SourceLocation KWLoc, Expr *BitWidth,
+                       const char *&PrevSpec, unsigned &DiagID,
+                       const PrintingPolicy &Policy);
+    bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
+                        unsigned &DiagID);
 
-  bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
+    void SetPackIndexingExpr(SourceLocation EllipsisLoc, Expr *Pack);
 
-  SourceLocation getFriendSpecLoc() const { return FriendLoc; }
+    bool SetTypeSpecError();
+    void UpdateDeclRep(Decl *Rep) {
+      assert(isDeclRep((TST)TypeSpecType));
+      DeclRep = Rep;
+    }
+    void UpdateTypeRep(ParsedType Rep) {
+      assert(isTypeRep((TST)TypeSpecType));
+      TypeRep = Rep;
+    }
+    void UpdateExprRep(Expr *Rep) {
+      assert(isExprRep((TST)TypeSpecType));
+      ExprRep = Rep;
+    }
 
-  bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
-  SourceLocation getModulePrivateSpecLoc() const { return ModulePrivateLoc; }
+    bool SetTypeQual(TQ T, SourceLocation Loc);
 
-  ConstexprSpecKind getConstexprSpecifier() const {
-    return ConstexprSpecKind(ConstexprSpecifier);
-  }
+    bool SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
+                     unsigned &DiagID, const LangOptions &Lang);
 
-  SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
-  bool hasConstexprSpecifier() const {
-    return getConstexprSpecifier() != ConstexprSpecKind::Unspecified;
-  }
+    bool setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
+                               unsigned &DiagID);
+    bool setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevSpec,
+                                    unsigned &DiagID);
+    bool setFunctionSpecVirtual(SourceLocation Loc, const char *&PrevSpec,
+                                unsigned &DiagID);
+    bool setFunctionSpecExplicit(SourceLocation Loc, const char *&PrevSpec,
+                                 unsigned &DiagID,
+                                 ExplicitSpecifier ExplicitSpec,
+                                 SourceLocation CloseParenLoc);
+    bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
+                                 unsigned &DiagID);
 
-  void ClearConstexprSpec() {
-    ConstexprSpecifier = static_cast<unsigned>(ConstexprSpecKind::Unspecified);
-    ConstexprLoc = SourceLocation();
-  }
+    bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
+                       unsigned &DiagID);
+    bool setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
+                              unsigned &DiagID);
+    bool SetConstexprSpec(ConstexprSpecKind ConstexprKind, SourceLocation Loc,
+                          const char *&PrevSpec, unsigned &DiagID);
 
-  AttributePool &getAttributePool() const {
-    return Attrs.getPool();
-  }
+    FriendSpecified isFriendSpecified() const {
+      return static_cast<FriendSpecified>(FriendLoc.isValid());
+    }
 
-  /// Concatenates two attribute lists.
-  ///
-  /// The GCC attribute syntax allows for the following:
-  ///
-  /// \code
-  /// short __attribute__(( unused, deprecated ))
-  /// int __attribute__(( may_alias, aligned(16) )) var;
-  /// \endcode
-  ///
-  /// This declares 4 attributes using 2 lists. The following syntax is
-  /// also allowed and equivalent to the previous declaration.
-  ///
-  /// \code
-  /// short __attribute__((unused)) __attribute__((deprecated))
-  /// int __attribute__((may_alias)) __attribute__((aligned(16))) var;
-  /// \endcode
-  ///
-  void addAttributes(const ParsedAttributesView &AL) {
-    Attrs.prepend(AL.begin(), AL.end());
-  }
+    bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
 
-  bool hasAttributes() const { return !Attrs.empty(); }
+    SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
-  ParsedAttributes &getAttributes() { return Attrs; }
-  const ParsedAttributes &getAttributes() const { return Attrs; }
+    bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
+    SourceLocation getModulePrivateSpecLoc() const { return ModulePrivateLoc; }
 
-  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
-  const LateParsedAttrList &getLateAttributes() const {
-    return LateParsedAttrs;
-  }
+    ConstexprSpecKind getConstexprSpecifier() const {
+      return ConstexprSpecKind(ConstexprSpecifier);
+    }
 
-  void takeAttributesAppendingingFrom(ParsedAttributes &attrs) {
-    Attrs.takeAllAppendingFrom(attrs);
-  }
+    SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
+    bool hasConstexprSpecifier() const {
+      return getConstexprSpecifier() != ConstexprSpecKind::Unspecified;
+    }
 
-  /// Finish - This does final analysis of the declspec, issuing diagnostics for
-  /// things like "_Complex" (lacking an FP type).  After calling this method,
-  /// DeclSpec is guaranteed self-consistent, even if an error occurred.
-  void Finish(Sema &S, const PrintingPolicy &Policy);
+    void ClearConstexprSpec() {
+      ConstexprSpecifier =
+          static_cast<unsigned>(ConstexprSpecKind::Unspecified);
+      ConstexprLoc = SourceLocation();
+    }
 
-  void CheckTypeSpec(Sema &S, const PrintingPolicy &Policy);
+    AttributePool &getAttributePool() const { return Attrs.getPool(); }
 
-  void CheckFriendSpec(Sema &S, const PrintingPolicy &Policy);
+    /// Concatenates two attribute lists.
+    ///
+    /// The GCC attribute syntax allows for the following:
+    ///
+    /// \code
+    /// short __attribute__(( unused, deprecated ))
+    /// int __attribute__(( may_alias, aligned(16) )) var;
+    /// \endcode
+    ///
+    /// This declares 4 attributes using 2 lists. The following syntax is
+    /// also allowed and equivalent to the previous declaration.
+    ///
+    /// \code
+    /// short __attribute__((unused)) __attribute__((deprecated))
+    /// int __attribute__((may_alias)) __attribute__((aligned(16))) var;
+    /// \endcode
+    ///
+    void addAttributes(const ParsedAttributesView &AL) {
+      Attrs.prepend(AL.begin(), AL.end());
+    }
 
-  const WrittenBuiltinSpecs& getWrittenBuiltinSpecs() const {
-    return writtenBS;
-  }
+    bool hasAttributes() const { return !Attrs.empty(); }
 
-  ObjCDeclSpec *getObjCQualifiers() const { return ObjCQualifiers; }
-  void setObjCQualifiers(ObjCDeclSpec *quals) { ObjCQualifiers = quals; }
+    ParsedAttributes &getAttributes() { return Attrs; }
+    const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  /// Checks if this DeclSpec can stand alone, without a Declarator.
-  ///
-  /// Only tag declspecs can stand alone.
-  bool isMissingDeclaratorOk();
-};
+    LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
+    const LateParsedAttrList &getLateAttributes() const {
+      return LateParsedAttrs;
+    }
+
+    void takeAttributesAppendingingFrom(ParsedAttributes &attrs) {
+      Attrs.takeAllAppendingFrom(attrs);
+    }
+
+    /// Finish - This does final analysis of the declspec, issuing diagnostics
+    /// for things like "_Complex" (lacking an FP type).  After calling this
+    /// method, DeclSpec is guaranteed self-consistent, even if an error
+    /// occurred.
+    void Finish(Sema &S, const PrintingPolicy &Policy);
+
+    void CheckTypeSpec(Sema &S, const PrintingPolicy &Policy);
+
+    void CheckFriendSpec(Sema &S, const PrintingPolicy &Policy);
+
+    const WrittenBuiltinSpecs &getWrittenBuiltinSpecs() const {
+      return writtenBS;
+    }
+
+    ObjCDeclSpec *getObjCQualifiers() const { return ObjCQualifiers; }
+    void setObjCQualifiers(ObjCDeclSpec *quals) { ObjCQualifiers = quals; }
+
+    /// Checks if this DeclSpec can stand alone, without a Declarator.
+    ///
+    /// Only tag declspecs can stand alone.
+    bool isMissingDeclaratorOk();
+  };
 
 /// Captures information about "declaration specifiers" specific to
 /// Objective-C.
