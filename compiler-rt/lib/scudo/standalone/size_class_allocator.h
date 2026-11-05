@@ -50,7 +50,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     // We read ClassSize first before accessing Chunks because it's adjacent to
     // Count, while Chunks might be further off (depending on Count). That keeps
     // the memory accesses in close quarters.
-    const uptr ClassSize = C->ClassSize;
+    const u32 ClassSize = C->ClassSize;
     CompactPtrT CompactP = C->Chunks[--C->Count];
     Stats.add(StatAllocated, ClassSize);
     Stats.sub(StatFree, ClassSize);
@@ -66,7 +66,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (NeedToDrainCache)
       drain(C, ClassId);
     // See comment in allocate() about memory accesses.
-    const uptr ClassSize = C->ClassSize;
+    const u32 ClassSize = C->ClassSize;
     C->Chunks[C->Count++] =
         Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
     Stats.sub(StatAllocated, ClassSize);
@@ -139,7 +139,7 @@ private:
     u16 Count;
     u16 MaxCount;
     // Note: ClassSize is zero for the transfer batch.
-    uptr ClassSize;
+    u32 ClassSize;
     CompactPtrT Chunks[2 * SizeClassMap::MaxNumCachedHint];
   };
   PerClass PerClassArray[NumClasses] = {};
@@ -152,7 +152,7 @@ private:
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
       P->MaxCount = static_cast<u16>(2 * getMaxCached(Size));
       if (I != BatchClassId) {
-        P->ClassSize = Size;
+        P->ClassSize = static_cast<u32>(Size);
       } else {
         // ClassSize in this struct is only used for malloc/free stats, which
         // should only track user allocations, not internal movements.
@@ -243,7 +243,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
       C->Count = NumBlocksRefilled;
     }
 
-    const uptr ClassSize = C->ClassSize;
+    const u32 ClassSize = C->ClassSize;
     CompactPtrT CompactP = BatchClassStorage[--C->Count];
     Stats.add(StatAllocated, ClassSize);
     Stats.sub(StatFree, ClassSize);
@@ -279,7 +279,7 @@ private:
     u16 Count = 0;
     u16 MaxCount;
     // Note: ClassSize is zero for the transfer batch.
-    uptr ClassSize;
+    u32 ClassSize;
   };
   PerClass PerClassArray[NumClasses] = {};
   // Popping BatchClass blocks requires taking a certain amount of blocks at
@@ -310,7 +310,7 @@ private:
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
       if (I != BatchClassId) {
-        P->ClassSize = Size;
+        P->ClassSize = static_cast<u32>(Size);
         P->MaxCount = static_cast<u16>(2 * getMaxCached(Size));
       } else {
         // ClassSize in this struct is only used for malloc/free stats, which

@@ -71,6 +71,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  close_range
+  SRCS
+    close_range.cpp
+  HDRS
+    ../close_range.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close_range
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   dup
   SRCS
     dup.cpp

@@ -170,9 +170,9 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
 /// frame.
 static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
                                      IRBuilder<> &Builder, Value *FramePtr) {
-  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                  Shape.SwitchLowering.DestroyOffset);
-  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+  return Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.SwitchLowering.DestroyOffset, "destroy.addr",
+      GEPNoWrapFlags::inBounds());
 }
 
 /// Make resume-clone coro.free conditional on whether the frame is elided.
@@ -356,9 +356,9 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 /// Create a pointer to the switch index field in the coroutine frame.
 static Value *createSwitchIndexPtr(const coro::Shape &Shape,
                                    IRBuilder<> &Builder, Value *FramePtr) {
-  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                  Shape.SwitchLowering.IndexOffset);
-  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+  return Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.SwitchLowering.IndexOffset, "index.addr",
+      GEPNoWrapFlags::inBounds());
 }
 
 // Mark a coroutine as done, which implies that the coroutine is finished and
@@ -464,20 +464,9 @@ void coro::BaseCloner::handleFinalSuspend() {
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
 
-  // Null means the final suspend. Save its weight before the case is removed.
-  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
-  std::optional<uint64_t> FinalSuspendWeight;
-  uint64_t RemainingWeight = 0;
-  unsigned FinalSuspendIndex = FinalCaseIt->getCaseIndex() + 1;
-  if (auto CaseWeight = SwitchWrapper.getSuccessorWeight(FinalSuspendIndex)) {
-    FinalSuspendWeight = *CaseWeight;
-    for (unsigned I = 0, E = Switch->getNumSuccessors(); I != E; ++I)
-      if (I != FinalSuspendIndex)
-        RemainingWeight += *SwitchWrapper.getSuccessorWeight(I);
-  }
-
   // Use SwitchInstProfUpdateWrapper to remove the case, keeping the profile
   // branch weights in sync with the switch successors.
+  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
   SwitchWrapper.removeCase(FinalCaseIt);
   if (isSwitchDestroyFunction()) {
     BasicBlock *OldSwitchBB = Switch->getParent();
@@ -495,13 +484,8 @@ void coro::BaseCloner::handleFinalSuspend() {
       auto *Cond = Builder.CreateIsNull(Load);
       auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
       applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
-        // Do not use this weight unless the coroutine was actually profiled.
-        if (FinalSuspendWeight && Inst->getFunction()->hasProfileData())
-          setFittedBranchWeights(*Inst, {*FinalSuspendWeight, RemainingWeight},
-                                 /*IsExpected=*/false);
-        else
-          setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
-                                                      Inst->getFunction());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    Inst->getFunction());
       });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();
@@ -870,12 +854,9 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     CallerContext->setCallingConv(ProjectionFunc->getCallingConv());
     CallerContext->setDebugLoc(DbgLoc);
     // The frame is located after the async_context header.
-    auto &Context = Builder.getContext();
-    auto *FramePtrAddr = Builder.CreateInBoundsPtrAdd(
-        CallerContext,
-        ConstantInt::get(Type::getInt64Ty(Context),
-                         Shape.AsyncLowering.FrameOffset),
-        "async.ctx.frameptr");
+    auto *FramePtrAddr = Builder.CreatePtrAddWithUnsignedOffset(
+        CallerContext, Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr",
+        GEPNoWrapFlags::inBounds());
     // Inline the projection function.
     InlineFunctionInfo InlineInfo;
     auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
@@ -1702,7 +1683,6 @@ private:
   static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
                               Function *DestroyFn, Function *CleanupFn) {
     IRBuilder<> Builder(&*Shape.getInsertPtAfterFramePtr());
-    LLVMContext &C = ResumeFn->getContext();
 
     // Resume function pointer
     Value *ResumeAddr = Shape.FramePtr;
@@ -1722,11 +1702,9 @@ private:
     }
 
     // Destroy function pointer
-    Value *DestroyAddr = Builder.CreateInBoundsPtrAdd(
-        Shape.FramePtr,
-        ConstantInt::get(Type::getInt64Ty(C),
-                         Shape.SwitchLowering.DestroyOffset),
-        "destroy.addr");
+    Value *DestroyAddr = Builder.CreatePtrAddWithUnsignedOffset(
+        Shape.FramePtr, Shape.SwitchLowering.DestroyOffset, "destroy.addr",
+        GEPNoWrapFlags::inBounds());
     Builder.CreateStore(DestroyOrCleanupFn, DestroyAddr);
   }
 
@@ -1836,11 +1814,9 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   auto *FramePtr = Id->getStorage();
   FramePtr = Builder.CreateBitOrPointerCast(FramePtr, Int8PtrTy);
-  FramePtr = Builder.CreateInBoundsPtrAdd(
-      FramePtr,
-      ConstantInt::get(Type::getInt64Ty(Context),
-                       Shape.AsyncLowering.FrameOffset),
-      "async.ctx.frameptr");
+  FramePtr = Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr",
+      GEPNoWrapFlags::inBounds());
 
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
   {
