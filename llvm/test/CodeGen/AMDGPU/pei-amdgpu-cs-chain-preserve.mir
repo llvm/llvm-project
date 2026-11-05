@@ -8,6 +8,7 @@
   define amdgpu_cs_chain_preserve void @preserve_active_lanes_above_args() #0 {ret void}
   define amdgpu_cs_chain_preserve void @preserve_all_lanes_wwm_above_args() #0 {ret void}
   define amdgpu_cs_chain_preserve void @dont_preserve_args() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @dont_preserve_t16_args() #0 {ret void}
   define amdgpu_cs_chain_preserve void @preserve_inactive_lanes_wwm_args() #0 {ret void}
   define amdgpu_cs_chain_preserve void @dont_preserve_if_no_chain_calls() #0 {ret void}
   define amdgpu_cs_chain_preserve void @dont_preserve_v0_v7() #0 {ret void}
@@ -125,6 +126,37 @@ body:             |
     renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
     SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $vgpr9
+
+...
+
+# With true16, a 16-bit argument is passed in the lo16 subregister of an
+# argument VGPR. The enclosing 32-bit register must not be preserved either,
+# otherwise the restore would clobber the argument.
+
+---
+name:            dont_preserve_t16_args
+tracksRegLiveness: true
+frameInfo:
+  hasTailCall:     true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+  isChainFunction: true
+  returnsVoid:     true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $vgpr8_lo16
+
+    ; GCN-LABEL: name: dont_preserve_t16_args
+    ; GCN: liveins: $sgpr0, $vgpr8_lo16
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr8_lo16 = V_MOV_B16_t16_e64 0, 10, 0, implicit $exec
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8_lo16
+    renamable $vgpr8_lo16 = V_MOV_B16_t16_e64 0, 10, 0, implicit $exec
+    renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8_lo16
 
 ...
 

@@ -1992,8 +1992,15 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // This prevents CSR restore from clobbering return VGPRs.
   if (ReturnMI) {
     for (auto &Op : ReturnMI->operands()) {
-      if (Op.isReg())
-        SavedVGPRs.reset(Op.getReg());
+      if (!Op.isReg() || !Op.getReg().isPhysical())
+        continue;
+      MCRegister Reg = Op.getReg().asMCReg();
+      // With true16, a 16-bit value is returned in the lo16 subregister of a
+      // callee saved VGPR_32. Reset the enclosing 32-bit register, otherwise
+      // the CSR restore would clobber the returned value.
+      if (AMDGPU::VGPR_16RegClass.contains(Reg))
+        Reg = TRI->get32BitRegister(Reg);
+      SavedVGPRs.reset(Reg);
     }
   }
 
