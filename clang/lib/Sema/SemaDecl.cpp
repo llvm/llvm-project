@@ -9386,6 +9386,24 @@ bool Sema::CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous) {
   return false;
 }
 
+void Sema::CheckPragmaWeakAliasRedeclaration(NamedDecl *NewD) {
+  assert(CurContext->isTranslationUnit() &&
+         "#pragma weak alias is declared at translation unit scope");
+  LookupResult Previous(*this, NewD->getDeclName(), NewD->getLocation(),
+                        LookupOrdinaryName, forRedeclarationInCurContext());
+  LookupName(Previous, TUScope);
+  FilterLookupForScope(Previous, CurContext, TUScope,
+                       /*ConsiderLinkage=*/true,
+                       /*AllowInlineNamespace=*/false);
+  if (auto *FD = dyn_cast<FunctionDecl>(NewD))
+    CheckFunctionDeclaration(TUScope, FD, Previous,
+                             /*IsMemberSpecialization=*/false,
+                             /*DeclIsDefn=*/false);
+  else
+    CheckVariableDeclaration(cast<VarDecl>(NewD), Previous);
+  checkAttributesAfterMerging(*this, *NewD);
+}
+
 bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
   llvm::SmallPtrSet<const CXXMethodDecl*, 4> Overridden;
 

@@ -6,6 +6,7 @@ int zex;
 // Different c++ ABIs may or may not mangle this, so we produce a strong
 // symbol.
 // CHECK: @zex = {{(dso_local )?}}global i32
+// CHECK: @_Z2ovi = weak {{.*}}alias i32 (i32), ptr @__ov
 
 #pragma weak foo
 struct S {  void foo(); };
@@ -29,3 +30,14 @@ void bax() {}
 // GCC produces a weak symbol for this one, but it doesn't look like a good
 // idea to expose the mangling to the pragma unless we really have to.
 // CHECK-LABEL: define {{.*}}void @_Z3baxv(
+
+// The alias redeclares the matching overload of an existing name, so calls to
+// it are not ambiguous.
+extern "C" int __ov(int);
+int ov(int);
+int ov(double);
+#pragma weak ov = __ov
+extern "C" int __ov(int i) { return i; }
+int use_ov() { return ov(1); }
+// CHECK-LABEL: define {{.*}}i32 @_Z6use_ovv(
+// CHECK: call {{.*}}i32 @_Z2ovi(i32

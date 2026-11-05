@@ -8825,7 +8825,6 @@ NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
   NamedDecl *NewD = nullptr;
   if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
     FunctionDecl *NewFD;
-    // FIXME: Missing call to CheckFunctionDeclaration().
     // FIXME: Mangling?
     // FIXME: Is the qualifier info correct?
     // FIXME: Is the DeclContext correct?
@@ -8866,44 +8865,28 @@ NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
 void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
   if (W.getAlias()) { // clone decl, impersonate __attribute(weak,alias(...))
     IdentifierInfo *NDId = ND->getIdentifier();
-
-    // Append attribute on previous declaration only.
-    NamedDecl *Prev = LookupSingleName(TUScope, W.getAlias(), W.getLocation(),
-                                       LookupOrdinaryName);
-    if (Prev && (isa<FunctionDecl>(Prev) || isa<VarDecl>(Prev)) &&
-        Prev->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      if (Prev->hasAttr<AliasAttr>())
+    // An existing alias of this name, from __attribute__((alias)) or an
+    // earlier #pragma weak, takes precedence.
+    if (NamedDecl *Prev = LookupSingleName(TUScope, W.getAlias(),
+                                           W.getLocation(), LookupOrdinaryName))
+      if (llvm::any_of(Prev->redecls(),
+                       [](const Decl *D) { return D->hasAttr<AliasAttr>(); }))
         return;
-      bool IsDefinition = false;
-      if (auto *FD = dyn_cast<FunctionDecl>(Prev))
-        IsDefinition = FD->isDefined();
-      else
-        IsDefinition =
-            cast<VarDecl>(Prev)->hasDefinition() != VarDecl::DeclarationOnly;
-      if (IsDefinition) {
-        Diag(W.getLocation(), diag::err_alias_is_definition) << Prev << 0;
-        return;
-      }
-      Prev->addAttr(
-          AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
-      Prev->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
-      WeakTopLevelDecl.push_back(Prev);
-      return;
-    }
-
     NamedDecl *NewD = DeclClonePragmaWeak(ND, W.getAlias(), W.getLocation());
     NewD->addAttr(
         AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
     NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
-    WeakTopLevelDecl.push_back(NewD);
     // FIXME: "hideous" code from Sema::LazilyCreateBuiltin
     // to insert Decl at TU scope, sorry.
     DeclContext *SavedContext = CurContext;
     CurContext = Context.getTranslationUnitDecl();
     NewD->setDeclContext(CurContext);
     NewD->setLexicalDeclContext(CurContext);
+    CheckPragmaWeakAliasRedeclaration(NewD);
     PushOnScopeChains(NewD, S);
     CurContext = SavedContext;
+    if (!NewD->isInvalidDecl())
+      WeakTopLevelDecl.push_back(NewD);
   } else { // just add weak to existing
     ND->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
   }

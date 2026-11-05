@@ -37,15 +37,31 @@ void pragma_ifunc_on_redecl(void) __attribute__((ifunc("resolver")));
 #pragma weak pragma_alias = ifunc_alias_target
 void ifunc_alias_target(void) __attribute__((ifunc("resolver")));
 
-// The weak name is already defined: a definition cannot also be an alias.
+// The pragma redeclares an existing declaration of the weak name, so it gets
+// the same checks as a weak alias attribute on a redeclaration would.
 void __defined_fn(void);
-void defined_fn(void) {}
-#pragma weak defined_fn = __defined_fn // expected-error {{definition 'defined_fn' cannot also be an alias}}
+void defined_fn(void) {} // expected-note 2 {{previous definition is here}}
+#pragma weak defined_fn = __defined_fn // expected-error {{redefinition of 'defined_fn'}} \
+                                       // expected-warning {{attribute declaration must precede definition}}
 void __defined_fn(void) {}
 
-int __defined_var = 1;
-int defined_var;
-#pragma weak defined_var = __defined_var // expected-error {{definition 'defined_var' cannot also be an alias}}
+// The cloned variable takes the target's location, so diagnostics on it point
+// at the target rather than at the pragma.
+int __defined_var = 1; // expected-error {{alias definition of 'defined_var' after tentative definition}}
+int defined_var; // expected-note {{previous definition is here}}
+#pragma weak defined_var = __defined_var
+
+int conflicting(long); // expected-note {{previous declaration is here}}
+int __conflicting(int);
+#pragma weak conflicting = __conflicting // expected-error {{conflicting types for 'conflicting'}}
+
+static int internal(int);
+int __internal(int);
+#pragma weak internal = __internal // expected-error {{weak declaration cannot have internal linkage}}
+
+extern _Thread_local int tls; // expected-note {{previous declaration is here}}
+int __tls; // expected-error {{non-thread-local declaration of 'tls' follows thread-local declaration}}
+#pragma weak tls = __tls
 
 // GH35478, GH56760: a pre-existing declaration of the weak name must not make
 // uses ambiguous.
@@ -53,3 +69,5 @@ int predecl(int), __predecl(int);
 #pragma weak predecl = __predecl
 int __predecl(int i) { return 0; }
 int use_predecl(void) { return predecl(0); }
+int predecl(int);
+int use_predecl_redecl(void) { return predecl(0); }

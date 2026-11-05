@@ -887,8 +887,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   weak linkage introduced through redeclarations or `#pragma weak`. (#GH220923)
 
 - `#pragma weak alias = target` no longer makes every later use of `alias`
-  ambiguous when `alias` was already declared: the alias is now attached to the
-  existing declaration, and a definition of `alias` is diagnosed. (#GH35478), (#GH56760)
+  ambiguous when `alias` was already declared: the alias is now checked and
+  merged as a redeclaration of the existing declaration, so conflicting types,
+  internal linkage, or an existing definition of `alias` are diagnosed.
+  (#GH35478), (#GH56760)
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
