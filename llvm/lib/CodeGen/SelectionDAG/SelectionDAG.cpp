@@ -12463,8 +12463,10 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Op, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Op, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)
@@ -12490,8 +12492,10 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op1, SDValue Op2) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Op1, Op2, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Op1, Op2, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)
@@ -12543,8 +12547,10 @@ UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Ops, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Ops, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)
