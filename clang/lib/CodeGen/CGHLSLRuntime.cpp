@@ -1199,6 +1199,23 @@ static llvm::Value *createSPIRVInputLoad(
   return Truncate ? B.CreateTrunc(Value, Ty) : Value;
 }
 
+// For Vulkan builtins which begin counting from a driver-supplied base offset,
+// where the corresponding HLSL system value is always zero-based within the
+// current draw call.
+static llvm::Value *
+createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
+                        const Twine &Name, unsigned BuiltInID,
+                        unsigned BaseBuiltInID,
+                        llvm::hlsl::InterpolationMode InterpMode) {
+  llvm::Value *Value = createSPIRVInputLoad(
+      B, M, Ty, Name, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BuiltInID,
+      InterpMode);
+  llvm::Value *Base = createSPIRVInputLoad(
+      B, M, Ty, Name + Twine(".base"),
+      llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BaseBuiltInID, InterpMode);
+  return B.CreateSub(Value, Base);
+}
+
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
     llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
@@ -1666,11 +1683,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     assert(Stage == llvm::Triple::Vertex &&
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    if (CGM.getTarget().getTriple().isSPIRV())
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // Matches DXC: only subtract BaseInstance when
+      // -fvk-support-nonzero-base-instance is given.
+      if (CGM.getLangOpts().HLSLSpvSupportNonzeroBaseInstance)
+        return createSPIRVBuiltinDelta(
+            B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+            /* InstanceIndex */ 43, /* BaseInstance */ 4425, InterpMode);
       return createSPIRVInputLoad(B, CGM.getModule(), Type,
                                   Semantic->getAttrName()->getName(),
                                   llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                                   /* InstanceIndex */ 43, InterpMode);
+    }
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
