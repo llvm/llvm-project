@@ -7,9 +7,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Insert the async barrier arrival replay workaround after scheduling and
-/// before wait-count analysis so the dummy stays immediately after its arrival
-/// and its async counter effects are included in wait generation.
+/// Insert the async barrier arrival replay workaround on affected targets
+/// unless XNACK is explicitly disabled. For example, insert the following
+/// sequence after an arrival (s7 illustrates the reserved EXEC-copy SGPR):
+///
+///   ds_atomic_async_barrier_arrive_b64 v2
+///   s_mov_b32 s7, exec_lo
+///   s_mov_b32 exec_lo, 0
+///   global_load_async_to_lds_b8 v0, v[0:1], off
+///   s_mov_b32 exec_lo, s7
+///
+/// Save and restore the active lane mask around the EXEC-zero dummy load.
+/// Run after scheduling to keep the inserted sequence after its arrival,
+/// and before wait-count analysis so it accounts for the added async load.
 //
 //===----------------------------------------------------------------------===//
 

@@ -37,7 +37,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/AMDGPUAsyncStages.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
