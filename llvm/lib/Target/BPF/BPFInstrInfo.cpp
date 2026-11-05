@@ -123,12 +123,10 @@ bool BPFInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return false;
 }
 
-void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator I,
-                                       Register SrcReg, bool IsKill, int FI,
-                                       const TargetRegisterClass *RC,
-                                       Register VReg,
-                                       MachineInstr::MIFlag Flags) const {
+void BPFInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool IsKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
