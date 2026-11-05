@@ -78,15 +78,23 @@ LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet,
 LLVM_ABI void expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
                                   uint64_t MaxLen, const KnownBits &LenKnown);
 
-/// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
+/// Expand \p MemSetPattern, whose count is known to be in
+/// [\p MinCount, \p MaxCount] and to have the known bits \p CountKnown, into a
+/// tree of branches on the count leading to at most two overlapping stores
+/// each. \p MemSetPattern is not deleted.
+LLVM_ABI void expandBoundedMemSetPattern(MemSetPatternInst *MemSetPattern,
+                                         uint64_t MinCount, uint64_t MaxCount,
+                                         const KnownBits &CountKnown);
+
+/// Expand \p MemSetPattern as a loop. \p MemSetPattern is not deleted.
 /// If \p TTI is provided, the memset.pattern is expanded according to the
 /// target's preferences. Otherwise, it is expanded as an element-wise loop.
 LLVM_ABI void
-expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+expandMemSetPatternAsLoop(MemSetPatternInst *MemSetPattern,
                           const TargetTransformInfo *TTI = nullptr);
 
-/// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
-LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+/// Expand \p MemSetPattern as a loop. \p MemSetPattern is not deleted.
+LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSetPattern,
                                         const TargetTransformInfo &TTI);
 
 /// Expand \p AtomicMemCpy as a loop. \p AtomicMemCpy is not deleted.
