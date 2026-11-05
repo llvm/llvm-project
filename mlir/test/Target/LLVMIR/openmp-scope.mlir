@@ -92,6 +92,8 @@ llvm.func @scope_reduction(%ptr: !llvm.ptr) {
 // CHECK:         call i32 @__kmpc_reduce_nowait(
 // CHECK:       reduce.switch.nonatomic:
 // CHECK:         call void @__kmpc_end_reduce_nowait(
+// nowait also suppresses the post-reduction end-of-construct barrier.
+// CHECK-NOT:     call void @__kmpc_barrier(
 
 omp.declare_reduction @add_f32_2 : f32 init {
 ^bb0(%arg0: f32):

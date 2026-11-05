@@ -669,3 +669,104 @@ llvm.func @wsloop_simd_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
 // CHECK: fadd float
+
+// -----
+
+// A wsloop reduction with `nowait` must NOT emit the end-of-construct barrier.
+// The nowait reduction runtime variants are used and no __kmpc_barrier follows
+// (mirrors @simple_reduction, which does emit the barrier without nowait).
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+
+// CHECK-LABEL: @simple_reduction_nowait
+llvm.func @simple_reduction_nowait(%lb : i64, %ub : i64, %step : i64) {
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  omp.parallel {
+    omp.wsloop nowait reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %2 = llvm.load %prv : !llvm.ptr -> f32
+        %3 = llvm.fadd %1, %2 : f32
+        llvm.store %3, %prv : f32, !llvm.ptr
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// Outlined function.
+// CHECK: call void {{.*}} @__kmpc_fork_call
+// CHECK-SAME: @[[OUTLINED:[A-Za-z_.][A-Za-z0-9_.]*]]
+// CHECK: define internal void @[[OUTLINED]]
+
+// The nowait reduction runtime variants are used ...
+// CHECK: call i32 @__kmpc_reduce_nowait
+// CHECK: call void @__kmpc_end_reduce_nowait
+
+// ... and no end-of-construct barrier is emitted for nowait.
+// CHECK-NOT: call void @__kmpc_barrier
+
+// -----
+
+// An omp.sections reduction with `nowait` must NOT emit the end-of-construct
+// barrier either (same createReductionsAndCleanup path as wsloop).
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+
+// CHECK-LABEL: @sections_reduction_nowait
+llvm.func @sections_reduction_nowait(%x : !llvm.ptr) {
+  omp.parallel {
+    omp.sections nowait reduction(@add_f32 %x -> %arg0 : !llvm.ptr) {
+      omp.section {
+      ^bb0(%arg1: !llvm.ptr):
+        %c = llvm.mlir.constant(1.0 : f32) : f32
+        %v = llvm.load %arg1 : !llvm.ptr -> f32
+        %r = llvm.fadd %v, %c : f32
+        llvm.store %r, %arg1 : f32, !llvm.ptr
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK: call i32 @__kmpc_reduce_nowait
+// CHECK: call void @__kmpc_end_reduce_nowait
+// CHECK-NOT: call void @__kmpc_barrier
