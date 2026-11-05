@@ -2412,6 +2412,20 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginRegisterCore",
+    srcs = glob(["Register/Core/*.cpp"]),
+    hdrs = glob(["Register/Core/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginRegisterNative",
     srcs = glob(["Register/Native/*.cpp"]),
     hdrs = glob(["Register/Native/*.h"]),
