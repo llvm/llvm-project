@@ -390,6 +390,13 @@ let TargetPrefix = "spv" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  def int_spv_subgroup_multi_prefix_bit_xor
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
   def int_spv_wave_prefix_product
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,

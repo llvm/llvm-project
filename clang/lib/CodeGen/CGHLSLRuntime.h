@@ -152,6 +152,9 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixBitAnd,
                                         wave_multi_prefix_bit_and,
                                         subgroup_multi_prefix_bit_and)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixBitXor,
+                                        wave_multi_prefix_bit_xor,
+                                        subgroup_multi_prefix_bit_xor)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)

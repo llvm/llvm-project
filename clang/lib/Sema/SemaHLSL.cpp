@@ -5377,7 +5377,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and: {
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
 
