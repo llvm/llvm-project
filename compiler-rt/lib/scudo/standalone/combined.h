@@ -1501,16 +1501,19 @@ private:
     return TaggedPtr;
   }
 
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) bool
+  canQuarantine(uptr Size) const {
+    // Only quarantine if quarantine is enabled, cache size is non-zero, and
+    // the actual size of the chunk is between 1 and QuarantineMaxChunkSize.
+    // This purposefully underflows for Size == 0.
+    return !AllocatorConfig::getQuarantineDisabled() &&
+           Quarantine.getCacheSize() && ((Size - 1) < QuarantineMaxChunkSize);
+  }
+
   void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
                                    void *Ptr, Chunk::UnpackedHeader *Header,
                                    uptr Size) NO_THREAD_SAFETY_ANALYSIS {
-    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
-    // than the maximum allowed, we return a chunk directly to the backend.
-    // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = AllocatorConfig::getQuarantineDisabled() ||
-                                  !Quarantine.getCacheSize() ||
-                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !Header->ClassId;
+    const bool BypassQuarantine = !canQuarantine(Size) || !Header->ClassId;
     bool MemoryTaggingEnabled = useMemoryTagging<AllocatorConfig>(Options);
     bool ZeroOnDeallocate = AllocatorConfig::getDeallocZeroFill() &&
                             Options.getFillContentsMode() == ZeroFill;

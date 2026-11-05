@@ -1782,12 +1782,42 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
                 return;
               }
               if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
-                context_.Say(designator.source,
+                auto &msg{context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "
                     "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
                     lastName.symbol->name(),
                     parser::ToUpperCaseLetters(
-                        llvm::acc::getOpenACCClauseName(clause).str()));
+                        llvm::acc::getOpenACCClauseName(clause).str()))};
+                // An ASSOCIATE or SELECT TYPE associate name does not have the
+                // POINTER or ALLOCATABLE attribute of its selector
+                // (F2023 11.1.3.3); a SELECT RANK associate name does
+                // (F2023 11.1.10.3) and is accepted above. Explain the error
+                // only when association is its cause, that is, when this
+                // check would accept the selector itself.
+                const Symbol &ultimate{lastName.symbol->GetUltimate()};
+                if (const auto *assoc{
+                        ultimate.detailsIf<AssocEntityDetails>()}) {
+                  std::optional<evaluate::DataRef> selector{
+                      evaluate::ExtractDataRef(assoc->expr())};
+                  if (selector &&
+                      IsAllocatableOrObjectPointer(
+                          &selector->GetLastSymbol())) {
+                    // Without an associate-name, the associate entity takes
+                    // the selector's name and declaration location, so point
+                    // at the clause instead. This compares source positions
+                    // on purpose: CharBlock is a StringRef, so `==` would
+                    // compare the text, and `associate (p => p)` would then
+                    // be taken as unnamed.
+                    const Symbol *whole{
+                        evaluate::UnwrapWholeSymbolDataRef(*selector)};
+                    bool unnamed{whole &&
+                        whole->name().begin() == ultimate.name().begin()};
+                    msg.Attach(unnamed ? designator.source : ultimate.name(),
+                        "`%s` is an associate name and does not have the "
+                        "POINTER or ALLOCATABLE attribute of its selector"_because_en_US,
+                        ultimate.name());
+                  }
+                }
               }
             },
             [&](const auto &name) {

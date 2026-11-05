@@ -3418,6 +3418,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
@@ -11505,6 +11511,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11590,7 +11598,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }

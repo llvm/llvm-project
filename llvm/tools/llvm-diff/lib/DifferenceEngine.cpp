@@ -24,8 +24,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/type_traits.h"
 #include <utility>
 
 using namespace llvm;
@@ -109,6 +107,13 @@ public:
     return tmp;
   }
 };
+
+/// Returns true if \p L and \p R, which have the same opcode, have different
+/// poison-generating flags.
+static bool hasDifferentFlags(const Instruction *L, const Instruction *R) {
+  return L->getRawSubclassOptionalData() != R->getRawSubclassOptionalData() ||
+         L->getFastMathFlagsOrNone() != R->getFastMathFlagsOrNone();
+}
 
 /// A function-scope difference engine.
 class FunctionDifferenceEngine {
@@ -373,6 +378,12 @@ class FunctionDifferenceEngine {
     // Different opcodes always imply different operations.
     if (L->getOpcode() != R->getOpcode()) {
       if (Complain) Engine.log("different instruction types");
+      return true;
+    }
+
+    if (hasDifferentFlags(L, R)) {
+      if (Complain)
+        Engine.log("different instruction flags");
       return true;
     }
 

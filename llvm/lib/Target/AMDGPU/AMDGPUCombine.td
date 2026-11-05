@@ -359,5 +359,6 @@ def AMDGPURegBankCombiner : GICombiner<
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
    umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3,
+   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
 }
