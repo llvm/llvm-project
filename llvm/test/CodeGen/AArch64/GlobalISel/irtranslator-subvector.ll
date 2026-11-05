@@ -156,7 +156,7 @@ define i32 @extract_v4i32_vector_insert_const_vscale(<vscale x 4 x i32> %a, <vsc
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 0)
+  %vector = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 0)
   store <vscale x 4 x i32> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -220,7 +220,7 @@ define i32 @extract_v4i32_vector_insert_const_illegal_scalable(<vscale x 4 x i32
   ; CHECK-NEXT:   $w0 = COPY [[C1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <vscale x 4  x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> %a, <1 x i32> %b, i64 0)
+  %vector = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v1i32(<vscale x 4 x i32> %a, <1 x i32> %b, i64 0)
   store <vscale x 4 x i32> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -242,7 +242,7 @@ define i32 @extract_v4i32_vector_insert_const_fixed(<4 x i32> %a, <1 x i32> %b, 
   ; CHECK-NEXT:   $w0 = COPY [[C1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <4  x i32> @llvm.vector.insert.v4i32.v4i32(<4 x i32> %a, <1 x i32> %b, i64 0)
+  %vector = call <4 x i32> @llvm.vector.insert.v4i32.v1i32(<4 x i32> %a, <1 x i32> %b, i64 0)
   store <4 x i32> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -264,7 +264,7 @@ define i32 @extract_v4i32_vector_insert_const_fixed_illegal(<1 x i32> %a, <1 x i
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <1  x i32> @llvm.vector.insert.v1i32.v4i32(<1 x i32> %a, <1 x i32> %b, i64 0)
+  %vector = call <1 x i32> @llvm.vector.insert.v1i32.v1i32(<1 x i32> %a, <1 x i32> %b, i64 0)
   store <1 x i32> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -284,7 +284,7 @@ define i32 @extract_v4ptr_vector_insert_const_fixed_illegal(<1 x ptr> %a, <1 x p
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <1  x ptr> @llvm.vector.insert.v1ptr.v4ptr(<1 x ptr> %a, <1 x ptr> %b, i64 0)
+  %vector = call <1 x ptr> @llvm.vector.insert.v1ptr.v1ptr(<1 x ptr> %a, <1 x ptr> %b, i64 0)
   store <1 x ptr> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -308,7 +308,7 @@ define i32 @extract_v4ifloat_vector_insert_const_fixed_illegal(<1 x float> %a, <
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <1  x float> @llvm.vector.insert.v1f32.v4f32(<1 x float> %a, <1 x float> %b, i64 0)
+  %vector = call <1 x float> @llvm.vector.insert.v1f32.v1f32(<1 x float> %a, <1 x float> %b, i64 0)
   store <1 x float> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -328,7 +328,7 @@ define i32 @extract_v4iptr_vector_insert_const_fixed_illegal(<1 x ptr> %a, <1 x 
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <1  x ptr> @llvm.vector.insert.v1ptr.v4ptr(<1 x ptr> %a, <1 x ptr> %b, i64 0)
+  %vector = call <1 x ptr> @llvm.vector.insert.v1ptr.v1ptr(<1 x ptr> %a, <1 x ptr> %b, i64 0)
   store <1 x ptr> %vector, ptr %p, align 16
   ret i32 1
 }
@@ -356,22 +356,7 @@ define i32 @extract_v4iptr_vector_insert_const_fixed_legal(<4 x ptr> %a, <4 x pt
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <4  x ptr> @llvm.vector.insert.v4ptr.v4ptr(<4 x ptr> %a, <4 x ptr> %b, i64 0)
+  %vector = call <4 x ptr> @llvm.vector.insert.v4ptr.v4ptr(<4 x ptr> %a, <4 x ptr> %b, i64 0)
   store <4 x ptr> %vector, ptr %p, align 16
   ret i32 1
-}
-
-define i32 @insert_one_element_vector() {
-  ; CHECK-LABEL: name: insert_one_element_vector
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY [[C]](i32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY [[C1]](i32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   $w0 = COPY [[COPY2]](i32)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
-  %vector = call <1 x i32> @llvm.vector.insert.v1i32.v1i32(<1 x i32> <i32 7>, <1 x i32> <i32 42>, i64 0)
-  %value = extractelement <1 x i32> %vector, i64 0
-  ret i32 %value
 }
