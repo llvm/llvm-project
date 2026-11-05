@@ -2513,3 +2513,23 @@ func.func @test_reverse_block_scaled_rank_zero(%arg0: tensor<!tosa.block_scaled<
   %0 = tosa.reverse %arg0 axis(0) : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }
+
+// -----
+
+func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
+  %s = tosa.const_shape values(dense<[2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
+  %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
+  return
+}
+
+// -----
+
+// Regression test: a zero-sized dimension in the shape operand must not cause a
+// division by zero while inferring the result type. The shape itself is
+// rejected by tosa-validate; the verifier must not crash.
+func.func @test_reshape_zero_and_inferable_dim(%arg0: tensor<8xf32>) -> tensor<?x?xf32> {
+  %shape = tosa.const_shape values(dense<[0, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
