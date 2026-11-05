@@ -26,10 +26,6 @@ std::string backendToString(sycl::backend Backend) {
     return "opencl";
   case sycl::backend::level_zero:
     return "level_zero";
-  case sycl::backend::cuda:
-    return "cuda";
-  case sycl::backend::hip:
-    return "hip";
   default:
     return "unknown";
   }

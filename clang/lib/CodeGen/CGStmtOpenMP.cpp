@@ -369,11 +369,19 @@ public:
 
 } // namespace
 
-// The loop directive with a bind clause will be mapped to a different
-// directive with corresponding semantics.
+// Map `loop` with a bind clause, `teams loop`, and `target teams loop` to the
+// construct CodeGen emits.
 static OpenMPDirectiveKind
 getEffectiveDirectiveKind(const OMPExecutableDirective &S) {
   OpenMPDirectiveKind Kind = S.getDirectiveKind();
+
+  if (Kind == OMPD_teams_loop)
+    return OMPD_teams_distribute;
+  if (Kind == OMPD_target_teams_loop)
+    return cast<OMPTargetTeamsGenericLoopDirective>(S).canBeParallelFor()
+               ? OMPD_target_teams_distribute_parallel_for
+               : OMPD_target_teams_distribute;
+
   if (Kind != OMPD_loop)
     return Kind;
 
@@ -2390,7 +2398,8 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
+  // TODO: Select the variant at runtime.
+  EmitStmt(S.variants().front());
 }
 
 namespace {
@@ -3435,35 +3444,36 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   emitOMPSimdDirective(S, *this, CGM);
 }
 
+/// Emit a loop-nest transformation followed by its loop variable finalization,
+/// which restores the loop-exit values as required by OpenMP 6.0.
+static void emitLoopNestTransformation(
+    CodeGenFunction &CGF,
+    const OMPCanonicalLoopNestTransformationDirective &S) {
+  OMPTransformDirectiveScopeRAII Scope(CGF, &S);
+  CGF.EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    CGF.EmitStmt(Finals);
+}
+
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII TileScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
-  // Emit the de-sugared statement (the split loops).
-  OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
@@ -3476,7 +3486,10 @@ void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
+
   EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
@@ -6482,6 +6495,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
   CGOpenMPRuntime &RT = CGM.getOpenMPRuntime();
 
+  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
   bool HasLastprivateClause = false;
   // Check pre-condition.
   {
@@ -6509,15 +6523,13 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
       // Emit helper vars inits.
 
       LValue LB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(
-                     (isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                          ? S.getCombinedLowerBoundVariable()
-                          : S.getLowerBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedLowerBoundVariable()
+                                       : S.getLowerBoundVariable()));
       LValue UB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(
-                     (isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                          ? S.getCombinedUpperBoundVariable()
-                          : S.getUpperBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedUpperBoundVariable()
+                                       : S.getUpperBoundVariable()));
       LValue ST =
           EmitOMPHelperVar(*this, cast<DeclRefExpr>(S.getStrideVariable()));
       LValue IL =
@@ -6564,7 +6576,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
       // GPU fused schedule: omit the outer distribute loop and let the inner
       // worksharing loop schedule the flattened team/thread iteration space.
-      if (canEmitGPUFusedDistSchedule(CGM, S, S.getDirectiveKind())) {
+      if (canEmitGPUFusedDistSchedule(CGM, S, EKind)) {
         JumpDest LoopExit =
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         CodeGenLoop(*this, S, LoopExit);
@@ -6580,7 +6592,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
         // league. The size of the chunks is unspecified in this case.
         bool StaticChunked =
             RT.isStaticChunked(ScheduleKind, /* Chunked */ Chunk != nullptr) &&
-            isOpenMPLoopBoundSharingDirective(S.getDirectiveKind());
+            isOpenMPLoopBoundSharingDirective(EKind);
         if (RT.isStaticNonchunked(ScheduleKind,
                                   /* Chunked */ Chunk != nullptr) ||
             StaticChunked) {
@@ -6593,20 +6605,17 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           JumpDest LoopExit =
               getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
           // UB = min(UB, GlobalUB);
-          EmitIgnoredExpr(
-              isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                  ? S.getCombinedEnsureUpperBound()
-                  : S.getEnsureUpperBound());
+          EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(EKind)
+                              ? S.getCombinedEnsureUpperBound()
+                              : S.getEnsureUpperBound());
           // IV = LB;
-          EmitIgnoredExpr(
-              isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                  ? S.getCombinedInit()
-                  : S.getInit());
+          EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(EKind)
+                              ? S.getCombinedInit()
+                              : S.getInit());
 
-          const Expr *Cond =
-              isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                  ? S.getCombinedCond()
-                  : S.getCond();
+          const Expr *Cond = isOpenMPLoopBoundSharingDirective(EKind)
+                                 ? S.getCombinedCond()
+                                 : S.getCond();
 
           if (StaticChunked)
             Cond = S.getCombinedDistCond();
@@ -9099,6 +9108,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     EmitOMPScanDirective(*SD);
     return;
   }
+  // A metadirective has no associated statement; emit its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(&D)) {
+    EmitOMPMetaDirective(*MD);
+    return;
+  }
   if (!D.hasAssociatedStmt() || !D.getAssociatedStmt())
     return;
   auto &&CodeGen = [&D](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -9162,8 +9176,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       D.getDirectiveKind() == OMPD_section ||
       D.getDirectiveKind() == OMPD_master ||
       D.getDirectiveKind() == OMPD_masked ||
-      D.getDirectiveKind() == OMPD_unroll ||
-      D.getDirectiveKind() == OMPD_assume) {
+      D.getDirectiveKind() == OMPD_assume ||
+      isOpenMPLoopTransformationDirective(D.getDirectiveKind())) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =

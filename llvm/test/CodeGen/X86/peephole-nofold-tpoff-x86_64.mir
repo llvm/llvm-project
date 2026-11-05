@@ -47,14 +47,14 @@ body:             |
     ; CHECK-NEXT: [[ADD64rm:%[0-9]+]]:gr64 = ADD64rm [[MOV64rm]], $rip, 1, $noreg, target-flags(x86-gottpoff) @x, $noreg, implicit-def dead $eflags :: (load (s64) from got)
     ; CHECK-NEXT: TEST64rr [[ADD64rm]], [[ADD64rm]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK-NEXT: RET 0, $eax
     %0:gr64 = MOV64rm $noreg, 1, $noreg, 0, $fs :: (load (s64) from `ptr addrspace(257) null`, addrspace 257)
     %1:gr64 = ADD64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @x, $noreg, implicit-def dead $eflags :: (load (s64) from got)
     TEST64rr %1, %1, implicit-def $eflags
     %2:gr8 = SETCCr 4, implicit $eflags
-    %3:gr32 = MOVZX32rr8 killed %2
+    %3:gr32 = MOVZX32rr8 %2
     $eax = COPY %3
     RET 0, $eax
 

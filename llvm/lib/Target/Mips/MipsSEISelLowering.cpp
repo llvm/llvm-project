@@ -167,6 +167,16 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // RINT uses the current rounding mode and may raise inexact.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
+      if (!Subtarget.isSingleFloat()) {
+        setOperationAction(ISD::FRINT, MVT::f64, Legal);
+        setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+      }
+    }
+
     // When dealing with single precision only, use libcalls
     if (!Subtarget.isSingleFloat()) {
       if (Subtarget.isFP64bit())
@@ -1133,7 +1143,7 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   if ((Ty != MVT::v2i16) && (Ty != MVT::v4i8))
     return SDValue();
 
-  if (!isLegalDSPCondCode(Ty, cast<CondCodeSDNode>(N->getOperand(2))->get()))
+  if (!isLegalDSPCondCode(Ty, N->getOperandCondCode(2)))
     return SDValue();
 
   return DAG.getNode(MipsISD::SETCC_DSP, SDLoc(N), Ty, N->getOperand(0),

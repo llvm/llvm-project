@@ -2,41 +2,41 @@ add_llvm_component_group(AMDGPU)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPU.td)
 
-tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM AMDGPUGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM AMDGPUGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler
+llvm_tablegen(AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(AMDGPUGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(AMDGPUGenCallingConv.inc -gen-callingconv)
+llvm_tablegen(AMDGPUGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(AMDGPUGenDisassemblerTables.inc -gen-disassembler
               --specialize-decoders-per-bitwidth
               -ignore-non-decodable-operands
               -ignore-fully-defined-operands)
-tablegen(LLVM AMDGPUGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM AMDGPUGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM AMDGPUGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
-tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(AMDGPUGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(AMDGPUGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
+llvm_tablegen(AMDGPUGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(AMDGPUGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(AMDGPUGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(AMDGPUGenSearchableTables.inc -gen-searchable-tables)
+llvm_tablegen(AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUGISel.td)
-tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
-tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AMDGPUGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+llvm_tablegen(AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AMDGPUPreLegalizerCombiner" -gisel-extended-llt)
-tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AMDGPUPostLegalizerCombiner" -gisel-extended-llt)
-tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
               -combiners="AMDGPURegBankCombiner" -gisel-extended-llt)
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
-tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM R600GenCallingConv.inc -gen-callingconv)
-tablegen(LLVM R600GenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM R600GenDFAPacketizer.inc -gen-dfa-packetizer)
-tablegen(LLVM R600GenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM R600GenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM R600GenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM R600GenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(R600GenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(R600GenCallingConv.inc -gen-callingconv)
+llvm_tablegen(R600GenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(R600GenDFAPacketizer.inc -gen-dfa-packetizer)
+llvm_tablegen(R600GenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(R600GenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(R600GenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(R600GenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(AMDGPUCommonTableGen)
 

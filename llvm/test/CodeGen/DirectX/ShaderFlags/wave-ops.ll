@@ -70,6 +70,13 @@ entry:
   ret i32 %ret
 }
 
+define i32 @wave_multi_prefix_bit_and(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_bit_and : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.and.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu i686 -tune-cpu i686 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i686-linux-gnu -target-cpu i686 -tune-cpu i686 -emit-llvm %s -o - | FileCheck %s %}
 
 // CHECK: define {{.*}}@f_default({{.*}} [[f_default:#[0-9]+]]
 // CHECK: define {{.*}}@f_avx_sse4_2_ivybridge({{.*}} [[f_avx_sse4_2_ivybridge:#[0-9]+]]

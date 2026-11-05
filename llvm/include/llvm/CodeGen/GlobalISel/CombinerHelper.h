@@ -39,6 +39,7 @@ class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
 class GISelValueTracking;
+struct KnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
@@ -291,8 +292,10 @@ public:
   LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
                                           SmallVector<Register> &Ops) const;
 
-  /// Replace \p MI with a build_vector.
+  /// Replace shuffle \p MI with a build_vector.
   LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  /// Replace shuffle of build_vector with a build_vector.
+  LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
@@ -527,10 +530,12 @@ public:
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
-  /// absolute value is a power of 2).
-  LLVM_ABI bool
-  matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
-                                     bool OrNegative = false) const;
+  /// absolute value is a power of 2). When \p OrZero is true, also match
+  /// operands that may be zero (i.e. that are known to be either zero or a
+  /// power of two).
+  LLVM_ABI bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                                   bool OrNegative = false,
+                                                   bool OrZero = false) const;
 
   /// Erase \p MI
   LLVM_ABI void eraseInst(MachineInstr &MI) const;
@@ -770,6 +775,14 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   LLVM_ABI void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine unsigned division by a shifted power of two into a right shift.
+  LLVM_ABI bool matchUDivByShiftedPow2(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
+
+  /// Convert signed division or remainder of nonnegative operands to unsigned.
+  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI,
+                                            unsigned UnsignedOpcode) const;
 
   /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
   LLVM_ABI void applySimplifySRemByPow2(MachineInstr &MI) const;
@@ -1065,7 +1078,28 @@ public:
   LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
                                            unsigned ZeroPoisonOpc) const;
 
+  /// Simplify a register use under \p DemandedBits and compute \p Known in
+  /// the same walk. Partial-demand rewrites of shared values update only this
+  /// use.
+  LLVM_ABI bool simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
+                                     const APInt &DemandedBits,
+                                     KnownBits &Known,
+                                     unsigned Depth = 0) const;
+
+  /// Match demanded-bits simplification of a root's register use.
+  LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
 private:
+  Register simplifyMultipleUseDemandedBits(Register R,
+                                           const APInt &DemandedBits,
+                                           unsigned Depth) const;
+
+  /// Walk a use operand; \p DoRewrite false probes without changing MIR.
+  bool simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
+                                const APInt &DemandedBits, KnownBits &Known,
+                                unsigned Depth, bool DoRewrite) const;
+
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
 

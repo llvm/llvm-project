@@ -787,6 +787,10 @@ define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(<4 x i8> %in
 ; GFX7-LABEL: define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(
 ; GFX7-SAME: <4 x i8> [[INPTR0:%.*]], ptr addrspace(3) [[INPTR1:%.*]], ptr [[OUT:%.*]], ptr addrspace(3) [[OUT1:%.*]], i32 [[FLAG:%.*]]) {
 ; GFX7-NEXT:  [[ENTRY:.*]]:
+; GFX7-NEXT:    [[OTHERELE0:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 0
+; GFX7-NEXT:    [[OTHERELE1:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 1
+; GFX7-NEXT:    [[OTHERELE2:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 2
+; GFX7-NEXT:    [[OTHERELE3:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 3
 ; GFX7-NEXT:    br label %[[DO_BODY:.*]]
 ; GFX7:       [[DO_BODY]]:
 ; GFX7-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[INPTR0]], %[[ENTRY]] ], [ [[INPTR0]], %[[DO_BODY]] ]
@@ -796,12 +800,22 @@ define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(<4 x i8> %in
 ; GFX7-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DO_BODY]]
 ; GFX7:       [[EXIT]]:
 ; GFX7-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 0
-; GFX7-NEXT:    store <4 x i8> [[INPTR0]], ptr addrspace(3) [[GEP0]], align 1
+; GFX7-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 1
+; GFX7-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 2
+; GFX7-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 3
+; GFX7-NEXT:    store i8 [[OTHERELE0]], ptr addrspace(3) [[GEP0]], align 1
+; GFX7-NEXT:    store i8 [[OTHERELE1]], ptr addrspace(3) [[GEP1]], align 1
+; GFX7-NEXT:    store i8 [[OTHERELE2]], ptr addrspace(3) [[GEP2]], align 1
+; GFX7-NEXT:    store i8 [[OTHERELE3]], ptr addrspace(3) [[GEP3]], align 1
 ; GFX7-NEXT:    ret void
 ;
 ; GFX8-LABEL: define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(
 ; GFX8-SAME: <4 x i8> [[INPTR0:%.*]], ptr addrspace(3) [[INPTR1:%.*]], ptr [[OUT:%.*]], ptr addrspace(3) [[OUT1:%.*]], i32 [[FLAG:%.*]]) {
 ; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[OTHERELE0:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 0
+; GFX8-NEXT:    [[OTHERELE1:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 1
+; GFX8-NEXT:    [[OTHERELE2:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 2
+; GFX8-NEXT:    [[OTHERELE3:%.*]] = extractelement <4 x i8> [[INPTR0]], i32 3
 ; GFX8-NEXT:    br label %[[DO_BODY:.*]]
 ; GFX8:       [[DO_BODY]]:
 ; GFX8-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[INPTR0]], %[[ENTRY]] ], [ [[INPTR0]], %[[DO_BODY]] ]
@@ -811,7 +825,13 @@ define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(<4 x i8> %in
 ; GFX8-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DO_BODY]]
 ; GFX8:       [[EXIT]]:
 ; GFX8-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 0
-; GFX8-NEXT:    store <4 x i8> [[INPTR0]], ptr addrspace(3) [[GEP0]], align 1
+; GFX8-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 1
+; GFX8-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 2
+; GFX8-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(3) [[OUT1]], i32 3
+; GFX8-NEXT:    store i8 [[OTHERELE0]], ptr addrspace(3) [[GEP0]], align 1
+; GFX8-NEXT:    store i8 [[OTHERELE1]], ptr addrspace(3) [[GEP1]], align 1
+; GFX8-NEXT:    store i8 [[OTHERELE2]], ptr addrspace(3) [[GEP2]], align 1
+; GFX8-NEXT:    store i8 [[OTHERELE3]], ptr addrspace(3) [[GEP3]], align 1
 ; GFX8-NEXT:    ret void
 ;
 ; GFX9-LABEL: define protected amdgpu_kernel void @phi_4_with_stores_outside_loop(

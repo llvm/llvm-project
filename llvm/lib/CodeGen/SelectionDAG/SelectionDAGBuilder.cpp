@@ -85,6 +85,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -331,6 +332,19 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
   return Ctx.emitError(I, ErrMsg);
 }
 
+/// Emit a fatal error if the broken down registers don't match part type
+/// or count.
+static void ensureMatchedVecRegParts(unsigned NumRegs, unsigned NumParts,
+                                     MVT RegisterVT, MVT PartVT) {
+  if (NumRegs == NumParts && RegisterVT == PartVT)
+    return;
+
+  llvm::reportFatalInternalError(
+      Twine("Part count doesn't match vector breakdown! ") + Twine(NumRegs) +
+      " registers, " + Twine(NumParts) + " parts, " + RegisterVT.getString() +
+      " RegisterVT, " + PartVT.getString() + " PartVT");
+}
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
@@ -365,9 +379,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                      NumIntermediates, RegisterVT);
     }
 
-    assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-    NumParts = NumRegs; // Silence a compiler warning.
-    assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
+    ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
     assert(RegisterVT.getSizeInBits() ==
            Parts[0].getSimpleValueType().getSizeInBits() &&
            "Part type sizes don't match!");
@@ -770,10 +782,7 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                    NumIntermediates, RegisterVT);
   }
 
-  assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-  NumParts = NumRegs; // Silence a compiler warning.
-  assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
-
+  ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
@@ -1652,7 +1661,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
   auto *Poison = PoisonValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -2625,8 +2634,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   if (BPI != nullptr) {
     // See if we are either likely to get an early out or compute both lhs/rhs
     // of the condition.
-    BasicBlock *IfFalse = I.getSuccessor(0);
-    BasicBlock *IfTrue = I.getSuccessor(1);
+    BasicBlock *IfTrue = I.getSuccessor(0);
+    BasicBlock *IfFalse = I.getSuccessor(1);
+    if (ProfcheckDisableMetadataFixes)
+      std::swap(IfTrue, IfFalse);
 
     std::optional<bool> Likely;
     if (BPI->isEdgeHot(I.getParent(), IfTrue))
@@ -6799,7 +6810,6 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   SDValue Mask = getValue(I.getOperand(2));
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  DataLayout TargetDL = DAG.getDataLayout();
   EVT VT = Inc.getValueType();
   Align Alignment = DAG.getEVTAlign(VT);
 
@@ -7570,7 +7580,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::set_fpenv: {
-    const DataLayout DLayout = DAG.getDataLayout();
     SDValue Env = getValue(I.getArgOperand(0));
     EVT EnvVT = Env.getValueType();
     Align TempAlign = DAG.getEVTAlign(EnvVT);
@@ -8041,7 +8050,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
       Value *Arg = I.getArgOperand(0);
-      Args.emplace_back(Arg, getValue(Arg));
+      Args.emplace_back(Arg, getValue(Arg),
+                        LibInfo->getExtAttrForI8Param(/*Signed=*/false));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -9291,7 +9301,8 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Skip emitting EH_LABEL on targets whose exception tables don't reference
   // them (32-bit x86 SEH, Wasm).
-  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels(
+          FuncInfo.ExceptionModel)) {
     BeginLabel = nullptr;
     return Chain;
   }
@@ -10546,7 +10557,7 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     //
     // Due to current llvm inline asm architecture designed to not "recognize"
     // the asm code, there are quite troubles for us to treat mem addressing
-    // differently for same value/adress used in different instuctions.
+    // differently for same value/adress used in different instructions.
     // For example, in pic model, call a func may in plt way or direclty
     // pc-related, but lea/mov a function adress may use got.
     //
@@ -10783,7 +10794,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
 
         SDValue AsmOp = InOperandVal;
-        if (isFunction(InOperandVal)) {
+        if (TLI.supportsInlineAsmFuncOperands() && isFunction(InOperandVal)) {
           auto *GA = cast<GlobalAddressSDNode>(InOperandVal);
           ResOpType = InlineAsm::Flag(InlineAsm::Kind::Func, 1);
           AsmOp = DAG.getTargetGlobalAddress(GA->getGlobal(), DL,
@@ -12751,8 +12762,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -12793,16 +12804,22 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // JTH->FallthroughUnreachable which will use it to suppress the range
         // check.
         //
-        // However, don't do this if we're doing branch target enforcement,
-        // because a table branch _without_ a range check can be a tempting JOP
-        // gadget - out-of-bounds inputs that are impossible in correct
-        // execution become possible again if an attacker can influence the
-        // control flow. So if an attacker doesn't already have a BTI bypass
-        // available, we don't want them to be able to get one out of this
-        // table branch.
+        // However, don't do this if we're doing branch target enforcement
+        // (e.g. Arm BTI, or the cf-protection-branch module flag used by
+        // RISC-V Zicfilp and X86 IBT), because a table branch _without_ a
+        // range check can be a tempting JOP gadget - out-of-bounds inputs
+        // that are impossible in correct execution become possible again if
+        // an attacker can influence the control flow. So if an attacker
+        // doesn't already have a branch target enforcement bypass available,
+        // we don't want them to be able to get one out of this table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
+          bool HasCFBranch = false;
+          if (auto *CFBranch = mdconst::extract_or_null<ConstantInt>(
+                  CurFunc.getParent()->getModuleFlag("cf-protection-branch")))
+            HasCFBranch = !CFBranch->isZero();
+          if (!HasCFBranch &&
+              !CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 
