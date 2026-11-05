@@ -72,8 +72,14 @@ void RewriteMFMAFormStage::findReachingDefs(
 void RewriteMFMAFormStage::findReachingUses(
     const MachineInstr *DefMI, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
+  // A partial def reads the lanes it leaves alone, so it uses the value too.
+  // A later read of an untouched lane is not found, but the first partial def
+  // is, and it cannot be redirected, so the original register stays defined.
   for (MachineOperand &UseMO :
-       DAG.MRI.use_nodbg_operands(DefMI->getOperand(0).getReg())) {
+       DAG.MRI.reg_nodbg_operands(DefMI->getOperand(0).getReg())) {
+    if (!UseMO.readsReg())
+      continue;
+
     SmallVector<MachineInstr *, 8> ReachingDefs;
     findReachingDefs(UseMO, LIS, ReachingDefs);
 
@@ -280,17 +286,25 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
 
     // The reaching uses either read the AGPR form directly or get a bridge
     // copy, so they do not constrain the recolor.
-    Entry.DstRecolorSafe = !RedefRegs.contains(DstReg) &&
-                           MFMAToAGPR->canRecolorToAGPR(DstReg, DstUses);
+    // A partial def is not redirected, so it keeps constraining the recolor.
+    SmallVector<MachineOperand *, 8> RedirectableUses;
+    for (MachineOperand *MO : DstUses)
+      if (!MO->isDef())
+        RedirectableUses.push_back(MO);
+    Entry.DstRecolorSafe =
+        !RedefRegs.contains(DstReg) &&
+        MFMAToAGPR->canRecolorToAGPR(DstReg, RedirectableUses);
     const TargetRegisterClass *DstAGPRClass =
         SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(DstReg));
 
     // A tied use shares its register with the def it is tied to, so pointing it
     // at a bridge copy would rewrite one half of the tie and leave the other.
+    // A partial def reads and writes the same register in the same way.
     // A group-member MFMA reads the AGPR form directly and is never redirected,
     // so its tied src2 is not a problem.
     bool HasTiedUse = any_of(DstUses, [&](const MachineOperand *MO) {
-      return MO->isTied() && !Plan.MFMASet.contains(MO->getParent());
+      return (MO->isTied() || MO->isDef()) &&
+             !Plan.MFMASet.contains(MO->getParent());
     });
 
     // Nothing to redirect, or nothing we are allowed to redirect: copy the
@@ -305,7 +319,7 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
       continue;
     }
 
-    for (MachineOperand *RUOp : DstUses) {
+    for (MachineOperand *RUOp : RedirectableUses) {
       MachineInstr *UserMI = RUOp->getParent();
 
       // Decide whether this reaching use can read the dst's AGPR form directly
@@ -623,7 +637,7 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
     // The dst cannot be recolored and its uses cannot be redirected: create a
     // fresh reg to carry the AGPR-form value and record the mapping, leaving
     // the original dst reg in VGPR form.
-    if (Entry.DstNeedsRestore && !RedefMap.contains(DstReg)) {
+    if (Entry.DstNeedsRestore) {
       // The MFMA's def operand is redirected to the mapped reg (which is
       // reclassified to AGPR form), so the original dst reg loses its full-lane
       // def. Bridge the AGPR-form result back into the original VGPR reg right

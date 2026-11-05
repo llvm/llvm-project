@@ -113,6 +113,9 @@ private:
 
   /// Appends every instruction whose def of \p UseMO's register reaches
   /// \p UseMO to \p Defs, without duplicates.
+  ///
+  /// This is the last write on each path, not the producer of each lane. One
+  /// whole-register copy after it holds every lane.
   void findReachingDefs(const MachineOperand &UseMO, LiveIntervals *LIS,
                         SmallVectorImpl<MachineInstr *> &Defs);
 
