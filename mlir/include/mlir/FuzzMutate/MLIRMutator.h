@@ -24,7 +24,6 @@
 #include <vector>
 
 namespace mlir {
-
 class MLIRContext;
 
 /// Random source for mutation strategies. Starts minimal (a seeded RNG)
@@ -95,7 +94,6 @@ public:
 /// \return the module, or null on failure.
 OwningOpRef<ModuleOp> parseAndVerify(llvm::StringRef text,
                                      MLIRContext &context);
-
 } // namespace mlir
 
 #endif

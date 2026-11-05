@@ -29,8 +29,7 @@
 
 using namespace mlir;
 
-static std::optional<llvm::StringRef>
-getPipeline(llvm::StringRef slug) {
+static std::optional<llvm::StringRef> getPipeline(llvm::StringRef slug) {
   return llvm::StringSwitch<std::optional<llvm::StringRef>>(slug)
 #define MLIR_OPT_FUZZER_PIPELINE(slug, pipeline) .Case(slug, pipeline)
 #include "MlirOptFuzzerPipelines.def"
@@ -41,8 +40,7 @@ getPipeline(llvm::StringRef slug) {
 static constexpr llvm::StringRef kModuleAnchor = "builtin.module";
 
 static llvm::cl::opt<std::string> PipelineSlug(
-    "pipeline",
-    llvm::cl::desc("Pipeline slug from MlirOptFuzzerPipelines.def"),
+    "pipeline", llvm::cl::desc("Pipeline slug from MlirOptFuzzerPipelines.def"),
     llvm::cl::init(""));
 
 static std::unique_ptr<MLIRMutator> Mutator;
@@ -183,8 +181,8 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(uint8_t *Data,
   return out.size();
 }
 
-extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomCrossOver(const uint8_t *Data1, size_t Size1,
-                                                                const uint8_t *Data2, size_t Size2, uint8_t *Out,
-                                                                size_t MaxOutSize, unsigned Seed) {
+extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomCrossOver(
+    const uint8_t *Data1, size_t Size1, const uint8_t *Data2, size_t Size2,
+    uint8_t *Out, size_t MaxOutSize, unsigned Seed) {
   return 0;
 }
