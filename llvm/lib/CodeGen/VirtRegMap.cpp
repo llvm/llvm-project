@@ -656,6 +656,9 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDeads;
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
+  // Super-registers whose untouched bits are read by a partial redef and must
+  // therefore stay live: recorded as their own implicit-use operand.
+  SmallVector<Register, 8> SuperPreservedUses;
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
@@ -688,6 +691,28 @@ void VirtRegRewriter::rewrite() {
             if ((MO.readsReg() && (MO.isDef() || MO.isKill())) ||
                 (MO.isDef() && subRegLiveThrough(MI, PhysReg)))
               SuperKills.push_back(PhysReg);
+
+            // A partial def that preserves the bits it does not write also
+            // reads them.  When another operand of this instruction already
+            // carries that read, rewriting that operand (e.g. copy propagation
+            // forwarding a COPY source into it) can take the only thing keeping
+            // the value alive with it.  Give the read its own operand so it
+            // survives on its own.
+            if (MO.isDef() && MO.readsReg()) {
+              bool HasCarrier = false;
+              for (const MachineOperand &Op : MI.operands()) {
+                // Operands are rewritten in place, so a use may still name the
+                // virtual register at this point.
+                if (!Op.isReg() || !Op.isUse() || Op.isUndef() || Op.isDebug())
+                  continue;
+                if (Op.getReg() == PhysReg || Op.getReg() == VirtReg) {
+                  HasCarrier = true;
+                  break;
+                }
+              }
+              if (HasCarrier)
+                SuperPreservedUses.push_back(PhysReg);
+            }
 
             if (MO.isDef()) {
               // Also add implicit defs for the super-register.
@@ -764,6 +789,22 @@ void VirtRegRewriter::rewrite() {
 
       while (!SuperDefs.empty())
         MI.addRegisterDefined(SuperDefs.pop_back_val(), TRI);
+
+      while (!SuperPreservedUses.empty()) {
+        Register R = SuperPreservedUses.pop_back_val();
+        bool Already = false;
+        for (const MachineOperand &Op : MI.operands()) {
+          if (!Op.isReg() || !Op.isUse() || !Op.isImplicit())
+            continue;
+          if (Op.getReg() == R) {
+            Already = true;
+            break;
+          }
+        }
+        if (!Already)
+          MI.addOperand(MachineOperand::CreateReg(R, /*isDef=*/false,
+                                                  /*isImp=*/true));
+      }
 
       LLVM_DEBUG(dbgs() << "> " << MI);
 
