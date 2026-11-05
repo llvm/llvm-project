@@ -692,8 +692,8 @@ public:
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
   /// Returns true if the symbol table for this in-memory object file should
-  /// not be loaded from the index cache, even if caching of memory modules is
-  /// enabled.
+  /// not be loaded from the index cache or saved to the index cache, even
+  /// if caching of memory modules is enabled.
   bool GetDisableMemorySymtabCaching() const {
     return m_disable_memory_symtab_caching;
   }
