@@ -3,12 +3,13 @@
 // RUN: touch %t.dir/sub/file
 // RUN: ln -s %t.dir/sub/file %t.dir/link
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t %t.dir
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O0 %s -o %t
+// RUN: %run %t %t.dir
 // RUN: %clangxx_msan -O0 -D_FILE_OFFSET_BITS=64 %s -o %t && %run %t %t.dir
 // RUN: %clangxx_msan -O3 %s -o %t && %run %t %t.dir
 
 #include <assert.h>
 #include <ftw.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -42,8 +43,6 @@ static int nftw_cb(const char *fpath, const struct stat *sb, int typeflag,
   __msan_check_mem_is_initialized(fpath, strlen(fpath) + 1);
   __msan_check_mem_is_initialized(sb, sizeof(*sb));
   __msan_check_mem_is_initialized(ftwbuf, sizeof(*ftwbuf));
-  fputs(fpath, stderr);
-  fputc('\n', stderr);
   struct stat st = *sb;
   if (S_ISDIR(st.st_mode))
     assert(typeflag == FTW_D || typeflag == FTW_DP || typeflag == FTW_DNR);
