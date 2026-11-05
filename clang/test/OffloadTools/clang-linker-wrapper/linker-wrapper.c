@@ -109,6 +109,10 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --emit-fatbin-only --linker-path=/usr/bin/ld %t.sycl-30r.o %t.sycl-40r.o \
 // RUN:   -o %t.sycl.fatbin
 // RUN: llvm-objdump --offloading %t.sycl.fatbin | FileCheck %s --check-prefix=SYCL-MERGED
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --wrapper-verbose --save-temps --linker-path=/usr/bin/ld \
+// RUN:   %t.sycl-30r.o %t.sycl-40r.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-MERGED-VERBOSE
 
 // SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
@@ -134,6 +138,9 @@ __attribute__((visibility("protected"), used)) int x;
 // single offload binary.
 // SYCL-MERGED-DAG: arch            igca_30r
 // SYCL-MERGED-DAG: arch            igca_40r
+
+// With --wrapper-verbose --save-temps, the merged offload binary is wrapped.
+// SYCL-MERGED-VERBOSE: llvm-offload-wrapper{{.*}} --kind=sycl {{.*}} a.out.sycl.merged.out{{$}}
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \

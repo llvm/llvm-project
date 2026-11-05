@@ -967,8 +967,20 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
   SmallString<0> Data;
   if (!Merged.empty())
     Data = OffloadBinary::write(Merged);
-  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(
-      Data, Images.front().Image->getBufferIdentifier()));
+
+  // Write the merged offload binary to its own file, which is what
+  // --wrapper-verbose --save-temps passes to llvm-offload-wrapper.
+  auto FileOrErr = createOutputFile(ExecutableName + ".sycl.merged", "out");
+  if (!FileOrErr)
+    return FileOrErr.takeError();
+  if (!DryRun) {
+    int FD = -1;
+    if (std::error_code EC = sys::fs::openFileForWrite(*FileOrErr, FD))
+      return errorCodeToError(EC);
+    llvm::raw_fd_ostream OS(FD, true);
+    OS << Data;
+  }
+  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(Data, *FileOrErr));
   return std::move(Buffers);
 }
 
@@ -1235,6 +1247,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
       TheImage.StringData["arch"] =
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
+      if (LinkerArgs.hasArg(OPT_device_EQ))
+        TheImage.StringData["code"] = Args.MakeArgString(
+            llvm::join(LinkerArgs.getAllArgValues(OPT_device_EQ), ","));
       TheImage.Image = std::move(*FileOrErr);
 
       Images[Kind].emplace_back(std::move(TheImage));
@@ -1261,6 +1276,11 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return TripleA > TripleB;
       if (ArchA != ArchB)
         return ArchA > ArchB;
+      // SYCL images with the same architecture differ in "code".
+      StringRef CodeA = A.StringData.lookup("code");
+      StringRef CodeB = B.StringData.lookup("code");
+      if (CodeA != CodeB)
+        return CodeA > CodeB;
       return A.TheOffloadKind < B.TheOffloadKind;
     });
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, WrapperKind);
