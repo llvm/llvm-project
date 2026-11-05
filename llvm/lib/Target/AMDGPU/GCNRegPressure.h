@@ -335,7 +335,7 @@ public:
 
 protected:
   LiveIntervals &LIS;
-  LiveRegSet LiveRegs;
+  LiveRegSet VirtLiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   MachineBasicBlock::const_iterator LastTrackedMI;
   mutable const MachineRegisterInfo *MRI = nullptr;
@@ -364,11 +364,11 @@ protected:
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
-  /// Resets tracker with the provided \p LiveRegs.
-  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &LiveRegs);
+  /// Resets tracker with the provided \p VirtLiveRegs.
+  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &VirtLiveRegs);
 
   // live regs for the current state
-  const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
+  const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const {
     return LastTrackedMI.isValid() ? &*LastTrackedMI : nullptr;
   }
@@ -388,15 +388,13 @@ public:
 
   GCNRegPressure getPressure() const { return CurPressure; }
 
-  decltype(LiveRegs) moveLiveRegs() {
-    return std::move(LiveRegs);
-  }
+  decltype(VirtLiveRegs) moveVirtLiveRegs() { return std::move(VirtLiveRegs); }
 };
 
 GCNRPTracker::LiveRegSet
-getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-            const MachineRegisterInfo &MRI,
-            GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
+getVirtLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
+                const MachineRegisterInfo &MRI,
+                GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
@@ -487,13 +485,13 @@ public:
     return Res;
   }
 
-  /// Reset tracker to the point before the \p MI (filling \ref LiveRegs upon
-  /// this point using \p LiveRegsCopy if provided or LIS otherwise) point using
-  /// LIS. \p End must be between the MI and the end of its parent block
-  /// (inclusive). \p returns false if the range [MI, End) is empty except debug
-  /// values.
+  /// Reset tracker to the point before the \p MI (filling \ref VirtLiveRegs
+  /// upon this point using \p VirtLiveRegsCopy if provided or LIS otherwise)
+  /// point using LIS. \p End must be between the MI and the end of its parent
+  /// block (inclusive). \p returns false if the range [MI, End) is empty except
+  /// debug values.
   bool reset(const MachineInstr &MI, MachineBasicBlock::const_iterator End,
-             const LiveRegSet *LiveRegsCopy = nullptr);
+             const LiveRegSet *VirtLiveRegsCopy = nullptr);
 
   /// Move to the state right before \ref NextMI or the end of the MBB. This
   /// retires defs of \ref LastTrackedMI that are dead after the instruction.
@@ -514,13 +512,14 @@ public:
   /// had to advance to reach \p End.
   bool advance(MachineBasicBlock::const_iterator End);
 
-  /// Reset tracker to \p Begin (filling \ref LiveRegs upon this point using \p
-  /// LiveRegsCopy if provided or LIS otherwise) and advance to \p End, which
-  /// must be between \p Begin and the end of its parent block (inclusive). \p
-  /// returns false if the range [Begin, End) is empty except debug values.
+  /// Reset tracker to \p Begin (filling \ref VirtLiveRegs upon this point using
+  /// \p VirtLiveRegsCopy if provided or LIS otherwise) and advance to \p End,
+  /// which must be between \p Begin and the end of its parent block
+  /// (inclusive). \p returns false if the range [Begin, End) is empty except
+  /// debug values.
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
-               const LiveRegSet *LiveRegsCopy = nullptr);
+               const LiveRegSet *VirtLiveRegsCopy = nullptr);
 };
 
 /// Downward RP tracker that relies on the user to provide the next instruction
@@ -555,8 +554,8 @@ LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
 /// Note: there is no entry in the map for instructions with empty live reg set
 /// Complexity = O(NumVirtRegs * averageLiveRangeSegmentsPerReg * lg(R))
 template <typename Range>
-DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
-getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
+DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
+getVirtLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
   Indexes.reserve(llvm::size(R));
   auto &SII = *LIS.getSlotIndexes();
@@ -593,21 +592,21 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   return LiveRegMap;
 }
 
-inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
-                                                 const LiveIntervals &LIS) {
-  return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getMF()->getRegInfo());
+inline GCNRPTracker::LiveRegSet getVirtLiveRegsAfter(const MachineInstr &MI,
+                                                     const LiveIntervals &LIS) {
+  return getVirtLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
+                         MI.getMF()->getRegInfo());
 }
 
-inline GCNRPTracker::LiveRegSet getLiveRegsBefore(const MachineInstr &MI,
-                                                  const LiveIntervals &LIS) {
-  return getLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getMF()->getRegInfo());
+inline GCNRPTracker::LiveRegSet
+getVirtLiveRegsBefore(const MachineInstr &MI, const LiveIntervals &LIS) {
+  return getVirtLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
+                         MI.getMF()->getRegInfo());
 }
 
 template <typename Range>
-GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
-                              Range &&LiveRegs) {
+GCNRegPressure getVirtRegPressure(const MachineRegisterInfo &MRI,
+                                  Range &&LiveRegs) {
   GCNRegPressure Res;
   for (const auto &RM : LiveRegs)
     Res.inc(RM.first, LaneBitmask::getNone(), RM.second, MRI);
@@ -620,7 +619,7 @@ bool isEqual(const GCNRPTracker::LiveRegSet &S1,
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
                 unsigned DynamicVGPRBlockSize = 0);
 
-Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
+Printable print(const GCNRPTracker::LiveRegSet &VirtLiveRegs,
                 const MachineRegisterInfo &MRI);
 
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,

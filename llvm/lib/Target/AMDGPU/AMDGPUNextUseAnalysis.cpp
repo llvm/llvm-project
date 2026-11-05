@@ -2401,7 +2401,7 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
 
       // Report distance for every register live at MI including the ones
       // that the tracker retired. Add their live-in lanes back.
-      GCNRPTracker::LiveRegSet LiveAtMI = RPTracker.getLiveRegs();
+      GCNRPTracker::LiveRegSet LiveAtMI = RPTracker.getVirtLiveRegs();
       if (!MI.isDebugInstr() && !MI.isPHI()) {
         SlotIndex BaseIdx = LIS.getInstructionIndex(MI).getBaseIndex();
         for (const MachineOperand &MO : MI.all_uses()) {
