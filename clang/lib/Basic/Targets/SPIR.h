@@ -333,6 +333,16 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+
+protected:
+  bool isSupportedOffloadArch(OffloadArch Arch) const override {
+    // Chipstar, vulkan, and amdhsa triples shouldn't accept a -target-cpu.
+    if (getTriple().getOS() != llvm::Triple::UnknownOS)
+      return false;
+
+    // Valid offload archs for SPIRV:
+    return Arch.isGeneric() || Arch.isIntel();
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRVTargetInfo {
@@ -440,22 +450,6 @@ public:
     return ConstantAS;
   }
 
-protected:
-  bool isSupportedOffloadArch(OffloadArch Arch) const override {
-    // Generic OffloadArch is used for SYCL JIT and should be accepted.
-    if (Arch.isGeneric())
-      // spirv64-*-chipstar or spirv64-*-vulkan triples shouldn't support
-      // offload arch.
-      return getTriple().getOS() == llvm::Triple::UnknownOS;
-
-    // Intel OffloadArch will be supported for SYCL and should be accepted.
-    if (Arch.isIntel())
-      return getTriple().getOS() == llvm::Triple::UnknownOS;
-
-    return false;
-  }
-
-public:
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);

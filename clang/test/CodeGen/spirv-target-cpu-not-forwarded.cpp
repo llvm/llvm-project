@@ -9,6 +9,12 @@
 // RUN:   | FileCheck %s --check-prefix=XE
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -emit-llvm -o - %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -target-cpu igca_20ca -emit-llvm -o - %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=IGCA
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -target-cpu xe-pvc -emit-llvm -o - %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=XE
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -emit-llvm -o - %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
 
 int f(int x) { return x + 1; }
 
