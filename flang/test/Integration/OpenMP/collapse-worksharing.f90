@@ -79,6 +79,38 @@ subroutine static_worksharing(a) bind(c)
   !$omp end do
 end subroutine
 
+! VIRTUAL-LABEL: define{{.*}} @runtime_static(
+! VIRTUAL: [[RAW_OUTER:%omp_loop.tripcount]] = select i1
+! VIRTUAL: [[RAW_INNER:%omp_loop.tripcount[0-9]+]] = select i1
+! VIRTUAL: [[OUTER_COUNT:%[^ ,]+]] = freeze i32 [[RAW_OUTER]]{{(,|$)}}
+! VIRTUAL-NEXT: [[INNER_COUNT:%[^ ,]+]] = freeze i32 [[RAW_INNER]]{{(,|$)}}
+! VIRTUAL-NEXT: mul nuw i32 [[OUTER_COUNT]], [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: call void @__kmpc_for_static_init_4u
+! VIRTUAL: omp_collapsed.init:
+! VIRTUAL: omp_collapsed.decode:
+! VIRTUAL-NEXT: {{.*}} = urem i32 %omp_collapsed.range.begin, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL-NEXT: {{.*}} = udiv i32 %omp_collapsed.range.begin, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: icmp ult i32 {{.*}}, [[OUTER_COUNT]]{{(,|$)}}
+! VIRTUAL: icmp ule i32 %omp_collapsed.row.remaining.0, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: call void @__kmpc_for_static_fini
+! VIRTUAL: ret void
+! OFF-LABEL: define{{.*}} @runtime_static(
+! OFF: omp_collapsed.body:
+! OFF-NEXT: [[FLAT:%[^ ,]+]] = add nsw i32 %omp_collapsed.iv, %{{[^ ,]+}}{{$}}
+! OFF-NEXT: {{.*}} = urem i32 [[FLAT]], [[RADIX:%[^ ,]+]]{{$}}
+! OFF-NEXT: {{.*}} = udiv i32 [[FLAT]], [[RADIX]]{{$}}
+! OFF: ret void
+subroutine runtime_static(a, n, m) bind(c)
+  integer :: n, m, a(m,n), i, j
+  !$omp do collapse(2) schedule(static)
+  do j = 1, n
+    do i = 1, m
+      a(i,j) = i + j
+    end do
+  end do
+  !$omp end do
+end subroutine
+
 ! VIRTUAL-LABEL: define{{.*}} @parallel_static(
 ! VIRTUAL: call void {{.*}}@__kmpc_fork_call
 ! VIRTUAL: ret void
