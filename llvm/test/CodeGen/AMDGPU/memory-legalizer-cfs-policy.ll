@@ -659,7 +659,6 @@ define float @buffer_atomicrmw_cfs_128B(ptr addrspace(7) inreg %ptr, float %val)
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_add_co_i32 s4, s16, 0x400
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -699,7 +698,6 @@ define float @buffer_atomicrmw_cfs_64B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_add_co_i32 s4, s16, 0x400
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -739,7 +737,6 @@ define float @buffer_atomicrmw_cfs_32B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_add_co_i32 s4, s16, 0x400
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
