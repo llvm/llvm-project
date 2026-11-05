@@ -655,12 +655,18 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
   default:
     if (auto *ED = dyn_cast<OMPExecutableDirective>(S)) {
       if (!ED->isStandaloneDirective()) {
+        // Sometimes, the transformed structured block may not be available
+        // when transformation is deferred (e.g., when using `omp interchange`).
+        // In such cases, use the existing source statement
+        Stmt *Block = ED->getStructuredBlock();
+        if (!Block)
+          Block = ED->getRawStmt();
+
         unsigned NewParentScope = Scopes.size();
-        Scopes.emplace_back(ParentScope,
-                            diag::note_omp_protected_structured_block,
-                            diag::note_omp_exits_structured_block,
-                            ED->getStructuredBlock()->getBeginLoc());
-        BuildScopeInformation(ED->getStructuredBlock(), NewParentScope);
+        Scopes.emplace_back(
+            ParentScope, diag::note_omp_protected_structured_block,
+            diag::note_omp_exits_structured_block, Block->getBeginLoc());
+        BuildScopeInformation(Block, NewParentScope);
         return;
       }
     }
