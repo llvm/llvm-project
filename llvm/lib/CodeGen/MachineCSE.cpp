@@ -123,6 +123,7 @@ private:
   bool PerformCSE(MachineDomTreeNode *Node);
 
   bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
+  bool eliminatePRECandidate(MachineInstr &MI, MachineInstr &CSMI);
   bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
   bool PerformSimplePRE(MachineDominatorTree *DT);
   /// Heuristics to see if it's profitable to move common computations of MBB
@@ -818,6 +819,45 @@ bool MachineCSEImpl::isPRECandidate(MachineInstr *MI,
   return true;
 }
 
+// Eliminate a PRE candidate with no physical register operands using an earlier
+// dominating representative. Propagating its result now exposes dependent
+// expressions during the same PRE traversal.
+bool MachineCSEImpl::eliminatePRECandidate(MachineInstr &MI,
+                                           MachineInstr &CSMI) {
+  assert(&MI != &CSMI && DT->dominates(&CSMI, &MI));
+  if (MI.isConvergent() && MI.getParent() != CSMI.getParent())
+    return false;
+
+  Register OldReg = MI.getOperand(0).getReg();
+  Register NewReg = CSMI.getOperand(0).getReg();
+  assert(OldReg.isVirtual() && NewReg.isVirtual());
+  if (!isProfitableToCSE(NewReg, OldReg, CSMI.getParent(), &MI) ||
+      !MRI->constrainRegAttrs(NewReg, OldReg))
+    return false;
+
+  // PREMap hashes instruction contents. Remove stored users before changing
+  // their operands. A matching entry may represent a different instruction, so
+  // check pointer identity as well as expression equality.
+  SmallVector<MachineInstr *, 16> ChangedKeys;
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(OldReg)) {
+    auto It = PREMap.find(&UseMI);
+    if (It != PREMap.end() && It->first == &UseMI) {
+      ChangedKeys.push_back(&UseMI);
+      PREMap.erase(It);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "PRE CSE: " << MI << "*** to: " << CSMI);
+  MRI->replaceRegWith(OldReg, NewReg);
+  MI.eraseFromParent();
+  CSMI.clearRegisterDeads(NewReg);
+  MRI->clearKillFlags(NewReg);
+  for (MachineInstr *Key : ChangedKeys)
+    PREMap.try_emplace(Key, Key->getParent());
+  ++NumCSEs;
+  return true;
+}
+
 bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
                                      MachineBasicBlock *MBB) {
   bool Changed = false;
@@ -835,6 +875,11 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
         !DT->properlyDominates(MBB, MBB1) &&
         "MBB cannot properly dominate MBB1 while DFS through dominators tree!");
     auto CMBB = DT->findNearestCommonDominator(MBB, MBB1);
+    if (CMBB == MBB1) {
+      if (PhysRefs.empty())
+        Changed |= eliminatePRECandidate(MI, *It->first);
+      continue;
+    }
     if (!CMBB->isLegalToHoistInto())
       continue;
 
@@ -884,7 +929,17 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
 
         NewMI.getOperand(0).setReg(NewReg);
 
-        PREMap[&MI] = CMBB;
+        // The clone's uses are not at the original kill points.
+        NewMI.clearKillInfo();
+
+        // Store the actual representative before deleting either occurrence.
+        MachineInstr *PrevMI = It->first;
+        PREMap.erase(It);
+        PREMap.try_emplace(&NewMI, CMBB);
+        if (PhysRefs.empty()) {
+          eliminatePRECandidate(*PrevMI, NewMI);
+          eliminatePRECandidate(MI, NewMI);
+        }
         ++NumPREs;
         Changed = true;
       }
@@ -893,11 +948,11 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
   return Changed;
 }
 
-// This simple PRE (partial redundancy elimination) pass doesn't actually
-// eliminate partial redundancy but transforms it to full redundancy,
-// anticipating that the next CSE step will eliminate this created redundancy.
-// If CSE doesn't eliminate this, than created instruction will remain dead
-// and eliminated later by Remove Dead Machine Instructions pass.
+// Transform partial redundancy into full redundancy by hoisting expressions to
+// a common dominator. For candidates without physical register operands, also
+// eliminate redundant occurrences now to expose dependent expressions. The
+// following CSE traversal handles the remaining redundancies. If a hoisted
+// instruction remains unused, dead machine instruction elimination removes it.
 bool MachineCSEImpl::PerformSimplePRE(MachineDominatorTree *DT) {
   SmallVector<MachineDomTreeNode *, 32> BBs;
 
