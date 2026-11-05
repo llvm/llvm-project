@@ -13,10 +13,29 @@
 #ifndef MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 #define MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 
+#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
 class RewriterBase;
+
+/// Identifies discardable attributes that describe a loop independently of its
+/// structured or control-flow representation. Lowerings might preserve these
+/// attributes on a replacement loop, or on the branch forming its backedge.
+///
+/// Query the dialect of the attribute value.
+/// Dialects without this interface will not opt in to any loop-attribute 
+/// propagation.
+class LoopAnnotationDialectInterface
+: public DialectInterface::Base<LoopAnnotationDialectInterface> {
+  public:
+  explicit LoopAnnotationDialectInterface(Dialect *dialect) : Base(dialect) {}
+
+  /// Whether to preserve this attribute when replacing a loop by an equivalent
+  /// loop or its backedge. This does not authorize copying it to every loop
+  /// produced by a transformation (for e.g. all loops in a serialized loop nest).
+  virtual bool shouldPropagateLoopAttribute(NamedAttribute attr) const = 0;
+};
 
 /// A function that returns the additional yielded values during
 /// `replaceWithAdditionalYields`. `newBbArgs` are the newly added region
@@ -92,5 +111,7 @@ struct JamBlockGatherer {
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::LoopAnnotationDialectInterface)
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_

@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/APFloat.h"
@@ -4706,7 +4707,20 @@ Speculation::Speculatability SRemOp::getSpeculatability() {
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMLoopAnnotationInterface : LoopAnnotationDialectInterface {
+  using LoopAnnotationDialectInterface::LoopAnnotationDialectInterface;
+
+  bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, when lowering a structured loop.
+    return &attr.getValue().getDialect() == getDialect();
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
+  addInterfaces<LLVMLoopAnnotationInterface>();
   registerAttributes();
 
   // clang-format off
