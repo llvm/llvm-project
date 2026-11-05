@@ -4241,12 +4241,9 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   // any overhead.
   SmallVector<Type *> Tys;
   SmallPtrSet<Value *, 4> SeenOps;
-  for (const Use &U :
-       make_filter_range(Ops, [&](Value *V) { return needsExtract(V, VF); })) {
-    if (!SeenOps.insert(U).second)
-      continue;
-    Tys.push_back(maybeVectorizeType(U->getType(), VF));
-  }
+  for (Value *Op : Ops)
+    if (needsExtract(Op, VF) && SeenOps.insert(Op).second)
+      Tys.push_back(maybeVectorizeType(Op->getType(), VF));
 
   TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
                                            ? TTI::VectorInstrContext::Store
