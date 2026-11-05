@@ -16141,18 +16141,14 @@ define <8 x half> @fadd_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
+; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 %rq<2>;
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
 ; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
+; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b128 %rq1, [%rd1];
+; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, %rq1;
 ; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
 ; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
@@ -16581,18 +16577,14 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
+; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 %rq<2>;
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fsub_acq_rel_v8f16_global_cta_param_1];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v8f16_global_cta_param_0];
 ; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
+; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b128 %rq1, [%rd1];
+; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, %rq1;
 ; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
 ; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
