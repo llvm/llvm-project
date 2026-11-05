@@ -1,0 +1,148 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --types --type-extras %t.pdb | FileCheck --check-prefix=YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --tpi-stream %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=PDB2YAML %s
+
+# YAML2PDB:        0x1000 | LF_UNION2 [size = 36, hash = 0x211D0] `AUnion`
+# YAML2PDB-NEXT:            unique name: `.?ATAUnion@@`
+# YAML2PDB-NEXT:            field list: <no type>
+# YAML2PDB-NEXT:            options: forward ref (-> 0x1003) | has unique name, sizeof 0
+# YAML2PDB-NEXT:   0x1001 | LF_CLASS2 [size = 44, hash = 0x252B1] `AClass`
+# YAML2PDB-NEXT:            unique name: `.?AVAClass@@`
+# YAML2PDB-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+# YAML2PDB-NEXT:            options: forward ref (-> 0x1004) | has unique name, sizeof 0
+# YAML2PDB-NEXT:   0x1002 | LF_STRUCTURE2 [size = 48, hash = 0x301BC] `AStruct`
+# YAML2PDB-NEXT:            unique name: `.?AUAStruct@@`
+# YAML2PDB-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+# YAML2PDB-NEXT:            options: forward ref (-> 0x1005) | has unique name, sizeof 0
+# YAML2PDB-NEXT:   0x1003 | LF_UNION2 [size = 36, hash = 0x399E2] `AUnion`
+# YAML2PDB-NEXT:            unique name: `.?ATAUnion@@`
+# YAML2PDB-NEXT:            field list: 0x1008
+# YAML2PDB-NEXT:            options: has unique name | sealed, sizeof 8
+# YAML2PDB-NEXT:   0x1004 | LF_CLASS2 [size = 44, hash = 0x952C] `AClass`
+# YAML2PDB-NEXT:            unique name: `.?AVAClass@@`
+# YAML2PDB-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100A
+# YAML2PDB-NEXT:            options: has unique name, sizeof 8
+# YAML2PDB-NEXT:   0x1005 | LF_STRUCTURE2 [size = 48, hash = 0x2293A] `AStruct`
+# YAML2PDB-NEXT:            unique name: `.?AUAStruct@@`
+# YAML2PDB-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100D
+# YAML2PDB-NEXT:            options: has unique name, sizeof 8
+
+# PDB2YAML:       Records:
+# PDB2YAML-NEXT:     - Kind:            LF_UNION2
+# PDB2YAML-NEXT:       Union:
+# PDB2YAML-NEXT:         MemberCount:     0
+# PDB2YAML-NEXT:         Options:         [ None, ForwardReference, HasUniqueName ]
+# PDB2YAML-NEXT:         FieldList:       0
+# PDB2YAML-NEXT:         Name:            AUnion
+# PDB2YAML-NEXT:         UniqueName:      '.?ATAUnion@@'
+# PDB2YAML-NEXT:         Size:            0
+# PDB2YAML-NEXT:     - Kind:            LF_CLASS2
+# PDB2YAML-NEXT:       Class:
+# PDB2YAML-NEXT:         MemberCount:     0
+# PDB2YAML-NEXT:         Options:         [ None, ForwardReference, HasUniqueName ]
+# PDB2YAML-NEXT:         FieldList:       0
+# PDB2YAML-NEXT:         Name:            AClass
+# PDB2YAML-NEXT:         UniqueName:      '.?AVAClass@@'
+# PDB2YAML-NEXT:         DerivationList:  0
+# PDB2YAML-NEXT:         VTableShape:     0
+# PDB2YAML-NEXT:         Size:            0
+# PDB2YAML-NEXT:     - Kind:            LF_STRUCTURE2
+# PDB2YAML-NEXT:       Class:
+# PDB2YAML-NEXT:         MemberCount:     0
+# PDB2YAML-NEXT:         Options:         [ None, ForwardReference, HasUniqueName ]
+# PDB2YAML-NEXT:         FieldList:       0
+# PDB2YAML-NEXT:         Name:            AStruct
+# PDB2YAML-NEXT:         UniqueName:      '.?AUAStruct@@'
+# PDB2YAML-NEXT:         DerivationList:  0
+# PDB2YAML-NEXT:         VTableShape:     0
+# PDB2YAML-NEXT:         Size:            0
+# PDB2YAML-NEXT:     - Kind:            LF_UNION2
+# PDB2YAML-NEXT:       Union:
+# PDB2YAML-NEXT:         MemberCount:     4
+# PDB2YAML-NEXT:         Options:         [ None, HasUniqueName, Sealed ]
+# PDB2YAML-NEXT:         FieldList:       4104
+# PDB2YAML-NEXT:         Name:            AUnion
+# PDB2YAML-NEXT:         UniqueName:      '.?ATAUnion@@'
+# PDB2YAML-NEXT:         Size:            8
+# PDB2YAML-NEXT:     - Kind:            LF_CLASS2
+# PDB2YAML-NEXT:       Class:
+# PDB2YAML-NEXT:         MemberCount:     1
+# PDB2YAML-NEXT:         Options:         [ None, HasUniqueName ]
+# PDB2YAML-NEXT:         FieldList:       4106
+# PDB2YAML-NEXT:         Name:            AClass
+# PDB2YAML-NEXT:         UniqueName:      '.?AVAClass@@'
+# PDB2YAML-NEXT:         DerivationList:  0
+# PDB2YAML-NEXT:         VTableShape:     0
+# PDB2YAML-NEXT:         Size:            8
+# PDB2YAML-NEXT:     - Kind:            LF_STRUCTURE2
+# PDB2YAML-NEXT:       Class:
+# PDB2YAML-NEXT:         MemberCount:     1
+# PDB2YAML-NEXT:         Options:         [ None, HasUniqueName ]
+# PDB2YAML-NEXT:         FieldList:       4109
+# PDB2YAML-NEXT:         Name:            AStruct
+# PDB2YAML-NEXT:         UniqueName:      '.?AUAStruct@@'
+# PDB2YAML-NEXT:         DerivationList:  0
+# PDB2YAML-NEXT:         VTableShape:     0
+# PDB2YAML-NEXT:         Size:            8
+
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_UNION2
+      Union:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            AUnion
+        UniqueName:      '.?ATAUnion@@'
+        Size:            0
+    - Kind:            LF_CLASS2
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            AClass
+        UniqueName:      '.?AVAClass@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_STRUCTURE2
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            AStruct
+        UniqueName:      '.?AUAStruct@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_UNION2
+      Union:
+        MemberCount:     4
+        Options:         [ None, HasUniqueName, Sealed ]
+        FieldList:       4104
+        Name:            AUnion
+        UniqueName:      '.?ATAUnion@@'
+        Size:            8
+    - Kind:            LF_CLASS2
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4106
+        Name:            AClass
+        UniqueName:      '.?AVAClass@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+    - Kind:            LF_STRUCTURE2
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4109
+        Name:            AStruct
+        UniqueName:      '.?AUAStruct@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8

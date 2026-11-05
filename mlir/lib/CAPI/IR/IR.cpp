@@ -728,6 +728,14 @@ MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
   return wrap(unwrap(op)->getParentOp());
 }
 
+bool mlirOperationIsAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isAncestor(unwrap(b));
+}
+
+bool mlirOperationIsProperAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isProperAncestor(unwrap(b));
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -907,7 +915,10 @@ MlirLogicalResult mlirOperationWriteBytecodeWithConfig(
   return wrap(writeBytecodeToFile(unwrap(op), stream, *unwrap(config)));
 }
 
-void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
+void mlirOperationDump(MlirOperation op) {
+  unwrap(op)->print(llvm::errs(), OpPrintingFlags().useLocalScope());
+  llvm::errs() << "\n";
+}
 
 bool mlirOperationVerify(MlirOperation op) {
   return succeeded(verify(unwrap(op)));
@@ -1211,7 +1222,10 @@ void mlirValueSetType(MlirValue value, MlirType type) {
   unwrap(value).setType(unwrap(type));
 }
 
-void mlirValueDump(MlirValue value) { unwrap(value).dump(); }
+void mlirValueDump(MlirValue value) {
+  unwrap(value).print(llvm::errs(), OpPrintingFlags().useLocalScope());
+  llvm::errs() << "\n";
+}
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
@@ -1332,7 +1346,10 @@ void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
   unwrap(type).print(stream);
 }
 
-void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
+void mlirTypeDump(MlirType type) {
+  unwrap(type).print(llvm::errs());
+  llvm::errs() << "\n";
+}
 
 //===----------------------------------------------------------------------===//
 // Attribute API.
@@ -1371,7 +1388,10 @@ void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
   unwrap(attr).print(stream);
 }
 
-void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
+void mlirAttributeDump(MlirAttribute attr) {
+  unwrap(attr).print(llvm::errs());
+  llvm::errs() << "\n";
+}
 
 MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
                                          MlirAttribute attr) {

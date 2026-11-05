@@ -397,25 +397,6 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX1100-NEXT:    s_mov_b32 s32, 0
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
-; GFX1010-NEXT    s_add_u32 s12, s12, s17
-; GFX1010-NEXT    s_mov_b32 s33, 0
-; GFX1010-NEXT    s_mov_b32 s32, 0
-; GFX1010-NEXT    s_addc_u32 s13, s13, 0
-; GFX1010-NEXT    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
-; GFX1010-NEXT    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
-; GFX1010-NEXT    v_lshlrev_b32_e32 v2, 20, v2
-; GFX1010-NEXT    v_lshlrev_b32_e32 v1, 10, v1
-; GFX1010-NEXT    s_add_u32 s0, s0, s17
-; GFX1010-NEXT    s_addc_u32 s1, s1, 0
-; GFX1010-NEXT    s_mov_b32 s12, s14
-; GFX1010-NEXT    s_mov_b32 s13, s15
-; GFX1010-NEXT    v_or3_b32 v31, v0, v1, v2
-; GFX1010-NEXT    s_mov_b32 s14, s16
-; GFX1010-NEXT    s_getpc_b64 s[18:19]
-; GFX1010-NEXT    s_add_u32 s18, s18, ex@rel32@lo+4
-; GFX1010-NEXT    s_addc_u32 s19, s19, ex@rel32@hi+12
-; GFX1010-NEXT    s_swappc_b64 s[30:31], s[18:19]
-; GFX1010-NEXT    s_endpgm
 entry:
   tail call void @ex() #2
   ret void

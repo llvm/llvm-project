@@ -18,7 +18,9 @@
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
+#include <cstddef>
 #include <optional>
 
 namespace {
@@ -475,6 +477,13 @@ public:
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
 
+  /// Print a comma separated range of operation operands out of line to avoid
+  /// instantiating the range iteration in every generated operation printer.
+  void printOperands(OperandRange operands);
+
+  /// Print the types of a comma separated range of operation operands.
+  void printOperandTypes(ValueTypeRange<OperandRange> types);
+
   /// Print a comma separated list of operands.
   template <typename ContainerType>
   void printOperands(const ContainerType &container) {
@@ -559,6 +568,17 @@ public:
 // Make the implementations convenient to use.
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
   p.printOperand(value);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, OperandRange values) {
+  p.printOperands(values);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
+                                ValueTypeRange<OperandRange> types) {
+  p.printOperandTypes(types);
   return p;
 }
 
@@ -1823,6 +1843,33 @@ public:
   parseOptionalAssignmentList(SmallVectorImpl<Argument> &lhs,
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
 };
+
+namespace detail {
+/// Parse an optional operand or type into a generated parser's storage.
+ParseResult parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands);
+ParseResult parseOptionalTypeInto(AsmParser &parser,
+                                  SmallVectorImpl<Type> &types);
+
+/// Keep the cleanup of multiple generated parser operand groups out of each
+/// parser's early-return paths. The storage is shared across operations with
+/// the same number of groups.
+template <size_t N>
+class OperandParserStorage {
+public:
+  using Group = llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4>;
+
+  LLVM_ATTRIBUTE_NOINLINE OperandParserStorage() {}
+  LLVM_ATTRIBUTE_NOINLINE ~OperandParserStorage() {}
+
+  Group &operator[](size_t index) { return groups[index]; }
+
+private:
+  Group groups[N];
+};
+
+} // namespace detail
 
 //===--------------------------------------------------------------------===//
 // Custom printers and parsers.

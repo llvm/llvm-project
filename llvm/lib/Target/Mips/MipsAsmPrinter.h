@@ -139,7 +139,6 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
   void printSavedRegsBitmask();
   void emitFrameDirective();
-  const char *getCurrentABIString() const;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
@@ -149,8 +148,6 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);
   void emitStartOfAsmFile(Module &M) override;

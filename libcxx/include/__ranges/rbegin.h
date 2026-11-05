@@ -27,9 +27,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [ranges.access.rbegin]
 
@@ -113,8 +113,8 @@ inline constexpr auto crbegin = __crbegin::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_RBEGIN_H

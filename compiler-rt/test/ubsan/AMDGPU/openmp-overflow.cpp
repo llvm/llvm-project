@@ -1,5 +1,6 @@
-// REQUIRES: ubsan-openmp-offload
-// RUN: %clang_omp_offload -fsanitize=undefined %s -o %t
+// RUN: %clang_omp_offload_ubsan %s -o %t
+// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clang_omp_offload_ubsan -shared-libsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #include <omp.h>

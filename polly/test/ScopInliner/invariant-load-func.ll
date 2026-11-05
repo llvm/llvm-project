@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-detect-full-functions -polly-invariant-load-hoisting '-passes=cgscc(polly-inline),polly-custom<print-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-detect-full-functions -plugin-arg=Polly,-polly-invariant-load-hoisting '-passes=cgscc(polly-inline),polly-custom<print-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Check that we inline a function that requires invariant load hoisting
 ; correctly.

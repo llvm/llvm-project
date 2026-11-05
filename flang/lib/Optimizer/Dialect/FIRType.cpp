@@ -12,11 +12,11 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1217,7 +1217,7 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   for (auto f : llvm::enumerate(getTypeList()))
     if (ident == f.value().first)
       return f.index();
-  return std::numeric_limits<unsigned>::max();
+  return Fortran::common::numeric_limits<unsigned>::max();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1712,7 +1712,12 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       return result;
     auto [compSize, compAlign] = *result;
     if (character.hasConstantLen())
-      compSize *= character.getLen();
+      // Use the code unit's allocation stride (aligned store size) rather than
+      // the bare store size.  Under kind mappings like a1:24 (i24, 3-byte
+      // store, 4-byte stride), multiplying by the store size under-counts the
+      // total byte footprint; using alignTo(compSize, compAlign) matches what
+      // LLVM allocates for each code unit.
+      compSize = llvm::alignTo(compSize, compAlign) * character.getLen();
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;

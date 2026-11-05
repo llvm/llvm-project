@@ -75,13 +75,32 @@ const int *object_arg_is_not_moved(Holder &&h [[clang::lifetimebound]]) {
 }
 
 const int *t1(Holder h) {
-  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}}
+  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}} \
+                               // expected-note {{result of call to 'borrow' aliases the storage of parameter 'h' because the implicit object parameter is marked as lifetimebound}}
   static_cast<Holder &&>(h).consume();
   return ptr; // expected-note {{returned here}}
 }
 
 const int *t2(Holder h) {
-  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}}
+  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}} \
+                               // expected-note {{result of call to 'borrow' aliases the storage of parameter 'h' because the implicit object parameter is marked as lifetimebound}}
   std::move(h).consume();
   return ptr; // expected-note {{returned here}}
+}
+
+struct Set {
+  void insert(this Set &self, const int &x [[clang::lifetime_capture_by(self)]],
+              const int &hint);
+};
+
+int global;
+
+void capture_by_explicit_object() {
+  Set s;
+  {
+    int local = 0;
+    s.insert(local, global); // expected-warning {{local variable 'local' does not live long enough}}
+    s.insert(global, local);
+  }                          // expected-note {{destroyed here}}
+  use(s);                    // expected-note {{later used here}}
 }
