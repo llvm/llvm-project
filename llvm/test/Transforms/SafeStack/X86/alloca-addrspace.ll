@@ -8,9 +8,9 @@ define void @correct_alloca_addrspace() nounwind uwtable safestack {
 ; TLS-SAME: ) #[[ATTR0:[0-9]+]] !annotation [[META0:![0-9]+]] {
 ; TLS-NEXT:  [[ENTRY:.*:]]
 ; TLS-NEXT:    [[UNSAFE_STACK_PTR:%.*]] = load ptr addrspace(5), ptr @__safestack_unsafe_stack_ptr, align 8
-; TLS-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr addrspace(5) [[UNSAFE_STACK_PTR]], i32 -16
+; TLS-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr addrspace(5) [[UNSAFE_STACK_PTR]], i64 -16
 ; TLS-NEXT:    store ptr addrspace(5) [[UNSAFE_STACK_STATIC_TOP]], ptr @__safestack_unsafe_stack_ptr, align 8
-; TLS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr addrspace(5) [[UNSAFE_STACK_PTR]], i32 -8
+; TLS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr addrspace(5) [[UNSAFE_STACK_PTR]], i64 -8
 ; TLS-NEXT:    call void @Capture_as5(ptr addrspace(5) [[TMP0]])
 ; TLS-NEXT:    store ptr addrspace(5) [[UNSAFE_STACK_PTR]], ptr @__safestack_unsafe_stack_ptr, align 8
 ; TLS-NEXT:    ret void

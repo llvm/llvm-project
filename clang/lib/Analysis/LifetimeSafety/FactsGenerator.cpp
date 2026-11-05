@@ -87,15 +87,16 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill,
   }
 }
 
-/// Creates a loan for the storage path of a given declaration reference.
-/// This function should be called whenever a DeclRefExpr represents a borrow.
-/// \param DRE The declaration reference expression that initiates the borrow.
+/// Creates a loan for the storage path of a given declaration.
+/// This function should be called whenever an expression naming \p VD
+/// represents a borrow.
+/// \param VD The declaration whose storage is borrowed.
+/// \param IssueExpr The expression (DeclRefExpr or MemberExpr) that initiates
+/// the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
-  const ValueDecl *VD = DRE->getDecl();
-  AccessPath Path(VD);
-  // The loan is created at the location of the DeclRefExpr.
-  return FactMgr.getLoanMgr().createLoan(Path, DRE);
+static const Loan *createLoan(FactManager &FactMgr, const ValueDecl &VD,
+                              const Expr *IssueExpr) {
+  return FactMgr.getLoanMgr().createLoan(AccessPath(&VD), IssueExpr);
 }
 
 /// Creates a loan for the storage location of a temporary object.
@@ -190,7 +191,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   //   - `View v; v` issues loan to v's storage (the view object)
   //   - `int& r = x; r` issues no loan (r has no storage, it's an alias to x)
   if (doesDeclHaveStorage(DRE->getDecl())) {
-    const Loan *L = createLoan(FactMgr, DRE);
+    const Loan *L = createLoan(FactMgr, *DRE->getDecl(), DRE);
     assert(L);
     OriginList *List = getOriginsList(*DRE);
     assert(List &&
@@ -258,6 +259,15 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   auto *MD = ME->getMemberDecl();
+  if (const auto *VD = dyn_cast<VarDecl>(MD); VD && doesDeclHaveStorage(VD)) {
+    // A static data member: borrow its storage, as for a DeclRefExpr.
+    const Loan *L = createLoan(FactMgr, *VD, ME);
+    OriginList *List = getOriginsList(*ME);
+    assert(List && "gl-value static member should have an origin list");
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+    return;
+  }
   if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
     assert(ME->isGLValue() && "Field member should be GL value");
     OriginList *Dst = getOriginsList(*ME);
@@ -976,8 +986,10 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
-  // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
+  // positives (e.g. `auto& r = s.v`). Static data members are not fields.
+  const Expr *Obj = Args[0]->IgnoreImpCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(Obj);
+      !isa<DeclRefExpr>(Obj) && !(ME && isa<VarDecl>(ME->getMemberDecl())))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);

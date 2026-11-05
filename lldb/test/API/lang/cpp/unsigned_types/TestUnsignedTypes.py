@@ -10,13 +10,16 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class UnsignedTypesTestCase(TestBase):
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// Set break point at this line", lldb.SBFileSpec("main.cpp")
         )
+
+        # CodeView has no type records for typedefs, so with PDB the variable
+        # has the underlying type.
+        uint32_name = "unsigned int" if self.getDebugInfo() == "pdb" else "uint32_t"
 
         # Test that unsigned types display correctly.
         self.expect(
@@ -30,6 +33,6 @@ class UnsignedTypesTestCase(TestBase):
                 "(unsigned int) the_unsigned_int = 99",
                 "(unsigned long) the_unsigned_long = 99",
                 "(unsigned long long) the_unsigned_long_long = 99",
-                "(uint32_t) the_uint32 = 99",
+                f"({uint32_name}) the_uint32 = 99",
             ],
         )
