@@ -30,6 +30,11 @@ contains
     integer, intent(in) :: k
     simple_bound = k
   end function
+  simple function simple_alloc(k) result(r)
+    integer, intent(in) :: k
+    integer, allocatable :: r
+    r = k
+  end function
 end module
 
 module dtio_mod
@@ -77,10 +82,13 @@ end subroutine
 subroutine write_finalval(a, n, k)
   integer :: n, k
   real :: a(n)
-  ! CHECK: %[[SEC:.*]] = hlfir.designate %{{.*}} (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-  ! CHECK: fir.call @_FortranAioOutputDescriptor
-  ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[SEC]], %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-  ! CHECK: %[[TS:.*]] = arith.muli %[[DIMS]]#1, %{{.*}} : index
+  ! CHECK: %[[CNT:.*]] = arith.maxsi %{{.*}}, %{{.*}} : i64
+  ! CHECK: %[[TRIP:.*]] = fir.convert %[[CNT]] : (i64) -> index
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.designate %{{.*}} (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK: }
+  ! CHECK: %[[TS:.*]] = arith.muli %[[TRIP]], %{{.*}} : index
   ! CHECK: %[[FV:.*]] = arith.addi %{{.*}}, %[[TS]] : index
   ! CHECK: %[[FVC:.*]] = fir.convert %[[FV]] : (index) -> i32
   ! CHECK: fir.store %[[FVC]] to %{{.*}} : !fir.ref<i32>
@@ -88,22 +96,97 @@ subroutine write_finalval(a, n, k)
   k = i
 end subroutine
 
-! A collapsed transfer is guarded by a runtime trip-count check: a zero-trip
-! implied-do (whose section may designate an unallocated array with a null base)
-! must transfer nothing, matching the per-element loop. The loop variable's
-! final value is still stored unconditionally.
+! The section, and so every subscript it evaluates, is built inside a guard on
+! the trip count computed from the bounds: a zero-trip implied-do evaluates and
+! transfers nothing. The loop variable's final value is stored unconditionally.
 ! CHECK-LABEL: func @_QPwrite_zerotrip_guard(
 subroutine write_zerotrip_guard(a, n)
   integer :: n
   real :: a(n)
-  ! CHECK: %[[SEC:.*]] = hlfir.designate
-  ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[SEC]], %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[DIMS]]#1, %{{.*}} : index
-  ! CHECK: fir.if %[[NE]] {
+  ! CHECK: fir.call @_FortranAioBeginUnformattedOutput
+  ! CHECK-NOT: hlfir.designate
+  ! CHECK: %[[CNT:.*]] = arith.maxsi %{{.*}}, %{{.*}} : i64
+  ! CHECK: %[[TRIP:.*]] = fir.convert %[[CNT]] : (i64) -> index
+  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[TRIP]], %{{.*}} : index
+  ! CHECK-NEXT: fir.if %[[NE]] {
+  ! CHECK:   hlfir.designate
   ! CHECK:   fir.call @_FortranAioOutputDescriptor
   ! CHECK: }
   ! CHECK-NOT: fir.do_loop
   write(10) (a(i), i=1,n)
+end subroutine
+
+! Pin the fix for issue #232323: a retained subscript that dereferences memory
+! (here j(1)) must be evaluated only inside the trip-count guard, so a zero-trip
+! implied-do never touches it.
+! CHECK-LABEL: func @_QPwrite_guarded_subscript(
+subroutine write_guarded_subscript(a, j, n)
+  integer :: n, j(:)
+  real :: a(10, n)
+  ! CHECK: fir.call @_FortranAioBeginUnformattedOutput
+  ! CHECK-NOT: hlfir.designate
+  ! CHECK: %[[CNT:.*]] = arith.maxsi %{{.*}}, %{{.*}} : i64
+  ! CHECK: %[[TRIP:.*]] = fir.convert %[[CNT]] : (i64) -> index
+  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[TRIP]], %{{.*}} : index
+  ! CHECK-NEXT: fir.if %[[NE]] {
+  ! CHECK:   %[[JELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+  ! CHECK:   fir.load %[[JELT]]
+  ! CHECK:   hlfir.designate
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK: }
+  ! CHECK-NOT: fir.do_loop
+  write(10) (a(j(1), i), i=1,n)
+end subroutine
+
+! Input twin of write_guarded_subscript: a READ also evaluates j(1) in the guard.
+! CHECK-LABEL: func @_QPread_guarded_subscript(
+subroutine read_guarded_subscript(a, j, n)
+  integer :: n, j(:)
+  real :: a(10, n)
+  ! CHECK: fir.call @_FortranAioBeginUnformattedInput
+  ! CHECK-NOT: hlfir.designate
+  ! CHECK: %[[TRIP:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[TRIP]], %{{.*}} : index
+  ! CHECK-NEXT: fir.if %[[NE]] {
+  ! CHECK:   %[[JELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+  ! CHECK:   fir.load %[[JELT]]
+  ! CHECK:   hlfir.designate
+  ! CHECK:   fir.call @_FortranAioInputDescriptor
+  ! CHECK: }
+  ! CHECK-NOT: fir.do_loop
+  read(10) (a(j(1), i), i=1,n)
+end subroutine
+
+! Cleanups of a retained subscript (here freeing an allocatable function result)
+! belong to the section, so they must also be emitted inside the guard.
+! CHECK-LABEL: func @_QPwrite_subscript_cleanup(
+subroutine write_subscript_cleanup(a, n)
+  use simple_mod
+  integer :: n
+  real :: a(10, n)
+  ! CHECK: fir.if %{{.*}} {
+  ! CHECK:   fir.call @_QMsimple_modPsimple_alloc
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK:   fir.freemem
+  ! CHECK: }
+  ! CHECK-NOT: fir.freemem
+  ! CHECK: fir.call @_FortranAioEndIoStatement
+  write(10) (a(simple_alloc(2), i), i=1,n)
+end subroutine
+
+! The final value is rebuilt from the lower bound, which the read may overwrite
+! (here a(2)), so for input it is stored before the guarded transfer.
+! CHECK-LABEL: func @_QPread_bound_in_item(
+subroutine read_bound_in_item(a)
+  integer :: a(5)
+  ! CHECK: fir.call @_FortranAioBeginUnformattedInput
+  ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
+  ! CHECK: fir.if %{{.*}} {
+  ! CHECK:   fir.call @_FortranAioInputDescriptor
+  ! CHECK: }
+  ! CHECK-NOT: fir.store
+  ! CHECK: fir.call @_FortranAioEndIoStatement
+  read(10) (a(i), i=a(2),5)
 end subroutine
 
 ! Zero-trip pin: the loop variable's final value (lower + tripCount*step, which
@@ -113,11 +196,12 @@ end subroutine
 subroutine write_zerotrip_finalval(a, n, k)
   integer :: n, k
   real :: a(n)
+  ! CHECK: %[[CNT:.*]] = arith.maxsi %{{.*}}, %{{.*}} : i64
+  ! CHECK: %[[TRIP:.*]] = fir.convert %[[CNT]] : (i64) -> index
   ! CHECK: fir.if
   ! CHECK:   fir.call @_FortranAioOutputDescriptor
   ! CHECK: }
-  ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims
-  ! CHECK: %[[TS:.*]] = arith.muli %[[DIMS]]#1, %{{.*}} : index
+  ! CHECK: %[[TS:.*]] = arith.muli %[[TRIP]], %{{.*}} : index
   ! CHECK: %[[FV:.*]] = arith.addi %{{.*}}, %[[TS]] : index
   ! CHECK: %[[FVC:.*]] = fir.convert %[[FV]] : (index) -> i32
   ! CHECK: fir.store %[[FVC]] to %{{.*}} : !fir.ref<i32>
@@ -479,8 +563,8 @@ subroutine write_volatile_loopvar(a, n)
   write(10) (a(i), i=1,n)
 end subroutine
 
-! An OPTIONAL base array may be absent, giving a null descriptor that the
-! collapsed path would still box and read even for a legal zero-trip transfer.
+! An OPTIONAL base array is conservatively not collapsed, although the
+! trip-count guard already keeps a zero-trip transfer from touching it.
 ! CHECK-LABEL: func @_QPwrite_optional_base(
 subroutine write_optional_base(a, n)
   integer :: n
@@ -490,8 +574,8 @@ subroutine write_optional_base(a, n)
   write(10) (a(i), i=1,n)
 end subroutine
 
-! An OPTIONAL retained subscript may be absent; the collapsed section reads it
-! once when building the box, even for a legal zero-trip transfer.
+! An OPTIONAL retained subscript is conservatively not collapsed, although the
+! trip-count guard already keeps a zero-trip transfer from evaluating it.
 ! CHECK-LABEL: func @_QPwrite_optional_subscript(
 subroutine write_optional_subscript(b, n, k)
   integer :: n

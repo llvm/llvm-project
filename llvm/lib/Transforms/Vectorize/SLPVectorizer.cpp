@@ -11710,9 +11710,17 @@ public:
     }
     // 2. Check, if operands can be vectorized. Skip for fmuladd; the
     // copyable operand is checked below and may legitimately hold many
-    // instructions.
+    // instructions. The instructions, built only from the first operand of the
+    // same lane and constants, are computed from the vectorized first
+    // operand, not gathered.
     if (Operands.size() == 2 &&
-        count_if(Operands.back(), IsaPred<Instruction>) > 1)
+        count_if(Operands.back(), IsaPred<Instruction>) > 1 &&
+        !all_of(zip(Operands.front(), Operands.back()), [](const auto &P) {
+          auto *I = dyn_cast<Instruction>(std::get<1>(P));
+          return !I || all_of(I->operands(), [&](Value *Op) {
+            return Op == std::get<0>(P) || isConstant(Op);
+          });
+        }))
       return OrigS;
     // Check the operand holding the copyable values.
     if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
@@ -16368,25 +16376,38 @@ public:
       Cost += TTI.getCastInstrCost(
           Instruction::ZExt, getWidenedType(ScalarTy, Mask.size()),
           getWidenedType(FieldTy, Mask.size()), CCH, CostKind);
-    // The extraction instructions die once the fields are emitted from the
-    // source scalar; their scalar cost is credited back for the gathers
-    // directly feeding the reduction. Instructions vectorized elsewhere are
-    // skipped: their scalar cost is already a part of the scalar baseline.
+    // The extraction instructions and their chains of single-use operands die
+    // once the fields are emitted from the source scalar; their scalar cost is
+    // credited back for the gathers directly feeding the reduction.
+    // Instructions vectorized elsewhere are skipped: their scalar cost is
+    // already a part of the scalar baseline.
     if (R.UserIgnoreList &&
-        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
-      for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
-        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
-            R.areAllUsersVectorized(I, &VectorizedVals))
-          Cost -= isa<CastInst>(I)
-                      ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
-                                             I->getOperand(0)->getType(),
-                                             TTI::getCastContextHint(I),
-                                             CostKind, I)
-                      : TTI.getArithmeticInstrCost(
-                            I->getOpcode(), I->getType(), CostKind,
-                            TTI::getOperandInfo(I->getOperand(0)),
-                            TTI::getOperandInfo(I->getOperand(1)),
-                            {I->getOperand(0), I->getOperand(1)}, I);
+        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0)) {
+      auto GetScalarCost = [&](Instruction *I) {
+        return isa<CastInst>(I)
+                   ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
+                                          I->getOperand(0)->getType(),
+                                          TTI::getCastContextHint(I), CostKind,
+                                          I)
+                   : TTI.getArithmeticInstrCost(
+                         I->getOpcode(), I->getType(), CostKind,
+                         TTI::getOperandInfo(I->getOperand(0)),
+                         TTI::getOperandInfo(I->getOperand(1)),
+                         {I->getOperand(0), I->getOperand(1)}, I);
+      };
+      for (Instruction *I : make_isa_range<Instruction>(E.Scalars)) {
+        if (!CheckedExtracts.insert(I).second || R.isVectorized(I) ||
+            !R.areAllUsersVectorized(I, &VectorizedVals))
+          continue;
+        Cost -= GetScalarCost(I);
+        for (auto *Op = dyn_cast<Instruction>(I->getOperand(0));
+             Op && Op != Src && isa<BinaryOperator, CastInst>(Op) &&
+             Op->hasOneUse() && !R.isVectorized(Op) &&
+             CheckedExtracts.insert(Op).second;
+             Op = dyn_cast<Instruction>(Op->getOperand(0)))
+          Cost -= GetScalarCost(Op);
+      }
+    }
     return Cost;
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
@@ -16844,31 +16865,6 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
     SpillsReloads += SingleRegSpillReload * SpillCount;
   }
   return SpillsReloads;
-}
-
-/// Calculates a VectorInstrContext from the values in \p VL at indices in
-/// \p DemandedElts.
-static TTI::VectorInstrContext
-getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
-  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
-  for (unsigned I : seq(VL.size())) {
-    if (!DemandedElts[I])
-      continue;
-    Value *V = VL[I];
-    if (isa<UndefValue>(V))
-      continue;
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      return TTI::VectorInstrContext::None;
-    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
-    if (VIC == TTI::VectorInstrContext::None) {
-      VIC = IVIC;
-      continue;
-    }
-    if (VIC != IVIC)
-      return TTI::VectorInstrContext::None;
-  }
-  return VIC;
 }
 
 /// \returns the cast opcode, which gives the same result for the operand,
@@ -17397,7 +17393,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     Cost -= getScalarizationOverhead(
         *TTI, Opts.slp_revec, ScalarTy, SrcVecTy, DemandedElts,
         /*Insert=*/true, /*Extract=*/false, CostKind, InMask.all(), AdjustedVL,
-        getVectorInstrContextHint(AdjustedVL, DemandedElts));
+        TTI::getVectorInstrContextHint(AdjustedVL, DemandedElts));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = cast<VectorType>(getWidenedType(ScalarTy, VecSz));
@@ -25547,9 +25543,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         PO = LI->getPointerOperand();
         const uint64_t Shift = getVectorLoadShift(E->Scalars);
         if (Shift)
-          PO = Builder.CreatePtrAdd(
-              PO, ConstantInt::getSigned(DL->getIndexType(PO->getType()),
-                                         -static_cast<int64_t>(Shift)));
+          PO = Builder.CreatePtrAddWithSignedOffset(
+              PO, -static_cast<int64_t>(Shift));
         NewLI = Builder.CreateAlignedLoad(
             VecTy, PO, commonAlignment(LI->getAlign(), Shift));
       } else if (E->State == TreeEntry::CompressVectorize) {
