@@ -71,7 +71,6 @@
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/AddressableBits.h"
-#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -2893,12 +2892,7 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
       !error.Success())
     return;
 
-  const auto byte_order = endian::InlHostByteOrder();
-  DataEncoder file(byte_order, /*addr_size=*/8);
-  llvm::ArrayRef<uint8_t> data_ref(data.data(), size_to_read);
-  file.AppendData(data_ref);
-
-  cache.SetCachedData(cache_key, file.GetData());
+  cache.SetCachedData(cache_key, data);
 }
 
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(

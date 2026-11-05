@@ -51,6 +51,10 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         module_file_glob = os.path.join(cache_dir, "llvmcache-*a.out*-symtab-*")
         self.assertEqual(len(glob.glob(module_file_glob)), 1)
 
+        # Check that we have the header bytes cached for a.out.
+        module_file_glob = os.path.join(cache_dir, "llvmcache-a.out-*-headerbytes")
+        self.assertEqual(len(glob.glob(module_file_glob)), 1)
+
         # Check that we don't have a symtab for a system library.
         module_file_glob = os.path.join(
             cache_dir, "llvmcache-*libsystem_c.dylib*-symtab-*"
