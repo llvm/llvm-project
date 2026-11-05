@@ -346,29 +346,14 @@ define i3 @bitcast_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-SSSE3-LABEL: bitcast_v3i32:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-SSSE3-NEXT:    andb $1, %cl
-; SSE2-SSSE3-NEXT:    shlb $2, %cl
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    addb %al, %al
-; SSE2-SSSE3-NEXT:    subb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    orb %cl, %al
+; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v3i32:
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    vpextrb $4, %xmm0, %ecx
-; AVX12-NEXT:    andb $1, %cl
-; AVX12-NEXT:    addb %cl, %cl
-; AVX12-NEXT:    subb %al, %cl
-; AVX12-NEXT:    vpextrb $8, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    shlb $2, %al
-; AVX12-NEXT:    orb %cl, %al
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
 ;

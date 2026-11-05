@@ -972,6 +972,17 @@ __packed_zip4(pzip_u8x8, uint8x8_t, uint8x4_t)
 __packed_zip2(pzip_i16x4, int16x4_t, int16x2_t)
 __packed_zip2(pzip_u16x4, uint16x4_t, uint16x2_t)
 
+/* Scalar Widening Zip */
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_wzip8p_64(uint32_t __rs1, uint32_t __rs2) {
+  return (uint64_t)__riscv_pzip_u8x8((uint8x4_t)__rs1, (uint8x4_t)__rs2);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_wzip16p_64(uint32_t __rs1, uint32_t __rs2) {
+  return (uint64_t)__riscv_pzip_u16x4((uint16x2_t)__rs1, (uint16x2_t)__rs2);
+}
+
 /* Packed Unzip */
 __packed_unzipe4(punzipe_i8x4, int8x4_t, int8x8_t)
 __packed_unzipo4(punzipo_i8x4, int8x4_t, int8x8_t)

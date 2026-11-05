@@ -1002,34 +1002,64 @@ SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
   return SetCCNode;
 }
 
-// Lower sext_invec using vslti instructions.
+// Lower SIGN_EXTEND_VECTOR_INREG with VSLLWIL, which sign-extends the low half
+// of the source elements (and shifts them left by 0).
 // For example:
-//  %b = sext <4 x i16> %a to <4 x i32>
+//  %b = sext <8 x i8> %a to <8 x i16>
 // can be lowered to:
-//  VSLTI_H vr2, vr1, 0
-//  VILVL.H vr1, vr2, vr1
+//  VSLLWIL.H.B vr1, vr1, 0
+//
+// VSLLWIL is slower than VILVL and VSRAI, so a 4x extension instead
+// replicates each source element across its destination element by
+// interleaving the source with itself twice, then shifts the copy in the top
+// bits down arithmetically:
+//  %b = sext <4 x i8> %a to <4 x i32>
+// can be lowered to:
+//  VILVL.B vr1, vr1, vr1
+//  VILVL.H vr1, vr1, vr1
+//  VSRAI.W vr1, vr1, 24
+//
+// If every extended source element is already all-ones or all-zeros, e.g. a
+// comparison result, the interleaves alone produce the sign extension, so
+// neither VSLLWIL nor the VSRAI is needed:
+//  %b = sext <8 x i8> %mask to <8 x i16>
+// can be lowered to:
+//  VILVL.B vr1, vr1, vr1
 SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  unsigned DstEltBits = DstVT.getScalarSizeInBits();
 
-  if (!SrcVT.is128BitVector())
+  // Leave larger ratios to the generic shuffle + shift expansion, which only
+  // needs a single VEXTRINS to move the second element into place.
+  unsigned Ratio = DstEltBits / SrcEltBits;
+  if (!SrcVT.is128BitVector() || Ratio > 4)
     return SDValue();
 
-  // lower to VSLTI + VILVL if extend could be done in single step.
-  if (DstVT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits() == 2) {
-    SDValue Zero = DAG.getConstant(0, DL, SrcVT);
-    SDValue Mask = DAG.getNode(ISD::SETCC, DL, SrcVT, Src, Zero,
-                               DAG.getCondCode(ISD::SETLT));
-    SDValue LoInterleaved =
-        DAG.getNode(LoongArchISD::VILVL, DL, SrcVT, Mask, Src);
+  // Only the low elements of the source are extended.
+  APInt DemandedElts = APInt::getLowBitsSet(SrcVT.getVectorNumElements(),
+                                            DstVT.getVectorNumElements());
+  bool IsSignSplat = DAG.ComputeNumSignBits(Src, DemandedElts) == SrcEltBits;
 
-    return DAG.getBitcast(DstVT, LoInterleaved);
+  if (Ratio == 2 && !IsSignSplat)
+    return DAG.getNode(LoongArchISD::VSLLWIL, DL, DstVT, Src,
+                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+
+  SDValue Res = Src;
+  for (unsigned EltBits = SrcEltBits; EltBits < DstEltBits; EltBits *= 2) {
+    MVT VT = MVT::getVectorVT(MVT::getIntegerVT(EltBits), 128 / EltBits);
+    Res = DAG.getBitcast(VT, Res);
+    Res = DAG.getNode(LoongArchISD::VILVL, DL, VT, Res, Res);
   }
-
-  return SDValue();
+  Res = DAG.getBitcast(DstVT, Res);
+  if (IsSignSplat)
+    return Res;
+  return DAG.getNode(ISD::SRA, DL, DstVT, Res,
+                     DAG.getConstant(DstEltBits - SrcEltBits, DL, DstVT));
 }
 
 // ANY_EXTEND can be replaced by ZERO_EXTEND when LASX is enabled.
@@ -6137,6 +6167,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     if (!DstVT.isVector() || DstVT.getSizeInBits() <= 128)
       return;
 
+    // If every source element is all-ones or all-zeros, so is every extended
+    // element, and interleaving a block with itself extends its low half.
+    bool IsSignSplat = DAG.ComputeNumSignBits(Src) == SrcEltBits;
+
     // Legalize and extend the src to 128-bit first.
     if (SrcVT.getSizeInBits() < 128) {
       unsigned WidenSrcElts = 128 / SrcEltBits;
@@ -6157,7 +6191,8 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     SmallVector<SDValue, 8> Blocks;
     Blocks.push_back(Src);
 
-    // Sign-extend the src by using SLTI + VILVL + VILVH recursively.
+    // Sign-extend the src by using VSLLWIL (or VILVL for a sign splat) + VEXTH
+    // recursively.
     while (SrcEltBits < DstEltBits) {
       unsigned NextEltBits = SrcEltBits * 2;
       MVT NextEltVT = MVT::getIntegerVT(NextEltBits);
@@ -6168,16 +6203,17 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       SmallVector<SDValue, 8> NextBlocks;
       NextBlocks.reserve(Blocks.size() * 2);
       for (SDValue Block : Blocks) {
-        SDValue Zero = DAG.getConstant(0, DL, SrcVT);
-        SDValue Mask = DAG.getNode(ISD::SETCC, DL, SrcVT, Block, Zero,
-                                   DAG.getCondCode(ISD::SETLT));
-        SDValue LoInterleaved =
-            DAG.getNode(LoongArchISD::VILVL, DL, SrcVT, Mask, Block);
-        SDValue HiInterleaved =
-            DAG.getNode(LoongArchISD::VILVH, DL, SrcVT, Mask, Block);
-
-        NextBlocks.push_back(DAG.getBitcast(NextBlockVT, LoInterleaved));
-        NextBlocks.push_back(DAG.getBitcast(NextBlockVT, HiInterleaved));
+        SDValue Lo;
+        if (IsSignSplat) {
+          Lo = DAG.getNode(LoongArchISD::VILVL, DL, SrcVT, Block, Block);
+          Lo = DAG.getBitcast(NextBlockVT, Lo);
+        } else {
+          Lo = DAG.getNode(LoongArchISD::VSLLWIL, DL, NextBlockVT, Block,
+                           DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+        }
+        NextBlocks.push_back(Lo);
+        NextBlocks.push_back(
+            DAG.getNode(LoongArchISD::VEXTH, DL, NextBlockVT, Block));
       }
 
       Blocks = std::move(NextBlocks);

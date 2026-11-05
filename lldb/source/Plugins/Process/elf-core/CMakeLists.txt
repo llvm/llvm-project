@@ -23,4 +23,5 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
     lldbPluginObjectFilePlaceholder
     lldbPluginObjectFileELF
     lldbPluginProcessUtility
+    lldbPluginRegisterCore
   )

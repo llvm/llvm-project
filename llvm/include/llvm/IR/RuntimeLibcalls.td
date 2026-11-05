@@ -497,26 +497,26 @@ def FESETENV : RuntimeLibcall<Int, [Ptr]>;
 def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
 def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
 
-def FPEXT_BF16_F32 : RuntimeLibcall;
+def FPEXT_BF16_F32 : RuntimeLibcall<Flt, [BFloat]>;
 def FPEXT_F32_PPCF128 : RuntimeLibcall<PPCFP128, [Flt]>;
 def FPEXT_F64_PPCF128 : RuntimeLibcall<PPCFP128, [Dbl]>;
 def FPEXT_F80_F128 : RuntimeLibcall<FP128, [X86FP80]>;
 def FPEXT_F64_F128 : RuntimeLibcall<FP128, [Dbl]>;
 def FPEXT_F32_F128 : RuntimeLibcall<FP128, [Flt]>;
-def FPEXT_F16_F128 : RuntimeLibcall;
-def FPEXT_F16_F80 : RuntimeLibcall;
+def FPEXT_F16_F128 : RuntimeLibcall<FP128, [Half]>;
+def FPEXT_F16_F80 : RuntimeLibcall<X86FP80, [Half]>;
 def FPEXT_F32_F64 : RuntimeLibcall<Dbl, [Flt]>;
-def FPEXT_F16_F64 : RuntimeLibcall;
-def FPEXT_F16_F32 : RuntimeLibcall;
-def FPROUND_F32_F16 : RuntimeLibcall;
-def FPROUND_F64_F16 : RuntimeLibcall;
-def FPROUND_F80_F16 : RuntimeLibcall;
-def FPROUND_F128_F16 : RuntimeLibcall;
-def FPROUND_PPCF128_F16 : RuntimeLibcall;
-def FPROUND_F32_BF16 : RuntimeLibcall;
-def FPROUND_F64_BF16 : RuntimeLibcall;
-def FPROUND_F80_BF16 : RuntimeLibcall;
-def FPROUND_F128_BF16 : RuntimeLibcall;
+def FPEXT_F16_F64 : RuntimeLibcall<Dbl, [Half]>;
+def FPEXT_F16_F32 : RuntimeLibcall<Flt, [Half]>;
+def FPROUND_F32_F16 : RuntimeLibcall<Half, [Flt]>;
+def FPROUND_F64_F16 : RuntimeLibcall<Half, [Dbl]>;
+def FPROUND_F80_F16 : RuntimeLibcall<Half, [X86FP80]>;
+def FPROUND_F128_F16 : RuntimeLibcall<Half, [FP128]>;
+def FPROUND_PPCF128_F16 : RuntimeLibcall<Half, [PPCFP128]>;
+def FPROUND_F32_BF16 : RuntimeLibcall<BFloat, [Flt]>;
+def FPROUND_F64_BF16 : RuntimeLibcall<BFloat, [Dbl]>;
+def FPROUND_F80_BF16 : RuntimeLibcall<BFloat, [X86FP80]>;
+def FPROUND_F128_BF16 : RuntimeLibcall<BFloat, [FP128]>;
 def FPROUND_F64_F32 : RuntimeLibcall<Flt, [Dbl]>;
 def FPROUND_F80_F32 : RuntimeLibcall<Flt, [X86FP80]>;
 def FPROUND_F128_F32 : RuntimeLibcall<Flt, [FP128]>;
@@ -525,9 +525,9 @@ def FPROUND_F80_F64 : RuntimeLibcall<Dbl, [X86FP80]>;
 def FPROUND_F128_F64 : RuntimeLibcall<Dbl, [FP128]>;
 def FPROUND_PPCF128_F64 : RuntimeLibcall<Dbl, [PPCFP128]>;
 def FPROUND_F128_F80 : RuntimeLibcall<X86FP80, [FP128]>;
-def FPTOSINT_F16_I32 : RuntimeLibcall;
-def FPTOSINT_F16_I64 : RuntimeLibcall;
-def FPTOSINT_F16_I128 : RuntimeLibcall;
+def FPTOSINT_F16_I32 : RuntimeLibcall<Int32, [Half]>;
+def FPTOSINT_F16_I64 : RuntimeLibcall<Int64, [Half]>;
+def FPTOSINT_F16_I128 : RuntimeLibcall<Int128, [Half]>;
 def FPTOSINT_F32_I32 : RuntimeLibcall<Int32, [Flt]>;
 def FPTOSINT_F32_I64 : RuntimeLibcall<Int64, [Flt]>;
 def FPTOSINT_F32_I128 : RuntimeLibcall<Int128, [Flt]>;
@@ -543,9 +543,9 @@ def FPTOSINT_F128_I128 : RuntimeLibcall<Int128, [FP128]>;
 def FPTOSINT_PPCF128_I32 : RuntimeLibcall<Int32, [PPCFP128]>;
 def FPTOSINT_PPCF128_I64 : RuntimeLibcall<Int64, [PPCFP128]>;
 def FPTOSINT_PPCF128_I128 : RuntimeLibcall<Int128, [PPCFP128]>;
-def FPTOUINT_F16_I32 : RuntimeLibcall;
-def FPTOUINT_F16_I64 : RuntimeLibcall;
-def FPTOUINT_F16_I128 : RuntimeLibcall;
+def FPTOUINT_F16_I32 : RuntimeLibcall<UInt32, [Half]>;
+def FPTOUINT_F16_I64 : RuntimeLibcall<UInt64, [Half]>;
+def FPTOUINT_F16_I128 : RuntimeLibcall<UInt128, [Half]>;
 def FPTOUINT_F32_I32 : RuntimeLibcall<UInt32, [Flt]>;
 def FPTOUINT_F32_I64 : RuntimeLibcall<UInt64, [Flt]>;
 def FPTOUINT_F32_I128 : RuntimeLibcall<UInt128, [Flt]>;
@@ -561,39 +561,39 @@ def FPTOUINT_F128_I128 : RuntimeLibcall<UInt128, [FP128]>;
 def FPTOUINT_PPCF128_I32 : RuntimeLibcall<UInt32, [PPCFP128]>;
 def FPTOUINT_PPCF128_I64 : RuntimeLibcall<UInt64, [PPCFP128]>;
 def FPTOUINT_PPCF128_I128 : RuntimeLibcall<UInt128, [PPCFP128]>;
-def SINTTOFP_I32_F16 : RuntimeLibcall;
+def SINTTOFP_I32_F16 : RuntimeLibcall<Half, [Int32]>;
 def SINTTOFP_I32_F32 : RuntimeLibcall<Flt, [Int32]>;
 def SINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [Int32]>;
 def SINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [Int32]>;
 def SINTTOFP_I32_F128 : RuntimeLibcall<FP128, [Int32]>;
 def SINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [Int32]>;
-def SINTTOFP_I64_BF16 : RuntimeLibcall;
-def SINTTOFP_I64_F16 : RuntimeLibcall;
+def SINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [Int64]>;
+def SINTTOFP_I64_F16 : RuntimeLibcall<Half, [Int64]>;
 def SINTTOFP_I64_F32 : RuntimeLibcall<Flt, [Int64]>;
 def SINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [Int64]>;
 def SINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [Int64]>;
 def SINTTOFP_I64_F128 : RuntimeLibcall<FP128, [Int64]>;
 def SINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [Int64]>;
-def SINTTOFP_I128_F16 : RuntimeLibcall;
+def SINTTOFP_I128_F16 : RuntimeLibcall<Half, [Int128]>;
 def SINTTOFP_I128_F32 : RuntimeLibcall<Flt, [Int128]>;
 def SINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [Int128]>;
 def SINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [Int128]>;
 def SINTTOFP_I128_F128 : RuntimeLibcall<FP128, [Int128]>;
 def SINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [Int128]>;
-def UINTTOFP_I32_F16 : RuntimeLibcall;
+def UINTTOFP_I32_F16 : RuntimeLibcall<Half, [UInt32]>;
 def UINTTOFP_I32_F32 : RuntimeLibcall<Flt, [UInt32]>;
 def UINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [UInt32]>;
 def UINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [UInt32]>;
 def UINTTOFP_I32_F128 : RuntimeLibcall<FP128, [UInt32]>;
 def UINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [UInt32]>;
-def UINTTOFP_I64_BF16 : RuntimeLibcall;
-def UINTTOFP_I64_F16 : RuntimeLibcall;
+def UINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [UInt64]>;
+def UINTTOFP_I64_F16 : RuntimeLibcall<Half, [UInt64]>;
 def UINTTOFP_I64_F32 : RuntimeLibcall<Flt, [UInt64]>;
 def UINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [UInt64]>;
 def UINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [UInt64]>;
 def UINTTOFP_I64_F128 : RuntimeLibcall<FP128, [UInt64]>;
 def UINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [UInt64]>;
-def UINTTOFP_I128_F16 : RuntimeLibcall;
+def UINTTOFP_I128_F16 : RuntimeLibcall<Half, [UInt128]>;
 def UINTTOFP_I128_F32 : RuntimeLibcall<Flt, [UInt128]>;
 def UINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [UInt128]>;
 def UINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [UInt128]>;
@@ -609,23 +609,26 @@ def CONVERT_PPCF128_F128 : RuntimeLibcall<FP128, [PPCFP128]>;
 // The FCMP3_PRED_*_F* libcalls return a three-way (-1/0/1) result, one symbol
 // per predicate. FCMP3_F* is a generic three-way compare for ABIs with one
 // symbol serving every predicate (e.g. MSP430's __mspabi_cmpd).
-foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
-  def OEQ_#FPTy : RuntimeLibcall;
-  def UNE_#FPTy : RuntimeLibcall;
-  def OGE_#FPTy : RuntimeLibcall;
-  def OLT_#FPTy : RuntimeLibcall;
-  def OLE_#FPTy : RuntimeLibcall;
-  def OGT_#FPTy : RuntimeLibcall;
-  def UO_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F128, PPCF128] in {
+  defvar Ty = FPTy.Type;
+  defvar CmpTy = !if(!eq(FPTy, PPCF128), Int, CmpResult);
 
-  def FCMP3_PRED_OEQ_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_UNE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLT_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGT_#FPTy : RuntimeLibcall;
+  def OEQ_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UNE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UO_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
 
-  def FCMP3_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OEQ_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_UNE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+
+  def FCMP3_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
 }
 
 // Memory
@@ -786,7 +789,7 @@ def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
-def DEOPTIMIZE : RuntimeLibcall;
+def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 
 // Return address
 def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
@@ -2757,8 +2760,14 @@ def __aeabi_f2h : RuntimeLibcallImpl<FPROUND_F32_F16>; // CallingConv::ARM_AAPCS
 def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 
 // !isTargetMachO()
-def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
-def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
+def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16> {
+  let ReturnType = UInt16;
+  let ArgumentTypes = [UInt32];
+}
+def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32> {
+  let ReturnType = UInt32;
+  let ArgumentTypes = [UInt16];
+}
 
 // The half <-> float conversion functions are always soft-float on
 // non-watchos platforms, but are needed for some targets which use a

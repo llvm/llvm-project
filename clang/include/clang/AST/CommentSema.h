@@ -23,7 +23,6 @@
 
 namespace clang {
 class Decl;
-class SourceMgr;
 class Preprocessor;
 
 namespace comments {
