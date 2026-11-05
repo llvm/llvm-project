@@ -4386,6 +4386,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_clock_settime",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/clock_settime.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_clockid_t",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_close",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/close.h"],
     target_compatible_with = select({
@@ -5430,6 +5447,24 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_clock_gettime",
         ":__support_osutil_vdso",
+        ":types_clockid_t",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
+    name = "__support_time_clock_settime",
+    srcs = ["src/__support/time/linux/clock_settime.cpp"],
+    hdrs = ["src/__support/time/clock_settime.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_clock_settime",
         ":types_clockid_t",
         ":types_struct_timespec",
     ],
