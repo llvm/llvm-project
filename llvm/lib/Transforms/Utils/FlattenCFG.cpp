@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -60,6 +61,25 @@ public:
 };
 
 } // end anonymous namespace
+
+/// Branch weights for a branch conditioned on b1 && b2, given the weights B1
+/// and B2 of the two input branches. In each, index 0 is the 'true' weight and
+/// index 1 the 'false' weight.
+static SmallVector<uint64_t, 2>
+getConjunctionWeights(const SmallVector<uint32_t, 2> &B1,
+                      const SmallVector<uint32_t, 2> &B2) {
+  // True only when both are true, so TrueWeight is the product of the two
+  // "true" weights, FalseWeight collects the remaining outcomes.
+  uint64_t TrueWeight = static_cast<uint64_t>(B1[0]) * B2[0];
+  uint64_t FalseWeight =
+      static_cast<uint64_t>(B1[1]) * (static_cast<uint64_t>(B2[0]) + B2[1]) +
+      static_cast<uint64_t>(B1[0]) * B2[1];
+  return {TrueWeight, FalseWeight};
+}
+
+static bool hasProfileInfo(const CondBrInst &BI) {
+  return hasBranchWeightMD(BI) || hasExplicitlyUnknownBranchWeights(BI);
+}
 
 /// If \param [in] BB has more than one predecessor that is a conditional
 /// branch, attempt to use parallel and/or for the branch condition. \returns
@@ -268,6 +288,10 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   // Do the transformation.
   BasicBlock *CB;
   CondBrInst *PBI = cast<CondBrInst>(FirstCondBlock->getTerminator());
+  SmallVector<uint32_t, 2> MergedWeights;
+  bool HasMergedWeights = extractBranchWeights(*PBI, MergedWeights);
+  MDNode *MergedProfile = PBI->getMetadata(LLVMContext::MD_prof);
+  bool MergedWasProfiled = hasProfileInfo(*PBI);
   bool Iteration = true;
   IRBuilder<>::InsertPointGuard Guard(Builder);
   Value *PC = PBI->getCondition();
@@ -279,6 +303,9 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     FirstCondBlock->splice(FirstCondBlock->end(), CB);
     PBI = cast<CondBrInst>(FirstCondBlock->getTerminator());
     Value *CC = PBI->getCondition();
+    SmallVector<uint32_t, 2> CurrentWeights;
+    bool HasCurrentWeights = extractBranchWeights(*PBI, CurrentWeights);
+    bool CurrentWasProfiled = hasProfileInfo(*PBI);
     // Merge conditions.
     Builder.SetInsertPoint(PBI);
     Value *NC;
@@ -289,10 +316,30 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
       // Case 1, use parallel and.
       NC = Builder.CreateLogicalAnd(PC, CC);
 
-    if (SelectInst *SI = dyn_cast<SelectInst>(NC))
-      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+    // Preserve the earlier condition's profile on the merged select.
+    if (auto *NCSel = dyn_cast<SelectInst>(NC)) {
+      if (HasMergedWeights)
+        NCSel->setMetadata(LLVMContext::MD_prof, MergedProfile);
+      else
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NCSel, DEBUG_TYPE);
+    }
 
     PBI->replaceUsesOfWith(CC, NC);
+    if (HasMergedWeights && HasCurrentWeights) {
+      SmallVector<uint64_t, 2> CombinedWeights =
+          Idx == 0 ? getDisjunctionWeights(MergedWeights, CurrentWeights)
+                   : getConjunctionWeights(MergedWeights, CurrentWeights);
+      // Fit once and reuse the result for metadata and later merges.
+      MergedWeights = fitWeights(CombinedWeights);
+      setBranchWeights(*PBI, MergedWeights, /*IsExpected=*/false);
+      MergedProfile = PBI->getMetadata(LLVMContext::MD_prof);
+      MergedWasProfiled = true;
+    } else if (MergedWasProfiled || CurrentWasProfiled) {
+      // One side has no weight, so the branch stays unknown.
+      setExplicitlyUnknownBranchWeights(*PBI, DEBUG_TYPE);
+      HasMergedWeights = false;
+      MergedWasProfiled = true;
+    }
     PC = NC;
     if (CB == LastCondBlock)
       Iteration = false;
@@ -477,17 +524,37 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   }
 
   // Merge \param SecondEntryBlock into \param FirstEntryBlock.
+  auto *FirstBranch = cast<CondBrInst>(FirstEntryBlock->getTerminator());
+  SmallVector<uint32_t, 2> FirstWeights;
+  bool HasFirstWeights = extractBranchWeights(*FirstBranch, FirstWeights);
+  bool FirstWasProfiled = hasProfileInfo(*FirstBranch);
   FirstEntryBlock->back().eraseFromParent();
   FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
   CondBrInst *PBI = cast<CondBrInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
+  SmallVector<uint32_t, 2> SecondWeights;
+  bool HasSecondWeights = extractBranchWeights(*PBI, SecondWeights);
+  bool SecondWasProfiled = hasProfileInfo(*PBI);
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
   Builder.SetInsertPoint(PBI);
   if (InvertCond2) {
     InvertBranch(PBI, Builder);
+    // Swap the saved weights to match the inverted edge order.
+    if (HasSecondWeights)
+      std::swap(SecondWeights[0], SecondWeights[1]);
   }
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, PBI->getCondition());
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
+  if (HasFirstWeights && HasSecondWeights) {
+    SmallVector<uint64_t, 2> CombinedWeights =
+        CombineOp == BinaryOperator::Or
+            ? getDisjunctionWeights(FirstWeights, SecondWeights)
+            : getConjunctionWeights(FirstWeights, SecondWeights);
+    setFittedBranchWeights(*PBI, CombinedWeights, /*IsExpected=*/false);
+  } else if (FirstWasProfiled || SecondWasProfiled) {
+    // One side has no weight, so the branch stays unknown.
+    setExplicitlyUnknownBranchWeights(*PBI, DEBUG_TYPE);
+  }
   Builder.SetInsertPoint(SaveInsertPt);
 
   // Remove IfTrue1
