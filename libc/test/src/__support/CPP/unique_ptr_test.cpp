@@ -260,13 +260,7 @@ TEST(LlvmLibcUniquePtrTest, BaseDerivedConversion) {
 }
 
 #ifndef NDEBUG
-// In full builds, LIBC_ASSERT exits with code 0xFF. Otherwise, it uses the
-// system assert, which raises SIGABRT.
-#if defined(LIBC_FULL_BUILD) && !defined(LIBC_COPT_USE_C_ASSERT)
-#define EXPECT_ASSERT_FAILURE(FUNC) EXPECT_EXITS(FUNC, 0xFF)
-#else
 #define EXPECT_ASSERT_FAILURE(FUNC) EXPECT_DEATH(FUNC, WITH_SIGNAL(SIGABRT))
-#endif
 
 // Test that dereferencing a null unique_ptr asserts.
 TEST(LlvmLibcUniquePtrTest, NullDereferenceDeath) {

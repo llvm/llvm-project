@@ -138,6 +138,11 @@ if(LIBC_TEST_SUBPROCESS_TESTS)
       libc.include.llvm-libc-types.pid_t
       libc.include.llvm-libc-types.struct_pollfd
     )
+    if(TARGET libc.src.assert.__assert_fail)
+      list(APPEND libc_death_test_deps
+        libc.src.assert.__assert_fail
+      )
+    endif()
     if(TARGET libc.src.sys.prctl.prctl)
       list(APPEND libc_death_test_deps
         libc.src.sys.prctl.prctl
@@ -171,6 +176,9 @@ set(libc_hermetic_test_support_deps
   libc.hdr.stdint_proxy
   libc.src.__support.libc_errno
 )
+if(TARGET libc.src.assert.__assert_fail)
+  list(APPEND libc_hermetic_test_support_deps libc.src.assert.__assert_fail)
+endif()
 if(LIBC_TARGET_OS_IS_BAREMETAL)
   if(LIBC_TARGET_ARCHITECTURE_IS_ARM)
     list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)

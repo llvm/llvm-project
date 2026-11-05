@@ -2366,7 +2366,6 @@ libc_support_library(
     ] + select({
         ":full_build": [
             ":__support_integer_to_string",
-            ":__support_osutil_exit_hdrs",
             ":__support_osutil_io",
         ],
         "//conditions:default": [],
