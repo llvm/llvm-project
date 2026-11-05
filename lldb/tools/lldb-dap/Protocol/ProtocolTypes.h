@@ -1053,6 +1053,10 @@ struct CompileUnit {
   /// The language of the compile unit, with its version where known, for
   /// example `c11` or `c++17`.
   std::optional<String> language;
+
+  /// True if the compile unit was compiled with optimization, false if it was
+  /// unoptimized or unknown. Optional so a debugger can omit it when unknown.
+  std::optional<bool> isOptimized;
 };
 llvm::json::Value toJSON(const CompileUnit &);
 

@@ -1558,6 +1558,27 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
+// Lower one DO control (lower, upper, or step).
+//
+// An implicit acc.loop is a DO inside a compute construct with no `!$acc loop`.
+// A non-integer control is a Fortran extension; convert it to the induction
+// variable's integer type, matching non-OpenACC lowering. An integer control,
+// of any kind, is already a legal acc.loop operand and is left unchanged.
+// An explicit `!$acc loop` keeps every control expression's own type.
+// OpenACC requires those bounds to be integer.
+static mlir::Value genACCLoopControlValue(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    mlir::Location loc, Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::lower::SomeExpr &expr,
+    const Fortran::semantics::Symbol &ivSym, bool hasDirective) {
+  mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx));
+  if (hasDirective || mlir::isa<mlir::IntegerType>(value.getType()) ||
+      value.getType().isIndex())
+    return value;
+  return builder.createConvert(loc, getTypeFromIvTypeSize(builder, ivSym),
+                               value);
+}
+
 static void privatizeIv(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &sym, mlir::Location loc,
@@ -1972,9 +1993,9 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
     llvm::SmallVector<mlir::Value> &reductionOperands,
     llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
-    llvm::SmallVector<
-        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
-        &localSymPairs) {
+    llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
+                                Fortran::semantics::SymbolRef>> &localSymPairs,
+    bool hasDirective) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
 
@@ -1999,21 +2020,27 @@ static void processDoLoopBounds(
         std::get<std::list<Fortran::parser::ConcurrentControl>>(
             concurrentHeader.t);
     for (const auto &control : controls) {
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx)));
+      const auto &name = std::get<Fortran::parser::Name>(control.t);
+      const Fortran::semantics::Symbol &ivSym = *name.symbol;
+      lowerbounds.push_back(genACCLoopControlValue(
+          converter, builder, currentLocation, stmtCtx,
+          *Fortran::semantics::GetExpr(std::get<1>(control.t)), ivSym,
+          hasDirective));
+      upperbounds.push_back(genACCLoopControlValue(
+          converter, builder, currentLocation, stmtCtx,
+          *Fortran::semantics::GetExpr(std::get<2>(control.t)), ivSym,
+          hasDirective));
       if (const auto &expr =
               std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
                   control.t))
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*expr), stmtCtx)));
+        steps.push_back(genACCLoopControlValue(
+            converter, builder, currentLocation, stmtCtx,
+            *Fortran::semantics::GetExpr(*expr), ivSym, hasDirective));
       else // If `step` is not present, assume it is `1`.
         steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
+            currentLocation, upperbounds.back().getType(), 1));
 
-      const auto &name = std::get<Fortran::parser::Name>(control.t);
-      privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
+      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
 
       // A DO CONCURRENT index-name is a construct entity living in the
@@ -2043,19 +2070,23 @@ static void processDoLoopBounds(
         [&](const Fortran::parser::LoopControl::Bounds &bounds,
             mlir::Location loc) {
           locs.push_back(loc);
-          lowerbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.Lower()), stmtCtx)));
-          upperbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.Upper()), stmtCtx)));
-          if (auto &step = bounds.Step())
-            steps.push_back(fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(step), stmtCtx)));
-          else // If `step` is not present, assume it is `1`.
-            steps.push_back(builder.createIntegerConstant(
-                currentLocation, upperbounds[upperbounds.size() - 1].getType(),
-                1));
           Fortran::semantics::Symbol &ivSym =
               bounds.Name().thing.symbol->GetUltimate();
+          lowerbounds.push_back(genACCLoopControlValue(
+              converter, builder, loc, stmtCtx,
+              *Fortran::semantics::GetExpr(bounds.Lower()), ivSym,
+              hasDirective));
+          upperbounds.push_back(genACCLoopControlValue(
+              converter, builder, loc, stmtCtx,
+              *Fortran::semantics::GetExpr(bounds.Upper()), ivSym,
+              hasDirective));
+          if (auto &step = bounds.Step())
+            steps.push_back(genACCLoopControlValue(
+                converter, builder, loc, stmtCtx,
+                *Fortran::semantics::GetExpr(step), ivSym, hasDirective));
+          else // If `step` is not present, assume it is `1`.
+            steps.push_back(builder.createIntegerConstant(
+                currentLocation, upperbounds.back().getType(), 1));
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
@@ -2322,7 +2353,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                         upperbounds, steps, privateOperands, ivPrivate, ivTypes,
                         ivLocs, inclusiveBounds, locs, loopsToProcess,
                         reductionOperands, firstprivateOperands, dataMap,
-                        localSymPairs);
+                        localSymPairs, hasDirective);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be

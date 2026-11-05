@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteTestUtils.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private::process_gdb_remote;
@@ -17,9 +20,16 @@ typedef GDBRemoteCommunication::PacketResult PacketResult;
 
 namespace {
 
+class CapturingLogHandler : public LogHandler {
+public:
+  void Emit(llvm::StringRef message) override { output += message; }
+
+  std::string output;
+};
+
 class TestClient : public GDBRemoteCommunication {
 public:
-  TestClient() : GDBRemoteCommunication() {}
+  TestClient() : GDBRemoteCommunication("test.client") {}
 
   PacketResult ReadPacket(StringExtractorGDBRemote &response) {
     return GDBRemoteCommunication::ReadPacket(response, std::chrono::seconds(1),
@@ -49,6 +59,24 @@ protected:
   }
 };
 } // end anonymous namespace
+
+TEST_F(GDBRemoteCommunicationTest, PacketLogsIncludeChannelName) {
+  ProcessGDBRemoteLog::Initialize();
+  llvm::scope_exit cleanup([] { ProcessGDBRemoteLog::Terminate(); });
+
+  auto handler = std::make_shared<CapturingLogHandler>();
+  ASSERT_THAT_ERROR(
+      Log::EnableLogChannel(handler, 0, "gdb-remote", {"packets"}),
+      llvm::Succeeded());
+
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("OK"));
+  StringExtractorGDBRemote response;
+  ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+
+  llvm::StringRef output = handler->output;
+  EXPECT_TRUE(output.contains("test.server <   6> send packet: $OK#9a"));
+  EXPECT_TRUE(output.contains("test.client <   6> read packet: $OK#9a"));
+}
 
 // Test that we can decode packets correctly. In particular, verify that
 // checksum calculation works.

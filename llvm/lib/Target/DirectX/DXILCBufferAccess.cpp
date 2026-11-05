@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILCBufferAccess.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
@@ -75,7 +74,8 @@ static bool replaceCBufferAccesses(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILCBufferAccess::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILCBufferAccessPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   bool Changed = replaceCBufferAccesses(M);
 

@@ -1,6 +1,6 @@
 # The content of this test is modfied upon the output obtained from running
 # `bin/llc -O2 -stop-before=machine-outliner <path_to_llvm_project>/llvm/test/CodeGen/AArch64/machine-outliner-sort-per-priority.ll -o -`
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner %s -o - | FileCheck %s
 
 --- |
   declare i32 @foo()

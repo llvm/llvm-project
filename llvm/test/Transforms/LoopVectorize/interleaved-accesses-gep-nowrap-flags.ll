@@ -195,7 +195,7 @@ define void @nusw_preservation_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -245,7 +245,7 @@ define void @inbounds_preservation_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -295,7 +295,7 @@ define void @nuw_drop_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

@@ -2105,8 +2105,6 @@ define i1 @test_s_signed_i1_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s0, s0, 0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_max_i32 s0, s0, -1
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2205,8 +2203,6 @@ define i8 @test_s_signed_i8_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s0, s0, 0x7f
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_max_i32 s0, s0, 0xffffff80
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)

@@ -929,15 +929,27 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
     const clang::LangOptions &langOpts, CIRBaseBuilderTy &builder,
     mlir::Type elementType) {
 
-  auto getHigherPrecisionFPType = [&context](mlir::Type type) -> mlir::Type {
+  auto getHigherPrecisionFPType = [&context,
+                                   &targetInfo](mlir::Type type) -> mlir::Type {
     if (mlir::isa<cir::FP16Type>(type))
       return cir::SingleType::get(&context);
 
     if (mlir::isa<cir::SingleType>(type) || mlir::isa<cir::BF16Type>(type))
       return cir::DoubleType::get(&context);
 
-    if (mlir::isa<cir::DoubleType>(type))
-      return cir::LongDoubleType::get(&context, type);
+    if (mlir::isa<cir::DoubleType>(type)) {
+      const llvm::fltSemantics &format = targetInfo.getLongDoubleFormat();
+      mlir::Type underlying;
+      if (&format == &llvm::APFloat::IEEEdouble())
+        underlying = cir::DoubleType::get(&context);
+      else if (&format == &llvm::APFloat::x87DoubleExtended())
+        underlying = cir::FP80Type::get(&context);
+      else if (&format == &llvm::APFloat::IEEEquad())
+        underlying = cir::FP128Type::get(&context);
+      else
+        llvm_unreachable("NYI: unsupported long double format");
+      return cir::LongDoubleType::get(&context, underlying);
+    }
 
     return type;
   };
@@ -2416,9 +2428,12 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  mlir::Value tmpAddr =
-      builder.createAlloca(loc, /*addr type*/ builder.getPointerTo(eltTy),
-                           "__array_idx", builder.getAlignmentAttr(1));
+  cir::CIRDataLayout dataLayout(op->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType tmpAddrTy = builder.getPointerTo(
+      eltTy, dataLayout.getAllocaAddrSpace(builder.getContext()));
+  mlir::Value tmpAddr = builder.createAlloca(
+      loc, /*addr type*/ tmpAddrTy, "__array_idx",
+      builder.getAlignmentAttr(dataLayout.getABITypeAlign(eltTy).value()));
   builder.createStore(loc, start, tmpAddr);
 
   mlir::Block *bodyBlock = &op->getRegion(0).front();
@@ -3489,7 +3504,18 @@ void LoweringPreparePass::runOnOperation() {
   for (mlir::Operation *o : opsToTransform)
     runOnOp(o);
 
+  // Every TLS wrapper, init alias and wrapper call has been built from
+  // 'tls_refs' by now. Nothing after this pass reads it, so drop it to keep a
+  // second run of this pass from building the wrappers again.
+  for (auto globalOp : mlirModule.getOps<cir::GlobalOp>())
+    globalOp.removeTlsRefsAttr();
+
   buildCXXGlobalInitFunc();
+  // The C++20 module initializer has been built from these. Nothing after this
+  // pass reads them, so drop them to keep a second run of this pass from
+  // building it again.
+  mlirModule->removeAttr(CIRDialect::getCXXModuleInitFnNameAttrName());
+  mlirModule->removeAttr(CIRDialect::getCXXModuleImportedInitsAttrName());
   buildCXXGlobalTlsFunc();
   if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();
@@ -3498,6 +3524,13 @@ void LoweringPreparePass::runOnOperation() {
     // happen out here because the ctor and the CUDA dtor builder test the
     // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
+    // The kernels and device variables have been registered from these.
+    // Nothing after this pass reads them, so drop them to keep a second run
+    // of this pass from registering them again.
+    for (auto &entry : cudaKernelMap)
+      entry.getValue()->removeAttr(CUDAKernelNameAttr::getMnemonic());
+    for (auto &deviceVar : cudaDeviceVars)
+      deviceVar.first->removeAttr(CUDAVarRegistrationInfoAttr::getMnemonic());
   }
 
   buildGlobalCtorDtorList();

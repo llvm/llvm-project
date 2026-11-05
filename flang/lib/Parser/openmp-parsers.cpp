@@ -1342,8 +1342,9 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
 TYPE_PARSER(construct<OmpDefaultClause>(
     Parser<OmpDefaultClause::DataSharingAttribute>{}))
 
-TYPE_PARSER(construct<OmpDefaultVariantClause>(
-    indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
+TYPE_PARSER(construct<OmpDefaultVariantClause>( //
+    indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
 
 TYPE_PARSER(construct<OmpDynGroupprivateClause>(
     maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
@@ -1571,8 +1572,9 @@ TYPE_PARSER(construct<OmpOrderClause>(
 TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
-TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
+TYPE_PARSER(construct<OmpOtherwiseClause>( //
+    maybe(indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false))))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),

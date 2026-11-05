@@ -137,7 +137,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 }
 
 bool LoopVectorizeHints::allowVectorization(
-    Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
+    Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
     if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
@@ -929,6 +929,14 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       return true;
+    }
+
+    if (isDisallowedStridedPointerInduction(ID, Opts)) {
+      reportVectorizationFailure("Found a disallowed pointer induction",
+                                 "pointer induction with a non-constant step "
+                                 "could not be vectorized",
+                                 "StridedPointerInduction", ORE, TheLoop, Phi);
+      return false;
     }
 
     reportVectorizationFailure("Found an unidentified PHI",

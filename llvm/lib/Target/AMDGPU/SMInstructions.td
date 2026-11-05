@@ -484,13 +484,8 @@ def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_
 //===----------------------------------------------------------------------===//
 
 class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
-  : SM_Real<ps>
-  , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
+  : SM_Real<ps>, Select_gfx6_gfx7<ps.PseudoInstr>
   , Enc32 {
-
-  let AssemblerPredicate = isGFX6GFX7;
-  let DecoderNamespace = "GFX6GFX7";
-
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, !if(ps.has_soffset, soffset, ?));
   let Inst{8}     = ps.has_offset;
   let Inst{14-9}  = !if(ps.has_sbase, sbase{6-1}, ?);

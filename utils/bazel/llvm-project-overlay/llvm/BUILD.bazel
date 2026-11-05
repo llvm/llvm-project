@@ -15,6 +15,7 @@ load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
+load(":instrumentor.bzl", "INSTRUMENTOR_RUNTIME_HELPER")
 load(":targets.bzl", "llvm_targets")
 
 package(
@@ -62,6 +63,7 @@ exports_files([
     "include/llvm/Frontend/Directive/DirectiveBase.td",
     "include/llvm/Frontend/OpenACC/ACC.td",
     "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Attributes.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
@@ -1282,8 +1284,6 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-        # Resolves circular-dep b/w Coroutines and Core.
-        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1299,6 +1299,8 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
         "include/llvm/ProfileData/InstrProf.h",
         "include/llvm/ProfileData/InstrProfData.inc",
+        # Resolves circular-dep b/w Coroutines, Scalar, and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     features = ["-parse_headers"],
@@ -1321,6 +1323,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitReaderOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Reader",
+    tbl_outs = {"lib/Bitcode/Reader/BitReaderOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Reader/BitReaderOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitReader",
     srcs = glob([
@@ -1337,8 +1348,10 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":BitReaderOptionsTableGen",
         ":BitstreamReader",
         ":Core",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1635,6 +1648,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitWriterOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Writer",
+    tbl_outs = {"lib/Bitcode/Writer/BitWriterOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Writer/BitWriterOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitWriter",
     srcs = glob([
@@ -1654,10 +1676,12 @@ cc_library(
         ":Analysis",
         ":BinaryFormat",
         ":BitReader",
+        ":BitWriterOptionsTableGen",
         ":BitstreamWriter",
         ":Core",
         ":MC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -1694,7 +1718,7 @@ filegroup(
         "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/IR/*.td",
         "include/llvm/TableGen/*.td",
         "include/llvm/Target/*.td",
         "include/llvm/Target/GlobalISel/*.td",
@@ -2372,14 +2396,13 @@ cc_library(
     ],
 )
 
-genrule(
+# The instrumentor includes the helper as C++ and emits its source in runtime
+# stubs. Use the same template as CMake and GN for the embedded string.
+expand_template(
     name = "instrumentor_variables_gen",
-    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
-    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
-    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
-    # `set /p` writes its prompt without a newline, like printf; it also returns
-    # errorlevel 1 on empty input, hence the single `&` after it.
-    cmd_bat = ">$@ <nul set /p =constexpr char InstrumentorRuntimeHelper[] = R^\"(& >>$@ type $(SRCS)&& >>$@ echo ^)^\";",
+    out = "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    substitutions = {"@LLVM_INSTRUMENTOR_RUNTIME_HELPER@": INSTRUMENTOR_RUNTIME_HELPER},
+    template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
 cc_library(
@@ -4674,6 +4697,7 @@ cc_library(
         ":Core",
         ":LTO",
         ":Object",
+        ":Passes",
         ":Support",
     ],
 )
@@ -7146,6 +7170,7 @@ write_file(
         "",
         "VALUES = {",
         "    '--assertion-mode': 'ON',",
+        "    '--build-mode': 'Release',",
         "    '--targets-built': '{}',".format(" ".join(llvm_targets)),
         "}",
         "",
@@ -7162,7 +7187,10 @@ py_binary(
     testonly = True,
     srcs = [":llvm_config_lit_py_gen"],
     main = "utils/bazel/llvm_config_lit.py",
-    visibility = ["//lld/test:__pkg__"],
+    visibility = [
+        "//lld/test:__pkg__",
+        "//lldb/test/Shell:__pkg__",
+    ],
 )
 
 filegroup(

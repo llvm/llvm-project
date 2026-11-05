@@ -1742,6 +1742,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ldexpf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    ldexpf128_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
   logb_test
   SUITE
     libc-math-tests
@@ -2672,6 +2688,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    sinhbf16_test.cpp
+  DEPENDS
+    libc.src.math.sinhbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   sinhf16_test
   NEED_MPFR
   SUITE
@@ -3088,6 +3117,23 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalbnf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalblnf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    scalblnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalblnf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )

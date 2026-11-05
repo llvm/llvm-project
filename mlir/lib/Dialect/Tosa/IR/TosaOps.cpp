@@ -5201,13 +5201,6 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   return success();
 }
 
-std::optional<SmallVector<int64_t, 4>>
-ApplyScaleOp::getIterationShapeToUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType()))
-    return llvm::to_vector<4>(vt.getShape());
-  return std::nullopt;
-}
-
 static void printInitializationList(OpAsmPrinter &parser,
                                     Block::BlockArgListType blocksArgs,
                                     ValueRange initializers,

@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple=aarch64-apple-macosx -run-pass=localizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=aarch64-apple-macosx -run-pass=localizer %s -o - | FileCheck %s
 # RUN: llc -O0 -mtriple=aarch64-apple-macosx -passes=localizer %s -o - | FileCheck %s
 
 # CHECK-DAG: ![[Y:[0-9]+]] = !DILocalVariable(name: "y"

@@ -306,8 +306,9 @@ public:
     libraries = (1u << 9),
     accelerator_plugins = (1u << 10),
     address_spaces = (1u << 11),
+    lldb_settings = (1u << 12),
 
-    LLVM_MARK_AS_BITMASK_ENUM(address_spaces)
+    LLVM_MARK_AS_BITMASK_ENUM(lldb_settings)
   };
 
   class Manager {

@@ -497,6 +497,9 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_dylinker);
   Args.AddLastArg(CmdArgs, options::OPT_Mach);
 
+  if (Version >= VersionTuple(900))
+    Args.AddLastArg(CmdArgs, options::OPT_O_Group);
+
   if (LinkerIsLLD) {
     if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
       SmallString<128> Path(CSPGOGenerateArg->getNumValues() == 0

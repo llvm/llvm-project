@@ -11570,6 +11570,13 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     return;
   }
 
+  // A metadirective has no associated statement; look into its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(S)) {
+    for (const Stmt *V : MD->variants())
+      scanForTargetRegionsFunctions(V, ParentName);
+    return;
+  }
+
   if (const auto *E = dyn_cast<OMPExecutableDirective>(S)) {
     if (!E->hasAssociatedStmt() || !E->getAssociatedStmt())
       return;

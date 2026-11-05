@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -706,6 +707,12 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Concurrency)) {
+      MPM.addPass(ModuleConcurrencySanitizerPass());
+      MPM.addPass(
+          createModuleToFunctionPassAdaptor(ConcurrencySanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::Type))
       MPM.addPass(TypeSanitizerPass());
 
@@ -903,7 +910,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO(&LibraryOptions);
+  PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -1380,7 +1387,6 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.SampleProfile = std::move(SampleProfile);
   const cl::LibraryOptionsContext &LibraryOptions =
       M->getContext().getLibraryOptions();
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   Conf.PTO.LoopFusion = CGOpts.FuseLoops;

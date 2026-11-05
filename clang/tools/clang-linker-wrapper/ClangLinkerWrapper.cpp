@@ -980,9 +980,6 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
                    OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
-  if (usesLLVMOffloadWrapper(Images))
-    return bundleOpenMP(Images);
-
   switch (Kind) {
   case OFK_OpenMP:
     return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
@@ -1192,6 +1189,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
   // fat binary directly (e.g. .hipfb / .fatbin).
   SmallVector<StringRef> WrappedOutput;
   for (auto &[Kind, Input] : Images) {
+    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
     // We sort the entries before bundling so they appear in a deterministic
     // order in the final binary.
     llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
@@ -1205,7 +1203,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return ArchA > ArchB;
       return A.TheOffloadKind < B.TheOffloadKind;
     });
-    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
+    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, WrapperKind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
 
@@ -1228,7 +1226,6 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       continue;
     }
 
-    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
     auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();

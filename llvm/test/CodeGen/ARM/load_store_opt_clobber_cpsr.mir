@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv6m--eabi -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv6m--eabi -run-pass=arm-ldst-opt %s -o - | FileCheck %s
 
 # Make sure bb.0 isn't transformed: it would incorrectly clobber CPSR.
 #

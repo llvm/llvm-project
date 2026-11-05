@@ -6,7 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "DXILLegalizePass.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"

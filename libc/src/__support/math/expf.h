@@ -27,33 +27,33 @@
     defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
 
 #include "src/__support/math/expf_float_eval.h"
-#define LIBC_MATH_EXPF_IMPL float_eval::cr_expf_rn
+#define LIBC_MATH_EXPF_IMPL float_eval_cr_rn
 
 #elif defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                             \
     (defined(LIBC_MATH_HAS_SMALL_TABLES) ||                                    \
      defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT))
 
 #include "src/__support/math/expf_float_eval.h"
-#define LIBC_MATH_EXPF_IMPL float_eval::expf
+#define LIBC_MATH_EXPF_IMPL float_eval
 
 #elif !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                              \
     defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY) &&                        \
     defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
 
 #include "src/__support/math/expf_integer_eval.h"
-#define LIBC_MATH_EXPF_IMPL integer_eval::expf
+#define LIBC_MATH_EXPF_IMPL integer_eval
 
 #else
 
 #include "src/__support/math/expf_double_eval.h"
-#define LIBC_MATH_EXPF_IMPL double_eval::expf
+#define LIBC_MATH_EXPF_IMPL double_eval
 
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float expf(float x) { return LIBC_MATH_EXPF_IMPL(x); }
+using LIBC_MATH_EXPF_IMPL::expf;
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

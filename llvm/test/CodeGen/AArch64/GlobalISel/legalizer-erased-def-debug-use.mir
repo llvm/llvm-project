@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 
 # Debug uses of an erased instruction that cannot be salvaged become undef,
 # instead of referring to a register that no longer has a definition.

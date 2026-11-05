@@ -328,17 +328,16 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
     Register Reg = MI->getOperand(0).getReg();
     SpvType = GR->getSPIRVTypeForVReg(Reg);
     if (!SpvType) {
+      MIB.setInsertPt(*MI->getParent(), MI);
       switch (MI->getOpcode()) {
       case TargetOpcode::G_FCONSTANT:
       case TargetOpcode::G_CONSTANT: {
-        MIB.setInsertPt(*MI->getParent(), MI);
         Type *Ty = MI->getOperand(1).getCImm()->getType();
         SpvType = GR->getOrCreateSPIRVType(
             Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
       }
       case TargetOpcode::G_GLOBAL_VALUE: {
-        MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
         unsigned AddrSpace = Global->getType()->getAddressSpace();

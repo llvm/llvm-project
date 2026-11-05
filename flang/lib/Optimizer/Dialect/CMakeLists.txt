@@ -42,6 +42,7 @@ add_flang_library(FIRDialect
   MLIRGPUDialect
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIROpenMPDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

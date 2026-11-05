@@ -439,8 +439,8 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
     const APInt *C;
     APInt Offset(IdxWidth, 0);
     // m_Value may bind even when the offset is not constant, so reset it.
-    if (match(Elt, m_PtrAdd(m_Value(EltBase), m_APInt(C))))
-      Offset = C->sextOrTrunc(IdxWidth);
+    if (match(Elt, m_PtrAdd(DL, m_Value(EltBase), m_APInt(C))))
+      Offset = *C;
     else
       EltBase = Elt;
     if (I == 0)

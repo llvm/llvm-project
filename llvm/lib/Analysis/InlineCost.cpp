@@ -1158,10 +1158,16 @@ public:
 };
 
 // Return true if CB is the sole call to local function Callee.
+//
+// A linkonce_odr function marked likely_module_local counts as local too: no
+// other module is expected to reference it, so we expect inlining the sole call
+// to turn the original dead.
 static bool isSoleCallToLocalFunction(const CallBase &CB,
                                       const Function &Callee) {
-  return Callee.hasLocalLinkage() && Callee.hasOneLiveUse() &&
-         &Callee == CB.getCalledFunction();
+  bool Local = Callee.hasLocalLinkage() ||
+               (Callee.hasLinkOnceODRLinkage() &&
+                Callee.hasFnAttribute(Attribute::LikelyModuleLocal));
+  return Local && Callee.hasOneLiveUse() && &Callee == CB.getCalledFunction();
 }
 
 class InlineCostFeaturesAnalyzer final : public CallAnalyzer {
@@ -2231,7 +2237,15 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
       !match(&I, m_FNegOrFSubNegZero(m_Value())))
     onCallPenalty();
 
-  return false;
+  // Free binary operators are, in practice, often fused vector idioms and logic
+  // on i1 conditions. Skip the TTI query, which is comparatively expensive, for
+  // the scalar operations that dominate most code.
+  Type *Ty = I.getType();
+  if (!Ty->isVectorTy() && !Ty->isIntegerTy(1))
+    return false;
+
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
@@ -3052,19 +3066,19 @@ int llvm::getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
 }
 
 InlineCost llvm::getInlineCost(
-    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
-  return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
+  return getInlineCost(Call, Call.getCalledFunction(), Params, CallerTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
                        GetEphValuesCache);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
@@ -3081,7 +3095,7 @@ std::optional<int> llvm::getInliningCostEstimate(
                                /*ComputeFullInlineCost*/ true,
                                /*EnableDeferral*/ true};
 
-  InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CalleeTTI,
+  InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CallerTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE, true,
                             /*IgnoreThreshold*/ true);
   auto R = CA.analyze();
@@ -3091,12 +3105,12 @@ std::optional<int> llvm::getInliningCostEstimate(
 }
 
 std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
-  InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, GetTLI,
+  InlineCostFeaturesAnalyzer CFA(CallerTTI, GetAssumptionCache, GetBFI, GetTLI,
                                  PSI, ORE, *Call.getCalledFunction(), Call);
   auto R = CFA.analyze();
   if (!R.isSuccess())
@@ -3105,7 +3119,7 @@ std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
 }
 
 std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
-    CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, Function *Callee, TargetTransformInfo &CallerTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
 
   // Cannot inline indirect calls.
@@ -3124,7 +3138,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   Function *Caller = Call.getCaller();
   const AnalysisOptions &Opts = getAnalysisOptions(*Caller);
   if (!Opts.ignore_tti_inline_compatible &&
-      !CalleeTTI.areInlineCompatible(Caller, Callee))
+      !CallerTTI.areInlineCompatible(Caller, Callee))
     return InlineResult::failure("conflicting target features");
 
   // Calls to functions with always-inline attributes should be inlined
@@ -3181,7 +3195,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
 InlineCost llvm::getInlineCost(
     CallBase &Call, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
+    TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
@@ -3189,7 +3203,7 @@ InlineCost llvm::getInlineCost(
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
 
   auto UserDecision =
-      llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
+      llvm::getAttributeBasedInliningDecision(Call, Callee, CallerTTI, GetTLI);
 
   if (UserDecision) {
     if (UserDecision->isSuccess())
@@ -3212,7 +3226,7 @@ InlineCost llvm::getInlineCost(
   function_ref<BlockFrequencyInfo &(Function &)> GetBFIForAnalysis =
       IgnoreProfile ? nullptr : GetBFI;
   InlineCostCallAnalyzer CA(
-      *Callee, Call, Params, CalleeTTI, GetAssumptionCache, GetBFIForAnalysis,
+      *Callee, Call, Params, CallerTTI, GetAssumptionCache, GetBFIForAnalysis,
       GetTLI, IgnoreProfile ? nullptr : PSI, ORE,
       /*BoostIndirect=*/true, /*IgnoreThreshold=*/false, GetEphValuesCache);
   InlineResult ShouldInline = CA.analyze();

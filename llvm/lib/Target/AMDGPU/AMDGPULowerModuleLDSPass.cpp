@@ -1466,8 +1466,6 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
-    ScopedNoAliasAAResult ScopedNoAlias;
-
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1497,8 +1495,8 @@ private:
           // these aliases set to preserve existing aliasing information.
 
           SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
-          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
-          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NoAlias, LDSDomains);
           auto Intersection = set_intersection(ExistingDomains, LDSDomains);
           if (Intersection.empty()) {
             NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;

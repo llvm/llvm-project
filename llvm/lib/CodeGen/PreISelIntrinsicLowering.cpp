@@ -123,11 +123,11 @@ static bool lowerLoadRelative(Function &F) {
       continue;
 
     IRBuilder<> B(CI);
-    Value *OffsetPtr =
-        B.CreatePtrAdd(CI->getArgOperand(0), CI->getArgOperand(1));
+    Value *Ptr = CI->getArgOperand(0);
+    Value *OffsetPtr = B.CreatePtrAddWithSExtOrTrunc(Ptr, CI->getArgOperand(1));
     Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtr, Align(4));
 
-    Value *ResultPtr = B.CreatePtrAdd(CI->getArgOperand(0), OffsetI32);
+    Value *ResultPtr = B.CreatePtrAddWithSExtOrTrunc(Ptr, OffsetI32);
 
     CI->replaceAllUsesWith(ResultPtr);
     CI->eraseFromParent();

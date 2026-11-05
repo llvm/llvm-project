@@ -32,7 +32,7 @@ public:
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
 
     Extension GetSupportedExtensions() const override {
-      return Extension::address_spaces;
+      return Extension::address_spaces | Extension::lldb_settings;
     }
   };
 

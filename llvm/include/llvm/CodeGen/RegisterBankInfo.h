@@ -421,10 +421,6 @@ protected:
   mutable DenseMap<hash_code, std::unique_ptr<const InstructionMapping>>
       MapOfInstructionMappings;
 
-  /// Getting the minimal register class of a physreg is expensive.
-  /// Cache this information as we get it.
-  mutable DenseMap<MCRegister, const TargetRegisterClass *> PhysRegMinimalRCs;
-
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
   RegisterBankInfo(const RegisterBank **RegBanks, unsigned NumRegBanks,
@@ -448,11 +444,6 @@ protected:
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
     return *RegBanks[ID];
   }
-
-  /// Get the MinimalPhysRegClass for Reg.
-  /// \pre Reg is a physical register.
-  const TargetRegisterClass *
-  getMinimalPhysRegClass(MCRegister Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
   /// See getInstrMapping for more details on what a mapping represents.

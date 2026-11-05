@@ -20,12 +20,12 @@ body:             |
     ; CHECK-NEXT: SI_RETURN
     %0:sgpr_32 = COPY killed $sgpr17
     %1:sgpr_32 = COPY killed $sgpr16
-    undef %2.sub0:sgpr_64 = COPY killed %1
-    %2.sub1:sgpr_64 = COPY killed %0
+    undef %2.sub0:sgpr_64 = COPY %1
+    %2.sub1:sgpr_64 = COPY %0
     %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     INLINEASM &"; def $0", attdialect, regdef:VReg_64, def %4:vreg_64
-    undef %5.sub0:vreg_128 = COPY killed %4.sub1
-    GLOBAL_STORE_DWORDX4_SADDR killed %3, killed %5, killed %2, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+    undef %5.sub0:vreg_128 = COPY %4.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %5, %2, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     SI_RETURN
 ...
 
@@ -55,17 +55,17 @@ body:             |
     %3.sub1:vreg_64 = COPY %2.sub0
     undef %4.sub0:vreg_64 = COPY %3.sub1
     %4.sub1:vreg_64 = COPY %3.sub0
-    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, killed %4, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %4, 0, 0, implicit $exec, implicit $flat_scr
 
     %5:vreg_96 = IMPLICIT_DEF
     undef %6.sub0_sub1:vreg_96 = COPY %5
     %6.sub2:vreg_96 = COPY %2.sub0
-    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, killed %6, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, %6, 0, 0, implicit $exec, implicit $flat_scr
 
     %7:vreg_128 = IMPLICIT_DEF
     undef %8.sub0_sub1_sub2:vreg_128 = COPY %7
     %8.sub3:vreg_128 = COPY %2.sub0
-    FLAT_STORE_DWORDX4 $vgpr0_vgpr1, killed %8, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX4 $vgpr0_vgpr1, %8, 0, 0, implicit $exec, implicit $flat_scr
 
 ...
 

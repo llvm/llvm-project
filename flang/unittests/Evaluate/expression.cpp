@@ -23,13 +23,18 @@
 
 using namespace Fortran::evaluate;
 
+static Expr<Type<TypeCategory::Integer>> MakeDefaultIntegerExpr(int32_t v) {
+  return MakeConstantExpr<Type<TypeCategory::Integer>>(4, v);
+}
+
 int main() {
-  using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer, 4>>;
-  TEST(DefaultIntegerExpr::Result::AsFortran() == "INTEGER(4)");
-  MATCH("666_4", DefaultIntegerExpr{666}.AsFortran());
-  MATCH("-1_4", (-DefaultIntegerExpr{1}).AsFortran());
-  auto ex1{
-      DefaultIntegerExpr{2} + DefaultIntegerExpr{3} * -DefaultIntegerExpr{4}};
+  using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer>>;
+  const int defaultIntegerKind{4};
+  TEST(DefaultIntegerExpr::Result{4}.AsFortran() == "INTEGER(4)");
+  MATCH("666_4", MakeDefaultIntegerExpr(666).AsFortran());
+  MATCH("-1_4", (-MakeDefaultIntegerExpr(1)).AsFortran());
+  auto ex1{MakeDefaultIntegerExpr(2) +
+      MakeDefaultIntegerExpr(3) * -MakeDefaultIntegerExpr(4)};
   MATCH("2_4+3_4*(-4_4)", ex1.AsFortran());
   Fortran::common::IntrinsicTypeDefaultKinds defaults;
   auto intrinsics{Fortran::evaluate::IntrinsicProcTable::Configure(defaults)};
@@ -40,9 +45,10 @@ int main() {
       intrinsics, targetCharacteristics, languageFeatures, tempNames};
   ex1 = Fold(context, std::move(ex1));
   MATCH("-10_4", ex1.AsFortran());
-  MATCH("1_4/2_4", (DefaultIntegerExpr{1} / DefaultIntegerExpr{2}).AsFortran());
-  DefaultIntegerExpr a{1};
-  DefaultIntegerExpr b{2};
+  MATCH("1_4/2_4",
+      (MakeDefaultIntegerExpr(1) / MakeDefaultIntegerExpr(2)).AsFortran());
+  DefaultIntegerExpr a{MakeDefaultIntegerExpr(1)};
+  DefaultIntegerExpr b{MakeDefaultIntegerExpr(2)};
   MATCH("1_4", a.AsFortran());
   a = b;
   MATCH("2_4", a.AsFortran());
@@ -55,24 +61,52 @@ int main() {
       defaults, languageFeatures, langOptions, cookedSources};
   auto &scope{semantics.globalScope()};
   const auto &integerType{
-      scope.MakeNumericType(TypeCategory::Integer, Expr<SubscriptInteger>{4})};
+      scope.MakeNumericType(TypeCategory::Integer, MakeDefaultIntegerExpr(4))};
   auto &coarray{scope.MakeSymbol(Fortran::parser::CharBlock{"a", 1}, {},
       Fortran::semantics::ObjectEntityDetails{})};
   auto &status{scope.MakeSymbol(Fortran::parser::CharBlock{"s", 1}, {},
       Fortran::semantics::ObjectEntityDetails{})};
   coarray.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
   status.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
+  Designator<DefaultIntegerExpr::Result> designator4{4, DataRef{coarray}};
+  Designator<DefaultIntegerExpr::Result> anotherDesignator4{
+      4, DataRef{coarray}};
+  Designator<DefaultIntegerExpr::Result> designator8{8, DataRef{coarray}};
+  TEST(designator4 == anotherDesignator4);
+  TEST(!(designator4 == designator8));
+
+  // Equality of array constructors must account for kind even when there
+  // are no elements from which to recover it.
+  using IntegerArray = ArrayConstructor<Type<TypeCategory::Integer>>;
+  IntegerArray integer1{1, IntegerArray::Base{}};
+  IntegerArray integer4{4, IntegerArray::Base{}};
+  IntegerArray anotherInteger1{1, IntegerArray::Base{}};
+  TEST(integer1 == anotherInteger1);
+  TEST(!(integer1 == integer4));
+
+  using CharacterArray = ArrayConstructor<Type<TypeCategory::Character>>;
+  CharacterArray character1{1, CharacterArray::Base{}};
+  CharacterArray character2{2, CharacterArray::Base{}};
+  CharacterArray anotherCharacter1{1, CharacterArray::Base{}};
+  TEST(character1 == anotherCharacter1);
+  TEST(!(character1 == character2));
+  character1.set_LEN(MakeSubscriptIntExpr(3));
+  anotherCharacter1.set_LEN(MakeSubscriptIntExpr(3));
+  character2.set_LEN(MakeSubscriptIntExpr(3));
+  TEST(character1 == anotherCharacter1);
+  TEST(!(character1 == character2));
+
   auto asExpr{[](const CoarrayRef &ref) {
-    return DefaultIntegerExpr{
-        Designator<DefaultIntegerExpr::Result>{DataRef{ref}}};
+    return DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
+        defaultIntegerKind, DataRef{ref}}};
   }};
 
-  CoarrayRef noNotify{DataRef{coarray},
-      {Expr<SubscriptInteger>{1} + Expr<SubscriptInteger>{1}}};
+  CoarrayRef noNotify{
+      DataRef{coarray}, {MakeSubscriptIntExpr(1) + MakeSubscriptIntExpr(1)}};
   CoarrayRef withNotify{noNotify};
   // Integer expressions exercise the type-independent specifier representation.
   withNotify.set_notify(
-      AsGenericExpr(DefaultIntegerExpr{2} + DefaultIntegerExpr{3}));
+      AsGenericExpr(MakeDefaultIntegerExpr(2) + MakeDefaultIntegerExpr(3)));
   MATCH("a[1_8+1_8,NOTIFY=2_4+3_4]", asExpr(withNotify).AsFortran());
 
   auto foldedNotify{ExtractCoarrayRef(Fold(context, asExpr(withNotify)))};
@@ -93,10 +127,11 @@ int main() {
   }
 
   CoarrayRef combined{withNotify};
-  combined.set_stat(AsCategoryExpr(DefaultIntegerExpr{
-      Designator<DefaultIntegerExpr::Result>{DataRef{status}}}));
+  combined.set_stat(
+      AsCategoryExpr(DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
+          defaultIntegerKind, DataRef{status}}}));
   combined.set_team(
-      AsGenericExpr(DefaultIntegerExpr{7} + DefaultIntegerExpr{1}));
+      AsGenericExpr(MakeDefaultIntegerExpr(7) + MakeDefaultIntegerExpr(1)));
   auto foldedCombined{ExtractCoarrayRef(Fold(context, asExpr(combined)))};
   TEST(foldedCombined.has_value());
   if (foldedCombined) {

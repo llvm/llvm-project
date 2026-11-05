@@ -1768,18 +1768,16 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   if (!StepInst)
     return false;
 
+  const DataLayout &DL = SE.getDataLayout();
   Value *Step = nullptr;
   bool StepMatch =
       PN->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          ? match(StepInst, m_PtrAdd(DL, m_Specific(PN), m_Value(Step)))
           : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
 
-  // Ensure GEP offsets are extended to the size of the PHI.
-  const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
-      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
-
+  const SCEV *StepSCEV = SE.getSCEV(Step);
   if (StepSCEV->isZero())
     return false;
 

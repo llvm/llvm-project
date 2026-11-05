@@ -3220,7 +3220,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (S)
     OutStreamer->switchSection(S);
 
-  if (TM.Options.EmitAddrsig) {
+  if (TM.Options.EmitAddrsig && MAI.hasAddrsigDirective()) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
@@ -4653,6 +4653,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (isa<ConstantPointerNull>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
     AP.OutStreamer->emitIntValue(0, Size);
     return;
   }

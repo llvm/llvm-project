@@ -1,0 +1,8 @@
+#!/bin/sh
+# Like offload-arch, print nothing for --only=intel, as there is no Intel GPU.
+if [ "$1" = "--only=intel" ]; then
+  exit 0
+fi
+echo "sm_70"
+echo "gfx90a:sramecc+:xnack-"
+exit 0

@@ -9,12 +9,12 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
+#include "Plugins/Register/Core/RegisterContextCore_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_arm : public RegisterContextPOSIX_arm {
+class RegisterContextCorePOSIX_arm : public RegisterContextCore_arm {
 public:
   RegisterContextCorePOSIX_arm(
       lldb_private::Thread &thread,

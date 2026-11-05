@@ -2100,6 +2100,44 @@ public:
                      GEPNoWrapFlags::inBounds());
   }
 
+  /// Create a ptradd with an unsigned constant offset. The offset must fit into
+  /// the unsigned index type.
+  Value *
+  CreatePtrAddWithUnsignedOffset(Value *Ptr, uint64_t Offset,
+                                 const Twine &Name = "",
+                                 GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd with a signed constant offset. The offset must fit into
+  /// the signed index type.
+  Value *
+  CreatePtrAddWithSignedOffset(Value *Ptr, int64_t Offset,
+                               const Twine &Name = "",
+                               GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::getSigned(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is sign-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithSExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateSExtOrTrunc(Offset, IdxTy), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is zero-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithZExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateZExtOrTrunc(Offset, IdxTy), Name, NW);
+  }
+
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

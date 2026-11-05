@@ -96,7 +96,7 @@ const Frame *InterpState::getCurrentFrame() { return Current; }
 void InterpState::deallocate(Block *B) {
   assert(B);
   assert(!B->isDynamic());
-  assert(!B->isStatic());
+  assert(!B->isGlobal());
   assert(!B->isDead());
 
   // The block might have a pointer saved in a field in its data
@@ -109,7 +109,7 @@ void InterpState::deallocate(Block *B) {
 
   assert(!B->isInitialized());
   if (B->hasPointers()) {
-    size_t Size = B->getSize();
+    size_t Size = B->getAllocSize();
     // Allocate a new block, transferring over pointers.
     char *Memory =
         reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));

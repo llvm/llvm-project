@@ -1683,6 +1683,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return narrowScalarAddSub(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_UMULH:
+  case TargetOpcode::G_SMULH:
     return narrowScalarMul(MI, NarrowTy);
   case TargetOpcode::G_EXTRACT:
     return narrowScalarExtract(MI, TypeIdx, NarrowTy);
@@ -7529,7 +7530,8 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
     return UnableToLegalize;
 
   unsigned NumParts = Size / NarrowSize;
-  bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH;
+  bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH ||
+                   MI.getOpcode() == TargetOpcode::G_SMULH;
   unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
 
   SmallVector<Register, 2> Src1Parts, Src2Parts;
@@ -7540,7 +7542,38 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
 
   // Take only high half of registers if this is high mul.
   ArrayRef<Register> DstRegs(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
-  MIRBuilder.buildMergeLikeInstr(DstReg, DstRegs);
+
+  if (MI.getOpcode() == TargetOpcode::G_SMULH) {
+    Register UnsignedHigh = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildMergeLikeInstr(UnsignedHigh, DstRegs);
+
+    // Extract the sign from the highest narrow part of each operand.
+    auto ShiftAmt = MIRBuilder.buildConstant(NarrowTy, NarrowSize - 1);
+
+    auto SignAPart =
+        MIRBuilder.buildAShr(NarrowTy, Src1Parts.back(), ShiftAmt.getReg(0));
+    auto SignBPart =
+        MIRBuilder.buildAShr(NarrowTy, Src2Parts.back(), ShiftAmt.getReg(0));
+
+    // Replicate the sign parts to construct full-width sign masks.
+    SmallVector<Register, 2> SignAParts(NumParts, SignAPart.getReg(0));
+    SmallVector<Register, 2> SignBParts(NumParts, SignBPart.getReg(0));
+
+    auto SignA = MIRBuilder.buildMergeLikeInstr(Ty, SignAParts);
+    auto SignB = MIRBuilder.buildMergeLikeInstr(Ty, SignBParts);
+
+    // Ca = (Src1 < 0) ? Src2 : 0
+    // Cb = (Src2 < 0) ? Src1 : 0
+    auto Ca = MIRBuilder.buildAnd(Ty, SignA, Src2);
+    auto Cb = MIRBuilder.buildAnd(Ty, SignB, Src1);
+
+    // SignedHigh = UnsignedHigh - Ca - Cb
+    auto Tmp = MIRBuilder.buildSub(Ty, UnsignedHigh, Ca);
+    MIRBuilder.buildSub(DstReg, Tmp, Cb);
+  } else {
+    MIRBuilder.buildMergeLikeInstr(DstReg, DstRegs);
+  }
+
   MI.eraseFromParent();
   return Legalized;
 }
@@ -8259,12 +8292,16 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
 
   Register ShX, ShY;
   Register ShAmt, InvShAmt;
+  unsigned OrFlags = MachineInstr::NoFlags;
 
   // FIXME: Emit optimized urem by constant instead of letting it expand later.
   if (isNonZeroModBitWidthOrUndef(MRI, Z, BW)) {
     // fshl: X << C | Y >> (BW - C)
     // fshr: X << (BW - C) | Y >> C
     // where C = Z % BW is not zero
+    // If Z has undef elements, C may be zero so the or isn't disjoint.
+    if (isNonZeroModBitWidth(MRI, Z, BW))
+      OrFlags |= MachineInstr::Disjoint;
     auto BitWidthC = MIRBuilder.buildConstant(ShTy, BW);
     ShAmt = MIRBuilder.buildURem(ShTy, Z, BitWidthC).getReg(0);
     InvShAmt = MIRBuilder.buildSub(ShTy, BitWidthC, ShAmt).getReg(0);
@@ -8273,6 +8310,8 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
   } else {
     // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
     // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
+    // The extra shift by 1 guarantees the two sides don't overlap.
+    OrFlags |= MachineInstr::Disjoint;
     auto Mask = MIRBuilder.buildConstant(ShTy, BW - 1);
     if (isPowerOf2_32(BW)) {
       // Z % BW -> Z & (BW - 1)
@@ -8298,7 +8337,7 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildOr(Dst, ShX, ShY, MachineInstr::Disjoint);
+  MIRBuilder.buildOr(Dst, ShX, ShY, OrFlags);
   MI.eraseFromParent();
   return Legalized;
 }

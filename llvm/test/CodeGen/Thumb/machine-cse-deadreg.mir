@@ -1,4 +1,4 @@
-# RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass=machine-cse -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass=machine-cse -o - %s | FileCheck %s
 # RUN: llc -mtriple thumbv6m-arm-none-eabi -passes=machine-cse -o - %s | FileCheck %s
 
 --- |

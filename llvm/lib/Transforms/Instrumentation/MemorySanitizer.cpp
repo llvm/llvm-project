@@ -5774,9 +5774,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// I.getIntrinsicID(), but the caller can choose to replace it with another
   /// intrinsic of the same type.
   ///
-  /// The trailing arguments are passed verbatim to the intrinsic, though any
-  /// uninitialized trailing arguments can also taint the shadow e.g., for an
-  /// intrinsic with one trailing verbatim argument:
+  /// verbatimArgIndices specifies which arguments are passed unmodified to the
+  /// intrinsic, though such arguments will also taint the shadow. Non-negative
+  /// indices are zero-indexed, while negative indices count from the last
+  /// argument. For example, if an intrinsic has one trailing verbatim argument
+  /// (specified with verbatimArgIndices = {-1}):
   ///     out = intrinsic(var1, var2, opType)
   /// we compute:
   ///     shadow[out] =
@@ -5804,30 +5806,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// The origin is approximated using setOriginForNaryOp.
   void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
                                          Intrinsic::ID shadowIntrinsicID,
-                                         unsigned int trailingVerbatimArgs,
+                                         ArrayRef<int> verbatimArgIndices,
                                          bool forceIntegerIntrinsic) {
     IRBuilder<> IRB(&I);
 
-    assert(trailingVerbatimArgs < I.arg_size());
+    assert(verbatimArgIndices.size() <= I.arg_size());
+
+    // verbatimArgIndices may have negative indices, and the indices may be in
+    // any order (e.g., [5, -1, 2]). Convert it to a lookup table.
+    SmallVector<bool, 4> verbatimArgLookup(I.arg_size(), false);
+
+    for (int index : verbatimArgIndices) {
+      if (index < 0)
+        index += I.arg_size();
+      assert(index >= 0 && static_cast<unsigned int>(index) < I.arg_size());
+      verbatimArgLookup[index] = true;
+    }
 
     SmallVector<Value *, 8> ShadowArgs;
     // Don't use getNumOperands() because it includes the callee
-    for (unsigned int i = 0; i < I.arg_size() - trailingVerbatimArgs; i++) {
-      Value *Shadow = getShadow(&I, i);
+    for (unsigned int i = 0; i < I.arg_size(); i++) {
+      if (verbatimArgLookup[i]) {
+        Value *Arg = I.getArgOperand(i);
 
-      if (forceIntegerIntrinsic)
-        ShadowArgs.push_back(Shadow);
-      else
-        ShadowArgs.push_back(
-            IRB.CreateBitCast(Shadow, I.getArgOperand(i)->getType()));
-    }
+        if (forceIntegerIntrinsic)
+          assert(Arg->getType()->isIntOrIntVectorTy());
 
-    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
-         i++) {
-      Value *Arg = I.getArgOperand(i);
-      if (forceIntegerIntrinsic)
-        assert(Arg->getType()->isIntOrIntVectorTy());
-      ShadowArgs.push_back(Arg);
+        ShadowArgs.push_back(Arg);
+      } else {
+        Value *Shadow = getShadow(&I, i);
+
+        if (forceIntegerIntrinsic)
+          ShadowArgs.push_back(Shadow);
+        else
+          ShadowArgs.push_back(
+              IRB.CreateBitCast(Shadow, I.getArgOperand(i)->getType()));
+      }
     }
 
     Value *CombinedShadow;
@@ -5840,9 +5854,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       CombinedShadow = IRB.CreateBitCast(CI, getShadowTy(&I));
     }
 
-    // Combine the computed shadow with the shadow of trailing args
-    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
-         i++) {
+    // Combine the computed shadow with the shadow of verbatim args
+    //
+    // N.B. we could merge this with the earlier loop, but we keep it separate
+    // for the IR to be byte-identical with the existing tests.
+    for (unsigned int i = 0; i < I.arg_size(); i++) {
+      if (!verbatimArgLookup[i])
+        continue;
+
       Value *Shadow =
           CreateShadowCast(IRB, getShadow(&I, i), CombinedShadow->getType());
       CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
@@ -5975,7 +5994,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::bitreverse:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/0,
+                                        /*verbatimArgIndices=*/{},
                                         /*forceIntegerIntrinsic=*/false);
       break;
     case Intrinsic::is_fpclass:
@@ -6915,7 +6934,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pshuf_b:
     case Intrinsic::x86_avx512_pshuf_b_512:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1,
+                                        /*verbatimArgsIndices=*/{-1},
                                         /*forceIntegerIntrinsic=*/false);
       break;
 
@@ -6938,7 +6957,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} were removed in
       // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1,
+                                        /*verbatimArgIndices=*/{-1},
                                         /*forceIntegerIntrinsic=*/false);
       break;
     }
@@ -6950,7 +6969,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_dw_512,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -6958,21 +6977,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_dw_256:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_dw_256,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_dw_128:
     case Intrinsic::x86_avx512_mask_pmovus_dw_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_dw_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_512:
     case Intrinsic::x86_avx512_mask_pmovus_db_512: {
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_db_512,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -6980,21 +6999,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_db_256:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_db_256,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_128:
     case Intrinsic::x86_avx512_mask_pmovus_db_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_db_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_512:
     case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qb_512,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -7002,21 +7021,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_qb_256:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qb_256,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_128:
     case Intrinsic::x86_avx512_mask_pmovus_qb_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qb_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_512:
     case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qw_512,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -7024,28 +7043,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_qw_256:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qw_256,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_128:
     case Intrinsic::x86_avx512_mask_pmovus_qw_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qw_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qd_128:
     case Intrinsic::x86_avx512_mask_pmovus_qd_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_qd_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_wb_128:
     case Intrinsic::x86_avx512_mask_pmovus_wb_128:
       handleIntrinsicByApplyingToShadow(
           I, Intrinsic::x86_avx512_mask_pmov_wb_128,
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qd_256:
@@ -7072,7 +7091,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                   <16 x i1> %mask)
     case Intrinsic::x86_avx512_mask_compress:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1,
+                                        /*verbatimArgIndices=*/{-1},
                                         /*forceIntegerIntrinsic=*/true);
       break;
 
@@ -7371,7 +7390,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_vsli:
     case Intrinsic::aarch64_neon_vsri:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1,
+                                        /*verbatimArgIndices=*/{-1},
                                         /*forceIntegerIntrinsic=*/false);
       break;
 
@@ -7521,7 +7540,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The last trailing argument (index register) should be handled verbatim
       handleIntrinsicByApplyingToShadow(
           I, /*shadowIntrinsicID=*/I.getIntrinsicID(),
-          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
+          /*verbatimArgIndices=*/{-1}, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -8839,8 +8858,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
               .first;
 
       Value *VrSrcPtr = IRB.CreateInBoundsPtrAdd(
-          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy,
-                                   IRB.getInt32(AArch64VrBegOffset)),
+          IRB.CreatePtrAddWithUnsignedOffset(VAArgTLSCopy, AArch64VrBegOffset,
+                                             "", GEPNoWrapFlags::inBounds()),
           VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
@@ -8853,8 +8872,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(16), /*isStore*/ true)
               .first;
 
-      Value *StackSrcPtr = IRB.CreateInBoundsPtrAdd(
-          VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
+      Value *StackSrcPtr = IRB.CreatePtrAddWithUnsignedOffset(
+          VAArgTLSCopy, AArch64VAEndOffset, "", GEPNoWrapFlags::inBounds());
 
       IRB.CreateMemCpy(StackSaveAreaShadowPtr, Align(16), StackSrcPtr,
                        Align(16), VAArgOverflowSize);

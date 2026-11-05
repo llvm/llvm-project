@@ -17,6 +17,9 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -390,13 +393,21 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
+// Phase 1 can erase loads the fused walk already collected: the greedy
+// driver folds plus drops trivially dead ops, so a load whose only user
+// folds away is gone before phase 2 runs. Track erasures to prune them.
+struct ErasedOpTracker : public RewriterBase::Listener {
+  void notifyOperationErased(Operation *op) override { erased.insert(op); }
+  DenseSet<Operation *> erased;
+};
+
 struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
 
 private:
-  void runSimplifyConstantLoad();
+  void runSimplifyConstantLoad(llvm::ArrayRef<Operation *> loadOps);
 };
 
 void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
@@ -415,40 +426,48 @@ void CIRSimplifyPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMergeCleanupPatterns(patterns);
 
-  // Collect operations to apply patterns.
+  // Collect operations to apply patterns. Both op lists come from one
+  // walk: the first-phase patterns create no LoadOps (Select/Not/
+  // Constant only), so every load phase 2 could see is collected here.
   llvm::SmallVector<Operation *, 16> ops;
+  llvm::SmallVector<Operation *, 16> loadOps;
   getOperation()->walk([&](Operation *op) {
     if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp>(op))
       ops.push_back(op);
+    else if (isa<LoadOp>(op))
+      loadOps.push_back(op);
   });
 
   // Apply patterns. Scope the rewrite to the body region, which encloses
   // the common ancestor the driver would otherwise search for.
+  ErasedOpTracker tracker;
   GreedyRewriteConfig config;
   config.setScope(&getOperation()->getRegion(0));
+  config.setListener(&tracker);
   if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
+
+  // Drop loads phase 1 erased (fold plus dead-op cleanup); the old
+  // second walk never saw them either.
+  llvm::erase_if(loadOps,
+                 [&](Operation *op) { return tracker.erased.contains(op); });
 
   // SimplifyConstantLoad needs to query dominance information, which could be
   // invalidated by other rewrite patterns. Thus we run it separately after
   // other patterns have been applied.
-  runSimplifyConstantLoad();
+  runSimplifyConstantLoad(loadOps);
 }
 
-void CIRSimplifyPass::runSimplifyConstantLoad() {
+void CIRSimplifyPass::runSimplifyConstantLoad(
+    llvm::ArrayRef<Operation *> loadOps) {
   RewritePatternSet patterns(&getContext());
   patterns.add<SimplifyConstantLoad>(patterns.getContext());
 
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](Operation *op) {
-    if (isa<LoadOp>(op))
-      ops.push_back(op);
-  });
   // Scope the rewrite to the body region, which encloses the common
   // ancestor the driver would otherwise search for.
   GreedyRewriteConfig config;
   config.setScope(&getOperation()->getRegion(0));
-  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
+  if (applyOpPatternsGreedily(loadOps, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

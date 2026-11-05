@@ -24,6 +24,20 @@ unsigned test_cls_32(int32_t a) { return __riscv_cls_32(a); }
 // RV64-NEXT:   srai
 uint32_t test_rev_32(uint32_t a) { return __riscv_rev_32(a); }
 
+// CHECK-LABEL: test_wzip8p_64:
+// RV32:        wzip8p{{[[:space:]]}}
+// RV64:        zip8p{{[[:space:]]}}
+uint64_t test_wzip8p_64(uint32_t rs1, uint32_t rs2) {
+  return __riscv_wzip8p_64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_wzip16p_64:
+// RV32:        wzip16p{{[[:space:]]}}
+// RV64:        zip16p{{[[:space:]]}}
+uint64_t test_wzip16p_64(uint32_t rs1, uint32_t rs2) {
+  return __riscv_wzip16p_64(rs1, rs2);
+}
+
 // CHECK-LABEL: test_slx_32:
 // RV32:        slx{{[[:space:]]}}
 // RV64:        andi

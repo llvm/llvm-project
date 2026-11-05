@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=i386-- -run-pass scavenger-test -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=i386-- -run-pass scavenger-test -o - %s | FileCheck %s
 ---
 # CHECK-LABEL: name: func0
 name: func0

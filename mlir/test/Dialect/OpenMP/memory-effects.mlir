@@ -173,3 +173,87 @@ func.func @sections_bounded_private_bounded_reduction(%x: memref<i32>, %y: memre
   } <{private_assume_bounded_recipe_effects, reduction_assume_bounded_recipe_effects}>
   return
 }
+
+func.func private @copy_i32(memref<i32>, memref<i32>)
+func.func private @copy_ptr(!llvm.ptr, !llvm.ptr)
+
+func.func @single_unbounded_copyprivate_effects(%x: memref<i32>) {
+  // An unannotated copy function may access arbitrary memory, allocate or free.
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  omp.single copyprivate(%x -> @copy_i32 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @single_bounded_copyprivate_effects(%x: memref<i32>, %y: !llvm.ptr) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 1, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on op operand 1, on resource '<Default>'}}
+  omp.single copyprivate(%x -> @copy_i32 : memref<i32>, %y -> @copy_ptr : !llvm.ptr) {
+    omp.terminator
+  } <{copyprivate_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @single_bounded_private_unbounded_copyprivate(%x: memref<i32>, %y: memref<i32>) {
+  // A bounded private clause does not constrain the copy function.
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  omp.single copyprivate(%x -> @copy_i32 : memref<i32>)
+      private(@private_i32 %y -> %py : memref<i32>) {
+    omp.terminator
+  } <{private_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @single_unbounded_private_bounded_copyprivate(%x: memref<i32>, %y: memref<i32>) {
+  // A bounded copy function does not constrain the private recipe.
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  omp.single copyprivate(%x -> @copy_i32 : memref<i32>)
+      private(@private_i32 %y -> %py : memref<i32>) {
+    omp.terminator
+  } <{copyprivate_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @single_bounded_private_bounded_copyprivate(%x: memref<i32>, %y: memref<i32>) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 1, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
+  omp.single copyprivate(%x -> @copy_i32 : memref<i32>)
+      private(@private_i32 %y -> %py : memref<i32>) {
+    omp.terminator
+  } <{copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @single_empty_copyprivate_effects() {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{operation has no memory effects}}
+  omp.single nowait {
+    omp.terminator
+  } <{copyprivate_assume_bounded_recipe_effects}>
+  return
+}

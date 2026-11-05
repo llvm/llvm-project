@@ -41,6 +41,7 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   bool usesPhysRegsForValues() const override { return false; }
+  CSEConfigBase *createCSEConfig() const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

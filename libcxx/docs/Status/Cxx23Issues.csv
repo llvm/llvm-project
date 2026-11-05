@@ -141,7 +141,7 @@
 "`LWG3471 <https://wg21.link/LWG3471>`__","``polymorphic_allocator::allocate`` does not satisfy ``Cpp17Allocator`` requirements","2022-02 (Virtual)","","","`#104943 <https://github.com/llvm/llvm-project/issues/104943>`__",""
 "`LWG3525 <https://wg21.link/LWG3525>`__","``uses_allocator_construction_args`` fails to handle types convertible to ``pair``","2022-02 (Virtual)","","","`#104944 <https://github.com/llvm/llvm-project/issues/104944>`__",""
 "`LWG3598 <https://wg21.link/LWG3598>`__","``system_category().default_error_condition(0)`` is underspecified","2022-02 (Virtual)","","","`#104945 <https://github.com/llvm/llvm-project/issues/104945>`__",""
-"`LWG3601 <https://wg21.link/LWG3601>`__","common_iterator's postfix-proxy needs ``indirectly_readable`` ","2022-02 (Virtual)","","","`#104946 <https://github.com/llvm/llvm-project/issues/104946>`__",""
+"`LWG3601 <https://wg21.link/LWG3601>`__","common_iterator's postfix-proxy needs ``indirectly_readable`` ","2022-02 (Virtual)","|Complete|","24","`#104946 <https://github.com/llvm/llvm-project/issues/104946>`__",""
 "`LWG3607 <https://wg21.link/LWG3607>`__","``contiguous_iterator`` should not be allowed to have custom ``iter_move`` and ``iter_swap`` behavior","2022-02 (Virtual)","|Nothing To Do|","","`#104947 <https://github.com/llvm/llvm-project/issues/104947>`__",""
 "`LWG3610 <https://wg21.link/LWG3610>`__","``iota_view::size`` sometimes rejects integer-class types","2022-02 (Virtual)","|Complete|","23","`#104948 <https://github.com/llvm/llvm-project/issues/104948>`__",""
 "`LWG3612 <https://wg21.link/LWG3612>`__","Inconsistent pointer alignment in ``std::format`` ","2022-02 (Virtual)","|Complete|","14","`#104949 <https://github.com/llvm/llvm-project/issues/104949>`__",""

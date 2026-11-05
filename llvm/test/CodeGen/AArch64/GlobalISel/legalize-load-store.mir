@@ -2,6 +2,7 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_load
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0
@@ -59,6 +60,7 @@ body: |
 
 ---
 name:            test_store
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $w1
@@ -511,6 +513,7 @@ body:             |
 ...
 ---
 name:            test_trunc_store
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $w1

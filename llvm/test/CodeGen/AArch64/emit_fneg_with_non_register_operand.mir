@@ -96,7 +96,7 @@ body:             |
   ; CHECK-NEXT:   [[LDRDui1:%[0-9]+]]:fpr64 = LDRDui [[LOADgot]], 0 :: (dereferenceable load (s64) from @c)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:FPR64, def %4, reguse tiedto:$0, [[LDRDui1]](tied-def 3)
   ; CHECK-NEXT:   [[FNEGDr:%[0-9]+]]:fpr64 = FNEGDr %2
-  ; CHECK-NEXT:   nofpexcept FCMPDrr %4, killed [[FNEGDr]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NEXT:   nofpexcept FCMPDrr %4, [[FNEGDr]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -116,7 +116,7 @@ body:             |
     %5:fpr64 = LDRDui %6, 0 :: (dereferenceable load (s64) from @c)
     INLINEASM &"", sideeffect attdialect, regdef:FPR64, def %4, reguse tiedto:$0, %5(tied-def 3)
     %7:fpr64 = FNEGDr %2
-    nofpexcept FCMPDrr %4, killed %7, implicit-def $nzcv, implicit $fpcr
+    nofpexcept FCMPDrr %4, %7, implicit-def $nzcv, implicit $fpcr
     Bcc 1, %bb.2, implicit $nzcv
     B %bb.1
 

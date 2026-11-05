@@ -69,38 +69,6 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
-// Helper struct to store/access costs for each cost kind.
-// TODO: Move this to allow other targets to use it?
-namespace {
-struct CostKindCosts {
-  unsigned RecipThroughputCost = ~0U;
-  unsigned LatencyCost = ~0U;
-  unsigned CodeSizeCost = ~0U;
-  unsigned SizeAndLatencyCost = ~0U;
-
-  std::optional<unsigned>
-  operator[](TargetTransformInfo::TargetCostKind Kind) const {
-    unsigned Cost = ~0U;
-    switch (Kind) {
-    case TargetTransformInfo::TCK_RecipThroughput:
-      Cost = RecipThroughputCost;
-      break;
-    case TargetTransformInfo::TCK_Latency:
-      Cost = LatencyCost;
-      break;
-    case TargetTransformInfo::TCK_CodeSize:
-      Cost = CodeSizeCost;
-      break;
-    case TargetTransformInfo::TCK_SizeAndLatency:
-      Cost = SizeAndLatencyCost;
-      break;
-    }
-    if (Cost == ~0U)
-      return std::nullopt;
-    return Cost;
-  }
-};
-} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
@@ -2313,6 +2281,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
   if (ST->hasVBMI())
     if (const auto *Entry =
             CostTableLookup(AVX512VBMIShuffleTbl, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX512BWInLaneShuffleTbl[] = {
+      {TTI::SK_PermuteTwoSrc, MVT::v64i8, {2, 2, 2, 2}}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWInLaneShuffleTbl, Kind, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 

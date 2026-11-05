@@ -1345,14 +1345,10 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
          "Preserving debug location based on moving memset within BB.");
   Builder.SetCurrentDebugLocation(MemSet->getDebugLoc());
 
-  // If the sizes have different types, zext the smaller one.
-  if (DestSize->getType() != SrcSize->getType()) {
-    if (DestSize->getType()->getIntegerBitWidth() >
-        SrcSize->getType()->getIntegerBitWidth())
-      SrcSize = Builder.CreateZExt(SrcSize, DestSize->getType());
-    else
-      DestSize = Builder.CreateZExt(DestSize, SrcSize->getType());
-  }
+  // Convert both sizes to the index size.
+  Type *IdxTy = MemCpy->getDataLayout().getIndexType(Dest->getType());
+  SrcSize = Builder.CreateZExtOrTrunc(SrcSize, IdxTy);
+  DestSize = Builder.CreateZExtOrTrunc(DestSize, IdxTy);
 
   Value *Ule = Builder.CreateICmpULE(DestSize, SrcSize);
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);

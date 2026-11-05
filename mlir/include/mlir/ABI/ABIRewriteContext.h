@@ -48,6 +48,10 @@ enum class ArgKind : uint8_t {
   /// Pass indirectly via a pointer (sret for returns, byval for args).
   Indirect,
 
+  /// Pass a pointer to the caller's object with no copy implied (byref).  The
+  /// callee must not write through it.  Arguments only.
+  IndirectAliased,
+
   /// Ignore (void return, empty struct).
   Ignore,
 
@@ -64,7 +68,7 @@ struct ArgClassification {
   /// use the original type.
   Type coercedType = nullptr;
 
-  /// For Indirect: alignment of the pointed-to object.
+  /// For Indirect and IndirectAliased: alignment of the pointed-to object.
   llvm::Align indirectAlign = llvm::Align(1);
 
   /// For Extend: whether to sign-extend (true) or zero-extend (false).
@@ -77,8 +81,8 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
-  /// For Indirect: target address space of the pointer passed in place of
-  /// the value.  Zero is the default address space.
+  /// For Indirect and IndirectAliased: target address space of the pointer
+  /// passed in place of the value.  Zero is the default address space.
   unsigned indirectAddrSpace = 0;
 
   /// For Direct with coercion: the byte offset within the original aggregate
@@ -139,6 +143,15 @@ struct ArgClassification {
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;
     c.byVal = byVal;
+    c.indirectAddrSpace = addrSpace;
+    return c;
+  }
+
+  static ArgClassification getIndirectAliased(llvm::Align align,
+                                              unsigned addrSpace) {
+    ArgClassification c;
+    c.kind = ArgKind::IndirectAliased;
+    c.indirectAlign = align;
     c.indirectAddrSpace = addrSpace;
     return c;
   }

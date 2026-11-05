@@ -40,7 +40,7 @@ body:             |
   
     %1:intregs = PHI %5, %bb.0, %3, %bb.1
     %6:intregs = L2_loadri_io %1, 12 :: (load (s32) from %ir.cgep)
-    S2_storeri_io %1, 0, killed %6 :: (store (s32) into %ir.lsr.iv)
+    S2_storeri_io %1, 0, %6 :: (store (s32) into %ir.lsr.iv)
     %3:intregs = A2_addi %1, -8
     ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.2, implicit-def dead $pc

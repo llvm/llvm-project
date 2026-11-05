@@ -784,6 +784,7 @@ class CompileUnit:
     id: int
     compileUnitPath: str
     language: Optional[str] = None
+    isOptimized: Optional[bool] = None
 
 
 @dataclass(frozen=True)

@@ -126,11 +126,12 @@ define amdgpu_kernel void @test_sincos_v3(ptr addrspace(1) nocapture %a) {
 ; GCN-PRELINK-NEXT:    [[__SINCOS_:%.*]] = alloca <3 x float>, align 16, addrspace(5)
 ; GCN-PRELINK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr addrspace(1) [[A]], align 16
 ; GCN-PRELINK-NEXT:    [[TMP1:%.*]] = call fast <3 x float> @_Z6sincosDv3_fPU3AS5S_(<3 x float> [[TMP0]], ptr addrspace(5) [[__SINCOS_]])
-; GCN-PRELINK-NEXT:    [[EXTRACTVEC13:%.*]] = load <4 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
+; GCN-PRELINK-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
 ; GCN-PRELINK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; GCN-PRELINK-NEXT:    store <4 x float> [[EXTRACTVEC6]], ptr addrspace(1) [[A]], align 16
 ; GCN-PRELINK-NEXT:    [[CALL11:%.*]] = call fast <3 x float> @_Z3cosDv3_f(<3 x float> [[TMP0]])
 ; GCN-PRELINK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 16
+; GCN-PRELINK-NEXT:    [[EXTRACTVEC13:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; GCN-PRELINK-NEXT:    store <4 x float> [[EXTRACTVEC13]], ptr addrspace(1) [[ARRAYIDX12]], align 16
 ; GCN-PRELINK-NEXT:    ret void
 ;

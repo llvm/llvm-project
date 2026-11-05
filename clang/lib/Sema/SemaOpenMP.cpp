@@ -2403,9 +2403,12 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
           !cast<OMPCapturedExprDecl>(D)->getInit()->isGLValue()) &&
         // If the variable is implicitly firstprivate and scalar - capture by
-        // copy
-        !((DSAStack->getDefaultDSA() == DSA_firstprivate ||
-           DSAStack->getDefaultDSA() == DSA_private) &&
+        // copy.  Query the default data-sharing attribute at the capture level
+        // being considered rather than at the innermost directive: a nested
+        // default(firstprivate) or default(private) must not make an enclosing
+        // region capture by copy and lose its writes.
+        !((DSAStack->getDefaultDSA(Level) == DSA_firstprivate ||
+           DSAStack->getDefaultDSA(Level) == DSA_private) &&
           !DSAStack->hasExplicitDSA(
               D, [](OpenMPClauseKind K, bool) { return K != OMPC_unknown; },
               Level) &&
@@ -2613,7 +2616,6 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       Expr *ThisExpr = SemaRef.BuildCXXThisExpr(SourceLocation(),
                                                 SemaRef.getCurrentThisType(),
                                                 /*IsImplicit=*/true);
-      const CXXScopeSpec CS = CXXScopeSpec();
       Expr *ME = SemaRef.BuildMemberExpr(
           ThisExpr, /*IsArrow=*/true, SourceLocation(),
           NestedNameSpecifierLoc(), SourceLocation(), FD,
@@ -3018,6 +3020,13 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
     SmallVector<Expr *, 8> PrivateCopies;
     for (Expr *DE : Clause->varlist()) {
       if (DE->isValueDependent() || DE->isTypeDependent()) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      // Data members are captured, and get private copies, on instantiation.
+      if (isa<MemberExpr>(DE->IgnoreParens())) {
+        assert(SemaRef.CurContext->isDependentContext() &&
+               "uncaptured data member in a non-dependent context");
         PrivateCopies.push_back(nullptr);
         continue;
       }
@@ -3846,14 +3855,33 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
-  assert(TraitInfos.size() == Variants.size() &&
+  // Without an 'otherwise' clause, the last variant is the implicit one.
+  bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
+  assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
          "Expected one variant per metadirective clause");
-  // TODO Phase 3: Build OMPMetaDirective AST node holding all variants.
-  // TODO Phase 4: Codegen - generate runtime if-else chain.
-  // Temporary stub: return the first variant until OMPMetaDirective exists.
-  if (Variants.empty())
-    return StmtError();
-  return Variants.front();
+  SmallVector<OMPTraitInfo *, 4> AllTraitInfos(TraitInfos);
+  if (HasImplicitOtherwise)
+    AllTraitInfos.push_back(&getASTContext().getNewOMPTraitInfo());
+  // The user condition of each variant; null for 'otherwise'.
+  SmallVector<Expr *, 4> Conditions;
+  for (OMPTraitInfo *TI : AllTraitInfos) {
+    Expr *Cond = nullptr;
+    TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
+      if (!IsScore)
+        Cond = E;
+      return !IsScore;
+    });
+    if (Cond) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(Cond->getExprLoc(), Cond);
+      if (Val.isInvalid())
+        return StmtError();
+      Cond = SemaRef.MakeFullExpr(Val.get()).get();
+    }
+    Conditions.push_back(Cond);
+  }
+  return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
+                                  Conditions, AllTraitInfos,
+                                  HasImplicitOtherwise);
 }
 
 OMPRequiresDecl *
@@ -4746,6 +4774,10 @@ public:
     // Loop transformation directives do not introduce data sharing
     VisitStmt(S);
   }
+
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(OMPMetaDirective *S) { VisitStmt(S); }
 
   void VisitCallExpr(CallExpr *S) {
     for (Stmt *C : S->arguments()) {
@@ -6033,6 +6065,33 @@ static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
   return Ty;
 }
 
+static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
+  auto *ILE = dyn_cast<InitListExpr>(E->IgnoreImplicit());
+  if (!ILE)
+    return E;
+  if (ILE->isTransparent())
+    return buildInitListValue(SemaRef, ILE->getInit(0));
+  QualType Ty = ILE->getType();
+  bool IsEmptyScalar = ILE->getNumInits() == 0 && Ty->isScalarType();
+  SourceLocation LBrace = ILE->getLBraceLoc();
+  if (!SemaRef.getLangOpts().CPlusPlus) {
+    if (!IsEmptyScalar)
+      return E;
+    ExprResult Zero = SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(LBrace, 0).get(), Ty,
+        AssignmentAction::Converting);
+    return Zero.isUsable() ? Zero.get() : E;
+  }
+  Expr *Syntactic = ILE->getSyntacticForm();
+  if ((!IsEmptyScalar && !Ty->isRecordType()) || !Syntactic)
+    return E;
+  Sema::TentativeAnalysisScope Trap(SemaRef);
+  ExprResult Value = SemaRef.BuildCXXTypeConstructExpr(
+      SemaRef.Context.getTrivialTypeSourceInfo(Ty, LBrace), LBrace, Syntactic,
+      ILE->getRBraceLoc(), /*ListInitialization=*/true);
+  return Value.isUsable() ? Value.get() : E;
+}
+
 static VarDecl *precomputeExpr(Sema &Actions,
                                SmallVectorImpl<Stmt *> &BodyStmts, Expr *E,
                                StringRef Name) {
@@ -6377,11 +6436,11 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
         llvm::APInt(Ctx.getIntWidth(LogicalTy), Direction, /*isSigned=*/true),
         LogicalTy, {});
   } else if (auto *IncBin = dyn_cast<BinaryOperator>(Inc)) {
+    Expr *IncRHS = buildInitListValue(SemaRef, IncBin->getRHS());
     if (IncBin->getOpcode() == BO_AddAssign) {
-      Step = IncBin->getRHS();
+      Step = IncRHS;
     } else if (IncBin->getOpcode() == BO_SubAssign) {
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncBin->getRHS()));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncRHS));
     } else
       llvm_unreachable("unhandled binary increment operator");
   } else if (auto *CondCXXOp = dyn_cast<CXXOperatorCallExpr>(Inc)) {
@@ -6395,11 +6454,12 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
           Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), -1), LogicalTy, {});
       break;
     case OO_PlusEqual:
-      Step = CondCXXOp->getArg(1);
+      Step = buildInitListValue(SemaRef, CondCXXOp->getArg(1));
       break;
     case OO_MinusEqual:
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, CondCXXOp->getArg(1)));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(
+          nullptr, {}, UO_Minus,
+          buildInitListValue(SemaRef, CondCXXOp->getArg(1))));
       break;
     default:
       llvm_unreachable("unhandled overloaded increment operator");
@@ -8879,6 +8939,7 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
+  NewLB = buildInitListValue(SemaRef, NewLB);
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
@@ -8923,6 +8984,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
   if (!NewStep || NewStep->containsErrors())
     return true;
+  NewStep = buildInitListValue(SemaRef, NewStep);
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getBeginLoc();
@@ -9598,6 +9660,26 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
   // 1]).
   if (NeedToReorganize) {
     Diff = Lower;
+
+    // (Lower - Step [+ 1]) may be negative. Compute it in at least Upper's
+    // width: in a narrower unsigned type it would wrap around and then be
+    // zero-extended in the subtraction from Upper, giving a wrong number of
+    // iterations, e.g. for
+    //   for (unsigned i = 0; i < (size_t)N; i += 2)
+    QualType LowerTy = Lower->getType();
+    QualType UpperTy = Upper->getType();
+    if (!LowerTy->isDependentType() && !UpperTy->isDependentType() &&
+        LowerTy->isIntegerType() && UpperTy->isIntegerType() &&
+        SemaRef.Context.getTypeSize(LowerTy) <
+            SemaRef.Context.getTypeSize(UpperTy)) {
+      QualType WideTy = getIntTypeForBitwidthOrBitInt(
+          SemaRef.Context, SemaRef.Context.getTypeSize(UpperTy),
+          UpperTy->hasSignedIntegerRepresentation());
+      Diff = SemaRef.PerformImplicitConversion(Lower, WideTy,
+                                               AssignmentAction::Converting);
+      if (!Diff.isUsable())
+        return nullptr;
+    }
 
     if (RoundToStep) {
       // Lower - Step
@@ -23129,7 +23211,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     DeclRefExpr *PrivateRef = buildDeclRefExpr(SemaRef, Private, Type, ELoc);
     // Build var to save initial value.
     VarDecl *Init = buildVarDecl(SemaRef, ELoc, Type, ".linear.start");
-    Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
     bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !IsBindingDecl && !SemaRef.CurContext->isDependentContext()) {
@@ -23150,10 +23231,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
         }
       }
     }
-    if (LinKind == OMPC_LINEAR_uval)
-      InitExpr = VD ? VD->getInit() : SimpleRefExpr;
-    else
-      InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
+    // Read the initial value through the list item itself for every modifier;
+    // a 'uval' item is a reference whose referenced value is linear, exactly as
+    // for 'val', and need not have an initializer (e.g. a reference parameter).
+    Expr *InitExpr = Ref ? Ref : SimpleRefExpr;
     SemaRef.AddInitializerToDecl(
         Init, SemaRef.DefaultLvalueConversion(InitExpr).get(),
         /*DirectInit=*/false);
@@ -23231,7 +23312,6 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   bool HasErrors = false;
   auto CurInit = Clause.inits().begin();
   auto CurPrivate = Clause.privates().begin();
-  OpenMPLinearClauseKind LinKind = Clause.getModifier();
   for (Expr *RefExpr : Clause.varlist()) {
     SourceLocation ELoc;
     SourceRange ERange;
@@ -23259,13 +23339,12 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     }
     Expr *InitExpr = *CurInit;
 
-    // Build privatized reference to the current linear var.
+    // Build privatized reference to the current linear var. The final value is
+    // written back through the variable itself, also for 'uval' references.
     auto *DE = cast<DeclRefExpr>(SimpleRefExpr);
     Expr *CapturedRef;
     if (isa<BindingDecl>(DE->getDecl())) {
       CapturedRef = SimpleRefExpr;
-    } else if (LinKind == OMPC_LINEAR_uval) {
-      CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
     } else {
       CapturedRef =
           buildDeclRefExpr(SemaRef, cast<VarDecl>(DE->getDecl()),
@@ -24550,24 +24629,24 @@ public:
     return RelevantExpr || Visit(UO->getSubExpr()->IgnoreParenImpCasts());
   }
   bool VisitBinaryOperator(BinaryOperator *BO) {
-    if (SemaRef.getLangOpts().OpenMP < 50 || !BO->getType()->isPointerType()) {
+    // Since OpenMP 5.0 only pointer arithmetic (pointer +/- integer offset)
+    // may lead to the base, which is in the pointer operand.
+    Expr *PtrE = nullptr;
+    if (SemaRef.getLangOpts().OpenMP >= 50 && BO->isAdditiveOp() &&
+        BO->getType()->isPointerType()) {
+      Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
+      Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
+      if (LE->getType()->isPointerType())
+        PtrE = LE;
+      else if (BO->getOpcode() == BO_Add && RE->getType()->isPointerType())
+        PtrE = RE;
+    }
+    if (!PtrE) {
       emitErrorMsg();
       return false;
     }
-
-    // Pointer arithmetic is the only thing we expect to happen here so after we
-    // make sure the binary operator is a pointer type, the only thing we need
-    // to do is to visit the subtree that has the same type as root (so that we
-    // know the other subtree is just an offset)
-    Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
-    Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
-    Components.emplace_back(BO, nullptr, false);
-    assert((LE->getType().getTypePtr() == BO->getType().getTypePtr() ||
-            RE->getType().getTypePtr() == BO->getType().getTypePtr()) &&
-           "Either LHS or RHS have base decl inside");
-    if (BO->getType().getTypePtr() == LE->getType().getTypePtr())
-      return RelevantExpr || Visit(LE);
-    return RelevantExpr || Visit(RE);
+    Components.emplace_back(BO, nullptr, /*IsNonContiguous=*/false);
+    return RelevantExpr || Visit(PtrE);
   }
   bool VisitCXXThisExpr(CXXThisExpr *CTE) {
     assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");

@@ -185,7 +185,7 @@ public:
 
   /// Get size of a C-level int or unsigned int, in bits.
   // FIXME Could move into Triple class.
-  unsigned getIntSize(const Triple &TT) const {
+  static unsigned getIntSize(const Triple &TT) {
     return TT.isArch16Bit() ? 16 : 32;
   }
 
@@ -196,6 +196,11 @@ public:
                                                bool &ShouldSignExtI32Param,
                                                bool &ShouldSignExtI32Return,
                                                const Triple &T);
+
+  /// Determine whether bool parameters and returns need zeroext on \p T.
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.

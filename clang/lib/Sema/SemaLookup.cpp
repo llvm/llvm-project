@@ -1907,6 +1907,10 @@ bool LookupResult::isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
         }
         DC = DC->getLexicalParent();
       } while (!IsEffectivelyFileContext(DC));
+    } else if (auto *FD = dyn_cast<FunctionDecl>(DC);
+               FD && !FD->getDefinition()) {
+      // This is possible as the definition are removed in reduced BMI.
+      AcceptableWithinParent = isAcceptable(SemaRef, FD, Kind);
     } else {
       AcceptableWithinParent =
           SemaRef.hasAcceptableDefinition(cast<NamedDecl>(DC), Kind);

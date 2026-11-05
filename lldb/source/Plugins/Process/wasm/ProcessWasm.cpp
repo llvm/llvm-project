@@ -11,7 +11,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "llvm/Support/ErrorExtras.h"
 #include <cstring>
@@ -132,16 +131,17 @@ ProcessWasm::GetFallbackFrameIndex(uint32_t module_id) {
     return llvm::createStringError(
         "the global belongs to no known module instance");
 
-  ThreadSP thread = GetThreadList().GetSelectedThread();
-  StackFrameSP frame =
-      thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
-  if (frame) {
-    // A frame can only stand in for the module the stub reports it executing.
-    const uint32_t frame_index = frame->GetConcreteFrameIndex();
+  // Use the real thread list in case an OS plugin is providing threads.
+  if (ThreadSP thread = m_thread_list_real.GetSelectedThread()) {
     ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(*thread);
-    if (GetWasmModuleID(wasm_thread.GetConcreteFramePC(frame_index)) ==
-        module_id)
-      return frame_index;
+    // A frame can only stand in for the module the stub reports it executing.
+    for (uint32_t frame_index = 0;; ++frame_index) {
+      lldb::addr_t pc = wasm_thread.GetConcreteFramePC(frame_index);
+      if (pc == LLDB_INVALID_ADDRESS)
+        break;
+      if (GetWasmModuleID(pc) == module_id)
+        return frame_index;
+    }
   }
 
   return llvm::createStringErrorV(

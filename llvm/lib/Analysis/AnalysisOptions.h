@@ -15,6 +15,13 @@
 
 namespace llvm {
 
+// Forward-declared so that Analysis headers can include this one. Fields of
+// these types default to the zero enumerator.
+enum class GVDAGType;
+enum class IR2VecKind;
+enum class InlinerFunctionImportStatsOpts;
+enum class PGOViewCountsType;
+
 enum class OutputCostKind {
   RecipThroughput,
   Latency,
@@ -28,6 +35,8 @@ enum class IntrinsicCostStrategy {
   IntrinsicCost,
   TypeBasedIntrinsicCost,
 };
+
+enum class CtxProfPrintMode { Everything, YAML };
 
 // Types of dependence test routines.
 enum class DependenceTestType {

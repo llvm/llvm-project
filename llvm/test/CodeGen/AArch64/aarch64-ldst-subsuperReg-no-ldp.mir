@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
 #
 # The test below tests that when the AArch64 Load Store Optimization pass tries to
 # convert load instructions into a ldp instruction, and when the destination

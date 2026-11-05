@@ -6,6 +6,7 @@ static_library("elf-core") {
     "//lldb/source/Plugins/DynamicLoader/POSIX-DYLD",
     "//lldb/source/Plugins/ObjectFile/ELF",
     "//lldb/source/Plugins/Process/Utility",
+    "//lldb/source/Plugins/Register/Core",
     "//lldb/source/Target",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",

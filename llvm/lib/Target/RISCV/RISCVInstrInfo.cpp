@@ -5105,7 +5105,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
   } else if (int ShXAmount, ShiftAmount;
-             STI.hasShlAdd(3) &&
+             STI.hasStdExtZba() &&
              (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;

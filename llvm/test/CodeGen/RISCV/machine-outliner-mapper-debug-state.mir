@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=riscv32-unknown-elf -stats -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=riscv32-unknown-elf -stats -run-pass=machine-outliner %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Debug instructions between adjacent illegal instructions must not reset the

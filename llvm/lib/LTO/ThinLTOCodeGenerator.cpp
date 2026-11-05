@@ -23,6 +23,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -261,7 +262,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(TheModule.getContext(), DebugPassManager);
   SI.registerCallbacks(PIC, &MAM);
-  PipelineTuningOptions PTO(&TheModule.getContext().getLibraryOptions());
+  PipelineTuningOptions PTO;
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
   PassBuilder PB(TheModule.getContext(), &TM, PTO, PGOOpt, &PIC);
@@ -560,6 +561,10 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
   if (TMBuilder.MCpu.empty())
     TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
+  // If data-sections is not explicitly set or unset, set data-sections by
+  // default to match the behaviour of lld and gold plugin.
+  if (!codegen::getExplicitDataSections())
+    TMBuilder.Options.DataSections = true;
 }
 
 void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {

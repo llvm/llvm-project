@@ -537,12 +537,18 @@ class OpEmitter {
       llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
 
 public:
+  // Emits the declaration of `op` to `os` and appends the headers declaring
+  // the traits it uses to `includes`.
   static void
   emitDecl(const Operator &op, raw_ostream &os,
-           const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+           const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+           SmallVectorImpl<StringRef> &includes);
+  // Emits the definition of `op` to `os` and appends the headers required by
+  // the definition beyond those of the declaration to `includes`.
   static void
   emitDef(const Operator &op, raw_ostream &os,
-          const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+          const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+          SmallVectorImpl<StringRef> &includes);
 
 private:
   OpEmitter(const Operator &op,
@@ -554,6 +560,12 @@ private:
 
   void emitDecl(raw_ostream &os);
   void emitDef(raw_ostream &os);
+
+  // Adds `trait` to the op class and records `cppIncludes` as headers required
+  // by the op declaration.
+  void addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes);
+  void addTrait(const tblgen::NativeTrait &trait);
+  void addTrait(const tblgen::InterfaceTrait &trait);
 
   // Generate methods for accessing the attribute names of this operation.
   void genAttrNameGetters();
@@ -770,6 +782,12 @@ private:
   // Keep track of the interface using declarations that have been generated to
   // avoid duplicates.
   llvm::StringSet<> interfaceUsingNames;
+
+  // The headers declaring the traits added to the op class.
+  SmallVector<StringRef> requiredIncludes;
+
+  // The headers required by the op definition beyond those of the declaration.
+  SmallVector<StringRef> requiredDefIncludes;
 };
 
 } // namespace
@@ -1051,14 +1069,20 @@ OpEmitter::OpEmitter(const Operator &op,
 }
 void OpEmitter::emitDecl(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDecl(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    SmallVectorImpl<StringRef> &includes) {
+  OpEmitter emitter(op, staticVerifierEmitter);
+  emitter.emitDecl(os);
+  llvm::append_range(includes, emitter.requiredIncludes);
 }
 
 void OpEmitter::emitDef(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDef(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    SmallVectorImpl<StringRef> &includes) {
+  OpEmitter emitter(op, staticVerifierEmitter);
+  emitter.emitDef(os);
+  llvm::append_range(includes, emitter.requiredDefIncludes);
 }
 
 void OpEmitter::emitDecl(raw_ostream &os) {
@@ -1069,6 +1093,19 @@ void OpEmitter::emitDecl(raw_ostream &os) {
 void OpEmitter::emitDef(raw_ostream &os) {
   opClass.finalize();
   opClass.writeDefTo(os);
+}
+
+void OpEmitter::addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes) {
+  opClass.addTrait(trait);
+  llvm::append_range(requiredIncludes, cppIncludes);
+}
+
+void OpEmitter::addTrait(const tblgen::NativeTrait &trait) {
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
+}
+
+void OpEmitter::addTrait(const tblgen::InterfaceTrait &trait) {
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
 }
 
 static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
@@ -1786,7 +1823,8 @@ void OpEmitter::genAttrGetters() {
   if (derivedAttrs.empty())
     return;
 
-  opClass.addTrait("::mlir::DerivedAttributeOpInterface::Trait");
+  addTrait("::mlir::DerivedAttributeOpInterface::Trait",
+           {"mlir/Interfaces/DerivedAttributeOpInterface.h"});
   // Generate helper method to query whether a named attribute is a derived
   // attribute. This enables, for example, avoiding adding an attribute that
   // overlaps with a derived attribute.
@@ -3427,6 +3465,8 @@ void OpEmitter::genCanonicalizerDecls() {
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";
+    // `RewritePatternSet::add` requires the complete type.
+    requiredDefIncludes.push_back("mlir/IR/PatternMatch.h");
   }
 }
 
@@ -3526,7 +3566,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
       if (SideEffect *effect = dyn_cast<SideEffect>(&decorator)) {
-        opClass.addTrait(effect->getInterfaceTrait());
+        addTrait(effect->getInterfaceTrait(), effect->getCppIncludes());
         interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
       }
@@ -4042,7 +4082,7 @@ void OpEmitter::genTraits() {
   for (const auto &trait : op.getTraits()) {
     if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       if (opTrait->isStructuralOpTrait())
-        opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+        addTrait(*opTrait);
     }
   }
 
@@ -4051,15 +4091,16 @@ void OpEmitter::genTraits() {
   opClass.addTrait("::mlir::OpTrait::OpInvariants");
 
   if (emitHelper.hasNonEmptyPropertiesStruct())
-    opClass.addTrait("::mlir::BytecodeOpInterface::Trait");
+    addTrait("::mlir::BytecodeOpInterface::Trait",
+             {"mlir/Bytecode/BytecodeOpInterface.h"});
 
   // Add the native and interface traits.
   for (const auto &trait : op.getTraits()) {
     if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       if (!opTrait->isStructuralOpTrait())
-        opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+        addTrait(*opTrait);
     } else if (auto *opTrait = dyn_cast<tblgen::InterfaceTrait>(&trait)) {
-      opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+      addTrait(*opTrait);
     }
   }
 
@@ -4103,7 +4144,7 @@ void OpEmitter::genOpAsmInterface() {
   // Don't add the trait if none of the results have a valid name.
   if (llvm::all_of(resultNames, [](StringRef name) { return name.empty(); }))
     return;
-  opClass.addTrait("::mlir::OpAsmOpInterface::Trait");
+  addTrait("::mlir::OpAsmOpInterface::Trait", {"mlir/IR/OpImplementation.h"});
 
   // Generate the right accessor for the number of results.
   auto *method = opClass.addMethod(
@@ -4583,54 +4624,10 @@ void OpOperandAdaptorEmitter::emitDef(
   emitter.adaptor.writeDefTo(os);
 }
 
-/// Emit the class declarations or definitions for the given op defs.
-static void emitOpClasses(
-    const RecordKeeper &records, ArrayRef<const Record *> defs, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter, bool emitDecl) {
-  if (defs.empty())
-    return;
-
-  for (auto *def : defs) {
-    Operator op(*def);
-    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
-    if (emitDecl) {
-      {
-        NamespaceEmitter emitter(os, op.getCppNamespace());
-        os << formatv(opCommentHeader, op.getQualCppClassName(),
-                      "declarations");
-        OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, os);
-        OpEmitter::emitDecl(op, os, staticVerifierEmitter);
-      }
-      // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty()) {
-        os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n";
-        if (emitHelper.hasNonEmptyPropertiesStruct())
-          os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-             << "::detail::" << op.getCppClassName()
-             << "GenericAdaptorBase::Properties)\n";
-        os << "\n";
-      }
-    } else {
-      {
-        NamespaceEmitter emitter(os, op.getCppNamespace());
-        os << formatv(opCommentHeader, op.getQualCppClassName(), "definitions");
-        OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, os);
-        OpEmitter::emitDef(op, os, staticVerifierEmitter);
-      }
-      // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty()) {
-        os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n";
-        if (emitHelper.hasNonEmptyPropertiesStruct())
-          os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-             << "::detail::" << op.getCppClassName()
-             << "GenericAdaptorBase::Properties)\n";
-        os << "\n";
-      }
-    }
-  }
-}
+/// Headers declaring the C++ constructs used by every generated op declaration.
+static constexpr StringRef opDeclBaseIncludes[] = {
+    "mlir/IR/OpDefinition.h",
+};
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &records,
@@ -4651,9 +4648,52 @@ static void emitOpClassDecls(const RecordKeeper &records,
     return;
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
   staticVerifierEmitter.collectOpConstraints(defs);
-  emitOpClasses(records, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/true);
+
+  // The required includes are only known once all declarations were
+  // generated, so buffer the declarations until the includes are emitted.
+  SmallVector<StringRef> includes(std::begin(opDeclBaseIncludes),
+                                  std::end(opDeclBaseIncludes));
+  std::string declarations;
+  raw_string_ostream declOs(declarations);
+  for (const Record *def : defs) {
+    Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
+    {
+      NamespaceEmitter emitter(declOs, op.getCppNamespace());
+      declOs << formatv(opCommentHeader, op.getQualCppClassName(),
+                        "declarations");
+      OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, declOs);
+      OpEmitter::emitDecl(op, declOs, staticVerifierEmitter, includes);
+    }
+    // Emit the TypeID explicit specialization to have a single definition.
+    if (!op.getCppNamespace().empty()) {
+      declOs << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::" << op.getCppClassName() << ")\n";
+      if (emitHelper.hasNonEmptyPropertiesStruct())
+        declOs << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+               << "::detail::" << op.getCppClassName()
+               << "GenericAdaptorBase::Properties)\n";
+      declOs << "\n";
+    }
+  }
+  tblgen::emitIncludes(os, includes);
+  os << declarations;
 }
+
+/// Headers declaring the C++ constructs used by every generated op definition,
+/// beyond those already included by the op declarations.
+static constexpr StringRef opDefBaseIncludes[] = {
+    // `::mlir::Builder`, `::mlir::OpBuilder`, `::mlir::ImplicitLocOpBuilder`.
+    "mlir/IR/Builders.h",
+    // `::mlir::DenseI32ArrayAttr`, `::mlir::DictionaryAttr`,
+    // `::mlir::StringAttr`, `::mlir::TypeAttr`.
+    "mlir/IR/BuiltinAttributes.h",
+    // `::mlir::FunctionType`.
+    "mlir/IR/BuiltinTypes.h",
+    // `::mlir::OpAsmParser`, `::mlir::OpAsmParser::UnresolvedOperand`,
+    // `::mlir::OpAsmPrinter`, `::mlir::detail::OperandParserStorage`.
+    "mlir/IR/OpImplementation.h",
+};
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &records,
@@ -4662,16 +4702,44 @@ static void emitOpClassDefs(const RecordKeeper &records,
   if (defs.empty())
     return;
 
+  // The required includes are only known once all definitions were generated,
+  // so buffer the definitions until the includes are emitted.
+  SmallVector<StringRef> includes(std::begin(opDefBaseIncludes),
+                                  std::end(opDefBaseIncludes));
+  std::string definitions;
+  raw_string_ostream defOs(definitions);
+
   // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(os, records,
+  StaticVerifierFunctionEmitter staticVerifierEmitter(defOs, records,
                                                       constraintPrefix);
-  os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
+  defOs << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
   staticVerifierEmitter.emitOpConstraints();
 
   // Emit the classes.
-  emitOpClasses(records, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/false);
+  for (const Record *def : defs) {
+    Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
+    {
+      NamespaceEmitter emitter(defOs, op.getCppNamespace());
+      defOs << formatv(opCommentHeader, op.getQualCppClassName(),
+                       "definitions");
+      OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, defOs);
+      OpEmitter::emitDef(op, defOs, staticVerifierEmitter, includes);
+    }
+    // Emit the TypeID explicit specialization to have a single definition.
+    if (!op.getCppNamespace().empty()) {
+      defOs << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+            << "::" << op.getCppClassName() << ")\n";
+      if (emitHelper.hasNonEmptyPropertiesStruct())
+        defOs << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+              << "::detail::" << op.getCppClassName()
+              << "GenericAdaptorBase::Properties)\n";
+      defOs << "\n";
+    }
+  }
+  tblgen::emitIncludes(os, includes);
+  os << definitions;
 }
 
 /// Emit op declarations for all op records.

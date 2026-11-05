@@ -863,8 +863,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || D.hasGroupingParens() ||
+      D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
        D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
     Diag(Decomp.getLSquareLoc(),
@@ -880,6 +880,17 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // shouldn't be called for such a type.
     if (R->isFunctionType())
       D.setInvalidType();
+
+    // Recover from an invalid 'auto *' structured binding by removing the
+    // pointer declarator. This allows type deduction to proceed and keeps
+    // the bindings usable in subsequent code.
+    if (D.getNumTypeObjects() == 1 &&
+        D.getTypeObject(0).Kind == DeclaratorChunk::Pointer &&
+        D.getTypeObject(0).Ptr.TypeQuals == 0) {
+      D.DropFirstTypeObject();
+      TInfo = GetTypeForDeclarator(D);
+      R = TInfo->getType();
+    }
   }
 
   // Constrained auto is prohibited by [decl.pre]p6, so check that here.
@@ -12098,8 +12109,16 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
                                       &IsInline, PrevNS);
   }
 
+  // Namespace lookup can find a namespace in an inline namespace. An extension
+  // of that namespace retains its semantic parent, even when it is written in
+  // an enclosing namespace.
+  DeclContext *SemanticContext = CurContext;
+  if (PrevNS && !CurContext->getRedeclContext()->Equals(
+                    PrevNS->getDeclContext()->getRedeclContext()))
+    SemanticContext = PrevNS->getDeclContext();
   NamespaceDecl *Namespc = NamespaceDecl::Create(
-      Context, CurContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+      Context, SemanticContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+  Namespc->setLexicalDeclContext(CurContext);
   if (IsInvalid)
     Namespc->setInvalidDecl();
 
@@ -15575,7 +15594,6 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Build references to the field in the object we're copying from and to.
-    CXXScopeSpec SS; // Intentionally empty
     LookupResult MemberLookup(*this, Field->getDeclName(), Loc,
                               LookupMemberName);
     MemberLookup.addDecl(Field);
@@ -17973,8 +17991,6 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
     SemaRef.LookupQualifiedName(MemberLookup, RD);
-    OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
-                                    OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;
     return std::move(MemberLookup);
@@ -18148,7 +18164,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
         const ASTConstraintSatisfaction &Satisfaction =
             ConceptIDExpr->getSatisfaction();
-        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+        if (!Satisfaction.containsErrors() || Satisfaction.record_size()) {
           Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
               << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
           // Drill down into concept specialization expressions to see why they

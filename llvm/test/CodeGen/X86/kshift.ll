@@ -719,7 +719,7 @@ define i16 @PR235657(<32 x i16> %a0) {
 ; SKX-LABEL: PR235657:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vptestnmw %zmm0, %zmm0, %k0
-; SKX-NEXT:    kshiftrd $8, %k0, %k0
+; SKX-NEXT:    kshiftrw $8, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    vzeroupper

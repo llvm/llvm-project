@@ -1,7 +1,8 @@
+// REQUIRES: lld
 // -emit-llvm prints the device IR of each input before its host IR.
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/lib
-// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
+// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared -fuse-ld=lld \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
 // RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \

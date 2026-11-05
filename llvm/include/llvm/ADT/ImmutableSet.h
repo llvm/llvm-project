@@ -39,7 +39,6 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 template <typename ImutInfo, bool Canonicalize = true> class ImutAVLFactory;
-template <typename ImutInfo> class ImutIntervalAVLFactory;
 template <typename ImutInfo, bool Canonicalize = true>
 class ImutAVLTreeInOrderIterator;
 
@@ -84,7 +83,6 @@ public:
   using iterator = ImutAVLTreeInOrderIterator<ImutInfo, Canonicalize>;
 
   friend class ImutAVLFactory<ImutInfo, Canonicalize>;
-  friend class ImutIntervalAVLFactory<ImutInfo>;
 
 private:
   using CanonLinks = ImutAVLDetail::CanonicalLinks<ImutAVLTree, Canonicalize>;

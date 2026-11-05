@@ -30,7 +30,7 @@ function(lldb_tablegen)
     list(APPEND LTG_UNPARSED_ARGUMENTS -DNDEBUG)
   endif()
 
-  tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
+  tablegen_internal(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})

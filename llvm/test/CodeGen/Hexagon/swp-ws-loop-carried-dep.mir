@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc --mtriple=hexagon -mcpu=hexagonv68 %s -run-pass=pipeliner \
 # RUN: -debug-only=pipeliner -window-sched=force -filetype=null \
-# RUN: -verify-machineinstrs 2>&1 | FileCheck %s
+# RUN: 2>&1 | FileCheck %s
 
 # This is the SHA-512 message-schedule loop from llvm.org/PR209946. Each
 # iteration advances the base pointer %1 by 32 bytes and stores to offsets

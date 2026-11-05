@@ -3468,9 +3468,11 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
     if (X86FI->isCandidateForPush2Pop2(Reg)) {
       MCRegister Reg2 = (++I)->getReg();
       if (IsWin64UnwindV3) {
+        // Name the pair in PUSH2 order: the epilog op must describe the PUSH2
+        // that this POP2 undoes.
         BuildMI(MBB, MI, DL, TII.get(X86::SEH_Push2Regs))
-            .addImm(Reg)
             .addImm(Reg2)
+            .addImm(Reg)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
       BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)

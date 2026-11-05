@@ -825,6 +825,11 @@ enum OpenFlags : unsigned {
   /// adds FILE_FLAG_BACKUP_SEMANTICS to the open flags so a handle to a
   /// directory can be obtained.
   OF_OpenDirectory = 128,
+
+  /// The file should be tagged as UTF-8 rather than the default IBM-1047
+  /// encoding. This flag should only be used with OF_Text. Only makes a
+  /// difference on z/OS.
+  OF_ForceUTF8 = 256,
 };
 
 /// Create a potentially unique file name but does not create it.

@@ -26,6 +26,7 @@
 # NO-SUCH-PATH: error: 'not_exists/text-section': [[MSG]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

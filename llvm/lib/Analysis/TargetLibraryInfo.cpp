@@ -117,6 +117,13 @@ void TargetLibraryInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
       ShouldSignExtI32Return, T);
 }
 
+void TargetLibraryInfo::initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                    bool &ShouldZExtBoolReturn,
+                                                    const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initBoolExtensionsForTriple(
+      ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+}
+
 static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
   bool ShouldExtI32Param, ShouldExtI32Return;
   bool ShouldSignExtI32Param, ShouldSignExtI32Return;

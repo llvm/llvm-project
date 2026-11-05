@@ -778,7 +778,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM->supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addPass(createSjLjEHPreparePass(TM));
+    addPass(createSjLjEHPreparePass());
     HasEHPrep = true;
   }
 

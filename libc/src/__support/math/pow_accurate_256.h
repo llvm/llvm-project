@@ -14,24 +14,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_POW_ACCURATE_256_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_POW_ACCURATE_256_H
 
-#include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/frac256.h"
 #include "src/__support/frac64.h"
-#include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/pow_utils.h"
-#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
@@ -802,11 +793,11 @@ LIBC_INLINE double pow_accurate_256(double y, bool is_neg, int x_e,
 
   int unbiased_exp = r.exponent + 255;
   if (LIBC_UNLIKELY(unbiased_exp >= 1024))
-    return set_overflow(is_neg);
+    return fputil::set_overflow<double>(r.sign);
 
   double res = static_cast<double>(r);
   if (LIBC_UNLIKELY(fputil::FPBits<double>(res).is_inf()))
-    return set_overflow(is_neg);
+    return fputil::set_overflow<double>(r.sign);
 
   return res;
 }

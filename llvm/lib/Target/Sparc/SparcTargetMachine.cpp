@@ -34,7 +34,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
-  initializeErrataWorkaroundPass(PR);
+  initializeSparcErrataWorkaroundLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -110,7 +110,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I)
     I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
   return I.get();
@@ -156,7 +156,8 @@ void SparcPassConfig::addIRPasses() {
 }
 
 bool SparcPassConfig::addInstSelector() {
-  addPass(createSparcISelDag(getSparcTargetMachine(), getOptLevel()));
+  addPass(createSparcDAGToDAGISelLegacyPass(getSparcTargetMachine(),
+                                            getOptLevel()));
   return false;
 }
 
@@ -164,11 +165,11 @@ void SparcPassConfig::addPreEmitPass(){
   if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createSparcDelaySlotFillerPass());
-  addPass(new InsertNOPLoad());
-  addPass(new DetectRoundChange());
-  addPass(new FixAllFDIVSQRT());
-  addPass(new ErrataWorkaround());
+  addPass(createSparcDelaySlotFillerLegacyPass());
+  addPass(new SparcInsertNOPLoadLegacy());
+  addPass(new SparcDetectRoundChangeLegacy());
+  addPass(new SparcFixAllFDIVSQRTLegacy());
+  addPass(new SparcErrataWorkaroundLegacy());
 }
 
 void SparcV8TargetMachine::anchor() { }

@@ -1992,10 +1992,16 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // spread packed lanes over (width 16 for an 8-bit scale needing 16 lanes of
     // 2 elements) cannot be loaded regularly; transformed, it packs down the
     // column instead. A vertical lane_layout is already transposed.
+    // Only switch if a transformed load is possible (checking via a call
+    // to 'get2DBlockIOInstDataLayout') otherwise keep the regularone and leave
+    // the conflict to a convert_layout.
     if (!hasTranspose && !hasTransform &&
         consumerInstData[rank - 1] %
                 (laneLayout[rank - 1] * laneData[rank - 1]) !=
-            0) {
+            0 &&
+        get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction,
+                                   /*transform=*/true,
+                                   /*transpose=*/false)) {
       hasTransform = true;
       std::tie(laneLayout, laneData, order) = compute2DBlockIOLaneLayout(
           dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),

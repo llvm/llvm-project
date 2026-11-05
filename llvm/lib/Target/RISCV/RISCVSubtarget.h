@@ -188,6 +188,9 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
+  bool hasYInstructions() const {
+    return HasStdExtYCapMode || HasStdExtZyhybrid;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -291,11 +294,7 @@ public:
   }
 
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
-  bool isSoftFPABI() const {
-    return TargetABI == RISCVABI::ABI_LP64 ||
-           TargetABI == RISCVABI::ABI_ILP32 ||
-           TargetABI == RISCVABI::ABI_ILP32E;
-  }
+  bool isSoftFPABI() const { return RISCVABI::isSoftFP(TargetABI); }
   bool isRegisterReservedByUser(Register i) const override {
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];

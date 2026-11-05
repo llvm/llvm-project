@@ -3,6 +3,7 @@
 
 ---
 name:            Scalar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalar
@@ -22,6 +23,7 @@ body:             |
 ...
 ---
 name:            Vector
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Vector
@@ -45,6 +47,7 @@ body:             |
 ...
 ---
 name:            Sign_Scalar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Scalar
@@ -74,6 +77,7 @@ body:             |
 ...
 ---
 name:            Sign_Scalar_Vector
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Scalar_Vector
@@ -91,6 +95,7 @@ body:             |
 ...
 ---
 name:            Sign_Vector
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Vector
@@ -110,6 +115,7 @@ body:             |
 ...
 ---
 name:            Sign_Vector_Poison
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Vector_Poison

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -732,6 +733,28 @@ enum ABI {
   ABI_CHERIOT,
   ABI_Unknown
 };
+
+// Returns true for the ABIs that pass floating point values in integer
+// registers.
+inline bool isSoftFP(ABI TargetABI) {
+  return TargetABI == ABI_ILP32 || TargetABI == ABI_ILP32E ||
+         TargetABI == ABI_LP64 || TargetABI == ABI_LP64E;
+}
+
+// Returns true for the ABIs that use the reduced 16 register integer file.
+inline bool isRVE(ABI TargetABI) {
+  return TargetABI == ABI_ILP32E || TargetABI == ABI_IL32PC64E ||
+         TargetABI == ABI_LP64E || TargetABI == ABI_CHERIOT;
+}
+
+// Returns the stack alignment required by the ABI.
+inline Align getStackAlignment(ABI TargetABI) {
+  if (TargetABI == ABI_ILP32E)
+    return Align(4);
+  if (TargetABI == ABI_LP64E)
+    return Align(8);
+  return Align(16);
+}
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
 // not supported for the subtarget's triple and FeatureBits combination.

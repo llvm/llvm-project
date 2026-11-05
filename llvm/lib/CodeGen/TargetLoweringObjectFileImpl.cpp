@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -75,8 +76,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-
-extern cl::opt<bool> PreserveHotDataSectionPrefix;
 
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
@@ -687,7 +686,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         raw_svector_ostream(SectionPrefix) << ".unlikely";
         break;
       case MachineFunctionDataHotness::Hot: {
-        if (PreserveHotDataSectionPrefix)
+        if (StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+                GO->getContext()))
           raw_svector_ostream(SectionPrefix) << ".hot";
         break;
       }
@@ -709,7 +709,9 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         Kind.isBSS()) {
       AddSectionPrefix =
           TM.getEnableStaticDataPartitioning() &&
-          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
+          (!SectionPrefix.starts_with(".hot") ||
+           StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+               GO->getContext()));
     }
 
     if (AddSectionPrefix) {
@@ -2151,10 +2153,6 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
     std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  const Triple &T = LHS->getParent()->getTargetTriple();
-  if (T.isOSCygMing())
-    return nullptr;
-
   // Our symbols should exist in address space zero, cowardly no-op if
   // otherwise.
   if (LHS->getType()->getPointerAddressSpace() != 0 ||

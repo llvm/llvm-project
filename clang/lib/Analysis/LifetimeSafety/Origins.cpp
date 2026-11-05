@@ -317,10 +317,14 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   const ValueDecl *ReferencedDecl = nullptr;
   if (auto *DRE = dyn_cast<DeclRefExpr>(E))
     ReferencedDecl = DRE->getDecl();
-  else if (auto *ME = dyn_cast<MemberExpr>(E))
+  else if (auto *ME = dyn_cast<MemberExpr>(E)) {
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
         Field && isSubobjectOfThis(ME))
       ReferencedDecl = Field;
+    // A static data member names the same variable regardless of its base.
+    else if (auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl()))
+      ReferencedDecl = VD;
+  }
   if (ReferencedDecl) {
     OriginList *Head = nullptr;
     // For non-reference declarations (e.g., `int* p`), the expression is an
@@ -331,7 +335,8 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     if (doesDeclHaveStorage(ReferencedDecl)) {
       // `this->f` reaches its field through `this` instead of naming it.
       Head = createNode(E, QualType{},
-                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E));
+                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E) ||
+                            isa<VarDecl>(ReferencedDecl));
       // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
       Head->setInnerOriginList(getOrCreateList(ReferencedDecl));

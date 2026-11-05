@@ -2398,7 +2398,8 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
+  // TODO: Select the variant at runtime.
+  EmitStmt(S.variants().front());
 }
 
 namespace {
@@ -9101,6 +9102,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     const OMPExecutableDirective &D) {
   if (const auto *SD = dyn_cast<OMPScanDirective>(&D)) {
     EmitOMPScanDirective(*SD);
+    return;
+  }
+  // A metadirective has no associated statement; emit its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(&D)) {
+    EmitOMPMetaDirective(*MD);
     return;
   }
   if (!D.hasAssociatedStmt() || !D.getAssociatedStmt())
