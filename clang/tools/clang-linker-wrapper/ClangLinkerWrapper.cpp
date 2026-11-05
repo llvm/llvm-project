@@ -1507,10 +1507,13 @@ getDeviceInput(const ArgList &Args) {
     if (!Binary.getBinary())
       continue;
 
+    // A generic member can still be linked into any compatible image; other
+    // members only into images with the same "code".
     ImageID Target = GetImageID(Binary);
+    bool IsGeneric = Target.first.second == "generic";
     SmallVector<ImageID> CompatibleTargets = {Target};
     for (const auto &[ID, Input] : InputFiles)
-      if (Target != ID && Target.second == ID.second &&
+      if (Target != ID && (IsGeneric || Target.second == ID.second) &&
           object::areTargetsCompatible(Target.first, ID.first))
         CompatibleTargets.emplace_back(ID);
 

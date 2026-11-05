@@ -84,6 +84,14 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --save-temps --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-uh-a.o \
 // RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-SAVE-TEMPS
+// RUN: llvm-offload-binary -o %t.sycl-generic.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-generic.o -fembed-offload-object=%t.sycl-generic.out
+// RUN: rm -f %t.sycl-generic.a
+// RUN: llvm-ar rcs %t.sycl-generic.a %t.sycl-generic.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-generic.a -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-GENERIC-ARCHIVE
 
 // SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
@@ -95,6 +103,9 @@ __attribute__((visibility("protected"), used)) int x;
 // each other with --save-temps.
 // SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--device=xe-mtl-u{{$}}
 // SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--device=xe-mtl-h{{$}}
+
+// A generic archive member is still linked into an image that lists devices.
+// SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
