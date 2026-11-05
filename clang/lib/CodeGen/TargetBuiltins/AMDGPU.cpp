@@ -630,9 +630,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Src0, Src1, Src2, Src3ToBool});
   }
 
-  case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
-    return emitBuiltinWithOneOverloadedType<2>(*this, E,
-                                               Intrinsic::amdgcn_ds_swizzle);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
@@ -783,9 +780,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_fracth:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_fract);
-  case AMDGPU::BI__builtin_amdgcn_lerp:
-    return emitBuiltinWithOneOverloadedType<3>(*this, E,
-                                               Intrinsic::amdgcn_lerp);
   case AMDGPU::BI__builtin_amdgcn_ubfe:
     return emitBuiltinWithOneOverloadedType<3>(*this, E,
                                                Intrinsic::amdgcn_ubfe);
@@ -1041,9 +1035,50 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b8:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b64:
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b8:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b64:
   case AMDGPU::BI__builtin_amdgcn_av_store_b128: {
-    const bool IsStore = BuiltinID == AMDGPU::BI__builtin_amdgcn_av_store_b128;
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_av_load_b8:
+      IID = Intrinsic::amdgcn_av_load_b8;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b16:
+      IID = Intrinsic::amdgcn_av_load_b16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b32:
+      IID = Intrinsic::amdgcn_av_load_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b64:
+      IID = Intrinsic::amdgcn_av_load_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+      IID = Intrinsic::amdgcn_av_load_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b8:
+      IID = Intrinsic::amdgcn_av_store_b8;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b16:
+      IID = Intrinsic::amdgcn_av_store_b16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b32:
+      IID = Intrinsic::amdgcn_av_store_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b64:
+      IID = Intrinsic::amdgcn_av_store_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b128:
+      IID = Intrinsic::amdgcn_av_store_b128;
+      break;
+    }
+    const bool IsStore = E->getType()->isVoidType();
     SmallVector<Value *, 5> Args = {EmitScalarExpr(E->getArg(0))}; // addr
     if (IsStore)
       Args.push_back(EmitScalarExpr(E->getArg(1))); // data
@@ -1051,10 +1086,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     auto *ScopeExpr =
         cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(ScopeIdx)));
     Args.push_back(emitScopeMD(*this, ScopeExpr->getZExtValue()));
-    llvm::Function *F =
-        CGM.getIntrinsic(IsStore ? Intrinsic::amdgcn_av_store_b128
-                                 : Intrinsic::amdgcn_av_load_b128,
-                         {Args[0]->getType()});
+    llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
@@ -1398,6 +1430,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
   case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
@@ -2049,10 +2082,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
       RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
 
-      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // Most targets require "atomic.ignore.denormal.mode" to emit the native
       // instruction, but this only matters for float fadd.
-      if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
-        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+      addAtomicIgnoreDenormalModeMetadata(*this, *RMW);
     }
 
     return Builder.CreateBitCast(RMW, OrigTy);
@@ -2105,8 +2137,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     llvm::PointerType *RetTy = llvm::PointerType::get(
         Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
-                                   {RetTy, Args[0]->getType()});
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                         {RetTy, Args[0]->getType(), Args[2]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
@@ -2183,6 +2216,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_add);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd);

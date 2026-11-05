@@ -66,13 +66,17 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   NoAsmVariants = true;
   GPU = OffloadArch::getUnused();
 
+  // Architectures are in the feature map only to gate builtins; the backend
+  // takes the architecture from `target-cpu`.
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  ReadOnlyFeatures.insert(NAME);
+#include "llvm/TargetParser/NVPTXTargetParser.def"
+
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  // TODO: Make shortptr a proper ABI?
-  DataLayoutString =
-      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
+  DataLayoutString = Triple.computeDataLayout();
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -160,6 +164,14 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   //   do the same.
 }
 
+bool NVPTXTargetInfo::setABI(const std::string &Name) {
+  if (Name != "shortptr")
+    return false;
+
+  resetDataLayout(getTriple().computeDataLayout(Name));
+  return true;
+}
+
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
@@ -192,6 +204,12 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     if (IsNVIDIAFamilySpecificOffloadArch(GPU))
       Builder.defineMacro("__CUDA_ARCH_FAMILY_SPECIFIC__", llvm::Twine(ArchID));
   }
+}
+
+void NVPTXTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                             const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
+  AtomicOpts = AtomicOptions(Opts);
 }
 
 llvm::SmallVector<Builtin::InfosShard>

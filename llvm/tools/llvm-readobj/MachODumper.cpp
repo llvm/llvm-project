@@ -190,6 +190,7 @@ constexpr EnumStringDef<uint32_t> MachOHeaderCpuSubtypesARM64Defs[] = {
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_ALL),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_V8),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E_X1),
 };
 constexpr auto MachOHeaderCpuSubtypesARM64 =
     BUILD_ENUM_STRINGS(MachOHeaderCpuSubtypesARM64Defs);
@@ -491,6 +492,8 @@ void MachODumper::printFileHeaders(const MachHeader &Header) {
   default:
     W.printHex("CpuSubType", subtype);
   }
+  W.printHex("CpuCapabilities",
+             (Header.cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24);
   W.printEnum("FileType", Header.filetype, EnumStrings(MachOHeaderFileTypes));
   W.printNumber("NumOfLoadCommands", Header.ncmds);
   W.printNumber("SizeOfLoadCommands", Header.sizeofcmds);
@@ -824,7 +827,6 @@ void MachODumper::printNeededLibraries() {
 
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
-        Command.C.cmd == MachO::LC_ID_DYLIB ||
         Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
         Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
         Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||

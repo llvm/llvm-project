@@ -8,17 +8,17 @@
 
 module {
   cir.func @acc_copyin(%arg0: !cir.ptr<!s32i>) {
-    %0 = acc.copyin varPtr(%arg0 : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "x"}
+    %0 = acc.copyin varPtr(%arg0 : !cir.ptr<!s32i>) name("x") -> !cir.ptr<!s32i>
     acc.parallel dataOperands(%0 : !cir.ptr<!s32i>) {
       acc.yield
     }
-    acc.delete accPtr(%0 : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copyin>, name = "x"}
+    acc.delete accPtr(%0 : !cir.ptr<!s32i>) dataClause(acc_copyin) name("x")
     cir.return
   }
 }
 
 // CHECK: cir.func{{.*}} @acc_copyin(%[[ARG:.*]]: !cir.ptr<!s32i>)
-// CHECK:   %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARG]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "x"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARG]] : !cir.ptr<!s32i>) name("x") -> !cir.ptr<!s32i>
 // CHECK:   acc.parallel dataOperands(%[[COPYIN]] : !cir.ptr<!s32i>)
 // CHECK:     acc.yield
 // CHECK:   acc.delete accPtr(%[[COPYIN]] : !cir.ptr<!s32i>)

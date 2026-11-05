@@ -231,8 +231,6 @@ HexagonTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  if (MF.getSubtarget<HexagonSubtarget>().useHVXOps())
-    return CCInfo.CheckReturn(Outs, RetCC_Hexagon_HVX);
   return CCInfo.CheckReturn(Outs, RetCC_Hexagon);
 }
 
@@ -253,10 +251,7 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values of ISD::RET
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
+  CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
 
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -396,10 +391,7 @@ SDValue HexagonTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -467,9 +459,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
@@ -857,9 +847,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
@@ -1100,7 +1088,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   MVT ResTy = ty(Op);
   MVT OpTy = ty(LHS);
 
@@ -1190,13 +1178,13 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   bool isVTi1Type = false;
   if (auto *CV = dyn_cast<ConstantVector>(CPN->getConstVal())) {
     if (cast<VectorType>(CV->getType())->getElementType()->isIntegerTy(1)) {
-      IRBuilder<> IRB(CV->getContext());
       SmallVector<Constant*, 128> NewConst;
       unsigned VecLen = CV->getNumOperands();
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isNullValue()));
+        NewConst.push_back(ConstantInt::get(Type::getInt8Ty(CV->getContext()),
+                                            CV->getOperand(i)->isNullValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;
@@ -1939,7 +1927,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
+      Addr != 0 ? Align::fromLog2(llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -2041,15 +2029,43 @@ static Value *returnEdge(const PHINode *PN, Value *IntrBaseVal) {
 // Bit-reverse Load Intrinsic: Figure out the underlying object the base
 // pointer points to, for the bit-reverse load intrinsic. Setting this to
 // memoperand might help alias analysis to figure out the dependencies.
-static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
+// A bit-reverse load accesses the base pointer with its low 16 bits reversed,
+// and post-increments the base pointer by the modifier value. For a chain of
+// bit-reverse loads, the offset that a load accesses relative to the
+// underlying object is the bit-reverse of the sum of the modifiers of the
+// preceding loads in the chain. Offset is set to that value, and HasOffset is
+// set to true, when the sum is known, that is when all of those modifiers are
+// constants and the sum fits in 16 unsigned bits. Otherwise HasOffset is set
+// to false and Offset is left unchanged.
+static Value *getUnderLyingObjectForBrevLdIntr(Value *V, int &Offset,
+                                               bool &HasOffset) {
   Value *IntrBaseVal = V;
   Value *BaseVal;
+  int64_t Sum = 0;
+  HasOffset = true;
   // Loop over till we return the same Value, implies we either figure out
   // the object or we hit a PHI
   do {
     BaseVal = V;
     V = getBrevLdObject(V);
+    // Identify if this is part of a chain of bit-reverse loads, and accumulate
+    // the modifier of the preceding load in the chain.
+    if (HasOffset && BaseVal != V && isa<IntrinsicInst>(V) &&
+        isBrevLdIntrinsic(V)) {
+      Value *Modifier = cast<IntrinsicInst>(V)->getOperand(1);
+      if (auto *CN = dyn_cast<ConstantInt>(Modifier))
+        Sum += CN->getSExtValue();
+      else
+        HasOffset = false;
+    }
   } while (BaseVal != V);
+
+  // Only the low 16 bits of the base pointer take part in the bit-reverse. A
+  // sum that does not fit in them would also change the remaining bits.
+  if (HasOffset && Sum >= 0 && isUInt<16>(Sum))
+    Offset = APInt(16, Sum).reverseBits().getZExtValue();
+  else
+    HasOffset = false;
 
   // Identify the object from PHINode.
   if (const PHINode *PN = dyn_cast<PHINode>(V))
@@ -2082,10 +2098,24 @@ void HexagonTargetLowering::getTgtMemIntrinsic(
     Type *ElTy = I.getCalledFunction()->getReturnType()->getStructElementType(0);
     Info.memVT = MVT::getVT(ElTy);
     llvm::Value *BasePtrVal = I.getOperand(0);
-    Info.ptrVal = getUnderLyingObjectForBrevLdIntr(BasePtrVal);
-    // The offset value comes through Modifier register. For now, assume the
-    // offset is 0.
+    // The offset value comes through the Modifier register. Determine the
+    // offset that is going to be accessed relative to the underlying object.
+    // If it cannot be determined, leave the pointer information out of the
+    // memory operand, so that alias analysis stays conservative.
+    bool HasOffset = false;
     Info.offset = 0;
+    Value *UnderlyingObj =
+        getUnderLyingObjectForBrevLdIntr(BasePtrVal, Info.offset, HasOffset);
+    // The underlying object is unknown if the base pointer could not be traced
+    // back to a pointer value. Also, unless the object is aligned to 64K, the
+    // low 16 bits of the base pointer are not known, and reversing them can
+    // produce an address anywhere in the surrounding 64K region, possibly
+    // outside of the object.
+    if (!UnderlyingObj->getType()->isPointerTy() ||
+        UnderlyingObj->getPointerAlignment(DL) < Align(65536))
+      HasOffset = false;
+    if (HasOffset)
+      Info.ptrVal = UnderlyingObj;
     Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
     Info.flags = MachineMemOperand::MOLoad;
     Infos.push_back(Info);
@@ -3667,12 +3697,11 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool ForCodeSize) const {
-  return true;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
+  return FPImmAction::Legal;
 }
 
 /// Returns true if it is beneficial to convert a load of a constant

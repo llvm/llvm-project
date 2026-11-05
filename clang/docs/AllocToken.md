@@ -1,8 +1,5 @@
 # Allocation Tokens
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
@@ -37,6 +34,12 @@ change or removal. These may (experimentally) be selected with `-Xclang
 
 - `typehash`: This mode assigns a token ID based on the hash of the allocated
   type's name.
+- `typefunchashpointersplit`: This mode assigns a token ID based on the hash of
+  the allocated type's name and the hash of the name of the function containing
+  the allocation. The upper half of the token ID bits is the type name hash,
+  the lower half of the token ID bits is the function name hash, and the most
+  significant bit is a flag indicating whether the type contains pointers.
+- `typefunchash`: Like `typefunchashpointersplit`, but without the pointer flag.
 - `random`: This mode assigns a statically-determined random token ID to each
   allocation site.
 - `increment`: This mode assigns a simple, incrementally increasing token ID
@@ -47,6 +50,11 @@ The following command-line options affect generated token IDs:
 - `-falloc-token-max=<N>`
   : Configures the maximum number of token IDs. By default the number of tokens
     is bounded by `SIZE_MAX`.
+
+    - In the `typefunchashpointersplit` and `typefunchash` modes, the number of
+      token IDs is `N` rounded down to a power of two. As an exception, if `N`
+      is of the form `2^k-1` (e.g. the default `SIZE_MAX`), all `k` bits are
+      used and token IDs are in `[0, N]`, i.e. a token ID may be equal to `N`.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
@@ -60,7 +68,9 @@ size_t __builtin_infer_alloc_token(<args>, ...);
 This builtin returns the token ID inferred from its argument expressions, which
 mirror arguments normally passed to any allocation function. The argument
 expressions are **unevaluated**, so it can be used with expressions that would
-have side effects without any runtime impact.
+have side effects without any runtime impact. In the `typefunchashpointersplit`,
+`typefunchash`, `random`, and `increment` modes, the builtin cannot be used in
+constant expressions.
 
 For example, it can be used as follows:
 
@@ -169,8 +179,8 @@ the allocation call the wrapper returns, which is then instrumented normally.
 Wrappers that are not inlined still require
 `-fsanitize-alloc-token-extended`.
 
-[malloc-attribute]: https://clang.llvm.org/docs/AttributeReference.html#malloc
-[alloc-size-attribute]: https://clang.llvm.org/docs/AttributeReference.html#alloc-size
+[malloc-attribute]: AttributeReference.md#malloc
+[alloc-size-attribute]: AttributeReference.md#alloc-size
 
 ### Disabling Instrumentation
 

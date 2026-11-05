@@ -3,7 +3,7 @@
 
 define float @test1(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @llvm.sqrt.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -16,7 +16,7 @@ define float @test1(float %x) nounwind readnone ssp {
 
 define float @test2(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -31,8 +31,8 @@ define float @test2(float %x) nounwind readnone ssp {
 
 define float @test3(ptr %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double +qnan) #[[ATTR4]]
-; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5]]
+; CHECK-NEXT:    [[CALL34:%.*]] = call double @llvm.sqrt.f64(double +qnan)
+; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]
 ;
@@ -70,7 +70,7 @@ define float @sqrt_call_nnan_f32(float %x) {
 
 define double @sqrt_call_nnan_f64(double %x) {
 ; CHECK-LABEL: @sqrt_call_nnan_f64(
-; CHECK-NEXT:    [[SQRT:%.*]] = tail call nnan ninf double @sqrt(double [[X:%.*]])
+; CHECK-NEXT:    [[SQRT:%.*]] = tail call nnan ninf double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[SQRT]]
 ;
   %sqrt = tail call nnan ninf double @sqrt(double %x)

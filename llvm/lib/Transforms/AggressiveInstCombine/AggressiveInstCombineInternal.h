@@ -21,7 +21,7 @@
 #include "llvm/Support/KnownBits.h"
 
 //===----------------------------------------------------------------------===//
-// TruncInstCombine - looks for expression graphs dominated by trunc
+// TruncInstCombine - looks for expression graphs post-dominated by trunc
 // instructions and for each eligible graph, it will create a reduced bit-width
 // expression and replace the old expression with this new one and remove the
 // old one. Eligible expression graph is such that:
@@ -85,8 +85,8 @@ public:
   bool run(Function &F);
 
 private:
-  /// Build expression graph dominated by the /p CurrentTruncInst and append it
-  /// to the InstInfoMap container.
+  /// Build expression graph post-dominated by the \p CurrentTruncInst and
+  /// append it to the InstInfoMap container.
   ///
   /// \return true only if succeed to generate an eligible sub expression graph.
   bool buildTruncExpressionGraph();
@@ -98,8 +98,8 @@ private:
   /// truncate's operand can be shrunk to.
   unsigned getMinBitWidth();
 
-  /// Build an expression graph dominated by the current processed TruncInst and
-  /// Check if it is eligible to be reduced to a smaller type.
+  /// Build an expression graph post-dominated by the current processed
+  /// TruncInst and check if it is eligible to be reduced to a smaller type.
   ///
   /// \return the scalar version of the new type to be used for the reduced
   ///         expression graph, or nullptr if the expression graph is not

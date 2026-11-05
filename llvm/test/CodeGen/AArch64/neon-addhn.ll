@@ -14,8 +14,7 @@ define <8 x i8> @addhn_setcc_v8i16( <8 x i16> %a, <8 x i16> %b, <8 x i16> %compa
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    cmeq v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    addhn v0.8b, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %cmp.a = icmp eq <8 x i16> %a, %comparand
   %cmp.b = icmp eq <8 x i16> %b, %comparand
@@ -36,8 +35,7 @@ define <4 x i16> @addhn_setcc_v4i32( <4 x i32> %a, <4 x i32> %b, <4 x i32> %comp
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    cmeq v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    addhn v0.4h, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %cmp.a = icmp eq <4 x i32> %a, %comparand
   %cmp.b = icmp eq <4 x i32> %b, %comparand
@@ -58,8 +56,7 @@ define <2 x i32> @addhn_setcc_v2i64( <2 x i64> %a, <2 x i64> %b, <2 x i64> %comp
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    cmeq v1.2d, v1.2d, v2.2d
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    addhn v0.2s, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %cmp.a = icmp eq <2 x i64> %a, %comparand
   %cmp.b = icmp eq <2 x i64> %b, %comparand

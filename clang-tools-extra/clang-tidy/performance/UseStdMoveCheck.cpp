@@ -175,10 +175,8 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
         if (!S.isReachable())
           continue;
         auto &W = CFGState.find(&*S)->second;
-        if (W.Ready) {
-          if (--W.RemainingSuccessors == 0)
-            WorkList.push_back(&*S);
-        }
+        if (W.Ready && --W.RemainingSuccessors == 0)
+          WorkList.push_back(&*S);
       }
     }
   }

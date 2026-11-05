@@ -22,7 +22,7 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; WITH-PCLMUL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; WITH-PCLMUL:       [[VECTOR_PH]]:
-; WITH-PCLMUL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; WITH-PCLMUL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; WITH-PCLMUL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; WITH-PCLMUL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; WITH-PCLMUL:       [[VECTOR_BODY]]:

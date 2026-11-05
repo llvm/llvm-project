@@ -1,4 +1,4 @@
-//===-- Mangled.h -----------------------------------------------*- C++ -*-===//
+//===-- Mangled.h ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,10 +14,12 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
-#include <memory>
+#include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 
@@ -39,41 +41,40 @@ public:
     ePreferDemangledWithoutArguments
   };
 
-  enum ManglingScheme {
+  enum ManglingScheme : uint8_t {
     eManglingSchemeNone = 0,
-    eManglingSchemeMSVC,
-    eManglingSchemeItanium,
-    eManglingSchemeRustV0,
-    eManglingSchemeD,
-    eManglingSchemeSwift,
+    eFirstRegisteredManglingScheme,
+  };
+
+  /// The number of possible mangling schemes, which sizes the tables that are
+  /// indexed by ManglingScheme.
+  static constexpr size_t g_num_mangling_schemes = 16;
+
+  /// What a mangled function name says about the function's declaration.
+  enum class FunctionNameKind {
+    TopLevel,
+    InNamespace,
+    Method,
+    ConstructorOrDestructor,
+    Unknown,
+  };
+
+  /// The parts of a mangled function name used in the symbol table's indices.
+  struct FunctionNameParts {
+    /// If empty, the symbol is only indexed by its mangled name.
+    ConstString basename;
+    /// The enclosing context. The symbol table only uses it to work
+    /// out which contexts are classes: a ConstructorOrDestructor
+    /// shows that its context is one, and an Unknown function in such
+    /// a context is a method.
+    ConstString decl_context;
+    FunctionNameKind kind = FunctionNameKind::Unknown;
   };
 
   /// Default constructor.
   ///
   /// Initialize with both mangled and demangled names empty.
   Mangled() = default;
-
-  Mangled(const Mangled &other)
-      : m_mangled(other.m_mangled), m_demangled(other.m_demangled),
-        m_demangled_info(
-            other.m_demangled_info
-                ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
-                : nullptr) {}
-
-  Mangled &operator=(const Mangled &other) {
-    if (this != &other) {
-      m_mangled = other.m_mangled;
-      m_demangled = other.m_demangled;
-      m_demangled_info =
-          other.m_demangled_info
-              ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
-              : nullptr;
-    }
-    return *this;
-  }
-
-  Mangled(Mangled &&) = default;
-  Mangled &operator=(Mangled &&) = default;
 
   /// Construct with name.
   ///
@@ -157,15 +158,9 @@ public:
   ///     A const reference to the display demangled name string object.
   ConstString GetDisplayDemangledName() const;
 
-  void SetDemangledName(ConstString name) {
-    m_demangled = name;
-    m_demangled_info.reset();
-  }
+  void SetDemangledName(ConstString name) { m_demangled = name; }
 
-  void SetMangledName(ConstString name) {
-    m_mangled = name;
-    m_demangled_info.reset();
-  }
+  void SetMangledName(ConstString name) { m_mangled = name; }
 
   /// Mangled name get accessor.
   ///
@@ -223,43 +218,40 @@ public:
   ///     if there is no mangled or demangled counterpart.
   lldb::LanguageType GuessLanguage() const;
 
-  /// Function signature for filtering mangled names.
-  using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
-
-  /// Get rich mangling information. This is optimized for batch processing
-  /// while populating a name index. To get the pure demangled name string for
-  /// a single entity, use GetDemangledName() instead.
-  ///
-  /// For names that match the Itanium mangling scheme, this uses LLVM's
-  /// ItaniumPartialDemangler. All other names fall back to LLDB's builtin
-  /// parser currently.
-  ///
-  /// This function is thread-safe when used with different \a context
-  /// instances in different threads.
-  ///
-  /// \param[in] context
-  ///     The context for this function. A single instance can be stack-
-  ///     allocated in the caller's frame and used for multiple calls.
-  ///
-  /// \param[in] skip_mangled_name
-  ///     A filtering function for skipping entities based on name and mangling
-  ///     scheme. This can be null if unused.
-  ///
-  /// \return
-  ///     True on success, false otherwise.
-  bool GetRichManglingInfo(RichManglingContext &context,
-                           SkipMangledNameFn *skip_mangled_name);
-
   /// Try to identify the mangling scheme used.
   /// \param[in] name
   ///     The name we are attempting to identify the mangling scheme for.
   ///
   /// \return
-  ///     eManglingSchemeNone if no known mangling scheme could be identified
-  ///     for s, otherwise the enumerator for the mangling scheme detected.
+  ///     eManglingSchemeNone if no registered mangling scheme matches \p name,
+  ///     otherwise the scheme that does.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);
+
+  using ManglingSchemeMatcher = bool (*)(llvm::StringRef name);
+
+  /// Register a mangling scheme for \p language. All mangled names in
+  /// this scheme start with one of \p prefixes. If the prefixes are
+  /// insufficient to unambiguously identify a scheme, \p matches
+  /// checks the rest of each name.
+  ///
+  /// Registering the same scheme again returns the same scheme.
+  ///
+  /// \return
+  ///     The new scheme, or eManglingSchemeNone if there is no slot left.
+  static ManglingScheme
+  RegisterManglingScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                         lldb::LanguageType language,
+                         ManglingSchemeMatcher matches = nullptr);
+
+  /// Stop recognizing the names of \p scheme, a scheme returned by
+  /// RegisterManglingScheme().
+  static void UnregisterManglingScheme(ManglingScheme scheme);
+
+  /// Returns the language that registered \p scheme, or eLanguageTypeUnknown
+  /// if no language did.
+  static lldb::LanguageType GetLanguageForManglingScheme(ManglingScheme scheme);
 
   /// Decode a serialized version of this object from data.
   ///
@@ -290,8 +282,15 @@ public:
   ///   table offsets in the cache data.
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
-  /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
-  const DemangledNameInfo *GetDemangledInfo() const;
+  /// Compute the \c DemangledNameInfo of the demangled name.
+  ///
+  /// Note that this always re-runs the demangler. \see DemangledNameInfoCache
+  /// for caching the result.
+  ///
+  /// \return
+  ///     std::nullopt if no info could be computed (for example because the
+  ///     name is mangled with a scheme that doesn't provide any info).
+  std::optional<DemangledNameInfo> ComputeDemangledInfo() const;
 
   /// Compute the base name (without namespace/class qualifiers) from the
   /// demangled name.
@@ -305,25 +304,14 @@ public:
   ConstString GetBaseName() const;
 
 private:
-  /// If \c force is \c false, this function will re-use the previously
-  /// demangled name (if any). If \c force is \c true (or the mangled name
-  /// on this object was not previously demangled), demangle and cache the
-  /// name.
-  ConstString GetDemangledNameImpl(bool force) const;
-
   /// The mangled version of the name.
   ConstString m_mangled;
 
   /// Mutable so we can get it on demand with
   /// a const version of this object.
   mutable ConstString m_demangled;
-
-  /// If available, holds information about where in \c m_demangled certain
-  /// parts of the name (e.g., basename, arguments, etc.) begin and end.
-  mutable std::unique_ptr<DemangledNameInfo> m_demangled_info;
 };
-static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString) +
-                                     sizeof(std::unique_ptr<DemangledNameInfo>),
+static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString),
               "High-volume object, size of object must be increased with care");
 
 Stream &operator<<(Stream &s, const Mangled &obj);

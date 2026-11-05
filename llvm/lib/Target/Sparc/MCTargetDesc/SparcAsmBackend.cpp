@@ -64,8 +64,11 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case ELF::R_SPARC_HIX22:
     return (~Value >> 10) & 0x3fffff;
 
+  // In PIC mode the parser may map %hi to PC22/GOT22. An operand that folds to
+  // an absolute value emits no relocation and needs the %hi encoding.
   case ELF::R_SPARC_PC22:
   case ELF::R_SPARC_HI22:
+  case ELF::R_SPARC_GOT22:
   case ELF::R_SPARC_LM22:
     return (Value >> 10) & 0x3fffff;
 
@@ -80,6 +83,7 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case ELF::R_SPARC_PC10:
   case ELF::R_SPARC_LO10:
+  case ELF::R_SPARC_GOT10:
     return Value & 0x3ff;
 
   case ELF::R_SPARC_H44:

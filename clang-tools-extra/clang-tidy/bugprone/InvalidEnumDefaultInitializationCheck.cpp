@@ -41,10 +41,10 @@ AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
 AST_MATCHER(Expr, isEmptyInit) {
   if (isa<CXXScalarValueInitExpr, ImplicitValueInitExpr>(&Node))
     return true;
-  if (const auto *Init = dyn_cast<InitListExpr>(&Node)) {
-    if (Init->getNumInits() == 0)
-      return true;
-  }
+  if (const auto *Init = dyn_cast<InitListExpr>(&Node);
+      Init && Init->getNumInits() == 0)
+    return true;
+
   return false;
 }
 

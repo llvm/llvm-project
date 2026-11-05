@@ -1,4 +1,4 @@
-add_custom_target(libc-rpc-tests)
+add_libc_testsuite(libc-rpc-tests PARENT libc-support-tests)
 
 add_libc_test(
   rpc_smoke_test
@@ -7,7 +7,7 @@ add_libc_test(
   SRCS
     rpc_smoke_test.cpp
   DEPENDS
-   libc.src.__support.RPC.rpc
+    libc.src.__support.RPC.rpc
 )
 
 add_libc_test(
@@ -17,5 +17,5 @@ add_libc_test(
   SRCS
     rpc_doorbell_test.cpp
   DEPENDS
-   libc.src.__support.RPC.rpc
+    libc.src.__support.RPC.rpc
 )

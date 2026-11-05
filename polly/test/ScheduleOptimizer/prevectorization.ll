@@ -1,5 +1,5 @@
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine -polly-prevect-width=16 '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=VEC16
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-pattern-matching-based-opts=false -plugin-arg=Polly,-polly-vectorizer=stripmine '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-pattern-matching-based-opts=false -plugin-arg=Polly,-polly-vectorizer=stripmine -plugin-arg=Polly,-polly-prevect-width=16 '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=VEC16
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

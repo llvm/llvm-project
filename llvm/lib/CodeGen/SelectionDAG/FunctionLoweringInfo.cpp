@@ -28,13 +28,16 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -91,6 +94,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
+  ExceptionModel = Fn->getParent()->getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -264,7 +268,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
       }
       if (isa<FuncletPadInst>(PadInst) &&
-          Personality != EHPersonality::Wasm_CXX)
+          Personality != EHPersonality::Wasm_CXX &&
+          Personality != EHPersonality::Wasm_D)
         assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 

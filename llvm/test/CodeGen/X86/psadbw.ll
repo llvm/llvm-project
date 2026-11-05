@@ -76,18 +76,10 @@ define void @combine_psadbw_demandedelt_store(<16 x i8> %0, <16 x i8> %1, ptr %p
 
 ; TODO: Each PSADBW source element has a maximum value of 3 - so max sum-of-diffs for each <8 x i8> should be 24.
 define <2 x i64> @combine_psadbw_cmp_knownbits(<16 x i8> %a0) nounwind {
-; X86-SSE-LABEL: combine_psadbw_cmp_knownbits:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE-NEXT:    retl
-;
-; X64-SSE-LABEL: combine_psadbw_cmp_knownbits:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X64-SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE-NEXT:    retq
+; SSE-LABEL: combine_psadbw_cmp_knownbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX2-LABEL: combine_psadbw_cmp_knownbits:
 ; AVX2:       # %bb.0:

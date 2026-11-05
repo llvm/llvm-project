@@ -1393,7 +1393,8 @@ define void @test_truncus_v4i16_v4i8(ptr %dst, ptr %src) {
 ; SKX-LABEL: test_truncus_v4i16_v4i8:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; SKX-NEXT:    vpmovuswb %xmm0, %xmm0
+; SKX-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpmovwb %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, (%rdi)
 ; SKX-NEXT:    retq
   %1 = load <4 x i16>, ptr %src

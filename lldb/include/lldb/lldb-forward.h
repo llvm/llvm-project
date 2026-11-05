@@ -22,6 +22,7 @@ class AddressRange;
 class AddressRanges;
 class AddressRangeList;
 class AddressResolver;
+class ProcessAddress;
 class ArchSpec;
 class Architecture;
 class Args;
@@ -196,6 +197,7 @@ class ScriptedMetadata;
 class ScriptedBreakpointInterface;
 class ScriptedCommandInterface;
 class ScriptedHookInterface;
+class ScriptedInstanceRegistry;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
@@ -247,6 +249,7 @@ class SyntheticFrameProvider;
 class SystemRuntime;
 class Progress;
 class Target;
+class TargetGroup;
 class TargetList;
 class TargetProperties;
 class Thread;
@@ -288,6 +291,7 @@ class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
 class TypeSystemClang;
+class TypeSystemFortran;
 class UUID;
 class UnixSignals;
 class Unwind;
@@ -434,6 +438,10 @@ typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
     ScriptedHookInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedInstanceRegistry>
+    ScriptedInstanceRegistrySP;
+typedef std::weak_ptr<lldb_private::ScriptedInstanceRegistry>
+    ScriptedInstanceRegistryWP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
@@ -483,6 +491,8 @@ typedef std::shared_ptr<lldb_private::SyntheticChildrenFrontEnd>
     SyntheticChildrenFrontEndSP;
 typedef std::shared_ptr<lldb_private::Target> TargetSP;
 typedef std::weak_ptr<lldb_private::Target> TargetWP;
+typedef std::shared_ptr<lldb_private::TargetGroup> TargetGroupSP;
+typedef std::weak_ptr<lldb_private::TargetGroup> TargetGroupWP;
 typedef std::shared_ptr<lldb_private::Thread> ThreadSP;
 typedef std::weak_ptr<lldb_private::Thread> ThreadWP;
 typedef std::shared_ptr<lldb_private::ThreadCollection> ThreadCollectionSP;

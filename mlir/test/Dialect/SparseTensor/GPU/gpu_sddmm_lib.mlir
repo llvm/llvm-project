@@ -42,8 +42,8 @@
 // CHECK:           %[[VAL_21:.*]] = memref.dim %[[VAL_18]], %[[VAL_4]] : memref<?x?xf32>
 // CHECK:           %[[VAL_22:.*]], %[[VAL_23:.*]] = gpu.alloc async {{\[}}%[[VAL_19]]] (%[[VAL_20]], %[[VAL_21]]) : memref<?x?xf32>
 // CHECK:           %[[VAL_24:.*]] = gpu.memcpy async {{\[}}%[[VAL_23]]] %[[VAL_22]], %[[VAL_18]] : memref<?x?xf32>, memref<?x?xf32>
-// CHECK:           %[[VAL_25:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index}
-// CHECK:           %[[VAL_26:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index}
+// CHECK:           %[[VAL_25:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1
+// CHECK:           %[[VAL_26:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 1
 // CHECK:           %[[VAL_27:.*]] = sparse_tensor.values %[[VAL_0]]
 // CHECK:           %[[VAL_28:.*]] = gpu.wait async
 // CHECK:           %[[VAL_29:.*]] = memref.dim %[[VAL_25]], %[[VAL_3]] : memref<?xindex>

@@ -69,12 +69,10 @@ public:
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
-  for (const Decl *D : RecDecl.decls()) {
-    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
-        return ND;
-    }
-  }
+  for (const Decl *D : RecDecl.decls())
+    if (const auto *ND = dyn_cast<NamedDecl>(D);
+        ND && ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
+      return ND;
   return nullptr;
 }
 
@@ -275,6 +273,11 @@ public:
   bool VisitDeclRefExpr(DeclRefExpr *DeclRef) {
     const SourceRange Range = DeclRef->getNameInfo().getSourceRange();
     Check->addUsage(DeclRef->getDecl(), Range, SM);
+    return true;
+  }
+
+  bool VisitSizeOfPackExpr(SizeOfPackExpr *SizeOfPack) {
+    Check->addUsage(SizeOfPack->getPack(), SizeOfPack->getPackLoc(), SM);
     return true;
   }
 

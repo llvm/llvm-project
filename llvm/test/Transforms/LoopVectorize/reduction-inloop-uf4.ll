@@ -39,8 +39,8 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[TMP9]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP11]], [[BIN_RDX7]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE1:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -344,8 +344,8 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX34:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP110]], [[BIN_RDX34]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE1:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -374,7 +374,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[COND]], 7
@@ -611,5 +611,5 @@ for.end:
 }
 
 !6 = distinct !{!6, !7, !8}
-!7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.predicate.enable"}
 !8 = !{!"llvm.loop.vectorize.enable"}

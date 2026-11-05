@@ -20,7 +20,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
-#include <cmath>
 
 using namespace llvm;
 
@@ -63,9 +62,9 @@ static cl::opt<unsigned> MinFunctionSize(
     cl::desc("Don't specialize functions that have less than this number of "
              "instructions"));
 
-static cl::opt<unsigned> MaxCodeSizeGrowth(
-    "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
-    "Maximum codesize growth allowed per function"));
+static cl::opt<unsigned>
+    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(4), cl::Hidden,
+                      cl::desc("Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
     "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
@@ -91,8 +90,6 @@ static cl::opt<bool> SpecializeLiteralConstant(
     cl::desc(
         "Enable specialization of functions that take a literal constant as an "
         "argument"));
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
 
@@ -794,7 +791,7 @@ bool FunctionSpecializer::run() {
       auto &BFI = GetBFI(*Call->getFunction());
       std::optional<uint64_t> Count =
           BFI.getBlockProfileCount(Call->getParent());
-      if (Count && !ProfcheckDisableMetadataFixes) {
+      if (Count) {
         std::optional<uint64_t> MaybeCloneCount = Clone->getEntryCount();
         if (MaybeCloneCount) {
           uint64_t CallCount = *Count + *MaybeCloneCount;
@@ -1074,7 +1071,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
 
-  if (F->getEntryCount() && !ProfcheckDisableMetadataFixes)
+  if (F->getEntryCount())
     Clone->setEntryCount(0);
 
   // Initialize the lattice state of the arguments of the function clone,
@@ -1101,8 +1098,8 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   if (!CalledFunction)
     return 0;
 
-  // Get TTI for the called function (used for the inline cost).
-  auto &CalleeTTI = (GetTTI)(*CalledFunction);
+  // Get TTI for the caller (used for the inline cost).
+  auto &CallerTTI = (GetTTI)(*A->getParent());
 
   // Look at all the call sites whose called value is the argument.
   // Specializing the function on the argument would allow these indirect
@@ -1131,7 +1128,7 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
     auto Params = getInlineParams();
     Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
     InlineCost IC =
-        getInlineCost(*CS, CalledFunction, Params, CalleeTTI, GetAC, GetTLI);
+        getInlineCost(*CS, CalledFunction, Params, CallerTTI, GetAC, GetTLI);
 
     // We clamp the bonus for this call to be between zero and the default
     // threshold.

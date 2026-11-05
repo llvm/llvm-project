@@ -39,6 +39,8 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
@@ -47,6 +49,16 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
+
+// Upper bound on the timeout used when running a utility expression with
+// only one thread allowed to run. On expiry, RunThreadPlan retries with all
+// threads, so this does not shorten the overall timeout.
+static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
+  constexpr std::chrono::seconds preferred(5);
+  return std::min<std::chrono::microseconds>(
+      preferred,
+      std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2);
+}
 
 namespace {
 
@@ -216,15 +228,15 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   ExecutionContext context;
   thread->CalculateExecutionContext(context);
 
-  Status status;
-  UtilityFunction *loader =
-      process->GetLoadImageUtilityFunction(this, [&]() -> std::unique_ptr<UtilityFunction> {
-        return MakeLoadImageUtilityFunction(context, status);
-      });
-  if (loader == nullptr)
+  llvm::Expected<UtilityFunction &> loader_or_err =
+      process->GetLoadImageUtilityFunction(
+          this, [&]() { return MakeLoadImageUtilityFunction(context); });
+  if (!loader_or_err) {
+    error = Status::FromError(loader_or_err.takeError());
     return LLDB_INVALID_IMAGE_TOKEN;
+  }
 
-  FunctionCaller *invocation = loader->GetFunctionCaller();
+  FunctionCaller *invocation = loader_or_err->GetFunctionCaller();
   if (!invocation) {
     error = Status::FromErrorString(
         "LoadLibrary error: could not get function caller");
@@ -241,6 +253,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   name.emplace_back(L'\0');
 
   /* Inject name paramter into inferior */
+  Status status;
   lldb::addr_t injected_name =
       process->AllocateMemory(name.size() * sizeof(llvm::UTF16),
                               ePermissionsReadable | ePermissionsWritable,
@@ -425,8 +438,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -443,12 +455,15 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   /* Read result */
-  lldb::addr_t token = process->ReadPointerFromMemory(injected_result, status);
-  if (status.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: could not read the result: %s", status.AsCString());
+  llvm::Expected<lldb::addr_t> token_or_err =
+      process->ReadPointerFromMemory(injected_result);
+  if (!token_or_err) {
+    error = Status::FromErrorStringWithFormatv(
+        "LoadLibrary error: could not read the result: {0}",
+        llvm::fmt_consume(token_or_err.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
+  lldb::addr_t token = *token_or_err;
 
   if (!token) {
     // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.
@@ -618,6 +633,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+  process_sp->SetShadowListener(launch_info.GetShadowListener());
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
@@ -664,9 +680,11 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
       target->CreateProcess(attach_info.GetListenerForProcess(debugger),
                             attach_info.GetProcessPluginName(), nullptr, false);
 
-  process_sp->HijackProcessEvents(attach_info.GetHijackListener());
-  if (process_sp)
+  if (process_sp) {
+    process_sp->HijackProcessEvents(attach_info.GetHijackListener());
+    process_sp->SetShadowListener(attach_info.GetShadowListener());
     error = process_sp->Attach(attach_info);
+  }
 
   return process_sp;
 }
@@ -682,13 +700,11 @@ void PlatformWindows::GetStatus(Stream &strm) {
 
 bool PlatformWindows::CanDebugProcess() { return true; }
 
-ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformWindows::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("%s.dll", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("{0}.dll", basename).str();
 }
 
 size_t
@@ -726,9 +742,8 @@ PlatformWindows::GetSoftwareBreakpointTrapOpcode(Target &target,
   }
 }
 
-std::unique_ptr<UtilityFunction>
-PlatformWindows::MakeLoadImageUtilityFunction(ExecutionContext &context,
-                                              Status &status) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+PlatformWindows::MakeLoadImageUtilityFunction(ExecutionContext &context) {
   // FIXME(compnerd) `-fdeclspec` is not passed to the clang instance?
   static constexpr const char kLoaderDecls[] = R"(
 extern "C" {
@@ -843,16 +858,15 @@ void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
                                                context);
   if (!function) {
     std::string error = llvm::toString(function.takeError());
-    status = Status::FromErrorStringWithFormat(
+    return llvm::createStringError(
         "LoadLibrary error: could not create utility function: %s",
         error.c_str());
-    return nullptr;
   }
 
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(target);
   if (!scratch_ts_sp)
-    return nullptr;
+    return llvm::createStringError("LoadLibrary error: no scratch type system");
 
   CompilerType VoidPtrTy =
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -875,18 +889,14 @@ void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
   std::unique_ptr<UtilityFunction> utility{std::move(*function)};
   utility->MakeFunctionCaller(VoidPtrTy, parameters, context.GetThreadSP(),
                               error);
-  if (error.Fail()) {
-    status = Status::FromErrorStringWithFormat(
+  if (error.Fail())
+    return llvm::createStringError(
         "LoadLibrary error: could not create function caller: %s",
         error.AsCString());
-    return nullptr;
-  }
 
-  if (!utility->GetFunctionCaller()) {
-    status = Status::FromErrorString(
+  if (!utility->GetFunctionCaller())
+    return llvm::createStringError(
         "LoadLibrary error: could not get function caller");
-    return nullptr;
-  }
 
   return utility;
 }
@@ -940,8 +950,7 @@ extern "C" {
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);

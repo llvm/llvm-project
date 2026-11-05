@@ -67,14 +67,14 @@ static unsigned getLength(const Expr *E,
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
-    if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
-      if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit();
-            LengthInit && !LengthInit->isValueDependent()) {
-          Expr::EvalResult Length;
-          if (LengthInit->EvaluateAsInt(Length, *Result.Context))
-            return Length.Val.getInt().getZExtValue();
-        }
+    if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl());
+        LengthVD && !isa<ParmVarDecl>(LengthVD))
+      if (const Expr *LengthInit = LengthVD->getInit();
+          LengthInit && !LengthInit->isValueDependent()) {
+        Expr::EvalResult Length;
+        if (LengthInit->EvaluateAsInt(Length, *Result.Context))
+          return Length.Val.getInt().getZExtValue();
+      }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();
@@ -107,9 +107,9 @@ static const CallExpr *getStrlenExpr(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<CallExpr>(WrongLengthExprName))
     if (const Decl *D = StrlenExpr->getCalleeDecl())
       if (const FunctionDecl *FD = D->getAsFunction())
-        if (const IdentifierInfo *II = FD->getIdentifier())
-          if (II->isStr("strlen") || II->isStr("wcslen"))
-            return StrlenExpr;
+        if (const IdentifierInfo *II = FD->getIdentifier();
+            II && (II->isStr("strlen") || II->isStr("wcslen")))
+          return StrlenExpr;
 
   return nullptr;
 }
@@ -233,9 +233,9 @@ isGivenLengthEqualToSrcLength(const MatchFinder::MatchResult &Result) {
   if (GivenLength != 0 && SrcLength != 0 && GivenLength == SrcLength)
     return true;
 
-  if (const auto *LengthExpr = Result.Nodes.getNodeAs<Expr>(LengthExprName))
-    if (isa<BinaryOperator>(LengthExpr->IgnoreParenImpCasts()))
-      return false;
+  if (const auto *LengthExpr = Result.Nodes.getNodeAs<Expr>(LengthExprName);
+      LengthExpr && isa<BinaryOperator>(LengthExpr->IgnoreParenImpCasts()))
+    return false;
 
   // Check the strlen()'s argument's 'VarDecl' is equal to the source 'VarDecl'.
   if (const CallExpr *StrlenCE = getStrlenExpr(Result))
@@ -324,21 +324,18 @@ static void lengthExprHandle(const Expr *LengthExpr,
     const Expr *LhsExpr = BO->getLHS()->IgnoreImpCasts();
     const Expr *RhsExpr = BO->getRHS()->IgnoreImpCasts();
 
-    if (const auto *LhsIL = dyn_cast<IntegerLiteral>(LhsExpr)) {
-      if (LhsIL->getValue().getZExtValue() == 1) {
-        Diag << FixItHint::CreateRemoval(
-            {LhsIL->getBeginLoc(),
-             RhsExpr->getBeginLoc().getLocWithOffset(-1)});
-        return;
-      }
+    if (const auto *LhsIL = dyn_cast<IntegerLiteral>(LhsExpr);
+        LhsIL && LhsIL->getValue().getZExtValue() == 1) {
+      Diag << FixItHint::CreateRemoval(
+          {LhsIL->getBeginLoc(), RhsExpr->getBeginLoc().getLocWithOffset(-1)});
+      return;
     }
 
-    if (const auto *RhsIL = dyn_cast<IntegerLiteral>(RhsExpr)) {
-      if (RhsIL->getValue().getZExtValue() == 1) {
-        Diag << FixItHint::CreateRemoval(
-            {LhsExpr->getEndLoc().getLocWithOffset(1), RhsIL->getEndLoc()});
-        return;
-      }
+    if (const auto *RhsIL = dyn_cast<IntegerLiteral>(RhsExpr);
+        RhsIL && RhsIL->getValue().getZExtValue() == 1) {
+      Diag << FixItHint::CreateRemoval(
+          {LhsExpr->getEndLoc().getLocWithOffset(1), RhsIL->getEndLoc()});
+      return;
     }
   }
 
@@ -912,9 +909,9 @@ void NotNullTerminatedResultCheck::memcpySFix(
 void NotNullTerminatedResultCheck::memchrFix(
     StringRef Name, const MatchFinder::MatchResult &Result) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
-  if (const auto *GivenCL = dyn_cast<CharacterLiteral>(FunctionExpr->getArg(1)))
-    if (GivenCL->getValue() != 0)
-      return;
+  if (const auto *GivenCL = dyn_cast<CharacterLiteral>(FunctionExpr->getArg(1));
+      GivenCL && GivenCL->getValue() != 0)
+    return;
 
   const auto Diag =
       diag(FunctionExpr->getArg(2)->IgnoreParenCasts()->getBeginLoc(),

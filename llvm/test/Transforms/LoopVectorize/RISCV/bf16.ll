@@ -73,7 +73,7 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; NO-ZVFBFMIN-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; NO-ZVFBFMIN-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-ZVFBFMIN:       [[VECTOR_PH]]:
-; NO-ZVFBFMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; NO-ZVFBFMIN-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; NO-ZVFBFMIN-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-ZVFBFMIN:       [[VECTOR_BODY]]:

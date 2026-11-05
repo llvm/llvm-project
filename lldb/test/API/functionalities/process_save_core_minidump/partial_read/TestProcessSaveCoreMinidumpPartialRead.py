@@ -43,15 +43,14 @@ class ProcessSaveCoreMinidumpPartialReadTestCase(TestBase):
         self.assertTrue(memory64_list_found, "minidump has no Memory64List stream")
 
     @skipUnlessPlatform(["linux"])
+    @skipIf(archs=["arm$"])
     def test_save_core_range_with_unreadable_tail(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        lldbutil.run_break_set_by_source_regexp(self, "Set a breakpoint here")
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertState(process.GetState(), lldb.eStateStopped)
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
-        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         region = frame.FindVariable("region").GetValueAsUnsigned()
         page = frame.FindVariable("page").GetValueAsUnsigned()
         self.assertNotEqual(region, 0)

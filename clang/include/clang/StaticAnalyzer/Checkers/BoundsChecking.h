@@ -29,15 +29,13 @@ namespace clang::ento::bounds {
 struct CheckFlags {
   unsigned CheckUnderflow : 1;
   unsigned OffsetObviouslyNonnegative : 1;
-  unsigned AcceptPastTheEnd : 1;
+  unsigned AlsoAcceptEquality : 1;
 };
 
 class CheckResult;
 
 /// Checks the validity of accessing a memory region with extent \p Extent at
-/// offset \p Offset. The \p Flags influence the semantics of the check, in
-/// particular if `AcceptPastTheEnd` is true, then Offset == Extent is also
-/// accepted as valid.
+/// offset \p Offset. The \p Flags influence the semantics of the check.
 CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
                         std::optional<NonLoc> Extent, CheckFlags Flags);
 
@@ -52,15 +50,11 @@ public:
   bool isCorruptedState() const { return IsCorruptedState; }
 
   /// When true, the checked offset may be in bounds.
-  /// As an exceptional case, this is also true for idiomatic expressions that
-  /// define a past-the-end pointer (and do not dereference it).
   bool mayBeInBounds() const { return static_cast<bool>(InBoundsState); }
 
   /// When true, the checked offset may be negative.
   bool mayUnderflow() const { return MayUnderflow; }
   /// When true, the checked offset may be >= the extent of the region.
-  /// As an exceptional case, this is also false for idiomatic expressions that
-  /// define a past-the-end pointer (and do not dereference it).
   bool mayOverflow() const { return ExtentIfMayOverflow.has_value(); }
   /// When true, the checked offset may be out of bounds.
   bool mayBeInvalid() const { return MayUnderflow || ExtentIfMayOverflow; }
@@ -78,8 +72,6 @@ public:
   /// Returns the program state that should be used for continuing the analysis
   /// after this bounds check. This returns null if mayBeInBounds() is false, in
   /// that case the state before the check should be used in the error node.
-  /// Note that we also have a valid state in the exception case when the
-  /// 'access' calculates the past-the-end pointer without dereferencing it.
   ProgramStateRef getInBoundsState() const { return InBoundsState; }
 
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
@@ -100,6 +92,29 @@ private:
   ProgramStateRef InBoundsState = nullptr;
 };
 
+enum class Comparison { LT, LE, EQ };
+
+inline BinaryOperator::Opcode asOpcode(Comparison C) {
+  switch (C) {
+  case Comparison::LT:
+    return BO_LT;
+  case Comparison::LE:
+    return BO_LE;
+  case Comparison::EQ:
+    return BO_EQ;
+  }
+  llvm_unreachable("unhandled Comparison kind");
+}
+
+// Evaluates the comparison \p Value \p CmpKind \p Threshold; and splits the
+// state, returning a pair {ComparisonTrueState, ComparisonFalseState}.
+// May return {nullptr, nullptr} when `evalBinOp` fails.
+// This uses a custom simplification algorithm that approximates a mathematical
+// comparison between the two numbers; ignoring overflow and heuristically
+// avoiding the automatic conversions done by the underlying `evalBinOp`.
+std::pair<ProgramStateRef, ProgramStateRef>
+compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB, NonLoc Value,
+                        NonLoc Threshold, Comparison CmpKind);
 } // namespace clang::ento::bounds
 
 #endif // LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H

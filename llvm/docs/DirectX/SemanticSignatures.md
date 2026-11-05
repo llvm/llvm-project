@@ -98,8 +98,8 @@ retains all information needed to serialize into `ISG1`, `OSG1` and `PSV0`.
 | Cols                   | i8              | number of components per row (1–4)                                                                                                                                                                                                 |
 | Start Row              | i32             | starting register row; `-1` (`0xFFFFFFFF`) if unallocated                                                                                                                                                                          |
 | Start Column           | i8              | starting component column; `-1` (`0xFF`) if unallocated, otherwise 0–3                                                                                                                                                             |
-| Usage Mask             | i8              | 4-bit bitmask of components that are always read (input) or may be written (output).                                                                                                                                               |
-| Dynamic Index Mask     | i8              | 4-bit bitmask of components that are dynamically indexed                                                                                                                                                                           |
+| Usage Mask             | i8              | 4-bit register-relative mask of components read (input) or written (output), including conditional accesses.                                                                                                                                               |
+| Dynamic Index Mask     | i8              | 4-bit element-relative mask of components that are dynamically indexed                                                                                                                                                                           |
 | GS Output Stream Index | i32             | GS output stream index; 0 for non-GS stages                                                                                                                                                                                        |
 
 [ElementType]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h
@@ -113,8 +113,11 @@ The following container fields are derived from the operands above:
   sentinels are always set together).
 - **DeclaredMask**: `((1 << Cols) - 1) << StartCol`.
 - **AlwaysReads / NeverWrites**: `UsageMask` is written to `AlwaysReads` for
-  inputs; for outputs `NeverWrites = ~UsageMask & DeclaredMask`.
-- **MinPrecision**: from `CompType` plus the `UseMinPrecision` module flag.
+  inputs (including conditional reads, following DXC); for outputs
+  `NeverWrites = ~UsageMask & 0xF`. The output mask includes components outside
+  the declared mask. These conventions apply to validator version 1.5 onward.
+- **MinPrecision**: from `CompType` when native low-precision mode is disabled;
+  otherwise `Default`. The backend reads native mode from `dx.nativelowprec`.
 
 ## Semantic Indices
 
@@ -125,3 +128,174 @@ The following container fields are derived from the operands above:
 
 A metadata node of one or more semantic indices. Its length must equal the
 `Rows` field of the containing signature element.
+
+## Signature Packing
+
+Before a semantic signature is serialized, each element that participates in
+packing is assigned a location in a fixed register space of 32 rows and 4
+columns. An element occupies a rectangle of `Rows` consecutive registers and
+`Cols` consecutive components. Its allocated location is recorded in
+`StartRow` and `StartCol`.
+
+The packing helper classifies each element from its semantic kind, shader stage,
+and I/O type. Elements with the `NotAllocated` interpretation are accessed by
+dedicated intrinsics and do not appear in input/output signature metadata.
+Elements with the `NotPacked` interpretation, remain in the signature and use
+ordinary `llvm.dx.load.input` accesses, but retain the unallocated row and
+column sentinels. Neither interpretation reserves registers. The remaining
+interpretations accepted by a packing algorithm are assigned locations according
+to that algorithm's rules. If an eligible element cannot be placed, packing
+returns a `SignaturePackingError` identifying the element that failed.
+
+The packing APIs are declared in [SemanticSignaturePacking.h], and the
+in-memory element representation they operate on is declared in
+[SemanticSignatures.h].
+
+[SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
+
+### Selecting a Packing Mode
+
+Clang packs semantic signatures before emitting `dx.semantic.signatures`
+metadata. For signatures connecting programmable shader stages, the default is
+prefix-stable packing. Use `-fdx-semantic-signature-packing-mode=prefix-stable`
+or `-fdx-semantic-signature-packing-mode=optimized` to select the mode explicitly.
+In DXC driver mode, the corresponding flags are `-pack-prefix-stable` and
+`-pack-optimized`. These options do not affect vertex shader inputs, which always
+use stacked packing, or pixel shader outputs, which always use indexed packing.
+
+### Prefix-Stable Packing
+
+Prefix-stable packing is used for signatures that connect programmable shader
+stages or carry patch constant data. Elements are visited in declaration order
+and placed at the first compatible location in the 32-row by 4-column register
+space. Once an element is placed it is never moved, so appending elements to a
+signature does not change the locations assigned to its existing prefix.
+
+Elements can share unused components in a row when all applicable packing
+constraints are satisfied:
+
+- Every element in a row must have a compatible interpolation mode.
+- When native 16-bit types are enabled, every element in a row must have the
+  same component width. Without native 16-bit types, min-precision values
+  occupy 32-bit components.
+- Within each row, elements are ordered by category: arbitrary values first,
+  followed by system values, and then system-generated values. For example, a
+  system value can never be packed to the left of an arbitrary value.
+  Indexed tessellation factors follow these categories in the component
+  ordering. Clip/cull values occupy dedicated rows as described below.
+- A system value or system generated value cannot be placed in a dynamically
+  indexed row. A dynamically indexed row is a row within the range covered by
+  a multi-row element, where the row is selected using a dynamic index.
+
+Some semantic interpretations require additional handling:
+
+- `SV_ClipDistance` and `SV_CullDistance` are packed only with each other in
+  dedicated rows. Together they may occupy at most eight components across at
+  most two rows. The rows must be adjacent when a clip or cull element spans
+  multiple rows. Otherwise, clip and cull rows do not need to be adjacent.
+- A multi-row tessellation factor is searched for only in the last column.
+  Arbitrary values may fill the columns to its left, even when declared after
+  the factor. A single-row tessellation factor is ordered and packed as a
+  system value instead.
+- Geometry shader output streams are packed independently.
+
+For example:
+
+```hlsl
+struct VSOut {
+  float3 A[3] : A;
+  float1x2 B  : B;
+  float2 C    : C;
+  float D     : D;
+};
+```
+
+Assuming `B` has column-major matrix orientation, the signature is allocated
+as:
+
+```text
+reg0: A[0].xyz | B[0][0].w
+reg1: A[1].xyz | B[0][1].w
+reg2: A[2].xyz | D.w
+reg3: C.xy     | unused.zw
+```
+
+### Optimized Packing
+
+Optimized packing partitions eligible elements into groups and packs the groups
+in this order:
+
+1. Arbitrary and system-value elements that occupy a full register.
+2. Multi-row tessellation factors, which are restricted to the last column.
+3. Arbitrary elements.
+4. System-value elements, including single-row tessellation factors.
+5. `SV_ClipDistance` and `SV_CullDistance` elements.
+6. System-generated-value elements.
+
+Within each group, elements are ordered first by the numeric value of their
+interpolation mode, then by decreasing row count, then by decreasing column
+count, and finally by increasing signature ID.
+
+Unlike prefix-stable packing, optimized packing does not reserve whole rows for
+clip/cull values. They may share compatible rows with other values following the
+same constraints.
+
+This is a greedy optimized ordering rather than an exhaustive search for a
+minimum-row layout. Reordering can reduce the number of rows occupied, but
+means that appending an element may change locations assigned to existing
+elements.
+
+### Stacked Packing
+
+Stacked packing is used for a vertex shader input signature. Eligible elements
+are visited in declaration order. Each starts at column zero of the first row
+after the preceding element, and a multi-row element occupies consecutive rows.
+Elements are never co-packed into the unused columns of another element, and
+interpolation mode, component type, and semantic interpretation do not otherwise
+affect placement.
+
+For example:
+
+```hlsl
+struct VSIn {
+  float A       : A;
+  float3 B[2]   : B;
+  uint VertexID : SV_VertexID;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: A.x        | unused.yzw
+reg1: B[0].xyz   | unused.w
+reg2: B[1].xyz   | unused.w
+reg3: VertexID.x | unused.yzw
+```
+
+### Indexed Packing
+
+Indexed packing is used for a pixel shader output signature. Each eligible
+`SV_Target` element occupies one row and starts at column zero. Its semantic
+index directly selects that row, so declaration order does not affect placement
+and rows without a corresponding semantic index remain unused. Elements that do
+not contribute to the target register space remain unallocated.
+
+For example:
+
+```hlsl
+struct PSOut {
+  float4 Color3 : SV_Target3;
+  float Color0  : SV_Target0;
+  float2 Color2 : SV_Target2;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: Color0.x  | unused.yzw
+reg1: unused.xyzw
+reg2: Color2.xy | unused.zw
+reg3: Color3.xyzw
+```

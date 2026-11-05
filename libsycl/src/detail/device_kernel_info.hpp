@@ -13,17 +13,26 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_DEVICE_KERNEL_INFO
-#define _LIBSYCL_DEVICE_KERNEL_INFO
+#ifndef _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
+#define _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
 #include <OffloadAPI.h>
 
+#include <llvm/ADT/Hashing.h>
+
+#include <cstddef>
+#include <mutex>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-class ProgramAndKernelManager;
+class DeviceImageManager;
+class ContextImpl;
 
 // TODO: Pointers to instances of this class are supported to be stored in
 // header function templates as a static variable to avoid repeated runtime
@@ -38,46 +47,40 @@ public:
       : MName(KernelName), MDeviceImage(DeviceImage) {}
 
   /// \return the name of this kernel.
-  std::string_view getName() { return MName; }
+  std::string_view getName() const { return MName; }
 
   /// \return the device image containing the device code of this kernel.
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
 
-private:
-  std::unordered_map<ol_device_handle_t, ol_symbol_handle_t> MBuiltKernels;
+  /// Returns a cache entry for pair key \p Context & \p Device if successful,
+  /// null otherwise
+  ol_symbol_handle_t tryGetCachedKernel(ContextImpl *Context,
+                                        ol_device_handle_t Device);
 
+  /// Adds \p Kernel to the cache by using the pair key \p Context & \p Device
+  void addCachedKernel(ContextImpl *Context, ol_device_handle_t Device,
+                       ol_symbol_handle_t Kernel);
+
+  /// Removes every cache entry keyed by \p Context, regardless of device.
+  /// Called by ContextImpl when it is being destroyed.
+  void removeCachedKernelsFor(ContextImpl *Context);
+
+private:
   std::string_view MName;
   DeviceImageManager &MDeviceImage;
 
-  /// Searches for the existing kernel handle compatible with the specified
-  /// device.
-  /// \param Device the device the kernel must be compatible with.
-  /// \return a liboffload kernel handle if a built kernel was found; otherwise
-  /// returns nullptr.
-  ol_symbol_handle_t getKernel(ol_device_handle_t Device) const {
-    auto KernelIt = MBuiltKernels.find(Device);
-    if (KernelIt == MBuiltKernels.end())
-      return nullptr;
-    return KernelIt->second;
-  }
-
-  /// Attaches a liboffload kernel handle to this device kernel info object.
-  /// \param Device the device the kernel symbol was created for.
-  /// \param Kernel the liboffload kernel symbol to attach.
-  void addKernel(ol_device_handle_t Device, ol_symbol_handle_t Kernel) {
-    assert(Kernel && "Invalid liboffload kernel handle");
-    assert(Device && "Invalid liboffload device handle");
-    assert((MBuiltKernels.find(Device) == MBuiltKernels.end()) &&
-           "Kernel is being managed already");
-    MBuiltKernels.insert({Device, Kernel});
-  }
-
-  /// Kernel info update is intended to be done only by ProgramAndKernelManager.
-  friend class ProgramAndKernelManager;
+  using CacheKeyT = std::pair<ContextImpl *, ol_device_handle_t>;
+  struct CacheKeyHash {
+    std::size_t operator()(const CacheKeyT &Key) const noexcept {
+      return llvm::hash_combine(Key.first, Key.second);
+    }
+  };
+  std::mutex MCacheMutex;
+  std::unordered_map<CacheKeyT, ol_symbol_handle_t, CacheKeyHash> MCache;
 };
 
 } // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_DEVICE_KERNEL_INFO
+#endif // _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
