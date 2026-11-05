@@ -8932,7 +8932,7 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
       OMP.initialize();
       auto *Ty = IntegerType::get(Ctx, Bits);
       auto *Fn = Function::Create(
-          FunctionType::get(Type::getVoidTy(Ctx), {Ty, Ty}, false),
+          FunctionType::get(Type::getVoidTy(Ctx), {Ty, Ty, Ty}, false),
           GlobalValue::ExternalLinkage, "runtime", *M);
       auto *Entry = BasicBlock::Create(Ctx, "entry", Fn);
       auto *Nest = BasicBlock::Create(Ctx, "nest", Fn);
@@ -8956,7 +8956,7 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
       if (Kind == Frozen || Kind == Defined) {
         // Undef uses may differ, so freezing X & (X + 1) need not yield zero.
         Value *X = Kind == Defined ? static_cast<Value *>(Fn->getArg(1))
-                                   : UndefValue::get(Ty);
+                                   : Fn->getArg(2);
         auto *Added = B.Insert(BinaryOperator::CreateAdd(X, One));
         Value *Count =
             B.CreateFreeze(B.CreateShl(B.CreateAnd(X, Added), Bits - 1));
@@ -8967,7 +8967,7 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
       if (Kind == SharedInputs) {
         // Reject the unsafe graph without discarding its shared safe input.
         Value *Safe = B.CreateAnd(Counts[0], SignedMax);
-        Value *Unsafe = B.CreateXor(Safe, B.CreateFreeze(UndefValue::get(Ty)));
+        Value *Unsafe = B.CreateXor(Safe, B.CreateFreeze(Fn->getArg(2)));
         for (unsigned I = 0; I < 128; ++I) {
           Safe = B.Insert(new FreezeInst(Safe));
           Unsafe = B.Insert(new FreezeInst(Unsafe));
@@ -8980,7 +8980,7 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
         Counts[1] = Kind == UnitInner ? One : Zero;
       if (Kind >= PendingPhi || Kind == Cyclic) {
         if (Kind == Cyclic)
-          Incoming = B.Insert(new FreezeInst(UndefValue::get(Ty)));
+          Incoming = B.Insert(new FreezeInst(Fn->getArg(2)));
         auto *Merge = BasicBlock::Create(Ctx, "merge", Fn, Nest);
         B.CreateBr(Merge);
         B.SetInsertPoint(Merge);
