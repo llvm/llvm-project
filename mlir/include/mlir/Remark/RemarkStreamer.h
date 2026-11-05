@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_REMARK_REMARKSTREAMER_H
+#define MLIR_REMARK_REMARKSTREAMER_H
+
 #include "mlir/IR/Remarks.h"
 
 #include "llvm/Remarks/RemarkStreamer.h"
@@ -56,3 +59,5 @@ LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     const RemarkCategories &cat, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
+
+#endif // MLIR_REMARK_REMARKSTREAMER_H

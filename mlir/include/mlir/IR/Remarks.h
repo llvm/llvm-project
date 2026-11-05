@@ -273,8 +273,9 @@ public:
     if (!relatedId)
       return;
     relatedRemarks.push_back(relatedId);
-    args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue())).isLink =
-        true;
+    Arg &arg =
+        args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
+    arg.isLink = true;
   }
 
   /// Check if this remark has any related remarks.

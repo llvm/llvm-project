@@ -10,6 +10,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <atomic>
