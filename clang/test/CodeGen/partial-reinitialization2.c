@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s %}
 
 struct P1 { char x[6]; } g1 = { "foo" };
 struct LP1 { struct P1 p1; };

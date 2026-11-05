@@ -91,8 +91,8 @@ body:             |
     %2:vgpr_32 = COPY killed $vgpr2
     %1:vgpr_32 = COPY killed $vgpr1
     %0:vgpr_32 = COPY killed $vgpr0
-    %18:vreg_512 = REG_SEQUENCE killed %0, %subreg.sub0, killed %1, %subreg.sub1, killed %2, %subreg.sub2, killed %3, %subreg.sub3, killed %4, %subreg.sub4, killed %5, %subreg.sub5, killed %6, %subreg.sub6, killed %7, %subreg.sub7, killed %8, %subreg.sub8, killed %9, %subreg.sub9, killed %10, %subreg.sub10, killed %11, %subreg.sub11, killed %12, %subreg.sub12, killed %13, %subreg.sub13, killed %14, %subreg.sub14, killed %15, %subreg.sub15
-    %19:vgpr_32 = V_AND_B32_e32 15, killed %16, implicit $exec
+    %18:vreg_512 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3, %4, %subreg.sub4, %5, %subreg.sub5, %6, %subreg.sub6, %7, %subreg.sub7, %8, %subreg.sub8, %9, %subreg.sub9, %10, %subreg.sub10, %11, %subreg.sub11, %12, %subreg.sub12, %13, %subreg.sub13, %14, %subreg.sub14, %15, %subreg.sub15
+    %19:vgpr_32 = V_AND_B32_e32 15, %16, implicit $exec
     %20:sreg_64_xexec = S_MOV_B64 $exec
 
   bb.1:
@@ -100,17 +100,17 @@ body:             |
 
     %21:sreg_32_xm0 = V_READFIRSTLANE_B32 %19, implicit $exec
     %22:sreg_64 = V_CMP_EQ_U32_e64 %21, %19, implicit $exec
-    %23:sreg_64 = S_AND_SAVEEXEC_B64 killed %22, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    S_SET_GPR_IDX_ON killed %21, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    %23:sreg_64 = S_AND_SAVEEXEC_B64 %22, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    S_SET_GPR_IDX_ON %21, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     %24:vgpr_32 = V_MOV_B32_e32 undef %18.sub0, implicit $exec, implicit %18, implicit $m0
     S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-    $exec = S_XOR_B64_term $exec, killed %23, implicit-def dead $scc
+    $exec = S_XOR_B64_term $exec, %23, implicit-def dead $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
 
   bb.2:
-    $exec = S_MOV_B64 killed %20
-    $sgpr30_sgpr31 = COPY killed %17
-    $vgpr0 = COPY killed %24
+    $exec = S_MOV_B64 %20
+    $sgpr30_sgpr31 = COPY %17
+    $vgpr0 = COPY %24
     S_SETPC_B64_return killed $sgpr30_sgpr31, implicit killed $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
 
 ...

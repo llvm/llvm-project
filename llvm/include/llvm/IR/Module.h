@@ -1100,10 +1100,21 @@ public:
   /// @{
 
   /// Returns the exception model recorded by the "exception-model" module flag,
-  /// or ExceptionHandling::Default when the flag is absent (meaning
-  /// unspecified; callers with a TargetMachine should fall back to its
-  /// exception model).
+  /// or the target's default exception model (from the target triple) when the
+  /// flag is absent. Never returns ExceptionHandling::Default.
   ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or Default is absent or an unrecognized kind.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
   /// @}
 
   /// @}

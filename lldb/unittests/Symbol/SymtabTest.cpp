@@ -62,6 +62,7 @@ TEST_F(SymtabTest, EncodeDecodeSymtab) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -319,6 +320,7 @@ TEST_F(SymtabTest, TestDecodeCStringMaps) {
   // can correctly lookup each of the names in the symbol table.
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

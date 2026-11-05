@@ -64,6 +64,13 @@ struct V2PhysSCopyInfo {
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
 
+/// Use two MMO flags to encode the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
+    MachineMemOperand::MOTargetFlag5;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag6;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -1568,13 +1575,6 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
-
-  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
-  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
-
-  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
-  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
-  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
