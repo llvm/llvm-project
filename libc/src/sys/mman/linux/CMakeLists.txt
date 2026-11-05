@@ -12,9 +12,11 @@ add_entrypoint_object(
   HDRS
     ../madvise.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.madvise
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
