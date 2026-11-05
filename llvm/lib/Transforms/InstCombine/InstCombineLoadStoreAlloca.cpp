@@ -714,8 +714,7 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
       if (BC->getType()->isX86_AMXTy())
         return nullptr;
 
-      // Try shuffling elements of the loaded type before folding the bitcast
-      // into the load, if the loaded type has wider elements.
+      // Try fold shuffle (bitcast X) -> bitcast (shuffle X).
       if (BC->hasOneUse())
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(BC->user_back()))
           if (Value *V = IC.foldShuffleOfBitcast(*SVI)) {
