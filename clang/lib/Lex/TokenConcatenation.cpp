@@ -180,7 +180,7 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
     return false;
 
   tok::TokenKind PrevKind = PrevTok.getKind();
-  if (!PrevTok.isAnnotation() && PrevTok.getIdentifierInfo())
+  if (PrevTok.getIdentifierInfo())
     PrevKind = tok::identifier; // Language keyword or named operator.
 
   // Look up information on when we should avoid concatenation with prevtok.

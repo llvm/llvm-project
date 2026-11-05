@@ -24,7 +24,6 @@ define i16 @cvt_pk_bf8_f16_v(ptr addrspace(1) %out) {
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0 ; encoding: [0x00,0x00,0xc8,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0 ; encoding: [0x00,0x00,0xc4,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
-; GFX13-FAKE16-NEXT:    s_wait_bvhcnt 0x0 ; encoding: [0x00,0x00,0xc3,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0 ; encoding: [0x00,0x00,0xc7,0xbf]
 ; GFX13-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e32 v0, 0x38003800 ; encoding: [0xff,0x5a,0x00,0x7e,0x00,0x38,0x00,0x38]
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
@@ -34,7 +33,6 @@ define i16 @cvt_pk_bf8_f16_v(ptr addrspace(1) %out) {
 ; GFX13-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0 ; encoding: [0x00,0x00,0xc8,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_expcnt 0x0 ; encoding: [0x00,0x00,0xc4,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
-; GFX13-REAL16-NEXT:    s_wait_bvhcnt 0x0 ; encoding: [0x00,0x00,0xc3,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0 ; encoding: [0x00,0x00,0xc7,0xbf]
 ; GFX13-REAL16-NEXT:    v_cvt_pk_bf8_f16_e32 v0.l, 0x38003800 ; encoding: [0xff,0x5a,0x00,0x7e,0x00,0x38,0x00,0x38]
 ; GFX13-REAL16-NEXT:    s_set_pc_i64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
@@ -43,7 +41,7 @@ define i16 @cvt_pk_bf8_f16_v(ptr addrspace(1) %out) {
 }
 
 ; GFX1250: codeLenInByte = 24
-; GFX13: codeLenInByte = 32
+; GFX13: codeLenInByte = 28
 
 define i16 @cvt_pk_fp8_f16_v(ptr addrspace(1) %out) {
 ; GFX1250-FAKE16-LABEL: cvt_pk_fp8_f16_v:
@@ -65,7 +63,6 @@ define i16 @cvt_pk_fp8_f16_v(ptr addrspace(1) %out) {
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0 ; encoding: [0x00,0x00,0xc8,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0 ; encoding: [0x00,0x00,0xc4,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
-; GFX13-FAKE16-NEXT:    s_wait_bvhcnt 0x0 ; encoding: [0x00,0x00,0xc3,0xbf]
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0 ; encoding: [0x00,0x00,0xc7,0xbf]
 ; GFX13-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e32 v0, 0x3800 ; encoding: [0xff,0x58,0x00,0x7e,0x00,0x38,0x00,0x00]
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
@@ -75,7 +72,6 @@ define i16 @cvt_pk_fp8_f16_v(ptr addrspace(1) %out) {
 ; GFX13-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0 ; encoding: [0x00,0x00,0xc8,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_expcnt 0x0 ; encoding: [0x00,0x00,0xc4,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
-; GFX13-REAL16-NEXT:    s_wait_bvhcnt 0x0 ; encoding: [0x00,0x00,0xc3,0xbf]
 ; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0 ; encoding: [0x00,0x00,0xc7,0xbf]
 ; GFX13-REAL16-NEXT:    v_cvt_pk_fp8_f16_e32 v0.l, 0x3800 ; encoding: [0xff,0x58,0x00,0x7e,0x00,0x38,0x00,0x00]
 ; GFX13-REAL16-NEXT:    s_set_pc_i64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
@@ -84,4 +80,4 @@ define i16 @cvt_pk_fp8_f16_v(ptr addrspace(1) %out) {
 }
 
 ; GFX1250: codeLenInByte = 24
-; GFX13: codeLenInByte = 32
+; GFX13: codeLenInByte = 28

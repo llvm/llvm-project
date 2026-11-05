@@ -1,12 +1,20 @@
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64 %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64 %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK %}
 
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64 %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64 %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK %}
 
 #include <x86intrin.h>
 

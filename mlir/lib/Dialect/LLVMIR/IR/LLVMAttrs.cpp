@@ -277,6 +277,23 @@ bool TBAANodeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// MemProfMIBAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MemProfMIBAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       DenseI64ArrayAttr callStack, StringAttr,
+                       ArrayRef<MemProfContextSizeAttr>) {
+  // The call stack feeds `Verifier::visitCallStackMetadata`, which needs at
+  // least one frame hash. The other parameters are typed, so an empty stack
+  // is the only bad shape that can get here.
+  if (callStack.empty())
+    return emitError() << "call stack of a memprof MemInfoBlock must not be "
+                          "empty";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MemoryEffectsAttr
 //===----------------------------------------------------------------------===//
 

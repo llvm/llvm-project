@@ -7,6 +7,7 @@
 # CHECK: Loaded 0 functions from symbol table.
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:       0xFEEDFACF
   cputype:     0x01000007
