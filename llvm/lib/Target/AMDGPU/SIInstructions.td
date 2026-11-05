@@ -91,7 +91,8 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-// Insert a branch to an endpgm block to use as a fallback trap.
+// Insert a branch to an endpgm block, for llvm.amdgcn.endpgm and as a fallback
+// trap.
 def ENDPGM_TRAP : SPseudoInstSI<
   (outs), (ins),
   [(AMDGPUendpgm_trap)],
