@@ -5515,6 +5515,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
 
+  if (TTI.preferReductionStartAfterLoop())
+    RUN_VPLAN_PASS(VPlanTransforms::applyReductionStartAfterLoop, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
                  *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
   if (!BestVPlan.hasTailFolded() &&

@@ -119,11 +119,10 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF10]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <16 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <16 x i32> [ [[TMP32]], %[[VEC_EPILOG_PH]] ], [ [[TMP39:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP39:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = trunc i64 [[INDEX12]] to i32
 ; CHECK-NEXT:    [[TMP36:%.*]] = add i32 [[OFFSET]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = sext i32 [[TMP36]] to i64
@@ -136,11 +135,12 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[TMP41]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP40:%.*]] = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> [[TMP39]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = or i32 [[TMP40]], [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX16:%.*]] = phi i32 [ [[TMP40]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP31]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX16:%.*]] = phi i32 [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP31]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -156,7 +156,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], %[[LOOP]] ], [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ [[TMP40]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], %[[LOOP]] ], [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[OR_LCSSA]]
 ;
 entry:

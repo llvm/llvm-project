@@ -58,11 +58,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; INTERLEAVE-4-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[N]], 3
 ; INTERLEAVE-4-NEXT:    [[N_VEC11:%.*]] = sub i64 [[N]], [[N_MOD_VF10]]
-; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; INTERLEAVE-4-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-4:       vec.epilog.vector.body:
 ; INTERLEAVE-4-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; INTERLEAVE-4-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP10]], [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; INTERLEAVE-4-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ zeroinitializer, [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP12]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
@@ -71,11 +70,12 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; INTERLEAVE-4:       vec.epilog.middle.block:
 ; INTERLEAVE-4-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
+; INTERLEAVE-4-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP14]], [[BC_MERGE_RDX]]
 ; INTERLEAVE-4-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC11]]
 ; INTERLEAVE-4-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; INTERLEAVE-4:       vec.epilog.scalar.ph:
 ; INTERLEAVE-4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[RDX_START]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; INTERLEAVE-4-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-4:       loop:
 ; INTERLEAVE-4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -87,7 +87,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; INTERLEAVE-4-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; INTERLEAVE-4:       exit:
-; INTERLEAVE-4-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; INTERLEAVE-4-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[RDX_START]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; INTERLEAVE-4-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
 ;
 ; INTERLEAVE-2-LABEL: @interleave_integer_reduction(
@@ -137,11 +137,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; INTERLEAVE-2-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[N]], 3
 ; INTERLEAVE-2-NEXT:    [[N_VEC11:%.*]] = sub i64 [[N]], [[N_MOD_VF10]]
-; INTERLEAVE-2-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; INTERLEAVE-2-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-2:       vec.epilog.vector.body:
 ; INTERLEAVE-2-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[LOOP]] ]
-; INTERLEAVE-2-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP10]], [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
+; INTERLEAVE-2-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ zeroinitializer, [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP12]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
@@ -150,11 +149,12 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; INTERLEAVE-2:       vec.epilog.middle.block:
 ; INTERLEAVE-2-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
+; INTERLEAVE-2-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP14]], [[BC_MERGE_RDX]]
 ; INTERLEAVE-2-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC11]]
 ; INTERLEAVE-2-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[SCALAR_PH]]
 ; INTERLEAVE-2:       vec.epilog.scalar.ph:
 ; INTERLEAVE-2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[RDX_START]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; INTERLEAVE-2-NEXT:    br label [[LOOP1:%.*]]
 ; INTERLEAVE-2:       loop:
 ; INTERLEAVE-2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
@@ -166,7 +166,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; INTERLEAVE-2-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; INTERLEAVE-2:       exit:
-; INTERLEAVE-2-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP1]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; INTERLEAVE-2-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP1]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[RDX_START]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; INTERLEAVE-2-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
 ;
 entry:

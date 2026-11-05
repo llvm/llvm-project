@@ -266,6 +266,11 @@ struct VPlanTransforms {
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
+  /// Seed the accumulators of out-of-loop reductions with the identity and
+  /// apply the start value to the result of ComputeReductionResult, taking it
+  /// off the dependency chain through the loop.
+  static void applyReductionStartAfterLoop(VPlan &Plan);
+
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
