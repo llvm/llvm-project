@@ -67,11 +67,17 @@ STATISTIC(AllocTypeNotCold, "Number of not cold static allocations (possibly "
                             "cloned) during whole program analysis");
 STATISTIC(AllocTypeCold, "Number of cold static allocations (possibly cloned) "
                          "during whole program analysis");
+STATISTIC(AllocTypeAmbiguous,
+          "Number of ambiguous static allocations (possibly cloned) during "
+          "whole program analysis");
 STATISTIC(AllocTypeNotColdThinBackend,
           "Number of not cold static allocations (possibly cloned) during "
           "ThinLTO backend");
 STATISTIC(AllocTypeColdThinBackend, "Number of cold static allocations "
                                     "(possibly cloned) during ThinLTO backend");
+STATISTIC(AllocTypeAmbiguousThinBackend,
+          "Number of ambiguous static allocations (possibly cloned) during "
+          "ThinLTO backend");
 STATISTIC(OrigAllocsThinBackend,
           "Number of original (not cloned) allocations with memprof profiles "
           "during ThinLTO backend");
@@ -285,6 +291,7 @@ static cl::opt<bool> MemProfImportClonedIndirectTargets(
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
+extern cl::opt<bool> MemProfUseAmbiguousAttributes;
 
 // Appends a per-context diagnostic suffix to each -memprof-report-hinted-sizes
 // line: the allocation function clone, how far the context matched, and the
@@ -865,7 +872,12 @@ private:
 
   /// Update the allocation call to record type of allocated memory.
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType) {
-    AllocType == AllocationType::Cold ? AllocTypeCold++ : AllocTypeNotCold++;
+    if (AllocType == AllocationType::Cold)
+      AllocTypeCold++;
+    else if (isAmbiguousAllocType((uint8_t)AllocType))
+      AllocTypeAmbiguous++;
+    else
+      AllocTypeNotCold++;
     static_cast<DerivedCCG *>(this)->updateAllocationCall(Call, AllocType);
   }
 
@@ -3912,7 +3924,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
               " full allocation context " + std::to_string(Info.FullStackId) +
               " with total size " + std::to_string(Info.TotalSize) + " is " +
               getAllocTypeString(Node->AllocTypes) + " after cloning";
-          if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+          if (allocTypeToUse(Node->AllocTypes) !=
+              allocTypeToUse((uint8_t)AllocTypeFromCall))
             Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                    " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
@@ -3928,7 +3941,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
             " context is " + getAllocTypeString(Node->AllocTypes) +
             " after cloning";
-        if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+        if (allocTypeToUse(Node->AllocTypes) !=
+            allocTypeToUse((uint8_t)AllocTypeFromCall))
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
         // Print the internal context id to aid debugging and visualization.
@@ -4839,10 +4853,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
-  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
-  auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
-                                "memprof", AllocTypeString);
-  cast<CallBase>(Call.call())->addFnAttr(A);
+  auto *CB = cast<CallBase>(Call.call());
+  if (isAmbiguousAllocType((uint8_t)AllocType)) {
+    // The contexts reaching this allocation could not be disambiguated, so it
+    // keeps (or gets) the ambiguous attribute added during matching rather than
+    // the default not cold attribute.
+    addAmbiguousAttribute(CB);
+  } else {
+    removeAnyExistingAmbiguousAttribute(CB);
+    auto A = llvm::Attribute::get(CB->getFunction()->getContext(), "memprof",
+                                  AllocTypeString);
+    CB->addFnAttr(A);
+  }
   OREGetter(Call.call()->getFunction())
       .emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", Call.call())
             << ore::NV("AllocationCall", Call.call()) << " in clone "
@@ -4864,9 +4886,14 @@ ModuleCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
   const auto *CB = cast<CallBase>(Call.call());
   if (!CB->getAttributes().hasFnAttr("memprof"))
     return AllocationType::None;
-  return CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
-             ? AllocationType::Cold
-             : AllocationType::NotCold;
+  StringRef AllocTypeString =
+      CB->getAttributes().getFnAttr("memprof").getValueAsString();
+  if (AllocTypeString == "cold")
+    return AllocationType::Cold;
+  if (AllocTypeString == "ambiguous")
+    return (AllocationType)((uint8_t)AllocationType::NotCold |
+                            (uint8_t)AllocationType::Cold);
+  return AllocationType::NotCold;
 }
 
 AllocationType
@@ -6387,6 +6414,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     if (Node->IsAllocation) {
       auto GetAllocTypeToUse = [&](const ContextNode *Node) {
         auto AT = allocTypeToUse(Node->AllocTypes);
+        // If the allocation type is still ambiguous after cloning, record
+        // that as the allocation type (the attribute stays "ambiguous") rather
+        // than falling back to the default not cold, unless ambiguous
+        // attributes are disabled.
+        if (Node->AllocTypes == BothTypes && MemProfUseAmbiguousAttributes)
+          AT = (AllocationType)BothTypes;
         // If the allocation type is ambiguous, and more aggressive hinting
         // has been enabled via the MinClonedColdBytePercent flag, see if this
         // allocation should be hinted cold anyway because its fraction cold
@@ -7134,28 +7167,18 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             MaxAllocVersionsThinBackend = AllocNode.Versions.size();
 
           // If there is only one version that means we didn't end up
-          // considering this function for cloning, and in that case the alloc
-          // will still be none type or should have gotten the default NotCold.
-          // Skip that after calling clone helper since that does some sanity
-          // checks that confirm we haven't decided yet that we need cloning.
-          // We might have a single version that is cold due to the
-          // MinClonedColdBytePercent heuristic, make sure we don't skip in that
-          // case.
+          // considering this function for cloning. Count that as unclonable
+          // unless the single version is cold due to the
+          // MinClonedColdBytePercent heuristic. The alloc may still be none
+          // type (not reached during whole program analysis), in which case
+          // there is nothing to apply; otherwise it got the type the whole
+          // program analysis resolved it to (not cold, or both types when the
+          // contexts could not be disambiguated), which is applied below like
+          // for cloned functions so that the attribute matches the regular
+          // LTO result.
           if (AllocNode.Versions.size() == 1 &&
-              (AllocationType)AllocNode.Versions[0] != AllocationType::Cold) {
-            assert((AllocationType)AllocNode.Versions[0] ==
-                       AllocationType::NotCold ||
-                   (AllocationType)AllocNode.Versions[0] ==
-                       AllocationType::None);
+              (AllocationType)AllocNode.Versions[0] != AllocationType::Cold)
             UnclonableAllocsThinBackend++;
-            continue;
-          }
-
-          // All versions should have a singular allocation type.
-          assert(llvm::none_of(AllocNode.Versions, [](uint8_t Type) {
-            return Type == ((uint8_t)AllocationType::NotCold |
-                            (uint8_t)AllocationType::Cold);
-          }));
 
           // Update the allocation types per the summary info.
           for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
@@ -7167,11 +7190,20 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             if (AllocNode.Versions[J] == (uint8_t)AllocationType::None)
               continue;
             AllocationType AllocTy = (AllocationType)AllocNode.Versions[J];
-            AllocTy == AllocationType::Cold ? AllocTypeColdThinBackend++
-                                            : AllocTypeNotColdThinBackend++;
+            // The whole program analysis only records both types when
+            // ambiguous attributes are enabled; if the backend runs without
+            // them, fall back to the not cold default.
+            if (isAmbiguousAllocType((uint8_t)AllocTy) &&
+                !MemProfUseAmbiguousAttributes)
+              AllocTy = AllocationType::NotCold;
+            const bool IsAmbiguous = isAmbiguousAllocType((uint8_t)AllocTy);
+            if (AllocTy == AllocationType::Cold)
+              AllocTypeColdThinBackend++;
+            else if (IsAmbiguous)
+              AllocTypeAmbiguousThinBackend++;
+            else
+              AllocTypeNotColdThinBackend++;
             std::string AllocTypeString = getAllocTypeAttributeString(AllocTy);
-            auto A = llvm::Attribute::get(F.getContext(), "memprof",
-                                          AllocTypeString);
             CallBase *CBClone;
             // Copy 0 is the original function.
             if (!J)
@@ -7181,8 +7213,15 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-            removeAnyExistingAmbiguousAttribute(CBClone);
-            CBClone->addFnAttr(A);
+            if (IsAmbiguous) {
+              // The contexts could not be disambiguated: keep (or add) the
+              // ambiguous attribute from matching instead of a specific type.
+              addAmbiguousAttribute(CBClone);
+            } else {
+              removeAnyExistingAmbiguousAttribute(CBClone);
+              CBClone->addFnAttr(llvm::Attribute::get(F.getContext(), "memprof",
+                                                      AllocTypeString));
+            }
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "
                      << ore::NV("Caller", CBClone->getFunction())
