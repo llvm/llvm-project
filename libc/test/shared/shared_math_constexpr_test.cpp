@@ -301,7 +301,7 @@ static_assert(LIBC_NAMESPACE::fputil::FPBits<float>::min_subnormal(
                   LIBC_NAMESPACE::Sign::NEG)
                   .get_val() == LIBC_NAMESPACE::shared::nextdownf(0.0f));
 static_assert(LIBC_NAMESPACE::fputil::FPBits<float>::min_subnormal(
-                  LIBC_NAMESPACE::Sign ::POS)
+                  LIBC_NAMESPACE::Sign::POS)
                   .get_val() == LIBC_NAMESPACE::shared::nextupf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::lgammaf(1.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fromfpf(0.0f, 0, 32));
@@ -841,7 +841,7 @@ static_assert(LIBC_NAMESPACE::fputil::FPBits<float128>::min_subnormal(
                   .get_val() ==
               LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)));
 static_assert(LIBC_NAMESPACE::fputil::FPBits<float128>::min_subnormal(
-                  LIBC_NAMESPACE::Sign ::POS)
+                  LIBC_NAMESPACE::Sign::POS)
                   .get_val() ==
               LIBC_NAMESPACE::shared::nextupf128(float128(0.0)));
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -993,7 +993,7 @@ static_assert(LIBC_NAMESPACE::fputil::FPBits<bfloat16>::min_subnormal(
                   .get_val() ==
               LIBC_NAMESPACE::shared::nextdownbf16(bfloat16(0.0)));
 static_assert(LIBC_NAMESPACE::fputil::FPBits<bfloat16>::min_subnormal(
-                  LIBC_NAMESPACE::Sign ::POS)
+                  LIBC_NAMESPACE::Sign::POS)
                   .get_val() ==
               LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
 static_assert(bfloat16(1.0) == LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));

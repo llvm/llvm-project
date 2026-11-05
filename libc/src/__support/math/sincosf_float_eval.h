@@ -152,7 +152,7 @@ template <bool IS_SIN> LIBC_INLINE constexpr float sincosf_eval(float x) {
   FPBits xbits(x);
   uint32_t x_abs = cpp::bit_cast<uint32_t>(x) & 0x7fff'ffffU;
 
-  float y;
+  float y = 0.0f;
   unsigned k = 0;
   if (x_abs < 0x4880'0000U) {
     k = sincosf_range_reduction_small(x, y);

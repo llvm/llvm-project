@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
@@ -25,7 +26,11 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 roundf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_ROUND) &&                                       \
     defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS) &&                           \
     !defined(LIBC_USE_CONSTEXPR)
-  return fputil::cast<float16>(__builtin_roundf(x));
+  if (cpp::is_constant_evaluated()) {
+    return fputil::round(x);
+  } else {
+    return fputil::cast<float16>(__builtin_roundf(x));
+  }
 #else
   return fputil::round(x);
 #endif
