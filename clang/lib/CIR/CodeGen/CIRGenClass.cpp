@@ -61,9 +61,7 @@ public:
     if (cgf.getContext().getLangOpts().SanitizeAddressFieldPadding)
       return false;
     Qualifiers qual = f->getType().getQualifiers();
-    if (qual.hasVolatile() || qual.hasObjCLifetime())
-      return false;
-    return true;
+    return !qual.hasVolatile() && !qual.hasObjCLifetime();
   }
 
   void addMemcpyableField(FieldDecl *f) {
@@ -247,7 +245,7 @@ class AssignmentMemcpyizer : public FieldMemcpyizer {
     return nullptr;
   }
 
-  bool assignmentsMemcpyable;
+  const bool assignmentsMemcpyable;
   SmallVector<Stmt *, 16> aggregatedStmts;
 
 public:
