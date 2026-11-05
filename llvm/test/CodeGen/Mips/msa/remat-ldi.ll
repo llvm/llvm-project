@@ -16,7 +16,8 @@ define dso_local void @test_ldi_b() {
 ; CHECK-NEXT:    ldi.b $w0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    balc foo
+; CHECK-NEXT:    jal foo
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ldi.b $w0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
@@ -40,7 +41,8 @@ define dso_local void @test_ldi_h() {
 ; CHECK-NEXT:    ldi.h $w0, 2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    balc foo
+; CHECK-NEXT:    jal foo
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ldi.h $w0, 2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
@@ -64,7 +66,8 @@ define dso_local void @test_ldi_w() {
 ; CHECK-NEXT:    ldi.w $w0, 3
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    balc foo
+; CHECK-NEXT:    jal foo
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ldi.w $w0, 3
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
@@ -88,7 +91,8 @@ define dso_local void @test_ldi_d() {
 ; CHECK-NEXT:    ldi.d $w0, 4
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    balc foo
+; CHECK-NEXT:    jal foo
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ldi.d $w0, 4
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP

@@ -1,5 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgpu %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu %s -emit-llvm -o - | FileCheck %s %}
 
 namespace std { class type_info; };
 

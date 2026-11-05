@@ -11710,9 +11710,17 @@ public:
     }
     // 2. Check, if operands can be vectorized. Skip for fmuladd; the
     // copyable operand is checked below and may legitimately hold many
-    // instructions.
+    // instructions. The instructions, built only from the first operand of the
+    // same lane and constants, are computed from the vectorized first
+    // operand, not gathered.
     if (Operands.size() == 2 &&
-        count_if(Operands.back(), IsaPred<Instruction>) > 1)
+        count_if(Operands.back(), IsaPred<Instruction>) > 1 &&
+        !all_of(zip(Operands.front(), Operands.back()), [](const auto &P) {
+          auto *I = dyn_cast<Instruction>(std::get<1>(P));
+          return !I || all_of(I->operands(), [&](Value *Op) {
+            return Op == std::get<0>(P) || isConstant(Op);
+          });
+        }))
       return OrigS;
     // Check the operand holding the copyable values.
     if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
@@ -16368,25 +16376,38 @@ public:
       Cost += TTI.getCastInstrCost(
           Instruction::ZExt, getWidenedType(ScalarTy, Mask.size()),
           getWidenedType(FieldTy, Mask.size()), CCH, CostKind);
-    // The extraction instructions die once the fields are emitted from the
-    // source scalar; their scalar cost is credited back for the gathers
-    // directly feeding the reduction. Instructions vectorized elsewhere are
-    // skipped: their scalar cost is already a part of the scalar baseline.
+    // The extraction instructions and their chains of single-use operands die
+    // once the fields are emitted from the source scalar; their scalar cost is
+    // credited back for the gathers directly feeding the reduction.
+    // Instructions vectorized elsewhere are skipped: their scalar cost is
+    // already a part of the scalar baseline.
     if (R.UserIgnoreList &&
-        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
-      for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
-        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
-            R.areAllUsersVectorized(I, &VectorizedVals))
-          Cost -= isa<CastInst>(I)
-                      ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
-                                             I->getOperand(0)->getType(),
-                                             TTI::getCastContextHint(I),
-                                             CostKind, I)
-                      : TTI.getArithmeticInstrCost(
-                            I->getOpcode(), I->getType(), CostKind,
-                            TTI::getOperandInfo(I->getOperand(0)),
-                            TTI::getOperandInfo(I->getOperand(1)),
-                            {I->getOperand(0), I->getOperand(1)}, I);
+        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0)) {
+      auto GetScalarCost = [&](Instruction *I) {
+        return isa<CastInst>(I)
+                   ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
+                                          I->getOperand(0)->getType(),
+                                          TTI::getCastContextHint(I), CostKind,
+                                          I)
+                   : TTI.getArithmeticInstrCost(
+                         I->getOpcode(), I->getType(), CostKind,
+                         TTI::getOperandInfo(I->getOperand(0)),
+                         TTI::getOperandInfo(I->getOperand(1)),
+                         {I->getOperand(0), I->getOperand(1)}, I);
+      };
+      for (Instruction *I : make_isa_range<Instruction>(E.Scalars)) {
+        if (!CheckedExtracts.insert(I).second || R.isVectorized(I) ||
+            !R.areAllUsersVectorized(I, &VectorizedVals))
+          continue;
+        Cost -= GetScalarCost(I);
+        for (auto *Op = dyn_cast<Instruction>(I->getOperand(0));
+             Op && Op != Src && isa<BinaryOperator, CastInst>(Op) &&
+             Op->hasOneUse() && !R.isVectorized(Op) &&
+             CheckedExtracts.insert(Op).second;
+             Op = dyn_cast<Instruction>(Op->getOperand(0)))
+          Cost -= GetScalarCost(Op);
+      }
+    }
     return Cost;
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
@@ -16844,31 +16865,6 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
     SpillsReloads += SingleRegSpillReload * SpillCount;
   }
   return SpillsReloads;
-}
-
-/// Calculates a VectorInstrContext from the values in \p VL at indices in
-/// \p DemandedElts.
-static TTI::VectorInstrContext
-getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
-  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
-  for (unsigned I : seq(VL.size())) {
-    if (!DemandedElts[I])
-      continue;
-    Value *V = VL[I];
-    if (isa<UndefValue>(V))
-      continue;
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      return TTI::VectorInstrContext::None;
-    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
-    if (VIC == TTI::VectorInstrContext::None) {
-      VIC = IVIC;
-      continue;
-    }
-    if (VIC != IVIC)
-      return TTI::VectorInstrContext::None;
-  }
-  return VIC;
 }
 
 /// \returns the cast opcode, which gives the same result for the operand,
@@ -17397,7 +17393,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     Cost -= getScalarizationOverhead(
         *TTI, Opts.slp_revec, ScalarTy, SrcVecTy, DemandedElts,
         /*Insert=*/true, /*Extract=*/false, CostKind, InMask.all(), AdjustedVL,
-        getVectorInstrContextHint(AdjustedVL, DemandedElts));
+        TTI::getVectorInstrContextHint(AdjustedVL, DemandedElts));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = cast<VectorType>(getWidenedType(ScalarTy, VecSz));
@@ -17505,7 +17501,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // a bitcast (here it is just a noop).
       if (VecOpcode != Opcode && VecOpcode == Instruction::BitCast)
         return CommonCost;
-      auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
+      auto *VI =
+          VL0->getOpcode() == Opcode && VecOpcode == Opcode ? VL0 : nullptr;
 
       bool IsArithmeticExtendedReduction =
           E->Idx == 0 && UserIgnoreList &&
@@ -17520,9 +17517,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
-      return CommonCost +
-             TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
-                                   VecOpcode == Opcode ? VI : nullptr);
+      // The scalar cast describes the users of the vector cast. If the scalar
+      // cast of the vector element types is free by itself (e.g. i32 to i64
+      // zext), it makes the vector cast free as well, which is true only for
+      // the widening arithmetic users.
+      if (VI &&
+          any_of(VI->users(),
+                 [](const User *U) {
+                   return !is_contained(
+                       {Instruction::Add, Instruction::Sub, Instruction::Mul},
+                       cast<Instruction>(U)->getOpcode());
+                 }) &&
+          TTI->getCastInstrCost(VecOpcode, VecTy->getScalarType(),
+                                SrcVecTy->getScalarType(),
+                                TTI::getCastContextHint(VL0), CostKind) == 0)
+        VI = nullptr;
+      return CommonCost + TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH,
+                                                CostKind, VI);
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -25532,9 +25543,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         PO = LI->getPointerOperand();
         const uint64_t Shift = getVectorLoadShift(E->Scalars);
         if (Shift)
-          PO = Builder.CreatePtrAdd(
-              PO, ConstantInt::getSigned(DL->getIndexType(PO->getType()),
-                                         -static_cast<int64_t>(Shift)));
+          PO = Builder.CreatePtrAddWithSignedOffset(
+              PO, -static_cast<int64_t>(Shift));
         NewLI = Builder.CreateAlignedLoad(
             VecTy, PO, commonAlignment(LI->getAlign(), Shift));
       } else if (E->State == TreeEntry::CompressVectorize) {
@@ -30745,6 +30755,8 @@ private:
       std::numeric_limits<unsigned>::max();
   /// Maximum number of iterations through CandidateVFs
   static constexpr unsigned MaxAttempts = 4;
+  /// The VFs, starting from this number of stores, are not tried
+  static constexpr unsigned StoresLimit = 64;
 
   const VectorizeOptions &Opts;
   /// For the StoreTy/Stride in the given group, what is the smallest VF
@@ -30868,13 +30880,23 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
-  // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
+  // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF), if
+  // its widest elements take no more vector registers than with the
+  // power-of-2 VF below it. Otherwise, start from the power-of-2 VF.
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
   if (isAllowedNonPowerOf2VF(CandVF, Opts.slp_vectorize_non_power_of_2)) {
-    NonPowerOf2VF = CandVF;
-    assert(NonPowerOf2VF != MaxVF &&
-           "Non-power-of-2 VF should not be equal to MaxVF");
+    unsigned PowerOf2VF = bit_floor(CandVF);
+    Type *EltTy = IntegerType::get(
+        StoreTy->getContext(),
+        std::max(EltSize, R.getVectorElementSize(Store->getValueOperand())));
+    if (PowerOf2VF < MinVF || StoreTy->isVectorTy() ||
+        R.getRegUsageForType(getWidenedType(EltTy, CandVF), EltTy) <=
+            R.getRegUsageForType(getWidenedType(EltTy, PowerOf2VF), EltTy)) {
+      NonPowerOf2VF = CandVF;
+      assert(NonPowerOf2VF != MaxVF &&
+             "Non-power-of-2 VF should not be equal to MaxVF");
+    }
   }
 
   MaxRegVF = MaxVF;
@@ -30887,6 +30909,14 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
+  // With the non-power-of-2 vectorization, the non-power-of-2 number of stores,
+  // which takes a whole number of vector registers, is tried first.
+  if (Opts.slp_vectorize_non_power_of_2) {
+    unsigned FullVF = getFloorFullVectorNumberOfElements(
+        TTI, StoreTy, Operands.size(), Opts.slp_revec);
+    if (!has_single_bit(FullVF) && FullVF < StoresLimit)
+      CandidateVFs.push(FullVF);
+  }
   for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
        VF = divideCeil(VF, 2))
     CandidateVFs.push(VF);
@@ -30954,7 +30984,6 @@ void StoreChainContext::updateCachedRangeSizes(unsigned StartIdx,
 
 bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
   assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
-  constexpr unsigned StoresLimit = 64;
   const unsigned MaxTotalNum = std::min<unsigned>(
       Operands.size(), static_cast<unsigned>(End - getFirstUnvecStore()));
   unsigned VF = bit_ceil(ProbeVF) * 2;

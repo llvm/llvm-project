@@ -401,10 +401,9 @@ enum EpilogueLowering {
   // Vectorization with OptForSize: don't allow epilogues.
   CM_EpilogueNotAllowedOptSize,
 
-  // A special case of vectorisation with OptForSize: loops with a very small
-  // trip count are considered for vectorization under OptForSize, thereby
-  // making sure the cost of their loop body is dominant, free of runtime
-  // guards and scalar iteration overheads.
+  // A special case for loops with a very small trip count: they are vectorized
+  // only if no scalar epilogue is required, ensuring the vectorized loop body
+  // is the dominant cost without scalar epilogue overheads.
   CM_EpilogueNotAllowedLowTripLoop,
 
   // Loop hint indicating an epilogue is undesired, apply tail folding.
@@ -1111,21 +1110,6 @@ private:
     return !Scalars.contains(VF) || !isScalarAfterVectorization(I, VF);
   };
 
-  /// Returns a range containing only operands needing to be extracted.
-  SmallVector<Value *, 4> filterExtractingOperands(Instruction::op_range Ops,
-                                                   ElementCount VF) const {
-
-    SmallPtrSet<const Value *, 4> UniqueOperands;
-    SmallVector<Value *, 4> Res;
-    for (Value *Op : Ops) {
-      if (isa<Constant>(Op) || !UniqueOperands.insert(Op).second ||
-          !needsExtract(Op, VF))
-        continue;
-      Res.push_back(Op);
-    }
-    return Res;
-  }
-
 public:
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -1531,9 +1515,7 @@ static bool isExplicitVecOuterLoop(const VectorizeOptions &Opts, Loop *OuterLp,
   if (Hints.getForce() == LoopVectorizeHints::FK_Undefined)
     return false;
 
-  Function *Fn = OuterLp->getHeader()->getParent();
-  if (!Hints.allowVectorization(Fn, OuterLp,
-                                true /*VectorizeOnlyWhenForced*/)) {
+  if (!Hints.allowVectorization(OuterLp, true /*VectorizeOnlyWhenForced*/)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent outer loop vectorization.\n");
     return false;
   }
@@ -2643,13 +2625,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
                       << "vector loop.\n");
     break;
   case CM_EpilogueNotAllowedLowTripLoop:
-    // fallthrough as a special case of OptForSize
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
+                      << "count.\n");
+    break;
   case CM_EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
-    else
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
-                        << "count.\n");
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
 
     // Bail if runtime checks are required, which are not good when optimising
     // for size.
@@ -2722,10 +2702,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
-    // If we have a low-trip-count, and the fixed-width VF is known to divide
-    // the trip count the fixed-width factor in preference to allow the
-    // generation of a non-predicated loop.
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+    // If we have a low-trip-count, or optimize for code size, and the
+    // fixed-width VF is known to divide the trip count the fixed-width factor
+    // in preference to allow the generation of a non-predicated loop.
+    if ((EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop ||
+         EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize) &&
         NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
       LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                            "remain for any chosen VF.\n");
@@ -4257,8 +4238,10 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   // Skip operands that do not require extraction/scalarization and do not incur
   // any overhead.
   SmallVector<Type *> Tys;
-  for (auto *V : filterExtractingOperands(Ops, VF))
-    Tys.push_back(maybeVectorizeType(V->getType(), VF));
+  SmallPtrSet<Value *, 4> SeenOps;
+  for (Value *Op : Ops)
+    if (needsExtract(Op, VF) && SeenOps.insert(Op).second)
+      Tys.push_back(maybeVectorizeType(Op->getType(), VF));
 
   TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
                                            ? TTI::VectorInstrContext::Store
@@ -6166,10 +6149,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  bool OptForSize =
-      !ForceVectorization &&
-      (PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  bool OptForSize = !ForceVectorization && PlanCM.EpilogueLoweringStatus ==
+                                               CM_EpilogueNotAllowedOptSize;
   unsigned SCEVCheckThreshold = ForceVectorization
                                     ? Opts.pragma_vectorize_scev_check_threshold
                                     : Opts.vectorize_scev_check_threshold;
@@ -7328,8 +7309,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // less verbose reporting vectorized loops and unvectorized loops that may
   // benefit from vectorization, respectively.
 
-  if (!Hints.allowVectorization(
-          F, L, VectorizeOnlyWhenForced || !Opts.vectorize_loops)) {
+  if (!Hints.allowVectorization(L, VectorizeOnlyWhenForced ||
+                                       !Opts.vectorize_loops)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
     return false;
   }
@@ -7419,22 +7400,29 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       ExpectedTC->getFixedValue() < Opts.vectorizer_min_trip_count) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
-                      << "iteration overheads are incurred.");
+                      << "epilogue is required.");
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
       LLVM_DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       LLVM_DEBUG(dbgs() << "\n");
-      // Tail-folded loops are efficient even when the loop
-      // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
-      // with runtime checks. It's more effective to let
-      // `isOutsideLoopWorkProfitable` determine if vectorization is
-      // beneficial for the loop. If the trip count is below the target's
-      // minimum for tail-folding, the tail cannot be folded, so treat it like
-      // any other low trip count loop.
-      if (SEL != CM_EpilogueNotNeededFoldTail ||
-          ExpectedTC->getFixedValue() <=
-              TTI->getMinTripCountTailFoldingThreshold())
+      // For loops with very small trip counts, require that no scalar epilogue
+      // is needed. Tail-folded loops are still allowed since they avoid
+      // epilogues, unless the trip count is below the target's minimum for
+      // tail-folding. In that case the tail cannot be folded, so the loop
+      // should be treated like any other low trip count loop.
+      // TODO: Remove the check for CM_EpilogueNotAllowedOptSize here. The
+      // EpilogueLowering enum currently conflates several pieces of
+      // information:
+      //   * Whether a scalar epilogue is permitted
+      //   * Whether tail folding is preferred or required
+      //   * Whether optimizing for code size
+      // Overwriting it here can drop OptForSize, breaking the
+      // runtimeChecksRequired() bail-out in computeMaxVF. Split
+      // EpilogueLowering into separate fields instead.
+      if (SEL != CM_EpilogueNotAllowedOptSize &&
+          (SEL != CM_EpilogueNotNeededFoldTail ||
+           ExpectedTC->getFixedValue() <=
+               TTI->getMinTripCountTailFoldingThreshold()))
         SEL = CM_EpilogueNotAllowedLowTripLoop;
     }
   }

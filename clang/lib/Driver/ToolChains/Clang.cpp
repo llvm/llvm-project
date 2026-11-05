@@ -8611,6 +8611,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_persistent_storage_variables);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
                     options::OPT_fno_keep_inline_functions);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodule_local_hints,
+                    options::OPT_fno_module_local_hints);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
   if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))
@@ -9869,6 +9871,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_sanitize_minimal_runtime,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ,
+      OPT_fvectorize,
+      OPT_fno_vectorize,
       OPT_fslp_vectorize,
       OPT_fno_slp_vectorize,
       OPT_hipstdpar,
