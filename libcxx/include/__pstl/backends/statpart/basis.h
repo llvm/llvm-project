@@ -527,6 +527,32 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
 //       - Obtain the inclusive prefix of the previous lookback partition.
 //       - Calculate and publish the inclusive prefix of their own lookback partition.
 //       - Perform the scanning operation.
+//
+// Description of the callbacks:
+// - __setup: std::optional<OpaqueCtx>(size_t number_of_workers, size_t max_partition_size)
+//   Provides an injection point for a higher-level algorithm to allocate resources upfront.
+//   The context this callback creates is opaque to __lookback_scan and will be passed as-is to each invocation of
+//   the head/middle/tail callbacks.
+//   In case __setup() returns std::nullopt, __lookback_scan will abort the operation and return std::nullopt.
+// - __scan_head: void(OpaqueCtx& ctx,
+//                     size_t worker_idx,
+//                     It chunk_first,
+//                     It chunk_last,
+//                     __decoupled_lookback_partition<Value> *optional_lookback_partition)
+// - __scan_middle: void(OpaqueCtx& ctx,
+//                       size_t worker_idx,
+//                       It chunk_first,
+//                       It chunk_last,
+//                       __decoupled_lookback_partition<Value> *lookback_partition)
+// - __scan_tail: void(OpaqueCtx& ctx,
+//                     size_t worker_idx,
+//                     It chunk_first,
+//                     It chunk_last,
+//                     __decoupled_lookback_partition<Value> *nonexistent_lookback_partition)
+//  All scanning callbacks have the same signature, but differ in how the last parameter is interpreted:
+//  The head callback will get a valid pointer in regular cases, but in the edge case of having a single partition this
+//  pointer will be nullptr. The middle callback always has a lookback partition. The tail callback never gets a
+//  lookback partition and can only use the provided pointer to access the previous one.
 template <class _Value, class _RandomAccessIterator, class _Setup, class _ScanHead, class _ScanMiddle, class _ScanTail>
 _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
     _RandomAccessIterator __first,
@@ -554,7 +580,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
     if (__partitioning_result.__status_ == __partitioning_status::__bad_alloc)
       return nullopt;
     // Not enough elements or partitions to run in parallel, scan everything serially using the head scanning.
-    auto __ctx = __setup(1, static_cast<size_t>(__last - __first));
+    auto __ctx = __setup(/*worker_count=*/1, /*max_partition_size=*/static_cast<size_t>(__last - __first));
     if (__ctx == nullopt)
       return nullopt; // Failed to allocate memory for the operation context
     __scan_head(*__ctx, 0, __first, __last, nullptr);
@@ -565,8 +591,9 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
 
   // Allocate the lookback storage.
   // The last partition doesn't need a storage in the lookback, hence its size is 1 less than the number of partitions.
-  __decoupled_lookback<_Value> __lookback{__partitions.__partitions_count() - 1};
-  if (__lookback.__size() == 0) {
+  optional<__decoupled_lookback<_Value>> __lookback =
+      __statpart::__make_decoupled_lookback<_Value>(__partitions.__partitions_count() - 1);
+  if (__lookback == nullopt) {
     return nullopt; // Failed to allocate the lookback storage, report an error
   }
 
@@ -597,19 +624,19 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
                     __worker_id,         //
                     __partition.__first, //
                     __partition.__last,  //
-                    &__lookback.__partition(0));
-      else if (__partition_idx < __lookback.__size())
+                    &__lookback->__partition(0));
+      else if (__partition_idx < __lookback->__size())
         __scan_middle(*__ctx,              //
                       __worker_id,         //
                       __partition.__first, //
                       __partition.__last,  //
-                      &__lookback.__partition(__partition_idx));
+                      &__lookback->__partition(__partition_idx));
       else
         __scan_tail(*__ctx,              //
                     __worker_id,         //
                     __partition.__first, //
                     __partition.__last,  //
-                    __lookback.__partitions() + __partition_idx);
+                    __lookback->__partitions() + __partition_idx);
     }
   });
 

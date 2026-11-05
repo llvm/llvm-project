@@ -15,9 +15,13 @@
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__memory/unique_ptr.h>
 #include <__new/global_new_delete.h>
 #include <__new/nothrow_t.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 
@@ -50,7 +54,7 @@ inline constexpr unsigned char __decoupled_lookback_status_prefix_available    =
 // and __inclusive_prefix().
 template <typename _Tp>
 struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
-  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition()                           = default;
+  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition() {}
   __decoupled_lookback_partition(const __decoupled_lookback_partition&)            = delete;
   __decoupled_lookback_partition& operator=(const __decoupled_lookback_partition&) = delete;
 
@@ -58,10 +62,10 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   _LIBCPP_HIDE_FROM_ABI ~__decoupled_lookback_partition() {
     unsigned char __flag = __status_flag_.load(std::memory_order_relaxed);
     if (__flag & __decoupled_lookback_status_aggregate_available) {
-      __aggregate().~_Tp();
+      __aggregate_.~_Tp();
     }
     if (__flag & __decoupled_lookback_status_prefix_available) {
-      __inclusive_prefix().~_Tp();
+      __inclusive_prefix_.~_Tp();
     }
   }
 
@@ -80,7 +84,7 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   _LIBCPP_HIDE_FROM_ABI void __construct_aggregate(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL((__status_flag_.load() & __decoupled_lookback_status_aggregate_available) == 0,
                             "__decoupled_lookback_status_aggregate_available flag must not be set");
-    std::__construct_at(&reinterpret_cast<_Tp&>(__aggregate_storage_), std::forward<_Args>(__args)...);
+    std::__construct_at(std::addressof(__aggregate_), std::forward<_Args>(__args)...);
     __status_flag_.fetch_or(__decoupled_lookback_status_aggregate_available, std::memory_order_release);
     std::__atomic_notify_all(__status_flag_);
   }
@@ -90,7 +94,7 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   _LIBCPP_HIDE_FROM_ABI const _Tp& __aggregate() const {
     _LIBCPP_ASSERT_INTERNAL((__status_flag_.load() & __decoupled_lookback_status_aggregate_available) != 0,
                             "__decoupled_lookback_status_aggregate_available flag must be set");
-    return reinterpret_cast<const _Tp&>(__aggregate_storage_);
+    return __aggregate_;
   }
 
   // Construct the inclusive prefix of the partition and publish this change.
@@ -98,7 +102,7 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   _LIBCPP_HIDE_FROM_ABI void __construct_inclusive_prefix(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL((__status_flag_.load() & __decoupled_lookback_status_prefix_available) == 0,
                             "__decoupled_lookback_status_prefix_available flag must not be set");
-    std::__construct_at(&reinterpret_cast<_Tp&>(__inclusive_prefix_storage_), std::forward<_Args>(__args)...);
+    std::__construct_at(std::addressof(__inclusive_prefix_), std::forward<_Args>(__args)...);
     __status_flag_.fetch_or(__decoupled_lookback_status_prefix_available, std::memory_order_release);
     std::__atomic_notify_all(__status_flag_);
   }
@@ -108,42 +112,36 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   _LIBCPP_HIDE_FROM_ABI const _Tp& __inclusive_prefix() const {
     _LIBCPP_ASSERT_INTERNAL((__status_flag_.load() & __decoupled_lookback_status_prefix_available) != 0,
                             "__decoupled_lookback_status_prefix_available flag must be set");
-    return reinterpret_cast<const _Tp&>(__inclusive_prefix_storage_);
+    return __inclusive_prefix_;
   }
 
 private:
+  // Storage for the aggregate reduced value of the partition.
+  union {
+    _Tp __aggregate_;
+  };
+
+  // Storage for the inclusive prefix of the partition.
+  union {
+    _Tp __inclusive_prefix_;
+  };
+
   // Atomic/waitable flag indicating the status of the partition.
   std::atomic<unsigned char> __status_flag_{__decoupled_lookback_status_invalid};
 
-  // Storage for the aggregate reduced value of the partition.
-  alignas(_Tp) unsigned char __aggregate_storage_[sizeof(_Tp)];
-
-  // Storage for the inclusive prefix of the partition.
-  alignas(_Tp) unsigned char __inclusive_prefix_storage_[sizeof(_Tp)];
+  // NB! Currently the layout of __decoupled_lookback_partition allows for false sharing to occur.
 };
 
 // __decoupled_lookback holds a dynamically-allocated array of __decoupled_lookback_partition.
+// Created by __make_decoupled_lookback().
 template <typename _Tp>
 class _LIBCPP_HIDE_FROM_ABI __decoupled_lookback {
 public:
-  // Allocates the memory for the lookback partitions.
-  // Does not throw, instead sets the size to 0 if allocation fails.
-  _LIBCPP_HIDE_FROM_ABI explicit __decoupled_lookback(size_t __size) {
-    __partitions_       = __size > 0 ? new (std::nothrow) __decoupled_lookback_partition<_Tp>[__size] : nullptr;
-    __partitions_count_ = __partitions_ ? __size : 0;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI ~__decoupled_lookback() { delete[] __partitions_; }
-
-  __decoupled_lookback(const __decoupled_lookback&) = delete;
-
-  __decoupled_lookback& operator=(const __decoupled_lookback&) = delete;
-
   // Returns the number of partitions in the lookback.
   _LIBCPP_HIDE_FROM_ABI size_t __size() const { return __partitions_count_; }
 
   // Provides a pointer to the first partition in a contiguous storage.
-  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>* __partitions() const { return __partitions_; }
+  _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>* __partitions() const { return __partitions_.get(); }
 
   // Provides a reference to the specified partition.
   _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>& __partition(size_t __index) const {
@@ -152,9 +150,24 @@ public:
   }
 
 private:
-  __decoupled_lookback_partition<_Tp>* __partitions_;
-  size_t __partitions_count_;
+  unique_ptr<__decoupled_lookback_partition<_Tp>[]> __partitions_;
+  size_t __partitions_count_ = 0;
+
+  template <class _Up>
+  friend _LIBCPP_HIDE_FROM_ABI optional<__decoupled_lookback<_Up>> __make_decoupled_lookback(size_t) noexcept;
 };
+
+// Creates a lookback partition with the specified capacity.
+// In case memory allocation fails, returns std::nullopt.
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI optional<__decoupled_lookback<_Tp>> __make_decoupled_lookback(size_t __size) noexcept {
+  __decoupled_lookback<_Tp> __lookback;
+  __lookback.__partitions_.reset(new (std::nothrow) __decoupled_lookback_partition<_Tp>[__size]);
+  if (!__lookback.__partitions_)
+    return nullopt;
+  __lookback.__partitions_count_ = __size;
+  return __lookback;
+}
 
 // Calculate an inclusive prefix of a given partition that currently has only an aggregate.
 // Performs reductions of aggregate values until it arrives at a partition with an available prefix.

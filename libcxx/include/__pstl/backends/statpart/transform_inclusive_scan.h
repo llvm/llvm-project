@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_STATPART_TRANSFORM_INCLUSIVE_SCAN_H
 #define _LIBCPP___PSTL_BACKENDS_STATPART_TRANSFORM_INCLUSIVE_SCAN_H
 
+#include <__assert>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__execution/is_execution_policy.h>
@@ -84,6 +85,7 @@ struct __transform_inclusive_scan_init<__statpart_backend_tag, _ExecutionPolicy>
                                _ForwardIterator1 __chunk_last,
                                __statpart::__decoupled_lookback_partition<_Tp>* __lookback_partition) {
         // General case: a chunk in the middle.
+        _LIBCPP_ASSERT_INTERNAL(__lookback_partition != nullptr, "middle chunks must have their lookback partitions");
 
         // Compute and publish the local aggregate.
         _Tp __aggregate = std::transform_reduce(
