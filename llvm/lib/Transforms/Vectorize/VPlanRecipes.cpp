@@ -3889,7 +3889,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     if (RedR->isPartialReduction())
       return Ctx.TTI.getPartialReductionCost(
           Opcode, getOperand(0)->getScalarType(), nullptr, RedTy, VF,
-          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
+          TargetTransformInfo::getPartialReductionExtendKind(
+              ExtR->getCastOpcode()),
           TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
           RedTy->isFloatingPointTy()
               ? std::optional{RedR->getFastMathFlagsOrNone()}
@@ -3928,9 +3929,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           Opcode, getOperand(0)->getScalarType(),
           getOperand(1)->getScalarType(), RedTy, VF,
           TargetTransformInfo::getPartialReductionExtendKind(
-              Ext0R->getOpcode()),
+              Ext0R->getCastOpcode()),
           TargetTransformInfo::getPartialReductionExtendKind(
-              Ext1R->getOpcode()),
+              Ext1R->getCastOpcode()),
           Mul->getOpcode(), Ctx.CostKind,
           RedTy->isFloatingPointTy()
               ? std::optional{RedR->getFastMathFlagsOrNone()}
