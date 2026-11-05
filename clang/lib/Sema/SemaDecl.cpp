@@ -14432,6 +14432,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     if (FunctionScopeInfo *FSI = getCurFunction())
       if ((VDecl->getType().getObjCLifetime() == Qualifiers::OCL_Strong ||
            VDecl->getType().isNonWeakInMRRWithObjCWeak(Context)) &&
+          !isUnevaluatedContext() &&
           !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                            Init->getBeginLoc()))
         FSI->markSafeWeakUse(Init);
