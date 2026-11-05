@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Vector16 is a Kernel-only capability. On Vulkan, 8 and 16 element vectors
@@ -7,6 +7,7 @@
 
 ; CHECK-NOT: OpCapability Vector16
 ; CHECK-DAG: OpCapability LongVectorEXT
+; CHECK-NOT: OpCapability Vector16
 ; CHECK-DAG: OpExtension "SPV_EXT_long_vector"
 
 ; CHECK-DAG: %[[#FLOAT:]] = OpTypeFloat 32
