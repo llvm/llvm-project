@@ -55,6 +55,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -3686,6 +3687,8 @@ ExprResult Sema::BuildDeclarationNameExpr(
   // diagnostics).
   if (VD->isInvalidDecl() && E)
     return CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), {E});
+  if (isa<EnumConstantDecl>(VD) && Context.getTargetInfo().getTriple().isBPF())
+    return BPF().BuildPreserveAIEnumeratorRef(E);
   return E;
 }
 
