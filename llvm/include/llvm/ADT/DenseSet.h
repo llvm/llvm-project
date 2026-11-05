@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
 #include <initializer_list>
@@ -279,8 +278,7 @@ using SmallDenseSet =
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-class LLVM_ATTRIBUTE_WARN_UNUSED DenseSet
-    : public detail::DenseSet<ValueT, ValueInfoT> {
+class DenseSet : public detail::DenseSet<ValueT, ValueInfoT> {
   using BaseT = detail::DenseSet<ValueT, ValueInfoT>;
 
 public:
