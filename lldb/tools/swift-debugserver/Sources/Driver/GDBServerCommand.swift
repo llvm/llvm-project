@@ -11,7 +11,7 @@ struct GDBServerCommand: Subcommand {
       --setsid        Run debugserver in a new session.
     """
 
-  var fd: Int32?
+  var fd: CInt?
   var nativeRegs = false
   var setsid = false
 
@@ -24,10 +24,10 @@ struct GDBServerCommand: Subcommand {
       let parts = arg.split(
         separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
       let name = String(parts[0])
-      let inlineValue = parts.count > 1 ? String(parts[1]) : nil
+      let storage = parts.count > 1 ? String(parts[1]) : nil
 
       func value() throws(ArgumentParseError) -> String {
-        if let inlineValue { return inlineValue }
+        if let storage { return storage }
         guard let next = remaining.popFirst() else {
           throw .failure("Missing value for \(name)")
         }
@@ -35,9 +35,9 @@ struct GDBServerCommand: Subcommand {
       }
 
       switch name {
-      case "--native-regs" where inlineValue == nil:
+      case "--native-regs" where storage == nil:
         server.nativeRegs = true
-      case "--setsid" where inlineValue == nil:
+      case "--setsid" where storage == nil:
         server.setsid = true
       case "--fd":
         server.fd = try parseFileDescriptor(try value())
@@ -49,8 +49,8 @@ struct GDBServerCommand: Subcommand {
   }
 
   private static func parseFileDescriptor(_ value: String)
-      throws(ArgumentParseError) -> Int32 {
-    guard let fd = Int32(value), fd >= 0 else {
+      throws(ArgumentParseError) -> CInt {
+    guard let fd = CInt(value), fd >= 0 else {
       throw .failure("Invalid file descriptor: \(value)")
     }
     return fd
