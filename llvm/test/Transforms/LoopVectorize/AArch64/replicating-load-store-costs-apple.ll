@@ -738,37 +738,35 @@ exit:
 define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.1, ptr %src.2) {
 ; CHECK-LABEL: define double @test_scalarization_cost_for_load_of_address(
 ; CHECK-SAME: ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[SRC_0]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 1, i32 4>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 2, i32 5>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[STRIDED_VEC]], splat (double 3.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[STRIDED_VEC1]], splat (double 3.000000e+00)
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[STRIDED_VEC2]], splat (double 3.000000e+00)
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[SRC_1]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 1
-; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 72
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi double [ 3.000000e+00, %[[VECTOR_PH]] ], [ [[RED_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP_0]], align 8
+; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[GEP_0]], i64 8
+; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_8]], align 8
+; CHECK-NEXT:    [[GEP_16:%.*]] = getelementptr i8, ptr [[GEP_0]], i64 16
+; CHECK-NEXT:    [[L_2:%.*]] = load double, ptr [[GEP_16]], align 8
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul double [[L_0]], 3.000000e+00
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul double [[L_1]], 3.000000e+00
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul double [[L_2]], 3.000000e+00
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd double [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[MUL256_US:%.*]] = fmul double [[ADD_1]], [[L]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP11]], i64 72
-; CHECK-NEXT:    [[L_P_2:%.*]] = load ptr, ptr [[GEP_72]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[LV:%.*]] = load double, ptr [[L_P_2]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[LV]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP17]], i64 1
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP9]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 3.000000e+00, <2 x double> [[TMP20]])
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[RED_NEXT]] = tail call double @llvm.fmuladd.f64(double [[MUL256_US]], double [[TMP17]], double [[RED]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP21:%.*]] = phi double [ [[RED_NEXT]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret double [[TMP21]]
 ;
 entry:

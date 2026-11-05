@@ -872,9 +872,9 @@ define float @sub_reduction_float_fpext_half_fpext_half(ptr %src1, ptr %src2, pt
 ;
 ; SME2-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
 ; SME2:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
-; SME2:  Cost of 6 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SME2:  Cost of 5 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ; SME2:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
-; SME2:  Cost of 6 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SME2:  Cost of 5 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ;
 ; I8MM-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
 ; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
@@ -995,11 +995,23 @@ define half @sum_half(ptr %h) {
 ; NEON:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
 ;
 ; SVE-LABEL: 'sum_half'
+; SVE:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 ; SVE2-LABEL: 'sum_half'
+; SVE2:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 ; SVE2p1-LABEL: 'sum_half'
+; SVE2p1:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 ; SVE2p3-LABEL: 'sum_half'
+; SVE2p3:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 ; SME2-LABEL: 'sum_half'
+; SME2:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 ; I8MM-LABEL: 'sum_half'
+; I8MM:  Cost of 1 for VF 2: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
+;
 entry:
   br label %loop
 

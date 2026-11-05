@@ -5562,10 +5562,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
+  case ISD::FMUL:
     if (!Ty->getScalarType()->isFP128Ty())
       return LT.first;
     [[fallthrough]];
-  case ISD::FMUL:
   case ISD::FDIV:
     // These nodes are marked as 'custom' just to lower them to SVE.
     // We know said lowering will incur no additional cost.
