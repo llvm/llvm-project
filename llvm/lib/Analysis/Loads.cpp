@@ -342,14 +342,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (!Step)
     return false;
 
-  auto *EltSizeConst = dyn_cast<SCEVConstant>(EltSizeSCEV);
-  if (!EltSizeConst)
-    return false;
-
-  const APInt &EltSize = EltSizeConst->getAPInt();
+  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
   // For the moment, restrict ourselves to the case where the access size and
   // step are multiples of the requested alignment and the base is aligned.
-
   // TODO: generalize if a case found which warrants
   if (EltSize.urem(Alignment.value()) != 0 ||
       Step->getAPInt().urem(Alignment.value()) != 0)
