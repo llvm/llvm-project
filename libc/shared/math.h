@@ -486,6 +486,7 @@
 #include "math/sinf.h"
 #include "math/sinf16.h"
 #include "math/sinh.h"
+#include "math/sinhbf16.h"
 #include "math/sinhf.h"
 #include "math/sinhf16.h"
 #include "math/sinpif.h"

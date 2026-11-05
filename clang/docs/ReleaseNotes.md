@@ -1429,6 +1429,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Add `RegroupByDirectory` value to `IncludeBlocks` to group includes by
+  category priority and top-level directory.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
@@ -1544,6 +1546,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   have arguments of different integer types. (#GH108367)
 - Fixed a crash when the init or increment of an OpenMP loop uses a braced
   list, such as `int i = {0}`. (#GH202562)
+- Fixed a crash when a `map`, `to` or `from` clause item uses a binary operator
+  other than pointer arithmetic, such as `s->*mp`. (#GH151542)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
