@@ -15,6 +15,9 @@ namespace NS {
 void variadic(int, ...) {}
 }
 
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void external_variadic(int, ...) {}
+
 struct S {
   S(int, ...) {}
   void operator()(int, ...) {}
@@ -33,6 +36,7 @@ int main() {
     variadic(5);        //expected-error{{SYCL device code does not support variadic functions}}
     variadic(5, 2);     //expected-error{{SYCL device code does not support variadic functions}}
     NS::variadic(5, 3); //expected-error{{SYCL device code does not support variadic functions}}
+    external_variadic(5, 4); //expected-error{{SYCL device code does not support variadic functions}}
     S s(5, 4);          //expected-error{{SYCL device code does not support variadic functions}}
     S s2(5);            //expected-error{{SYCL device code does not support variadic functions}}
     s(5, 5);            //expected-error{{SYCL device code does not support variadic functions}}

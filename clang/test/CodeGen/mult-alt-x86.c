@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple i686 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i686 -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -emit-llvm %s -o - | FileCheck %s %}
 
 int mout0;
 int min1;
