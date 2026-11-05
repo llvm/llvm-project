@@ -24,16 +24,17 @@ class RewriterBase;
 /// attributes on a replacement loop, or on the branch forming its backedge.
 ///
 /// Query the dialect of the attribute value.
-/// Dialects without this interface will not opt in to any loop-attribute 
+/// Dialects without this interface will not opt in to any loop-attribute
 /// propagation.
 class LoopAnnotationDialectInterface
-: public DialectInterface::Base<LoopAnnotationDialectInterface> {
-  public:
+    : public DialectInterface::Base<LoopAnnotationDialectInterface> {
+public:
   explicit LoopAnnotationDialectInterface(Dialect *dialect) : Base(dialect) {}
 
   /// Whether to preserve this attribute when replacing a loop by an equivalent
   /// loop or its backedge. This does not authorize copying it to every loop
-  /// produced by a transformation (for e.g. all loops in a serialized loop nest).
+  /// produced by a transformation (for e.g. all loops in a serialized loop
+  /// nest).
   virtual bool shouldPropagateLoopAttribute(NamedAttribute attr) const = 0;
 };
 
