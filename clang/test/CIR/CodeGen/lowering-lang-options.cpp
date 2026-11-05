@@ -8,6 +8,9 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:   -no-enable-noundef-analysis -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=NONOUNDEF
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
+// RUN:   -fsanitize=address,hwaddress -emit-cir %s -o - \
+// RUN:   | FileCheck %s --check-prefix=SAN
 
 // CIRGen serializes the LangOptions and CodeGenOptions facts that post-CIRGen
 // lowering consumes onto the ModuleOp as a #cir.lowering_options attribute,
@@ -32,6 +35,9 @@ int x;
 // PLAIN-SAME: openmp_is_target_device = false
 // PLAIN-SAME: clang_abi_compat = {{[0-9]+}}
 // PLAIN-SAME: long_double_size = 0
+// PLAIN-SAME: sanitize_address = false
+// PLAIN-SAME: sanitize_kernel_address = false
+// PLAIN-SAME: sanitize_hwaddress = false
 // PLAIN-SAME: enable_noundef_attrs = true>
 
 // -fexceptions -fcxx-exceptions flips exceptions. (OpenMP is exercised in the
@@ -52,3 +58,8 @@ int x;
 // NONOUNDEF: cir.lowering_options = #cir.lowering_options<
 // NONOUNDEF-SAME: exceptions = false
 // NONOUNDEF-SAME: enable_noundef_attrs = false>
+
+// SAN: cir.lowering_options = #cir.lowering_options<
+// SAN-SAME: sanitize_address = true
+// SAN-SAME: sanitize_kernel_address = false
+// SAN-SAME: sanitize_hwaddress = true

@@ -114,6 +114,12 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
     langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
+    langOpts.Sanitize.set(clang::SanitizerKind::Address,
+                          loweringLangOpts.getSanitizeAddress());
+    langOpts.Sanitize.set(clang::SanitizerKind::KernelAddress,
+                          loweringLangOpts.getSanitizeKernelAddress());
+    langOpts.Sanitize.set(clang::SanitizerKind::HWAddress,
+                          loweringLangOpts.getSanitizeHwaddress());
   }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());

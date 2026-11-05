@@ -208,6 +208,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
           static_cast<int32_t>(langOpts.LongDoubleSize),
+          /*sanitize_address=*/langOpts.Sanitize.has(SanitizerKind::Address),
+          /*sanitize_kernel_address=*/
+          langOpts.Sanitize.has(SanitizerKind::KernelAddress),
+          /*sanitize_hwaddress=*/
+          langOpts.Sanitize.has(SanitizerKind::HWAddress),
           /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
@@ -4158,6 +4163,7 @@ void CIRGenModule::release() {
     // External linkage requires public visibility
     mlir::SymbolTable::setSymbolVisibility(
         gv, mlir::SymbolTable::Visibility::Public);
+    builder.disableSanitizerForGlobal(gv, langOpts.Sanitize);
 
     addCompilerUsedGlobal(gv);
   }
