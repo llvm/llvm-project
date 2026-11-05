@@ -19,7 +19,6 @@
 
 namespace mlir {
 namespace affine {
-
 /// An AffineValueMap is an affine map plus its ML value operands and
 /// results for analysis purposes. The structure is still a tree form that is
 /// same as that of an affine map or an AffineApplyOp. However, its operands,
@@ -49,24 +48,27 @@ public:
   /// operands, but the result count remains the same.
   void composeSimplifyAndCanonicalize();
 
-  /// Combine results from 'a' and 'b' using 'expr'. By default, combine
-  /// corresponding results; the result counts must be equal. If 'pairwise' is
-  /// false, combine every pair of results, with results from 'a' as the outer
-  /// loop.
-  /// The expression may refer only to d0 and d1, which stand for the results
-  /// of 'a' and 'b', respectively. The output map and operands are composed,
-  /// canonicalized, and simplified.
+  /// Combine results from 'a' and 'b' using 'expr'. If 'pairwise' is true (the
+  /// default), apply 'expr' to the results of 'a' and 'b' at each matching
+  /// index; the result counts must be equal. Otherwise, apply 'expr' to the
+  /// Cartesian product of the results. The expression may refer only to d0 and
+  /// d1, which stand for the results of 'a' and 'b', respectively. The output
+  /// map and operands are composed, canonicalized, and simplified.
   static void combine(const AffineValueMap &a, const AffineValueMap &b,
                       AffineExpr expr, AffineValueMap *res,
                       bool pairwise = true);
 
-  /// Subtract results of 'b' from 'a'. By default, subtract corresponding
-  /// results, which requires equal result counts. If 'pairwise' is false,
-  /// subtract every result of 'b' from every result of 'a', with results of
-  /// 'a' as the outer loop. The output map and operands are canonicalized and
-  /// simplified.
+  /// Subtract each result of 'b' from the result of 'a' at the same index; the
+  /// result counts must be equal. The output map and operands are composed,
+  /// canonicalized, and simplified.
   static void difference(const AffineValueMap &a, const AffineValueMap &b,
-                         AffineValueMap *res, bool pairwise = true);
+                         AffineValueMap *res);
+
+  /// Subtract results of 'b' from results of 'a' over their Cartesian product.
+  /// The output map and operands are composed, canonicalized, and simplified.
+  static void cartesianProductDifference(const AffineValueMap &a,
+                                         const AffineValueMap &b,
+                                         AffineValueMap *res);
 
   /// Return true if the idx^th result can be proved to be a multiple of
   /// 'factor', false otherwise.
@@ -114,7 +116,6 @@ private:
   /// The SSA results binding to the results of 'map'.
   SmallVector<Value, 4> results;
 };
-
 } // namespace affine
 } // namespace mlir
 

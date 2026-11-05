@@ -584,8 +584,7 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
   AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
   AffineValueMap newUbValueMap;
   // Subtract the single lower bound from each upper bound.
-  AffineValueMap::difference(ubValueMap, lbMap, &newUbValueMap,
-                             /*pairwise=*/false);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbMap, &newUbValueMap);
   (void)newUbValueMap.canonicalize();
 
   // Scale down the upper bound value map by the loop step.

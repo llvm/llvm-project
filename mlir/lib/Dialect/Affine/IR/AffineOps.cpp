@@ -2847,8 +2847,8 @@ std::optional<APInt> AffineForOp::getStaticTripCount() {
   AffineValueMap lbValueMap(lbMap, getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbValueMap, &tripCountValueMap,
-                             /*pairwise=*/false);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
 
   // Take the min if all trip counts are constant.
   std::optional<uint64_t> tripCount;
@@ -5085,7 +5085,6 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
 }
 
 namespace {
-
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {

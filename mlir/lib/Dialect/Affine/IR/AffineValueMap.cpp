@@ -65,11 +65,12 @@ void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
 
   // Substitute each pair of results into the combining expression.
   auto aMap = a.getAffineMap();
-  SmallVector<AffineExpr, 4> resultExprs;
+  SmallVector<AffineExpr> resultExprs;
   if (pairwise) {
     resultExprs.reserve(a.getNumResults());
-    for (unsigned i = 0, e = a.getNumResults(); i < e; ++i) {
-      AffineExpr replacements[] = {aMap.getResult(i), bMap.getResult(i)};
+    for (auto [aResult, bResult] :
+         llvm::zip_equal(aMap.getResults(), bMap.getResults())) {
+      AffineExpr replacements[] = {aResult, bResult};
       resultExprs.push_back(expr.replaceDims(replacements));
     }
   } else {
@@ -90,12 +91,20 @@ void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
 }
 
 void AffineValueMap::difference(const AffineValueMap &a,
-                                const AffineValueMap &b, AffineValueMap *res,
-                                bool pairwise) {
+                                const AffineValueMap &b, AffineValueMap *res) {
   MLIRContext *context = a.getAffineMap().getContext();
   AffineExpr lhs = getAffineDimExpr(0, context);
   AffineExpr rhs = getAffineDimExpr(1, context);
-  combine(a, b, lhs - rhs, res, pairwise);
+  combine(a, b, lhs - rhs, res);
+}
+
+void AffineValueMap::cartesianProductDifference(const AffineValueMap &a,
+                                                const AffineValueMap &b,
+                                                AffineValueMap *res) {
+  MLIRContext *context = a.getAffineMap().getContext();
+  AffineExpr lhs = getAffineDimExpr(0, context);
+  AffineExpr rhs = getAffineDimExpr(1, context);
+  combine(a, b, lhs - rhs, res, /*pairwise=*/false);
 }
 
 // Returns true and sets 'indexOfMatch' if 'valueToMatch' is found in

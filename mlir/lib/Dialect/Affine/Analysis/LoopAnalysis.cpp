@@ -192,8 +192,8 @@ void mlir::affine::getTripCountMapAndOperands(
   AffineValueMap lbValueMap(lbMap, forOp.getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbValueMap, &tripCountValueMap,
-                             /*pairwise=*/false);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
   for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i)
     tripCountValueMap.setResult(i,
                                 tripCountValueMap.getResult(i).ceilDiv(step));
