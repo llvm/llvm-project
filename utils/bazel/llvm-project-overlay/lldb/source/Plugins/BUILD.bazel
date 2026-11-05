@@ -2442,6 +2442,21 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginRegisterCore",
+    srcs = glob(["Register/Core/*.cpp"]),
+    hdrs = glob(["Register/Core/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginRegisterDarwin",
     srcs = glob(["Register/Darwin/*.cpp"]),
     hdrs = glob(["Register/Darwin/*.h"]),
