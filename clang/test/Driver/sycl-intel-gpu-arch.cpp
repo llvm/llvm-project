@@ -15,8 +15,7 @@
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-mtl-u \
 // RUN:   --offload-arch=xe-arl-u --offload-arch=xe_12.70.0 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-AS-GIVEN %s
-// CHK-AS-GIVEN: llvm-offload-binary{{.*}} "--image=file={{.*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u,code=xe_12.70.0"
-// CHK-AS-GIVEN-NOT: --image=
+// CHK-AS-GIVEN: llvm-offload-binary" "-o" "{{[^"]*}}" "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u,code=xe_12.70.0"{{$}}
 
 /// The devices are sorted, so that objects compiled for the same devices in any
 /// order have the same list and are linked together.
@@ -26,14 +25,14 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-u,xe-mtl-h -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-SORTED %s
-// CHK-SORTED: "--image=file={{.*}},arch=igca_30r,kind=sycl,code=xe-mtl-h,code=xe-mtl-u"
+// CHK-SORTED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-h,code=xe-mtl-u"
 
 /// An IGCA target given directly lists no devices, so it is compiled just in
 /// time.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=igca_30r -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-IGCA-ONLY %s
-// CHK-IGCA-ONLY: "--image=file={{.*}},arch=igca_30r,kind=sycl"
+// CHK-IGCA-ONLY: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl"
 
 /// -Xarch_ names the IGCA target of the device compile, not an Intel GPU, as
 /// one device compile can be for several Intel GPUs.
@@ -44,12 +43,14 @@
 // CHK-XARCH: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-D" "FOO"
 // CHK-XARCH-NOT: "-D" "BAR"
 
-/// Static libraries are searched for the IGCA target of an Intel GPU.
+/// Static libraries are searched for the IGCA target of an Intel GPU, once for
+/// Intel GPUs that share it.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-u,xe-mtl-h %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-EXTRACT %s
-// CHK-EXTRACT: clang-linker-wrapper{{.*}} "--should-extract=igca_30r"
-// CHK-EXTRACT-NOT: --should-extract=xe-
+// CHK-EXTRACT: clang-linker-wrapper"
+// CHK-EXTRACT-SAME: "--should-extract=igca_30r"
+// CHK-EXTRACT-NOT: --should-extract=
 
 /// Without --offload-targets, an Intel device (by name or numeric name), an IGCA
 /// target or "generic" picks SPIR-V of the host's width.
@@ -73,8 +74,7 @@
 // RUN:   --offload-arch=xe-mtl-u --offload-arch=xe-arl-u --offload-arch=xe-pvc \
 // RUN:   --no-offload-arch=xe-pvc -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS-AS-GIVEN %s
-// CHK-NO-TARGETS-AS-GIVEN: "--image=file={{.*}},arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u"
-// CHK-NO-TARGETS-AS-GIVEN-NOT: {{igca_20ca|xe-pvc}}
+// CHK-NO-TARGETS-AS-GIVEN: llvm-offload-binary" "-o" "{{[^"]*}}" "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u"{{$}}
 
 /// As for CUDA and HIP, -foffload-via-llvm gives the inferred target the LLVM
 /// environment.

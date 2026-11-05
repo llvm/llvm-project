@@ -39,6 +39,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -9956,6 +9957,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // If the user explicitly requested it via `--offload-arch` we should
       // extract it from any static libraries if present. Device images are
       // labeled with the canonical target ID, so request that.
+      llvm::StringSet<> ShouldExtract;
       for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
         std::optional<std::string> TargetID =
             getCanonicalTargetID(TC->getTriple(), Arg);
@@ -9965,7 +9967,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         if (Kind == Action::OFK_SYCL)
           if (OffloadArch ID = StringToOffloadArch(Arg); ID.isIntelGPU())
             Name = OffloadArchToString(ID.intelGPUIGCATarget());
-        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));
+        // Intel GPUs that share an IGCA target ask for it once.
+        if (ShouldExtract.insert(Name).second)
+          CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));
       }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
