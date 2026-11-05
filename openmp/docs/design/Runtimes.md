@@ -1244,6 +1244,52 @@ recording phase. Because this verification performs a strict binary difference
 between the two memory snapshots, the check may fail for kernels operating on
 floating-point data due to normal variations in precision and operation order.
 
+To reduce their size, the output snapshots (the `.record_output` and
+`.replay_output` files) only store the device memory regions that the kernel
+changed, as a diff against the input snapshot (the `.record_input` file). Two
+output snapshots of the same recording are identical if and only if the device
+memory after the kernel execution is identical. The format of these files is
+described in `offload/include/Shared/RecordReplayDiff.h`.
+
+The kernels of a program mostly see the same device memory, so the input
+snapshots are not stored as full copies either. Each input snapshot is split
+into 64 KiB blocks, and every distinct block is stored once, compressed with
+zstd (or zlib if LLVM was built without zstd), in a `record_blocks.<N>.store`
+file shared by all the recordings of the output directory. The `.record_input`
+file of a kernel then lists its blocks, and the replay tool reassembles the
+snapshot from the store. Recording into the same directory again only adds the
+blocks that are not stored yet. Setting `LIBOMPTARGET_RECORD_BLOCK_STORE=FALSE`
+records full copies instead. The format is described in
+`offload/include/Shared/RecordReplayBlocks.h`.
+
+Deleting the files of a recorded kernel leaves its blocks in the store. To
+remove the blocks that no recorded kernel refers to anymore, compact the
+directory:
+
+```console
+$ llvm-omp-kernel-replay --compact-store records
+[llvm-omp-kernel-replay] Compacted the block store of 7 snapshots from 75808768 to 37904384 bytes (2908 blocks)
+```
+
+Compaction writes a new generation of the store and switches the recordings to
+it one at a time, so an interrupted compaction leaves the recordings valid, and
+running it again completes it. A lock file in the directory prevents compacting
+while a program records into the directory.
+
+By default, the replay places the device memory at the same address as in the
+recording, so the pointers into that memory remain valid. The `--relocate` flag
+instead lets the device place the replay memory at any address, and only
+allocates the memory that the kernel uses. To make this possible, the recording
+logs the device locations where the runtime stores device pointers (e.g., when
+attaching a pointer to its pointee) and saves the ones pointing into the
+recorded memory in a `.pointers` file. The replay adjusts these pointers and the
+kernel arguments to the new address. Any other value in the recorded memory or
+the globals that looks like a pointer into the recorded memory, such as a
+device pointer that the program copied to the device itself, prevents the
+relocation, and the replay falls back to the recorded address. Similarly, a
+relocated replay cannot be verified if the kernel stores such values in the
+output.
+
 The recording phase, implemented by `libomptarget`, can be controlled via
 environment variables. A full list of environment variables and their definition
 is provided below.
@@ -1255,6 +1301,7 @@ is provided below.
 - `LIBOMPTARGET_RECORD_MEMSIZE=<Num> (default 8*1024*1024*1024)`
 - `LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)`
 - `LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)`
+- `LIBOMPTARGET_RECORD_BLOCK_STORE=[TRUE/FALSE] (default TRUE)`
 
 (libomptarget_record)=
 

@@ -135,6 +135,12 @@ struct KernelReplayOutcomeTy {
   /// The pointer to the device memory allocation used to replay. This can be
   /// reused for future replays of the same kernel.
   void *ReplayDeviceAlloc = nullptr;
+  /// The host copy of the input memory snapshot that initialized the device
+  /// allocation before the replay. If it covers the whole replay memory, the
+  /// output snapshot is recorded as a diff against it, which avoids retrieving
+  /// the device memory before the kernel execution.
+  const void *InputSnapshot = nullptr;
+  uint64_t InputSnapshotSize = 0;
 };
 }
 
