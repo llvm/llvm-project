@@ -226,6 +226,56 @@ define i64 @memset_partial() {
   ret i64 %l
 }
 
+; The memset clears only the middle field; its neighbours keep their stores.
+define i64 @memset_middle_field_only(i64 %x, i64 %y) {
+; CHECK-LABEL: define i64 @memset_middle_field_only(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca { i64, i64, i64 }, align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 4
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[F1]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[F2:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    store i64 [[Y]], ptr [[F2]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[S:%.*]] = add i64 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[S]], [[Y]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca { i64, i64, i64 }, align 8
+  store i64 %x, ptr %a
+  %f1 = getelementptr i8, ptr %a, i64 8
+  call void @llvm.memset.p0.i64(ptr %f1, i8 0, i64 8, i1 false)
+  %f2 = getelementptr i8, ptr %a, i64 16
+  store i64 %y, ptr %f2
+  call void @callee(ptr %a)
+  %l0 = load i64, ptr %a
+  %l1 = load i64, ptr %f1
+  %l2 = load i64, ptr %f2
+  %s = add i64 %l0, %l1
+  %r = add i64 %s, %l2
+  ret i64 %r
+}
+
+; The second memset overwrites half of the field the first one defines.
+define i64 @memset_full_then_partial() {
+; CHECK-LABEL: define i64 @memset_full_then_partial() {
+; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P4]], i8 1, i64 2, i1 false)
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[A]], align 4
+; CHECK-NEXT:    ret i64 [[L]]
+;
+  %a = alloca i64, align 8
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 8, i1 false)
+  %p4 = getelementptr i8, ptr %a, i64 4
+  call void @llvm.memset.p0.i64(ptr %p4, i8 1, i64 2, i1 false)
+  call void @callee(ptr %a)
+  %l = load i64, ptr %a
+  ret i64 %l
+}
+
 define i32 @memset_volatile() {
 ; CHECK-LABEL: define i32 @memset_volatile() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -383,15 +433,10 @@ define i32 @memset_variable_value_two_fields(i8 %v) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[V]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP8]], 16
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 [[V]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP5]], [[TMP10]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP5]], [[TMP5]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca { i32, i32 }, align 4
@@ -402,6 +447,68 @@ define i32 @memset_variable_value_two_fields(i8 %v) {
   %l2 = load i32, ptr %b
   %r = add i32 %l1, %l2
   ret i32 %r
+}
+
+; The splat built for the first field, which a store overwrites, is still used
+; by the second field.
+define i32 @memset_variable_value_first_field_overwritten(i8 %v, i32 %x) {
+; CHECK-LABEL: define i32 @memset_variable_value_first_field_overwritten(
+; CHECK-SAME: i8 [[V:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[V]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 [[V]], i64 8, i1 false)
+; CHECK-NEXT:    store i32 [[X]], ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], [[TMP5]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = alloca { i32, i32 }, align 4
+  call void @llvm.memset.p0.i64(ptr %a, i8 %v, i64 8, i1 false)
+  store i32 %x, ptr %a
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  %b = getelementptr i8, ptr %a, i64 4
+  %l2 = load i32, ptr %b
+  %r = add i32 %l1, %l2
+  ret i32 %r
+}
+
+define float @memset_variable_value_two_types(i8 %v) {
+; CHECK-LABEL: define float @memset_variable_value_two_types(
+; CHECK-SAME: i8 [[V:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca { i32, float }, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[V]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[V]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 [[TMP10]] to float
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 [[V]], i64 8, i1 false)
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[TMP5]] to float
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[F]], [[TMP11]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = alloca { i32, float }, align 4
+  call void @llvm.memset.p0.i64(ptr %a, i8 %v, i64 8, i1 false)
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  %b = getelementptr i8, ptr %a, i64 4
+  %l2 = load float, ptr %b
+  %f = sitofp i32 %l1 to float
+  %r = fadd float %f, %l2
+  ret float %r
 }
 
 ; The store overwrites the memset before any load reads it, so the splat of
@@ -460,8 +567,8 @@ join:
 
 ; A target extension type without a zero value can't be made from the memset's
 ; bytes.
-define target("dx.RawBuffer", i8, 0, 0) @memset_zero_target_ext_type() {
-; CHECK-LABEL: define target("dx.RawBuffer", i8, 0, 0) @memset_zero_target_ext_type() {
+define target("dx.RawBuffer", i8, 0, 0) @memset_zero_target_ext_type_no_zeroinit() {
+; CHECK-LABEL: define target("dx.RawBuffer", i8, 0, 0) @memset_zero_target_ext_type_no_zeroinit() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca target("dx.RawBuffer", i8, 0, 0), align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
@@ -562,15 +669,18 @@ define <2 x ptr> @memset_variable_value_ptr_vector(i8 %v) {
   ret <2 x ptr> %l
 }
 
-define <vscale x 4 x i32> @memset_scalable_load() {
-; CHECK-LABEL: define <vscale x 4 x i32> @memset_scalable_load() {
-; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
+; A scalable load from a fixed-size alloca reaches the memset check, which
+; rejects scalable types.
+define <vscale x 4 x i32> @memset_scalable_load() vscale_range(1,1) {
+; CHECK-LABEL: define <vscale x 4 x i32> @memset_scalable_load(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    [[L:%.*]] = load <vscale x 4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[L]]
 ;
-  %a = alloca <vscale x 4 x i32>, align 16
+  %a = alloca <4 x i32>, align 16
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
   call void @callee(ptr %a)
   %l = load <vscale x 4 x i32>, ptr %a
