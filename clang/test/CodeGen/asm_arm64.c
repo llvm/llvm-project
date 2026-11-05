@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple arm64-apple-ios -emit-llvm -o - %s | FileCheck %s %}
 
 int t1(void)
 {

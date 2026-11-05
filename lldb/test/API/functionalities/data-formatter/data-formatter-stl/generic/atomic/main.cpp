@@ -66,6 +66,11 @@ int main() {
   std::shared_ptr<int> s_value = std::make_shared<int>(300);
   std::atomic<std::shared_ptr<int>> atomic_shared{s_value};
   std::atomic<std::weak_ptr<int>> atomic_weak{s_value};
+  std::shared_ptr<int> s_value2 = std::make_shared<int>(400);
+  std::weak_ptr<int> w_value2{s_value2};
+  std::atomic<std::weak_ptr<int>> atomic_weak_expired{s_value2};
+  std::atomic<std::shared_ptr<int>> atomic_shared_null;
+  s_value2.reset();
 #endif // __cpp_lib_atomic_shared_ptr
 
   return 0; // Set break point at this line.
