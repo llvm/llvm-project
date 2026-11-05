@@ -57,7 +57,7 @@ public:
   // Return the symbol named `name`, creating one that is not yet in the symbol
   // table if needed. This is thread-safe while `concurrent` is true.
   Symbol *intern(llvm::CachedHashStringRef name);
-  // True while other threads may call intern. The shards are locked only then.
+  // True while worker threads run. The shards are locked only then.
   bool concurrent = false;
 
   template <typename T> Symbol *addSymbol(const T &newSym) {
@@ -102,9 +102,9 @@ private:
 
   Ctx &ctx;
 
-  // A map from symbol name to the symbol, sharded by the high bits of the hash
-  // so that intern can run in parallel.
+  // Shard by the high bits of the hash so that lookups can run in parallel.
   struct Shard {
+    // A map from symbol name to the symbol.
     llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> map;
     std::mutex mu;
     std::unique_lock<std::mutex> getLock(bool concurrent) {
@@ -112,9 +112,9 @@ private:
                         : std::unique_lock<std::mutex>();
     }
   };
-  std::array<Shard, 256> symMap;
+  std::array<Shard, 256> shards;
   Shard &getShard(llvm::CachedHashStringRef key) {
-    return symMap[key.hash() >> 24];
+    return shards[key.hash() >> 24];
   }
 
   // Global symbols in insertion order, which must be deterministic even when
