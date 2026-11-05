@@ -91,6 +91,20 @@ define ptr @ptrmask_combine_add_nonnull(ptr %p) {
   ret ptr %r
 }
 
+define <2 x ptr> @ptrmask_combine_add_nonnull_vec(<2 x ptr> %p) {
+; CHECK-LABEL: define <2 x ptr> @ptrmask_combine_add_nonnull_vec
+; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
+; CHECK-NEXT:    [[PM0:%.*]] = call align 4 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -60))
+; CHECK-NEXT:    [[PGEP12:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], i64 32
+; CHECK-NEXT:    [[R:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP12]], <2 x i64> splat (i64 -32))
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %pm0 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> splat (i64 -60))
+  %pgep = getelementptr i8, <2 x ptr> %pm0, i64 33
+  %r = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %pgep, <2 x i64> splat (i64 -16))
+  ret <2 x ptr> %r
+}
+
 define ptr @ptrmask_combine_add_alignment(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_add_alignment
 ; CHECK-SAME: (ptr [[P:%.*]]) {
