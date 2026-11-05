@@ -603,7 +603,8 @@ TEST(GetZeroOneAttrTest, NestedShapedElementType) {
   EXPECT_TRUE(builder.getZeroAttr(tensorTy));
   EXPECT_TRUE(builder.getOneAttr(tensorTy));
 
-  // A shaped element type has no DenseElementsAttr form, so expect null.
+  // A vector element type does not implement DenseElementTypeInterface, so
+  // it has no DenseElementsAttr form; expect null.
   // See https://github.com/llvm/llvm-project/issues/205060.
   VectorType vecTy = VectorType::get({4}, i8);
   RankedTensorType nestedTy = RankedTensorType::get({2}, vecTy);
