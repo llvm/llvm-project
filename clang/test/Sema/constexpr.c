@@ -473,3 +473,7 @@ static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant 
 
 x y; // expected-error{{unknown type name 'x'}}
 constexpr int *p = (int*){y};
+
+const int g1 = 1;
+constexpr int g2 = g1; // expected-error{{constexpr variable 'g2' must be initialized by a constant expression}}
+constexpr int g3 = (int){g1}; // expected-error{{constexpr variable 'g3' must be initialized by a constant expression}}

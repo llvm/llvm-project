@@ -7749,7 +7749,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
         return nullptr;
       }
       // An immediate invocation already is a ConstantExpr.
-      if (isa<ConstantExpr>(Init))
+      if (!getLangOpts().CPlusPlus || isa<ConstantExpr>(Init))
         return Init;
       return ConstantExpr::Create(Context, Init, Eval.Val);
     };
