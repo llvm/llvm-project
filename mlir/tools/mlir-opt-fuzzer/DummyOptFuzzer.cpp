@@ -15,6 +15,6 @@
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
 extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv);
 int main(int argc, char *argv[]) {
-    return llvm::runFuzzerOnInputs(argc, argv, LLVMFuzzerTestOneInput,
-                                   LLVMFuzzerInitialize);
+  return llvm::runFuzzerOnInputs(argc, argv, LLVMFuzzerTestOneInput,
+                                 LLVMFuzzerInitialize);
 }

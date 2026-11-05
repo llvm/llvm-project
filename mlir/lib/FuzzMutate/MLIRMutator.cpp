@@ -43,8 +43,8 @@ void TopLevelOpDuplicationStrategy::mutate(ModuleOp module,
     return;
   OpBuilder b(module->getContext());
   b.setInsertionPointToStart(module.getBody());
-  b.clone(*ops[std::uniform_int_distribution<size_t>(0, ops.size() - 1)(
-      IB.getRand())]);
+  b.clone(*ops[std::uniform_int_distribution<size_t>(0, ops.size() -
+                                                            1)(IB.getRand())]);
 }
 
 uint64_t PoisonAppendStrategy::getWeight(size_t CurrentSize, size_t MaxSize,
