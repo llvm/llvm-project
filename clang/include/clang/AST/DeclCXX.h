@@ -2650,6 +2650,16 @@ class CXXConstructorDecl final
   /// \{
   /// The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
+
+  /// FIXME: as a space-optimization for constructors we could probably make
+  /// LazyCXXCtorInitializersPtr refer to an ArrayRef type (that is, size + ptr)
+  /// to store this size. However, the downside to this is that querying whether
+  /// this is a 'delegating' constructor would then become expensive.
+  ///
+  /// An additional alternative we can do to negate that is to either store
+  /// 'isDelegatingConstructor', or a 2 bit 'size' (where 0b11 means 'always
+  /// check the Lazy Ptr array ref') in CXXConstructorDeclBitfields.
+  ///
   /// The number of base/member initializers.
   unsigned numCtorInitializers = 0;
 
