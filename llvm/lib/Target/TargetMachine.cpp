@@ -188,6 +188,9 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    const DataLayout &DL = GV->getDataLayout();
+    if (!isLargeDataSize(GV->getGlobalSize(DL)))
+      return false;
     // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
     // sections; that would require the linker to emit more than one
     // PT_GNU_RELRO because large sections are discontiguous by design, and most
@@ -201,8 +204,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
         TargetLoweringObjectFile::getKindForGlobal(GV, *this)
             .isReadOnlyWithRel())
       return false;
-    const DataLayout &DL = GV->getDataLayout();
-    return isLargeDataSize(GV->getGlobalSize(DL));
+    return true;
   }
 
   return false;

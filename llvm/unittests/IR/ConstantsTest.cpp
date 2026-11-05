@@ -1091,4 +1091,55 @@ TEST(ConstantsTest, PtrAddCAPI) {
             nullptr);
 }
 
+TEST(ConstantsTest, RelocationInfo) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+
+  Module M("MyModule", Context);
+  auto *GV1 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 1), "g1");
+  auto *GV2 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 2), "g2");
+  GV1->setDSOLocal(true);
+  GV2->setDSOLocal(true);
+
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  EXPECT_FALSE(Zero->needsRelocation());
+  EXPECT_FALSE(Zero->needsDynamicRelocation());
+
+  // Relative pointer between two dso_local globals is a LocalRelocation.
+  Constant *LocalReloc =
+      ConstantExpr::getSub(ConstantExpr::getPtrToInt(GV1, Int64Ty),
+                           ConstantExpr::getPtrToInt(GV2, Int64Ty));
+  EXPECT_TRUE(LocalReloc->needsRelocation());
+  EXPECT_FALSE(LocalReloc->needsDynamicRelocation());
+
+  // Direct global reference is a GlobalRelocation.
+  EXPECT_TRUE(GV1->needsRelocation());
+  EXPECT_TRUE(GV1->needsDynamicRelocation());
+
+  Constant *StructLocalFirst =
+      ConstantStruct::getAnon(Context, {LocalReloc, GV1});
+  EXPECT_TRUE(StructLocalFirst->needsRelocation());
+  EXPECT_TRUE(StructLocalFirst->needsDynamicRelocation());
+
+  Constant *StructGlobalFirst =
+      ConstantStruct::getAnon(Context, {GV1, LocalReloc});
+  EXPECT_TRUE(StructGlobalFirst->needsRelocation());
+  EXPECT_TRUE(StructGlobalFirst->needsDynamicRelocation());
+
+  Constant *ArrayInt =
+      ConstantArray::get(ArrayType::get(Int32Ty, 2), {Zero, Zero});
+  EXPECT_FALSE(ArrayInt->needsRelocation());
+  EXPECT_FALSE(ArrayInt->needsDynamicRelocation());
+
+  Constant *ArrayGV = ConstantArray::get(ArrayType::get(PtrTy, 2), {GV1, GV2});
+  EXPECT_TRUE(ArrayGV->needsRelocation());
+  EXPECT_TRUE(ArrayGV->needsDynamicRelocation());
+}
+
 } // end anonymous namespace
