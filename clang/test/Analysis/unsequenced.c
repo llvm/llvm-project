@@ -336,3 +336,13 @@ static void dst_tests(void) {
     // expected-warning@-1{{unsequenced write to and read from variable}}
     // expected-note@-2{{variable is read from here}}
 }
+
+static int same_value_assign(int* v) {
+    *v = 10;
+    return 1;
+}
+
+int same_value_assign_test() {
+    int v = 0;
+    return same_value_assign(&v) + same_value_assign(&v);
+}
