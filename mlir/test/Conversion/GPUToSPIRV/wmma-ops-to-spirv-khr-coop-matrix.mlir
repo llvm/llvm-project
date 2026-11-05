@@ -307,12 +307,12 @@ module attributes {
       // CHECK:      %[[STRIDE:.+]] = spirv.Constant 32 : i32
       // CHECK:      %[[MAT:.+]] = spirv.KHR.CooperativeMatrixLoad {{%.*}}, %[[STRIDE]], <RowMajor>, <Aligned>, 2 :
       // CHECK-SAME:   !spirv.ptr<f16, PhysicalStorageBuffer>, i32 -> !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
-      %0 = gpu.subgroup_mma_load_matrix %arg0[%i, %j] {leadDimension = 32 : index} :
+      %0 = gpu.subgroup_mma_load_matrix %arg0[%i, %j] leadDimension 32 :
         memref<32x32xf16, #spirv.storage_class<PhysicalStorageBuffer>> -> !gpu.mma_matrix<16x16xf16, "COp">
 
       // CHECK:      spirv.KHR.CooperativeMatrixStore {{%.*}}, %[[MAT]], %[[STRIDE]], <RowMajor>, <Aligned>, 2 :
       // CHECK-SAME:   !spirv.ptr<f16, PhysicalStorageBuffer>, !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
-      gpu.subgroup_mma_store_matrix %0, %arg0[%i, %j] {leadDimension = 32 : index} :
+      gpu.subgroup_mma_store_matrix %0, %arg0[%i, %j] leadDimension 32 :
         !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, #spirv.storage_class<PhysicalStorageBuffer>>
       // CHECK: spirv.Return
       gpu.return
