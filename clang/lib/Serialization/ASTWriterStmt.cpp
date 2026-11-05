@@ -2621,6 +2621,8 @@ void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   Record.push_back(D->constructTraits().size());
   for (llvm::omp::TraitProperty Trait : D->constructTraits())
     Record.push_back(unsigned(Trait));
+  for (bool Flag : D->directiveThenStmt())
+    Record.writeBool(Flag);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 

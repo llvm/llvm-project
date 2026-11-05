@@ -351,24 +351,30 @@ OMPMetaDirective *OMPMetaDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
     ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
-    ArrayRef<llvm::omp::TraitProperty> ConstructTraits) {
+    ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+    ArrayRef<bool> DirectiveThenStmt) {
   assert(Variants.size() == Conditions.size() &&
          Variants.size() == TraitInfos.size() &&
-         "Expected one condition and one trait info per variant");
+         Variants.size() == DirectiveThenStmt.size() &&
+         "Expected one condition, trait info and flag per variant");
   OMPMetaDirective *Dir = allocate(C, Variants.size(), StartLoc, EndLoc);
   llvm::copy(Variants, Dir->getTrailingVariants().begin());
   llvm::copy(Conditions, Dir->getTrailingConditions().begin());
   llvm::copy(TraitInfos, Dir->getTrailingTraitInfos().begin());
   Dir->setHasImplicitOtherwise(HasImplicitOtherwise);
   Dir->setConstructTraits(C, ConstructTraits);
+  Dir->setDirectiveThenStmt(C, DirectiveThenStmt);
   return Dir;
+}
+
+void OMPMetaDirective::setDirectiveThenStmt(const ASTContext &C,
+                                            ArrayRef<bool> Flags) {
+  DirectiveThenStmt = Flags.copy(C);
 }
 
 void OMPMetaDirective::setConstructTraits(
     const ASTContext &C, ArrayRef<llvm::omp::TraitProperty> Traits) {
-  auto *Mem = C.Allocate<llvm::omp::TraitProperty>(Traits.size());
-  llvm::copy(Traits, Mem);
-  ConstructTraits = {Mem, Traits.size()};
+  ConstructTraits = Traits.copy(C);
 }
 
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,

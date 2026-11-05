@@ -813,7 +813,11 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
       TraitInfos[I]->print(OS, Policy);
       OS << ": ";
     }
-    if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
+    Stmt *V = Variants[I];
+    // A standalone directive is stored together with the statement.
+    if (Node->directiveThenStmt()[I])
+      V = cast<CompoundStmt>(V)->body_front();
+    if (auto *D = dyn_cast<OMPExecutableDirective>(V)) {
       OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
       for (OMPClause *C : D->clauses()) {
         if (C && !C->isImplicit()) {
@@ -825,11 +829,15 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
     OS << ')';
   }
   OS << NL;
-  // Every variant has the same associated statement; print it once.
-  Stmt *Body = Variants.front();
-  if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
-    Body = D->getRawStmt();
-  PrintStmt(Body);
+  // Print the statement once, from a variant that has it. If none has it,
+  // the statement follows the metadirective.
+  for (Stmt *V : Variants) {
+    auto *D = dyn_cast<OMPExecutableDirective>(V);
+    if (D && D->hasAssociatedStmt()) {
+      PrintStmt(D->getRawStmt());
+      break;
+    }
+  }
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {

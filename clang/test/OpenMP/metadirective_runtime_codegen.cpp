@@ -203,6 +203,45 @@ void runtime_path(int flag) {
   }
 }
 
+// A standalone variant runs its directive and then the statement.
+// CHECK-LABEL: define internal void @_Z5mixedi.omp_outlined(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.when[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK:       call void @__kmpc_barrier(
+// CHECK-NEXT:  call void @_Z3barv()
+// CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
+// CHECK:       [[ELSE]]:
+// CHECK:       call i32 @__kmpc_single(
+// CHECK:       [[END]]:
+// CHECK-NEXT:  ret void
+void mixed(int flag) {
+#pragma omp parallel
+  {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(single)
+    bar();
+  }
+}
+
+// All variants are standalone: the statement runs once, after the selection.
+// CHECK-LABEL: define internal void @_Z14all_standalonei.omp_outlined(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.when[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK:       call void @__kmpc_barrier(
+// CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
+// CHECK:       [[ELSE]]:
+// CHECK:       call i32 @__kmpc_omp_taskyield(
+// CHECK-NEXT:  br label %[[END]]
+// CHECK:       [[END]]:
+// CHECK-NEXT:  call void @_Z3barv()
+// CHECK-NEXT:  ret void
+void all_standalone(int flag) {
+#pragma omp parallel
+  {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(taskyield)
+    bar();
+  }
+}
+
 // Instantiated template. Kept last: the instantiation may be emitted at the
 // end of the file.
 // CHECK-LABEL: define {{.*}}void @_Z4tmplIiEvT_(
