@@ -590,6 +590,19 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
   if (!PhysReg.isValid() || PhysReg != GetAssignedReg(StoreReg))
     return false;
 
+  // Both accesses must read the same physical registers.
+  auto GetPhysInputs = [&](const MachineInstr &MI) {
+    SmallVector<Register, 4> Inputs;
+    for (const MachineOperand &MO : MI.all_uses())
+      if (MO.getReg().isPhysical() && MO.getReg() != StoreReg)
+        Inputs.push_back(MO.getReg());
+    sort(Inputs);
+    return Inputs;
+  };
+  SmallVector<Register, 4> Inputs = GetPhysInputs(Store);
+  if (Inputs != GetPhysInputs(Restore))
+    return false;
+
   MachineBasicBlock &MBB = *Restore.getParent();
   auto Gap = make_range(std::next(Store.getIterator()), Restore.getIterator());
   bool Adjacent = all_of(
@@ -599,17 +612,12 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
   LiveInterval *StoreLI =
       StoreReg.isVirtual() ? &LIS.getInterval(StoreReg) : nullptr;
   // If Restore and Store are not directly adjacent, we need to make sure that
-  // the forwarded register or the implicit inputs of restore or store are not
-  // modified between the two instructions.
+  // the forwarded register or the inputs of restore and store are not modified
+  // between the two instructions.
   if (!Adjacent) {
     if (!Matrix)
       return false;
-    SmallVector<Register, 4> Inputs;
     Inputs.push_back(PhysReg);
-    for (const MachineInstr *Access : {&Store, &Restore})
-      for (const MachineOperand &MO : Access->all_uses())
-        if (MO.getReg().isPhysical() && MO.getReg() != StoreReg)
-          Inputs.push_back(MO.getReg());
     for (const MachineInstr &GapMI : Gap)
       for (const MachineOperand &Def : GapMI.all_defs()) {
         Register DefReg = GetAssignedReg(Def.getReg());
