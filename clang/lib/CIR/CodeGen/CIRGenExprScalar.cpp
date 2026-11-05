@@ -2929,11 +2929,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                               cgf.convertType(destTy));
   }
 
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
-    // Create a vector object and fill all elements with the same scalar value.
+    // Splat the element across to all elements
     mlir::Type destCIRTy = cgf.convertType(destTy);
-    assert(mlir::isa<cir::VectorType>(destCIRTy) &&
-           "CK_VectorSplat to non-vector type");
     return cir::VecSplatOp::create(builder,
                                    cgf.getLoc(subExpr->getSourceRange()),
                                    destCIRTy, Visit(subExpr));
