@@ -21,13 +21,28 @@ int main(int argc, char **argv) {
   }
 
   char dst[16];
+  __msan_poison(dst, sizeof(dst));
 
   assert(call_strlcpy(dst, "hello", sizeof(dst)) == 5);
   assert(__msan_test_shadow(dst, 6) == -1);
+  assert(__msan_test_shadow(dst + 6, 1) == 0);
 
   assert(call_strlcat(dst, "xy", sizeof(dst)) == 7);
   assert(__msan_test_shadow(dst, 8) == -1);
+  assert(__msan_test_shadow(dst + 8, 1) == 0);
   assert(strcmp(dst, "helloxy") == 0);
+
+  __msan_poison(dst, sizeof(dst));
+  assert(call_strlcpy(dst, "abcdef", 4) == 6);
+  assert(__msan_test_shadow(dst, 4) == -1);
+  assert(__msan_test_shadow(dst + 4, 1) == 0);
+  assert(strcmp(dst, "abc") == 0);
+
+  char zero_dst[8] = "";
+  __msan_poison(zero_dst + 1, 1);
+
+  assert(call_strlcpy(zero_dst, "abc", 0) == 3);
+  assert(__msan_test_shadow(zero_dst + 1, 1) == 0);
 
   return 0;
 }
