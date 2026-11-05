@@ -41,7 +41,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -62,14 +61,6 @@ using namespace llvm;
 
 STATISTIC(NumUnrolledAndJammed, "Number of loops unroll and jammed");
 STATISTIC(NumCompletelyUnrolledAndJammed, "Number of loops unroll and jammed");
-
-// When enabled, intrinsics that do not create a real cross-iteration memory
-// dependence (lifetime markers, assume, invariant markers, ...) no longer force
-// the unroll-and-jam dependency check to bail out.
-static cl::opt<bool> AllowUnrollAndJamSafeIntrinsics(
-    "allow-unj-safe-intrinsics", cl::init(true), cl::Hidden,
-    cl::desc("Allow unroll-and-jam of loops containing side-effect-free "
-             "intrinsics (lifetime markers, assume, ...)"));
 
 typedef SmallPtrSet<BasicBlock *, 4> BasicBlockSet;
 
@@ -679,7 +670,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 }
 
 static bool getLoadsAndStores(BasicBlockSet &Blocks,
-                              SmallVector<Instruction *, 4> &MemInstr) {
+                              SmallVector<Instruction *, 4> &MemInstr,
+                              bool AllowSafeIntrinsics) {
   // Scan the BBs and collect legal loads and stores.
   // Returns false if non-simple loads/stores are found.
   for (BasicBlock *BB : Blocks) {
@@ -695,7 +687,7 @@ static bool getLoadsAndStores(BasicBlockSet &Blocks,
       } else if (I.mayReadOrWriteMemory()) {
         // Side-effect-free intrinsics (lifetime markers, assume, ...) do not
         // create real memory dependencies; skip them instead of bailing.
-        if (AllowUnrollAndJamSafeIntrinsics && isSafeUnrollAndJamIntrinsic(I))
+        if (AllowSafeIntrinsics && isSafeUnrollAndJamIntrinsic(I))
           continue;
         return false;
       }
@@ -815,7 +807,7 @@ static bool
 checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
                   const DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
                   const DenseMap<Loop *, BasicBlockSet> &AftBlocksMap,
-                  DependenceInfo &DI, LoopInfo &LI) {
+                  DependenceInfo &DI, LoopInfo &LI, bool AllowSafeIntrinsics) {
   SmallVector<BasicBlockSet, 8> AllBlocks;
   for (Loop *L : Root.getLoopsInPreorder())
     if (ForeBlocksMap.contains(L))
@@ -830,7 +822,7 @@ checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
   SmallVector<Instruction *, 4> CurrentLoadsAndStores;
   for (BasicBlockSet &Blocks : AllBlocks) {
     CurrentLoadsAndStores.clear();
-    if (!getLoadsAndStores(Blocks, CurrentLoadsAndStores))
+    if (!getLoadsAndStores(Blocks, CurrentLoadsAndStores, AllowSafeIntrinsics))
       return false;
 
     Loop *CurLoop = LI.getLoopFor((*Blocks.begin())->front().getParent());
@@ -919,7 +911,8 @@ static Loop *getInnerMostLoop(Loop *L) {
 }
 
 bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                                DependenceInfo &DI, LoopInfo &LI) {
+                                DependenceInfo &DI, LoopInfo &LI,
+                                bool AllowSafeIntrinsics) {
   if (!isEligibleLoopForm(*L)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Ineligible loop form\n");
     return false;
@@ -1049,8 +1042,8 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check
   // there are no dependencies between Fore-Sub, Fore-Aft, Sub-Aft and Sub-Sub.
-  if (!checkDependencies(*L, SubLoopBlocks, ForeBlocksMap, AftBlocksMap, DI,
-                         LI)) {
+  if (!checkDependencies(*L, SubLoopBlocks, ForeBlocksMap, AftBlocksMap, DI, LI,
+                         AllowSafeIntrinsics)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; failed dependency check\n");
     return false;
   }
