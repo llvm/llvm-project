@@ -1055,8 +1055,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
 
     if (!Subtarget.is64Bit()) {
-      setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
-      setOperationAction(ISD::MULHS,            MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHU, MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHS, MVT::v2i64, Custom);
     }
 
     setOperationAction(ISD::SMULO,              MVT::v16i8, Custom);
@@ -2392,6 +2392,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
+      // clang-format off
       setOperationAction(ISD::SCALAR_TO_VECTOR,       MVT::v32f16, Custom);
       setOperationAction(ISD::SINT_TO_FP,             MVT::v32i16, Legal);
       setOperationAction(ISD::STRICT_SINT_TO_FP,      MVT::v32i16, Legal);
@@ -2421,6 +2422,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::FP_TO_UINT,     MVT::v32i1,  MVT::v32i16);
       setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v32i1,
                                  MVT::v32i16);
+      // clang-format off
 
       setOperationAction(ISD::EXTRACT_SUBVECTOR,      MVT::v16f16, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR,       MVT::v32f16, Legal);
@@ -23378,8 +23380,9 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
     SDValue R = DAG.getNode(ISD::FMA, Dl, WideVT,
                             DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
     R = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, R, X);
-    Parts.push_back(DAG.getNode(ISD::FP_ROUND, Dl, ChunkVT, R,
-                                DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true)));
+    Parts.push_back(
+        DAG.getNode(ISD::FP_ROUND, Dl, ChunkVT, R,
+                    DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true)));
   }
 
   SDNodeFlags Flags = Op->getFlags();
@@ -23392,8 +23395,10 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
 
   MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
   unsigned ClassOpc = IsVec ? X86ISD::VFPCLASS : X86ISD::VFPCLASSS;
-  SDValue AV = IsVec ? A : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
-  SDValue BV = IsVec ? B : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
+  SDValue AV =
+      IsVec ? A : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
+  SDValue BV =
+      IsVec ? B : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
 
   SDValue XNotFinite = DAG.getNode(ClassOpc, Dl, MaskVT, AV,
                                    DAG.getTargetConstant(0x99, Dl, MVT::i32));
@@ -23401,7 +23406,6 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
                                DAG.getTargetConstant(0x18, Dl, MVT::i32));
   SDValue UseX = DAG.getNode(ISD::AND, Dl, MaskVT,
                              DAG.getNOT(Dl, XNotFinite, MaskVT), YIsInf);
-
 
   return IsVec ? DAG.getSelect(Dl, VT, UseX, A, Res)
                : DAG.getNode(X86ISD::SELECTS, Dl, VT, UseX, A, Res);
@@ -35190,7 +35194,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
 
-    SmallVector<SDValue, 4> Ops(8 / VT.getVectorNumElements(), DAG.getUNDEF(VT));
+    SmallVector<SDValue, 4> Ops(8 / VT.getVectorNumElements(),
+                                DAG.getUNDEF(VT));
     Ops[0] = Rounded;
     Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f16, Ops));
     return;
