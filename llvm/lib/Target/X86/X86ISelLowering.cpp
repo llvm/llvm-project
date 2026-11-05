@@ -2371,6 +2371,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
+    // clang-format off
     setOperationAction(ISD::FREM,                 MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
@@ -2387,6 +2388,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setCondCodeAction(ISD::SETOEQ, MVT::f16, Expand);
     setCondCodeAction(ISD::SETUNE, MVT::f16, Expand);
+    // clang-format on
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
@@ -2462,10 +2464,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v8f32, Legal);
       setOperationAction(ISD::FP_EXTEND,          MVT::v4f64, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v4f64, Legal);
+
+      // clang-format off
       setOperationAction(ISD::FREM,               MVT::v2f16, Custom);
       setOperationAction(ISD::FREM,               MVT::v4f16, Custom);
       setOperationAction(ISD::FREM,               MVT::v8f16, Custom);
       setOperationAction(ISD::FREM,               MVT::v16f16, Custom);
+      // clang-format on
 
       // INSERT_VECTOR_ELT v8f16 extended to VECTOR_SHUFFLE
       setOperationAction(ISD::INSERT_VECTOR_ELT,    MVT::v8f16,  Custom);
