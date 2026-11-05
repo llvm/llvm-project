@@ -1568,6 +1568,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
   inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
   `order(concurrent)`) were incorrectly accepted.
+- Fixed a crash when a `tile` or `stripe` `sizes` argument has type `bool` or
+  `_BitInt`. (#GH229039)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings

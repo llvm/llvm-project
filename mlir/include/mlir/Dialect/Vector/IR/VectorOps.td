@@ -109,7 +109,6 @@ def Vector_ContractionOp :
     | "parallel"    | yes       | lhs only       | free (M-like)            |
     | "parallel"    | yes       | rhs only       | free (N-like)            |
     | "reduction"   | no        | both           | contracting              |
-    | "reduction"   | no        | one of them    | reduction on one operand |
 
     The M-like and N-like terms follow
     [`linalg.contract`](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgcontract-linalgcontractop)
