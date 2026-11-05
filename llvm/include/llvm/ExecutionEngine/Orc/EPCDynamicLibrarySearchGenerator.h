@@ -42,7 +42,7 @@ public:
       DylibManager &DylibMgr, tpctypes::DylibHandle H,
       SymbolPredicate Allow = SymbolPredicate(),
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : ES(ES), DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
+      : DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Create an EPCDynamicLibrarySearchGenerator that resolves all symbols
@@ -55,7 +55,7 @@ public:
   EPCDynamicLibrarySearchGenerator(
       DylibManager &DylibMgr, SymbolPredicate Allow,
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : ES(ES), DylibMgr(DylibMgr), Allow(std::move(Allow)),
+      : DylibMgr(DylibMgr), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
@@ -73,7 +73,7 @@ public:
   GetForTargetProcess(DylibManager &DylibMgr,
                       SymbolPredicate Allow = SymbolPredicate(),
                       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr) {
-    return Load(ES, DylibMgr, nullptr, std::move(Allow),
+    return Load(DylibMgr, nullptr, std::move(Allow),
                 std::move(AddAbsoluteSymbols));
   }
 

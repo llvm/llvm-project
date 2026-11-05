@@ -9,10 +9,12 @@ set(ORC_RT_BEDROCK_SOURCES
   Session.cpp
   SimpleNativeMemoryMap.cpp
   SimpleSymbolTable.cpp
+  SymbolResolver.cpp
   ThreadPoolRunner.cpp
   sps/AllSPSCI.cpp
   sps/CallSPSCI.cpp
   sps/GDBJITRegistrarSPSCI.cpp
+  sps/LookupInJITDylibSPS.cpp
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
   sps/SessionSPSCI.cpp
