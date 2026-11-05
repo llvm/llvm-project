@@ -2,10 +2,12 @@
 
 #include "ObjectFilePECOFF.h"
 
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "llvm/Support/Win64EH.h"
 
+
+namespace reg_ids = lldb_private::registers::x86_64::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::Win64EH;
@@ -162,10 +164,10 @@ bool EHProgramBuilder::Build() {
 
 uint32_t EHProgramBuilder::ConvertMachineToLLDBRegister(uint8_t machine_reg) {
   static uint32_t machine_to_lldb_register[] = {
-      lldb_rax_x86_64, lldb_rcx_x86_64, lldb_rdx_x86_64, lldb_rbx_x86_64,
-      lldb_rsp_x86_64, lldb_rbp_x86_64, lldb_rsi_x86_64, lldb_rdi_x86_64,
-      lldb_r8_x86_64,  lldb_r9_x86_64,  lldb_r10_x86_64, lldb_r11_x86_64,
-      lldb_r12_x86_64, lldb_r13_x86_64, lldb_r14_x86_64, lldb_r15_x86_64};
+      reg_ids::rax, reg_ids::rcx, reg_ids::rdx, reg_ids::rbx,
+      reg_ids::rsp, reg_ids::rbp, reg_ids::rsi, reg_ids::rdi,
+      reg_ids::r8,  reg_ids::r9,  reg_ids::r10, reg_ids::r11,
+      reg_ids::r12, reg_ids::r13, reg_ids::r14, reg_ids::r15};
 
   if (machine_reg >= std::size(machine_to_lldb_register))
     return LLDB_INVALID_REGNUM;
@@ -175,12 +177,10 @@ uint32_t EHProgramBuilder::ConvertMachineToLLDBRegister(uint8_t machine_reg) {
 
 uint32_t EHProgramBuilder::ConvertXMMToLLDBRegister(uint8_t xmm_reg) {
   static uint32_t xmm_to_lldb_register[] = {
-      lldb_xmm0_x86_64,  lldb_xmm1_x86_64,  lldb_xmm2_x86_64,
-      lldb_xmm3_x86_64,  lldb_xmm4_x86_64,  lldb_xmm5_x86_64,
-      lldb_xmm6_x86_64,  lldb_xmm7_x86_64,  lldb_xmm8_x86_64,
-      lldb_xmm9_x86_64,  lldb_xmm10_x86_64, lldb_xmm11_x86_64,
-      lldb_xmm12_x86_64, lldb_xmm13_x86_64, lldb_xmm14_x86_64,
-      lldb_xmm15_x86_64};
+      reg_ids::xmm0,  reg_ids::xmm1,  reg_ids::xmm2,  reg_ids::xmm3,
+      reg_ids::xmm4,  reg_ids::xmm5,  reg_ids::xmm6,  reg_ids::xmm7,
+      reg_ids::xmm8,  reg_ids::xmm9,  reg_ids::xmm10, reg_ids::xmm11,
+      reg_ids::xmm12, reg_ids::xmm13, reg_ids::xmm14, reg_ids::xmm15};
 
   if (xmm_reg >= std::size(xmm_to_lldb_register))
     return LLDB_INVALID_REGNUM;
@@ -281,15 +281,15 @@ bool EHProgramBuilder::ProcessUnwindCode(UnwindCode code) {
       m_program.emplace_back(EHInstruction{o, EHInstruction::Type::ALLOCATE,
                                            LLDB_INVALID_REGNUM, 8});
     m_program.emplace_back(EHInstruction{o, EHInstruction::Type::PUSH_REGISTER,
-                                         lldb_rip_x86_64, 8});
+                                         reg_ids::rip, 8});
     m_program.emplace_back(EHInstruction{o, EHInstruction::Type::PUSH_REGISTER,
-                                         lldb_cs_x86_64, 8});
+                                         reg_ids::cs, 8});
     m_program.emplace_back(EHInstruction{o, EHInstruction::Type::PUSH_REGISTER,
-                                         lldb_rflags_x86_64, 8});
+                                         reg_ids::rflags, 8});
     m_program.emplace_back(EHInstruction{o, EHInstruction::Type::PUSH_REGISTER,
-                                         lldb_rsp_x86_64, 8});
+                                         reg_ids::rsp, 8});
     m_program.emplace_back(EHInstruction{o, EHInstruction::Type::PUSH_REGISTER,
-                                         lldb_ss_x86_64, 8});
+                                         reg_ids::ss, 8});
 
     return true;
   }
@@ -300,11 +300,11 @@ bool EHProgramBuilder::ProcessUnwindCode(UnwindCode code) {
 
 void EHProgramBuilder::Finalize() {
   for (const EHInstruction &i : m_program)
-    if (i.reg == lldb_rip_x86_64)
+    if (i.reg == reg_ids::rip)
       return;
 
   m_program.emplace_back(
-      EHInstruction{0, EHInstruction::Type::PUSH_REGISTER, lldb_rip_x86_64, 8});
+      EHInstruction{0, EHInstruction::Type::PUSH_REGISTER, reg_ids::rip, 8});
 }
 
 bool EHProgramBuilder::ParseBigOrScaledFrameOffset(uint32_t &result, bool big,
@@ -387,7 +387,7 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
       break;
   }
   if (!frame_pointer_found)
-    row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64,
+    row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp,
                                               cfa_frame_offset);
 
   int32_t rsp_frame_offset = 0;
@@ -410,7 +410,7 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
     }
   }
 
-  row.SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(reg_ids::rsp, 0, false);
 
   return row;
 }

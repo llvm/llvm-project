@@ -7,18 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/lldb-types.h"
+#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
 
 #include "ABIAArch64.h"
 #include "ABIMacOSX_arm64.h"
 #include "ABISysV_arm64.h"
-#include "Utility/ARM64_DWARF_Registers.h"
-#include "Utility/ARM64_ehframe_Registers.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 
 #include <bitset>
 #include <optional>
 
+
+namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
+namespace ehframe_regs = lldb_private::registers::arm64::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -70,7 +73,7 @@ lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
 std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
-    return {arm64_ehframe::pc, arm64_dwarf::pc};
+    return {ehframe_regs::pc, dwarf_regs::pc};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 

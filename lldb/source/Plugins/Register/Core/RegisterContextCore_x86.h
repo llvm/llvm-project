@@ -11,8 +11,8 @@
 
 #include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/RegisterInfos_x86_64_with_base_shared.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
 #include "Register/RegisterInfoInterface.h"
+#include "lldb/Register/Arch/lldb-x86_32-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 

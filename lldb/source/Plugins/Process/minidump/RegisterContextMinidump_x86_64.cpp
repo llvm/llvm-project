@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextMinidump_x86_64.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 
 // C includes
 // C++ includes
 
+
+namespace reg_ids = lldb_private::registers::x86_64::id;
 using namespace lldb_private;
 using namespace minidump;
 
@@ -21,15 +24,15 @@ static llvm::MutableArrayRef<uint8_t> getDestRegister(uint8_t *context,
   auto bytes = reg.mutable_data(context);
 
   switch (reg.kinds[lldb::eRegisterKindLLDB]) {
-  case lldb_cs_x86_64:
-  case lldb_ds_x86_64:
-  case lldb_es_x86_64:
-  case lldb_fs_x86_64:
-  case lldb_gs_x86_64:
-  case lldb_ss_x86_64:
+  case reg_ids::cs:
+  case reg_ids::ds:
+  case reg_ids::es:
+  case reg_ids::fs:
+  case reg_ids::gs:
+  case reg_ids::ss:
     return bytes.take_front(2);
     break;
-  case lldb_rflags_x86_64:
+  case reg_ids::rflags:
     return bytes.take_front(4);
     break;
   default:
@@ -84,44 +87,44 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     return nullptr;
 
   if ((context_flags & ControlFlag) == ControlFlag) {
-    writeRegister(&context->cs, result_base, reg_info[lldb_cs_x86_64]);
-    writeRegister(&context->ss, result_base, reg_info[lldb_ss_x86_64]);
-    writeRegister(&context->eflags, result_base, reg_info[lldb_rflags_x86_64]);
-    writeRegister(&context->rsp, result_base, reg_info[lldb_rsp_x86_64]);
-    writeRegister(&context->rip, result_base, reg_info[lldb_rip_x86_64]);
+    writeRegister(&context->cs, result_base, reg_info[reg_ids::cs]);
+    writeRegister(&context->ss, result_base, reg_info[reg_ids::ss]);
+    writeRegister(&context->eflags, result_base, reg_info[reg_ids::rflags]);
+    writeRegister(&context->rsp, result_base, reg_info[reg_ids::rsp]);
+    writeRegister(&context->rip, result_base, reg_info[reg_ids::rip]);
   }
 
   if ((context_flags & SegmentsFlag) == SegmentsFlag) {
-    writeRegister(&context->ds, result_base, reg_info[lldb_ds_x86_64]);
-    writeRegister(&context->es, result_base, reg_info[lldb_es_x86_64]);
-    writeRegister(&context->fs, result_base, reg_info[lldb_fs_x86_64]);
-    writeRegister(&context->gs, result_base, reg_info[lldb_gs_x86_64]);
+    writeRegister(&context->ds, result_base, reg_info[reg_ids::ds]);
+    writeRegister(&context->es, result_base, reg_info[reg_ids::es]);
+    writeRegister(&context->fs, result_base, reg_info[reg_ids::fs]);
+    writeRegister(&context->gs, result_base, reg_info[reg_ids::gs]);
   }
 
   if ((context_flags & IntegerFlag) == IntegerFlag) {
-    writeRegister(&context->rax, result_base, reg_info[lldb_rax_x86_64]);
-    writeRegister(&context->rcx, result_base, reg_info[lldb_rcx_x86_64]);
-    writeRegister(&context->rdx, result_base, reg_info[lldb_rdx_x86_64]);
-    writeRegister(&context->rbx, result_base, reg_info[lldb_rbx_x86_64]);
-    writeRegister(&context->rbp, result_base, reg_info[lldb_rbp_x86_64]);
-    writeRegister(&context->rsi, result_base, reg_info[lldb_rsi_x86_64]);
-    writeRegister(&context->rdi, result_base, reg_info[lldb_rdi_x86_64]);
-    writeRegister(&context->r8, result_base, reg_info[lldb_r8_x86_64]);
-    writeRegister(&context->r9, result_base, reg_info[lldb_r9_x86_64]);
-    writeRegister(&context->r10, result_base, reg_info[lldb_r10_x86_64]);
-    writeRegister(&context->r11, result_base, reg_info[lldb_r11_x86_64]);
-    writeRegister(&context->r12, result_base, reg_info[lldb_r12_x86_64]);
-    writeRegister(&context->r13, result_base, reg_info[lldb_r13_x86_64]);
-    writeRegister(&context->r14, result_base, reg_info[lldb_r14_x86_64]);
-    writeRegister(&context->r15, result_base, reg_info[lldb_r15_x86_64]);
+    writeRegister(&context->rax, result_base, reg_info[reg_ids::rax]);
+    writeRegister(&context->rcx, result_base, reg_info[reg_ids::rcx]);
+    writeRegister(&context->rdx, result_base, reg_info[reg_ids::rdx]);
+    writeRegister(&context->rbx, result_base, reg_info[reg_ids::rbx]);
+    writeRegister(&context->rbp, result_base, reg_info[reg_ids::rbp]);
+    writeRegister(&context->rsi, result_base, reg_info[reg_ids::rsi]);
+    writeRegister(&context->rdi, result_base, reg_info[reg_ids::rdi]);
+    writeRegister(&context->r8, result_base, reg_info[reg_ids::r8]);
+    writeRegister(&context->r9, result_base, reg_info[reg_ids::r9]);
+    writeRegister(&context->r10, result_base, reg_info[reg_ids::r10]);
+    writeRegister(&context->r11, result_base, reg_info[reg_ids::r11]);
+    writeRegister(&context->r12, result_base, reg_info[reg_ids::r12]);
+    writeRegister(&context->r13, result_base, reg_info[reg_ids::r13]);
+    writeRegister(&context->r14, result_base, reg_info[reg_ids::r14]);
+    writeRegister(&context->r15, result_base, reg_info[reg_ids::r15]);
   }
 
   // See comment on base register
   if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
     writeBaseRegister(&context->fs_base, result_base,
-                      reg_info[x86_64_with_base::lldb_fs_base]);
+                      reg_info[reg_ids::with_base::fs_base]);
     writeBaseRegister(&context->gs_base, result_base,
-                      reg_info[x86_64_with_base::lldb_gs_base]);
+                      reg_info[reg_ids::with_base::gs_base]);
   }
 
   // TODO parse the floating point registers

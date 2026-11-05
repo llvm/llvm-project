@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
-#include "Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
@@ -23,6 +23,8 @@
 #include <sys/param.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -97,29 +99,29 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
 
     uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
     switch (reg) {
-    case gpr_x19_arm64:
-    case gpr_x20_arm64:
-    case gpr_x21_arm64:
-    case gpr_x22_arm64:
-    case gpr_x23_arm64:
-    case gpr_x24_arm64:
-    case gpr_x25_arm64:
-    case gpr_x26_arm64:
-    case gpr_x27_arm64:
-    case gpr_x28_arm64:
-    case gpr_fp_arm64:
-      static_assert(gpr_fp_arm64 - gpr_x19_arm64 == pcb_fp,
+    case reg_ids::gpr_x19:
+    case reg_ids::gpr_x20:
+    case reg_ids::gpr_x21:
+    case reg_ids::gpr_x22:
+    case reg_ids::gpr_x23:
+    case reg_ids::gpr_x24:
+    case reg_ids::gpr_x25:
+    case reg_ids::gpr_x26:
+    case reg_ids::gpr_x27:
+    case reg_ids::gpr_x28:
+    case reg_ids::gpr_fp:
+      static_assert(reg_ids::gpr_fp - reg_ids::gpr_x19 == pcb_fp,
                     "nonconsecutive arm64 register numbers");
-      value = pcb.x[reg - gpr_x19_arm64];
+      value = pcb.x[reg - reg_ids::gpr_x19];
       break;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       value = pcb.sp;
       break;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       // The pc of crashing thread is stored in lr.
-      static_assert(gpr_lr_arm64 - gpr_x19_arm64 == pcb_lr,
+      static_assert(reg_ids::gpr_lr - reg_ids::gpr_x19 == pcb_lr,
                     "nonconsecutive arm64 register numbers");
-      value = pcb.x[gpr_lr_arm64 - gpr_x19_arm64];
+      value = pcb.x[reg_ids::gpr_lr - reg_ids::gpr_x19];
       break;
     default:
       return false;
@@ -132,44 +134,44 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
 
     uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
     switch (reg) {
-    case gpr_x0_arm64:
-    case gpr_x1_arm64:
-    case gpr_x2_arm64:
-    case gpr_x3_arm64:
-    case gpr_x4_arm64:
-    case gpr_x5_arm64:
-    case gpr_x6_arm64:
-    case gpr_x7_arm64:
-    case gpr_x8_arm64:
-    case gpr_x9_arm64:
-    case gpr_x10_arm64:
-    case gpr_x11_arm64:
-    case gpr_x12_arm64:
-    case gpr_x13_arm64:
-    case gpr_x14_arm64:
-    case gpr_x15_arm64:
-    case gpr_x16_arm64:
-    case gpr_x17_arm64:
-    case gpr_x18_arm64:
-    case gpr_x19_arm64:
-    case gpr_x20_arm64:
-    case gpr_x21_arm64:
-    case gpr_x22_arm64:
-    case gpr_x23_arm64:
-    case gpr_x24_arm64:
-    case gpr_x25_arm64:
-    case gpr_x26_arm64:
-    case gpr_x27_arm64:
-    case gpr_x28_arm64:
-    case gpr_fp_arm64:
-      static_assert(gpr_fp_arm64 - gpr_x0_arm64 == 29,
+    case reg_ids::gpr_x0:
+    case reg_ids::gpr_x1:
+    case reg_ids::gpr_x2:
+    case reg_ids::gpr_x3:
+    case reg_ids::gpr_x4:
+    case reg_ids::gpr_x5:
+    case reg_ids::gpr_x6:
+    case reg_ids::gpr_x7:
+    case reg_ids::gpr_x8:
+    case reg_ids::gpr_x9:
+    case reg_ids::gpr_x10:
+    case reg_ids::gpr_x11:
+    case reg_ids::gpr_x12:
+    case reg_ids::gpr_x13:
+    case reg_ids::gpr_x14:
+    case reg_ids::gpr_x15:
+    case reg_ids::gpr_x16:
+    case reg_ids::gpr_x17:
+    case reg_ids::gpr_x18:
+    case reg_ids::gpr_x19:
+    case reg_ids::gpr_x20:
+    case reg_ids::gpr_x21:
+    case reg_ids::gpr_x22:
+    case reg_ids::gpr_x23:
+    case reg_ids::gpr_x24:
+    case reg_ids::gpr_x25:
+    case reg_ids::gpr_x26:
+    case reg_ids::gpr_x27:
+    case reg_ids::gpr_x28:
+    case reg_ids::gpr_fp:
+      static_assert(reg_ids::gpr_fp - reg_ids::gpr_x0 == 29,
                     "nonconsecutive arm64 register numbers");
-      value = pcb13.x[reg - gpr_x0_arm64];
+      value = pcb13.x[reg - reg_ids::gpr_x0];
       break;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       value = pcb13.sp;
       break;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       // The pc of crashing thread is stored in lr.
       value = pcb13.lr;
       break;

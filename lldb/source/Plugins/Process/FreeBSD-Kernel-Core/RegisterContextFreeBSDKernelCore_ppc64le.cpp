@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_ppc64le.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -17,6 +18,8 @@
 #include <machine/pcb.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::ppc64le::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -58,42 +61,42 @@ bool RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(
 
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
-  case gpr_r1_ppc64le:
+  case reg_ids::gpr_r1:
     // r1 is saved in the sp field
     value = pcb.sp;
     break;
-  case gpr_r2_ppc64le:
+  case reg_ids::gpr_r2:
     // r2 is saved in the toc field
     value = pcb.toc;
     break;
-  case gpr_r12_ppc64le:
-  case gpr_r13_ppc64le:
-  case gpr_r14_ppc64le:
-  case gpr_r15_ppc64le:
-  case gpr_r16_ppc64le:
-  case gpr_r17_ppc64le:
-  case gpr_r18_ppc64le:
-  case gpr_r19_ppc64le:
-  case gpr_r20_ppc64le:
-  case gpr_r21_ppc64le:
-  case gpr_r22_ppc64le:
-  case gpr_r23_ppc64le:
-  case gpr_r24_ppc64le:
-  case gpr_r25_ppc64le:
-  case gpr_r26_ppc64le:
-  case gpr_r27_ppc64le:
-  case gpr_r28_ppc64le:
-  case gpr_r29_ppc64le:
-  case gpr_r30_ppc64le:
-  case gpr_r31_ppc64le:
-    value = pcb.context[reg - gpr_r12_ppc64le];
+  case reg_ids::gpr_r12:
+  case reg_ids::gpr_r13:
+  case reg_ids::gpr_r14:
+  case reg_ids::gpr_r15:
+  case reg_ids::gpr_r16:
+  case reg_ids::gpr_r17:
+  case reg_ids::gpr_r18:
+  case reg_ids::gpr_r19:
+  case reg_ids::gpr_r20:
+  case reg_ids::gpr_r21:
+  case reg_ids::gpr_r22:
+  case reg_ids::gpr_r23:
+  case reg_ids::gpr_r24:
+  case reg_ids::gpr_r25:
+  case reg_ids::gpr_r26:
+  case reg_ids::gpr_r27:
+  case reg_ids::gpr_r28:
+  case reg_ids::gpr_r29:
+  case reg_ids::gpr_r30:
+  case reg_ids::gpr_r31:
+    value = pcb.context[reg - reg_ids::gpr_r12];
     break;
-  case gpr_pc_ppc64le:
-  case gpr_lr_ppc64le:
+  case reg_ids::gpr_pc:
+  case reg_ids::gpr_lr:
     // The pc of crashing thread is stored in lr.
     value = pcb.lr;
     break;
-  case gpr_cr_ppc64le:
+  case reg_ids::gpr_cr:
     value = pcb.cr;
     break;
   default:

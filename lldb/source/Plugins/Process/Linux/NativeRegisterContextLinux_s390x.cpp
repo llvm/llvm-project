@@ -9,6 +9,7 @@
 #if defined(__s390x__) && defined(__linux__)
 
 #include "NativeRegisterContextLinux_s390x.h"
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Register/Linux/RegisterInfoLinux_s390x.h"
 #include "lldb/Host/HostInfo.h"
@@ -19,6 +20,7 @@
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 
+namespace reg_ids = lldb_private::registers::s390x::id;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
@@ -27,45 +29,44 @@ using namespace lldb_private::process_linux;
 namespace {
 // s390x 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_s390x[] = {
-    lldb_r0_s390x,      lldb_r1_s390x,    lldb_r2_s390x,    lldb_r3_s390x,
-    lldb_r4_s390x,      lldb_r5_s390x,    lldb_r6_s390x,    lldb_r7_s390x,
-    lldb_r8_s390x,      lldb_r9_s390x,    lldb_r10_s390x,   lldb_r11_s390x,
-    lldb_r12_s390x,     lldb_r13_s390x,   lldb_r14_s390x,   lldb_r15_s390x,
-    lldb_acr0_s390x,    lldb_acr1_s390x,  lldb_acr2_s390x,  lldb_acr3_s390x,
-    lldb_acr4_s390x,    lldb_acr5_s390x,  lldb_acr6_s390x,  lldb_acr7_s390x,
-    lldb_acr8_s390x,    lldb_acr9_s390x,  lldb_acr10_s390x, lldb_acr11_s390x,
-    lldb_acr12_s390x,   lldb_acr13_s390x, lldb_acr14_s390x, lldb_acr15_s390x,
-    lldb_pswm_s390x,    lldb_pswa_s390x,
+    reg_ids::r0,        reg_ids::r1,    reg_ids::r2,    reg_ids::r3,
+    reg_ids::r4,        reg_ids::r5,    reg_ids::r6,    reg_ids::r7,
+    reg_ids::r8,        reg_ids::r9,    reg_ids::r10,   reg_ids::r11,
+    reg_ids::r12,       reg_ids::r13,   reg_ids::r14,   reg_ids::r15,
+    reg_ids::acr0,      reg_ids::acr1,  reg_ids::acr2,  reg_ids::acr3,
+    reg_ids::acr4,      reg_ids::acr5,  reg_ids::acr6,  reg_ids::acr7,
+    reg_ids::acr8,      reg_ids::acr9,  reg_ids::acr10, reg_ids::acr11,
+    reg_ids::acr12,     reg_ids::acr13, reg_ids::acr14, reg_ids::acr15,
+    reg_ids::pswm,      reg_ids::pswa,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_gpr_regnums_s390x) / sizeof(g_gpr_regnums_s390x[0])) -
                       1 ==
-                  k_num_gpr_registers_s390x,
+                  reg_ids::k_num_gpr_registers,
               "g_gpr_regnums_s390x has wrong number of register infos");
 
 // s390x 64-bit floating point registers.
 static const uint32_t g_fpu_regnums_s390x[] = {
-    lldb_f0_s390x,      lldb_f1_s390x,  lldb_f2_s390x,  lldb_f3_s390x,
-    lldb_f4_s390x,      lldb_f5_s390x,  lldb_f6_s390x,  lldb_f7_s390x,
-    lldb_f8_s390x,      lldb_f9_s390x,  lldb_f10_s390x, lldb_f11_s390x,
-    lldb_f12_s390x,     lldb_f13_s390x, lldb_f14_s390x, lldb_f15_s390x,
-    lldb_fpc_s390x,
+    reg_ids::f0,        reg_ids::f1,  reg_ids::f2,  reg_ids::f3,  reg_ids::f4,
+    reg_ids::f5,        reg_ids::f6,  reg_ids::f7,  reg_ids::f8,  reg_ids::f9,
+    reg_ids::f10,       reg_ids::f11, reg_ids::f12, reg_ids::f13, reg_ids::f14,
+    reg_ids::f15,       reg_ids::fpc,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_s390x) / sizeof(g_fpu_regnums_s390x[0])) -
                       1 ==
-                  k_num_fpr_registers_s390x,
+                  reg_ids::k_num_fpr_registers,
               "g_fpu_regnums_s390x has wrong number of register infos");
 
 // s390x Linux operating-system information.
 static const uint32_t g_linux_regnums_s390x[] = {
-    lldb_orig_r2_s390x, lldb_last_break_s390x, lldb_system_call_s390x,
+    reg_ids::orig_r2, reg_ids::last_break, reg_ids::system_call,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_linux_regnums_s390x) /
                sizeof(g_linux_regnums_s390x[0])) -
                       1 ==
-                  k_num_linux_registers_s390x,
+                  reg_ids::k_num_linux_registers,
               "g_linux_regnums_s390x has wrong number of register infos");
 
 // Number of register sets provided by this context.
@@ -73,11 +74,11 @@ enum { k_num_register_sets = 3 };
 
 // Register sets for s390x 64-bit.
 static const RegisterSet g_reg_sets_s390x[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_s390x,
+    {"General Purpose Registers", "gpr", reg_ids::k_num_gpr_registers,
      g_gpr_regnums_s390x},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_s390x,
+    {"Floating Point Registers", "fpr", reg_ids::k_num_fpr_registers,
      g_fpu_regnums_s390x},
-    {"Linux Operating System Data", "linux", k_num_linux_registers_s390x,
+    {"Linux Operating System Data", "linux", reg_ids::k_num_linux_registers,
      g_linux_regnums_s390x},
 };
 }
@@ -118,12 +119,12 @@ NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:
-    m_reg_info.num_registers = k_num_registers_s390x;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_s390x;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_s390x;
-    m_reg_info.last_gpr = k_last_gpr_s390x;
-    m_reg_info.first_fpr = k_first_fpr_s390x;
-    m_reg_info.last_fpr = k_last_fpr_s390x;
+    m_reg_info.num_registers = reg_ids::k_num_registers;
+    m_reg_info.num_gpr_registers = reg_ids::k_num_gpr_registers;
+    m_reg_info.num_fpr_registers = reg_ids::k_num_fpr_registers;
+    m_reg_info.last_gpr = reg_ids::k_last_gpr;
+    m_reg_info.first_fpr = reg_ids::k_first_fpr;
+    m_reg_info.last_fpr = reg_ids::k_last_fpr;
     break;
   default:
     assert(false && "Unhandled target architecture.");
@@ -178,7 +179,7 @@ bool NativeRegisterContextLinux_s390x::IsRegisterSetAvailable(
 bool NativeRegisterContextLinux_s390x::IsGPR(uint32_t reg_index) const {
   // GPRs come first.  "orig_r2" counts as GPR since it is part of the GPR
   // register area.
-  return reg_index <= m_reg_info.last_gpr || reg_index == lldb_orig_r2_s390x;
+  return reg_index <= m_reg_info.last_gpr || reg_index == reg_ids::orig_r2;
 }
 
 bool NativeRegisterContextLinux_s390x::IsFPR(uint32_t reg_index) const {
@@ -244,7 +245,7 @@ NativeRegisterContextLinux_s390x::ReadRegister(const RegisterInfo *reg_info,
     return Status();
   }
 
-  if (reg == lldb_last_break_s390x) {
+  if (reg == reg_ids::last_break) {
     uint64_t last_break;
     Status error = DoReadRegisterSet(NT_S390_LAST_BREAK, &last_break, 8);
     if (error.Fail())
@@ -254,7 +255,7 @@ NativeRegisterContextLinux_s390x::ReadRegister(const RegisterInfo *reg_info,
     return Status();
   }
 
-  if (reg == lldb_system_call_s390x) {
+  if (reg == reg_ids::system_call) {
     uint32_t system_call;
     Status error = DoReadRegisterSet(NT_S390_SYSTEM_CALL, &system_call, 4);
     if (error.Fail())
@@ -324,11 +325,11 @@ Status NativeRegisterContextLinux_s390x::WriteRegister(
     return WriteFPR();
   }
 
-  if (reg == lldb_last_break_s390x) {
+  if (reg == reg_ids::last_break) {
     return Status::FromErrorString("The last break address is read-only");
   }
 
-  if (reg == lldb_system_call_s390x) {
+  if (reg == reg_ids::system_call) {
     uint32_t system_call = reg_value.GetAsUInt32();
     return DoWriteRegisterSet(NT_S390_SYSTEM_CALL, &system_call, 4);
   }

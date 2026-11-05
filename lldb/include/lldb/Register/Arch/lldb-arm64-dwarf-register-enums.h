@@ -1,21 +1,26 @@
-//===-- ARM64_ehframe_Registers.h -------------------------------------*- C++
-//-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// DWARF register numbers for arm64.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
-#define LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
+#ifndef LLDB_REGISTER_ARCH_LLDB_ARM64_DWARF_REGISTER_ENUMS_H
+#define LLDB_REGISTER_ARCH_LLDB_ARM64_DWARF_REGISTER_ENUMS_H
 
-// The register numbers used in the eh_frame unwind information.
-// Should be the same as DWARF register numbers.
+#include <cstdint>
 
-namespace arm64_ehframe {
+namespace lldb_private::registers::arm64::dwarf {
 
-enum {
+// DWARF register numbers (eRegisterKindDWARF)
+enum : uint32_t {
+  // General Purpose Registers.
   x0 = 0,
   x1,
   x2,
@@ -45,26 +50,34 @@ enum {
   x26,
   x27,
   x28,
-  fp, // aka x29
-  lr, // aka x30
-  sp, // aka x31 aka wzr
-  pc, // value is 32
+  x29 = 29,
+  fp = x29,
+  x30 = 30,
+  lr = x30,
+  x31 = 31,
+  sp = x31,
+  pc = 32,
+
+  // Status Registers.
   elr_mode = 33,
   ra_sign_state = 34,
+
+  // Thread-Local Storage Registers.
   tpidrr0_el0 = 35,
   tpidr_el0 = 36,
   tpidr_el1 = 37,
   tpidr_el2 = 38,
   tpidr_el3 = 39,
-  // 40-45 Reserved
 
-  // 64-bit SVE Vector granule pseudo register
+  // Register numbers 40-45 are reserved.
+
+  // SVE Vector Granule Count.
   vg = 46,
 
-  // VG ́8-bit SVE first fault register
+  // SVE First-Fault Register (VG * 8 bits).
   ffr = 47,
 
-  // VG x ́8-bit SVE predicate registers
+  // SVE Predicate Registers (VG * 8 bits).
   p0 = 48,
   p1,
   p2,
@@ -82,7 +95,7 @@ enum {
   p14,
   p15,
 
-  // V0-V31 (128 bit vector registers)
+  // 128-bit Vector Registers.
   v0 = 64,
   v1,
   v2,
@@ -116,7 +129,7 @@ enum {
   v30,
   v31,
 
-  // VG ́64-bit SVE vector registers
+  // SVE Vector Registers (VG * 64 bits).
   z0 = 96,
   z1,
   z2,
@@ -150,6 +163,7 @@ enum {
   z30,
   z31
 };
-}
 
-#endif // LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
+} // namespace lldb_private::registers::arm64::dwarf
+
+#endif // LLDB_REGISTER_ARCH_LLDB_ARM64_DWARF_REGISTER_ENUMS_H

@@ -15,7 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 
-#include "Utility/RISCV_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Target/RegisterContext.h"
@@ -42,6 +42,8 @@
 #define DEFINE_REGISTER_STUB(dwarf_num, str_name)                              \
   DEFINE_GENERIC_REGISTER_STUB(dwarf_num, str_name, LLDB_INVALID_REGNUM)
 
+
+namespace dwarf_regs = lldb_private::registers::riscv::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -83,8 +85,8 @@ enum regnums {
   t4,
   t5,
   t6,
-  pc = riscv_dwarf::dwarf_gpr_pc,
-  ft0 = riscv_dwarf::dwarf_fpr_f0,
+  pc = dwarf_regs::gpr_pc,
+  ft0 = dwarf_regs::fpr_f0,
   ft1,
   ft2,
   ft3,
@@ -779,9 +781,9 @@ ValueObjectSP ABISysV_riscv::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
-  uint32_t pc_reg_num = riscv_dwarf::dwarf_gpr_pc;
-  uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
-  uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
+  uint32_t pc_reg_num = dwarf_regs::gpr_pc;
+  uint32_t sp_reg_num = dwarf_regs::gpr_sp;
+  uint32_t ra_reg_num = dwarf_regs::gpr_ra;
 
   UnwindPlan::Row row;
 
