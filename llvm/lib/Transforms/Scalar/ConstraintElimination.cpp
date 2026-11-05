@@ -1246,6 +1246,23 @@ getPhiWithBackedgeValue(Loop *L, const BasicBlock *LoopPred, Value *V) {
   return {nullptr, nullptr};
 }
 
+namespace {
+/// Matches a value that is the backedge value of a phi in the header of a loop
+/// and binds the phi.
+struct BackedgeValueOfHeaderPhi {
+  Loop *L;
+  const BasicBlock *LoopPred;
+  PHINode *&PN;
+
+  template <typename ITy> bool match(ITy *V) const {
+    if (!LoopPred)
+      return false;
+    PN = getPhiWithBackedgeValue(L, LoopPred, V).first;
+    return PN;
+  }
+};
+} // namespace
+
 void State::addInfoForInductions(BasicBlock &BB) {
   auto *L = LI.getLoopFor(&BB);
   if (!L)
@@ -1263,31 +1280,15 @@ void State::addInfoForInductions(BasicBlock &BB) {
   PHINode *PN = nullptr;
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
-  auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  auto IndValue = m_Value(
+      A, m_CombineOr(m_Phi(PN),
+                     m_CombineOr(m_IncrementOf(m_Phi(PN), IncStep),
+                                 BackedgeValueOfHeaderPhi{L, LoopPred, PN})));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
     return;
-
-  // If the latch branches back on pred(V0, V1) for the backedge values of
-  // header phis P0 and P1, pred(P0, P1) holds in the header given
-  // pred(Start0, Start1). Drop samesign: it only holds on the backedge.
-  Value *V0, *V1;
-  BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (&BB == Latch && LoopPred &&
-      match(Br->getCondition(), m_ICmp(Pred, m_Value(V0), m_Value(V1)))) {
-    auto [P0, Start0] = getPhiWithBackedgeValue(L, LoopPred, V0);
-    auto [P1, Start1] = getPhiWithBackedgeValue(L, LoopPred, V1);
-    if (P0 && P1 && P0 != P1) {
-      CmpInst::Predicate HeaderPred = Br->getSuccessor(0) == Header
-                                          ? Pred.dropSameSign()
-                                          : CmpInst::getInversePredicate(Pred);
-      WorkList.push_back(FactOrCheck::getConditionFact(
-          DT.getNode(Header), HeaderPred, P0, P1,
-          ConditionTy(HeaderPred, Start0, Start1)));
-    }
-  }
 
   auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
   std::optional<bool> PeeledOnEdge;
@@ -1306,8 +1307,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
       !SE->isSCEVable(PN->getType()))
     return;
 
-  bool ContinueOnTrue =
-      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  // The latch continues on the edge to the header. For the header, guess the
+  // continue edge from the predicate.
+  bool ContinueOnTrue = &BB == Latch
+                            ? Br->getSuccessor(0) == Header
+                            : Pred == CmpInst::ICMP_NE ||
+                                  ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
   CmpInst::Predicate ContinuePred =
       ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
   BasicBlock *InLoopSucc = Br->getSuccessor(ContinueOnTrue ? 0 : 1);
@@ -1320,10 +1325,27 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
-  if (!LoopPred || !L->isLoopInvariant(B))
+  if (!LoopPred)
     return;
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+
+  // A is the backedge value of the header phi APhi with start value AStart.
+  // This is PN, unless A is for example the increment of a different phi.
+  PHINode *APhi = PN;
+  Value *AStart = StartValue;
+  if (A != Backedge)
+    std::tie(APhi, AStart) = getPhiWithBackedgeValue(L, LoopPred, A);
+
+  // B is either loop-invariant, or the backedge value of another header phi
+  // BHeader with start value BStart.
+  Value *BHeader = B, *BStart = B;
+  if (!L->isLoopInvariant(B)) {
+    std::tie(BHeader, BStart) = getPhiWithBackedgeValue(L, LoopPred, B);
+    if (!BHeader || BHeader == APhi)
+      return;
+  }
+  bool BIsPhi = BHeader != B;
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
   DomTreeNode *HeaderDTN = DT.getNode(Header);
 
@@ -1333,14 +1355,48 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // (added precondition) imply PN <= B.
   const APInt *Step;
   bool HasHeaderBound =
-      !IncStep && match(Backedge, m_IncrementOf(m_Specific(PN), Step)) &&
-      Step->isOne() &&
+      !IncStep && !BIsPhi &&
+      match(Backedge, m_IncrementOf(m_Specific(PN), Step)) && Step->isOne() &&
       (ContinuePred == CmpInst::ICMP_NE || ICmpInst::isLT(ContinuePred));
   if (HasHeaderBound) {
     for (CmpInst::Predicate BoundPred : {CmpInst::ICMP_ULE, CmpInst::ICMP_SLE})
       WorkList.push_back(FactOrCheck::getConditionFact(
           HeaderDTN, BoundPred, PN, B, ConditionTy(BoundPred, StartValue, B)));
   }
+
+  // A relational, equality or two-phi latch condition steps past B or compares
+  // two varying values, so none of the step reasoning below applies.
+  if (ICmpInst::isRelational(ContinuePred) ||
+      ContinuePred == CmpInst::ICMP_EQ || BIsPhi) {
+    if (!APhi)
+      return;
+
+    // The condition ensures ContinuePred holds in the header on each iteration
+    // other than the first. Together with a precondition on the start values
+    // (AStart ContinuePred BStart), the fact holds on every iteration.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        HeaderDTN, ContinuePred, APhi, BHeader,
+        ConditionTy(ContinuePred, AStart, BStart)));
+
+    // A signed bound can be translated to the unsigned system if APhi is
+    // signed non-decreasing (AStart s<= APhi s< B) and AStart u< B holds. Then
+    // AStart, APhi and B must all have the same sign.
+    if (!BIsPhi && (ContinuePred == CmpInst::ICMP_SLT ||
+                    ContinuePred == CmpInst::ICMP_SLE)) {
+      MonotonicInfo Info = getMonotonicityInfo(*APhi, A);
+      if (Info.Signed && !Info.Decreasing) {
+        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            HeaderDTN, UPred, APhi, B, ConditionTy(UPred, AStart, B)));
+      }
+    }
+    return;
+  }
+
+  // The step reasoning below only applies if A is PN or PN + IncStep. Other
+  // backedge values are only used for the facts above.
+  if (A != PN && !IncStep)
+    return;
 
   // For latch conditions, we need to inject the condition that holds for the
   // next iteration into the header. We limit to post-inc conditions, for which
@@ -1350,37 +1406,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // B constraint instead.
   if (&BB == Latch && !IncStep)
     return;
-
-  if (ICmpInst::isRelational(ContinuePred)) {
-    if (A != Backedge)
-      return;
-
-    // The condition ensures ContinuePred holds in the header on each iteration
-    // other than the first. Together with a precondition on the start value
-    // (StartValue ContinuePred B), we can add B as bound of PN.
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        HeaderDTN, ContinuePred, PN, B,
-        ConditionTy(ContinuePred, StartValue, B)));
-
-    // A signed bound can be translated to the unsigned system if PN is signed
-    // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
-    // Then StartValue, PN and B must all have the same sign.
-    if (ICmpInst::isSigned(ContinuePred)) {
-      assert((ContinuePred == CmpInst::ICMP_SLT ||
-              ContinuePred == CmpInst::ICMP_SLE) &&
-             "Expected a signed less-than continuation predicate");
-      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
-      if (Info.Signed && !Info.Decreasing) {
-        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
-        WorkList.push_back(FactOrCheck::getConditionFact(
-            HeaderDTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
-      }
-    }
-
-    // A relational latch steps past B rather than landing on it, so none of the
-    // reasoning below applies.
-    return;
-  }
 
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
