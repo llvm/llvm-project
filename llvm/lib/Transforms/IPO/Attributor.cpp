@@ -387,7 +387,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       return ConstantExpr::getPointerCast(C, &Ty);
     if (C->getType()->getPrimitiveSizeInBits() >= Ty.getPrimitiveSizeInBits()) {
       if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
-        return ConstantExpr::getTrunc(C, &Ty, true);
+        return ConstantExpr::getTrunc(C, &Ty, /*OnlyIfReduced=*/true);
       if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy()) {
         if (C->getType()->getPrimitiveSizeInBits() == Ty.getPrimitiveSizeInBits()) {
           if (C->getType()->isPPC_FP128Ty() || Ty.isPPC_FP128Ty())
