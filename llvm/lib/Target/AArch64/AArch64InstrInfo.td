@@ -10198,7 +10198,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_like node:$LHS, (AArch64vashr_oneuse node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -10214,7 +10214,7 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_like node:$LHS, (AArch64vlshr_oneuse node:$MHS, node:$RHS))> >;
 
 let Predicates = [HasNEON] in {
 defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
