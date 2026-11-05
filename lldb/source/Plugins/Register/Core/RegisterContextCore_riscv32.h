@@ -11,7 +11,7 @@
 
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_riscv32.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -52,7 +52,9 @@ protected:
 
   size_t GetFPRSize() { return sizeof(RegisterInfo_riscv32::FPR); }
 
-  uint32_t GetRegNumFCSR() const { return fpr_fcsr_riscv; }
+  uint32_t GetRegNumFCSR() const {
+    return lldb_private::registers::riscv::id::fpr_fcsr;
+  }
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;

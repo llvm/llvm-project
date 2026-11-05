@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextDarwin_arm.h"
+#include "lldb/Register/Arch/lldb-arm-ehframe-register-enums.h"
 #include "RegisterContextDarwinConstants.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
@@ -21,11 +22,13 @@
 
 #include <memory>
 
-#include "Utility/ARM_DWARF_Registers.h"
-#include "Utility/ARM_ehframe_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
+namespace ehframe_regs = lldb_private::registers::arm::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -190,7 +193,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(0),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r0, dwarf_r0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r0},
+     {ehframe_regs::r0, dwarf_regs::r0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r0},
      nullptr,
      nullptr,
      nullptr,
@@ -201,7 +204,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(1),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r1, dwarf_r1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r1},
+     {ehframe_regs::r1, dwarf_regs::r1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r1},
      nullptr,
      nullptr,
      nullptr,
@@ -212,7 +215,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(2),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r2, dwarf_r2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r2},
+     {ehframe_regs::r2, dwarf_regs::r2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r2},
      nullptr,
      nullptr,
      nullptr,
@@ -223,7 +226,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(3),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r3, dwarf_r3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r3},
+     {ehframe_regs::r3, dwarf_regs::r3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r3},
      nullptr,
      nullptr,
      nullptr,
@@ -234,7 +237,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(4),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r4, dwarf_r4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r4},
+     {ehframe_regs::r4, dwarf_regs::r4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r4},
      nullptr,
      nullptr,
      nullptr,
@@ -245,7 +248,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(5),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r5, dwarf_r5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r5},
+     {ehframe_regs::r5, dwarf_regs::r5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r5},
      nullptr,
      nullptr,
      nullptr,
@@ -256,7 +259,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(6),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r6, dwarf_r6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r6},
+     {ehframe_regs::r6, dwarf_regs::r6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r6},
      nullptr,
      nullptr,
      nullptr,
@@ -267,7 +270,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(7),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r7, dwarf_r7, LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM,
+     {ehframe_regs::r7, dwarf_regs::r7, LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM,
       gpr_r7},
      nullptr,
      nullptr,
@@ -279,7 +282,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(8),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r8, dwarf_r8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r8},
+     {ehframe_regs::r8, dwarf_regs::r8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r8},
      nullptr,
      nullptr,
      nullptr,
@@ -290,7 +293,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(9),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r9, dwarf_r9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r9},
+     {ehframe_regs::r9, dwarf_regs::r9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r9},
      nullptr,
      nullptr,
      nullptr,
@@ -301,7 +304,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(10),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r10, dwarf_r10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {ehframe_regs::r10, dwarf_regs::r10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_r10},
      nullptr,
      nullptr,
@@ -313,7 +316,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(11),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r11, dwarf_r11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {ehframe_regs::r11, dwarf_regs::r11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_r11},
      nullptr,
      nullptr,
@@ -325,7 +328,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(12),
      eEncodingUint,
      eFormatHex,
-     {ehframe_r12, dwarf_r12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {ehframe_regs::r12, dwarf_regs::r12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_r12},
      nullptr,
      nullptr,
@@ -337,7 +340,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(13),
      eEncodingUint,
      eFormatHex,
-     {ehframe_sp, dwarf_sp, LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM,
+     {ehframe_regs::sp, dwarf_regs::sp, LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM,
       gpr_sp},
      nullptr,
      nullptr,
@@ -349,7 +352,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(14),
      eEncodingUint,
      eFormatHex,
-     {ehframe_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM,
+     {ehframe_regs::lr, dwarf_regs::lr, LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM,
       gpr_lr},
      nullptr,
      nullptr,
@@ -361,7 +364,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(15),
      eEncodingUint,
      eFormatHex,
-     {ehframe_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM,
+     {ehframe_regs::pc, dwarf_regs::pc, LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM,
       gpr_pc},
      nullptr,
      nullptr,
@@ -373,7 +376,7 @@ static RegisterInfo g_register_infos[] = {
      GPR_OFFSET(16),
      eEncodingUint,
      eFormatHex,
-     {ehframe_cpsr, dwarf_cpsr, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM,
+     {ehframe_regs::cpsr, dwarf_regs::cpsr, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM,
       gpr_cpsr},
      nullptr,
      nullptr,
@@ -386,7 +389,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(0),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s0},
      nullptr,
      nullptr,
@@ -398,7 +401,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(1),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s1},
      nullptr,
      nullptr,
@@ -410,7 +413,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(2),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s2},
      nullptr,
      nullptr,
@@ -422,7 +425,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(3),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s3},
      nullptr,
      nullptr,
@@ -434,7 +437,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(4),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s4},
      nullptr,
      nullptr,
@@ -446,7 +449,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(5),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s5},
      nullptr,
      nullptr,
@@ -458,7 +461,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(6),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s6},
      nullptr,
      nullptr,
@@ -470,7 +473,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(7),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s7, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s7, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s7},
      nullptr,
      nullptr,
@@ -482,7 +485,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(8),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s8},
      nullptr,
      nullptr,
@@ -494,7 +497,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(9),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s9},
      nullptr,
      nullptr,
@@ -506,7 +509,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(10),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s10},
      nullptr,
      nullptr,
@@ -518,7 +521,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(11),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s11},
      nullptr,
      nullptr,
@@ -530,7 +533,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(12),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s12},
      nullptr,
      nullptr,
@@ -542,7 +545,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(13),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s13, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s13, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s13},
      nullptr,
      nullptr,
@@ -554,7 +557,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(14),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s14, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s14, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s14},
      nullptr,
      nullptr,
@@ -566,7 +569,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(15),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s15, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s15, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s15},
      nullptr,
      nullptr,
@@ -578,7 +581,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(16),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s16, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s16, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s16},
      nullptr,
      nullptr,
@@ -590,7 +593,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(17),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s17, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s17, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s17},
      nullptr,
      nullptr,
@@ -602,7 +605,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(18),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s18, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s18, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s18},
      nullptr,
      nullptr,
@@ -614,7 +617,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(19),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s19, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s19, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s19},
      nullptr,
      nullptr,
@@ -626,7 +629,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(20),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s20, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s20, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s20},
      nullptr,
      nullptr,
@@ -638,7 +641,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(21),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s21, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s21, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s21},
      nullptr,
      nullptr,
@@ -650,7 +653,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(22),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s22, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s22, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s22},
      nullptr,
      nullptr,
@@ -662,7 +665,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(23),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s23, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s23, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s23},
      nullptr,
      nullptr,
@@ -674,7 +677,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(24),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s24, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s24, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s24},
      nullptr,
      nullptr,
@@ -686,7 +689,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(25),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s25, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s25, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s25},
      nullptr,
      nullptr,
@@ -698,7 +701,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(26),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s26, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s26, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s26},
      nullptr,
      nullptr,
@@ -710,7 +713,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(27),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s27, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s27, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s27},
      nullptr,
      nullptr,
@@ -722,7 +725,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(28),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s28, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s28, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s28},
      nullptr,
      nullptr,
@@ -734,7 +737,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(29),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s29, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s29, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s29},
      nullptr,
      nullptr,
@@ -746,7 +749,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(30),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s30, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s30, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s30},
      nullptr,
      nullptr,
@@ -758,7 +761,7 @@ static RegisterInfo g_register_infos[] = {
      FPU_OFFSET(31),
      eEncodingIEEE754,
      eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_s31, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+     {LLDB_INVALID_REGNUM, dwarf_regs::s31, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       fpu_s31},
      nullptr,
      nullptr,
@@ -1341,104 +1344,104 @@ uint32_t RegisterContextDarwin_arm::ConvertRegisterKindToRegisterNumber(
     }
   } else if (kind == eRegisterKindDWARF) {
     switch (reg) {
-    case dwarf_r0:
+    case dwarf_regs::r0:
       return gpr_r0;
-    case dwarf_r1:
+    case dwarf_regs::r1:
       return gpr_r1;
-    case dwarf_r2:
+    case dwarf_regs::r2:
       return gpr_r2;
-    case dwarf_r3:
+    case dwarf_regs::r3:
       return gpr_r3;
-    case dwarf_r4:
+    case dwarf_regs::r4:
       return gpr_r4;
-    case dwarf_r5:
+    case dwarf_regs::r5:
       return gpr_r5;
-    case dwarf_r6:
+    case dwarf_regs::r6:
       return gpr_r6;
-    case dwarf_r7:
+    case dwarf_regs::r7:
       return gpr_r7;
-    case dwarf_r8:
+    case dwarf_regs::r8:
       return gpr_r8;
-    case dwarf_r9:
+    case dwarf_regs::r9:
       return gpr_r9;
-    case dwarf_r10:
+    case dwarf_regs::r10:
       return gpr_r10;
-    case dwarf_r11:
+    case dwarf_regs::r11:
       return gpr_r11;
-    case dwarf_r12:
+    case dwarf_regs::r12:
       return gpr_r12;
-    case dwarf_sp:
+    case dwarf_regs::sp:
       return gpr_sp;
-    case dwarf_lr:
+    case dwarf_regs::lr:
       return gpr_lr;
-    case dwarf_pc:
+    case dwarf_regs::pc:
       return gpr_pc;
-    case dwarf_spsr:
+    case dwarf_regs::spsr:
       return gpr_cpsr;
 
-    case dwarf_s0:
+    case dwarf_regs::s0:
       return fpu_s0;
-    case dwarf_s1:
+    case dwarf_regs::s1:
       return fpu_s1;
-    case dwarf_s2:
+    case dwarf_regs::s2:
       return fpu_s2;
-    case dwarf_s3:
+    case dwarf_regs::s3:
       return fpu_s3;
-    case dwarf_s4:
+    case dwarf_regs::s4:
       return fpu_s4;
-    case dwarf_s5:
+    case dwarf_regs::s5:
       return fpu_s5;
-    case dwarf_s6:
+    case dwarf_regs::s6:
       return fpu_s6;
-    case dwarf_s7:
+    case dwarf_regs::s7:
       return fpu_s7;
-    case dwarf_s8:
+    case dwarf_regs::s8:
       return fpu_s8;
-    case dwarf_s9:
+    case dwarf_regs::s9:
       return fpu_s9;
-    case dwarf_s10:
+    case dwarf_regs::s10:
       return fpu_s10;
-    case dwarf_s11:
+    case dwarf_regs::s11:
       return fpu_s11;
-    case dwarf_s12:
+    case dwarf_regs::s12:
       return fpu_s12;
-    case dwarf_s13:
+    case dwarf_regs::s13:
       return fpu_s13;
-    case dwarf_s14:
+    case dwarf_regs::s14:
       return fpu_s14;
-    case dwarf_s15:
+    case dwarf_regs::s15:
       return fpu_s15;
-    case dwarf_s16:
+    case dwarf_regs::s16:
       return fpu_s16;
-    case dwarf_s17:
+    case dwarf_regs::s17:
       return fpu_s17;
-    case dwarf_s18:
+    case dwarf_regs::s18:
       return fpu_s18;
-    case dwarf_s19:
+    case dwarf_regs::s19:
       return fpu_s19;
-    case dwarf_s20:
+    case dwarf_regs::s20:
       return fpu_s20;
-    case dwarf_s21:
+    case dwarf_regs::s21:
       return fpu_s21;
-    case dwarf_s22:
+    case dwarf_regs::s22:
       return fpu_s22;
-    case dwarf_s23:
+    case dwarf_regs::s23:
       return fpu_s23;
-    case dwarf_s24:
+    case dwarf_regs::s24:
       return fpu_s24;
-    case dwarf_s25:
+    case dwarf_regs::s25:
       return fpu_s25;
-    case dwarf_s26:
+    case dwarf_regs::s26:
       return fpu_s26;
-    case dwarf_s27:
+    case dwarf_regs::s27:
       return fpu_s27;
-    case dwarf_s28:
+    case dwarf_regs::s28:
       return fpu_s28;
-    case dwarf_s29:
+    case dwarf_regs::s29:
       return fpu_s29;
-    case dwarf_s30:
+    case dwarf_regs::s30:
       return fpu_s30;
-    case dwarf_s31:
+    case dwarf_regs::s31:
       return fpu_s31;
 
     default:
@@ -1446,39 +1449,39 @@ uint32_t RegisterContextDarwin_arm::ConvertRegisterKindToRegisterNumber(
     }
   } else if (kind == eRegisterKindEHFrame) {
     switch (reg) {
-    case ehframe_r0:
+    case dwarf_regs::r0:
       return gpr_r0;
-    case ehframe_r1:
+    case dwarf_regs::r1:
       return gpr_r1;
-    case ehframe_r2:
+    case dwarf_regs::r2:
       return gpr_r2;
-    case ehframe_r3:
+    case dwarf_regs::r3:
       return gpr_r3;
-    case ehframe_r4:
+    case dwarf_regs::r4:
       return gpr_r4;
-    case ehframe_r5:
+    case dwarf_regs::r5:
       return gpr_r5;
-    case ehframe_r6:
+    case dwarf_regs::r6:
       return gpr_r6;
-    case ehframe_r7:
+    case dwarf_regs::r7:
       return gpr_r7;
-    case ehframe_r8:
+    case dwarf_regs::r8:
       return gpr_r8;
-    case ehframe_r9:
+    case dwarf_regs::r9:
       return gpr_r9;
-    case ehframe_r10:
+    case dwarf_regs::r10:
       return gpr_r10;
-    case ehframe_r11:
+    case dwarf_regs::r11:
       return gpr_r11;
-    case ehframe_r12:
+    case dwarf_regs::r12:
       return gpr_r12;
-    case ehframe_sp:
+    case dwarf_regs::sp:
       return gpr_sp;
-    case ehframe_lr:
+    case dwarf_regs::lr:
       return gpr_lr;
-    case ehframe_pc:
+    case dwarf_regs::pc:
       return gpr_pc;
-    case ehframe_cpsr:
+    case dwarf_regs::cpsr:
       return gpr_cpsr;
     }
   } else if (kind == eRegisterKindLLDB) {

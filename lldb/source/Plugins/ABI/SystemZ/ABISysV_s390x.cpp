@@ -8,6 +8,9 @@
 
 #include "ABISysV_s390x.h"
 
+#include "lldb/Register/Arch/lldb-s390x-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-s390x-ehframe-register-enums.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -31,91 +34,20 @@
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
+namespace dwarf_regs = lldb_private::registers::s390x::dwarf;
+namespace ehframe_regs = lldb_private::registers::s390x::ehframe;
+
 using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE_ADV(ABISysV_s390x, ABISystemZ)
-
-enum dwarf_regnums {
-  // General Purpose Registers
-  dwarf_r0_s390x = 0,
-  dwarf_r1_s390x,
-  dwarf_r2_s390x,
-  dwarf_r3_s390x,
-  dwarf_r4_s390x,
-  dwarf_r5_s390x,
-  dwarf_r6_s390x,
-  dwarf_r7_s390x,
-  dwarf_r8_s390x,
-  dwarf_r9_s390x,
-  dwarf_r10_s390x,
-  dwarf_r11_s390x,
-  dwarf_r12_s390x,
-  dwarf_r13_s390x,
-  dwarf_r14_s390x,
-  dwarf_r15_s390x,
-  // Floating Point Registers / Vector Registers 0-15
-  dwarf_f0_s390x = 16,
-  dwarf_f2_s390x,
-  dwarf_f4_s390x,
-  dwarf_f6_s390x,
-  dwarf_f1_s390x,
-  dwarf_f3_s390x,
-  dwarf_f5_s390x,
-  dwarf_f7_s390x,
-  dwarf_f8_s390x,
-  dwarf_f10_s390x,
-  dwarf_f12_s390x,
-  dwarf_f14_s390x,
-  dwarf_f9_s390x,
-  dwarf_f11_s390x,
-  dwarf_f13_s390x,
-  dwarf_f15_s390x,
-  // Access Registers
-  dwarf_acr0_s390x = 48,
-  dwarf_acr1_s390x,
-  dwarf_acr2_s390x,
-  dwarf_acr3_s390x,
-  dwarf_acr4_s390x,
-  dwarf_acr5_s390x,
-  dwarf_acr6_s390x,
-  dwarf_acr7_s390x,
-  dwarf_acr8_s390x,
-  dwarf_acr9_s390x,
-  dwarf_acr10_s390x,
-  dwarf_acr11_s390x,
-  dwarf_acr12_s390x,
-  dwarf_acr13_s390x,
-  dwarf_acr14_s390x,
-  dwarf_acr15_s390x,
-  // Program Status Word
-  dwarf_pswm_s390x = 64,
-  dwarf_pswa_s390x,
-  // Vector Registers 16-31
-  dwarf_v16_s390x = 68,
-  dwarf_v18_s390x,
-  dwarf_v20_s390x,
-  dwarf_v22_s390x,
-  dwarf_v17_s390x,
-  dwarf_v19_s390x,
-  dwarf_v21_s390x,
-  dwarf_v23_s390x,
-  dwarf_v24_s390x,
-  dwarf_v26_s390x,
-  dwarf_v28_s390x,
-  dwarf_v30_s390x,
-  dwarf_v25_s390x,
-  dwarf_v27_s390x,
-  dwarf_v29_s390x,
-  dwarf_v31_s390x,
-};
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
 
 #define DEFINE_REG(name, size, alt, generic)                                   \
   {                                                                            \
     #name, alt, size, 0, eEncodingUint, eFormatHex,                            \
-        {dwarf_##name##_s390x, dwarf_##name##_s390x, generic,                  \
+        {ehframe_regs::name, dwarf_regs::name, generic,                        \
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },                           \
          nullptr, nullptr, nullptr,                                            \
   }
@@ -615,10 +547,10 @@ UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value + 160
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_regs::r15, 160);
 
   // The previous PC is in r14
-  row.SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
+  row.SetRegisterLocationToRegister(dwarf_regs::pswa, dwarf_regs::r14, true);
 
   // All other registers are the same.
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);

@@ -13,7 +13,7 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Register/Common/RegisterInfo_riscv64.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -30,6 +30,8 @@
 #define PTRACE_GETREGSET 0x4204
 #endif
 
+
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -121,7 +123,7 @@ NativeRegisterContextLinux_riscv64::ReadRegister(const RegisterInfo *reg_info,
         "no lldb regnum for %s",
         reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
-  if (reg == gpr_x0_riscv) {
+  if (reg == reg_ids::gpr_x0) {
     reg_value.SetUInt(0, reg_info->byte_size);
     return error;
   }
@@ -171,7 +173,7 @@ Status NativeRegisterContextLinux_riscv64::WriteRegister(
         "no lldb regnum for %s",
         reg_info->name != nullptr ? reg_info->name : "<unknown register>");
 
-  if (reg == gpr_x0_riscv) {
+  if (reg == reg_ids::gpr_x0) {
     // do nothing.
     return error;
   }

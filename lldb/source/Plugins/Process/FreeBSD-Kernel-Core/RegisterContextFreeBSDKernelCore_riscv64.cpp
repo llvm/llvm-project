@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_riscv64.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -17,6 +18,7 @@
 #include <machine/pcb.h>
 #endif
 
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -72,38 +74,38 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
 
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
-  case gpr_pc_riscv:
-  case gpr_ra_riscv:
+  case reg_ids::gpr_pc:
+  case reg_ids::gpr_ra:
     // Supply the RA as PC as well to simulate the PC as if the thread had just
     // returned.
     value = pcb.ra;
     break;
-  case gpr_sp_riscv:
+  case reg_ids::gpr_sp:
     value = pcb.sp;
     break;
-  case gpr_gp_riscv:
+  case reg_ids::gpr_gp:
     value = pcb.gp;
     break;
-  case gpr_tp_riscv:
+  case reg_ids::gpr_tp:
     value = pcb.tp;
     break;
-  case gpr_fp_riscv:
+  case reg_ids::gpr_fp:
     value = pcb.s[0];
     break;
-  case gpr_s1_riscv:
+  case reg_ids::gpr_s1:
     value = pcb.s[1];
     break;
-  case gpr_s2_riscv:
-  case gpr_s3_riscv:
-  case gpr_s4_riscv:
-  case gpr_s5_riscv:
-  case gpr_s6_riscv:
-  case gpr_s7_riscv:
-  case gpr_s8_riscv:
-  case gpr_s9_riscv:
-  case gpr_s10_riscv:
-  case gpr_s11_riscv:
-    value = pcb.s[reg - gpr_s2_riscv + 2];
+  case reg_ids::gpr_s2:
+  case reg_ids::gpr_s3:
+  case reg_ids::gpr_s4:
+  case reg_ids::gpr_s5:
+  case reg_ids::gpr_s6:
+  case reg_ids::gpr_s7:
+  case reg_ids::gpr_s8:
+  case reg_ids::gpr_s9:
+  case reg_ids::gpr_s10:
+  case reg_ids::gpr_s11:
+    value = pcb.s[reg - reg_ids::gpr_s2 + 2];
     break;
   default:
     return false;

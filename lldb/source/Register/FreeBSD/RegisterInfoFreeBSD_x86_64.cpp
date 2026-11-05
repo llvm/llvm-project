@@ -7,13 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoFreeBSD_x86_64.h"
+#include "lldb/Register/Arch/lldb-x86_64-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-ehframe-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+
 #include "RegisterInfoFreeBSD_i386.h"
 #include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Threading.h"
 #include <vector>
 
+
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -83,7 +96,7 @@ GetSharedRegisterInfoVector_i386(const lldb_private::ArchSpec &arch) {
           new RegisterInfoFreeBSD_i386(arch));
       const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
       g_register_infos.insert(g_register_infos.end(), &base_info[0],
-                              &base_info[k_num_registers_i386]);
+                              &base_info[reg_ids::k_num_registers]);
 
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.

@@ -7,10 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoLinux_i386.h"
+
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+
 #include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-ehframe-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
 
+
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -123,5 +134,5 @@ uint32_t RegisterInfoLinux_i386::GetRegisterCount() const {
 }
 
 uint32_t RegisterInfoLinux_i386::GetUserRegisterCount() const {
-  return static_cast<uint32_t>(k_num_user_registers_i386);
+  return static_cast<uint32_t>(reg_ids::k_num_user_registers);
 }

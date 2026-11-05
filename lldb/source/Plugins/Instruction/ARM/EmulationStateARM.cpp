@@ -15,8 +15,10 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 
-#include "Utility/ARM_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -28,13 +30,13 @@ EmulationStateARM::~EmulationStateARM() = default;
 
 bool EmulationStateARM::StorePseudoRegisterValue(uint32_t reg_num,
                                                  uint64_t value) {
-  if (reg_num <= dwarf_cpsr)
-    m_gpr[reg_num - dwarf_r0] = (uint32_t)value;
-  else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
-    uint32_t idx = reg_num - dwarf_s0;
+  if (reg_num <= dwarf_regs::cpsr)
+    m_gpr[reg_num - dwarf_regs::r0] = (uint32_t)value;
+  else if ((dwarf_regs::s0 <= reg_num) && (reg_num <= dwarf_regs::s31)) {
+    uint32_t idx = reg_num - dwarf_regs::s0;
     m_vfp_regs.s_regs[idx] = (uint32_t)value;
-  } else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31)) {
-    uint32_t idx = reg_num - dwarf_d0;
+  } else if ((dwarf_regs::d0 <= reg_num) && (reg_num <= dwarf_regs::d31)) {
+    uint32_t idx = reg_num - dwarf_regs::d0;
     if (idx < 16) {
       m_vfp_regs.s_regs[idx * 2] = (uint32_t)value;
       m_vfp_regs.s_regs[idx * 2 + 1] = (uint32_t)(value >> 32);
@@ -51,13 +53,13 @@ uint64_t EmulationStateARM::ReadPseudoRegisterValue(uint32_t reg_num,
   uint64_t value = 0;
   success = true;
 
-  if (reg_num <= dwarf_cpsr)
-    value = m_gpr[reg_num - dwarf_r0];
-  else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
-    uint32_t idx = reg_num - dwarf_s0;
+  if (reg_num <= dwarf_regs::cpsr)
+    value = m_gpr[reg_num - dwarf_regs::r0];
+  else if ((dwarf_regs::s0 <= reg_num) && (reg_num <= dwarf_regs::s31)) {
+    uint32_t idx = reg_num - dwarf_regs::s0;
     value = m_vfp_regs.s_regs[idx];
-  } else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31)) {
-    uint32_t idx = reg_num - dwarf_d0;
+  } else if ((dwarf_regs::d0 <= reg_num) && (reg_num <= dwarf_regs::d31)) {
+    uint32_t idx = reg_num - dwarf_regs::d0;
     if (idx < 16)
       value = (uint64_t)m_vfp_regs.s_regs[idx * 2] |
               ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] << 32);
@@ -322,14 +324,14 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load General Registers
 
   OptionValueDictionary *reg_dict = value_sp->GetAsDictionary();
-  if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_r0, 16))
+  if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_regs::r0, 16))
     return false;
 
   static constexpr llvm::StringLiteral cpsr_name("cpsr");
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;
-  StorePseudoRegisterValue(dwarf_cpsr,
+  StorePseudoRegisterValue(dwarf_regs::cpsr,
                            value_sp->GetValueAs<uint64_t>().value_or(0));
 
   // Load s/d Registers
@@ -337,9 +339,9 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // one or the other, we'll expect to get either all S registers,
   // or all D registers. Not a mix of the two.
   bool found_s_registers =
-      LoadRegistersStateFromDictionary(reg_dict, 's', dwarf_s0, 32);
+      LoadRegistersStateFromDictionary(reg_dict, 's', dwarf_regs::s0, 32);
   bool found_d_registers =
-      LoadRegistersStateFromDictionary(reg_dict, 'd', dwarf_d0, 32);
+      LoadRegistersStateFromDictionary(reg_dict, 'd', dwarf_regs::d0, 32);
 
   return found_s_registers != found_d_registers;
 }

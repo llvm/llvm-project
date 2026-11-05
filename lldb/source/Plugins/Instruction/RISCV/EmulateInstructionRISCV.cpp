@@ -10,7 +10,7 @@
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_riscv32.h"
 #include "Register/Common/RegisterInfo_riscv64.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
 
@@ -28,6 +28,8 @@
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
+
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
@@ -103,15 +105,15 @@ constexpr uint32_t DecodeUImm(uint32_t inst) {
 
 static uint32_t GPREncodingToLLDB(uint32_t reg_encode) {
   if (reg_encode == 0)
-    return gpr_x0_riscv;
+    return reg_ids::gpr_x0;
   if (reg_encode >= 1 && reg_encode <= 31)
-    return gpr_x1_riscv + reg_encode - 1;
+    return reg_ids::gpr_x1 + reg_encode - 1;
   return LLDB_INVALID_REGNUM;
 }
 
 static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
   if (reg_encode <= 31)
-    return fpr_f0_riscv + reg_encode;
+    return reg_ids::fpr_f0 + reg_encode;
   return LLDB_INVALID_REGNUM;
 }
 
@@ -1758,7 +1760,7 @@ bool EmulateInstructionRISCV::ReadInstruction() {
 
 RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
   bool success = false;
-  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
+  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, reg_ids::fpr_fcsr,
                                    LLDB_INVALID_ADDRESS, &success);
   if (!success)
     return RoundingMode::Invalid;
@@ -1783,7 +1785,7 @@ RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
 bool EmulateInstructionRISCV::SetAccruedExceptions(
     APFloatBase::opStatus opStatus) {
   bool success = false;
-  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
+  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, reg_ids::fpr_fcsr,
                                    LLDB_INVALID_ADDRESS, &success);
   if (!success)
     return false;
@@ -1809,7 +1811,7 @@ bool EmulateInstructionRISCV::SetAccruedExceptions(
   EmulateInstruction::Context ctx;
   ctx.type = eContextRegisterStore;
   ctx.SetNoArgs();
-  return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, fpr_fcsr_riscv, fcsr);
+  return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, reg_ids::fpr_fcsr, fcsr);
 }
 
 std::optional<RegisterInfo>
@@ -1819,19 +1821,19 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     switch (reg_index) {
     case LLDB_REGNUM_GENERIC_PC:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_pc_riscv;
+      reg_index = reg_ids::gpr_pc;
       break;
     case LLDB_REGNUM_GENERIC_SP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_sp_riscv;
+      reg_index = reg_ids::gpr_sp;
       break;
     case LLDB_REGNUM_GENERIC_FP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_fp_riscv;
+      reg_index = reg_ids::gpr_fp;
       break;
     case LLDB_REGNUM_GENERIC_RA:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_ra_riscv;
+      reg_index = reg_ids::gpr_ra;
       break;
     // We may handle LLDB_REGNUM_GENERIC_ARGx when more instructions are
     // supported.
@@ -1906,16 +1908,16 @@ bool EmulateInstructionRISCV::CreateFunctionEntryUnwind(
 
   UnwindPlan::Row row;
 
-  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, 0);
-  row.SetRegisterLocationToSame(gpr_ra_riscv, /*must_replace=*/false);
-  row.SetRegisterLocationToSame(gpr_fp_riscv, /*must_replace=*/false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::gpr_sp, 0);
+  row.SetRegisterLocationToSame(reg_ids::gpr_ra, /*must_replace=*/false);
+  row.SetRegisterLocationToSame(reg_ids::gpr_fp, /*must_replace=*/false);
 
   unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionRISCV");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(gpr_ra_riscv);
+  unwind_plan.SetReturnAddressRegister(reg_ids::gpr_ra);
   return true;
 }
 

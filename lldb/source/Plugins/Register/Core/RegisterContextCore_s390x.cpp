@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cerrno>
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
 #include <cstdint>
 #include <cstring>
 
@@ -21,41 +22,40 @@
 #include "llvm/Support/Compiler.h"
 
 #include "RegisterContextCore_s390x.h"
-#include "Register/Arch/RegisterContext_s390x.h"
 
+namespace reg_ids = lldb_private::registers::s390x::id;
 using namespace lldb_private;
 using namespace lldb;
 
 // s390x 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_s390x[] = {
-    lldb_r0_s390x,      lldb_r1_s390x,    lldb_r2_s390x,    lldb_r3_s390x,
-    lldb_r4_s390x,      lldb_r5_s390x,    lldb_r6_s390x,    lldb_r7_s390x,
-    lldb_r8_s390x,      lldb_r9_s390x,    lldb_r10_s390x,   lldb_r11_s390x,
-    lldb_r12_s390x,     lldb_r13_s390x,   lldb_r14_s390x,   lldb_r15_s390x,
-    lldb_acr0_s390x,    lldb_acr1_s390x,  lldb_acr2_s390x,  lldb_acr3_s390x,
-    lldb_acr4_s390x,    lldb_acr5_s390x,  lldb_acr6_s390x,  lldb_acr7_s390x,
-    lldb_acr8_s390x,    lldb_acr9_s390x,  lldb_acr10_s390x, lldb_acr11_s390x,
-    lldb_acr12_s390x,   lldb_acr13_s390x, lldb_acr14_s390x, lldb_acr15_s390x,
-    lldb_pswm_s390x,    lldb_pswa_s390x,
+    reg_ids::r0,        reg_ids::r1,    reg_ids::r2,    reg_ids::r3,
+    reg_ids::r4,        reg_ids::r5,    reg_ids::r6,    reg_ids::r7,
+    reg_ids::r8,        reg_ids::r9,    reg_ids::r10,   reg_ids::r11,
+    reg_ids::r12,       reg_ids::r13,   reg_ids::r14,   reg_ids::r15,
+    reg_ids::acr0,      reg_ids::acr1,  reg_ids::acr2,  reg_ids::acr3,
+    reg_ids::acr4,      reg_ids::acr5,  reg_ids::acr6,  reg_ids::acr7,
+    reg_ids::acr8,      reg_ids::acr9,  reg_ids::acr10, reg_ids::acr11,
+    reg_ids::acr12,     reg_ids::acr13, reg_ids::acr14, reg_ids::acr15,
+    reg_ids::pswm,      reg_ids::pswa,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_gpr_regnums_s390x) / sizeof(g_gpr_regnums_s390x[0])) -
                       1 ==
-                  k_num_gpr_registers_s390x,
+                  reg_ids::k_num_gpr_registers,
               "g_gpr_regnums_s390x has wrong number of register infos");
 
 // s390x 64-bit floating point registers.
 static const uint32_t g_fpu_regnums_s390x[] = {
-    lldb_f0_s390x,      lldb_f1_s390x,  lldb_f2_s390x,  lldb_f3_s390x,
-    lldb_f4_s390x,      lldb_f5_s390x,  lldb_f6_s390x,  lldb_f7_s390x,
-    lldb_f8_s390x,      lldb_f9_s390x,  lldb_f10_s390x, lldb_f11_s390x,
-    lldb_f12_s390x,     lldb_f13_s390x, lldb_f14_s390x, lldb_f15_s390x,
-    lldb_fpc_s390x,
+    reg_ids::f0,        reg_ids::f1,  reg_ids::f2,  reg_ids::f3,  reg_ids::f4,
+    reg_ids::f5,        reg_ids::f6,  reg_ids::f7,  reg_ids::f8,  reg_ids::f9,
+    reg_ids::f10,       reg_ids::f11, reg_ids::f12, reg_ids::f13, reg_ids::f14,
+    reg_ids::f15,       reg_ids::fpc,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_s390x) / sizeof(g_fpu_regnums_s390x[0])) -
                       1 ==
-                  k_num_fpr_registers_s390x,
+                  reg_ids::k_num_fpr_registers,
               "g_fpu_regnums_s390x has wrong number of register infos");
 
 // Number of register sets provided by this context.
@@ -63,9 +63,9 @@ enum { k_num_register_sets = 2 };
 
 // Register sets for s390x 64-bit.
 static const RegisterSet g_reg_sets_s390x[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_s390x,
+    {"General Purpose Registers", "gpr", reg_ids::k_num_gpr_registers,
      g_gpr_regnums_s390x},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_s390x,
+    {"Floating Point Registers", "fpr", reg_ids::k_num_fpr_registers,
      g_fpu_regnums_s390x},
 };
 
@@ -85,12 +85,12 @@ RegisterContextCore_s390x::RegisterContextCore_s390x(
 
   switch (register_info->GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::systemz:
-    m_reg_info.num_registers = k_num_registers_s390x;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_s390x;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_s390x;
-    m_reg_info.last_gpr = k_last_gpr_s390x;
-    m_reg_info.first_fpr = k_first_fpr_s390x;
-    m_reg_info.last_fpr = k_last_fpr_s390x;
+    m_reg_info.num_registers = reg_ids::k_num_registers;
+    m_reg_info.num_gpr_registers = reg_ids::k_num_gpr_registers;
+    m_reg_info.num_fpr_registers = reg_ids::k_num_fpr_registers;
+    m_reg_info.last_gpr = reg_ids::k_last_gpr;
+    m_reg_info.first_fpr = reg_ids::k_first_fpr;
+    m_reg_info.last_fpr = reg_ids::k_last_fpr;
     break;
   default:
     assert(false && "Unhandled target architecture.");

@@ -16,7 +16,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
-#include "Register/Arch/RegisterContext_powerpc.h"
+#include "lldb/Register/Arch/lldb-powerpc-register-enums.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -25,42 +25,44 @@
 // clang-format on
 #include <optional>
 
+
+namespace reg_ids = lldb_private::registers::powerpc::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
 
 static const uint32_t g_gpr_regnums[] = {
-    gpr_r0_powerpc,  gpr_r1_powerpc,  gpr_r2_powerpc,  gpr_r3_powerpc,
-    gpr_r4_powerpc,  gpr_r5_powerpc,  gpr_r6_powerpc,  gpr_r7_powerpc,
-    gpr_r8_powerpc,  gpr_r9_powerpc,  gpr_r10_powerpc, gpr_r11_powerpc,
-    gpr_r12_powerpc, gpr_r13_powerpc, gpr_r14_powerpc, gpr_r15_powerpc,
-    gpr_r16_powerpc, gpr_r17_powerpc, gpr_r18_powerpc, gpr_r19_powerpc,
-    gpr_r20_powerpc, gpr_r21_powerpc, gpr_r22_powerpc, gpr_r23_powerpc,
-    gpr_r24_powerpc, gpr_r25_powerpc, gpr_r26_powerpc, gpr_r27_powerpc,
-    gpr_r28_powerpc, gpr_r29_powerpc, gpr_r30_powerpc, gpr_r31_powerpc,
-    gpr_lr_powerpc,  gpr_cr_powerpc,  gpr_xer_powerpc, gpr_ctr_powerpc,
-    gpr_pc_powerpc,
+    reg_ids::gpr_r0,  reg_ids::gpr_r1,  reg_ids::gpr_r2,  reg_ids::gpr_r3,
+    reg_ids::gpr_r4,  reg_ids::gpr_r5,  reg_ids::gpr_r6,  reg_ids::gpr_r7,
+    reg_ids::gpr_r8,  reg_ids::gpr_r9,  reg_ids::gpr_r10, reg_ids::gpr_r11,
+    reg_ids::gpr_r12, reg_ids::gpr_r13, reg_ids::gpr_r14, reg_ids::gpr_r15,
+    reg_ids::gpr_r16, reg_ids::gpr_r17, reg_ids::gpr_r18, reg_ids::gpr_r19,
+    reg_ids::gpr_r20, reg_ids::gpr_r21, reg_ids::gpr_r22, reg_ids::gpr_r23,
+    reg_ids::gpr_r24, reg_ids::gpr_r25, reg_ids::gpr_r26, reg_ids::gpr_r27,
+    reg_ids::gpr_r28, reg_ids::gpr_r29, reg_ids::gpr_r30, reg_ids::gpr_r31,
+    reg_ids::gpr_lr,  reg_ids::gpr_cr,  reg_ids::gpr_xer, reg_ids::gpr_ctr,
+    reg_ids::gpr_pc,
 };
 
 static const uint32_t g_fpr_regnums[] = {
-    fpr_f0_powerpc,    fpr_f1_powerpc,  fpr_f2_powerpc,  fpr_f3_powerpc,
-    fpr_f4_powerpc,    fpr_f5_powerpc,  fpr_f6_powerpc,  fpr_f7_powerpc,
-    fpr_f8_powerpc,    fpr_f9_powerpc,  fpr_f10_powerpc, fpr_f11_powerpc,
-    fpr_f12_powerpc,   fpr_f13_powerpc, fpr_f14_powerpc, fpr_f15_powerpc,
-    fpr_f16_powerpc,   fpr_f17_powerpc, fpr_f18_powerpc, fpr_f19_powerpc,
-    fpr_f20_powerpc,   fpr_f21_powerpc, fpr_f22_powerpc, fpr_f23_powerpc,
-    fpr_f24_powerpc,   fpr_f25_powerpc, fpr_f26_powerpc, fpr_f27_powerpc,
-    fpr_f28_powerpc,   fpr_f29_powerpc, fpr_f30_powerpc, fpr_f31_powerpc,
-    fpr_fpscr_powerpc,
+    reg_ids::fpr_f0,    reg_ids::fpr_f1,  reg_ids::fpr_f2,  reg_ids::fpr_f3,
+    reg_ids::fpr_f4,    reg_ids::fpr_f5,  reg_ids::fpr_f6,  reg_ids::fpr_f7,
+    reg_ids::fpr_f8,    reg_ids::fpr_f9,  reg_ids::fpr_f10, reg_ids::fpr_f11,
+    reg_ids::fpr_f12,   reg_ids::fpr_f13, reg_ids::fpr_f14, reg_ids::fpr_f15,
+    reg_ids::fpr_f16,   reg_ids::fpr_f17, reg_ids::fpr_f18, reg_ids::fpr_f19,
+    reg_ids::fpr_f20,   reg_ids::fpr_f21, reg_ids::fpr_f22, reg_ids::fpr_f23,
+    reg_ids::fpr_f24,   reg_ids::fpr_f25, reg_ids::fpr_f26, reg_ids::fpr_f27,
+    reg_ids::fpr_f28,   reg_ids::fpr_f29, reg_ids::fpr_f30, reg_ids::fpr_f31,
+    reg_ids::fpr_fpscr,
 };
 
 // Number of register sets provided by this context.
 enum { k_num_register_sets = 2 };
 
 static const RegisterSet g_reg_sets_powerpc[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_powerpc,
+    {"General Purpose Registers", "gpr", reg_ids::k_num_gpr_registers,
      g_gpr_regnums},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_powerpc,
+    {"Floating Point Registers", "fpr", reg_ids::k_num_fpr_registers,
      g_fpr_regnums},
 };
 
@@ -111,9 +113,9 @@ NativeRegisterContextFreeBSD_powerpc::GetSetForNativeRegNum(
     uint32_t reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::ppc:
-    if (reg_num >= k_first_gpr_powerpc && reg_num <= k_last_gpr_powerpc)
+    if (reg_num >= reg_ids::k_first_gpr && reg_num <= reg_ids::k_last_gpr)
       return GPRegSet;
-    if (reg_num >= k_first_fpr && reg_num <= k_last_fpr)
+    if (reg_num >= reg_ids::k_first_fpr && reg_num <= reg_ids::k_last_fpr)
       return FPRegSet;
     break;
   default:

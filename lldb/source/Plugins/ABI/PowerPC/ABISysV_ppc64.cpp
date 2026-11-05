@@ -7,13 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABISysV_ppc64.h"
+#include "lldb/Register/Arch/lldb-ppc64-ehframe-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-ehframe-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Utility/PPC64LE_DWARF_Registers.h"
-#include "Utility/PPC64_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
@@ -37,6 +48,8 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 
+using namespace lldb_private;
+
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
 #include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
@@ -47,7 +60,6 @@
 #include <optional>
 
 using namespace lldb;
-using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ABISysV_ppc64)
 
@@ -957,13 +969,13 @@ UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
   uint32_t pc_reg_num;
 
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    lr_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
-    sp_reg_num = ppc64le_dwarf::dwarf_r1_ppc64le;
-    pc_reg_num = ppc64le_dwarf::dwarf_pc_ppc64le;
+    lr_reg_num = registers::ppc64le::dwarf::lr;
+    sp_reg_num = registers::ppc64le::dwarf::r1;
+    pc_reg_num = registers::ppc64le::dwarf::pc;
   } else {
-    lr_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
-    sp_reg_num = ppc64_dwarf::dwarf_r1_ppc64;
-    pc_reg_num = ppc64_dwarf::dwarf_pc_ppc64;
+    lr_reg_num = registers::ppc64::dwarf::lr;
+    sp_reg_num = registers::ppc64::dwarf::r1;
+    pc_reg_num = registers::ppc64::dwarf::pc;
   }
 
   UnwindPlan::Row row;
@@ -987,13 +999,13 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   uint32_t cr_reg_num;
 
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    sp_reg_num = ppc64le_dwarf::dwarf_r1_ppc64le;
-    pc_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
-    cr_reg_num = ppc64le_dwarf::dwarf_cr_ppc64le;
+    sp_reg_num = registers::ppc64le::dwarf::r1;
+    pc_reg_num = registers::ppc64le::dwarf::lr;
+    cr_reg_num = registers::ppc64le::dwarf::cr;
   } else {
-    sp_reg_num = ppc64_dwarf::dwarf_r1_ppc64;
-    pc_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
-    cr_reg_num = ppc64_dwarf::dwarf_cr_ppc64;
+    sp_reg_num = registers::ppc64::dwarf::r1;
+    pc_reg_num = registers::ppc64::dwarf::lr;
+    cr_reg_num = registers::ppc64::dwarf::cr;
   }
 
   UnwindPlan::Row row;

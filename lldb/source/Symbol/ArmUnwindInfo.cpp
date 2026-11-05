@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "Utility/ARM_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
@@ -26,6 +26,8 @@
  *     http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038a/IHI0038A_ehabi.pdf
  */
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -127,7 +129,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
     byte_offset = 5;
   }
 
-  uint8_t vsp_reg = dwarf_sp;
+  uint8_t vsp_reg = dwarf_regs::sp;
   int32_t vsp = 0;
   std::vector<std::pair<uint32_t, int32_t>>
       register_offsets; // register -> (offset from vsp_reg)
@@ -158,7 +160,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
         uint16_t regs = ((byte1 & 0x0f) << 8) | byte2;
         for (uint8_t i = 0; i < 12; ++i) {
           if (regs & (1 << i)) {
-            register_offsets.emplace_back(dwarf_r4 + i, vsp);
+            register_offsets.emplace_back(dwarf_regs::r4 + i, vsp);
             vsp += 4;
           }
         }
@@ -174,13 +176,13 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
     } else if ((byte1 & 0xf0) == 0x90) {
       // 1001nnnn (nnnn != 13,15)
       // Set vsp = r[nnnn]
-      vsp_reg = dwarf_r0 + (byte1 & 0x0f);
+      vsp_reg = dwarf_regs::r0 + (byte1 & 0x0f);
     } else if ((byte1 & 0xf8) == 0xa0) {
       // 10100nnn
       // Pop r4-r[4+nnn]
       uint8_t n = byte1 & 0x7;
       for (uint8_t i = 0; i <= n; ++i) {
-        register_offsets.emplace_back(dwarf_r4 + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::r4 + i, vsp);
         vsp += 4;
       }
     } else if ((byte1 & 0xf8) == 0xa8) {
@@ -188,11 +190,11 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       // Pop r4-r[4+nnn], r14
       uint8_t n = byte1 & 0x7;
       for (uint8_t i = 0; i <= n; ++i) {
-        register_offsets.emplace_back(dwarf_r4 + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::r4 + i, vsp);
         vsp += 4;
       }
 
-      register_offsets.emplace_back(dwarf_lr, vsp);
+      register_offsets.emplace_back(dwarf_regs::lr, vsp);
       vsp += 4;
     } else if ((byte1 & 0xff) == 0xb0) {
       // 10110000
@@ -212,7 +214,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
         // Pop integer registers under mask {r3, r2, r1, r0}
         for (uint8_t i = 0; i < 4; ++i) {
           if (byte2 & (1 << i)) {
-            register_offsets.emplace_back(dwarf_r0 + i, vsp);
+            register_offsets.emplace_back(dwarf_regs::r0 + i, vsp);
             vsp += 4;
           }
         }
@@ -237,7 +239,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       uint8_t s = (byte2 & 0xf0) >> 4;
       uint8_t c = (byte2 & 0x0f) >> 0;
       for (uint8_t i = 0; i <= c; ++i) {
-        register_offsets.emplace_back(dwarf_d0 + s + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::d0 + s + i, vsp);
         vsp += 8;
       }
       vsp += 4;
@@ -251,7 +253,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       // FSTMFDX (see remark d)
       uint8_t n = byte1 & 0x07;
       for (uint8_t i = 0; i <= n; ++i) {
-        register_offsets.emplace_back(dwarf_d8 + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::d8 + i, vsp);
         vsp += 8;
       }
       vsp += 4;
@@ -283,7 +285,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       uint8_t s = (byte2 & 0xf0) >> 4;
       uint8_t c = (byte2 & 0x0f) >> 0;
       for (uint8_t i = 0; i <= c; ++i) {
-        register_offsets.emplace_back(dwarf_d16 + s + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::d16 + s + i, vsp);
         vsp += 8;
       }
     } else if ((byte1 & 0xff) == 0xc9) {
@@ -297,7 +299,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       uint8_t s = (byte2 & 0xf0) >> 4;
       uint8_t c = (byte2 & 0x0f) >> 0;
       for (uint8_t i = 0; i <= c; ++i) {
-        register_offsets.emplace_back(dwarf_d0 + s + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::d0 + s + i, vsp);
         vsp += 8;
       }
     } else if ((byte1 & 0xf8) == 0xc8) {
@@ -310,7 +312,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       // FSTMFDD (see remark d)
       uint8_t n = byte1 & 0x07;
       for (uint8_t i = 0; i <= n; ++i) {
-        register_offsets.emplace_back(dwarf_d8 + i, vsp);
+        register_offsets.emplace_back(dwarf_regs::d8 + i, vsp);
         vsp += 8;
       }
     } else if ((byte1 & 0xc0) == 0xc0) {
@@ -326,17 +328,17 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
 
   bool have_location_for_pc = false;
   for (const auto &offset : register_offsets) {
-    have_location_for_pc |= offset.first == dwarf_pc;
+    have_location_for_pc |= offset.first == dwarf_regs::pc;
     row.SetRegisterLocationToAtCFAPlusOffset(offset.first, offset.second - vsp,
                                              true);
   }
 
   if (!have_location_for_pc) {
     UnwindPlan::Row::AbstractRegisterLocation lr_location;
-    if (row.GetRegisterInfo(dwarf_lr, lr_location))
-      row.SetRegisterInfo(dwarf_pc, lr_location);
+    if (row.GetRegisterInfo(dwarf_regs::lr, lr_location))
+      row.SetRegisterInfo(dwarf_regs::pc, lr_location);
     else
-      row.SetRegisterLocationToRegister(dwarf_pc, dwarf_lr, false);
+      row.SetRegisterLocationToRegister(dwarf_regs::pc, dwarf_regs::lr, false);
   }
 
   unwind_plan.AppendRow(row);

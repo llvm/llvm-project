@@ -6,19 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Textual register-table fragment; intentionally has no include guard.
+// Include its ordinary dependencies at file scope before defining layout macros.
+// See README.md for the inclusion contract.
+
+#if !defined(DECLARE_REGISTER_INFOS_ARM_STRUCT)
+#error Select a register-table generation mode before including this fragment
+#endif
+
 #ifdef DECLARE_REGISTER_INFOS_ARM_STRUCT
 
-#include <cstddef>
-
-#include "lldb/lldb-defines.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private.h"
-
-#include "Utility/ARM_DWARF_Registers.h"
-#include "Utility/ARM_ehframe_Registers.h"
-
-using namespace lldb;
-using namespace lldb_private;
 
 #ifndef GPR_OFFSET
 #error GPR_OFFSET must be defined before including this header file
@@ -37,334 +34,275 @@ using namespace lldb_private;
 #endif
 
 #ifndef EXC_OFFSET
-#error EXC_OFFSET_NAME must be defined before including this header file
+#error EXC_OFFSET must be defined before including this header file
 #endif
 
 #ifndef DEFINE_DBG
 #error DEFINE_DBG must be defined before including this header file
 #endif
 
-enum {
-  gpr_r0 = 0,
-  gpr_r1,
-  gpr_r2,
-  gpr_r3,
-  gpr_r4,
-  gpr_r5,
-  gpr_r6,
-  gpr_r7,
-  gpr_r8,
-  gpr_r9,
-  gpr_r10,
-  gpr_r11,
-  gpr_r12,
-  gpr_r13,
-  gpr_sp = gpr_r13,
-  gpr_r14,
-  gpr_lr = gpr_r14,
-  gpr_r15,
-  gpr_pc = gpr_r15,
-  gpr_cpsr,
-
-  fpu_s0,
-  fpu_s1,
-  fpu_s2,
-  fpu_s3,
-  fpu_s4,
-  fpu_s5,
-  fpu_s6,
-  fpu_s7,
-  fpu_s8,
-  fpu_s9,
-  fpu_s10,
-  fpu_s11,
-  fpu_s12,
-  fpu_s13,
-  fpu_s14,
-  fpu_s15,
-  fpu_s16,
-  fpu_s17,
-  fpu_s18,
-  fpu_s19,
-  fpu_s20,
-  fpu_s21,
-  fpu_s22,
-  fpu_s23,
-  fpu_s24,
-  fpu_s25,
-  fpu_s26,
-  fpu_s27,
-  fpu_s28,
-  fpu_s29,
-  fpu_s30,
-  fpu_s31,
-  fpu_fpscr,
-
-  fpu_d0,
-  fpu_d1,
-  fpu_d2,
-  fpu_d3,
-  fpu_d4,
-  fpu_d5,
-  fpu_d6,
-  fpu_d7,
-  fpu_d8,
-  fpu_d9,
-  fpu_d10,
-  fpu_d11,
-  fpu_d12,
-  fpu_d13,
-  fpu_d14,
-  fpu_d15,
-  fpu_d16,
-  fpu_d17,
-  fpu_d18,
-  fpu_d19,
-  fpu_d20,
-  fpu_d21,
-  fpu_d22,
-  fpu_d23,
-  fpu_d24,
-  fpu_d25,
-  fpu_d26,
-  fpu_d27,
-  fpu_d28,
-  fpu_d29,
-  fpu_d30,
-  fpu_d31,
-
-  fpu_q0,
-  fpu_q1,
-  fpu_q2,
-  fpu_q3,
-  fpu_q4,
-  fpu_q5,
-  fpu_q6,
-  fpu_q7,
-  fpu_q8,
-  fpu_q9,
-  fpu_q10,
-  fpu_q11,
-  fpu_q12,
-  fpu_q13,
-  fpu_q14,
-  fpu_q15,
-
-  tls_tpidruro,
-
-  exc_exception,
-  exc_fsr,
-  exc_far,
-
-  dbg_bvr0,
-  dbg_bvr1,
-  dbg_bvr2,
-  dbg_bvr3,
-  dbg_bvr4,
-  dbg_bvr5,
-  dbg_bvr6,
-  dbg_bvr7,
-  dbg_bvr8,
-  dbg_bvr9,
-  dbg_bvr10,
-  dbg_bvr11,
-  dbg_bvr12,
-  dbg_bvr13,
-  dbg_bvr14,
-  dbg_bvr15,
-
-  dbg_bcr0,
-  dbg_bcr1,
-  dbg_bcr2,
-  dbg_bcr3,
-  dbg_bcr4,
-  dbg_bcr5,
-  dbg_bcr6,
-  dbg_bcr7,
-  dbg_bcr8,
-  dbg_bcr9,
-  dbg_bcr10,
-  dbg_bcr11,
-  dbg_bcr12,
-  dbg_bcr13,
-  dbg_bcr14,
-  dbg_bcr15,
-
-  dbg_wvr0,
-  dbg_wvr1,
-  dbg_wvr2,
-  dbg_wvr3,
-  dbg_wvr4,
-  dbg_wvr5,
-  dbg_wvr6,
-  dbg_wvr7,
-  dbg_wvr8,
-  dbg_wvr9,
-  dbg_wvr10,
-  dbg_wvr11,
-  dbg_wvr12,
-  dbg_wvr13,
-  dbg_wvr14,
-  dbg_wvr15,
-
-  dbg_wcr0,
-  dbg_wcr1,
-  dbg_wcr2,
-  dbg_wcr3,
-  dbg_wcr4,
-  dbg_wcr5,
-  dbg_wcr6,
-  dbg_wcr7,
-  dbg_wcr8,
-  dbg_wcr9,
-  dbg_wcr10,
-  dbg_wcr11,
-  dbg_wcr12,
-  dbg_wcr13,
-  dbg_wcr14,
-  dbg_wcr15,
-
-  k_num_registers
-};
-
-static uint32_t g_s0_invalidates[] = {fpu_d0, fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_s1_invalidates[] = {fpu_d0, fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_s2_invalidates[] = {fpu_d1, fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_s3_invalidates[] = {fpu_d1, fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_s4_invalidates[] = {fpu_d2, fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_s5_invalidates[] = {fpu_d2, fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_s6_invalidates[] = {fpu_d3, fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_s7_invalidates[] = {fpu_d3, fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_s8_invalidates[] = {fpu_d4, fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_s9_invalidates[] = {fpu_d4, fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_s10_invalidates[] = {fpu_d5, fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_s11_invalidates[] = {fpu_d5, fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_s12_invalidates[] = {fpu_d6, fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_s13_invalidates[] = {fpu_d6, fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_s14_invalidates[] = {fpu_d7, fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_s15_invalidates[] = {fpu_d7, fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_s16_invalidates[] = {fpu_d8, fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_s17_invalidates[] = {fpu_d8, fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_s18_invalidates[] = {fpu_d9, fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_s19_invalidates[] = {fpu_d9, fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_s20_invalidates[] = {fpu_d10, fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_s21_invalidates[] = {fpu_d10, fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_s22_invalidates[] = {fpu_d11, fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_s23_invalidates[] = {fpu_d11, fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_s24_invalidates[] = {fpu_d12, fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_s25_invalidates[] = {fpu_d12, fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_s26_invalidates[] = {fpu_d13, fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_s27_invalidates[] = {fpu_d13, fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_s28_invalidates[] = {fpu_d14, fpu_q7, LLDB_INVALID_REGNUM};
-static uint32_t g_s29_invalidates[] = {fpu_d14, fpu_q7, LLDB_INVALID_REGNUM};
-static uint32_t g_s30_invalidates[] = {fpu_d15, fpu_q7, LLDB_INVALID_REGNUM};
-static uint32_t g_s31_invalidates[] = {fpu_d15, fpu_q7, LLDB_INVALID_REGNUM};
-
-static uint32_t g_d0_invalidates[] = {fpu_q0, fpu_s0, fpu_s1,
+static uint32_t g_s0_invalidates[] = {lldb_private::registers::arm::id::fpu_d0,
+                                      lldb_private::registers::arm::id::fpu_q0,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d1_invalidates[] = {fpu_q0, fpu_s2, fpu_s3,
+static uint32_t g_s1_invalidates[] = {lldb_private::registers::arm::id::fpu_d0,
+                                      lldb_private::registers::arm::id::fpu_q0,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d2_invalidates[] = {fpu_q1, fpu_s4, fpu_s5,
+static uint32_t g_s2_invalidates[] = {lldb_private::registers::arm::id::fpu_d1,
+                                      lldb_private::registers::arm::id::fpu_q0,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d3_invalidates[] = {fpu_q1, fpu_s6, fpu_s7,
+static uint32_t g_s3_invalidates[] = {lldb_private::registers::arm::id::fpu_d1,
+                                      lldb_private::registers::arm::id::fpu_q0,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d4_invalidates[] = {fpu_q2, fpu_s8, fpu_s9,
+static uint32_t g_s4_invalidates[] = {lldb_private::registers::arm::id::fpu_d2,
+                                      lldb_private::registers::arm::id::fpu_q1,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d5_invalidates[] = {fpu_q2, fpu_s10, fpu_s11,
+static uint32_t g_s5_invalidates[] = {lldb_private::registers::arm::id::fpu_d2,
+                                      lldb_private::registers::arm::id::fpu_q1,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d6_invalidates[] = {fpu_q3, fpu_s12, fpu_s13,
+static uint32_t g_s6_invalidates[] = {lldb_private::registers::arm::id::fpu_d3,
+                                      lldb_private::registers::arm::id::fpu_q1,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d7_invalidates[] = {fpu_q3, fpu_s14, fpu_s15,
+static uint32_t g_s7_invalidates[] = {lldb_private::registers::arm::id::fpu_d3,
+                                      lldb_private::registers::arm::id::fpu_q1,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d8_invalidates[] = {fpu_q4, fpu_s16, fpu_s17,
+static uint32_t g_s8_invalidates[] = {lldb_private::registers::arm::id::fpu_d4,
+                                      lldb_private::registers::arm::id::fpu_q2,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d9_invalidates[] = {fpu_q4, fpu_s18, fpu_s19,
+static uint32_t g_s9_invalidates[] = {lldb_private::registers::arm::id::fpu_d4,
+                                      lldb_private::registers::arm::id::fpu_q2,
                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d10_invalidates[] = {fpu_q5, fpu_s20, fpu_s21,
+static uint32_t g_s10_invalidates[] = {lldb_private::registers::arm::id::fpu_d5,
+                                       lldb_private::registers::arm::id::fpu_q2,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d11_invalidates[] = {fpu_q5, fpu_s22, fpu_s23,
+static uint32_t g_s11_invalidates[] = {lldb_private::registers::arm::id::fpu_d5,
+                                       lldb_private::registers::arm::id::fpu_q2,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d12_invalidates[] = {fpu_q6, fpu_s24, fpu_s25,
+static uint32_t g_s12_invalidates[] = {lldb_private::registers::arm::id::fpu_d6,
+                                       lldb_private::registers::arm::id::fpu_q3,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d13_invalidates[] = {fpu_q6, fpu_s26, fpu_s27,
+static uint32_t g_s13_invalidates[] = {lldb_private::registers::arm::id::fpu_d6,
+                                       lldb_private::registers::arm::id::fpu_q3,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d14_invalidates[] = {fpu_q7, fpu_s28, fpu_s29,
+static uint32_t g_s14_invalidates[] = {lldb_private::registers::arm::id::fpu_d7,
+                                       lldb_private::registers::arm::id::fpu_q3,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d15_invalidates[] = {fpu_q7, fpu_s30, fpu_s31,
+static uint32_t g_s15_invalidates[] = {lldb_private::registers::arm::id::fpu_d7,
+                                       lldb_private::registers::arm::id::fpu_q3,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d16_invalidates[] = {fpu_q8, LLDB_INVALID_REGNUM};
-static uint32_t g_d17_invalidates[] = {fpu_q8, LLDB_INVALID_REGNUM};
-static uint32_t g_d18_invalidates[] = {fpu_q9, LLDB_INVALID_REGNUM};
-static uint32_t g_d19_invalidates[] = {fpu_q9, LLDB_INVALID_REGNUM};
-static uint32_t g_d20_invalidates[] = {fpu_q10, LLDB_INVALID_REGNUM};
-static uint32_t g_d21_invalidates[] = {fpu_q10, LLDB_INVALID_REGNUM};
-static uint32_t g_d22_invalidates[] = {fpu_q11, LLDB_INVALID_REGNUM};
-static uint32_t g_d23_invalidates[] = {fpu_q11, LLDB_INVALID_REGNUM};
-static uint32_t g_d24_invalidates[] = {fpu_q12, LLDB_INVALID_REGNUM};
-static uint32_t g_d25_invalidates[] = {fpu_q12, LLDB_INVALID_REGNUM};
-static uint32_t g_d26_invalidates[] = {fpu_q13, LLDB_INVALID_REGNUM};
-static uint32_t g_d27_invalidates[] = {fpu_q13, LLDB_INVALID_REGNUM};
-static uint32_t g_d28_invalidates[] = {fpu_q14, LLDB_INVALID_REGNUM};
-static uint32_t g_d29_invalidates[] = {fpu_q14, LLDB_INVALID_REGNUM};
-static uint32_t g_d30_invalidates[] = {fpu_q15, LLDB_INVALID_REGNUM};
-static uint32_t g_d31_invalidates[] = {fpu_q15, LLDB_INVALID_REGNUM};
+static uint32_t g_s16_invalidates[] = {lldb_private::registers::arm::id::fpu_d8,
+                                       lldb_private::registers::arm::id::fpu_q4,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_s17_invalidates[] = {lldb_private::registers::arm::id::fpu_d8,
+                                       lldb_private::registers::arm::id::fpu_q4,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_s18_invalidates[] = {lldb_private::registers::arm::id::fpu_d9,
+                                       lldb_private::registers::arm::id::fpu_q4,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_s19_invalidates[] = {lldb_private::registers::arm::id::fpu_d9,
+                                       lldb_private::registers::arm::id::fpu_q4,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_s20_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d10,
+    lldb_private::registers::arm::id::fpu_q5, LLDB_INVALID_REGNUM};
+static uint32_t g_s21_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d10,
+    lldb_private::registers::arm::id::fpu_q5, LLDB_INVALID_REGNUM};
+static uint32_t g_s22_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d11,
+    lldb_private::registers::arm::id::fpu_q5, LLDB_INVALID_REGNUM};
+static uint32_t g_s23_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d11,
+    lldb_private::registers::arm::id::fpu_q5, LLDB_INVALID_REGNUM};
+static uint32_t g_s24_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d12,
+    lldb_private::registers::arm::id::fpu_q6, LLDB_INVALID_REGNUM};
+static uint32_t g_s25_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d12,
+    lldb_private::registers::arm::id::fpu_q6, LLDB_INVALID_REGNUM};
+static uint32_t g_s26_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d13,
+    lldb_private::registers::arm::id::fpu_q6, LLDB_INVALID_REGNUM};
+static uint32_t g_s27_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d13,
+    lldb_private::registers::arm::id::fpu_q6, LLDB_INVALID_REGNUM};
+static uint32_t g_s28_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d14,
+    lldb_private::registers::arm::id::fpu_q7, LLDB_INVALID_REGNUM};
+static uint32_t g_s29_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d14,
+    lldb_private::registers::arm::id::fpu_q7, LLDB_INVALID_REGNUM};
+static uint32_t g_s30_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d15,
+    lldb_private::registers::arm::id::fpu_q7, LLDB_INVALID_REGNUM};
+static uint32_t g_s31_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_d15,
+    lldb_private::registers::arm::id::fpu_q7, LLDB_INVALID_REGNUM};
+
+static uint32_t g_d0_invalidates[] = {lldb_private::registers::arm::id::fpu_q0,
+                                      lldb_private::registers::arm::id::fpu_s0,
+                                      lldb_private::registers::arm::id::fpu_s1,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d1_invalidates[] = {lldb_private::registers::arm::id::fpu_q0,
+                                      lldb_private::registers::arm::id::fpu_s2,
+                                      lldb_private::registers::arm::id::fpu_s3,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d2_invalidates[] = {lldb_private::registers::arm::id::fpu_q1,
+                                      lldb_private::registers::arm::id::fpu_s4,
+                                      lldb_private::registers::arm::id::fpu_s5,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d3_invalidates[] = {lldb_private::registers::arm::id::fpu_q1,
+                                      lldb_private::registers::arm::id::fpu_s6,
+                                      lldb_private::registers::arm::id::fpu_s7,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d4_invalidates[] = {lldb_private::registers::arm::id::fpu_q2,
+                                      lldb_private::registers::arm::id::fpu_s8,
+                                      lldb_private::registers::arm::id::fpu_s9,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d5_invalidates[] = {lldb_private::registers::arm::id::fpu_q2,
+                                      lldb_private::registers::arm::id::fpu_s10,
+                                      lldb_private::registers::arm::id::fpu_s11,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d6_invalidates[] = {lldb_private::registers::arm::id::fpu_q3,
+                                      lldb_private::registers::arm::id::fpu_s12,
+                                      lldb_private::registers::arm::id::fpu_s13,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d7_invalidates[] = {lldb_private::registers::arm::id::fpu_q3,
+                                      lldb_private::registers::arm::id::fpu_s14,
+                                      lldb_private::registers::arm::id::fpu_s15,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d8_invalidates[] = {lldb_private::registers::arm::id::fpu_q4,
+                                      lldb_private::registers::arm::id::fpu_s16,
+                                      lldb_private::registers::arm::id::fpu_s17,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d9_invalidates[] = {lldb_private::registers::arm::id::fpu_q4,
+                                      lldb_private::registers::arm::id::fpu_s18,
+                                      lldb_private::registers::arm::id::fpu_s19,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d10_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q5,
+    lldb_private::registers::arm::id::fpu_s20,
+    lldb_private::registers::arm::id::fpu_s21, LLDB_INVALID_REGNUM};
+static uint32_t g_d11_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q5,
+    lldb_private::registers::arm::id::fpu_s22,
+    lldb_private::registers::arm::id::fpu_s23, LLDB_INVALID_REGNUM};
+static uint32_t g_d12_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q6,
+    lldb_private::registers::arm::id::fpu_s24,
+    lldb_private::registers::arm::id::fpu_s25, LLDB_INVALID_REGNUM};
+static uint32_t g_d13_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q6,
+    lldb_private::registers::arm::id::fpu_s26,
+    lldb_private::registers::arm::id::fpu_s27, LLDB_INVALID_REGNUM};
+static uint32_t g_d14_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q7,
+    lldb_private::registers::arm::id::fpu_s28,
+    lldb_private::registers::arm::id::fpu_s29, LLDB_INVALID_REGNUM};
+static uint32_t g_d15_invalidates[] = {
+    lldb_private::registers::arm::id::fpu_q7,
+    lldb_private::registers::arm::id::fpu_s30,
+    lldb_private::registers::arm::id::fpu_s31, LLDB_INVALID_REGNUM};
+static uint32_t g_d16_invalidates[] = {lldb_private::registers::arm::id::fpu_q8,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d17_invalidates[] = {lldb_private::registers::arm::id::fpu_q8,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d18_invalidates[] = {lldb_private::registers::arm::id::fpu_q9,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d19_invalidates[] = {lldb_private::registers::arm::id::fpu_q9,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d14_invalidates[] = {lldb_private::registers::arm::id::fpu_q7, lldb_private::registers::arm::id::fpu_s28, lldb_private::registers::arm::id::fpu_s29,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d15_invalidates[] = {lldb_private::registers::arm::id::fpu_q7, lldb_private::registers::arm::id::fpu_s30, lldb_private::registers::arm::id::fpu_s31,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d16_invalidates[] = {lldb_private::registers::arm::id::fpu_q8, LLDB_INVALID_REGNUM};
+static uint32_t g_d17_invalidates[] = {lldb_private::registers::arm::id::fpu_q8, LLDB_INVALID_REGNUM};
+static uint32_t g_d18_invalidates[] = {lldb_private::registers::arm::id::fpu_q9, LLDB_INVALID_REGNUM};
+static uint32_t g_d19_invalidates[] = {lldb_private::registers::arm::id::fpu_q9, LLDB_INVALID_REGNUM};
+static uint32_t g_d20_invalidates[] = {lldb_private::registers::arm::id::fpu_q10, LLDB_INVALID_REGNUM};
+static uint32_t g_d21_invalidates[] = {lldb_private::registers::arm::id::fpu_q10, LLDB_INVALID_REGNUM};
+static uint32_t g_d22_invalidates[] = {lldb_private::registers::arm::id::fpu_q11, LLDB_INVALID_REGNUM};
+static uint32_t g_d23_invalidates[] = {lldb_private::registers::arm::id::fpu_q11, LLDB_INVALID_REGNUM};
+static uint32_t g_d24_invalidates[] = {lldb_private::registers::arm::id::fpu_q12, LLDB_INVALID_REGNUM};
+static uint32_t g_d25_invalidates[] = {lldb_private::registers::arm::id::fpu_q12, LLDB_INVALID_REGNUM};
+static uint32_t g_d26_invalidates[] = {lldb_private::registers::arm::id::fpu_q13, LLDB_INVALID_REGNUM};
+static uint32_t g_d27_invalidates[] = {lldb_private::registers::arm::id::fpu_q13, LLDB_INVALID_REGNUM};
+static uint32_t g_d28_invalidates[] = {lldb_private::registers::arm::id::fpu_q14, LLDB_INVALID_REGNUM};
+static uint32_t g_d29_invalidates[] = {lldb_private::registers::arm::id::fpu_q14, LLDB_INVALID_REGNUM};
+static uint32_t g_d30_invalidates[] = {lldb_private::registers::arm::id::fpu_q15, LLDB_INVALID_REGNUM};
+static uint32_t g_d31_invalidates[] = {lldb_private::registers::arm::id::fpu_q15, LLDB_INVALID_REGNUM};
 
 static uint32_t g_q0_invalidates[] = {
-    fpu_d0, fpu_d1, fpu_s0, fpu_s1, fpu_s2, fpu_s3, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d0, lldb_private::registers::arm::id::fpu_d1, lldb_private::registers::arm::id::fpu_s0, lldb_private::registers::arm::id::fpu_s1, lldb_private::registers::arm::id::fpu_s2, lldb_private::registers::arm::id::fpu_s3, LLDB_INVALID_REGNUM};
 static uint32_t g_q1_invalidates[] = {
-    fpu_d2, fpu_d3, fpu_s4, fpu_s5, fpu_s6, fpu_s7, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d2, lldb_private::registers::arm::id::fpu_d3, lldb_private::registers::arm::id::fpu_s4, lldb_private::registers::arm::id::fpu_s5, lldb_private::registers::arm::id::fpu_s6, lldb_private::registers::arm::id::fpu_s7, LLDB_INVALID_REGNUM};
 static uint32_t g_q2_invalidates[] = {
-    fpu_d4, fpu_d5, fpu_s8, fpu_s9, fpu_s10, fpu_s11, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d4, lldb_private::registers::arm::id::fpu_d5, lldb_private::registers::arm::id::fpu_s8, lldb_private::registers::arm::id::fpu_s9, lldb_private::registers::arm::id::fpu_s10, lldb_private::registers::arm::id::fpu_s11, LLDB_INVALID_REGNUM};
 static uint32_t g_q3_invalidates[] = {
-    fpu_d6, fpu_d7, fpu_s12, fpu_s13, fpu_s14, fpu_s15, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d6, lldb_private::registers::arm::id::fpu_d7, lldb_private::registers::arm::id::fpu_s12, lldb_private::registers::arm::id::fpu_s13, lldb_private::registers::arm::id::fpu_s14, lldb_private::registers::arm::id::fpu_s15, LLDB_INVALID_REGNUM};
 static uint32_t g_q4_invalidates[] = {
-    fpu_d8, fpu_d9, fpu_s16, fpu_s17, fpu_s18, fpu_s19, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d8, lldb_private::registers::arm::id::fpu_d9, lldb_private::registers::arm::id::fpu_s16, lldb_private::registers::arm::id::fpu_s17, lldb_private::registers::arm::id::fpu_s18, lldb_private::registers::arm::id::fpu_s19, LLDB_INVALID_REGNUM};
 static uint32_t g_q5_invalidates[] = {
-    fpu_d10, fpu_d11, fpu_s20, fpu_s21, fpu_s22, fpu_s23, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d10, lldb_private::registers::arm::id::fpu_d11, lldb_private::registers::arm::id::fpu_s20, lldb_private::registers::arm::id::fpu_s21, lldb_private::registers::arm::id::fpu_s22, lldb_private::registers::arm::id::fpu_s23, LLDB_INVALID_REGNUM};
 static uint32_t g_q6_invalidates[] = {
-    fpu_d12, fpu_d13, fpu_s24, fpu_s25, fpu_s26, fpu_s27, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d12, lldb_private::registers::arm::id::fpu_d13, lldb_private::registers::arm::id::fpu_s24, lldb_private::registers::arm::id::fpu_s25, lldb_private::registers::arm::id::fpu_s26, lldb_private::registers::arm::id::fpu_s27, LLDB_INVALID_REGNUM};
 static uint32_t g_q7_invalidates[] = {
-    fpu_d14, fpu_d15, fpu_s28, fpu_s29, fpu_s30, fpu_s31, LLDB_INVALID_REGNUM};
-static uint32_t g_q8_invalidates[] = {fpu_d16, fpu_d17, LLDB_INVALID_REGNUM};
-static uint32_t g_q9_invalidates[] = {fpu_d18, fpu_d19, LLDB_INVALID_REGNUM};
-static uint32_t g_q10_invalidates[] = {fpu_d20, fpu_d21, LLDB_INVALID_REGNUM};
-static uint32_t g_q11_invalidates[] = {fpu_d22, fpu_d23, LLDB_INVALID_REGNUM};
-static uint32_t g_q12_invalidates[] = {fpu_d24, fpu_d25, LLDB_INVALID_REGNUM};
-static uint32_t g_q13_invalidates[] = {fpu_d26, fpu_d27, LLDB_INVALID_REGNUM};
-static uint32_t g_q14_invalidates[] = {fpu_d28, fpu_d29, LLDB_INVALID_REGNUM};
-static uint32_t g_q15_invalidates[] = {fpu_d30, fpu_d31, LLDB_INVALID_REGNUM};
+    lldb_private::registers::arm::id::fpu_d14, lldb_private::registers::arm::id::fpu_d15, lldb_private::registers::arm::id::fpu_s28, lldb_private::registers::arm::id::fpu_s29, lldb_private::registers::arm::id::fpu_s30, lldb_private::registers::arm::id::fpu_s31, LLDB_INVALID_REGNUM};
+static uint32_t g_q8_invalidates[] = {lldb_private::registers::arm::id::fpu_d16, lldb_private::registers::arm::id::fpu_d17, LLDB_INVALID_REGNUM};
+static uint32_t g_q9_invalidates[] = {lldb_private::registers::arm::id::fpu_d18, lldb_private::registers::arm::id::fpu_d19, LLDB_INVALID_REGNUM};
+static uint32_t g_q10_invalidates[] = {lldb_private::registers::arm::id::fpu_d20, lldb_private::registers::arm::id::fpu_d21, LLDB_INVALID_REGNUM};
+static uint32_t g_q11_invalidates[] = {lldb_private::registers::arm::id::fpu_d22, lldb_private::registers::arm::id::fpu_d23, LLDB_INVALID_REGNUM};
+static uint32_t g_q12_invalidates[] = {lldb_private::registers::arm::id::fpu_d24, lldb_private::registers::arm::id::fpu_d25, LLDB_INVALID_REGNUM};
+static uint32_t g_q13_invalidates[] = {lldb_private::registers::arm::id::fpu_d26, lldb_private::registers::arm::id::fpu_d27, LLDB_INVALID_REGNUM};
+static uint32_t g_q14_invalidates[] = {lldb_private::registers::arm::id::fpu_d28, lldb_private::registers::arm::id::fpu_d29, LLDB_INVALID_REGNUM};
+static uint32_t g_q15_invalidates[] = {lldb_private::registers::arm::id::fpu_d30, lldb_private::registers::arm::id::fpu_d31, LLDB_INVALID_REGNUM};
 
-static uint32_t g_q0_contained[] = {fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_q1_contained[] = {fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_q2_contained[] = {fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_q3_contained[] = {fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_q4_contained[] = {fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_q5_contained[] = {fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_q6_contained[] = {fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_q7_contained[] = {fpu_q7, LLDB_INVALID_REGNUM};
-static uint32_t g_q8_contained[] = {fpu_q8, LLDB_INVALID_REGNUM};
-static uint32_t g_q9_contained[] = {fpu_q9, LLDB_INVALID_REGNUM};
-static uint32_t g_q10_contained[] = {fpu_q10, LLDB_INVALID_REGNUM};
-static uint32_t g_q11_contained[] = {fpu_q11, LLDB_INVALID_REGNUM};
-static uint32_t g_q12_contained[] = {fpu_q12, LLDB_INVALID_REGNUM};
-static uint32_t g_q13_contained[] = {fpu_q13, LLDB_INVALID_REGNUM};
-static uint32_t g_q14_contained[] = {fpu_q14, LLDB_INVALID_REGNUM};
-static uint32_t g_q15_contained[] = {fpu_q15, LLDB_INVALID_REGNUM};
+static uint32_t g_q0_contained[] = {lldb_private::registers::arm::id::fpu_q0,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q1_contained[] = {lldb_private::registers::arm::id::fpu_q1,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q2_contained[] = {lldb_private::registers::arm::id::fpu_q2,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q3_contained[] = {lldb_private::registers::arm::id::fpu_q3,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q4_contained[] = {lldb_private::registers::arm::id::fpu_q4,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q5_contained[] = {lldb_private::registers::arm::id::fpu_q5,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q6_contained[] = {lldb_private::registers::arm::id::fpu_q6,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q7_contained[] = {lldb_private::registers::arm::id::fpu_q7,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q8_contained[] = {lldb_private::registers::arm::id::fpu_q8,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q9_contained[] = {lldb_private::registers::arm::id::fpu_q9,
+                                    LLDB_INVALID_REGNUM};
+static uint32_t g_q10_contained[] = {lldb_private::registers::arm::id::fpu_q10,
+                                     LLDB_INVALID_REGNUM};
+static uint32_t g_q11_contained[] = {lldb_private::registers::arm::id::fpu_q11,
+                                     LLDB_INVALID_REGNUM};
+static uint32_t g_q12_contained[] = {lldb_private::registers::arm::id::fpu_q12,
+                                     LLDB_INVALID_REGNUM};
+static uint32_t g_q13_contained[] = {lldb_private::registers::arm::id::fpu_q13,
+                                     LLDB_INVALID_REGNUM};
+static uint32_t g_q14_contained[] = {lldb_private::registers::arm::id::fpu_q14,
+                                     LLDB_INVALID_REGNUM};
+static uint32_t g_q15_contained[] = {lldb_private::registers::arm::id::fpu_q15,
+                                     LLDB_INVALID_REGNUM};
 
 #define FPU_REG(name, size, offset, qreg)                                      \
   {                                                                            \
-    #name, nullptr, size, FPU_OFFSET(offset), eEncodingIEEE754, eFormatFloat,  \
-        {LLDB_INVALID_REGNUM, dwarf_##name, LLDB_INVALID_REGNUM,               \
-         LLDB_INVALID_REGNUM, fpu_##name },                                    \
+    #name, nullptr, size, FPU_OFFSET(offset), lldb::eEncodingIEEE754, lldb::eFormatFloat,  \
+        {LLDB_INVALID_REGNUM, lldb_private::registers::arm::dwarf::name, LLDB_INVALID_REGNUM,               \
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::fpu_##name },                                    \
          g_##qreg##_contained, g_##name##_invalidates, nullptr,                \
   }
 
 #define FPU_QREG(name, offset)                                                 \
   {                                                                            \
-    #name, nullptr, 16, FPU_OFFSET(offset), eEncodingVector,                   \
-        eFormatVectorOfUInt8,                                                  \
-        {LLDB_INVALID_REGNUM, dwarf_##name, LLDB_INVALID_REGNUM,               \
-         LLDB_INVALID_REGNUM, fpu_##name },                                    \
+    #name, nullptr, 16, FPU_OFFSET(offset), lldb::eEncodingVector,                   \
+        lldb::eFormatVectorOfUInt8,                                                  \
+        {LLDB_INVALID_REGNUM, lldb_private::registers::arm::dwarf::name, LLDB_INVALID_REGNUM,               \
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::fpu_##name },                                    \
          nullptr, g_##name##_invalidates, nullptr,                             \
   }
 
@@ -374,10 +312,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(0),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r0, dwarf_r0, LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM,
-         gpr_r0},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r0,
+         lldb_private::registers::arm::dwarf::r0, LLDB_REGNUM_GENERIC_ARG1,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r0},
         nullptr,
         nullptr,
         nullptr,
@@ -387,10 +326,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(1),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r1, dwarf_r1, LLDB_REGNUM_GENERIC_ARG2, LLDB_INVALID_REGNUM,
-         gpr_r1},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r1,
+         lldb_private::registers::arm::dwarf::r1, LLDB_REGNUM_GENERIC_ARG2,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r1},
         nullptr,
         nullptr,
         nullptr,
@@ -400,10 +340,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(2),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r2, dwarf_r2, LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM,
-         gpr_r2},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r2,
+         lldb_private::registers::arm::dwarf::r2, LLDB_REGNUM_GENERIC_ARG3,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r2},
         nullptr,
         nullptr,
         nullptr,
@@ -413,10 +354,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(3),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r3, dwarf_r3, LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM,
-         gpr_r3},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r3,
+         lldb_private::registers::arm::dwarf::r3, LLDB_REGNUM_GENERIC_ARG4,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r3},
         nullptr,
         nullptr,
         nullptr,
@@ -426,10 +368,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(4),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r4, dwarf_r4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r4},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r4,
+         lldb_private::registers::arm::dwarf::r4, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r4},
         nullptr,
         nullptr,
         nullptr,
@@ -439,10 +382,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(5),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r5, dwarf_r5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r5},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r5,
+         lldb_private::registers::arm::dwarf::r5, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r5},
         nullptr,
         nullptr,
         nullptr,
@@ -452,10 +396,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(6),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r6, dwarf_r6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r6},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r6,
+         lldb_private::registers::arm::dwarf::r6, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r6},
         nullptr,
         nullptr,
         nullptr,
@@ -465,10 +410,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(7),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r7, dwarf_r7, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r7},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r7,
+         lldb_private::registers::arm::dwarf::r7, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r7},
         nullptr,
         nullptr,
         nullptr,
@@ -478,10 +424,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(8),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r8, dwarf_r8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r8},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r8,
+         lldb_private::registers::arm::dwarf::r8, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r8},
         nullptr,
         nullptr,
         nullptr,
@@ -491,10 +438,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(9),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r9, dwarf_r9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r9},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r9,
+         lldb_private::registers::arm::dwarf::r9, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r9},
         nullptr,
         nullptr,
         nullptr,
@@ -504,10 +452,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(10),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r10, dwarf_r10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r10},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r10,
+         lldb_private::registers::arm::dwarf::r10, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r10},
         nullptr,
         nullptr,
         nullptr,
@@ -517,10 +466,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(11),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r11, dwarf_r11, LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM,
-         gpr_r11},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r11,
+         lldb_private::registers::arm::dwarf::r11, LLDB_REGNUM_GENERIC_FP,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r11},
         nullptr,
         nullptr,
         nullptr,
@@ -530,10 +480,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         GPR_OFFSET(12),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_r12, dwarf_r12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         gpr_r12},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::r12,
+         lldb_private::registers::arm::dwarf::r12, LLDB_INVALID_REGNUM,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_r12},
         nullptr,
         nullptr,
         nullptr,
@@ -543,10 +494,11 @@ static RegisterInfo g_register_infos_arm[] = {
         "r13",
         4,
         GPR_OFFSET(13),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_sp, dwarf_sp, LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM,
-         gpr_sp},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::sp,
+         lldb_private::registers::arm::dwarf::sp, LLDB_REGNUM_GENERIC_SP,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_sp},
         nullptr,
         nullptr,
         nullptr,
@@ -556,10 +508,11 @@ static RegisterInfo g_register_infos_arm[] = {
         "r14",
         4,
         GPR_OFFSET(14),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM,
-         gpr_lr},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::lr,
+         lldb_private::registers::arm::dwarf::lr, LLDB_REGNUM_GENERIC_RA,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_lr},
         nullptr,
         nullptr,
         nullptr,
@@ -569,10 +522,11 @@ static RegisterInfo g_register_infos_arm[] = {
         "r15",
         4,
         GPR_OFFSET(15),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM,
-         gpr_pc},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::pc,
+         lldb_private::registers::arm::dwarf::pc, LLDB_REGNUM_GENERIC_PC,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_pc},
         nullptr,
         nullptr,
         nullptr,
@@ -582,10 +536,11 @@ static RegisterInfo g_register_infos_arm[] = {
         "psr",
         4,
         GPR_OFFSET(16),
-        eEncodingUint,
-        eFormatHex,
-        {ehframe_cpsr, dwarf_cpsr, LLDB_REGNUM_GENERIC_FLAGS,
-         LLDB_INVALID_REGNUM, gpr_cpsr},
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
+        {lldb_private::registers::arm::ehframe::cpsr,
+         lldb_private::registers::arm::dwarf::cpsr, LLDB_REGNUM_GENERIC_FLAGS,
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::gpr_cpsr},
         nullptr,
         nullptr,
         nullptr,
@@ -629,10 +584,10 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         FPSCR_OFFSET,
-        eEncodingUint,
-        eFormatHex,
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_fpscr},
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::fpu_fpscr},
         nullptr,
         nullptr,
         nullptr,
@@ -693,10 +648,10 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         TLS_OFFSET,
-        eEncodingUint,
-        eFormatHex,
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP,
-         LLDB_INVALID_REGNUM, tls_tpidruro},
+         LLDB_INVALID_REGNUM, lldb_private::registers::arm::id::tls_tpidruro},
         nullptr,
         nullptr,
         nullptr,
@@ -707,10 +662,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         EXC_OFFSET(0),
-        eEncodingUint,
-        eFormatHex,
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, exc_exception},
+         LLDB_INVALID_REGNUM,
+         lldb_private::registers::arm::id::exc_exception_with_tls},
         nullptr,
         nullptr,
         nullptr,
@@ -720,10 +676,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         EXC_OFFSET(1),
-        eEncodingUint,
-        eFormatHex,
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, exc_fsr},
+         LLDB_INVALID_REGNUM,
+         lldb_private::registers::arm::id::exc_fsr_with_tls},
         nullptr,
         nullptr,
         nullptr,
@@ -733,10 +690,11 @@ static RegisterInfo g_register_infos_arm[] = {
         nullptr,
         4,
         EXC_OFFSET(2),
-        eEncodingUint,
-        eFormatHex,
+        lldb::eEncodingUint,
+        lldb::eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, exc_far},
+         LLDB_INVALID_REGNUM,
+         lldb_private::registers::arm::id::exc_far_with_tls},
         nullptr,
         nullptr,
         nullptr,
@@ -810,4 +768,8 @@ static RegisterInfo g_register_infos_arm[] = {
     {DEFINE_DBG(wcr, 14)},
     {DEFINE_DBG(wcr, 15)}};
 
+
 #endif // DECLARE_REGISTER_INFOS_ARM_STRUCT
+
+#undef FPU_REG
+#undef FPU_QREG

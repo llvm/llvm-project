@@ -16,9 +16,11 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
+
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -117,55 +119,55 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   // CFA=sp+0 => fp=<same> ra=<same>.
   row = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_sp);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_fp, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_ra, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
   // CFA=sp+16 => fp=<same> ra=<same>.
   row = unwind_plan.GetRowForFunctionOffset(2);
   EXPECT_EQ(2, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_sp);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_fp, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_ra, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
   // CFA=sp+16 => fp=<same> ra=[CFA-8].
   row = unwind_plan.GetRowForFunctionOffset(4);
   EXPECT_EQ(4, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_sp);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_fp, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_ra, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
   // CFA=sp+16 => fp=[CFA-16] ra=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(6);
   EXPECT_EQ(6, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_sp);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_fp, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-16, regloc.GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_ra, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
@@ -174,15 +176,15 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   // locations.
   row = unwind_plan.GetRowForFunctionOffset(8);
   EXPECT_EQ(8, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_fp_riscv);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_fp);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_fp, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-16, regloc.GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_ra, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 }

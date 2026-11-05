@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -17,6 +18,7 @@
 #include <machine/pcb.h>
 #endif
 
+namespace reg_ids = lldb_private::registers::x86_64::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -81,7 +83,7 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
-  case lldb_##x##_x86_64:                                                      \
+  case reg_ids::x:                                                             \
     value = pcb.x;                                                             \
     break;
 
@@ -94,10 +96,10 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     REG(rbx);
     REG(rip);
 #undef REG
-  case lldb_cs_x86_64:
+  case reg_ids::cs:
     value.SetUInt(CODE_SEL, reg_info->byte_size);
     break;
-  case lldb_ss_x86_64:
+  case reg_ids::ss:
     value.SetUInt(DATA_SEL, reg_info->byte_size);
     break;
   default:

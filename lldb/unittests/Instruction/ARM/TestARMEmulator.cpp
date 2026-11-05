@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
-#include "Utility/ARM_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -17,6 +17,8 @@
 
 #include <map>
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -36,8 +38,8 @@ struct ARMEmulatorTester : public EmulateInstructionARM {
                                    RegisterValue &reg_value) {
     auto *tester = static_cast<ARMEmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindDWARF];
-    if (reg <= dwarf_cpsr) {
-      reg_value.SetUInt32(tester->gpr[reg - dwarf_r0]);
+    if (reg <= dwarf_regs::cpsr) {
+      reg_value.SetUInt32(tester->gpr[reg - dwarf_regs::r0]);
       return true;
     }
     return false;
@@ -49,8 +51,8 @@ struct ARMEmulatorTester : public EmulateInstructionARM {
                                     const RegisterValue &reg_value) {
     auto *tester = static_cast<ARMEmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindDWARF];
-    if (reg <= dwarf_cpsr) {
-      tester->gpr[reg - dwarf_r0] = reg_value.GetAsUInt32();
+    if (reg <= dwarf_regs::cpsr) {
+      tester->gpr[reg - dwarf_regs::r0] = reg_value.GetAsUInt32();
       return true;
     }
     return false;
@@ -114,8 +116,8 @@ TEST_F(TestARMEmulator, TestSTRT1AddsOffset) {
   ARMEmulatorTester emu;
 
   // Set up: r0 = 0xDEADBEEF (value to store), r1 = 0x1000 (base address)
-  emu.gpr[dwarf_r0] = 0xDEADBEEF;
-  emu.gpr[dwarf_r1] = 0x1000;
+  emu.gpr[dwarf_regs::r0] = 0xDEADBEEF;
+  emu.gpr[dwarf_regs::r1] = 0x1000;
   // Set up internal emulator state for Thumb mode.
   emu.SetupThumbMode(0x6048);
 

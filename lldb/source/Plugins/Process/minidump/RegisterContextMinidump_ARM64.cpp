@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextMinidump_ARM64.h"
+#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
 
-#include "Utility/ARM64_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-enumerations.h"
@@ -18,6 +19,8 @@
 
 // C++ includes
 
+namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
+namespace ehframe_regs = lldb_private::registers::arm64::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
@@ -28,7 +31,7 @@ using namespace minidump;
 #define DEF_X(i)                                                               \
   {                                                                            \
     "x" #i, nullptr, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,          \
-        {arm64_dwarf::x##i, arm64_dwarf::x##i, INV, INV, reg_x##i},            \
+        {ehframe_regs::x##i, dwarf_regs::x##i, INV, INV, reg_x##i},            \
         nullptr, nullptr, nullptr,                                             \
   }
 
@@ -41,14 +44,14 @@ using namespace minidump;
 #define DEF_X_ARG(i, n)                                                        \
   {                                                                            \
     "x" #i, "arg" #n, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,         \
-        {arm64_dwarf::x##i, arm64_dwarf::x##i, LLDB_REGNUM_GENERIC_ARG1 + i,   \
+        {ehframe_regs::x##i, dwarf_regs::x##i, LLDB_REGNUM_GENERIC_ARG1 + i,   \
          INV, reg_x##i}, nullptr, nullptr, nullptr,                            \
   }
 
 #define DEF_V(i)                                                               \
   {                                                                            \
     "v" #i, nullptr, 16, OFFSET(v) + i * 16, eEncodingVector,                  \
-        eFormatVectorOfUInt8, {arm64_dwarf::v##i, arm64_dwarf::v##i, INV, INV, \
+        eFormatVectorOfUInt8, {ehframe_regs::v##i, dwarf_regs::v##i, INV, INV, \
         reg_v##i}, nullptr, nullptr, nullptr,                                  \
   }
 
@@ -314,7 +317,7 @@ static RegisterInfo g_reg_infos[] = {
         OFFSET(x) + 29 * 8,
         eEncodingUint,
         eFormatHex,
-        {arm64_dwarf::x29, arm64_dwarf::x29, LLDB_REGNUM_GENERIC_FP, INV,
+        {ehframe_regs::x29, dwarf_regs::x29, LLDB_REGNUM_GENERIC_FP, INV,
          reg_fp},
         nullptr,
         nullptr,
@@ -327,7 +330,7 @@ static RegisterInfo g_reg_infos[] = {
         OFFSET(x) + 30 * 8,
         eEncodingUint,
         eFormatHex,
-        {arm64_dwarf::x30, arm64_dwarf::x30, LLDB_REGNUM_GENERIC_RA, INV,
+        {ehframe_regs::x30, dwarf_regs::x30, LLDB_REGNUM_GENERIC_RA, INV,
          reg_lr},
         nullptr,
         nullptr,
@@ -340,7 +343,7 @@ static RegisterInfo g_reg_infos[] = {
         OFFSET(x) + 31 * 8,
         eEncodingUint,
         eFormatHex,
-        {arm64_dwarf::x31, arm64_dwarf::x31, LLDB_REGNUM_GENERIC_SP, INV,
+        {ehframe_regs::x31, dwarf_regs::x31, LLDB_REGNUM_GENERIC_SP, INV,
          reg_sp},
         nullptr,
         nullptr,
@@ -353,7 +356,7 @@ static RegisterInfo g_reg_infos[] = {
         OFFSET(pc),
         eEncodingUint,
         eFormatHex,
-        {arm64_dwarf::pc, arm64_dwarf::pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
+        {ehframe_regs::pc, dwarf_regs::pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
         nullptr,
         nullptr,
         nullptr,

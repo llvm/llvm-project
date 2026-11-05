@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextMinidump_x86_32.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 
 // C includes
 // C++ includes
 
+
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb_private;
 using namespace minidump;
 
@@ -51,43 +54,43 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_32(
 
   if ((context_flags & ControlFlag) == ControlFlag) {
     writeRegister(&context->ebp,
-                  reg_info[lldb_ebp_i386].mutable_data(result_base));
+                  reg_info[reg_ids::ebp].mutable_data(result_base));
     writeRegister(&context->eip,
-                  reg_info[lldb_eip_i386].mutable_data(result_base));
+                  reg_info[reg_ids::eip].mutable_data(result_base));
     writeRegister(&context->cs,
-                  reg_info[lldb_cs_i386].mutable_data(result_base));
+                  reg_info[reg_ids::cs].mutable_data(result_base));
     writeRegister(&context->eflags,
-                  reg_info[lldb_eflags_i386].mutable_data(result_base));
+                  reg_info[reg_ids::eflags].mutable_data(result_base));
     writeRegister(&context->esp,
-                  reg_info[lldb_esp_i386].mutable_data(result_base));
+                  reg_info[reg_ids::esp].mutable_data(result_base));
     writeRegister(&context->ss,
-                  reg_info[lldb_ss_i386].mutable_data(result_base));
+                  reg_info[reg_ids::ss].mutable_data(result_base));
   }
 
   if ((context_flags & SegmentsFlag) == SegmentsFlag) {
     writeRegister(&context->ds,
-                  reg_info[lldb_ds_i386].mutable_data(result_base));
+                  reg_info[reg_ids::ds].mutable_data(result_base));
     writeRegister(&context->es,
-                  reg_info[lldb_es_i386].mutable_data(result_base));
+                  reg_info[reg_ids::es].mutable_data(result_base));
     writeRegister(&context->fs,
-                  reg_info[lldb_fs_i386].mutable_data(result_base));
+                  reg_info[reg_ids::fs].mutable_data(result_base));
     writeRegister(&context->gs,
-                  reg_info[lldb_gs_i386].mutable_data(result_base));
+                  reg_info[reg_ids::gs].mutable_data(result_base));
   }
 
   if ((context_flags & IntegerFlag) == IntegerFlag) {
     writeRegister(&context->eax,
-                  reg_info[lldb_eax_i386].mutable_data(result_base));
+                  reg_info[reg_ids::eax].mutable_data(result_base));
     writeRegister(&context->ecx,
-                  reg_info[lldb_ecx_i386].mutable_data(result_base));
+                  reg_info[reg_ids::ecx].mutable_data(result_base));
     writeRegister(&context->edx,
-                  reg_info[lldb_edx_i386].mutable_data(result_base));
+                  reg_info[reg_ids::edx].mutable_data(result_base));
     writeRegister(&context->ebx,
-                  reg_info[lldb_ebx_i386].mutable_data(result_base));
+                  reg_info[reg_ids::ebx].mutable_data(result_base));
     writeRegister(&context->esi,
-                  reg_info[lldb_esi_i386].mutable_data(result_base));
+                  reg_info[reg_ids::esi].mutable_data(result_base));
     writeRegister(&context->edi,
-                  reg_info[lldb_edi_i386].mutable_data(result_base));
+                  reg_info[reg_ids::edi].mutable_data(result_base));
   }
 
   // TODO parse the floating point registers

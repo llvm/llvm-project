@@ -11,7 +11,8 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Register/Arch/RegisterContext_x86.h"
+#include "lldb/Register/Arch/lldb-x86_64-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-ehframe-register-enums.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
@@ -25,11 +26,15 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
+
+namespace dwarf_regs = lldb_private::registers::x86_64::dwarf;
+namespace ehframe_regs = lldb_private::registers::x86_64::ehframe;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -50,29 +55,52 @@ static std::ostream &operator<<(std::ostream &OS, const UnwindPlan::Row &row) {
 }
 } // namespace lldb_private
 
-static UnwindPlan::Row GetExpectedRow0() {
+struct ExpectedRegisterNumbers {
+  RegisterKind kind;
+  uint32_t rsp;
+  uint32_t rbp;
+  uint32_t rip;
+};
+
+static ExpectedRegisterNumbers
+GetExpectedRegisterNumbers(DWARFCallFrameInfo::Type type) {
+  switch (type) {
+  case DWARFCallFrameInfo::EH:
+    return {eRegisterKindEHFrame, ehframe_regs::rsp, ehframe_regs::rbp,
+            ehframe_regs::rip};
+  case DWARFCallFrameInfo::DWARF:
+    return {eRegisterKindDWARF, dwarf_regs::rsp, dwarf_regs::rbp,
+            dwarf_regs::rip};
+  }
+  llvm_unreachable("unexpected call frame information type");
+}
+
+static UnwindPlan::Row
+GetExpectedRow0(const ExpectedRegisterNumbers &registers) {
   UnwindPlan::Row row;
   row.SetOffset(0);
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rsp_x86_64, 8);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rip_x86_64, -8, false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers.rsp, 8);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rip, -8, false);
   return row;
 }
 
-static UnwindPlan::Row GetExpectedRow1() {
+static UnwindPlan::Row
+GetExpectedRow1(const ExpectedRegisterNumbers &registers) {
   UnwindPlan::Row row;
   row.SetOffset(1);
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rsp_x86_64, 16);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rip_x86_64, -8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rbp_x86_64, -16, false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers.rsp, 16);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rip, -8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rbp, -16, false);
   return row;
 }
 
-static UnwindPlan::Row GetExpectedRow2() {
+static UnwindPlan::Row
+GetExpectedRow2(const ExpectedRegisterNumbers &registers) {
   UnwindPlan::Row row;
   row.SetOffset(4);
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp_x86_64, 16);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rip_x86_64, -8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rbp_x86_64, -16, false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers.rbp, 16);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rip, -8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rbp, -16, false);
   return row;
 }
 
@@ -240,10 +268,15 @@ Symbols:
 
   std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
   ASSERT_TRUE(plan_up);
+  const auto registers = GetExpectedRegisterNumbers(type);
+  EXPECT_EQ(registers.kind, plan_up->GetRegisterKind());
   ASSERT_EQ(3, plan_up->GetRowCount());
-  EXPECT_THAT(plan_up->GetRowAtIndex(0), testing::Pointee(GetExpectedRow0()));
-  EXPECT_THAT(plan_up->GetRowAtIndex(1), testing::Pointee(GetExpectedRow1()));
-  EXPECT_THAT(plan_up->GetRowAtIndex(2), testing::Pointee(GetExpectedRow2()));
+  EXPECT_THAT(plan_up->GetRowAtIndex(0),
+              testing::Pointee(GetExpectedRow0(registers)));
+  EXPECT_THAT(plan_up->GetRowAtIndex(1),
+              testing::Pointee(GetExpectedRow1(registers)));
+  EXPECT_THAT(plan_up->GetRowAtIndex(2),
+              testing::Pointee(GetExpectedRow2(registers)));
 }
 
 TEST_F(DWARFCallFrameInfoTest, Basic_dwarf3) {
@@ -258,12 +291,13 @@ TEST_F(DWARFCallFrameInfoTest, Basic_eh) {
   TestBasic(DWARFCallFrameInfo::EH, "eh_frame");
 }
 
-static UnwindPlan::Row GetValOffsetExpectedRow0() {
+static UnwindPlan::Row
+GetValOffsetExpectedRow0(const ExpectedRegisterNumbers &registers) {
   UnwindPlan::Row row;
   row.SetOffset(0);
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rsp_x86_64, 16);
-  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rip_x86_64, -8, false);
-  row.SetRegisterLocationToIsCFAPlusOffset(dwarf_rbp_x86_64, -16, false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers.rsp, 16);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers.rip, -8, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(registers.rbp, -16, false);
   return row;
 }
 
@@ -372,9 +406,11 @@ Symbols:
 
   std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
   ASSERT_TRUE(plan_up);
+  const auto registers = GetExpectedRegisterNumbers(type);
+  EXPECT_EQ(registers.kind, plan_up->GetRegisterKind());
   ASSERT_EQ(1, plan_up->GetRowCount());
   EXPECT_THAT(plan_up->GetRowAtIndex(0),
-              testing::Pointee(GetValOffsetExpectedRow0()));
+              testing::Pointee(GetValOffsetExpectedRow0(registers)));
 }
 
 TEST_F(DWARFCallFrameInfoTest, ValOffset_dwarf3) {

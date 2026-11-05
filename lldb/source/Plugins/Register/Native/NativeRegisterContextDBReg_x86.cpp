@@ -10,7 +10,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 using namespace lldb_private;
 
@@ -84,9 +85,9 @@ const RegisterInfo *NativeRegisterContextDBReg_x86::GetDR(int num) const {
   assert(num >= 0 && num <= 7);
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
-    return GetRegisterInfoAtIndex(lldb_dr0_i386 + num);
+    return GetRegisterInfoAtIndex(registers::x86::id::dr0 + num);
   case llvm::Triple::x86_64:
-    return GetRegisterInfoAtIndex(lldb_dr0_x86_64 + num);
+    return GetRegisterInfoAtIndex(registers::x86_64::id::dr0 + num);
   default:
     llvm_unreachable("Unhandled target architecture.");
   }

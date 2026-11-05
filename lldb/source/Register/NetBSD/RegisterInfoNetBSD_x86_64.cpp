@@ -7,9 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoNetBSD_x86_64.h"
+#include "lldb/Register/Arch/lldb-x86_64-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-ehframe-register-enums.h"
+
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include <cstdint>
+
 #include "RegisterInfoNetBSD_i386.h"
 #include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -79,7 +88,6 @@ struct UserArea {
   (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
    LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
-
 // Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
 // structure.
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
@@ -103,7 +111,7 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
         new RegisterInfoNetBSD_i386(arch));
     const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
     g_register_infos.insert(g_register_infos.end(), &base_info[0],
-                            &base_info[k_num_registers_i386]);
+                            &base_info[registers::x86::id::k_num_registers]);
 
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
@@ -149,9 +157,9 @@ static uint32_t
 PrivateGetUserRegisterCount(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::x86:
-    return static_cast<uint32_t>(k_num_user_registers_i386);
+    return static_cast<uint32_t>(registers::x86::id::k_num_user_registers);
   case llvm::Triple::x86_64:
-    return static_cast<uint32_t>(k_num_user_registers_x86_64);
+    return static_cast<uint32_t>(registers::x86_64::id::k_num_user_registers);
   default:
     assert(false && "Unhandled target architecture.");
     return 0;

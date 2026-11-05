@@ -9,7 +9,7 @@
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Utility/ARM_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
@@ -24,6 +24,8 @@
 
 #include "llvm/Support/Endian.h"
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -264,13 +266,15 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
 
   int stored_regs_size = fp_regs_saved ? 0x68 : 0x20;
 
-  uint32_t gpr_regs[] = {dwarf_r0,  dwarf_r1, dwarf_r2, dwarf_r3,
-                         dwarf_r12, dwarf_lr, dwarf_pc, dwarf_cpsr};
+  uint32_t gpr_regs[] = {dwarf_regs::r0, dwarf_regs::r1,  dwarf_regs::r2,
+                         dwarf_regs::r3, dwarf_regs::r12, dwarf_regs::lr,
+                         dwarf_regs::pc, dwarf_regs::cpsr};
   const int gpr_reg_count = std::size(gpr_regs);
-  uint32_t fpr_regs[] = {dwarf_s0,  dwarf_s1,  dwarf_s2,  dwarf_s3,
-                         dwarf_s4,  dwarf_s5,  dwarf_s6,  dwarf_s7,
-                         dwarf_s8,  dwarf_s9,  dwarf_s10, dwarf_s11,
-                         dwarf_s12, dwarf_s13, dwarf_s14, dwarf_s15};
+  uint32_t fpr_regs[] = {
+      dwarf_regs::s0,  dwarf_regs::s1,  dwarf_regs::s2,  dwarf_regs::s3,
+      dwarf_regs::s4,  dwarf_regs::s5,  dwarf_regs::s6,  dwarf_regs::s7,
+      dwarf_regs::s8,  dwarf_regs::s9,  dwarf_regs::s10, dwarf_regs::s11,
+      dwarf_regs::s12, dwarf_regs::s13, dwarf_regs::s14, dwarf_regs::s15};
   const int fpr_reg_count = std::size(fpr_regs);
 
   RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
@@ -315,8 +319,8 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
             callers_return_address, cfa, fp_regs_saved, stored_regs_size,
             align_stack);
 
-  uint32_t sp_regnum = dwarf_sp;
-  reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, dwarf_sp,
+  uint32_t sp_regnum = dwarf_regs::sp;
+  reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, dwarf_regs::sp,
                                           plan_regkind, sp_regnum);
 
   const int row_count = current_unwindplan->GetRowCount();

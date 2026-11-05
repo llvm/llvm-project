@@ -15,7 +15,7 @@
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_x86.h"
 #include "Register/Linux/RegisterInfoLinux_x86.h"
 #include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 #include <optional>
 #include <sys/uio.h>
 
@@ -111,7 +111,7 @@ private:
   MPX m_mpx_set;
   RegInfo m_reg_info;
   RegisterInfo m_i386_thread_pointer_info = {};
-  uint64_t m_gpr_x86_64[x86_64_with_base::k_num_gpr_registers];
+  uint64_t m_gpr_x86_64[registers::x86_64::id::with_base::k_num_gpr_registers];
   uint32_t m_fctrl_offset_in_userarea;
 
   // Private member methods.

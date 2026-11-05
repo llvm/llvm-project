@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Register/Arch/lldb-riscv-ehframe-register-enums.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
@@ -21,8 +22,11 @@
 #include <memory>
 
 #include "RegisterContextDarwin_riscv32.h"
-#include "Utility/RISCV_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
 
+
+namespace dwarf_regs = lldb_private::registers::riscv::dwarf;
+namespace ehframe_regs = lldb_private::registers::riscv::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -149,7 +153,7 @@ enum {
 static RegisterInfo g_register_infos[] = {
     {
         DEFINE_GPR_ABI(zero, x0),
-        {riscv_dwarf::dwarf_gpr_x0, riscv_dwarf::dwarf_gpr_x0,
+        {ehframe_regs::gpr_x0, dwarf_regs::gpr_x0,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x0},
         nullptr,
         nullptr,
@@ -157,7 +161,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(ra, x1),
-        {riscv_dwarf::dwarf_gpr_x1, riscv_dwarf::dwarf_gpr_x1,
+        {ehframe_regs::gpr_x1, dwarf_regs::gpr_x1,
          LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM, gpr_x1},
         nullptr,
         nullptr,
@@ -165,7 +169,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(sp, x2),
-        {riscv_dwarf::dwarf_gpr_x2, riscv_dwarf::dwarf_gpr_x2,
+        {ehframe_regs::gpr_x2, dwarf_regs::gpr_x2,
          LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM, gpr_x2},
         nullptr,
         nullptr,
@@ -173,7 +177,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(gp, x3),
-        {riscv_dwarf::dwarf_gpr_x3, riscv_dwarf::dwarf_gpr_x3,
+        {ehframe_regs::gpr_x3, dwarf_regs::gpr_x3,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x3},
         nullptr,
         nullptr,
@@ -181,7 +185,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(tp, x4),
-        {riscv_dwarf::dwarf_gpr_x4, riscv_dwarf::dwarf_gpr_x4,
+        {ehframe_regs::gpr_x4, dwarf_regs::gpr_x4,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x4},
         nullptr,
         nullptr,
@@ -189,7 +193,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t0, x5),
-        {riscv_dwarf::dwarf_gpr_x5, riscv_dwarf::dwarf_gpr_x5,
+        {ehframe_regs::gpr_x5, dwarf_regs::gpr_x5,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x5},
         nullptr,
         nullptr,
@@ -197,7 +201,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t1, x6),
-        {riscv_dwarf::dwarf_gpr_x6, riscv_dwarf::dwarf_gpr_x6,
+        {ehframe_regs::gpr_x6, dwarf_regs::gpr_x6,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x6},
         nullptr,
         nullptr,
@@ -205,7 +209,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t2, x7),
-        {riscv_dwarf::dwarf_gpr_x7, riscv_dwarf::dwarf_gpr_x7,
+        {ehframe_regs::gpr_x7, dwarf_regs::gpr_x7,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x7},
         nullptr,
         nullptr,
@@ -213,7 +217,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(fp, x8),
-        {riscv_dwarf::dwarf_gpr_x8, riscv_dwarf::dwarf_gpr_x8,
+        {ehframe_regs::gpr_x8, dwarf_regs::gpr_x8,
          LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM, gpr_x8},
         nullptr,
         nullptr,
@@ -221,7 +225,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s1, x9),
-        {riscv_dwarf::dwarf_gpr_x9, riscv_dwarf::dwarf_gpr_x9,
+        {ehframe_regs::gpr_x9, dwarf_regs::gpr_x9,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x9},
         nullptr,
         nullptr,
@@ -229,7 +233,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a0, x10),
-        {riscv_dwarf::dwarf_gpr_x10, riscv_dwarf::dwarf_gpr_x10,
+        {ehframe_regs::gpr_x10, dwarf_regs::gpr_x10,
          LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM, gpr_x10},
         nullptr,
         nullptr,
@@ -237,7 +241,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a1, x11),
-        {riscv_dwarf::dwarf_gpr_x11, riscv_dwarf::dwarf_gpr_x11,
+        {ehframe_regs::gpr_x11, dwarf_regs::gpr_x11,
          LLDB_REGNUM_GENERIC_ARG2, LLDB_INVALID_REGNUM, gpr_x11},
         nullptr,
         nullptr,
@@ -245,7 +249,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a2, x12),
-        {riscv_dwarf::dwarf_gpr_x12, riscv_dwarf::dwarf_gpr_x12,
+        {ehframe_regs::gpr_x12, dwarf_regs::gpr_x12,
          LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM, gpr_x12},
         nullptr,
         nullptr,
@@ -253,7 +257,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a3, x13),
-        {riscv_dwarf::dwarf_gpr_x13, riscv_dwarf::dwarf_gpr_x13,
+        {ehframe_regs::gpr_x13, dwarf_regs::gpr_x13,
          LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM, gpr_x13},
         nullptr,
         nullptr,
@@ -261,7 +265,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a4, x14),
-        {riscv_dwarf::dwarf_gpr_x14, riscv_dwarf::dwarf_gpr_x14,
+        {ehframe_regs::gpr_x14, dwarf_regs::gpr_x14,
          LLDB_REGNUM_GENERIC_ARG5, LLDB_INVALID_REGNUM, gpr_x14},
         nullptr,
         nullptr,
@@ -269,7 +273,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a5, x15),
-        {riscv_dwarf::dwarf_gpr_x15, riscv_dwarf::dwarf_gpr_x15,
+        {ehframe_regs::gpr_x15, dwarf_regs::gpr_x15,
          LLDB_REGNUM_GENERIC_ARG6, LLDB_INVALID_REGNUM, gpr_x15},
         nullptr,
         nullptr,
@@ -277,7 +281,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a6, x16),
-        {riscv_dwarf::dwarf_gpr_x16, riscv_dwarf::dwarf_gpr_x16,
+        {ehframe_regs::gpr_x16, dwarf_regs::gpr_x16,
          LLDB_REGNUM_GENERIC_ARG7, LLDB_INVALID_REGNUM, gpr_x16},
         nullptr,
         nullptr,
@@ -285,7 +289,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(a7, x17),
-        {riscv_dwarf::dwarf_gpr_x17, riscv_dwarf::dwarf_gpr_x17,
+        {ehframe_regs::gpr_x17, dwarf_regs::gpr_x17,
          LLDB_REGNUM_GENERIC_ARG8, LLDB_INVALID_REGNUM, gpr_x17},
         nullptr,
         nullptr,
@@ -293,7 +297,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s2, x18),
-        {riscv_dwarf::dwarf_gpr_x18, riscv_dwarf::dwarf_gpr_x18,
+        {ehframe_regs::gpr_x18, dwarf_regs::gpr_x18,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x18},
         nullptr,
         nullptr,
@@ -301,7 +305,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s3, x19),
-        {riscv_dwarf::dwarf_gpr_x19, riscv_dwarf::dwarf_gpr_x19,
+        {ehframe_regs::gpr_x19, dwarf_regs::gpr_x19,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x19},
         nullptr,
         nullptr,
@@ -309,7 +313,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s4, x20),
-        {riscv_dwarf::dwarf_gpr_x20, riscv_dwarf::dwarf_gpr_x20,
+        {ehframe_regs::gpr_x20, dwarf_regs::gpr_x20,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x20},
         nullptr,
         nullptr,
@@ -317,7 +321,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s5, x21),
-        {riscv_dwarf::dwarf_gpr_x21, riscv_dwarf::dwarf_gpr_x21,
+        {ehframe_regs::gpr_x21, dwarf_regs::gpr_x21,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x21},
         nullptr,
         nullptr,
@@ -325,7 +329,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s6, x22),
-        {riscv_dwarf::dwarf_gpr_x22, riscv_dwarf::dwarf_gpr_x22,
+        {ehframe_regs::gpr_x22, dwarf_regs::gpr_x22,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x22},
         nullptr,
         nullptr,
@@ -333,7 +337,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s7, x23),
-        {riscv_dwarf::dwarf_gpr_x23, riscv_dwarf::dwarf_gpr_x23,
+        {ehframe_regs::gpr_x23, dwarf_regs::gpr_x23,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x23},
         nullptr,
         nullptr,
@@ -341,7 +345,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s8, x24),
-        {riscv_dwarf::dwarf_gpr_x24, riscv_dwarf::dwarf_gpr_x24,
+        {ehframe_regs::gpr_x24, dwarf_regs::gpr_x24,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x24},
         nullptr,
         nullptr,
@@ -349,7 +353,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s9, x25),
-        {riscv_dwarf::dwarf_gpr_x25, riscv_dwarf::dwarf_gpr_x25,
+        {ehframe_regs::gpr_x25, dwarf_regs::gpr_x25,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x25},
         nullptr,
         nullptr,
@@ -357,7 +361,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s10, x26),
-        {riscv_dwarf::dwarf_gpr_x26, riscv_dwarf::dwarf_gpr_x26,
+        {ehframe_regs::gpr_x26, dwarf_regs::gpr_x26,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x26},
         nullptr,
         nullptr,
@@ -365,7 +369,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(s11, x27),
-        {riscv_dwarf::dwarf_gpr_x27, riscv_dwarf::dwarf_gpr_x27,
+        {ehframe_regs::gpr_x27, dwarf_regs::gpr_x27,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x27},
         nullptr,
         nullptr,
@@ -373,7 +377,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t3, x28),
-        {riscv_dwarf::dwarf_gpr_x28, riscv_dwarf::dwarf_gpr_x28,
+        {ehframe_regs::gpr_x28, dwarf_regs::gpr_x28,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x28},
         nullptr,
         nullptr,
@@ -381,7 +385,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t4, x29),
-        {riscv_dwarf::dwarf_gpr_x29, riscv_dwarf::dwarf_gpr_x29,
+        {ehframe_regs::gpr_x29, dwarf_regs::gpr_x29,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x29},
         nullptr,
         nullptr,
@@ -389,7 +393,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t5, x30),
-        {riscv_dwarf::dwarf_gpr_x30, riscv_dwarf::dwarf_gpr_x30,
+        {ehframe_regs::gpr_x30, dwarf_regs::gpr_x30,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x30},
         nullptr,
         nullptr,
@@ -397,7 +401,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR_ABI(t6, x31),
-        {riscv_dwarf::dwarf_gpr_x31, riscv_dwarf::dwarf_gpr_x31,
+        {ehframe_regs::gpr_x31, dwarf_regs::gpr_x31,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_x31},
         nullptr,
         nullptr,
@@ -405,7 +409,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_GPR(pc),
-        {riscv_dwarf::dwarf_gpr_pc, riscv_dwarf::dwarf_gpr_pc,
+        {ehframe_regs::gpr_pc, dwarf_regs::gpr_pc,
          LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM, gpr_pc},
         nullptr,
         nullptr,
@@ -414,7 +418,7 @@ static RegisterInfo g_register_infos[] = {
 
     {
         DEFINE_FPU_ABI(ft0, f0),
-        {riscv_dwarf::dwarf_fpr_f0, riscv_dwarf::dwarf_fpr_f0,
+        {ehframe_regs::fpr_f0, dwarf_regs::fpr_f0,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f0},
         nullptr,
         nullptr,
@@ -422,7 +426,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft1, f1),
-        {riscv_dwarf::dwarf_fpr_f1, riscv_dwarf::dwarf_fpr_f1,
+        {ehframe_regs::fpr_f1, dwarf_regs::fpr_f1,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f1},
         nullptr,
         nullptr,
@@ -430,7 +434,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft2, f2),
-        {riscv_dwarf::dwarf_fpr_f2, riscv_dwarf::dwarf_fpr_f2,
+        {ehframe_regs::fpr_f2, dwarf_regs::fpr_f2,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f2},
         nullptr,
         nullptr,
@@ -438,7 +442,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft3, f3),
-        {riscv_dwarf::dwarf_fpr_f3, riscv_dwarf::dwarf_fpr_f3,
+        {ehframe_regs::fpr_f3, dwarf_regs::fpr_f3,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f3},
         nullptr,
         nullptr,
@@ -446,7 +450,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft4, f4),
-        {riscv_dwarf::dwarf_fpr_f4, riscv_dwarf::dwarf_fpr_f4,
+        {ehframe_regs::fpr_f4, dwarf_regs::fpr_f4,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f4},
         nullptr,
         nullptr,
@@ -454,7 +458,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft5, f5),
-        {riscv_dwarf::dwarf_fpr_f5, riscv_dwarf::dwarf_fpr_f5,
+        {ehframe_regs::fpr_f5, dwarf_regs::fpr_f5,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f5},
         nullptr,
         nullptr,
@@ -462,7 +466,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft6, f6),
-        {riscv_dwarf::dwarf_fpr_f6, riscv_dwarf::dwarf_fpr_f6,
+        {ehframe_regs::fpr_f6, dwarf_regs::fpr_f6,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f6},
         nullptr,
         nullptr,
@@ -470,7 +474,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft7, f7),
-        {riscv_dwarf::dwarf_fpr_f7, riscv_dwarf::dwarf_fpr_f7,
+        {ehframe_regs::fpr_f7, dwarf_regs::fpr_f7,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f7},
         nullptr,
         nullptr,
@@ -478,7 +482,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs0, f8),
-        {riscv_dwarf::dwarf_fpr_f8, riscv_dwarf::dwarf_fpr_f8,
+        {ehframe_regs::fpr_f8, dwarf_regs::fpr_f8,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f8},
         nullptr,
         nullptr,
@@ -486,7 +490,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs1, f9),
-        {riscv_dwarf::dwarf_fpr_f9, riscv_dwarf::dwarf_fpr_f9,
+        {ehframe_regs::fpr_f9, dwarf_regs::fpr_f9,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f9},
         nullptr,
         nullptr,
@@ -494,7 +498,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa0, f10),
-        {riscv_dwarf::dwarf_fpr_f10, riscv_dwarf::dwarf_fpr_f10,
+        {ehframe_regs::fpr_f10, dwarf_regs::fpr_f10,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f10},
         nullptr,
         nullptr,
@@ -502,7 +506,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa1, f11),
-        {riscv_dwarf::dwarf_fpr_f11, riscv_dwarf::dwarf_fpr_f11,
+        {ehframe_regs::fpr_f11, dwarf_regs::fpr_f11,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f11},
         nullptr,
         nullptr,
@@ -510,7 +514,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa2, f12),
-        {riscv_dwarf::dwarf_fpr_f12, riscv_dwarf::dwarf_fpr_f12,
+        {ehframe_regs::fpr_f12, dwarf_regs::fpr_f12,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f12},
         nullptr,
         nullptr,
@@ -518,7 +522,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa3, f13),
-        {riscv_dwarf::dwarf_fpr_f13, riscv_dwarf::dwarf_fpr_f13,
+        {ehframe_regs::fpr_f13, dwarf_regs::fpr_f13,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f13},
         nullptr,
         nullptr,
@@ -526,7 +530,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa4, f14),
-        {riscv_dwarf::dwarf_fpr_f14, riscv_dwarf::dwarf_fpr_f14,
+        {ehframe_regs::fpr_f14, dwarf_regs::fpr_f14,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f14},
         nullptr,
         nullptr,
@@ -534,7 +538,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa5, f15),
-        {riscv_dwarf::dwarf_fpr_f15, riscv_dwarf::dwarf_fpr_f15,
+        {ehframe_regs::fpr_f15, dwarf_regs::fpr_f15,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f15},
         nullptr,
         nullptr,
@@ -542,7 +546,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa6, f16),
-        {riscv_dwarf::dwarf_fpr_f16, riscv_dwarf::dwarf_fpr_f16,
+        {ehframe_regs::fpr_f16, dwarf_regs::fpr_f16,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f16},
         nullptr,
         nullptr,
@@ -550,7 +554,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fa7, f17),
-        {riscv_dwarf::dwarf_fpr_f17, riscv_dwarf::dwarf_fpr_f17,
+        {ehframe_regs::fpr_f17, dwarf_regs::fpr_f17,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f17},
         nullptr,
         nullptr,
@@ -558,7 +562,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs2, f18),
-        {riscv_dwarf::dwarf_fpr_f18, riscv_dwarf::dwarf_fpr_f18,
+        {ehframe_regs::fpr_f18, dwarf_regs::fpr_f18,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f18},
         nullptr,
         nullptr,
@@ -566,7 +570,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs3, f19),
-        {riscv_dwarf::dwarf_fpr_f19, riscv_dwarf::dwarf_fpr_f19,
+        {ehframe_regs::fpr_f19, dwarf_regs::fpr_f19,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f19},
         nullptr,
         nullptr,
@@ -574,7 +578,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs4, f20),
-        {riscv_dwarf::dwarf_fpr_f20, riscv_dwarf::dwarf_fpr_f20,
+        {ehframe_regs::fpr_f20, dwarf_regs::fpr_f20,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f20},
         nullptr,
         nullptr,
@@ -582,7 +586,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs5, f21),
-        {riscv_dwarf::dwarf_fpr_f21, riscv_dwarf::dwarf_fpr_f21,
+        {ehframe_regs::fpr_f21, dwarf_regs::fpr_f21,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f21},
         nullptr,
         nullptr,
@@ -590,7 +594,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs6, f22),
-        {riscv_dwarf::dwarf_fpr_f22, riscv_dwarf::dwarf_fpr_f22,
+        {ehframe_regs::fpr_f22, dwarf_regs::fpr_f22,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f22},
         nullptr,
         nullptr,
@@ -598,7 +602,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs7, f23),
-        {riscv_dwarf::dwarf_fpr_f23, riscv_dwarf::dwarf_fpr_f23,
+        {ehframe_regs::fpr_f23, dwarf_regs::fpr_f23,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f23},
         nullptr,
         nullptr,
@@ -606,7 +610,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs8, f24),
-        {riscv_dwarf::dwarf_fpr_f24, riscv_dwarf::dwarf_fpr_f24,
+        {ehframe_regs::fpr_f24, dwarf_regs::fpr_f24,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f24},
         nullptr,
         nullptr,
@@ -614,7 +618,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs9, f25),
-        {riscv_dwarf::dwarf_fpr_f25, riscv_dwarf::dwarf_fpr_f25,
+        {ehframe_regs::fpr_f25, dwarf_regs::fpr_f25,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f25},
         nullptr,
         nullptr,
@@ -622,7 +626,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs10, f26),
-        {riscv_dwarf::dwarf_fpr_f26, riscv_dwarf::dwarf_fpr_f26,
+        {ehframe_regs::fpr_f26, dwarf_regs::fpr_f26,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f26},
         nullptr,
         nullptr,
@@ -630,7 +634,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(fs11, f27),
-        {riscv_dwarf::dwarf_fpr_f27, riscv_dwarf::dwarf_fpr_f27,
+        {ehframe_regs::fpr_f27, dwarf_regs::fpr_f27,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f27},
         nullptr,
         nullptr,
@@ -638,7 +642,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft8, f28),
-        {riscv_dwarf::dwarf_fpr_f28, riscv_dwarf::dwarf_fpr_f28,
+        {ehframe_regs::fpr_f28, dwarf_regs::fpr_f28,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f28},
         nullptr,
         nullptr,
@@ -646,7 +650,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft9, f29),
-        {riscv_dwarf::dwarf_fpr_f29, riscv_dwarf::dwarf_fpr_f29,
+        {ehframe_regs::fpr_f29, dwarf_regs::fpr_f29,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f29},
         nullptr,
         nullptr,
@@ -654,7 +658,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft10, f30),
-        {riscv_dwarf::dwarf_fpr_f30, riscv_dwarf::dwarf_fpr_f30,
+        {ehframe_regs::fpr_f30, dwarf_regs::fpr_f30,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f30},
         nullptr,
         nullptr,
@@ -662,7 +666,7 @@ static RegisterInfo g_register_infos[] = {
     },
     {
         DEFINE_FPU_ABI(ft11, f31),
-        {riscv_dwarf::dwarf_fpr_f31, riscv_dwarf::dwarf_fpr_f31,
+        {ehframe_regs::fpr_f31, dwarf_regs::fpr_f31,
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_f31},
         nullptr,
         nullptr,
@@ -1235,73 +1239,73 @@ uint32_t RegisterContextDarwin_riscv32::ConvertRegisterKindToRegisterNumber(
     }
   } else if (kind == eRegisterKindEHFrame || kind == eRegisterKindDWARF) {
     switch (reg) {
-    case riscv_dwarf::dwarf_gpr_x0:
-    case riscv_dwarf::dwarf_gpr_x1:
-    case riscv_dwarf::dwarf_gpr_x2:
-    case riscv_dwarf::dwarf_gpr_x3:
-    case riscv_dwarf::dwarf_gpr_x4:
-    case riscv_dwarf::dwarf_gpr_x5:
-    case riscv_dwarf::dwarf_gpr_x6:
-    case riscv_dwarf::dwarf_gpr_x7:
-    case riscv_dwarf::dwarf_gpr_x8:
-    case riscv_dwarf::dwarf_gpr_x9:
-    case riscv_dwarf::dwarf_gpr_x10:
-    case riscv_dwarf::dwarf_gpr_x11:
-    case riscv_dwarf::dwarf_gpr_x12:
-    case riscv_dwarf::dwarf_gpr_x13:
-    case riscv_dwarf::dwarf_gpr_x14:
-    case riscv_dwarf::dwarf_gpr_x15:
-    case riscv_dwarf::dwarf_gpr_x16:
-    case riscv_dwarf::dwarf_gpr_x17:
-    case riscv_dwarf::dwarf_gpr_x18:
-    case riscv_dwarf::dwarf_gpr_x19:
-    case riscv_dwarf::dwarf_gpr_x20:
-    case riscv_dwarf::dwarf_gpr_x21:
-    case riscv_dwarf::dwarf_gpr_x22:
-    case riscv_dwarf::dwarf_gpr_x23:
-    case riscv_dwarf::dwarf_gpr_x24:
-    case riscv_dwarf::dwarf_gpr_x25:
-    case riscv_dwarf::dwarf_gpr_x26:
-    case riscv_dwarf::dwarf_gpr_x27:
-    case riscv_dwarf::dwarf_gpr_x28:
-    case riscv_dwarf::dwarf_gpr_x29:
-    case riscv_dwarf::dwarf_gpr_x30:
-    case riscv_dwarf::dwarf_gpr_x31:
-      return gpr_x0 + (reg - riscv_dwarf::dwarf_gpr_x0);
+    case dwarf_regs::gpr_x0:
+    case dwarf_regs::gpr_x1:
+    case dwarf_regs::gpr_x2:
+    case dwarf_regs::gpr_x3:
+    case dwarf_regs::gpr_x4:
+    case dwarf_regs::gpr_x5:
+    case dwarf_regs::gpr_x6:
+    case dwarf_regs::gpr_x7:
+    case dwarf_regs::gpr_x8:
+    case dwarf_regs::gpr_x9:
+    case dwarf_regs::gpr_x10:
+    case dwarf_regs::gpr_x11:
+    case dwarf_regs::gpr_x12:
+    case dwarf_regs::gpr_x13:
+    case dwarf_regs::gpr_x14:
+    case dwarf_regs::gpr_x15:
+    case dwarf_regs::gpr_x16:
+    case dwarf_regs::gpr_x17:
+    case dwarf_regs::gpr_x18:
+    case dwarf_regs::gpr_x19:
+    case dwarf_regs::gpr_x20:
+    case dwarf_regs::gpr_x21:
+    case dwarf_regs::gpr_x22:
+    case dwarf_regs::gpr_x23:
+    case dwarf_regs::gpr_x24:
+    case dwarf_regs::gpr_x25:
+    case dwarf_regs::gpr_x26:
+    case dwarf_regs::gpr_x27:
+    case dwarf_regs::gpr_x28:
+    case dwarf_regs::gpr_x29:
+    case dwarf_regs::gpr_x30:
+    case dwarf_regs::gpr_x31:
+      return gpr_x0 + (reg - dwarf_regs::gpr_x0);
 
-    case riscv_dwarf::dwarf_fpr_f0:
-    case riscv_dwarf::dwarf_fpr_f1:
-    case riscv_dwarf::dwarf_fpr_f2:
-    case riscv_dwarf::dwarf_fpr_f3:
-    case riscv_dwarf::dwarf_fpr_f4:
-    case riscv_dwarf::dwarf_fpr_f5:
-    case riscv_dwarf::dwarf_fpr_f6:
-    case riscv_dwarf::dwarf_fpr_f7:
-    case riscv_dwarf::dwarf_fpr_f8:
-    case riscv_dwarf::dwarf_fpr_f9:
-    case riscv_dwarf::dwarf_fpr_f10:
-    case riscv_dwarf::dwarf_fpr_f11:
-    case riscv_dwarf::dwarf_fpr_f12:
-    case riscv_dwarf::dwarf_fpr_f13:
-    case riscv_dwarf::dwarf_fpr_f14:
-    case riscv_dwarf::dwarf_fpr_f15:
-    case riscv_dwarf::dwarf_fpr_f16:
-    case riscv_dwarf::dwarf_fpr_f17:
-    case riscv_dwarf::dwarf_fpr_f18:
-    case riscv_dwarf::dwarf_fpr_f19:
-    case riscv_dwarf::dwarf_fpr_f20:
-    case riscv_dwarf::dwarf_fpr_f21:
-    case riscv_dwarf::dwarf_fpr_f22:
-    case riscv_dwarf::dwarf_fpr_f23:
-    case riscv_dwarf::dwarf_fpr_f24:
-    case riscv_dwarf::dwarf_fpr_f25:
-    case riscv_dwarf::dwarf_fpr_f26:
-    case riscv_dwarf::dwarf_fpr_f27:
-    case riscv_dwarf::dwarf_fpr_f28:
-    case riscv_dwarf::dwarf_fpr_f29:
-    case riscv_dwarf::dwarf_fpr_f30:
-    case riscv_dwarf::dwarf_fpr_f31:
-      return fpr_f0 + (reg - riscv_dwarf::dwarf_fpr_f0);
+    case dwarf_regs::fpr_f0:
+    case dwarf_regs::fpr_f1:
+    case dwarf_regs::fpr_f2:
+    case dwarf_regs::fpr_f3:
+    case dwarf_regs::fpr_f4:
+    case dwarf_regs::fpr_f5:
+    case dwarf_regs::fpr_f6:
+    case dwarf_regs::fpr_f7:
+    case dwarf_regs::fpr_f8:
+    case dwarf_regs::fpr_f9:
+    case dwarf_regs::fpr_f10:
+    case dwarf_regs::fpr_f11:
+    case dwarf_regs::fpr_f12:
+    case dwarf_regs::fpr_f13:
+    case dwarf_regs::fpr_f14:
+    case dwarf_regs::fpr_f15:
+    case dwarf_regs::fpr_f16:
+    case dwarf_regs::fpr_f17:
+    case dwarf_regs::fpr_f18:
+    case dwarf_regs::fpr_f19:
+    case dwarf_regs::fpr_f20:
+    case dwarf_regs::fpr_f21:
+    case dwarf_regs::fpr_f22:
+    case dwarf_regs::fpr_f23:
+    case dwarf_regs::fpr_f24:
+    case dwarf_regs::fpr_f25:
+    case dwarf_regs::fpr_f26:
+    case dwarf_regs::fpr_f27:
+    case dwarf_regs::fpr_f28:
+    case dwarf_regs::fpr_f29:
+    case dwarf_regs::fpr_f30:
+    case dwarf_regs::fpr_f31:
+      return fpr_f0 + (reg - dwarf_regs::fpr_f0);
 
     default:
       break;

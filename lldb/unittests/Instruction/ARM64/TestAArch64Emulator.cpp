@@ -18,10 +18,12 @@
 
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 
 #include <vector>
 
+
+namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -66,28 +68,28 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                    RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg >= gpr_x0_arm64 && reg <= gpr_x28_arm64) {
-      reg_value.SetUInt64(tester->gpr.x[reg - gpr_x0_arm64]);
+    if (reg >= reg_ids::gpr_x0 && reg <= reg_ids::gpr_x28) {
+      reg_value.SetUInt64(tester->gpr.x[reg - reg_ids::gpr_x0]);
       return true;
     }
-    if (reg >= gpr_w0_arm64 && reg <= gpr_w28_arm64) {
-      reg_value.SetUInt32(tester->gpr.x[reg - gpr_w0_arm64]);
+    if (reg >= reg_ids::gpr_w0 && reg <= reg_ids::gpr_w28) {
+      reg_value.SetUInt32(tester->gpr.x[reg - reg_ids::gpr_w0]);
       return true;
     }
     switch (reg) {
-    case gpr_fp_arm64:
+    case reg_ids::gpr_fp:
       reg_value.SetUInt64(tester->gpr.fp);
       return true;
-    case gpr_lr_arm64:
+    case reg_ids::gpr_lr:
       reg_value.SetUInt64(tester->gpr.lr);
       return true;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       reg_value.SetUInt64(tester->gpr.sp);
       return true;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       reg_value.SetUInt64(tester->gpr.pc);
       return true;
-    case gpr_cpsr_arm64:
+    case reg_ids::gpr_cpsr:
       reg_value.SetUInt32(tester->gpr.cpsr);
       return true;
     default:
@@ -112,28 +114,28 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
       write.context_offset = context.info.RegisterPlusOffset.signed_offset;
     }
     tester->writes.push_back(write);
-    if (reg >= gpr_x0_arm64 && reg <= gpr_x28_arm64) {
-      tester->gpr.x[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
+    if (reg >= reg_ids::gpr_x0 && reg <= reg_ids::gpr_x28) {
+      tester->gpr.x[reg - reg_ids::gpr_x0] = reg_value.GetAsUInt64();
       return true;
     }
-    if (reg >= gpr_w0_arm64 && reg <= gpr_w28_arm64) {
-      tester->gpr.x[reg - gpr_w0_arm64] = reg_value.GetAsUInt32();
+    if (reg >= reg_ids::gpr_w0 && reg <= reg_ids::gpr_w28) {
+      tester->gpr.x[reg - reg_ids::gpr_w0] = reg_value.GetAsUInt32();
       return true;
     }
     switch (reg) {
-    case gpr_fp_arm64:
+    case reg_ids::gpr_fp:
       tester->gpr.fp = reg_value.GetAsUInt64();
       return true;
-    case gpr_lr_arm64:
+    case reg_ids::gpr_lr:
       tester->gpr.lr = reg_value.GetAsUInt64();
       return true;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       tester->gpr.sp = reg_value.GetAsUInt64();
       return true;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       tester->gpr.pc = reg_value.GetAsUInt64();
       return true;
-    case gpr_cpsr_arm64:
+    case reg_ids::gpr_cpsr:
       tester->gpr.cpsr = reg_value.GetAsUInt32();
       return true;
     default:
@@ -227,14 +229,14 @@ TEST_F(TestAArch64Emulator, TestMOVRegister) {
 
   ASSERT_EQ(1u, emu.writes.size());
   // Check that x2 was written to.
-  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  EXPECT_EQ((uint32_t)reg_ids::gpr_x2, emu.writes[0].reg);
   // Check that x2 has the value originally on x30.
   EXPECT_EQ(0xdeadbeef12345678ULL, emu.gpr.x[2]);
   // Check that the contents of the write originated from a register.
   EXPECT_EQ(EmulateInstruction::eContextRegisterPlusOffset,
             emu.writes[0].context_type);
   // Check that the original register was lr.
-  EXPECT_EQ((uint32_t)gpr_lr_arm64, emu.writes[0].context_reg);
+  EXPECT_EQ((uint32_t)reg_ids::gpr_lr, emu.writes[0].context_reg);
   EXPECT_EQ(0, emu.writes[0].context_offset);
 }
 
@@ -246,7 +248,7 @@ TEST_F(TestAArch64Emulator, TestMOVRegister32BitZeroExtends) {
   ASSERT_TRUE(emu.Run(0x2a1e03e2));
 
   ASSERT_EQ(1u, emu.writes.size());
-  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  EXPECT_EQ((uint32_t)reg_ids::gpr_x2, emu.writes[0].reg);
   EXPECT_EQ(0x00000000deadbeefULL, emu.writes[0].value);
 }
 
@@ -260,7 +262,7 @@ TEST_F(TestAArch64Emulator, TestMOVRegisterFromZeroRegister) {
   ASSERT_TRUE(emu.Run(0xaa1f03e2));
 
   ASSERT_EQ(1u, emu.writes.size());
-  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  EXPECT_EQ((uint32_t)reg_ids::gpr_x2, emu.writes[0].reg);
   EXPECT_EQ(0u, emu.writes[0].value);
   // There is no source register to name, so the value is an immediate zero.
   EXPECT_EQ(EmulateInstruction::eContextImmediate, emu.writes[0].context_type);

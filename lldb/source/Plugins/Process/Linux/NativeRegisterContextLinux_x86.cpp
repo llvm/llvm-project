@@ -9,6 +9,8 @@
 #if defined(__i386__) || defined(__x86_64__)
 
 #include "NativeRegisterContextLinux_x86.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
@@ -56,158 +58,263 @@ using namespace lldb_private::process_linux;
 
 // Linux exposes the i386 thread pointer as a synthetic register between the
 // always-available FPU registers and the optional extended register sets.
-constexpr uint32_t k_i386_thread_pointer_index = k_first_avx_i386;
+constexpr uint32_t k_i386_thread_pointer_index =
+    registers::x86::id::k_first_avx;
 
 // x86 32-bit general purpose registers.
 static const uint32_t g_gpr_regnums_i386[] = {
-    lldb_eax_i386,      lldb_ebx_i386,    lldb_ecx_i386, lldb_edx_i386,
-    lldb_edi_i386,      lldb_esi_i386,    lldb_ebp_i386, lldb_esp_i386,
-    lldb_eip_i386,      lldb_eflags_i386, lldb_cs_i386,  lldb_fs_i386,
-    lldb_gs_i386,       lldb_ss_i386,     lldb_ds_i386,  lldb_es_i386,
-    lldb_ax_i386,       lldb_bx_i386,     lldb_cx_i386,  lldb_dx_i386,
-    lldb_di_i386,       lldb_si_i386,     lldb_bp_i386,  lldb_sp_i386,
-    lldb_ah_i386,       lldb_bh_i386,     lldb_ch_i386,  lldb_dh_i386,
-    lldb_al_i386,       lldb_bl_i386,     lldb_cl_i386,  lldb_dl_i386,
+    registers::x86::id::eax, registers::x86::id::ebx,
+    registers::x86::id::ecx, registers::x86::id::edx,
+    registers::x86::id::edi, registers::x86::id::esi,
+    registers::x86::id::ebp, registers::x86::id::esp,
+    registers::x86::id::eip, registers::x86::id::eflags,
+    registers::x86::id::cs,  registers::x86::id::fs,
+    registers::x86::id::gs,  registers::x86::id::ss,
+    registers::x86::id::ds,  registers::x86::id::es,
+    registers::x86::id::ax,  registers::x86::id::bx,
+    registers::x86::id::cx,  registers::x86::id::dx,
+    registers::x86::id::di,  registers::x86::id::si,
+    registers::x86::id::bp,  registers::x86::id::sp,
+    registers::x86::id::ah,  registers::x86::id::bh,
+    registers::x86::id::ch,  registers::x86::id::dh,
+    registers::x86::id::al,  registers::x86::id::bl,
+    registers::x86::id::cl,  registers::x86::id::dl,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_gpr_regnums_i386) / sizeof(g_gpr_regnums_i386[0])) -
                       1 ==
-                  k_num_gpr_registers_i386,
+                  registers::x86::id::k_num_gpr_registers,
               "g_gpr_regnums_i386 has wrong number of register infos");
 
 // x86 32-bit floating point registers.
 static const uint32_t g_fpu_regnums_i386[] = {
-    lldb_fctrl_i386,    lldb_fstat_i386,     lldb_ftag_i386,  lldb_fop_i386,
-    lldb_fiseg_i386,    lldb_fioff_i386,     lldb_foseg_i386, lldb_fooff_i386,
-    lldb_mxcsr_i386,    lldb_mxcsrmask_i386, lldb_st0_i386,   lldb_st1_i386,
-    lldb_st2_i386,      lldb_st3_i386,       lldb_st4_i386,   lldb_st5_i386,
-    lldb_st6_i386,      lldb_st7_i386,       lldb_mm0_i386,   lldb_mm1_i386,
-    lldb_mm2_i386,      lldb_mm3_i386,       lldb_mm4_i386,   lldb_mm5_i386,
-    lldb_mm6_i386,      lldb_mm7_i386,       lldb_xmm0_i386,  lldb_xmm1_i386,
-    lldb_xmm2_i386,     lldb_xmm3_i386,      lldb_xmm4_i386,  lldb_xmm5_i386,
-    lldb_xmm6_i386,     lldb_xmm7_i386,
+    registers::x86::id::fctrl, registers::x86::id::fstat,
+    registers::x86::id::ftag,  registers::x86::id::fop,
+    registers::x86::id::fiseg, registers::x86::id::fioff,
+    registers::x86::id::foseg, registers::x86::id::fooff,
+    registers::x86::id::mxcsr, registers::x86::id::mxcsrmask,
+    registers::x86::id::st0,   registers::x86::id::st1,
+    registers::x86::id::st2,   registers::x86::id::st3,
+    registers::x86::id::st4,   registers::x86::id::st5,
+    registers::x86::id::st6,   registers::x86::id::st7,
+    registers::x86::id::mm0,   registers::x86::id::mm1,
+    registers::x86::id::mm2,   registers::x86::id::mm3,
+    registers::x86::id::mm4,   registers::x86::id::mm5,
+    registers::x86::id::mm6,   registers::x86::id::mm7,
+    registers::x86::id::xmm0,  registers::x86::id::xmm1,
+    registers::x86::id::xmm2,  registers::x86::id::xmm3,
+    registers::x86::id::xmm4,  registers::x86::id::xmm5,
+    registers::x86::id::xmm6,  registers::x86::id::xmm7,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_i386) / sizeof(g_fpu_regnums_i386[0])) -
                       1 ==
-                  k_num_fpr_registers_i386,
+                  registers::x86::id::k_num_fpr_registers,
               "g_fpu_regnums_i386 has wrong number of register infos");
 
 // x86 32-bit AVX registers.
 static const uint32_t g_avx_regnums_i386[] = {
-    lldb_ymm0_i386,     lldb_ymm1_i386, lldb_ymm2_i386, lldb_ymm3_i386,
-    lldb_ymm4_i386,     lldb_ymm5_i386, lldb_ymm6_i386, lldb_ymm7_i386,
+    registers::x86::id::ymm0, registers::x86::id::ymm1,
+    registers::x86::id::ymm2, registers::x86::id::ymm3,
+    registers::x86::id::ymm4, registers::x86::id::ymm5,
+    registers::x86::id::ymm6, registers::x86::id::ymm7,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_avx_regnums_i386) / sizeof(g_avx_regnums_i386[0])) -
                       1 ==
-                  k_num_avx_registers_i386,
+                  registers::x86::id::k_num_avx_registers,
               " g_avx_regnums_i386 has wrong number of register infos");
 
 // x64 32-bit MPX registers.
 static const uint32_t g_mpx_regnums_i386[] = {
-    lldb_bnd0_i386,     lldb_bnd1_i386, lldb_bnd2_i386, lldb_bnd3_i386,
-    lldb_bndcfgu_i386,  lldb_bndstatus_i386,
+    registers::x86::id::bnd0,    registers::x86::id::bnd1,
+    registers::x86::id::bnd2,    registers::x86::id::bnd3,
+    registers::x86::id::bndcfgu, registers::x86::id::bndstatus,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_mpx_regnums_i386) / sizeof(g_mpx_regnums_i386[0])) -
                       1 ==
-                  k_num_mpx_registers_i386,
+                  registers::x86::id::k_num_mpx_registers,
               "g_mpx_regnums_x86_64 has wrong number of register infos");
 
 // x86 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_x86_64[] = {
-    x86_64_with_base::lldb_rax,    x86_64_with_base::lldb_rbx,    x86_64_with_base::lldb_rcx, x86_64_with_base::lldb_rdx,
-    x86_64_with_base::lldb_rdi,    x86_64_with_base::lldb_rsi,    x86_64_with_base::lldb_rbp, x86_64_with_base::lldb_rsp,
-    x86_64_with_base::lldb_r8,     x86_64_with_base::lldb_r9,     x86_64_with_base::lldb_r10, x86_64_with_base::lldb_r11,
-    x86_64_with_base::lldb_r12,    x86_64_with_base::lldb_r13,    x86_64_with_base::lldb_r14, x86_64_with_base::lldb_r15,
-    x86_64_with_base::lldb_rip,    x86_64_with_base::lldb_rflags, x86_64_with_base::lldb_cs,  x86_64_with_base::lldb_fs,
-    x86_64_with_base::lldb_gs,     x86_64_with_base::lldb_ss,     x86_64_with_base::lldb_fs_base, x86_64_with_base::lldb_gs_base,
-    x86_64_with_base::lldb_ds,  x86_64_with_base::lldb_es,
-    x86_64_with_base::lldb_eax,    x86_64_with_base::lldb_ebx,    x86_64_with_base::lldb_ecx, x86_64_with_base::lldb_edx,
-    x86_64_with_base::lldb_edi,    x86_64_with_base::lldb_esi,    x86_64_with_base::lldb_ebp, x86_64_with_base::lldb_esp,
-    x86_64_with_base::lldb_r8d,  // Low 32 bits or r8
-    x86_64_with_base::lldb_r9d,  // Low 32 bits or r9
-    x86_64_with_base::lldb_r10d, // Low 32 bits or r10
-    x86_64_with_base::lldb_r11d, // Low 32 bits or r11
-    x86_64_with_base::lldb_r12d, // Low 32 bits or r12
-    x86_64_with_base::lldb_r13d, // Low 32 bits or r13
-    x86_64_with_base::lldb_r14d, // Low 32 bits or r14
-    x86_64_with_base::lldb_r15d, // Low 32 bits or r15
-    x86_64_with_base::lldb_ax,     x86_64_with_base::lldb_bx,     x86_64_with_base::lldb_cx,  x86_64_with_base::lldb_dx,
-    x86_64_with_base::lldb_di,     x86_64_with_base::lldb_si,     x86_64_with_base::lldb_bp,  x86_64_with_base::lldb_sp,
-    x86_64_with_base::lldb_r8w,  // Low 16 bits or r8
-    x86_64_with_base::lldb_r9w,  // Low 16 bits or r9
-    x86_64_with_base::lldb_r10w, // Low 16 bits or r10
-    x86_64_with_base::lldb_r11w, // Low 16 bits or r11
-    x86_64_with_base::lldb_r12w, // Low 16 bits or r12
-    x86_64_with_base::lldb_r13w, // Low 16 bits or r13
-    x86_64_with_base::lldb_r14w, // Low 16 bits or r14
-    x86_64_with_base::lldb_r15w, // Low 16 bits or r15
-    x86_64_with_base::lldb_ah,     x86_64_with_base::lldb_bh,     x86_64_with_base::lldb_ch,  x86_64_with_base::lldb_dh,
-    x86_64_with_base::lldb_al,     x86_64_with_base::lldb_bl,     x86_64_with_base::lldb_cl,  x86_64_with_base::lldb_dl,
-    x86_64_with_base::lldb_dil,    x86_64_with_base::lldb_sil,    x86_64_with_base::lldb_bpl, x86_64_with_base::lldb_spl,
-    x86_64_with_base::lldb_r8l,    // Low 8 bits or r8
-    x86_64_with_base::lldb_r9l,    // Low 8 bits or r9
-    x86_64_with_base::lldb_r10l,   // Low 8 bits or r10
-    x86_64_with_base::lldb_r11l,   // Low 8 bits or r11
-    x86_64_with_base::lldb_r12l,   // Low 8 bits or r12
-    x86_64_with_base::lldb_r13l,   // Low 8 bits or r13
-    x86_64_with_base::lldb_r14l,   // Low 8 bits or r14
-    x86_64_with_base::lldb_r15l,   // Low 8 bits or r15
+    registers::x86_64::id::with_base::rax,
+    registers::x86_64::id::with_base::rbx,
+    registers::x86_64::id::with_base::rcx,
+    registers::x86_64::id::with_base::rdx,
+    registers::x86_64::id::with_base::rdi,
+    registers::x86_64::id::with_base::rsi,
+    registers::x86_64::id::with_base::rbp,
+    registers::x86_64::id::with_base::rsp,
+    registers::x86_64::id::with_base::r8,
+    registers::x86_64::id::with_base::r9,
+    registers::x86_64::id::with_base::r10,
+    registers::x86_64::id::with_base::r11,
+    registers::x86_64::id::with_base::r12,
+    registers::x86_64::id::with_base::r13,
+    registers::x86_64::id::with_base::r14,
+    registers::x86_64::id::with_base::r15,
+    registers::x86_64::id::with_base::rip,
+    registers::x86_64::id::with_base::rflags,
+    registers::x86_64::id::with_base::cs,
+    registers::x86_64::id::with_base::fs,
+    registers::x86_64::id::with_base::gs,
+    registers::x86_64::id::with_base::ss,
+    registers::x86_64::id::with_base::fs_base,
+    registers::x86_64::id::with_base::gs_base,
+    registers::x86_64::id::with_base::ds,
+    registers::x86_64::id::with_base::es,
+    registers::x86_64::id::with_base::eax,
+    registers::x86_64::id::with_base::ebx,
+    registers::x86_64::id::with_base::ecx,
+    registers::x86_64::id::with_base::edx,
+    registers::x86_64::id::with_base::edi,
+    registers::x86_64::id::with_base::esi,
+    registers::x86_64::id::with_base::ebp,
+    registers::x86_64::id::with_base::esp,
+    registers::x86_64::id::with_base::r8d,  // Low 32 bits or r8
+    registers::x86_64::id::with_base::r9d,  // Low 32 bits or r9
+    registers::x86_64::id::with_base::r10d, // Low 32 bits or r10
+    registers::x86_64::id::with_base::r11d, // Low 32 bits or r11
+    registers::x86_64::id::with_base::r12d, // Low 32 bits or r12
+    registers::x86_64::id::with_base::r13d, // Low 32 bits or r13
+    registers::x86_64::id::with_base::r14d, // Low 32 bits or r14
+    registers::x86_64::id::with_base::r15d, // Low 32 bits or r15
+    registers::x86_64::id::with_base::ax,
+    registers::x86_64::id::with_base::bx,
+    registers::x86_64::id::with_base::cx,
+    registers::x86_64::id::with_base::dx,
+    registers::x86_64::id::with_base::di,
+    registers::x86_64::id::with_base::si,
+    registers::x86_64::id::with_base::bp,
+    registers::x86_64::id::with_base::sp,
+    registers::x86_64::id::with_base::r8w,  // Low 16 bits or r8
+    registers::x86_64::id::with_base::r9w,  // Low 16 bits or r9
+    registers::x86_64::id::with_base::r10w, // Low 16 bits or r10
+    registers::x86_64::id::with_base::r11w, // Low 16 bits or r11
+    registers::x86_64::id::with_base::r12w, // Low 16 bits or r12
+    registers::x86_64::id::with_base::r13w, // Low 16 bits or r13
+    registers::x86_64::id::with_base::r14w, // Low 16 bits or r14
+    registers::x86_64::id::with_base::r15w, // Low 16 bits or r15
+    registers::x86_64::id::with_base::ah,
+    registers::x86_64::id::with_base::bh,
+    registers::x86_64::id::with_base::ch,
+    registers::x86_64::id::with_base::dh,
+    registers::x86_64::id::with_base::al,
+    registers::x86_64::id::with_base::bl,
+    registers::x86_64::id::with_base::cl,
+    registers::x86_64::id::with_base::dl,
+    registers::x86_64::id::with_base::dil,
+    registers::x86_64::id::with_base::sil,
+    registers::x86_64::id::with_base::bpl,
+    registers::x86_64::id::with_base::spl,
+    registers::x86_64::id::with_base::r8l,  // Low 8 bits or r8
+    registers::x86_64::id::with_base::r9l,  // Low 8 bits or r9
+    registers::x86_64::id::with_base::r10l, // Low 8 bits or r10
+    registers::x86_64::id::with_base::r11l, // Low 8 bits or r11
+    registers::x86_64::id::with_base::r12l, // Low 8 bits or r12
+    registers::x86_64::id::with_base::r13l, // Low 8 bits or r13
+    registers::x86_64::id::with_base::r14l, // Low 8 bits or r14
+    registers::x86_64::id::with_base::r15l, // Low 8 bits or r15
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_gpr_regnums_x86_64) / sizeof(g_gpr_regnums_x86_64[0])) -
                       1 ==
-                  x86_64_with_base::k_num_gpr_registers,
+                  registers::x86_64::id::with_base::k_num_gpr_registers,
               "g_gpr_regnums_x86_64 has wrong number of register infos");
 
 // x86 64-bit floating point registers.
 static const uint32_t g_fpu_regnums_x86_64[] = {
-    x86_64_with_base::lldb_fctrl,  x86_64_with_base::lldb_fstat, x86_64_with_base::lldb_ftag,
-    x86_64_with_base::lldb_fop,    x86_64_with_base::lldb_fiseg, x86_64_with_base::lldb_fioff,
-    x86_64_with_base::lldb_fip,    x86_64_with_base::lldb_foseg, x86_64_with_base::lldb_fooff,
-    x86_64_with_base::lldb_fdp,    x86_64_with_base::lldb_mxcsr, x86_64_with_base::lldb_mxcsrmask,
-    x86_64_with_base::lldb_st0,    x86_64_with_base::lldb_st1,   x86_64_with_base::lldb_st2,
-    x86_64_with_base::lldb_st3,    x86_64_with_base::lldb_st4,   x86_64_with_base::lldb_st5,
-    x86_64_with_base::lldb_st6,    x86_64_with_base::lldb_st7,   x86_64_with_base::lldb_mm0,
-    x86_64_with_base::lldb_mm1,    x86_64_with_base::lldb_mm2,   x86_64_with_base::lldb_mm3,
-    x86_64_with_base::lldb_mm4,    x86_64_with_base::lldb_mm5,   x86_64_with_base::lldb_mm6,
-    x86_64_with_base::lldb_mm7,    x86_64_with_base::lldb_xmm0,  x86_64_with_base::lldb_xmm1,
-    x86_64_with_base::lldb_xmm2,   x86_64_with_base::lldb_xmm3,  x86_64_with_base::lldb_xmm4,
-    x86_64_with_base::lldb_xmm5,   x86_64_with_base::lldb_xmm6,  x86_64_with_base::lldb_xmm7,
-    x86_64_with_base::lldb_xmm8,   x86_64_with_base::lldb_xmm9,  x86_64_with_base::lldb_xmm10,
-    x86_64_with_base::lldb_xmm11,  x86_64_with_base::lldb_xmm12, x86_64_with_base::lldb_xmm13,
-    x86_64_with_base::lldb_xmm14,  x86_64_with_base::lldb_xmm15,
+    registers::x86_64::id::with_base::fctrl,
+    registers::x86_64::id::with_base::fstat,
+    registers::x86_64::id::with_base::ftag,
+    registers::x86_64::id::with_base::fop,
+    registers::x86_64::id::with_base::fiseg,
+    registers::x86_64::id::with_base::fioff,
+    registers::x86_64::id::with_base::fip,
+    registers::x86_64::id::with_base::foseg,
+    registers::x86_64::id::with_base::fooff,
+    registers::x86_64::id::with_base::fdp,
+    registers::x86_64::id::with_base::mxcsr,
+    registers::x86_64::id::with_base::mxcsrmask,
+    registers::x86_64::id::with_base::st0,
+    registers::x86_64::id::with_base::st1,
+    registers::x86_64::id::with_base::st2,
+    registers::x86_64::id::with_base::st3,
+    registers::x86_64::id::with_base::st4,
+    registers::x86_64::id::with_base::st5,
+    registers::x86_64::id::with_base::st6,
+    registers::x86_64::id::with_base::st7,
+    registers::x86_64::id::with_base::mm0,
+    registers::x86_64::id::with_base::mm1,
+    registers::x86_64::id::with_base::mm2,
+    registers::x86_64::id::with_base::mm3,
+    registers::x86_64::id::with_base::mm4,
+    registers::x86_64::id::with_base::mm5,
+    registers::x86_64::id::with_base::mm6,
+    registers::x86_64::id::with_base::mm7,
+    registers::x86_64::id::with_base::xmm0,
+    registers::x86_64::id::with_base::xmm1,
+    registers::x86_64::id::with_base::xmm2,
+    registers::x86_64::id::with_base::xmm3,
+    registers::x86_64::id::with_base::xmm4,
+    registers::x86_64::id::with_base::xmm5,
+    registers::x86_64::id::with_base::xmm6,
+    registers::x86_64::id::with_base::xmm7,
+    registers::x86_64::id::with_base::xmm8,
+    registers::x86_64::id::with_base::xmm9,
+    registers::x86_64::id::with_base::xmm10,
+    registers::x86_64::id::with_base::xmm11,
+    registers::x86_64::id::with_base::xmm12,
+    registers::x86_64::id::with_base::xmm13,
+    registers::x86_64::id::with_base::xmm14,
+    registers::x86_64::id::with_base::xmm15,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_x86_64) / sizeof(g_fpu_regnums_x86_64[0])) -
                       1 ==
-                  x86_64_with_base::k_num_fpr_registers,
+                  registers::x86_64::id::with_base::k_num_fpr_registers,
               "g_fpu_regnums_x86_64 has wrong number of register infos");
 
 // x86 64-bit AVX registers.
 static const uint32_t g_avx_regnums_x86_64[] = {
-    x86_64_with_base::lldb_ymm0,   x86_64_with_base::lldb_ymm1,  x86_64_with_base::lldb_ymm2,  x86_64_with_base::lldb_ymm3,
-    x86_64_with_base::lldb_ymm4,   x86_64_with_base::lldb_ymm5,  x86_64_with_base::lldb_ymm6,  x86_64_with_base::lldb_ymm7,
-    x86_64_with_base::lldb_ymm8,   x86_64_with_base::lldb_ymm9,  x86_64_with_base::lldb_ymm10, x86_64_with_base::lldb_ymm11,
-    x86_64_with_base::lldb_ymm12,  x86_64_with_base::lldb_ymm13, x86_64_with_base::lldb_ymm14, x86_64_with_base::lldb_ymm15,
+    registers::x86_64::id::with_base::ymm0,
+    registers::x86_64::id::with_base::ymm1,
+    registers::x86_64::id::with_base::ymm2,
+    registers::x86_64::id::with_base::ymm3,
+    registers::x86_64::id::with_base::ymm4,
+    registers::x86_64::id::with_base::ymm5,
+    registers::x86_64::id::with_base::ymm6,
+    registers::x86_64::id::with_base::ymm7,
+    registers::x86_64::id::with_base::ymm8,
+    registers::x86_64::id::with_base::ymm9,
+    registers::x86_64::id::with_base::ymm10,
+    registers::x86_64::id::with_base::ymm11,
+    registers::x86_64::id::with_base::ymm12,
+    registers::x86_64::id::with_base::ymm13,
+    registers::x86_64::id::with_base::ymm14,
+    registers::x86_64::id::with_base::ymm15,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_avx_regnums_x86_64) / sizeof(g_avx_regnums_x86_64[0])) -
                       1 ==
-                  x86_64_with_base::k_num_avx_registers,
+                  registers::x86_64::id::with_base::k_num_avx_registers,
               "g_avx_regnums_x86_64 has wrong number of register infos");
 
 // x86 64-bit MPX registers.
 static const uint32_t g_mpx_regnums_x86_64[] = {
-    x86_64_with_base::lldb_bnd0,    x86_64_with_base::lldb_bnd1,    x86_64_with_base::lldb_bnd2,
-    x86_64_with_base::lldb_bnd3,    x86_64_with_base::lldb_bndcfgu, x86_64_with_base::lldb_bndstatus,
+    registers::x86_64::id::with_base::bnd0,
+    registers::x86_64::id::with_base::bnd1,
+    registers::x86_64::id::with_base::bnd2,
+    registers::x86_64::id::with_base::bnd3,
+    registers::x86_64::id::with_base::bndcfgu,
+    registers::x86_64::id::with_base::bndstatus,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_mpx_regnums_x86_64) / sizeof(g_mpx_regnums_x86_64[0])) -
                       1 ==
-                  x86_64_with_base::k_num_mpx_registers,
+                  registers::x86_64::id::with_base::k_num_mpx_registers,
               "g_mpx_regnums_x86_64 has wrong number of register infos");
 
 // Number of register sets provided by this context.
@@ -215,24 +322,28 @@ constexpr unsigned k_num_extended_register_sets = 2, k_num_register_sets = 4;
 
 // Register sets for x86 32-bit.
 static const RegisterSet g_reg_sets_i386[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_i386,
+    {"General Purpose Registers", "gpr", registers::x86::id::k_num_gpr_registers,
      g_gpr_regnums_i386},
-    {"Floating Point Registers", "fpu", k_num_fpr_registers_i386,
+    {"Floating Point Registers", "fpu", registers::x86::id::k_num_fpr_registers,
      g_fpu_regnums_i386},
-    {"Advanced Vector Extensions", "avx", k_num_avx_registers_i386,
+    {"Advanced Vector Extensions", "avx", registers::x86::id::k_num_avx_registers,
      g_avx_regnums_i386},
-    { "Memory Protection Extensions", "mpx", k_num_mpx_registers_i386,
+    { "Memory Protection Extensions", "mpx", registers::x86::id::k_num_mpx_registers,
      g_mpx_regnums_i386}};
 
 // Register sets for x86 64-bit.
 static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", x86_64_with_base::k_num_gpr_registers,
+    {"General Purpose Registers", "gpr",
+     registers::x86_64::id::with_base::k_num_gpr_registers,
      g_gpr_regnums_x86_64},
-    {"Floating Point Registers", "fpu", x86_64_with_base::k_num_fpr_registers,
+    {"Floating Point Registers", "fpu",
+     registers::x86_64::id::with_base::k_num_fpr_registers,
      g_fpu_regnums_x86_64},
-    {"Advanced Vector Extensions", "avx", x86_64_with_base::k_num_avx_registers,
+    {"Advanced Vector Extensions", "avx",
+     registers::x86_64::id::with_base::k_num_avx_registers,
      g_avx_regnums_x86_64},
-    { "Memory Protection Extensions", "mpx", x86_64_with_base::k_num_mpx_registers,
+    {"Memory Protection Extensions", "mpx",
+     registers::x86_64::id::with_base::k_num_mpx_registers,
      g_mpx_regnums_x86_64}};
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize() + sizeof(FPR))
@@ -343,55 +454,60 @@ NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
                                   nullptr,
                                   nullptr};
 
-    m_reg_info.num_registers = k_num_registers_i386 + 1;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_i386;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_i386;
-    m_reg_info.num_avx_registers = k_num_avx_registers_i386;
-    m_reg_info.num_mpx_registers = k_num_mpx_registers_i386;
-    m_reg_info.last_gpr = k_last_gpr_i386;
-    m_reg_info.first_fpr = k_first_fpr_i386;
-    m_reg_info.last_fpr = k_last_fpr_i386;
-    m_reg_info.first_st = lldb_st0_i386;
-    m_reg_info.last_st = lldb_st7_i386;
-    m_reg_info.first_mm = lldb_mm0_i386;
-    m_reg_info.last_mm = lldb_mm7_i386;
-    m_reg_info.first_xmm = lldb_xmm0_i386;
-    m_reg_info.last_xmm = lldb_xmm7_i386;
-    m_reg_info.first_ymm = lldb_ymm0_i386;
-    m_reg_info.last_ymm = lldb_ymm7_i386;
-    m_reg_info.first_mpxr = lldb_bnd0_i386;
-    m_reg_info.last_mpxr = lldb_bnd3_i386;
-    m_reg_info.first_mpxc = lldb_bndcfgu_i386;
-    m_reg_info.last_mpxc = lldb_bndstatus_i386;
-    m_reg_info.first_dr = lldb_dr0_i386;
-    m_reg_info.last_dr = lldb_dr7_i386;
-    m_reg_info.gpr_flags = lldb_eflags_i386;
+    m_reg_info.num_registers = registers::x86::id::k_num_registers + 1;
+    m_reg_info.num_gpr_registers = registers::x86::id::k_num_gpr_registers;
+    m_reg_info.num_fpr_registers = registers::x86::id::k_num_fpr_registers;
+    m_reg_info.num_avx_registers = registers::x86::id::k_num_avx_registers;
+    m_reg_info.num_mpx_registers = registers::x86::id::k_num_mpx_registers;
+    m_reg_info.last_gpr = registers::x86::id::k_last_gpr;
+    m_reg_info.first_fpr = registers::x86::id::k_first_fpr;
+    m_reg_info.last_fpr = registers::x86::id::k_last_fpr;
+    m_reg_info.first_st = registers::x86::id::st0;
+    m_reg_info.last_st = registers::x86::id::st7;
+    m_reg_info.first_mm = registers::x86::id::mm0;
+    m_reg_info.last_mm = registers::x86::id::mm7;
+    m_reg_info.first_xmm = registers::x86::id::xmm0;
+    m_reg_info.last_xmm = registers::x86::id::xmm7;
+    m_reg_info.first_ymm = registers::x86::id::ymm0;
+    m_reg_info.last_ymm = registers::x86::id::ymm7;
+    m_reg_info.first_mpxr = registers::x86::id::bnd0;
+    m_reg_info.last_mpxr = registers::x86::id::bnd3;
+    m_reg_info.first_mpxc = registers::x86::id::bndcfgu;
+    m_reg_info.last_mpxc = registers::x86::id::bndstatus;
+    m_reg_info.first_dr = registers::x86::id::dr0;
+    m_reg_info.last_dr = registers::x86::id::dr7;
+    m_reg_info.gpr_flags = registers::x86::id::eflags;
     break;
   }
   case llvm::Triple::x86_64:
-    m_reg_info.num_registers = x86_64_with_base::k_num_registers;
-    m_reg_info.num_gpr_registers = x86_64_with_base::k_num_gpr_registers;
-    m_reg_info.num_fpr_registers = x86_64_with_base::k_num_fpr_registers;
-    m_reg_info.num_avx_registers = x86_64_with_base::k_num_avx_registers;
-    m_reg_info.num_mpx_registers = x86_64_with_base::k_num_mpx_registers;
-    m_reg_info.last_gpr = x86_64_with_base::k_last_gpr;
-    m_reg_info.first_fpr = x86_64_with_base::k_first_fpr;
-    m_reg_info.last_fpr = x86_64_with_base::k_last_fpr;
-    m_reg_info.first_st = x86_64_with_base::lldb_st0;
-    m_reg_info.last_st = x86_64_with_base::lldb_st7;
-    m_reg_info.first_mm = x86_64_with_base::lldb_mm0;
-    m_reg_info.last_mm = x86_64_with_base::lldb_mm7;
-    m_reg_info.first_xmm = x86_64_with_base::lldb_xmm0;
-    m_reg_info.last_xmm = x86_64_with_base::lldb_xmm15;
-    m_reg_info.first_ymm = x86_64_with_base::lldb_ymm0;
-    m_reg_info.last_ymm = x86_64_with_base::lldb_ymm15;
-    m_reg_info.first_mpxr = x86_64_with_base::lldb_bnd0;
-    m_reg_info.last_mpxr = x86_64_with_base::lldb_bnd3;
-    m_reg_info.first_mpxc = x86_64_with_base::lldb_bndcfgu;
-    m_reg_info.last_mpxc = x86_64_with_base::lldb_bndstatus;
-    m_reg_info.first_dr = x86_64_with_base::lldb_dr0;
-    m_reg_info.last_dr = x86_64_with_base::lldb_dr7;
-    m_reg_info.gpr_flags = x86_64_with_base::lldb_rflags;
+    m_reg_info.num_registers =
+        registers::x86_64::id::with_base::k_num_registers;
+    m_reg_info.num_gpr_registers =
+        registers::x86_64::id::with_base::k_num_gpr_registers;
+    m_reg_info.num_fpr_registers =
+        registers::x86_64::id::with_base::k_num_fpr_registers;
+    m_reg_info.num_avx_registers =
+        registers::x86_64::id::with_base::k_num_avx_registers;
+    m_reg_info.num_mpx_registers =
+        registers::x86_64::id::with_base::k_num_mpx_registers;
+    m_reg_info.last_gpr = registers::x86_64::id::with_base::k_last_gpr;
+    m_reg_info.first_fpr = registers::x86_64::id::with_base::k_first_fpr;
+    m_reg_info.last_fpr = registers::x86_64::id::with_base::k_last_fpr;
+    m_reg_info.first_st = registers::x86_64::id::with_base::st0;
+    m_reg_info.last_st = registers::x86_64::id::with_base::st7;
+    m_reg_info.first_mm = registers::x86_64::id::with_base::mm0;
+    m_reg_info.last_mm = registers::x86_64::id::with_base::mm7;
+    m_reg_info.first_xmm = registers::x86_64::id::with_base::xmm0;
+    m_reg_info.last_xmm = registers::x86_64::id::with_base::xmm15;
+    m_reg_info.first_ymm = registers::x86_64::id::with_base::ymm0;
+    m_reg_info.last_ymm = registers::x86_64::id::with_base::ymm15;
+    m_reg_info.first_mpxr = registers::x86_64::id::with_base::bnd0;
+    m_reg_info.last_mpxr = registers::x86_64::id::with_base::bnd3;
+    m_reg_info.first_mpxc = registers::x86_64::id::with_base::bndcfgu;
+    m_reg_info.last_mpxc = registers::x86_64::id::with_base::bndstatus;
+    m_reg_info.first_dr = registers::x86_64::id::with_base::dr0;
+    m_reg_info.last_dr = registers::x86_64::id::with_base::dr7;
+    m_reg_info.gpr_flags = registers::x86_64::id::with_base::rflags;
     break;
   default:
     assert(false && "Unhandled target architecture.");
@@ -1081,7 +1197,7 @@ bool NativeRegisterContextLinux_x86::IsThreadPointer(
 Status
 NativeRegisterContextLinux_x86::ReadThreadPointer(RegisterValue &reg_value) {
   RegisterValue selector;
-  Status error = ReadRegisterRaw(lldb_gs_i386, selector);
+  Status error = ReadRegisterRaw(registers::x86::id::gs, selector);
   if (error.Fail())
     return error;
 
@@ -1160,17 +1276,19 @@ NativeRegisterContextLinux_x86::GetSyscallData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86: {
     static const uint8_t Int80[] = {0xcd, 0x80};
-    static const uint32_t Args[] = {lldb_eax_i386, lldb_ebx_i386, lldb_ecx_i386,
-                                    lldb_edx_i386, lldb_esi_i386, lldb_edi_i386,
-                                    lldb_ebp_i386};
-    return SyscallData{Int80, Args, lldb_eax_i386};
+    static const uint32_t Args[] = {
+        registers::x86::id::eax, registers::x86::id::ebx,
+        registers::x86::id::ecx, registers::x86::id::edx,
+        registers::x86::id::esi, registers::x86::id::edi,
+        registers::x86::id::ebp};
+    return SyscallData{Int80, Args, registers::x86::id::eax};
   }
   case llvm::Triple::x86_64: {
     static const uint8_t Syscall[] = {0x0f, 0x05};
     static const uint32_t Args[] = {
-        x86_64_with_base::lldb_rax, x86_64_with_base::lldb_rdi, x86_64_with_base::lldb_rsi, x86_64_with_base::lldb_rdx,
-        x86_64_with_base::lldb_r10, x86_64_with_base::lldb_r8,  x86_64_with_base::lldb_r9};
-    return SyscallData{Syscall, Args, x86_64_with_base::lldb_rax};
+        registers::x86_64::id::with_base::rax, registers::x86_64::id::with_base::rdi, registers::x86_64::id::with_base::rsi, registers::x86_64::id::with_base::rdx,
+        registers::x86_64::id::with_base::r10, registers::x86_64::id::with_base::r8,  registers::x86_64::id::with_base::r9};
+    return SyscallData{Syscall, Args, registers::x86_64::id::with_base::rax};
   }
   default:
     llvm_unreachable("Unhandled architecture!");
@@ -1193,9 +1311,10 @@ const RegisterInfo *NativeRegisterContextLinux_x86::GetDR(int num) const {
   assert(num >= 0 && num <= 7);
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
-    return GetRegisterInfoAtIndex(GetRegisterInfoIndex(lldb_dr0_i386 + num));
+    return GetRegisterInfoAtIndex(
+        GetRegisterInfoIndex(registers::x86::id::dr0 + num));
   case llvm::Triple::x86_64:
-    return GetRegisterInfoAtIndex(x86_64_with_base::lldb_dr0 + num);
+    return GetRegisterInfoAtIndex(registers::x86_64::id::with_base::dr0 + num);
   default:
     llvm_unreachable("Unhandled target architecture.");
   }

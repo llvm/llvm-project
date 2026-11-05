@@ -12,11 +12,13 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include <memory>
 
+
+namespace reg_ids = lldb_private::registers::ppc64le::id;
 using namespace lldb_private;
 
 RegisterContextELFCore_ppc64le::RegisterContextELFCore_ppc64le(
@@ -49,16 +51,16 @@ RegisterContextELFCore_ppc64le::RegisterContextELFCore_ppc64le(
 }
 
 size_t RegisterContextELFCore_ppc64le::GetFPRSize() const {
-  return k_num_fpr_registers_ppc64le * sizeof(uint64_t);
+  return reg_ids::k_num_fpr_registers * sizeof(uint64_t);
 }
 
 size_t RegisterContextELFCore_ppc64le::GetVMXSize() const {
-  return (k_num_vmx_registers_ppc64le - 1) * sizeof(uint64_t) * 2 +
+  return (reg_ids::k_num_vmx_registers - 1) * sizeof(uint64_t) * 2 +
          sizeof(uint32_t);
 }
 
 size_t RegisterContextELFCore_ppc64le::GetVSXSize() const {
-  return k_num_vsx_registers_ppc64le * sizeof(uint64_t) * 2;
+  return reg_ids::k_num_vsx_registers * sizeof(uint64_t) * 2;
 }
 
 bool RegisterContextELFCore_ppc64le::ReadRegister(

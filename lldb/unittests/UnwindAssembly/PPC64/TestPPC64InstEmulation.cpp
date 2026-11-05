@@ -20,9 +20,11 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
-#include "Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
+
+namespace reg_ids = lldb_private::registers::ppc64le::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -98,74 +100,74 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
   // 0: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 1: CFA=sp+0 => fp=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(16);
   EXPECT_EQ(16, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_r31_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_r31, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
   // 2: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(20);
   EXPECT_EQ(20, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_lr, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(16, regloc.GetOffset());
 
   // 3: CFA=sp+112 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(24);
   EXPECT_EQ(24, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(112, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_r31_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_r31, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_lr, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(16, regloc.GetOffset());
 
   // 4: CFA=r31+112 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(28);
   EXPECT_EQ(28, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r31_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r31);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(112, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_r31_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_r31, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_lr, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(16, regloc.GetOffset());
 
   // 5: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(40);
   EXPECT_EQ(40, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_r31_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_r31, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_lr, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(16, regloc.GetOffset());
 }
@@ -210,49 +212,49 @@ TEST_F(TestPPC64InstEmulation, TestMediumFunction) {
   // 0: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 1: CFA=sp+0 => fp=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(8);
   EXPECT_EQ(8, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_r31_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_r31, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 
   // 2: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(12);
   EXPECT_EQ(12, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
-  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_ppc64le, regloc));
+  EXPECT_TRUE(row->GetRegisterInfo(reg_ids::gpr_lr, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(16, regloc.GetOffset());
 
   // 3: CFA=r30
   row = unwind_plan.GetRowForFunctionOffset(16);
   EXPECT_EQ(16, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r30_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r30);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   row = unwind_plan.GetRowForFunctionOffset(32);
   EXPECT_EQ(16, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r30_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r30);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 4: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(36);
   EXPECT_EQ(36, row->GetOffset());
-  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == reg_ids::gpr_r1);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 }

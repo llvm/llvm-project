@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cerrno>
+#include "lldb/Register/Arch/lldb-powerpc-register-enums.h"
 #include <cstdint>
 #include <cstring>
 
@@ -22,70 +23,72 @@
 
 #include "RegisterContextCore_powerpc.h"
 
+
+namespace reg_ids = lldb_private::registers::powerpc::id;
 using namespace lldb_private;
 using namespace lldb;
 
 static const uint32_t g_gpr_regnums[] = {
-    gpr_r0_powerpc,  gpr_r1_powerpc,  gpr_r2_powerpc,  gpr_r3_powerpc,
-    gpr_r4_powerpc,  gpr_r5_powerpc,  gpr_r6_powerpc,  gpr_r7_powerpc,
-    gpr_r8_powerpc,  gpr_r9_powerpc,  gpr_r10_powerpc, gpr_r11_powerpc,
-    gpr_r12_powerpc, gpr_r13_powerpc, gpr_r14_powerpc, gpr_r15_powerpc,
-    gpr_r16_powerpc, gpr_r17_powerpc, gpr_r18_powerpc, gpr_r19_powerpc,
-    gpr_r20_powerpc, gpr_r21_powerpc, gpr_r22_powerpc, gpr_r23_powerpc,
-    gpr_r24_powerpc, gpr_r25_powerpc, gpr_r26_powerpc, gpr_r27_powerpc,
-    gpr_r28_powerpc, gpr_r29_powerpc, gpr_r30_powerpc, gpr_r31_powerpc,
-    gpr_lr_powerpc,  gpr_cr_powerpc,  gpr_xer_powerpc, gpr_ctr_powerpc,
-    gpr_pc_powerpc,
+    reg_ids::gpr_r0,  reg_ids::gpr_r1,  reg_ids::gpr_r2,  reg_ids::gpr_r3,
+    reg_ids::gpr_r4,  reg_ids::gpr_r5,  reg_ids::gpr_r6,  reg_ids::gpr_r7,
+    reg_ids::gpr_r8,  reg_ids::gpr_r9,  reg_ids::gpr_r10, reg_ids::gpr_r11,
+    reg_ids::gpr_r12, reg_ids::gpr_r13, reg_ids::gpr_r14, reg_ids::gpr_r15,
+    reg_ids::gpr_r16, reg_ids::gpr_r17, reg_ids::gpr_r18, reg_ids::gpr_r19,
+    reg_ids::gpr_r20, reg_ids::gpr_r21, reg_ids::gpr_r22, reg_ids::gpr_r23,
+    reg_ids::gpr_r24, reg_ids::gpr_r25, reg_ids::gpr_r26, reg_ids::gpr_r27,
+    reg_ids::gpr_r28, reg_ids::gpr_r29, reg_ids::gpr_r30, reg_ids::gpr_r31,
+    reg_ids::gpr_lr,  reg_ids::gpr_cr,  reg_ids::gpr_xer, reg_ids::gpr_ctr,
+    reg_ids::gpr_pc,
 };
 
 static const uint32_t g_fpr_regnums[] = {
-    fpr_f0_powerpc,    fpr_f1_powerpc,  fpr_f2_powerpc,  fpr_f3_powerpc,
-    fpr_f4_powerpc,    fpr_f5_powerpc,  fpr_f6_powerpc,  fpr_f7_powerpc,
-    fpr_f8_powerpc,    fpr_f9_powerpc,  fpr_f10_powerpc, fpr_f11_powerpc,
-    fpr_f12_powerpc,   fpr_f13_powerpc, fpr_f14_powerpc, fpr_f15_powerpc,
-    fpr_f16_powerpc,   fpr_f17_powerpc, fpr_f18_powerpc, fpr_f19_powerpc,
-    fpr_f20_powerpc,   fpr_f21_powerpc, fpr_f22_powerpc, fpr_f23_powerpc,
-    fpr_f24_powerpc,   fpr_f25_powerpc, fpr_f26_powerpc, fpr_f27_powerpc,
-    fpr_f28_powerpc,   fpr_f29_powerpc, fpr_f30_powerpc, fpr_f31_powerpc,
-    fpr_fpscr_powerpc,
+    reg_ids::fpr_f0,    reg_ids::fpr_f1,  reg_ids::fpr_f2,  reg_ids::fpr_f3,
+    reg_ids::fpr_f4,    reg_ids::fpr_f5,  reg_ids::fpr_f6,  reg_ids::fpr_f7,
+    reg_ids::fpr_f8,    reg_ids::fpr_f9,  reg_ids::fpr_f10, reg_ids::fpr_f11,
+    reg_ids::fpr_f12,   reg_ids::fpr_f13, reg_ids::fpr_f14, reg_ids::fpr_f15,
+    reg_ids::fpr_f16,   reg_ids::fpr_f17, reg_ids::fpr_f18, reg_ids::fpr_f19,
+    reg_ids::fpr_f20,   reg_ids::fpr_f21, reg_ids::fpr_f22, reg_ids::fpr_f23,
+    reg_ids::fpr_f24,   reg_ids::fpr_f25, reg_ids::fpr_f26, reg_ids::fpr_f27,
+    reg_ids::fpr_f28,   reg_ids::fpr_f29, reg_ids::fpr_f30, reg_ids::fpr_f31,
+    reg_ids::fpr_fpscr,
 };
 
 static const uint32_t g_vmx_regnums[] = {
-    vmx_v0_powerpc,     vmx_v1_powerpc,   vmx_v2_powerpc,  vmx_v3_powerpc,
-    vmx_v4_powerpc,     vmx_v5_powerpc,   vmx_v6_powerpc,  vmx_v7_powerpc,
-    vmx_v8_powerpc,     vmx_v9_powerpc,   vmx_v10_powerpc, vmx_v11_powerpc,
-    vmx_v12_powerpc,    vmx_v13_powerpc,  vmx_v14_powerpc, vmx_v15_powerpc,
-    vmx_v16_powerpc,    vmx_v17_powerpc,  vmx_v18_powerpc, vmx_v19_powerpc,
-    vmx_v20_powerpc,    vmx_v21_powerpc,  vmx_v22_powerpc, vmx_v23_powerpc,
-    vmx_v24_powerpc,    vmx_v25_powerpc,  vmx_v26_powerpc, vmx_v27_powerpc,
-    vmx_v28_powerpc,    vmx_v29_powerpc,  vmx_v30_powerpc, vmx_v31_powerpc,
-    vmx_vrsave_powerpc, vmx_vscr_powerpc,
+    reg_ids::vmx_v0,     reg_ids::vmx_v1,   reg_ids::vmx_v2,  reg_ids::vmx_v3,
+    reg_ids::vmx_v4,     reg_ids::vmx_v5,   reg_ids::vmx_v6,  reg_ids::vmx_v7,
+    reg_ids::vmx_v8,     reg_ids::vmx_v9,   reg_ids::vmx_v10, reg_ids::vmx_v11,
+    reg_ids::vmx_v12,    reg_ids::vmx_v13,  reg_ids::vmx_v14, reg_ids::vmx_v15,
+    reg_ids::vmx_v16,    reg_ids::vmx_v17,  reg_ids::vmx_v18, reg_ids::vmx_v19,
+    reg_ids::vmx_v20,    reg_ids::vmx_v21,  reg_ids::vmx_v22, reg_ids::vmx_v23,
+    reg_ids::vmx_v24,    reg_ids::vmx_v25,  reg_ids::vmx_v26, reg_ids::vmx_v27,
+    reg_ids::vmx_v28,    reg_ids::vmx_v29,  reg_ids::vmx_v30, reg_ids::vmx_v31,
+    reg_ids::vmx_vrsave, reg_ids::vmx_vscr,
 };
 
 // Number of register sets provided by this context.
 enum { k_num_register_sets = 3 };
 
 static const RegisterSet g_reg_sets_powerpc[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_powerpc,
+    {"General Purpose Registers", "gpr", reg_ids::k_num_gpr_registers,
      g_gpr_regnums},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_powerpc,
+    {"Floating Point Registers", "fpr", reg_ids::k_num_fpr_registers,
      g_fpr_regnums},
-    {"Altivec/VMX Registers", "vmx", k_num_vmx_registers_powerpc,
+    {"Altivec/VMX Registers", "vmx", reg_ids::k_num_vmx_registers,
      g_vmx_regnums},
 };
 
-static_assert(k_first_gpr_powerpc == 0,
+static_assert(reg_ids::k_first_gpr == 0,
               "GPRs must index starting at 0, or fix IsGPR()");
 bool RegisterContextCore_powerpc::IsGPR(unsigned reg) {
-  return (reg <= k_last_gpr_powerpc); // GPR's come first.
+  return (reg <= reg_ids::k_last_gpr); // GPR's come first.
 }
 
 bool RegisterContextCore_powerpc::IsFPR(unsigned reg) {
-  return (reg >= k_first_fpr) && (reg <= k_last_fpr);
+  return (reg >= reg_ids::k_first_fpr) && (reg <= reg_ids::k_last_fpr);
 }
 
 bool RegisterContextCore_powerpc::IsVMX(unsigned reg) {
-  return (reg >= k_first_vmx) && (reg <= k_last_vmx);
+  return (reg >= reg_ids::k_first_vmx) && (reg <= reg_ids::k_last_vmx);
 }
 
 RegisterContextCore_powerpc::RegisterContextCore_powerpc(
@@ -102,17 +105,17 @@ void RegisterContextCore_powerpc::Invalidate() {}
 void RegisterContextCore_powerpc::InvalidateAllRegisters() {}
 
 unsigned RegisterContextCore_powerpc::GetRegisterOffset(unsigned reg) {
-  assert(reg < k_num_registers_powerpc && "Invalid register number.");
+  assert(reg < reg_ids::k_num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
 unsigned RegisterContextCore_powerpc::GetRegisterSize(unsigned reg) {
-  assert(reg < k_num_registers_powerpc && "Invalid register number.");
+  assert(reg < reg_ids::k_num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
 size_t RegisterContextCore_powerpc::GetRegisterCount() {
-  size_t num_registers = k_num_registers_powerpc;
+  size_t num_registers = reg_ids::k_num_registers;
   return num_registers;
 }
 
@@ -129,7 +132,7 @@ const RegisterInfo *RegisterContextCore_powerpc::GetRegisterInfo() {
 
 const RegisterInfo *
 RegisterContextCore_powerpc::GetRegisterInfoAtIndex(size_t reg) {
-  if (reg < k_num_registers_powerpc)
+  if (reg < reg_ids::k_num_registers)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
@@ -153,7 +156,7 @@ const RegisterSet *RegisterContextCore_powerpc::GetRegisterSet(size_t set) {
 }
 
 const char *RegisterContextCore_powerpc::GetRegisterName(unsigned reg) {
-  assert(reg < k_num_registers_powerpc && "Invalid register offset.");
+  assert(reg < reg_ids::k_num_registers && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
