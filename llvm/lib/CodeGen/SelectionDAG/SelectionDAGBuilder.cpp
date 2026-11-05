@@ -3668,12 +3668,13 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
   // this changes, we might need to enhance
   // Target->setIsInlineAsmBrIndirectTarget or add something similar for
   // intrinsic indirect branches.
-
+  //
   // An asm that failed to lower, which reported an error, has no INLINEASM_BR
   // to branch to the indirect targets.
   if (I.isInlineAsm() && CallBrOutputs.contains(&I)) {
@@ -13351,6 +13352,7 @@ static void readPhysRegsAtBlockEntry(SDValue &V, MachineBasicBlock &MBB,
   HandleSDNode Handle(V);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
+
   // The walk found the reads last operand first. Copy them in operand order,
   // which is the order of an output's registers.
   for (SDNode *N : reverse(PhysRegReads)) {
@@ -13386,6 +13388,7 @@ static void readPhysRegsAtBlockEntry(SDValue &V, MachineBasicBlock &MBB,
     SDValue Read = DAG.getCopyFromReg(N->getOperand(0), DL, VReg, VT);
     DAG.ReplaceAllUsesWith(N, Read.getNode());
   }
+
   V = Handle.getValue();
 }
 
@@ -13396,6 +13399,7 @@ static SmallBitVector getUsedCallBrOutputs(const CallInst &I,
   if (!I.getType()->isStructTy()) {
     if (!I.use_empty())
       Used.set();
+
     return Used;
   }
 
@@ -13410,6 +13414,7 @@ static SmallBitVector getUsedCallBrOutputs(const CallInst &I,
     if (!EV->use_empty())
       Used.set(EV->getIndices()[0]);
   }
+
   return Used;
 }
 
@@ -13439,6 +13444,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   SmallVector<SDValue, 8> OutputValues;
   for (auto [Idx, Output] : enumerate(It->second)) {
     RegsForValue Regs(Output.Regs, Output.RegVT, Output.ValueVT);
+
     // Each output's reads only follow the block's entry, so that an unused
     // output's reads have no users left.
     SDValue Chain = DAG.getRoot();
@@ -13449,6 +13455,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       readPhysRegsAtBlockEntry(V, *FuncInfo.MBB, DAG, getCurSDLoc());
     else
       V = DAG.getUNDEF(V.getValueType());
+
     OutputValues.push_back(V);
   }
 
