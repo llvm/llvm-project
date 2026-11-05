@@ -1005,6 +1005,20 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
           return Op0;
       }
     }
+    // Look through redundant operations for a matching SHL. If none of the
+    // shifted-in zeros are demanded, reuse its source for this use of the SRL.
+    auto *SA = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+    if (SA && SA->getAPIntValue().ule(DemandedBits.countl_zero())) {
+      APInt SrcBits = DemandedBits.shl(SA->getZExtValue());
+      SDValue Src = Op.getOperand(0);
+      while (Src) {
+        if (Src.getOpcode() == ISD::SHL &&
+            Src.getOperand(1) == Op.getOperand(1))
+          return Src.getOperand(0);
+        Src = SimplifyMultipleUseDemandedBits(Src, SrcBits, DemandedElts, DAG,
+                                              ++Depth);
+      }
+    }
     break;
   }
   case ISD::SETCC: {

@@ -145,11 +145,8 @@ define void @i56_and_or(ptr %a) {
 ; CHECK-LABEL: i56_and_or:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    ldrh w10, [x9, #4]!
 ; CHECK-NEXT:    orr w8, w8, #0x180
 ; CHECK-NEXT:    and w8, w8, #0xffffff80
-; CHECK-NEXT:    strh w10, [x9]
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %b = load i56, ptr %a, align 1
