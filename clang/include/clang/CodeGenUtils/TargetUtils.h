@@ -111,9 +111,8 @@ enum class MSVCIntrin {
   __fastfail,
 };
 
-std::optional<MSVCIntrin>
-translateX86ToMsvcIntrin(unsigned BuiltinID);
-  
+std::optional<MSVCIntrin> translateX86ToMsvcIntrin(unsigned BuiltinID);
+
 // Library builtins (PowerPC64 and AIX)
 //===----------------------------------------------------------------------===//
 

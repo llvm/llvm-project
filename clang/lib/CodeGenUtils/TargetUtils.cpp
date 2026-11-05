@@ -152,8 +152,7 @@ bool isAAPCS(const TargetInfo &TargetInfo) {
 
 // Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
 // we handle them here.
-std::optional<MSVCIntrin>
-translateX86ToMsvcIntrin(unsigned BuiltinID) {
+std::optional<MSVCIntrin> translateX86ToMsvcIntrin(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
     return std::nullopt;

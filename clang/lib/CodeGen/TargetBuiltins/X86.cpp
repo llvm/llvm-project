@@ -760,7 +760,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<CodeGenUtils::MSVCIntrin> MsvcIntId =
-      CodeGenUtils::translateX86ToMsvcIntrin(BuiltinID))
+          CodeGenUtils::translateX86ToMsvcIntrin(BuiltinID))
     return EmitMSVCBuiltinExpr(*MsvcIntId, E);
 
   SmallVector<Value*, 4> Ops;
