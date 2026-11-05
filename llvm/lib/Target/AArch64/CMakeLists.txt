@@ -9,6 +9,12 @@ llvm_tablegen(AArch64GenCallingConv.inc -gen-callingconv)
 llvm_tablegen(AArch64GenDAGISel.inc -gen-dag-isel)
 llvm_tablegen(AArch64GenDisassemblerTables.inc -gen-disassembler)
 llvm_tablegen(AArch64GenFastISel.inc -gen-fast-isel)
+set(LLVM_TARGET_DEFINITIONS AArch64IntrinsicFeatureChecks.td)
+llvm_tablegen(AArch64GenIntrinsicFeatureChecks.inc -gen-intrinsic-feature-checks
+              -intrinsic-feature-prefix=aarch64 -intrinsic-feature-namespace=AArch64
+              DEPENDS
+              ${LLVM_MAIN_SRC_DIR}/include/llvm/IR/IntrinsicsAArch64.td)
+set(LLVM_TARGET_DEFINITIONS AArch64.td)
 llvm_tablegen(AArch64GenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 llvm_tablegen(AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
@@ -72,6 +78,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
+  AArch64IntrinsicsVerifier.cpp
   AArch64LoadStoreOptimizer.cpp
   AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp

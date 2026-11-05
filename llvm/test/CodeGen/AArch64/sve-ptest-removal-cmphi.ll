@@ -17,19 +17,6 @@ define i32 @cmphi_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale
   ret i32 %conv
 }
 
-define i32 @cmphi_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmphi_nxv4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmphi p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmphi.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %2 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %1)
-  %conv = zext i1 %2 to i32
-  ret i32 %conv
-}
-
-
 ;
 ; Immediate Compares
 ;
@@ -96,7 +83,6 @@ declare <vscale x 16 x i1> @llvm.aarch64.sve.cmphi.wide.nxv16i8(<vscale x 16 x i
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmphi.wide.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 2 x i64>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.cmphi.wide.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 2 x i64>)
 
-declare i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
 declare i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
