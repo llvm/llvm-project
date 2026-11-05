@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <mutex>
-#include <vector>
 
 using namespace mlir::remark::detail;
 using namespace mlir::remark;
@@ -407,11 +406,11 @@ void RemarkEmittingPolicyFinal::reportRemark(const detail::Remark &remark) {
 void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
-  std::vector<detail::Remark> remarks;
+  SmallVector<detail::Remark, 0> remarks;
   llvm::DenseSet<uint64_t> discarded;
   {
     std::scoped_lock<std::mutex> lock(mutex);
-    remarks.assign(pendingRemarks.begin(), pendingRemarks.end());
+    remarks = llvm::to_vector<0>(pendingRemarks);
     pendingRemarks.clear();
     discarded.swap(discardedIds);
   }
