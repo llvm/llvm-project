@@ -557,12 +557,12 @@ public:
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
   bool isVSrc_v2b64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::i64) ||
            isLiteralImm(MVT::i64);
   }
 
   bool isVSrc_v2f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::f64) ||
            isLiteralImm(MVT::f64);
   }
 
