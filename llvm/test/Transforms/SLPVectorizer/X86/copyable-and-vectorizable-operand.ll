@@ -5,28 +5,14 @@ define void @test(ptr dereferenceable(16) %y, ptr %r) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr dereferenceable(16) [[Y:%.*]], ptr [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[Y1:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 4
-; CHECK-NEXT:    [[Y2:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[Y3:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 12
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[Y]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[Y1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[Y2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[Y3]], align 4
-; CHECK-NEXT:    [[SHL0:%.*]] = shl i32 1, [[L0]]
-; CHECK-NEXT:    [[SHL1:%.*]] = shl i32 9, [[L1]]
-; CHECK-NEXT:    [[SHL2:%.*]] = shl i32 16, [[L2]]
-; CHECK-NEXT:    [[SHL3:%.*]] = shl i32 25, [[L3]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SHL1]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[SHL1]], [[SUB1]]
-; CHECK-NEXT:    [[SUB3:%.*]] = sub i32 0, [[SHL3]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[SHL3]], [[SUB3]]
-; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 4
-; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 8
-; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 12
-; CHECK-NEXT:    store i32 [[SHL0]], ptr [[R]], align 4
-; CHECK-NEXT:    store i32 [[AND1]], ptr [[R1]], align 4
-; CHECK-NEXT:    store i32 [[SHL2]], ptr [[R2]], align 4
-; CHECK-NEXT:    store i32 [[AND3]], ptr [[R3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[Y]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> <i32 1, i32 9, i32 16, i32 25>, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> <i32 -1, i32 poison, i32 -1, i32 poison>, <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
