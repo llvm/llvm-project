@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
-; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
 
 ; Check that AMDGPU legalizes constant i128 UREM without emitting a libcall.
 

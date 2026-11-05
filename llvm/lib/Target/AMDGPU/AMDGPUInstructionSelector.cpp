@@ -398,7 +398,7 @@ static unsigned getLogicalBitOpcode(unsigned Opc, bool Is64) {
 
 bool AMDGPUInstructionSelector::selectG_AND_OR_XOR(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
-  uint64_t Size = RBI.getSizeInBits(DstReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(DstReg, *MRI);
 
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   if (DstRB->getID() != AMDGPU::SGPRRegBankID &&
@@ -1576,7 +1576,7 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
 
   Register SrcReg = I.getOperand(2).getReg();
-  uint64_t Size = RBI.getSizeInBits(SrcReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(SrcReg, *MRI);
 
   auto Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
 
@@ -2504,7 +2504,7 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
 
   Register DstReg = I.getOperand(0).getReg();
-  uint64_t Size = RBI.getSizeInBits(DstReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(DstReg, *MRI);
   assert(Size <= 32 || Size == 64);
   const MachineOperand &CCOp = I.getOperand(1);
   Register CCReg = CCOp.getReg();
