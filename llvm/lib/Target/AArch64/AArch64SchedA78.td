@@ -706,6 +706,10 @@ def A78IsScaledLoadStore : MCSchedPredicate<CheckImmOperand<4, 1>>;
 // the instruction.
 def A78IsExtendedLoadStore : MCSchedPredicate<CheckImmOperand<3, 1>>;
 
+// Predicate for EXTR with a zero imm operand:
+// extr w0, w1, w2, #0
+def A78IsZeroEXTR : MCSchedPredicate<CheckImmOperand<3, 0>>;
+
 //===----------------------------------------------------------------------===//
 // Define predicate-controlled types
 
@@ -722,7 +726,9 @@ def A78Write_0or3c_1M0 : SchedWriteVariant<[
                       SchedVar<NoSchedPred,      [A78Write_3c_1M0]>]>;
 
 def A78Write_Extr : SchedWriteVariant<[
-                      SchedVar<IsRORImmIdiomPred, [A78Write_1c_1I]>,
+                      SchedVar<AnyOfSchedPreds<[IsRORImmIdiomPred,
+		                                A78IsZeroEXTR]>,
+		               [A78Write_1c_1I]>,
                       SchedVar<NoSchedPred,       [A78Write_3c_1I_1M]>]>;
 
 //===----------------------------------------------------------------------===//

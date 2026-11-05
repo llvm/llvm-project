@@ -75,7 +75,7 @@ ror	x0, x1, x2
 # CHECK-NEXT:  1      1     0.25                        adr	x0, #4
 # CHECK-NEXT:  1      1     0.25                        adrp	x0, #6553600
 # CHECK-NEXT:  1      1     0.25                        ror	w0, w1, #1
-# CHECK-NEXT:  2      3     0.50                        extr	w0, w1, w2, #0
+# CHECK-NEXT:  1      1     0.25                        extr	w0, w1, w2, #0
 # CHECK-NEXT:  2      3     0.50                        extr	w0, w1, w2, #1
 # CHECK-NEXT:  1      1     0.25                        sbfx	w0, w1, #1, #15
 # CHECK-NEXT:  1      1     0.25                        sbfx	x0, x1, #1, #15
@@ -133,14 +133,14 @@ ror	x0, x1, x2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     10.50  10.50  8.50   8.50    -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     10.00  10.00  8.50   8.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     adr	x0, #4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     adrp	x0, #6553600
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	w0, w1, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     extr	w0, w1, w2, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     extr	w0, w1, w2, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     extr	w0, w1, w2, #1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     sbfx	w0, w1, #1, #15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     sbfx	x0, x1, #1, #15
