@@ -75,27 +75,34 @@ func.func @associate_char(%arg0: !fir.boxchar<1> ) {
 // CHECK:           %[[VAL_4:.*]] = arith.addi %[[VAL_2]]#1, %[[VAL_1]] : index
 // CHECK:           %[[VAL_5:.*]] = fir.undefined !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] uniq_name("char_literal") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_7:.*]] = arith.addi %[[VAL_2]]#1, %[[VAL_1]] : index
-// CHECK:           %[[VAL_8:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
+// CHECK:           %[[VAL_8:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_4]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
+// CHECK:           %[[VAL_35:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_36:.*]] = arith.addi %[[VAL_35]], %[[VAL_15]] : index
+// CHECK:           %[[VAL_37:.*]] = arith.subi %[[VAL_36]], %[[VAL_15]] : index
+// CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:           %[[VAL_39:.*]] = fir.coordinate_of %[[VAL_38]], %[[VAL_37]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+// CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 // CHECK:           %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_10]] : i64
-// CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_40]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:           "llvm.intr.memmove"(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
-// CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_7]], %[[VAL_15]] : index
-// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]]#1 to %[[VAL_16]] step %[[VAL_15]] {
-// CHECK:             %[[VAL_18:.*]] = arith.subi %[[VAL_17]], %[[VAL_2]]#1 : index
-// CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.array<1x!fir.char<1>>>
-// CHECK:             %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<1x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-// CHECK:             %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.char<1>>
-// CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-// CHECK:             %[[VAL_23:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_17]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-// CHECK:             fir.store %[[VAL_21]] to %[[VAL_23]] : !fir.ref<!fir.char<1>>
-// CHECK:           }
+// CHECK:           %[[VAL_41:.*]] = arith.addi %[[VAL_35]], %[[VAL_2]]#1 : index
+// CHECK:           %[[VAL_42:.*]] = arith.addi %[[VAL_41]], %[[VAL_15]] : index
+// CHECK:           %[[VAL_43:.*]] = arith.subi %[[VAL_42]], %[[VAL_15]] : index
+// CHECK:           %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:           %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_43]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+// CHECK:           %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:           %[[VAL_47:.*]] = arith.constant 1 : i64
+// CHECK:           %[[VAL_48:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
+// CHECK:           %[[VAL_49:.*]] = arith.muli %[[VAL_47]], %[[VAL_48]] : i64
+// CHECK:           %[[VAL_50:.*]] = fir.convert %[[VAL_46]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1>>) -> !llvm.ptr
+// CHECK:           "llvm.intr.memmove"(%[[VAL_50]], %[[VAL_51]], %[[VAL_49]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:           %[[VAL_8_REF:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_8_REF]] typeparams %[[VAL_7]] uniq_name("tmp") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_8_REF]] typeparams %[[VAL_4]] uniq_name("tmp") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_25:.*]] = arith.constant true
 // CHECK:           %[[VAL_26:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_25]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
