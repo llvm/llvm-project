@@ -1392,6 +1392,9 @@ public:
   /// Get the ABI currently in use.
   virtual StringRef getABI() const { return StringRef(); }
 
+  /// Get the CPU name to pass to the LLVM backend.
+  virtual StringRef getBackendCPU() const { return getTargetOpts().CPU; }
+
   /// Get the C++ ABI currently in use.
   TargetCXXABI getCXXABI() const {
     return TheCXXABI;
