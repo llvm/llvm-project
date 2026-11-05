@@ -8688,6 +8688,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:
+  case Intrinsic::ldexp:
+  case Intrinsic::experimental_constrained_ldexp:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::mask_beforefirst:
     return true;
