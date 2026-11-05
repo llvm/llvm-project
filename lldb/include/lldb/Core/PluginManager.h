@@ -477,6 +477,16 @@ public:
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
 
+  /// Records why no script interpreter for \p script_lang could be
+  /// registered, for the fallback interpreter to report in its place. Success
+  /// clears the recorded error.
+  static void SetScriptInterpreterError(lldb::ScriptLanguage script_lang,
+                                        llvm::Error error);
+
+  /// Returns the error recorded for \p script_lang, or success.
+  static llvm::Error
+  GetScriptInterpreterError(lldb::ScriptLanguage script_lang);
+
   static FileSpec
   GetScriptInterpreterLibraryPath(lldb::ScriptLanguage script_lang);
 

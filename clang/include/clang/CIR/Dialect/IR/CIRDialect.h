@@ -36,7 +36,6 @@
 
 #include "llvm/TargetParser/Triple.h"
 
-#include <mutex>
 #include <optional>
 
 using BuilderCallbackRef =

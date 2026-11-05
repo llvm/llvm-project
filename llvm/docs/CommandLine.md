@@ -1601,6 +1601,6 @@ An `OptionalValueField` or `OptionalEnumField` takes no default; its `std::optio
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
-A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
+A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `llvm_tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
 Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

@@ -24,6 +24,8 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
+#include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
@@ -213,23 +215,13 @@ protected:
     return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
   }
 
-  bool testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
+  bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
                         internal::Location Loc);
 
-  bool testProcessKilled(testutils::FunctionCaller *Func, int Signal,
+  bool testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
                          const char *LHSStr, const char *RHSStr,
                          internal::Location Loc);
-
-  template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
-    struct Callable : public testutils::FunctionCaller {
-      Func f;
-      Callable(Func f) : f(f) {}
-      void operator()() override { f(); }
-    };
-
-    return new Callable(f);
-  }
 
 private:
   virtual void Run() = 0;
@@ -498,13 +490,19 @@ CString libc_make_test_file_path_func(const char *file_name);
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
+#define LIBC_TEST_DUMMY_PROCESS_(FUNC, VAL)                                    \
+  do {                                                                         \
+    if constexpr (false) {                                                     \
+      (FUNC)();                                                                \
+      (void)(VAL);                                                             \
+    }                                                                          \
+  } while (false)
+
 #if LIBC_TEST_SUBPROCESS_TESTS
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
   LIBC_TEST_SCAFFOLDING_(                                                      \
-      TEST_FUNC(LIBC_NAMESPACE::testing::Test::createCallable(FUNC), VALUE,    \
-                #FUNC, #VALUE, LIBC_TEST_LOC_()),                              \
-      RET_OR_EMPTY)
+      TEST_FUNC(FUNC, VALUE, #FUNC, #VALUE, LIBC_TEST_LOC_()), RET_OR_EMPTY)
 
 #define EXPECT_EXITS(FUNC, EXIT)                                               \
   LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, )
@@ -513,8 +511,8 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #ifdef LIBC_TEST_SKIP_DEATH_TESTS
 
-#define EXPECT_DEATH(FUNC, SIG)
-#define ASSERT_DEATH(FUNC, SIG)
+#define EXPECT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
 
 #else
 
@@ -530,10 +528,10 @@ CString libc_make_test_file_path_func(const char *file_name);
 // EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
 // if passing nullptr to the function. So it must be defined, even if it can't
 // do anything.
-#define EXPECT_EXITS(FUNC, EXIT)
-#define ASSERT_EXITS(FUNC, EXIT)
-#define EXPECT_DEATH(FUNC, SIG)
-#define ASSERT_DEATH(FUNC, SIG)
+#define EXPECT_EXITS(FUNC, EXIT) LIBC_TEST_DUMMY_PROCESS_(FUNC, EXIT)
+#define ASSERT_EXITS(FUNC, EXIT) LIBC_TEST_DUMMY_PROCESS_(FUNC, EXIT)
+#define EXPECT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
 
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 

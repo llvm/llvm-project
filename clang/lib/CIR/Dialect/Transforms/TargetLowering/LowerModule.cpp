@@ -98,14 +98,13 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   }
 
   // Populate the lowering-relevant LangOptions from the module's
-  // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
+  // #cir.lowering_options attribute so a reloaded .cir lowers the same
   // way it was compiled, without a live clang::LangOptions. When the attribute
   // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
   if (auto loweringLangOpts =
-          mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(
-              module->getAttr(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))) {
+          mlir::dyn_cast_if_present<cir::LoweringOptionsAttr>(
+              module->getAttr(cir::CIRDialect::getLoweringOptionsAttrName()))) {
     langOpts.Exceptions = loweringLangOpts.getExceptions();
     langOpts.ThreadsafeStatics = loweringLangOpts.getThreadsafeStatics();
     langOpts.CUDA = loweringLangOpts.getCuda();
@@ -116,6 +115,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.OpenMPIsTargetDevice = loweringLangOpts.getOpenmpIsTargetDevice();
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
+    langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
   }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());
@@ -134,6 +134,11 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
+
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                 new clang::IgnoringDiagConsumer());
+  targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
 
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,
