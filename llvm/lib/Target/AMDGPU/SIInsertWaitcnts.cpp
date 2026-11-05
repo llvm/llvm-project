@@ -243,7 +243,29 @@ public:
 
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
-      WaitEventMaskForInstPreGFX12[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstUpToGFX9[AMDGPU::NUM_INST_CNTS] = {
+          HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS |
+              HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
+          HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
+              HWEvents::SQ_MESSAGE,
+          HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
+              HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
+              HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE,
+          HWEvents::NONE};
+
+  // GFX10 and GFX11 have a separate store counter (VScnt).
+  static constexpr const HWEvents
+      WaitEventMaskForInstGFX10GFX11[AMDGPU::NUM_INST_CNTS] = {
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
               HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
@@ -275,14 +297,8 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
-    // Targets without a separate store counter count stores in LOAD_CNT
-    // (see below), so STORE_CNT has no events of its own there.
-    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
-      return HWEvents::NONE;
-    HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
-    if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
-      EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
-    return EVs;
+    return ST.hasVscnt() ? WaitEventMaskForInstGFX10GFX11[T]
+                         : WaitEventMaskForInstUpToGFX9[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
