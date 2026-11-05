@@ -79,13 +79,22 @@ public:
   /// Look up an element at position `Index`.
   /// If the associated page is not filled, it will be filled with default
   /// constructed elements.
+#ifdef __clang__
+  // Casting the newly allocated void* page to T* before
+  // uninitialized_value_construct_n constructs the elements in place is valid
+  // in C++, but for polymorphic T, cfi-unrelated-cast reads the vtable pointer
+  // from the uninitialized memory at the cast before any constructor has
+  // initialized it.
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#endif
   T &operator[](size_t Index) const {
     assert(Index < Size);
     assert(Index / PageSize < PageToDataPtrs.size());
     T *&PagePtr = PageToDataPtrs[Index / PageSize];
     // If the page was not yet allocated, allocate it.
     if (LLVM_UNLIKELY(!PagePtr)) {
-      PagePtr = Allocator.getPointer()->template Allocate<T>(PageSize);
+      PagePtr = static_cast<T *>(
+          Allocator.getPointer()->Allocate(PageSize * sizeof(T), alignof(T)));
       // We need to invoke the default constructor on all the elements of the
       // page.
       std::uninitialized_value_construct_n(PagePtr, PageSize);

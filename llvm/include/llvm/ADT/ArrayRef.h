@@ -167,8 +167,16 @@ public:
   }
 
   // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
-  template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
-    T *Buff = A.template Allocate<T>(Length);
+  template <typename Allocator>
+#ifdef __clang__
+  // Casting the uninitialized void* buffer to T* before uninitialized_copy
+  // constructs the elements in place is valid in C++, but for polymorphic T,
+  // cfi-unrelated-cast reads the vtable pointer from the uninitialized memory
+  // at the cast before any constructor has initialized it.
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#endif
+      MutableArrayRef<T> copy(Allocator &A) {
+    T *Buff = static_cast<T *>(A.Allocate(Length * sizeof(T), alignof(T)));
     llvm::uninitialized_copy(*this, Buff);
     return MutableArrayRef<T>(Buff, Length);
   }

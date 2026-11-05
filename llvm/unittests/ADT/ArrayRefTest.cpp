@@ -72,6 +72,26 @@ TEST(ArrayRefTest, AllocatorCopy) {
   ArrayRef<NonAssignable> Array3Copy = ArrayRef(Array3Src).copy(Alloc);
   EXPECT_EQ(ArrayRef(Array3Src), Array3Copy);
   EXPECT_NE(ArrayRef(Array3Src).data(), Array3Copy.data());
+
+  // Check that copy works with polymorphic types over non-zero allocator
+  // storage (e.g. under -fsanitize=cfi-unrelated-cast).
+  struct Polymorphic {
+    int V;
+    explicit Polymorphic(int V) : V(V) {}
+    Polymorphic(const Polymorphic &) = default;
+    virtual ~Polymorphic() = default;
+    virtual int get() const { return V; }
+    bool operator==(const Polymorphic &RHS) const { return V == RHS.V; }
+  };
+  void *Dirty = Alloc.Allocate(64, 8);
+  std::memset(Dirty, 0x5A, 64);
+  Alloc.Reset();
+  Polymorphic PolySrc[] = {Polymorphic(10), Polymorphic(20)};
+  MutableArrayRef<Polymorphic> PolyCopy = ArrayRef(PolySrc).copy(Alloc);
+  ASSERT_EQ(2u, PolyCopy.size());
+  EXPECT_EQ(10, PolyCopy[0].get());
+  EXPECT_EQ(20, PolyCopy[1].get());
+  EXPECT_NE(ArrayRef(PolySrc).data(), PolyCopy.data());
 }
 
 // This test is pure UB given the ArrayRef<> implementation.

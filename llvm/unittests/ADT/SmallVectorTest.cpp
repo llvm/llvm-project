@@ -1816,4 +1816,69 @@ TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
   EXPECT_EQ(int(V.size()) - 1, V.back().second);
 }
 
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+TEST(SmallVectorTest, PolymorphicTypes) {
+  // Exercise inline storage, growth to heap storage, insertion, erasure,
+  // copy/move, and virtual dispatch with a polymorphic value type.
+  alignas(SmallVector<PolymorphicBase, 2>) unsigned char
+      Storage[sizeof(SmallVector<PolymorphicBase, 2>)];
+  std::memset(Storage, 0x5A, sizeof(Storage));
+  auto *V = ::new (Storage) SmallVector<PolymorphicBase, 2>();
+  EXPECT_TRUE(V->empty());
+  EXPECT_EQ(V->begin(), V->end());
+
+  V->push_back(PolymorphicBase(1));
+  V->emplace_back(2);
+  V->emplace_back(3);
+  V->insert(V->begin(), PolymorphicBase(0));
+  ASSERT_EQ(4u, V->size());
+  for (int I = 0; I < 4; ++I)
+    EXPECT_EQ(I, (*V)[I].get());
+
+  V->resize(6, PolymorphicBase(5));
+  EXPECT_EQ(5, V->back().get());
+  V->erase(V->begin());
+  EXPECT_EQ(1, V->front().get());
+
+  SmallVector<PolymorphicBase, 2> Copy(*V);
+  EXPECT_EQ(*V, Copy);
+  SmallVector<PolymorphicBase, 2> Moved(std::move(Copy));
+  EXPECT_EQ(*V, Moved);
+  V->~SmallVector<PolymorphicBase, 2>();
+
+  SmallVector<PolymorphicBase, 0> V0;
+  V0.emplace_back(10);
+  V0.emplace_back(20);
+  EXPECT_EQ(10, V0[0].get());
+  EXPECT_EQ(20, V0[1].get());
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  SmallVector<PolymorphicBase *, 1> PtrV;
+  PtrV.push_back(&B);
+  PtrV.push_back(&D);
+  ASSERT_EQ(2u, PtrV.size());
+  EXPECT_EQ(3, PtrV[0]->get());
+  EXPECT_EQ(8, PtrV[1]->get());
+}
+
 } // end namespace
