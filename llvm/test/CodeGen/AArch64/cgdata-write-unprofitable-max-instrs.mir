@@ -1,0 +1,46 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=machine-outliner \
+# RUN:   -codegen-data-generate \
+# RUN:   -machine-outliner-publish-unprofitable-candidates -stats %s \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=MAX-THREE
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=machine-outliner \
+# RUN:   -codegen-data-generate \
+# RUN:   -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -machine-outliner-unprofitable-candidate-max-instrs=2 -stats %s \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=MAX-TWO
+
+# The repeated three-instruction sequence and one of its two-instruction
+# subsequences are locally unprofitable. Lowering the maximum length excludes
+# only the three-instruction candidate.
+#
+# MAX-THREE: 2 machine-outliner - Number of locally unprofitable candidate groups published
+# MAX-THREE: 4 machine-outliner - Number of locally unprofitable candidate sites published
+# MAX-TWO: 1 machine-outliner - Number of locally unprofitable candidate groups published
+# MAX-TWO: 2 machine-outliner - Number of locally unprofitable candidate sites published
+
+--- |
+  define void @three1() noredzone { unreachable }
+  define void @three2() noredzone { unreachable }
+...
+---
+name: three1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: three2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...

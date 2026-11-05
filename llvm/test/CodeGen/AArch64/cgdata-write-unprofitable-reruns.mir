@@ -1,0 +1,137 @@
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=0 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.zero.o
+# RUN: llvm-cgdata --merge %t.zero.o -o %t.zero.cgdata
+# RUN: llvm-cgdata --convert --format text %t.zero.cgdata -o %t.zero.txt
+# RUN: FileCheck %s --check-prefix=TREE --match-full-lines < %t.zero.txt
+# RUN: FileCheck %s --check-prefix=COUNTS --match-full-lines < %t.zero.txt
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=1 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.one.o
+# RUN: llvm-cgdata --merge %t.one.o -o %t.one.cgdata
+# RUN: llvm-cgdata --convert --format text %t.one.cgdata -o %t.one.txt
+# RUN: diff %t.zero.txt %t.one.txt
+# RUN: llvm-objdump -d %t.one.o | FileCheck %s --check-prefix=OUTLINE
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=2 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.two.o
+# RUN: llvm-cgdata --merge %t.two.o -o %t.two.cgdata
+# RUN: llvm-cgdata --convert --format text %t.two.cgdata -o %t.two.txt
+# RUN: diff %t.zero.txt %t.two.txt
+# RUN: llvm-cgdata --merge %t.two.o %t.two.o %t.two.o %t.two.o \
+# RUN:   -o %t.global.cgdata
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-use-path=%t.global.cgdata \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=READ
+
+# The first iteration finds four profitable A-B sites and two unprofitable B-C
+# sites. Outlining A-B consumes one B-C site, so the next iteration cannot
+# rediscover B-C as a repeated substring. Retain its hash from the first
+# iteration and publish its single surviving site, without republishing A-B.
+# Check both exhausting the rerun limit and stopping early on a no-change rerun.
+# Merging four copies makes B-C globally profitable; Read mode must outline it.
+#
+# TREE: :outlined_hash_tree
+# TREE-NEXT: ---
+# TREE-NEXT: 0:
+# TREE-NEXT:   Hash:            0x0
+# TREE-NEXT:   Terminals:       0
+# TREE-NEXT:   SuccessorIds:    [ 1, 3 ]
+# TREE-NEXT: 1:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       0
+# TREE-NEXT:   SuccessorIds:    [ 2 ]
+# TREE-NEXT: 2:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       {{1|4}}
+# TREE-NEXT:   SuccessorIds:    [  ]
+# TREE-NEXT: 3:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       0
+# TREE-NEXT:   SuccessorIds:    [ 4 ]
+# TREE-NEXT: 4:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       {{1|4}}
+# TREE-NEXT:   SuccessorIds:    [  ]
+# TREE-NEXT: ...
+#
+# COUNTS-DAG: Terminals:       1
+# COUNTS-DAG: Terminals:       4
+#
+# OUTLINE-COUNT-4: {{[[:space:]]bl[[:space:]]}}
+# OUTLINE-NOT: {{[[:space:]]bl[[:space:]]}}
+# OUTLINE-LABEL: <_OUTLINED_FUNCTION_0.content.{{[0-9]+}}>:
+# OUTLINE-NEXT: orr w0, wzr, #0x3
+# OUTLINE-NEXT: orr w1, wzr, #0x7
+# OUTLINE-NEXT: ret
+#
+# READ-LABEL: _bc:
+# READ: bl _OUTLINED_FUNCTION_[[BC:[0-9]+]].content.
+# READ-NOT: orr
+# READ: ret
+# READ: _OUTLINED_FUNCTION_[[BC]].content.{{[0-9]+}}:
+# READ: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ret
+
+--- |
+  define void @abc() noredzone { unreachable }
+  define void @ab1() noredzone { unreachable }
+  define void @ab2() noredzone { unreachable }
+  define void @ab3() noredzone { unreachable }
+  define void @bc() noredzone { unreachable }
+...
+---
+name: abc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: bc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
