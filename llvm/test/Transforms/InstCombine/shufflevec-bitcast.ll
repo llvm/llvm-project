@@ -211,8 +211,8 @@ define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, ptr %p) {
 
 define <2 x i4> @shuf_bitcast_insert_wrong_index(<2 x i8> %v, i8 %x) {
 ; CHECK-LABEL: @shuf_bitcast_insert_wrong_index(
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i8> [[V:%.*]] to <4 x i4>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[B]], <4 x i4> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i8> [[V:%.*]], <2 x i8> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = bitcast <1 x i8> [[TMP1]] to <2 x i4>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %i = insertelement <2 x i8> %v, i8 %x, i32 1

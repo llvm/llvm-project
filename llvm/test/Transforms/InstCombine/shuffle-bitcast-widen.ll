@@ -6,8 +6,8 @@
 define <4 x i8> @whole_elements(<4 x i16> %x) {
 ; CHECK-LABEL: define <4 x i8> @whole_elements(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i16> [[X]] to <8 x i8>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i8> [[BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[S:%.*]] = bitcast <2 x i16> [[TMP1]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[S]]
 ;
   %bc = bitcast <4 x i16> %x to <8 x i8>
@@ -20,8 +20,8 @@ define <4 x i8> @whole_elements(<4 x i16> %x) {
 define <6 x i4> @odd_element_width(<4 x i12> %x) {
 ; CHECK-LABEL: define <6 x i4> @odd_element_width(
 ; CHECK-SAME: <4 x i12> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i12> [[X]] to <12 x i4>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <12 x i4> [[BC]], <12 x i4> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i12> [[X]], <4 x i12> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[S:%.*]] = bitcast <2 x i12> [[TMP1]] to <6 x i4>
 ; CHECK-NEXT:    ret <6 x i4> [[S]]
 ;
   %bc = bitcast <4 x i12> %x to <12 x i4>
@@ -34,8 +34,8 @@ define <6 x i4> @odd_element_width(<4 x i12> %x) {
 define <8 x i8> @same_length(<4 x i16> %x) {
 ; CHECK-LABEL: define <8 x i8> @same_length(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i16> [[X]] to <8 x i8>
-; CHECK-NEXT:    [[BC:%.*]] = shufflevector <8 x i8> [[BC1]], <8 x i8> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[BC]]
 ;
   %bc = bitcast <4 x i16> %x to <8 x i8>
@@ -48,8 +48,8 @@ define <8 x i8> @same_length(<4 x i16> %x) {
 define <8 x i8> @longer_result(<2 x i16> %x) {
 ; CHECK-LABEL: define <8 x i8> @longer_result(
 ; CHECK-SAME: <2 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i16> [[X]] to <4 x i8>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[BC]], <4 x i8> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[X]], <2 x i16> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[S:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[S]]
 ;
   %bc = bitcast <2 x i16> %x to <4 x i8>
@@ -62,8 +62,8 @@ define <8 x i8> @longer_result(<2 x i16> %x) {
 define <8 x i8> @floating_source(<4 x float> %x) {
 ; CHECK-LABEL: define <8 x i8> @floating_source(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x float> [[X]] to <16 x i8>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[S:%.*]] = bitcast <2 x float> [[TMP1]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[S]]
 ;
   %bc = bitcast <4 x float> %x to <16 x i8>
@@ -77,8 +77,8 @@ define <8 x i8> @floating_source(<4 x float> %x) {
 define <4 x i8> @poison_group(<4 x i16> %x) {
 ; CHECK-LABEL: define <4 x i8> @poison_group(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i16> [[X]] to <8 x i8>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i8> [[BC]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> poison, <2 x i32> <i32 2, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = bitcast <2 x i16> [[TMP1]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[S]]
 ;
   %bc = bitcast <4 x i16> %x to <8 x i8>
@@ -191,9 +191,9 @@ define <4 x i8> @other_input(<4 x i16> %x, <8 x i8> %y) {
 define void @load_shuffle_store(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @load_shuffle_store(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load <8 x i8>, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i8> [[V1]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    store <4 x i8> [[S]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i16>, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[V]], <4 x i16> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = load <4 x i16>, ptr %src, align 8
@@ -210,9 +210,9 @@ define void @load_shuffle_store_cross_block(ptr %src, ptr %dst, i1 %cond) {
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[COPY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[COPY]]:
-; CHECK-NEXT:    [[V1:%.*]] = load <8 x i8>, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i8> [[V1]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    store <4 x i8> [[S]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i16>, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[V]], <4 x i16> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -236,9 +236,8 @@ define void @volatile_load_shuffle_store(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @volatile_load_shuffle_store(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <4 x i16>, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i16> [[V]] to <8 x i8>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i8> [[BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    store <4 x i8> [[S]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[V]], <4 x i16> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = load volatile <4 x i16>, ptr %src, align 8
