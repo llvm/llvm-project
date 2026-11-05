@@ -3529,6 +3529,9 @@ bool SIInsertWaitcnts::run() {
              CT == AMDGPU::BVH_CNT))
           continue;
 
+        if (!ST.hasAnyBVHInsts() && CT == AMDGPU::BVH_CNT)
+          continue;
+
         BuildMI(EntryBB, I, DebugLoc(),
                 TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
