@@ -53,11 +53,13 @@ define void @f() nounwind {
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %BB_udiv-special-cases
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    bsrl %ecx, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:    orl $32, %esi
 ; X86-NEXT:    jmp .LBB0_3
 ; X86-NEXT:  .LBB0_1:
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    bsrl %eax, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:  .LBB0_3: # %BB_udiv-special-cases

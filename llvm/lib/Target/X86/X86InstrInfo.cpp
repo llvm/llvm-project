@@ -7029,12 +7029,22 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(const MachineInstr &MI,
 
 // Return true for any instruction the copies the high bits of the first source
 // operand into the unused high bits of the destination operand.
-// Also returns true for instructions that have two inputs where one may
-// be undef and we want it to use the same register as the other input.
+// Also returns true for instructions with an undef conditional fallback, or two
+// inputs where one may be undef and should use the same register as the other.
 static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
                               bool ForLoadFold = false) {
   // Set the OpNum parameter to the first source operand.
   switch (Opcode) {
+  case X86::BSR32rr:
+  case X86::BSR32rm:
+  case X86::BSR64rr:
+  case X86::BSR64rm:
+    // BSR has a tied fallback for a zero source. If that operand is undef,
+    // the destination dependency is unnecessary. Leave defined fallbacks
+    // and load folding alone. The 16-bit forms also preserve live upper
+    // bits and cannot use the 32-bit dependency-breaking XOR.
+    return OpNum == 1 && !ForLoadFold;
+
   case X86::MMX_PUNPCKHBWrr:
   case X86::MMX_PUNPCKHWDrr:
   case X86::MMX_PUNPCKHDQrr:
