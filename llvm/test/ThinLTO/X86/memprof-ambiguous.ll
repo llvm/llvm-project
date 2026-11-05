@@ -1,3 +1,6 @@
+;; The -stats checks need assertions.
+; REQUIRES: asserts
+
 ;; Test that an allocation whose cold and not cold contexts cannot be
 ;; disambiguated by cloning keeps the "ambiguous" memprof attribute, in both
 ;; regular LTO (opt pass on IR) and ThinLTO (whole program analysis on the

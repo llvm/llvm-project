@@ -107,9 +107,9 @@ define void @B1() {
 
 declare ptr @_Znwm(i64)
 
-; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
-; IR: attributes #[[AMBIGUOUS]] = { "memprof"="ambiguous" }
-; IR: attributes #[[COLD]] = { "memprof"="cold" }
+; CHECK: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; CHECK: attributes #[[AMBIGUOUS]] = { "memprof"="ambiguous" }
+; CHECK: attributes #[[COLD]] = { "memprof"="cold" }
 
 !0 = !{i64 123}
 !1 = !{i64 234}
