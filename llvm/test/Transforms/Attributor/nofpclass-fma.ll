@@ -1075,6 +1075,26 @@ define half @ret_fmuladd_square__psub__nnorm__dynamic_dynamic(half noundef nofpc
   ret half %call
 }
 
+define half @ret_fma_square__nan_inf__any(half noundef nofpclass(zero sub norm) %arg0, half %arg1) {
+; CHECK-LABEL: define half @ret_fma_square__nan_inf__any(
+; CHECK-SAME: half noundef nofpclass(zero sub norm) [[ARG0:%.*]], half [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.fma.f16(half noundef nofpclass(zero sub norm) [[ARG0]], half noundef nofpclass(zero sub norm) [[ARG0]], half [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
+  ret half %call
+}
+
+define half @ret_fmuladd_square__nan_inf__any(half noundef nofpclass(zero sub norm) %arg0, half %arg1) {
+; CHECK-LABEL: define half @ret_fmuladd_square__nan_inf__any(
+; CHECK-SAME: half noundef nofpclass(zero sub norm) [[ARG0:%.*]], half [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.fmuladd.f16(half noundef nofpclass(zero sub norm) [[ARG0]], half noundef nofpclass(zero sub norm) [[ARG0]], half [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.fmuladd.f16(half %arg0, half %arg0, half %arg1)
+  ret half %call
+}
+
 ;-------------------------------------------------------------------------------
 ; fma produces NaN if 0.0 * inf or inf * 0.0 occurs, or when adding two exact
 ; infinities of the opposite sign. An exact infinity requires at least one
