@@ -20,9 +20,9 @@ define amdgpu_kernel void @ds_prefetch_pattern(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; CHECK-NEXT:    v_lshl_add_u32 v13, v12, 8, s1
-; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ds_load_b128 v[4:7], v13
 ; CHECK-NEXT:    ds_load_b128 v[0:3], v13 offset:16
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -32,10 +32,11 @@ define amdgpu_kernel void @ds_prefetch_pattern(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[10:11], v[6:7]
 ; CHECK-NEXT:    v_pk_add_f32 v[4:5], v[8:9], v[4:5]
 ; CHECK-NEXT:    v_lshl_add_u32 v10, s1, 5, v13
-; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[6:7], v[2:3]
 ; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[4:5], v[0:1]
+; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    ds_load_b128 v[4:7], v10
 ; CHECK-NEXT:    ds_load_b128 v[0:3], v10 offset:16

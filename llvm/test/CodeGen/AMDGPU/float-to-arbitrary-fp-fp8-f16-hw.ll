@@ -1982,10 +1982,10 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1250-FAKE16-NEXT:    v_cmp_ne_u16_e64 s0, 0, v6
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b16 v20, 7, v15
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b16 v13, v14, v12
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-FAKE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v7
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v17, 1, v20
 ; GFX1250-FAKE16-NEXT:    s_movk_i32 s4, 0x7e
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v17, 1, v20
 ; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v9, v16, v9, v17 bitop3:0xe0
@@ -2258,10 +2258,10 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1310-NEXT:    v_cmp_ne_u16_e64 s0, 0, v6
 ; GFX1310-NEXT:    v_lshrrev_b16 v20, 7, v15
 ; GFX1310-NEXT:    v_lshrrev_b16 v13, v14, v12
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v7
-; GFX1310-NEXT:    v_and_b32_e32 v17, 1, v20
 ; GFX1310-NEXT:    s_movk_i32 s4, 0x7e
+; GFX1310-NEXT:    v_and_b32_e32 v17, 1, v20
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_bitop3_b16 v9, v16, v9, v17 bitop3:0xe0
