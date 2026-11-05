@@ -1,7 +1,7 @@
-// Offload arch names accepted as -target-cpu on SPIR-V must not be forwarded to
-// the LLVM backend, which defines no processors and would print a
-// non-diagnostic "not a recognized processor" message to stderr. The
-// "target-cpu" IR attribute is still emitted.
+// SPIRV offload arch names accepted via -target-cpu should not be forwarded
+// to LLVM backend: The SPIRV backend only defines a "generic" processor, and
+// any other name forwarded results in a "not a recognized processor"
+// diagnostic. -target-cpu values are only used in the frontend for SPIRV.
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -target-cpu igca_20ca -emit-llvm -o - %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=IGCA
