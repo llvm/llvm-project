@@ -2509,8 +2509,8 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info,
       }))
     return;
 
-  std::string AsmParserClassName =
-      Info.AsmParser->getValueAsString("AsmParserClassName").str();
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   OS << "static const char *getMatchKindDiag(" << Info.Target.getName()
      << AsmParserClassName << "::" << Info.Target.getName()
      << "MatchResultTy MatchResult) {\n";
@@ -2534,8 +2534,8 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info,
 }
 
 static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
-  std::string AsmParserClassName =
-      Info.AsmParser->getValueAsString("AsmParserClassName").str();
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   OS << "static unsigned getDiagKindFromRegisterClass(MatchClassKind "
         "RegisterClass) {\n";
   if (none_of(Info.Classes, [](const ClassInfo &CI) {
@@ -2567,8 +2567,8 @@ static void emitTokenDiagFunction(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "  switch (Kind) {\n";
   OS << "  default:\n";
   OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
-  std::string AsmParserClassName =
-      Info.AsmParser->getValueAsString("AsmParserClassName").str();
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   for (const auto &CI : Info.Classes) {
     if (CI.Kind == ClassInfo::Token && !CI.DiagnosticType.empty()) {
       OS << "  case " << CI.Name << ":\n";
@@ -2747,8 +2747,8 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   // actually matching against one of them.
   OS << "  switch (Kind) {\n"
         "  default: break;\n";
-  std::string AsmParserClassName =
-      Info.AsmParser->getValueAsString("AsmParserClassName").str();
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   for (const auto &CI : Info.Classes) {
     if (!CI.isUserClass())
       continue;
