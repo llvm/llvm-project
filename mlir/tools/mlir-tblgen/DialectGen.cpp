@@ -12,6 +12,7 @@
 
 #include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
+#include "OpGenHelpers.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -216,8 +217,29 @@ static const char *const discardableAttrHelperDecl = R"(
  public:
 )";
 
+/// Emit the op registration hooks of a dialect with op partitions as private
+/// members of the dialect class: one per partition, defined by `-gen-op-defs
+/// -op-partition=...`, and one that registers the ops of all partitions.
+static void emitOpPartitionRegistrationHooks(const Dialect &dialect,
+                                             raw_ostream &os) {
+  os << "\nprivate:\n"
+     << "  /// Registers the operations of all op partitions of the dialect.\n"
+     << llvm::formatv("  void {0}() {{\n", getOpRegistrationHookName());
+  for (StringRef partition : dialect.getOpPartitions())
+    os << llvm::formatv("    {0}();\n", getOpRegistrationHookName(partition));
+  os << "  }\n";
+  for (StringRef partition : dialect.getOpPartitions())
+    os << llvm::formatv(
+        "  /// Registers the operations in op partition `{0}`.\n"
+        "  void {1}();\n",
+        partition, getOpRegistrationHookName(partition));
+  os << "public:\n";
+}
+
 /// Generate the declaration for the given dialect class.
 static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
+  verifyDialectOpPartitions(dialect);
+
   // Emit all nested namespaces.
   {
     DialectNamespaceEmitter nsEmitter(os, dialect);
@@ -271,6 +293,9 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
                           attrPair.first, attrPair.second, camelName,
                           dialect.getName());
     }
+
+    if (!dialect.getOpPartitions().empty())
+      emitOpPartitionRegistrationHooks(dialect, os);
 
     if (std::optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())
       os << *extraDecl;

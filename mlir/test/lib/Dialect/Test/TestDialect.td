@@ -11,6 +11,19 @@
 
 include "mlir/IR/OpBase.td"
 
+// Op partitions, each generated and compiled separately. Ops from TestOps.td
+// are in `Core` unless a `let` block or their base class picks another
+// partition. All ops from TestOpsSyntax.td are in `Syntax`, which is generated
+// from that file.
+def Test_CorePartition : Partition<"Core">;
+def Test_AttributesPartition : Partition<"Attributes">;
+def Test_TraitsPartition : Partition<"Traits">;
+def Test_PatternsPartition : Partition<"Patterns">;
+def Test_ConversionPartition : Partition<"Conversion">;
+def Test_InterfacesPartition : Partition<"Interfaces">;
+def Test_PropertiesPartition : Partition<"Properties">;
+def Test_SyntaxPartition : Partition<"Syntax">;
+
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "::test";
@@ -24,6 +37,12 @@ def Test_Dialect : Dialect {
   let useDefaultTypePrinterParser = 0;
   let useDefaultAttributePrinterParser = 1;
   let isExtensible = 1;
+  let opPartitions = [
+    Test_CorePartition, Test_AttributesPartition, Test_TraitsPartition,
+    Test_PatternsPartition, Test_ConversionPartition, Test_InterfacesPartition,
+    Test_PropertiesPartition, Test_SyntaxPartition
+  ];
+  let defaultOpPartition = Test_CorePartition;
   let dependentDialects = [
     "::mlir::DLTIDialect",
     "::mlir::bufferization::BufferizationDialect"
@@ -37,7 +56,6 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerInterfaces();
     void registerTypes();
-    void registerOpsSyntax();
 
     // Provides a custom printing/parsing for some operations.
     ::std::optional<ParseOpHook>

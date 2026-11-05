@@ -19,6 +19,17 @@ include "mlir/IR/Utils.td"
 // Dialect definitions
 //===----------------------------------------------------------------------===//
 
+// A partition of the ops of a dialect, for "natural sharding" of the generated
+// op declarations and definitions. See `Dialect::opPartitions`.
+class Partition<string name> {
+  // The name of the partition, a C++ identifier. `-gen-op-decls` and
+  // `-gen-op-defs` select a partition by this name with `-op-partition=...`.
+  string partitionName = name;
+
+  assert !match(partitionName, "^[A-Za-z_][A-Za-z0-9_]*$"),
+         "op partition name '" # partitionName # "' is not a C++ identifier";
+}
+
 class Dialect {
   // The name of the dialect.
   string name = ?;
@@ -99,6 +110,28 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
+
+  // The op partitions of this dialect, enabling "natural sharding" of its op
+  // declarations and definitions (see `Op::partition`). When non-empty, every
+  // op of the dialect must be in one of these partitions.
+  list<Partition> opPartitions = [];
+
+  // Optional. The partition of the ops of this dialect that do not set their
+  // `partition`. Must be one of `opPartitions`. This allows partitioning the
+  // ops of a dialect incrementally: all ops start in the default partition and
+  // groups of ops can move to other partitions one at a time.
+  Partition defaultOpPartition = ?;
+
+  assert !if(!initialized(defaultOpPartition),
+             !not(!empty(!filter(p, opPartitions,
+                                 !eq(p, defaultOpPartition)))),
+             1),
+         "default op partition '" #
+         !if(!initialized(defaultOpPartition),
+             defaultOpPartition.partitionName # "' (record '" #
+             !cast<string>(defaultOpPartition), "") #
+         "') of dialect '" # name #
+         "' is not one of its `opPartitions`";
 }
 
 #endif // DIALECTBASE_TD

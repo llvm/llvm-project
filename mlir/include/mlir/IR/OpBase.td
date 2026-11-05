@@ -351,6 +351,30 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // Optional. The group of ops this op is part of.
   OpDocGroup opDocGroup = ?;
 
+  // Optional. The partition of this op. A dialect that lists its partitions in
+  // `opPartitions` is "naturally sharded": every op of the dialect must be in
+  // one of the listed partitions, `-gen-op-decls`/`-gen-op-defs` can generate
+  // the ops of one partition at a time with `-op-partition=...` into separate
+  // files.
+  // Defaults to the dialect's `defaultOpPartition`. The partition must be one
+  // of the `opPartitions` records of the dialect.
+  Partition partition = dialect.defaultOpPartition;
+
+  assert !if(!initialized(partition),
+             !not(!empty(!filter(p, opDialect.opPartitions,
+                                 !eq(p, partition)))),
+             1),
+         "op '" # NAME # "' is in partition '" #
+         !if(!initialized(partition),
+             partition.partitionName # "' (record '" #
+             !cast<string>(partition), "") #
+         "'), which is not one of the `opPartitions` of dialect '" #
+         opDialect.name # "'";
+
+  assert !or(!initialized(partition), !empty(opDialect.opPartitions)),
+         "op '" # NAME # "' is in no partition, but dialect '" #
+         opDialect.name # "' has `opPartitions` and no `defaultOpPartition`";
+
   // Dag containing the arguments of the op. Default to 0 arguments.
   dag arguments = (ins);
 
