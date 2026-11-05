@@ -32,11 +32,15 @@ namespace eventtracking {
 
 void EventTrackerRecord::print(raw_ostream &OS, bool PrintMI,
                                unsigned Indent) const {
-  OS.indent(Indent) << "Record Kind=" << Kind << ": ";
+  OS.indent(Indent) << "Record Kind=" << Kind << " Age=" << Age << ": ";
   if (PrintMI && MI)
     OS << *MI;
   else
     OS << "MI@" << (void *)MI << '\n';
+}
+
+hash_code EventTrackerRecord::getIdentity() const {
+  return hash_combine((void *)MI, Kind.rawValue());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -55,6 +59,36 @@ EventTracker::EventTracker(const MachineBasicBlock &MBB,
     Counters[Info.CounterT].CI = &Info;
 }
 
+void EventTracker::enterBlock(GetEventTrackerFn EventTrackerGetter) {
+  LLVM_DEBUG(dbgs() << "\n[EventTracker] Entering ";
+             MBB->printAsOperand(dbgs()); dbgs() << '\n');
+
+  // FIXME: This is a bit hacky, but we need to save the old state in case the
+  // MBB is also its own predecessor. Revisit when the design and clients of
+  // this class are set in stone.
+
+  SmallVector<EventTracker *> Preds;
+  bool IsSelfPred = false;
+  if (!MBB->pred_empty()) {
+    for (MachineBasicBlock *Pred : MBB->predecessors()) {
+      if (Pred == MBB)
+        IsSelfPred = true;
+      else
+        Preds.push_back(&EventTrackerGetter(*Pred));
+    }
+  }
+
+  if (IsSelfPred) {
+    EventTracker SelfCopy = *this;
+    Preds.push_back(&SelfCopy);
+    clear();
+    recordIncomings(Preds);
+  } else {
+    clear();
+    recordIncomings(Preds);
+  }
+}
+
 void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
   LLVM_DEBUG(dbgs() << "[EventTracker] Recording " << Event << ": " << MI);
 
@@ -66,6 +100,27 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
 
     FoundMatch = true;
     ++CD.Count;
+
+    // NB: There is an intentional tradeoff here. We could avoid this loop by
+    // instead storing a timestamp in each record, and having a monotonically
+    // increasing clock to infer the age (clock - timestamp = age).
+    // However, it would:
+    //  - Complicate fetching the age (`EventTrackerRecord` could no longer
+    //    answer it on its own, and we would need a separate query/wrapper).
+    //  - Make merging incoming records more annoying (we would need to rebase
+    //    the clock).
+    //  - Potentially require (much) more space in EventTrackerRecord to store
+    //    bigger numbers.
+    //
+    // All in all, this small loop is fine for now, but we can revisit it if
+    // profiling data justifies the change.
+    for (auto &Live : CD.Timeline)
+      Live.setAge(Live.getAge() + 1);
+
+    // NOTE: Unlike recordIncomings, we do not merge with a previous record that
+    // has the same identity (MI+Kind). Having two such records is fine: one is
+    // carried over from a backedge and the other is from a more recent
+    // iteration.
     CD.Timeline.push_back(Rec);
 
     LLVM_DEBUG(if (EventTrackerPrintAll) {
@@ -93,16 +148,13 @@ void EventTracker::drain(InstCounterType T, unsigned N) {
   } else {
     CD.Count = std::min(CD.Count, N);
 
-    // Only keep the N youngest records.
-    if (CD.Timeline.size() > N) {
-      auto *RmEnd = CD.Timeline.end() - N;
-      LLVM_DEBUG(for (const EventTrackerRecord &E
-                      : make_range(CD.Timeline.begin(), RmEnd)) {
-        dbgs() << "  | Removing ";
-        E.print(dbgs());
-      });
-      CD.Timeline.erase(CD.Timeline.begin(), RmEnd);
-    }
+    auto *RmIt = remove_if(CD.Timeline, [&](EventTrackerRecord &E) {
+      if (E.getAge() < N)
+        return false;
+      LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
+      return true;
+    });
+    CD.Timeline.erase(RmIt, CD.Timeline.end());
 
     LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
@@ -148,10 +200,37 @@ void EventTracker::verify() const {
       print(dbgs(), C);
     };
 
-    // The timeline cannot have more records than the value of the counter.
-    if (C.Timeline.size() > C.Count) {
+    // Check some basic invariants:
+    //  - The age of a record cannot exceed the value of the counter.
+    //  - We cannot have two records with the same identity at the same age,
+    //    e.g. two VMEM_READ_ACCESS records for the same instruction at the
+    //    same age. `recordIncomings` merges based on identity, and `record`
+    //    increments the age of all pre-existing records before inserting a
+    //    new one.
+    DenseSet<std::pair<hash_code, unsigned>> RecIdentityCheck;
+    for (const EventTrackerRecord &E : C.Timeline) {
+      if (E.getAge() > C.Count) {
+        OnError();
+        dbgs() << "Concerning Record:";
+        E.print(dbgs());
+        llvm_unreachable("record age is out of range");
+      }
+
+      auto [It, Inserted] =
+          RecIdentityCheck.insert({E.getIdentity(), E.getAge()});
+      if (!Inserted) {
+        OnError();
+        dbgs() << "Concerning Record:";
+        E.print(dbgs());
+        llvm_unreachable("The timeline cannot have two records with the same "
+                         "MachineInstr, Kind and Age at the same time!");
+      }
+    }
+
+    // Check that the timeline is sorted.
+    if (!is_sorted(C.Timeline, compareRecords)) {
       OnError();
-      llvm_unreachable("timeline has more records than the counter value");
+      llvm_unreachable("live records are not sorted!");
     }
   }
 }
@@ -184,6 +263,92 @@ LLVM_DUMP_METHOD void EventTracker::dump() const {
   dbgs() << '\n';
 }
 #endif
+
+bool EventTracker::compareRecords(const EventTrackerRecord &A,
+                                  const EventTrackerRecord &B) {
+  // Different age.
+  if (A.getAge() != B.getAge())
+    return A.getAge() > B.getAge();
+
+  // Same age but different kind.
+  unsigned AKindV = A.getKind().rawValue();
+  unsigned BKindV = B.getKind().rawValue();
+  if (AKindV != BKindV)
+    return AKindV > BKindV;
+
+  const MachineInstr *AMI = A.getMI();
+  const MachineInstr *BMI = B.getMI();
+  if (AMI == BMI)
+    return false;
+
+  // Same age/kind but MIs are in different MBBs: the one in the MBB with the
+  // lower number comes first.
+  const MachineBasicBlock *Bbb = BMI->getParent();
+  const MachineBasicBlock *Abb = AMI->getParent();
+  if (Abb != Bbb)
+    return Abb->getNumber() < Bbb->getNumber();
+
+  llvm_unreachable("We cannot have two distinct instructions from the same "
+                   "MBB, at the same age and with the same event kind!");
+}
+
+void EventTracker::clear() {
+  for (CounterData &C : Counters) {
+    C.Timeline.clear();
+    C.Count = 0;
+  }
+}
+
+void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
+  LLVM_DEBUG(if (!Preds.empty()) {
+    dbgs() << "[EventTracker] Recording incoming events (merge) from "
+              "predecessors:\n";
+    for (EventTracker *Pred : Preds) {
+      Pred->print(dbgs(), /*IgnoreEmpty=*/true, /*Indent=*/2);
+    }
+  });
+
+  // Iterate over all counters that are available to us.
+  for (CounterData &CData : Counters) {
+    assert(CData.Timeline.empty());
+
+    DenseMap<hash_code, EventTrackerRecord> Acc;
+
+    for (EventTracker *Pred : Preds) {
+      auto &PredCData = Pred->Counters[CData.CI->CounterT];
+
+      // The merged count is the max across predecessors.
+      CData.Count = std::max(CData.Count, PredCData.Count);
+
+      for (EventTrackerRecord &PredEntry : PredCData.Timeline) {
+        // At a join, collapse records from all predecessors with the same
+        // identity (MI+Kind) into a single record whose age is the minimum
+        // across predecessors.
+        auto [It, Inserted] =
+            Acc.try_emplace(PredEntry.getIdentity(), PredEntry);
+        if (!Inserted) {
+          auto &AccVal = It->second;
+          AccVal.setAge(std::min(AccVal.getAge(), PredEntry.getAge()));
+        }
+      }
+    }
+
+    auto AccVals = Acc.values();
+    CData.Timeline.append(AccVals.begin(), AccVals.end());
+
+    // Sort records by descending age for consistent iteration.
+    stable_sort(CData.Timeline, compareRecords);
+  }
+
+#ifdef EXPENSIVE_CHECKS
+  verify();
+#endif
+
+  LLVM_DEBUG(if (!Preds.empty()) {
+    dbgs() << "[EventTracker] Timeline after recording incomings:\n";
+    print(dbgs(), /*IgnoreEmpty=*/true, /*Indent=*/2);
+  });
+}
 
 void EventTracker::print(raw_ostream &OS, const CounterData &CD,
                          unsigned Indent) {
