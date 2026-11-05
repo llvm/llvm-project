@@ -1193,9 +1193,9 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
-; GFX1250-GISEL-NEXT:    s_mov_b32 s5, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1250-GISEL-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1503,9 +1503,9 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, float %x, flo
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX1250-GISEL-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)

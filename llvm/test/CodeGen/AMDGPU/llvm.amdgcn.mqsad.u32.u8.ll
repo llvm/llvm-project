@@ -106,13 +106,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX13-GISEL-NEXT:    s_mov_b32 s4, 10
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s7 :: v_dual_mov_b32 v9, s6
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, s5
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    ; def v[2:3], use v[0:1]
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s4 :: v_dual_mov_b32 v0, v2
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX13-GISEL-NEXT:    s_mov_b32 s4, 10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s7 :: v_dual_mov_b32 v9, s6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s5 :: v_dual_mov_b32 v7, s4
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, v4
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
@@ -331,13 +331,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, s7
-; GFX13-GISEL-NEXT:    s_mov_b32 s7, s5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s6 :: v_dual_mov_b32 v8, s5
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v10, s7
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    ; def v[2:3], use v[0:1]
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s4 :: v_dual_mov_b32 v0, v2
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX13-GISEL-NEXT:    s_mov_b32 s7, s5
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s6 :: v_dual_mov_b32 v8, s5
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s7 :: v_dual_mov_b32 v7, s4
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, v4
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
