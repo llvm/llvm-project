@@ -442,6 +442,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   separated from surrounding arguments by whitespace. Quoted arguments can no
   longer be split across multiple lines using a backslash.
 
+- `clang-dxc -spirv` without `-fspv-extension` now enables the SPIR-V
+  extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
+  extensions. `-fspv-extension=all` restores the previous behavior.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
