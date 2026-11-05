@@ -500,7 +500,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define LIBC_TEST_DUMMY_PROCESS_(FUNC, VAL)                                    \
   do {                                                                         \
-    if (false) {                                                               \
+    if constexpr (false) {                                                     \
       (FUNC)();                                                                \
       (void)(VAL);                                                             \
     }                                                                          \
