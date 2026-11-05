@@ -433,19 +433,25 @@ void TypeLocWriter::VisitDependentAddressSpaceTypeLoc(
 void TypeLocWriter::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitVectorTypeLoc(VectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitDependentVectorTypeLoc(
     DependentVectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+  VisitVectorTypeLoc(TL);
 }
 
 void TypeLocWriter::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
