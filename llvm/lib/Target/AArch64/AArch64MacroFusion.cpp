@@ -621,7 +621,9 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
+namespace {
 enum class FMinFMaxKind { None, Scalar, Vector, ScalarNM, VectorNM };
+} // end anonymous namespace
 
 // Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd), and their
 // number (NM) variants.
