@@ -182,7 +182,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                const NVPTXTargetMachine &TM)
-    : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+    : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
       CLOpts(TM.getCLOpts()), PTXVersion(0),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       TSInfo(std::make_unique<NVPTXSelectionDAGInfo>()) {}
