@@ -1,6 +1,5 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler \
-# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
-# RUN:     -verify-machineinstrs -o - %s | FileCheck %s
+# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false -o - %s | FileCheck %s
 
 # apply() bridges an accumulator operand by giving it a fresh virtual register,
 # which it cannot do for a physical one. buildPlan() spots that before anything

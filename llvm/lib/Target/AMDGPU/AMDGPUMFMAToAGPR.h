@@ -50,7 +50,9 @@ public:
   /// Restrict which MFMAs are being converted. MFMAs in \p S do not constrain a
   /// recolor; a convertible MFMA outside \p S stays in VGPR form and pins its
   /// operands to the VGPR bank. Null, the default, means all of them convert.
-  void setActiveSet(const SmallPtrSetImpl<MachineInstr *> *S) { ActiveSet = S; }
+  void setConvertSet(const SmallPtrSetImpl<MachineInstr *> *S) {
+    ConvertSet = S;
+  }
 
   /// Decide whether \p Reg alone may leave the VGPR bank, by narrowing its
   /// AV_* superclass by the constraints of its defs and uses. Landing back on
@@ -121,14 +123,15 @@ public:
   };
 
 private:
-  /// \returns true if \p MI will be in AGPR form after the conversion.
-  bool isActive(const MachineInstr &MI) const;
+  /// \returns true if \p MI will be in AGPR form after the conversion. With
+  /// no convert set, as in the post-RA pass, every MFMA with an AGPR form is.
+  bool isConverted(const MachineInstr &MI) const;
 
   MachineFunction &MF;
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   MachineRegisterInfo &MRI;
-  const SmallPtrSetImpl<MachineInstr *> *ActiveSet = nullptr;
+  const SmallPtrSetImpl<MachineInstr *> *ConvertSet = nullptr;
 };
 
 } // namespace AMDGPU

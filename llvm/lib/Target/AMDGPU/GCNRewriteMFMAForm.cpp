@@ -39,7 +39,7 @@ bool RewriteMFMAFormStage::isEnabled() {
 }
 
 void RewriteMFMAFormStage::findReachingDefs(
-    const MachineOperand &UseMO, LiveIntervals *LIS,
+    const MachineOperand &UseMO, const LiveIntervals *LIS,
     SmallVectorImpl<MachineInstr *> &Defs) {
   const LiveInterval &LI = LIS->getInterval(UseMO.getReg());
   SlotIndex UseIdx = LIS->getInstructionIndex(*UseMO.getParent());
@@ -70,7 +70,7 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    const MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, const LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   // A partial def reads the lanes it leaves alone, so it uses the value too.
   // A later read of an untouched lane is not found, but the first partial def
@@ -126,7 +126,7 @@ unsigned RewriteMFMAFormStage::findBestChainCount(
     MFMARewriteCost Result;
     if (buildPlan(Plan, selectChainPrefix(Chains, N)))
       Result = cost(Plan, measure(Plan));
-    MFMAToAGPR->setActiveSet(nullptr);
+    MFMAToAGPR->setConvertSet(nullptr);
     LLVM_DEBUG(dbgs() << "RewriteMFMAForm: probe " << N << '/' << Chains.size()
                       << " chains, cost " << Result.Cost << ", AGPR util "
                       << Result.AGPRUtil << '\n');
@@ -239,7 +239,7 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
   // operands nor the defs feeding them need a bridge copy. Registering them as
   // the active set is what tells the shared analysis to ignore them.
   Plan.MFMASet.insert_range(Plan.MFMAs);
-  MFMAToAGPR->setActiveSet(&Plan.MFMASet);
+  MFMAToAGPR->setConvertSet(&Plan.MFMASet);
 
   // Registers apply() will replace with a fresh one, mirrored here so that the
   // analysis sees the same state apply() will. A replaced register keeps its
@@ -509,6 +509,30 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   return {Cost + CopyCost, AGPRUtil};
 }
 
+/// Insert "MappedReg = COPY Reg" after the reaching def \p RD, unless \p
+/// AlreadyBridged says an earlier call did.
+void RewriteMFMAFormStage::bridgeAfterDef(
+    MachineInstr *RD, Register Reg, Register MappedReg,
+    SmallPtrSetImpl<MachineInstr *> &AlreadyBridged,
+    DenseMap<MachineInstr *, unsigned> &LastMIToRegion) {
+  if (!AlreadyBridged.insert(RD).second)
+    return;
+
+  MachineInstrBuilder VGPRCopy =
+      BuildMI(*RD->getParent(), std::next(RD->getIterator()), RD->getDebugLoc(),
+              TII->get(TargetOpcode::COPY), MappedReg)
+          .addUse(Reg, {}, 0);
+  DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+
+  // If this reaching def was the last MI in the region, update the region
+  // boundaries.
+  auto LMI = LastMIToRegion.find(RD);
+  if (LMI != LastMIToRegion.end()) {
+    DAG.Regions[LMI->second].second = VGPRCopy;
+    LastMIToRegion.erase(LMI);
+  }
+}
+
 void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
@@ -585,28 +609,6 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
     return It->second;
   };
 
-  // Insert "MappedReg = COPY Reg" after the reaching def \p RD. An earlier
-  // iteration may have inserted this copy already.
-  auto bridgeAfterDef = [&](MachineInstr *RD, Register Reg) {
-    if (!ReachingDefCopyMap[Reg].insert(RD).second)
-      return;
-
-    MachineInstrBuilder VGPRCopy =
-        BuildMI(*RD->getParent(), std::next(RD->getIterator()),
-                RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-            .addDef(getMappedReg(Reg), {}, 0)
-            .addUse(Reg, {}, 0);
-    DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-    // If this reaching def was the last MI in the region, update the region
-    // boundaries.
-    auto LMI = LastMIToRegion.find(RD);
-    if (LMI != LastMIToRegion.end()) {
-      DAG.Regions[LMI->second].second = VGPRCopy;
-      LastMIToRegion.erase(LMI);
-    }
-  };
-
   for (const MFMARewriteEntry &Entry : Plan.Entries) {
     MachineInstr *MI = Entry.MFMA;
     int ReplacementOp = AMDGPU::getAGPRFormOp(MI->getOpcode());
@@ -618,7 +620,8 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
     if (Src2->isReg()) {
       Register Src2Reg = Src2->getReg();
       for (MachineInstr *RD : Entry.Src2Bridges)
-        bridgeAfterDef(RD, Src2Reg);
+        bridgeAfterDef(RD, Src2Reg, getMappedReg(Src2Reg),
+                       ReachingDefCopyMap[Src2Reg], LastMIToRegion);
 
       // Track the register for reclassification
       RewriteRegs.insert(Src2Reg);
@@ -645,8 +648,7 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
       // a dominating full-lane def.
       MachineInstrBuilder Bridge =
           BuildMI(*MI->getParent(), std::next(MI->getIterator()),
-                  MI->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(DstReg, {}, 0)
+                  MI->getDebugLoc(), TII->get(TargetOpcode::COPY), DstReg)
               .addUse(getMappedReg(DstReg), {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*Bridge);
     }
@@ -658,7 +660,8 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
       getMappedReg(DstReg);
 
     for (MachineInstr *RD : Entry.DstUseDefBridges)
-      bridgeAfterDef(RD, DstReg);
+      bridgeAfterDef(RD, DstReg, getMappedReg(DstReg),
+                     ReachingDefCopyMap[DstReg], LastMIToRegion);
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
     // One AGPR→VGPR copy per dst register, shared by all same-block uses.

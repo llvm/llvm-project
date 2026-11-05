@@ -37,16 +37,16 @@ constrainByDesc(const TargetRegisterClass *CurRC, const MCInstrDesc &Desc,
   return TRI.getCommonSubClass(CurRC, OpRC);
 }
 
-bool AMDGPU::MFMAToAGPR::isActive(const MachineInstr &MI) const {
+bool AMDGPU::MFMAToAGPR::isConverted(const MachineInstr &MI) const {
   if (!hasAGPRForm(MI, TII))
     return false;
-  return !ActiveSet || ActiveSet->contains(&MI);
+  return !ConvertSet || ConvertSet->contains(&MI);
 }
 
 bool AMDGPU::MFMAToAGPR::operandAcceptsClass(
     const MachineOperand &MO, const TargetRegisterClass *RC) const {
   const MachineInstr &MI = *MO.getParent();
-  if (isActive(MI)) {
+  if (isConverted(MI)) {
     const MCInstrDesc &AGPRDesc =
         TII.get(AMDGPU::getAGPRFormOp(MI.getOpcode()));
     return constrainByDesc(RC, AGPRDesc, MO, TII, TRI);
@@ -79,7 +79,7 @@ bool AMDGPU::MFMAToAGPR::canRecolorToAGPR(
     // An MFMA we are converting constrains Reg by its AGPR-form operand class,
     // not the VGPR-form one it still carries. This lets dst and src2 swap as a
     // pair while the scale variant's VGPR-only src0/src1 stay put.
-    if (isActive(*MI)) {
+    if (isConverted(*MI)) {
       const MCInstrDesc &AGPRDesc =
           TII.get(AMDGPU::getAGPRFormOp(MI->getOpcode()));
       NewRC = constrainByDesc(NewRC, AGPRDesc, MO, TII, TRI);
@@ -173,9 +173,10 @@ AMDGPU::MFMAToAGPR::partitionChains() const {
     const MachineOperand *Src2 = TII.getNamedOperand(*MI, AMDGPU::OpName::src2);
     if (!Src2 || !Src2->isReg() || !Src2->getReg().isVirtual())
       continue;
-    for (MachineInstr &Def : MRI.def_instructions(Src2->getReg()))
+    for (MachineInstr &Def : MRI.def_instructions(Src2->getReg())) {
       if (hasAGPRForm(Def, TII))
         Classes.unionSets(&Def, MI);
+    }
   }
 
   // Candidates is in program order, so both the chains and their members come

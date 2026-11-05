@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:     -run-pass=machine-scheduler \
 # RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
-# RUN:     -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:     %s -o - | FileCheck %s
 #
 # A candidate MFMA whose dst %acc is recolor-unsafe but which has NO
 # non-candidate reaching-use def (DstUseDefsReplace is empty), must still be

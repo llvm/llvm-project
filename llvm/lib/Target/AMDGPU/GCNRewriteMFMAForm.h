@@ -111,17 +111,24 @@ private:
   /// reclassify the registers.
   void apply(const MFMARewritePlan &Plan);
 
+  /// Insert "MappedReg = COPY Reg" after the reaching def \p RD, unless \p
+  /// AlreadyBridged says an earlier call did. Keeps \p LastMIToRegion, which
+  /// maps a region's last MI to the region, current.
+  void bridgeAfterDef(MachineInstr *RD, Register Reg, Register MappedReg,
+                      SmallPtrSetImpl<MachineInstr *> &AlreadyBridged,
+                      DenseMap<MachineInstr *, unsigned> &LastMIToRegion);
+
   /// Appends every instruction whose def of \p UseMO's register reaches
   /// \p UseMO to \p Defs, without duplicates.
   ///
   /// This is the last write on each path, not the producer of each lane. One
   /// whole-register copy after it holds every lane.
-  void findReachingDefs(const MachineOperand &UseMO, LiveIntervals *LIS,
+  void findReachingDefs(const MachineOperand &UseMO, const LiveIntervals *LIS,
                         SmallVectorImpl<MachineInstr *> &Defs);
 
   /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
   /// ReachingUses
-  void findReachingUses(const MachineInstr *DefMI, LiveIntervals *LIS,
+  void findReachingUses(const MachineInstr *DefMI, const LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
 public:
