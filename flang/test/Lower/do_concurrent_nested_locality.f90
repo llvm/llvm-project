@@ -150,7 +150,7 @@ end subroutine
 ! CHECK:         fir.do_concurrent.loop {{.*}} local(@{{.*}} %{{.*}} -> %[[LOCAL_ARG:.*]] : !fir.ref<i32>) {
 ! CHECK:           %[[LOCAL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] uniq_name("_QFblock_volatile_in_localEt")
 ! CHECK:           llvm.intr.stacksave
-! CHECK-NOT:       fir.alloca
+! CHECK-NOT:       fir.alloca {{.*}}uniq_name = "_QFblock_volatile_in_localEt"
 ! CHECK:           %[[OLD:.*]] = fir.load %[[LOCAL]]#0
 ! CHECK:           %[[NEW:.*]] = arith.addi %[[OLD]], %{{.*}}
 ! CHECK:           hlfir.assign %[[NEW]] to %[[LOCAL]]#0
@@ -174,7 +174,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPblock_asynchronous_in_local(
 ! CHECK:         fir.do_concurrent.loop {{.*}} local(@{{.*}} %{{.*}} -> %[[LOCAL_ARG:.*]] : !fir.ref<i32>) {
 ! CHECK:           %[[LOCAL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] uniq_name("_QFblock_asynchronous_in_localEt")
-! CHECK-NOT:       fir.alloca
+! CHECK-NOT:       fir.alloca {{.*}}uniq_name = "_QFblock_asynchronous_in_localEt"
 ! CHECK:           fir.embox %[[LOCAL]]#0
 ! CHECK:           fir.call @_FortranAioOutputDescriptor
 ! CHECK:           hlfir.assign %{{.*}} to %[[LOCAL]]#0
