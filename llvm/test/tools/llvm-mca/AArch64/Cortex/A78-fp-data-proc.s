@@ -117,56 +117,60 @@ fsqrt	d0, d1
 # CHECK-NEXT: [0.1] - A78UnitB
 # CHECK-NEXT: [1.0] - A78UnitD
 # CHECK-NEXT: [1.1] - A78UnitD
-# CHECK-NEXT: [2.0] - A78UnitFlg
-# CHECK-NEXT: [2.1] - A78UnitFlg
-# CHECK-NEXT: [2.2] - A78UnitFlg
-# CHECK-NEXT: [3]   - A78UnitL2
-# CHECK-NEXT: [4.0] - A78UnitL01
-# CHECK-NEXT: [4.1] - A78UnitL01
-# CHECK-NEXT: [5]   - A78UnitM0
-# CHECK-NEXT: [6]   - A78UnitM1
-# CHECK-NEXT: [7.0] - A78UnitS
-# CHECK-NEXT: [7.1] - A78UnitS
-# CHECK-NEXT: [8]   - A78UnitV0
-# CHECK-NEXT: [9]   - A78UnitV1
+# CHECK-NEXT: [2.0] - A78UnitFD
+# CHECK-NEXT: [2.1] - A78UnitFD
+# CHECK-NEXT: [2.2] - A78UnitFD
+# CHECK-NEXT: [2.3] - A78UnitFD
+# CHECK-NEXT: [3.0] - A78UnitFlg
+# CHECK-NEXT: [3.1] - A78UnitFlg
+# CHECK-NEXT: [3.2] - A78UnitFlg
+# CHECK-NEXT: [4]   - A78UnitL2
+# CHECK-NEXT: [5.0] - A78UnitL01
+# CHECK-NEXT: [5.1] - A78UnitL01
+# CHECK-NEXT: [6]   - A78UnitM0
+# CHECK-NEXT: [7]   - A78UnitM1
+# CHECK-NEXT: [8.0] - A78UnitS
+# CHECK-NEXT: [8.1] - A78UnitS
+# CHECK-NEXT: [9]   - A78UnitV0
+# CHECK-NEXT: [10]  - A78UnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     82.50  9.50
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     82.50  9.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmp	s0, s1, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmpe	s0, s1, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fdiv	h0, h1, h2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     10.00   -     fdiv	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     15.00   -     fdiv	d0, d1, d2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmin	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fminnm	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmaxnm	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	d0, d1, d2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	d0, d1, d2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmadd	s0, s1, s2, s3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmsub	s0, s1, s2, s3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmadd	s0, s1, s2, s3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmsub	s0, s1, s2, s3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	d0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinta	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinti	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintm	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintn	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintp	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintx	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintz	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	s0, s1, s2, pl
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	d0, d1, d2, pl
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fsqrt	h0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     9.00    -     fsqrt	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     fsqrt	d0, d1
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmp	s0, s1, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmpe	s0, s1, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fdiv	h0, h1, h2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     10.00   -     fdiv	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     15.00   -     fdiv	d0, d1, d2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmin	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fminnm	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmaxnm	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	d0, d1, d2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	d0, d1, d2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmadd	s0, s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmsub	s0, s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmadd	s0, s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmsub	s0, s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	d0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinta	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinti	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintm	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintn	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintp	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintx	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintz	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	s0, s1, s2, pl
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	d0, d1, d2, pl
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fsqrt	h0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     9.00    -     fsqrt	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     fsqrt	d0, d1

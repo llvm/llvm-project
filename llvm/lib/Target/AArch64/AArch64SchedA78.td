@@ -45,6 +45,7 @@ def A78UnitD   : ProcResource<2>;  // Store data 0/1
 def A78UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def A78UnitV1  : ProcResource<1>;  // FP/ASIMD 1
 def A78UnitFlg : ProcResource<3>;  // Flags
+def A78UnitFD  : ProcResource<4>;  // FP div/sqrt
 
 def A78UnitV : ProcResGroup<[A78UnitV0, A78UnitV1]>;  // FP/ASIMD 0/1
 def A78UnitM : ProcResGroup<[A78UnitM0, A78UnitM1]>;  // Integer single/multicycle 0/1

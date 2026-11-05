@@ -65,38 +65,42 @@ sha256su1	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: [0.1] - A78UnitB
 # CHECK-NEXT: [1.0] - A78UnitD
 # CHECK-NEXT: [1.1] - A78UnitD
-# CHECK-NEXT: [2.0] - A78UnitFlg
-# CHECK-NEXT: [2.1] - A78UnitFlg
-# CHECK-NEXT: [2.2] - A78UnitFlg
-# CHECK-NEXT: [3]   - A78UnitL2
-# CHECK-NEXT: [4.0] - A78UnitL01
-# CHECK-NEXT: [4.1] - A78UnitL01
-# CHECK-NEXT: [5]   - A78UnitM0
-# CHECK-NEXT: [6]   - A78UnitM1
-# CHECK-NEXT: [7.0] - A78UnitS
-# CHECK-NEXT: [7.1] - A78UnitS
-# CHECK-NEXT: [8]   - A78UnitV0
-# CHECK-NEXT: [9]   - A78UnitV1
+# CHECK-NEXT: [2.0] - A78UnitFD
+# CHECK-NEXT: [2.1] - A78UnitFD
+# CHECK-NEXT: [2.2] - A78UnitFD
+# CHECK-NEXT: [2.3] - A78UnitFD
+# CHECK-NEXT: [3.0] - A78UnitFlg
+# CHECK-NEXT: [3.1] - A78UnitFlg
+# CHECK-NEXT: [3.2] - A78UnitFlg
+# CHECK-NEXT: [4]   - A78UnitL2
+# CHECK-NEXT: [5.0] - A78UnitL01
+# CHECK-NEXT: [5.1] - A78UnitL01
+# CHECK-NEXT: [6]   - A78UnitM0
+# CHECK-NEXT: [7]   - A78UnitM1
+# CHECK-NEXT: [8.0] - A78UnitS
+# CHECK-NEXT: [8.1] - A78UnitS
+# CHECK-NEXT: [9]   - A78UnitV0
+# CHECK-NEXT: [10]  - A78UnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     14.00  2.00
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     14.00  2.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesd	v0.16b, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aese	v0.16b, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesimc	v0.16b, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesmc	v0.16b, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull	v0.1q, v0.1d, v1.1d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull2	v0.1q, v0.2d, v1.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1h	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1c	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1m	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1p	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1su0	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1su1	v0.4s, v1.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256h	q0, q1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256h2	q0, q1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256su0	v0.4s, v1.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256su1	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesd	v0.16b, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aese	v0.16b, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesimc	v0.16b, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   aesmc	v0.16b, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull	v0.1q, v0.1d, v1.1d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull2	v0.1q, v0.2d, v1.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1h	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1c	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1m	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1p	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1su0	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha1su1	v0.4s, v1.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256h	q0, q1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256h2	q0, q1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256su0	v0.4s, v1.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sha256su1	v0.4s, v1.4s, v2.4s

@@ -211,100 +211,104 @@ ldpsw	x0, x1, [x2], #4
 # CHECK-NEXT: [0.1] - A78UnitB
 # CHECK-NEXT: [1.0] - A78UnitD
 # CHECK-NEXT: [1.1] - A78UnitD
-# CHECK-NEXT: [2.0] - A78UnitFlg
-# CHECK-NEXT: [2.1] - A78UnitFlg
-# CHECK-NEXT: [2.2] - A78UnitFlg
-# CHECK-NEXT: [3]   - A78UnitL2
-# CHECK-NEXT: [4.0] - A78UnitL01
-# CHECK-NEXT: [4.1] - A78UnitL01
-# CHECK-NEXT: [5]   - A78UnitM0
-# CHECK-NEXT: [6]   - A78UnitM1
-# CHECK-NEXT: [7.0] - A78UnitS
-# CHECK-NEXT: [7.1] - A78UnitS
-# CHECK-NEXT: [8]   - A78UnitV0
-# CHECK-NEXT: [9]   - A78UnitV1
+# CHECK-NEXT: [2.0] - A78UnitFD
+# CHECK-NEXT: [2.1] - A78UnitFD
+# CHECK-NEXT: [2.2] - A78UnitFD
+# CHECK-NEXT: [2.3] - A78UnitFD
+# CHECK-NEXT: [3.0] - A78UnitFlg
+# CHECK-NEXT: [3.1] - A78UnitFlg
+# CHECK-NEXT: [3.2] - A78UnitFlg
+# CHECK-NEXT: [4]   - A78UnitL2
+# CHECK-NEXT: [5.0] - A78UnitL01
+# CHECK-NEXT: [5.1] - A78UnitL01
+# CHECK-NEXT: [6]   - A78UnitM0
+# CHECK-NEXT: [7]   - A78UnitM1
+# CHECK-NEXT: [8.0] - A78UnitS
+# CHECK-NEXT: [8.1] - A78UnitS
+# CHECK-NEXT: [9]   - A78UnitV0
+# CHECK-NEXT: [10]  - A78UnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -     28.33  28.33  28.33  6.25   6.25   6.25   6.25    -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     28.33  28.33  28.33  6.25   6.25   6.25   6.25    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, #4
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, #-4
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	x0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurb	w0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurh	w0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursb	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursh	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursw	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfum	pldl2keep, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	w0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	x0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrb	w0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsb	x0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsw	x0, [x1], #1
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	w0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	x0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrb	w0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsb	x0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsw	x0, [x1, #1]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtr	x0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrb	w0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrh	w0, [x1, #255]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsb	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsh	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsw	x0, [x1, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	w0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	x0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurh	w0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursh	x0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursw	x0, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfum	pldl2keep, [x1, #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrh	w0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsh	x0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, lsl #2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, lsl #3]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, lsl #2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, lsl #3]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, x2, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, x2, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrh	w0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsh	x0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, sxtx #2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, sxtx #3]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, sxtx #2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, sxtx #3]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, x2, sxtx #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, x2, sxtx #1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldp	w0, w1, [x2, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldnp	w0, w1, [x2, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldp	x0, x1, [x2, #504]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldnp	x0, x1, [x2, #504]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2, #-256]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2], #-256
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2, #-256]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2], #-256
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2], #4
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, #4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, #-4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl1strm, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	x0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurb	w0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurh	w0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursb	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursh	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursw	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfum	pldl2keep, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	w0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	x0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrb	w0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsb	x0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsw	x0, [x1], #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	w0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	x0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrb	w0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsb	x0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsw	x0, [x1, #1]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtr	x0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrb	w0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrh	w0, [x1, #255]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsb	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsh	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldtrsw	x0, [x1, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	w0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldur	x0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldurh	w0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursh	x0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldursw	x0, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfum	pldl2keep, [x1, #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrh	w0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsh	x0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, lsl #2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, lsl #3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, lsl #2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, lsl #3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, x2, lsl #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, x2, lsl #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrb	w0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrh	w0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsb	x0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsh	x0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	w0, [x1, x2, sxtx #2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	x0, [x1, x2, sxtx #3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldrsw	x0, [x1, x2, sxtx #2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl2keep, [x1, x2, sxtx #3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrh	w0, [x1, x2, sxtx #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldrsh	x0, [x1, x2, sxtx #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldp	w0, w1, [x2, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldnp	w0, w1, [x2, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldp	x0, x1, [x2, #504]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldnp	x0, x1, [x2, #504]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2, #-256]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2], #-256
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2, #-256]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2], #-256
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2], #4
