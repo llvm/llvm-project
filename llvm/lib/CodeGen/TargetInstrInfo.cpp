@@ -204,27 +204,16 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   assert(findCommutedOpIndices(MI, CommutableOpIdx1, CommutableOpIdx2) &&
          CommutableOpIdx1 == Idx1 && CommutableOpIdx2 == Idx2 &&
          "TargetInstrInfo::CommuteInstructionImpl(): not commutable operands.");
-  assert(MI.getOperand(Idx1).isReg() && MI.getOperand(Idx2).isReg() &&
-         "This only knows how to commute register operands so far");
+  const MachineOperand &MO1 = MI.getOperand(Idx1);
+  const MachineOperand &MO2 = MI.getOperand(Idx2);
+
+  // A tied operand must remain a register.
+  if ((MO1.isReg() && MO1.isTied() && !MO2.isReg()) ||
+      (MO2.isReg() && MO2.isTied() && !MO1.isReg()))
+    return nullptr;
 
   Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
-  Register Reg1 = MI.getOperand(Idx1).getReg();
-  Register Reg2 = MI.getOperand(Idx2).getReg();
   unsigned SubReg0 = HasDef ? MI.getOperand(0).getSubReg() : 0;
-  unsigned SubReg1 = MI.getOperand(Idx1).getSubReg();
-  unsigned SubReg2 = MI.getOperand(Idx2).getSubReg();
-  bool Reg1IsKill = MI.getOperand(Idx1).isKill();
-  bool Reg2IsKill = MI.getOperand(Idx2).isKill();
-  bool Reg1IsUndef = MI.getOperand(Idx1).isUndef();
-  bool Reg2IsUndef = MI.getOperand(Idx2).isUndef();
-  bool Reg1IsInternal = MI.getOperand(Idx1).isInternalRead();
-  bool Reg2IsInternal = MI.getOperand(Idx2).isInternalRead();
-  // Avoid calling isRenamable for virtual registers since we assert that
-  // renamable property is only queried/set for physical registers.
-  bool Reg1IsRenamable =
-      Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
-  bool Reg2IsRenamable =
-      Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
 
   // For a case like this:
   //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
@@ -242,17 +231,19 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   }
 
   // If destination is tied to either of the commuted source register, then
-  // it must be updated.
-  if (HasDef && Reg0 == Reg1 &&
-      MI.getDesc().getOperandConstraint(Idx1, MCOI::TIED_TO) == 0) {
-    Reg2IsKill = false;
-    Reg0 = Reg2;
-    SubReg0 = SubReg2;
-  } else if (HasDef && Reg0 == Reg2 &&
-             MI.getDesc().getOperandConstraint(Idx2, MCOI::TIED_TO) == 0) {
-    Reg1IsKill = false;
-    Reg0 = Reg1;
-    SubReg0 = SubReg1;
+  // it must be updated, and the source operand that ends up in the tied
+  // position must not be a kill.
+  std::optional<unsigned> ClearKillIdx;
+  if (HasDef && MO1.isReg() && Reg0 == MO1.getReg() &&
+      MCID.getOperandConstraint(Idx1, MCOI::TIED_TO) == 0) {
+    Reg0 = MO2.getReg();
+    SubReg0 = MO2.getSubReg();
+    ClearKillIdx = Idx1;
+  } else if (HasDef && MO2.isReg() && Reg0 == MO2.getReg() &&
+             MCID.getOperandConstraint(Idx2, MCOI::TIED_TO) == 0) {
+    Reg0 = MO1.getReg();
+    SubReg0 = MO1.getSubReg();
+    ClearKillIdx = Idx2;
   }
 
   MachineInstr *CommutedMI = nullptr;
@@ -270,22 +261,9 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     for (unsigned Idx : UpdateImplicitDefIdx)
       CommutedMI->getOperand(Idx).setReg(Reg0);
   }
-  CommutedMI->getOperand(Idx2).setReg(Reg1);
-  CommutedMI->getOperand(Idx1).setReg(Reg2);
-  CommutedMI->getOperand(Idx2).setSubReg(SubReg1);
-  CommutedMI->getOperand(Idx1).setSubReg(SubReg2);
-  CommutedMI->getOperand(Idx2).setIsKill(Reg1IsKill);
-  CommutedMI->getOperand(Idx1).setIsKill(Reg2IsKill);
-  CommutedMI->getOperand(Idx2).setIsUndef(Reg1IsUndef);
-  CommutedMI->getOperand(Idx1).setIsUndef(Reg2IsUndef);
-  CommutedMI->getOperand(Idx2).setIsInternalRead(Reg1IsInternal);
-  CommutedMI->getOperand(Idx1).setIsInternalRead(Reg2IsInternal);
-  // Avoid calling setIsRenamable for virtual registers since we assert that
-  // renamable property is only queried/set for physical registers.
-  if (Reg1.isPhysical())
-    CommutedMI->getOperand(Idx2).setIsRenamable(Reg1IsRenamable);
-  if (Reg2.isPhysical())
-    CommutedMI->getOperand(Idx1).setIsRenamable(Reg2IsRenamable);
+  CommutedMI->swapOperands(Idx1, Idx2);
+  if (ClearKillIdx)
+    CommutedMI->getOperand(*ClearKillIdx).setIsKill(false);
   return CommutedMI;
 }
 
