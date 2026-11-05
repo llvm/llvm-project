@@ -56,10 +56,8 @@ namespace llvm {
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-class IRBuilderBase;
 struct VPTransformState;
 class raw_ostream;
-class RecurrenceDescriptor;
 class SCEV;
 class SCEVPredicate;
 class Type;
@@ -70,7 +68,6 @@ using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
-class VPLane;
 class VPReplicateRecipe;
 class Value;
 class LoopVectorizationCostModel;
@@ -1520,9 +1517,6 @@ public:
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
-  /// Generate the instruction.
-  /// TODO: We currently execute only per-part unless a specific instance is
-  /// provided.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPInstruction.
@@ -1534,30 +1528,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool hasResult() const {
-    // CallInst may or may not have a result, depending on the called function.
-    // Conservatively return calls have results for now.
-    switch (getOpcode()) {
-    case Instruction::Ret:
-    case Instruction::UncondBr:
-    case Instruction::CondBr:
-    case Instruction::Store:
-    case Instruction::Switch:
-    case Instruction::IndirectBr:
-    case Instruction::Resume:
-    case Instruction::CatchRet:
-    case Instruction::Unreachable:
-    case Instruction::Fence:
-    case Instruction::AtomicRMW:
-    case VPInstruction::BranchOnCond:
-    case VPInstruction::BranchOnTwoConds:
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::WideVectorStore:
-      return false;
-    default:
-      return true;
-    }
-  }
+  bool hasResult() const { return !getScalarType()->isVoidTy(); }
 
   /// Returns true if the VPInstruction has a mask operand.
   bool isMasked() const {

@@ -299,7 +299,7 @@ define void @test_2xi64_mul_sub_mismatched_ops2(ptr noalias %data, ptr noalias %
 ; VF2-NEXT:    [[TMP4:%.*]] = sub <2 x i64> [[TMP3]], splat (i64 2)
 ; VF2-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[TMP1]], 1
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP9]]
-; VF2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 -8
+; VF2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 -8
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ; VF2-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
@@ -600,7 +600,7 @@ define void @test_2xi64_mul_add_xor_mismatched_ops(ptr noalias %data, ptr noalia
 ; VF2-NEXT:    [[TMP5:%.*]] = xor <2 x i64> splat (i64 4), [[TMP4]]
 ; VF2-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[TMP1]], 1
 ; VF2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP11]]
-; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 -8
+; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 -8
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP13]], align 8
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ; VF2-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
