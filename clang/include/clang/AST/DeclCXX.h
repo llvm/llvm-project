@@ -2776,9 +2776,7 @@ public:
 
   /// Determine the number of arguments used to initialize the member
   /// or base.
-  unsigned getNumCtorInitializers() const {
-      return numCtorInitializers;
-  }
+  unsigned getNumCtorInitializers() const { return numCtorInitializers; }
 
   void setNumCtorInitializers(unsigned numCtorInitializers) {
     this->numCtorInitializers = numCtorInitializers;
