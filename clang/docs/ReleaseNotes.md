@@ -1429,6 +1429,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Fix `SeparateDefinitionBlocks` not inserting or removing empty lines around
+  scoped enum definitions.
 - Add `RegroupByDirectory` value to `IncludeBlocks` to group includes by
   category priority and top-level directory.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
