@@ -31,8 +31,9 @@ void test_value_types(bool b, bool2 bv, bool2x2 bm, S s, uint4 mask) {
   __builtin_hlsl_wave_multi_prefix_sum(bv, mask);
   // expected-error@-1 {{invalid operand of type 'bool2'}}
   __builtin_hlsl_wave_multi_prefix_sum(bm, mask);
-  // expected-error@-1 {{matrix, integer or floating-point}}
-  // expected-error@-2 {{cannot pass object of non-trivial type 'bool2x2'}}
+  // expected-error@-1 {{1st argument must be a matrix, integer or \
+floating-point type (was 'bool2x2' (aka 'matrix<bool, 2, 2>'))}}
+  // expected-error@-3 {{cannot pass object of non-trivial type 'bool2x2'}}
   __builtin_hlsl_wave_multi_prefix_sum(s, mask);
   // expected-error@-1 {{invalid operand of type 'S'}}
 }
