@@ -29,11 +29,10 @@ struct GDBServerCommand: Subcommand {
       let storage = parts.count > 1 ? String(parts[1]) : nil
 
       func value() throws(ArgumentParseError) -> String {
-        if let storage { return storage }
-        guard let next = remaining.popFirst() else {
+        guard let value = storage ?? remaining.popFirst() else {
           throw .failure("Missing value for \(name)")
         }
-        return next
+        return value
       }
 
       switch name {
