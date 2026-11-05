@@ -82,9 +82,9 @@ fsqrt	d0, d1
 # CHECK-NEXT:  1      2     0.50                        fsub	s0, s1, s2
 # CHECK-NEXT:  1      2     1.00                        fccmp	s0, s1, #0, eq
 # CHECK-NEXT:  1      2     1.00                        fccmpe	s0, s1, #0, eq
-# CHECK-NEXT:  7      7     7.00                        fdiv	h0, h1, h2
-# CHECK-NEXT:  10     10    10.00                       fdiv	s0, s1, s2
-# CHECK-NEXT:  15     15    15.00                       fdiv	d0, d1, d2
+# CHECK-NEXT:  7      7     1.75                        fdiv	h0, h1, h2
+# CHECK-NEXT:  10     10    2.25                        fdiv	s0, s1, s2
+# CHECK-NEXT:  15     15    7.00                        fdiv	d0, d1, d2
 # CHECK-NEXT:  1      2     0.50                        fmin	s0, s1, s2
 # CHECK-NEXT:  1      2     0.50                        fminnm	s0, s1, s2
 # CHECK-NEXT:  1      2     0.50                        fmax	s0, s1, s2
@@ -108,9 +108,9 @@ fsqrt	d0, d1
 # CHECK-NEXT:  1      2     1.00                        frintz	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fcsel	s0, s1, s2, pl
 # CHECK-NEXT:  1      2     0.50                        fcsel	d0, d1, d2, pl
-# CHECK-NEXT:  7      7     7.00                        fsqrt	h0, h1
-# CHECK-NEXT:  9      9     9.00                        fsqrt	s0, s1
-# CHECK-NEXT:  16     16    16.00                       fsqrt	d0, d1
+# CHECK-NEXT:  7      7     1.75                        fsqrt	h0, h1
+# CHECK-NEXT:  9      9     2.00                        fsqrt	s0, s1
+# CHECK-NEXT:  16     16    7.50                        fsqrt	d0, d1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - A78UnitB
@@ -136,7 +136,7 @@ fsqrt	d0, d1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     82.50  9.50
+# CHECK-NEXT:  -      -      -      -     22.25  22.25  22.25  22.25   -      -      -      -      -      -      -      -      -      -     24.50  9.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [3.2]  [4]    [5.0]  [5.1]  [6]    [7]    [8.0]  [8.1]  [9]    [10]   Instructions:
@@ -145,9 +145,9 @@ fsqrt	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	s0, s1, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmp	s0, s1, #0, eq
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fccmpe	s0, s1, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fdiv	h0, h1, h2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     10.00   -     fdiv	s0, s1, s2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     15.00   -     fdiv	d0, d1, d2
+# CHECK-NEXT:  -      -      -      -     1.75   1.75   1.75   1.75    -      -      -      -      -      -      -      -      -      -     1.00    -     fdiv	h0, h1, h2
+# CHECK-NEXT:  -      -      -      -     2.25   2.25   2.25   2.25    -      -      -      -      -      -      -      -      -      -     1.00    -     fdiv	s0, s1, s2
+# CHECK-NEXT:  -      -      -      -     7.00   7.00   7.00   7.00    -      -      -      -      -      -      -      -      -      -     1.00    -     fdiv	d0, d1, d2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmin	s0, s1, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fminnm	s0, s1, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	s0, s1, s2
@@ -171,6 +171,6 @@ fsqrt	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintz	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	s0, s1, s2, pl
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	d0, d1, d2, pl
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     fsqrt	h0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     9.00    -     fsqrt	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     fsqrt	d0, d1
+# CHECK-NEXT:  -      -      -      -     1.75   1.75   1.75   1.75    -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	h0, h1
+# CHECK-NEXT:  -      -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	s0, s1
+# CHECK-NEXT:  -      -      -      -     7.50   7.50   7.50   7.50    -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	d0, d1

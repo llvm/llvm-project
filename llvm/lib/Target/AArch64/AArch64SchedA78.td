@@ -558,10 +558,10 @@ def A78Write_8c_3L_4V : SchedWriteRes<[A78UnitL, A78UnitL, A78UnitL,
   let NumMicroOps = 7;
 }
 
-def A78Write_7c_7V0 : SchedWriteRes<[A78UnitV0]> {
+def A78Write_7c_7V0_1FD : SchedWriteRes<[A78UnitV0, A78UnitFD]> {
   let Latency     = 7;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [7];
+  let ReleaseAtCycles = [1, 7];
 }
 
 //===----------------------------------------------------------------------===//
@@ -602,10 +602,10 @@ def A78Write_9c_4L_4V : SchedWriteRes<[A78UnitL, A78UnitL, A78UnitL, A78UnitL,
 //===----------------------------------------------------------------------===//
 // Define generic 9 micro-op types
 
-def A78Write_9c_9V0 : SchedWriteRes<[A78UnitV0]> {
+def A78Write_9c_9V0_1FD : SchedWriteRes<[A78UnitV0, A78UnitFD]> {
   let Latency     = 9;
   let NumMicroOps = 9;
-  let ReleaseAtCycles = [9];
+  let ReleaseAtCycles = [1, 8];
 }
 
 //===----------------------------------------------------------------------===//
@@ -615,13 +615,13 @@ def A78Write_7c_5L01_5V : SchedWriteRes<[A78UnitL01, A78UnitL01, A78UnitL01,
                                         A78UnitL01, A78UnitL01, A78UnitV,
                                         A78UnitV, A78UnitV, A78UnitV, A78UnitV]> {
   let Latency     = 7;
-  let NumMicroOps = 10;
+  let NumMicroOps = 7;
 }
 
-def A78Write_10c_10V0 : SchedWriteRes<[A78UnitV0]> {
+def A78Write_10c_10V0_1FD : SchedWriteRes<[A78UnitV0, A78UnitFD]> {
   let Latency     = 10;
   let NumMicroOps = 10;
-  let ReleaseAtCycles = [10];
+  let ReleaseAtCycles = [1, 9];
 }
 
 //===----------------------------------------------------------------------===//
@@ -647,19 +647,19 @@ def A78Write_7c_5L01_5S_5V : SchedWriteRes<[A78UnitL01, A78UnitL01, A78UnitL01,
   let NumMicroOps = 15;
 }
 
-def A78Write_15c_15V0 : SchedWriteRes<[A78UnitV0]> {
+def A78Write_15c_15V0_2FD : SchedWriteRes<[A78UnitV0, A78UnitFD, A78UnitFD]> {
   let Latency     = 15;
   let NumMicroOps = 15;
-  let ReleaseAtCycles = [15];
+  let ReleaseAtCycles = [1, 14, 14];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 16 micro-op types
 
-def A78Write_16c_16V0 : SchedWriteRes<[A78UnitV0]> {
+def A78Write_16c_16V0_1FD : SchedWriteRes<[A78UnitV0, A78UnitFD, A78UnitFD]> {
   let Latency     = 16;
   let NumMicroOps = 16;
-  let ReleaseAtCycles = [16];
+  let ReleaseAtCycles = [1, 15, 15];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1085,21 +1085,21 @@ def : SchedAlias<WriteFCmp,  A78Write_2c_1V0>;
 // "FP data processing instructions").
 
 // FP divide, square root
-def : SchedAlias<WriteFDiv,  A78Write_7c_7V0>;
+def : SchedAlias<WriteFDiv,  A78Write_7c_7V0_1FD>;
 
 // FP divide, H-form
-def : InstRW<[A78Write_7c_7V0],  (instrs FDIVHrr)>;
+def : InstRW<[A78Write_7c_7V0_1FD],  (instrs FDIVHrr)>;
 // FP divide, S-form
-def : InstRW<[A78Write_10c_10V0], (instrs FDIVSrr)>;
+def : InstRW<[A78Write_10c_10V0_1FD], (instrs FDIVSrr)>;
 // FP divide, D-form
-def : InstRW<[A78Write_15c_15V0], (instrs FDIVDrr)>;
+def : InstRW<[A78Write_15c_15V0_2FD], (instrs FDIVDrr)>;
 
 // FP square root, H-form
-def : InstRW<[A78Write_7c_7V0],  (instrs FSQRTHr)>;
+def : InstRW<[A78Write_7c_7V0_1FD],  (instrs FSQRTHr)>;
 // FP square root, S-form
-def : InstRW<[A78Write_9c_9V0],  (instrs FSQRTSr)>;
+def : InstRW<[A78Write_9c_9V0_1FD],  (instrs FSQRTSr)>;
 // FP square root, D-form
-def : InstRW<[A78Write_16c_16V0], (instrs FSQRTDr)>;
+def : InstRW<[A78Write_16c_16V0_1FD], (instrs FSQRTDr)>;
 
 // FP multiply
 def : WriteRes<WriteFMul, [A78UnitV]> { let Latency = 3; }
