@@ -940,6 +940,6 @@ X86FlagsCopyLoweringPass::run(MachineFunction &MF,
   MachineDominatorTree *MDT =
       MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   bool Changed = X86FlagsCopyLoweringImpl(MDT).runOnMachineFunction(MF);
-  return Changed ? PreservedAnalyses::all()
-                 : getMachineFunctionPassPreservedAnalyses();
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }
