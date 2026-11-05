@@ -10,11 +10,15 @@
 #include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -1903,6 +1907,123 @@ TEST(DebugLocTest, PrintIntermediateLocWithInlinedAt) {
   EXPECT_NE(DLResult.find("callee.py:10:3"), std::string::npos) << DLResult;
   EXPECT_NE(DLResult.find("@["), std::string::npos) << DLResult;
   EXPECT_NE(DLResult.find("caller.py:50:1"), std::string::npos) << DLResult;
+}
+
+TEST(FLMDTest, BuildFLContext) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("TestModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *File = DIB.createFile("test.cpp", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus, File,
+                                            "test", false, "", 0);
+  DISubprogram *FnSP =
+      DIB.createFunction(CU, "func", "", File, 1, DIB.createSubroutineType({}),
+                         2, DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  auto *FLCtx = MDFunctionLocalContext::getDistinct(Ctx);
+
+  FLMDBuilder FLBuilder(FLCtx, FnSP);
+  // The builder should automatically insert scopes and source locations.
+  EXPECT_EQ(FLCtx->getScope(0).get(), FnSP);
+  EXPECT_EQ(FLCtx->getSrcLoc(0).Line, (uint32_t)0);
+  EXPECT_EQ(FLCtx->getSrcLoc(1).Line, (uint32_t)1);
+  EXPECT_EQ(FLCtx->getSrcLoc(2).Line, (uint32_t)2);
+
+  // If we insert the same source location multiple times, the index is reused.
+  auto SrcLocAIdx = FLBuilder.getSrcLoc(4, 2, 0);
+  auto SrcLocBIdx = FLBuilder.getSrcLoc(4, 2, 0);
+  EXPECT_EQ(SrcLocAIdx, SrcLocBIdx);
+
+  DILexicalBlock *FnBlock = DILexicalBlock::getDistinct(Ctx, FnSP, File, 5, 0);
+  auto BlockIdx = FLBuilder.getScope(FnBlock);
+
+  // The returned scope index can be used for subsequent source locations.
+  auto SrcLocCIdx = FLBuilder.getSrcLoc(6, 2, BlockIdx);
+  EXPECT_EQ(FLCtx->getSrcLoc(SrcLocCIdx).Line, (uint32_t)6);
+  EXPECT_EQ(FLCtx->getSrcLoc(SrcLocCIdx).ScopeIdx, BlockIdx);
+}
+
+TEST(FLMDTest, VerifyFLContext) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("TestModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *File = DIB.createFile("test.cpp", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus, File,
+                                            "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", File, 1, DIB.createSubroutineType({}), 2,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeSP = DIB.createFunction(
+      CU, "callee", "", File, 11, DIB.createSubroutineType({}), 11,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  auto *CallerFLCtx = MDFunctionLocalContext::getDistinct(Ctx);
+  auto *CalleeFLCtx = MDFunctionLocalContext::getDistinct(Ctx);
+
+  // Assemble a simple valid pair of FLContexts...
+  auto *CalleeBlock = DILexicalBlock::getDistinct(Ctx, CalleeSP, File, 13, 4);
+  CalleeFLCtx->insertScope(CalleeSP);
+  CalleeFLCtx->insertScope(CalleeBlock);
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(12, 4, 0));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(13, 13, 0));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(14, 0, 1));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(15, 0, 0));
+
+  auto *CallerBlock = DILexicalBlock::getDistinct(Ctx, CallerSP, File, 5, 0);
+  CallerFLCtx->insertScope(CallerSP);
+  CallerFLCtx->insertScope(CallerBlock);
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(0, 0, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(4, 10, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(5, 3, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(6, 1, 1));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(7, 7, 1));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(8, 3, 0));
+  CallerFLCtx->insertInlinedCall(FLInlinedCall(4, {}, CalleeFLCtx, false));
+  CallerFLCtx->insertInlinedCall(FLInlinedCall(3, 0, CalleeFLCtx, false));
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), std::vector<Type *>(), false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "caller", *M);
+  BasicBlock::Create(Ctx, "", F);
+  ReturnInst::Create(Ctx, nullptr, &*F->begin());
+  F->setSubprogram(CallerSP);
+  F->setFLContext(CallerFLCtx);
+  // First verify that the original program is correct.
+  EXPECT_FALSE(verifyFunction(*F, &dbgs()));
+
+  // Small cheat to modify the entries in-place, so that we can reversibly
+  // create invalid state.
+  auto *CallerScope0 = const_cast<FLScope *>(&CallerFLCtx->getScopes()[0]);
+  auto *CallerScope1 = const_cast<FLScope *>(&CallerFLCtx->getScopes()[1]);
+  // Set a scope with the incorrect subprogram.
+  CallerScope1->Scope = CalleeBlock;
+  EXPECT_TRUE(verifyFunction(*F));
+
+  // Subprogram outside of first index.
+  CallerScope1->Scope = CallerSP;
+  EXPECT_TRUE(verifyFunction(*F));
+  CallerScope1->Scope = CallerBlock;
+
+  // Missing subprogram at first index.
+  CallerScope0->Scope = CallerBlock;
+  EXPECT_TRUE(verifyFunction(*F));
+  CallerScope0->Scope = CallerSP;
+
+  // Missing scope for SrcLoc.
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(6, 2, 2));
+  EXPECT_TRUE(verifyFunction(*F));
+  CallerFLCtx->insertScope(
+      DILexicalBlock::getDistinct(Ctx, CallerSP, File, 6, 0));
+
+  // Missing SrcLoc in inlined context.
+  auto *InlinedCall1 =
+      const_cast<FLInlinedCall *>(&CallerFLCtx->getInlinedCalls()[1]);
+  InlinedCall1->SrcLocIdx = 4;
+  EXPECT_TRUE(verifyFunction(*F));
+  InlinedCall1->SrcLocIdx = 3;
+
+  // Sanity check that the state was valid.
+  EXPECT_FALSE(verifyFunction(*F));
 }
 
 } // end namespace
