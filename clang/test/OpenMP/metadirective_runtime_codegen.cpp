@@ -136,3 +136,83 @@ void score_reorders(int flag) {
     when(user={condition(flag)}, implementation={vendor(score(5): llvm)}: single)
   bar();
 }
+
+void baz(int);
+
+// Loop variants: each one runs its own loop.
+// CHECK-LABEL: define {{.*}}void @_Z13loop_variantsii(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.when[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call({{.*}}@_Z13loop_variantsii.omp_outlined
+// CHECK:       [[ELSE]]:
+// CHECK:       call void @__kmpc_for_static_init_4(
+// CHECK:       call void @_Z3bazi(
+// CHECK:       call void @__kmpc_for_static_fini(
+// CHECK:       call void @__kmpc_barrier(
+// CHECK:       define internal void @_Z13loop_variantsii.omp_outlined(
+// CHECK:       call void @__kmpc_for_static_init_4(
+// CHECK:       call void @_Z3bazi(
+// CHECK:       call void @__kmpc_for_static_fini(
+void loop_variants(int flag, int n) {
+#pragma omp metadirective when(user={condition(flag)}: parallel for) otherwise(for)
+  for (int i = 0; i < n; ++i)
+    baz(i);
+}
+
+// A metadirective inside a variant of another one. The empty 'otherwise()'
+// runs the block, so the inner metadirective runs on both paths.
+// CHECK-LABEL: define {{.*}}void @_Z6nestedii(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.when[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call({{.*}}@_Z6nestedii.omp_outlined, ptr %b.addr)
+// CHECK:       [[ELSE]]:
+// CHECK-NEXT:  {{%.*}} = load i32, ptr %b.addr
+// CHECK-NEXT:  {{%.*}} = icmp ne i32
+// CHECK-NEXT:  br i1 {{.*}}, label %[[IWHEN:omp.metadirective.when[0-9]*]], label %[[IELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[IWHEN]]:
+// CHECK-NEXT:  call i32 @__kmpc_single(
+// CHECK:       [[IELSE]]:
+// CHECK-NEXT:  call i32 @__kmpc_masked(
+// CHECK:       define internal void @_Z6nestedii.omp_outlined(
+// CHECK:       br i1 {{.*}}, label %[[OWHEN:omp.metadirective.when[0-9]*]], label %[[OELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[OWHEN]]:
+// CHECK:       call i32 @__kmpc_single(
+// CHECK:       [[OELSE]]:
+// CHECK:       call i32 @__kmpc_masked(
+void nested(int a, int b) {
+#pragma omp metadirective when(user={condition(a)}: parallel) otherwise()
+  {
+#pragma omp metadirective when(user={condition(b)}: single) otherwise(masked)
+    bar();
+  }
+}
+
+// construct={parallel} matches inside the parallel region and scores higher,
+// so 'single' is always selected.
+// CHECK-LABEL: define internal void @_Z12runtime_pathi.omp_outlined(
+// CHECK-NOT:   __kmpc_masked
+// CHECK:       call i32 @__kmpc_single(
+// CHECK-NOT:   __kmpc_masked
+// CHECK:       ret void
+void runtime_path(int flag) {
+#pragma omp parallel
+  {
+#pragma omp metadirective when(construct={parallel}: single) \
+                          when(user={condition(flag)}: masked)
+    bar();
+  }
+}
+
+// Instantiated template. Kept last: the instantiation may be emitted at the
+// end of the file.
+// CHECK-LABEL: define {{.*}}void @_Z4tmplIiEvT_(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.when[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call({{.*}}@_Z4tmplIiEvT_.omp_outlined
+// CHECK:       [[ELSE]]:
+// CHECK-NEXT:  call i32 @__kmpc_single(
+template <typename T> void tmpl(T flag) {
+#pragma omp metadirective when(user={condition(flag)}: parallel) otherwise(single)
+  bar();
+}
+void inst() { tmpl(1); }

@@ -1525,6 +1525,9 @@ public:
 
   int getOpenMPDeviceNum() const;
 
+  /// Return the OpenMP constructs enclosing the current location.
+  ArrayRef<llvm::omp::TraitProperty> getConstructTraits();
+
   void setOpenMPDeviceNumID(StringRef ID);
 
   enum class OpenMPImpexType {

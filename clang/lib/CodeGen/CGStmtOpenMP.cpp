@@ -2401,8 +2401,7 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   // Try variants from best to worst match; 'otherwise' runs if none applies.
   TargetOMPContext OMPCtx(
       getContext(), /*DiagUnknownTrait=*/[](StringRef) {},
-      /*CurrentFunctionDecl=*/nullptr,
-      /*ConstructTraits=*/{}, /*DeviceNum=*/-1);
+      /*CurrentFunctionDecl=*/nullptr, S.constructTraits(), /*DeviceNum=*/-1);
   ArrayRef<Stmt *> Variants = S.variants();
   ArrayRef<Expr *> Conditions = S.conditions();
   SmallVector<llvm::omp::VariantMatchInfo, 4> VMIs;

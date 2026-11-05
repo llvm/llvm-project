@@ -2715,7 +2715,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         };
     TargetOMPContext OMPCtx(ASTContext, std::move(DiagUnknownTrait),
                             /* CurrentFunctionDecl */ nullptr,
-                            ArrayRef<llvm::omp::TraitProperty>(),
+                            Actions.OpenMP().getConstructTraits(),
                             Actions.OpenMP().getOpenMPDeviceNum());
 
     // A single match is returned for OpenMP 5.0

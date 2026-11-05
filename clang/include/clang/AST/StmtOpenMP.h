@@ -6627,6 +6627,9 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   /// directive has no 'otherwise' clause.
   bool HasImplicitOtherwise = false;
 
+  /// The OpenMP constructs that enclose the directive.
+  ArrayRef<llvm::omp::TraitProperty> ConstructTraits;
+
   OMPMetaDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPExecutableDirective(OMPMetaDirectiveClass,
                                llvm::omp::OMPD_metadirective, StartLoc,
@@ -6669,12 +6672,15 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   }
 
   void setHasImplicitOtherwise(bool V) { HasImplicitOtherwise = V; }
+  void setConstructTraits(const ASTContext &C,
+                          ArrayRef<llvm::omp::TraitProperty> Traits);
 
 public:
   static OMPMetaDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
-         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise);
+         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
+         ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
   static OMPMetaDirective *CreateEmpty(const ASTContext &C,
                                        unsigned NumVariants, EmptyShell);
 
@@ -6684,6 +6690,9 @@ public:
   ArrayRef<Expr *> conditions() const { return getTrailingConditions(); }
   ArrayRef<OMPTraitInfo *> traitInfos() const {
     return getTrailingTraitInfos();
+  }
+  ArrayRef<llvm::omp::TraitProperty> constructTraits() const {
+    return ConstructTraits;
   }
 
   child_range children() {

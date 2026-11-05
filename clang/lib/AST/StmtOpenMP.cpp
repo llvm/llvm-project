@@ -350,7 +350,8 @@ OMPMetaDirective *OMPMetaDirective::allocate(const ASTContext &C,
 OMPMetaDirective *OMPMetaDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
-    ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise) {
+    ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
+    ArrayRef<llvm::omp::TraitProperty> ConstructTraits) {
   assert(Variants.size() == Conditions.size() &&
          Variants.size() == TraitInfos.size() &&
          "Expected one condition and one trait info per variant");
@@ -359,7 +360,15 @@ OMPMetaDirective *OMPMetaDirective::Create(
   llvm::copy(Conditions, Dir->getTrailingConditions().begin());
   llvm::copy(TraitInfos, Dir->getTrailingTraitInfos().begin());
   Dir->setHasImplicitOtherwise(HasImplicitOtherwise);
+  Dir->setConstructTraits(C, ConstructTraits);
   return Dir;
+}
+
+void OMPMetaDirective::setConstructTraits(
+    const ASTContext &C, ArrayRef<llvm::omp::TraitProperty> Traits) {
+  auto *Mem = C.Allocate<llvm::omp::TraitProperty>(Traits.size());
+  llvm::copy(Traits, Mem);
+  ConstructTraits = {Mem, Traits.size()};
 }
 
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,

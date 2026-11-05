@@ -2547,6 +2547,10 @@ void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
   D->setHasImplicitOtherwise(Record.readBool());
   for (OMPTraitInfo *&TI : D->getTrailingTraitInfos())
     TI = Record.readOMPTraitInfo();
+  SmallVector<llvm::omp::TraitProperty, 4> ConstructTraits(Record.readInt());
+  for (llvm::omp::TraitProperty &Trait : ConstructTraits)
+    Trait = llvm::omp::TraitProperty(Record.readInt());
+  D->setConstructTraits(Record.getContext(), ConstructTraits);
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {

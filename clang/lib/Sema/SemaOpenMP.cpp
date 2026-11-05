@@ -3881,7 +3881,7 @@ StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
   }
   return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
                                   Conditions, AllTraitInfos,
-                                  HasImplicitOtherwise);
+                                  HasImplicitOtherwise, getConstructTraits());
 }
 
 OMPRequiresDecl *
@@ -19194,6 +19194,10 @@ void SemaOpenMP::setOpenMPDeviceNum(int Num) { DeviceNum = Num; }
 void SemaOpenMP::setOpenMPDeviceNumID(StringRef ID) { DeviceNumID = ID; }
 
 int SemaOpenMP::getOpenMPDeviceNum() const { return DeviceNum; }
+
+ArrayRef<llvm::omp::TraitProperty> SemaOpenMP::getConstructTraits() {
+  return DSAStack->getConstructTraits();
+}
 
 void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
   llvm::APSInt Result;
