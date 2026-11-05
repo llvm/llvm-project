@@ -1,0 +1,15 @@
+add_entrypoint_object(
+  shmget
+  SRCS
+    shmget.cpp
+  HDRS
+    ../shmget.h
+  DEPENDS
+    libc.hdr.types.key_t
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.shmget
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
