@@ -73,6 +73,10 @@ private:
   /// Rebuild the translation unit redeclaration chain without \p MostRecentTU,
   /// making its predecessor the current unit again.
   void withdrawMostRecentTU(TranslationUnitDecl *MostRecentTU);
+
+  /// Reset the implicit instantiations of the failed unit \p FailedTU, so the
+  /// next use instantiates them again.
+  void resetImplicitInstantiations(TranslationUnitDecl *FailedTU);
 };
 } // end namespace clang
 
