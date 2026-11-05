@@ -3,6 +3,8 @@
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
 // RUN: %clang_cc1 -I%S/Inputs %s -triple x86_64-apple-darwin10 -fclangir -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM
 // RUN: %clang_cc1 -I%S/Inputs %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 -I%S/Inputs %s -triple spir64 -fclangir -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefix=SPIR
+// RUN: %clang_cc1 -I%S/Inputs %s -triple spir64 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefix=SPIR
 #include <typeinfo>
 
 namespace Test1 {
@@ -55,6 +57,11 @@ extern A &a;
 // CIR: cir.global "private" constant external @_ZN5Test11aE : !cir.ptr<!rec_Test13A3AA>
 // LLVM: @_ZN5Test14a_tiE ={{.*}} global
 const std::type_info &a_ti = typeid(a);
+
+// SPIR-LABEL: define internal {{(spir_func )?}}void @__cxx_global_var_init()
+// SPIR: %[[VPTR:.*]] = load ptr addrspace(1), ptr %{{.*}}
+// SPIR-NEXT: %[[TYPEINFO_SLOT:.*]] = getelementptr{{.*}} ptr, ptr addrspace(1) %[[VPTR]], i64 -1
+// SPIR-NEXT: %[[TYPEINFO:.*]] = load ptr, ptr addrspace(1) %[[TYPEINFO_SLOT]]
 
 // CIR: cir.global constant external @_ZN5Test18A10_c_tiE = #cir.global_view<@_ZTIA10_c> : !cir.ptr<!rec_std3A3Atype_info>
 // LLVM: @_ZN5Test18A10_c_tiE ={{.*}} constant ptr @_ZTIA10_c, align 8

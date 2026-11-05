@@ -230,7 +230,9 @@ void throw_scalar() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR: %[[TYPE_INFO:.*]] = cir.const #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>
+// CIR: %[[DTOR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %[[TYPE_INFO]], %[[DTOR]] : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
@@ -248,7 +250,7 @@ void paren_expr() { (throw 0, 1 + 2); }
 // CIR:   %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:   %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:   cir.unreachable
 // CIR: ^bb1:
 // CIR:   cir.return
@@ -268,7 +270,7 @@ void throw_complex_expr() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, @_ZTICf
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
@@ -292,7 +294,7 @@ void throw_vector_type() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
@@ -318,7 +320,7 @@ void throw_ext_vector_type() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
@@ -345,7 +347,7 @@ void throw_enum_expr() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!u32i>
 // CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !u32i
 // CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !u32i, !cir.ptr<!u32i>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!u32i>, @_ZTIZ15throw_enum_exprvE4Test
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!u32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
@@ -369,7 +371,7 @@ void throw_enum_class_expr() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIZ21throw_enum_class_exprvE4Test
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
@@ -394,7 +396,7 @@ void throw_pointer_type() {
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TMP_PTR:.*]] = cir.load{{.*}} %[[PTR_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[TMP_PTR]], %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, @_ZTIPi
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %{{.*}}, %{{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[PTR_ADDR:.*]] = alloca ptr,{{.*}} align 8
@@ -419,7 +421,10 @@ struct ThrowNonTrivialDtor {
 void throw_class_with_nontrivial_dtor() { throw ThrowNonTrivialDtor(); }
 
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 1 -> !cir.ptr<!rec_ThrowNonTrivialDtor>
-// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!rec_ThrowNonTrivialDtor>, @_ZTI19ThrowNonTrivialDtor, @_ZN19ThrowNonTrivialDtorD1Ev
+// CIR: %[[TYPE_INFO:.*]] = cir.const #cir.global_view<@_ZTI19ThrowNonTrivialDtor> : !cir.ptr<!u8i>
+// CIR: %[[DTOR_ADDR:.*]] = cir.get_global @_ZN19ThrowNonTrivialDtorD1Ev
+// CIR: %[[DTOR:.*]] = cir.cast bitcast %[[DTOR_ADDR]] : {{.*}} -> !cir.ptr<!void>
+// CIR: cir.throw %[[EXCEPTION_ADDR]], %[[TYPE_INFO]], %[[DTOR]] : !cir.ptr<!rec_ThrowNonTrivialDtor>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)

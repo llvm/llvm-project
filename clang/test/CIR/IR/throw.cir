@@ -1,6 +1,8 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
 
 module  {
 
@@ -12,6 +14,16 @@ cir.func @throw_with_no_return() {
 // CHECK: cir.func @throw_with_no_return() {
 // CHECK:  cir.throw
 // CHECK:  cir.unreachable
+// CHECK: }
+
+cir.func @throw_with_operands(%exception: !cir.ptr<!s32i>, %type_info: !cir.ptr<!u8i>, %dtor: !cir.ptr<!void>) {
+  cir.throw %exception, %type_info, %dtor : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
+  cir.unreachable
+}
+
+// CHECK: cir.func @throw_with_operands(%[[EXCEPTION:.*]]: !cir.ptr<!s32i>, %[[TYPE_INFO:.*]]: !cir.ptr<!u8i>, %[[DTOR:.*]]: !cir.ptr<!void>) {
+// CHECK:   cir.throw %[[EXCEPTION]], %[[TYPE_INFO]], %[[DTOR]] : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
+// CHECK:   cir.unreachable
 // CHECK: }
 
 cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {

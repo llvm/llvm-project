@@ -93,7 +93,7 @@ Throws::Throws() try : Throws(1) {
 // CIR:         %[[EXCEPT:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:         %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store align(16) %[[FIVE]], %[[EXCEPT]] : !s32i, !cir.ptr<!s32i>
-// CIR:         cir.throw %[[EXCEPT]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:         cir.throw %[[EXCEPT]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:         cir.unreachable
 // CIR:       ^bb1:
 // CIR:         cir.yield

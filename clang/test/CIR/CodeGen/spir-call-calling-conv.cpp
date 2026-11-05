@@ -25,6 +25,8 @@ const S &r = S();
 
 // TODO(cir): The global init functions and the __cxa_atexit call do not use
 // the runtime calling convention yet.
+// LLVM-DAG: @_ZTV1E = addrspace(1) constant { [4 x ptr addrspace(1)], [3 x ptr addrspace(1)] }
+// LLVM-DAG: @_ZTI1E = addrspace(1) constant
 // LLVM-CIR: define internal void @__cxx_global_var_init()
 // OGCG:     define internal spir_func void @__cxx_global_var_init()
 // LLVM:       call spir_func void @_ZN1SC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @g)

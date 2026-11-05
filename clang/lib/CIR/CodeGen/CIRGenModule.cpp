@@ -2039,7 +2039,9 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  gv = createGlobalOp(loc, name, ty, /*isConstant=*/true);
+  gv = createGlobalOp(
+      loc, name, ty, /*isConstant=*/true,
+      getDataLayout().getDefaultGlobalsAddrSpace(&getMLIRContext()));
 
   // Set up extra information and add to the module
   gv.setLinkageAttr(
@@ -4360,7 +4362,7 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
   if (!shouldEmitRTTI(forEh))
-    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+    return builder.getConstNullPtrAttr(getGlobalsUInt8PtrTy());
 
   if (forEh && ty->isObjCObjectPointerType() &&
       langOpts.ObjCRuntime.isGNUFamily()) {

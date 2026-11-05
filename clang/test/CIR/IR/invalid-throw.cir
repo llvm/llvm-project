@@ -4,13 +4,113 @@
 
 module {
 
-cir.func dso_local @throw_without_type_info() {
+cir.func dso_local @throw_with_incomplete_operands() {
     %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
-    // expected-error @below {{'cir.throw' op 'type_info' symbol attribute missing}}
-    cir.throw %0 : !cir.ptr<!s32i>
+    // expected-error @below {{'cir.throw' op must have either no operands for a rethrow or exception, type_info, and destructor pointer operands for a throw}}
+    "cir.throw"(%0) <{operandSegmentSizes = array<i32: 1, 0, 0>}> : (!cir.ptr<!s32i>) -> ()
     cir.unreachable
   ^bb1:
     cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.global_memory_space" = 1 : ui64>
+} {
+cir.func @throw_with_as2(%exception: !cir.ptr<!s32i>, %type_info: !cir.ptr<!u8i, target_address_space(2)>, %dtor: !cir.ptr<!void>) {
+  // expected-error @below {{'cir.throw' op type_info pointer must use the module's global address space}}
+  cir.throw %exception, %type_info, %dtor : !cir.ptr<!s32i>, !cir.ptr<!u8i, target_address_space(2)>, !cir.ptr<!void>
+  cir.unreachable
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.global_memory_space" = 1 : ui64>
+} {
+cir.func @throw_with_exception_as2(%exception: !cir.ptr<!s32i, target_address_space(2)>, %type_info: !cir.ptr<!u8i, target_address_space(1)>, %dtor: !cir.ptr<!void>) {
+  // expected-error @below {{'cir.throw' op exception pointer must use the module's default address space}}
+  cir.throw %exception, %type_info, %dtor : !cir.ptr<!s32i, target_address_space(2)>, !cir.ptr<!u8i, target_address_space(1)>, !cir.ptr<!void>
+  cir.unreachable
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.global_memory_space" = 1 : ui64>
+} {
+cir.func @throw_with_dtor_as2(%exception: !cir.ptr<!s32i>, %type_info: !cir.ptr<!u8i, target_address_space(1)>, %dtor: !cir.ptr<!void, target_address_space(2)>) {
+  // expected-error @below {{'cir.throw' op destructor pointer must use the module's default address space}}
+  cir.throw %exception, %type_info, %dtor : !cir.ptr<!s32i>, !cir.ptr<!u8i, target_address_space(1)>, !cir.ptr<!void, target_address_space(2)>
+  cir.unreachable
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.global_memory_space" = 1 : ui64>
+} {
+cir.func @try_throw_with_as2(%exception: !cir.ptr<!s32i>, %type_info: !cir.ptr<!u8i, target_address_space(2)>, %dtor: !cir.ptr<!void>) {
+  // expected-error @below {{'cir.try_throw' op type_info pointer must use the module's global address space}}
+  cir.try_throw %exception, %type_info, %dtor : !cir.ptr<!s32i>, !cir.ptr<!u8i, target_address_space(2)>, !cir.ptr<!void> ^normal, ^unwind
+^normal:
+  cir.unreachable
+^unwind:
+  cir.unreachable
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    "dlti.default_memory_space" = 7 : ui64,
+    "dlti.global_memory_space" = 1 : ui64>
+} {
+
+// Different pointee types are valid when the address-space signature is the
+// same.
+cir.func @try_throw_one(%exception: !cir.ptr<!s32i, target_address_space(7)>, %type_info: !cir.ptr<!u8i, target_address_space(1)>, %dtor: !cir.ptr<!void, target_address_space(7)>) {
+  cir.try_throw %exception, %type_info, %dtor : !cir.ptr<!s32i, target_address_space(7)>, !cir.ptr<!u8i, target_address_space(1)>, !cir.ptr<!void, target_address_space(7)> ^normal, ^unwind
+^normal:
+  cir.unreachable
+^unwind:
+  cir.unreachable
+}
+
+cir.func @throw_two(%exception: !cir.ptr<!u8i, target_address_space(7)>, %type_info: !cir.ptr<!void, target_address_space(1)>, %dtor: !cir.ptr<!s32i, target_address_space(7)>) {
+  cir.throw %exception, %type_info, %dtor : !cir.ptr<!u8i, target_address_space(7)>, !cir.ptr<!void, target_address_space(1)>, !cir.ptr<!s32i, target_address_space(7)>
+  cir.unreachable
 }
 
 }

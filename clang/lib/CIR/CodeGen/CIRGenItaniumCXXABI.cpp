@@ -889,8 +889,9 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
     // From LLVM codegen => Note for the future: If we would ever like to do
     // deferred emission of RTTI, check if emitting vtables opportunistically
     // need any adjustment.
-    gv = cgm.createGlobalOp(loc, name, builder.getUInt8PtrTy(),
-                            /*isConstant=*/true);
+    gv = cgm.createGlobalOp(
+        loc, name, cgm.getGlobalsUInt8PtrTy(), /*isConstant=*/true,
+        cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
     const CXXRecordDecl *rd = ty->getAsCXXRecordDecl();
     cgm.setGVProperties(gv, rd);
 
@@ -901,7 +902,7 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
     }
   }
 
-  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+  return builder.getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(), gv);
 }
 
 void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
@@ -915,7 +916,7 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
     return;
   }
 
-  mlir::Type vtableGlobalTy = builder.getPointerTo(builder.getUInt8PtrTy());
+  mlir::Type vtableGlobalTy = builder.getPointerTo(cgm.getGlobalsUInt8PtrTy());
   llvm::Align align = cgm.getDataLayout().getABITypeAlign(vtableGlobalTy);
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
@@ -934,7 +935,7 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
     SmallVector<mlir::Attribute, 4> offsets{
         cgm.getBuilder().getI32IntegerAttr(2)};
     auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
-    field = cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
+    field = cgm.getBuilder().getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(),
                                                vTable, indices);
   }
 
@@ -1123,7 +1124,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   if (oldGV && !oldGV.isDeclaration()) {
     assert(!oldGV.hasAvailableExternallyLinkage() &&
            "available_externally typeinfos not yet implemented");
-    return cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
+    return cgm.getBuilder().getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(),
                                               oldGV);
   }
 
@@ -1180,7 +1181,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
         "buildTypeInfo: rttiUniqueness != CIRGenItaniumCXXABI::RUK_Unique");
   } else {
     typeNameField =
-        builder.getGlobalViewAttr(builder.getUInt8PtrTy(), typeName);
+        builder.getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(), typeName);
   }
 
   fields.push_back(typeNameField);
@@ -1295,8 +1296,9 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // Create new global and search for an existing global.
   auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, init.getType(),
-                                        /*isConstant=*/true);
+  cir::GlobalOp gv = cgm.createGlobalOp(
+      loc, name, init.getType(), /*isConstant=*/true,
+      cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
   gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
@@ -1351,7 +1353,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   assert(!cir::MissingFeatures::setDSOLocal());
 
   CIRGenModule::setInitializer(gv, init);
-  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+  return builder.getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(), gv);
 }
 
 bool CIRGenItaniumCXXABI::shouldTypeidBeNullChecked(QualType srcTy) {
@@ -1387,10 +1389,13 @@ mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
   // meaningful/notable for implementation of relative layout in the future.
   if (cgm.getLangOpts().RelativeCXXABIVTables)
     cgm.errorNYI("buildVTablePointer: isRelativeLayout");
-  else
-    vtbl = cir::VTableGetTypeInfoOp::create(
-        cgf.getBuilder(), loc, cgf.getBuilder().getPointerTo(typeInfoPtrTy),
-        vptr);
+  else {
+    auto typeInfoSlotPtrTy = cgf.getBuilder().getPointerTo(
+        typeInfoPtrTy,
+        cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
+    vtbl = cir::VTableGetTypeInfoOp::create(cgf.getBuilder(), loc,
+                                            typeInfoSlotPtrTy, vptr);
+  }
 
   return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
                                             cgf.getPointerAlign());
@@ -1473,8 +1478,8 @@ mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
 // to the throw block and create a block for the remaining operations.
 static void insertThrowAndSplit(mlir::OpBuilder &builder, mlir::Location loc,
                                 mlir::Value exceptionPtr = {},
-                                mlir::FlatSymbolRefAttr typeInfo = {},
-                                mlir::FlatSymbolRefAttr dtor = {}) {
+                                mlir::Value typeInfo = {},
+                                mlir::Value dtor = {}) {
   mlir::Block *currentBlock = builder.getInsertionBlock();
   mlir::Region *region = currentBlock->getParent();
 
@@ -1531,11 +1536,14 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   CharUnits exnAlign = cgf.getContext().getExnObjectAlignment();
   cgf.emitAnyExprToExn(e->getSubExpr(), Address(exceptionPtr, exnAlign));
 
-  // Get the RTTI symbol address.
-  auto typeInfo = mlir::cast<cir::GlobalViewAttr>(
+  // Materialize the RTTI address, or a typed null when RTTI is unavailable.
+  auto typeInfoAttr = mlir::cast<mlir::TypedAttr>(
       cgm.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
                                   /*forEH=*/true));
-  assert(!typeInfo.getIndices() && "expected no indirection");
+  if (auto globalView = mlir::dyn_cast<cir::GlobalViewAttr>(typeInfoAttr))
+    assert(!globalView.getIndices() && "expected no indirection");
+  mlir::Value typeInfo =
+      cir::ConstantOp::create(builder, subExprLoc, typeInfoAttr);
 
   // The address of the destructor.
   //
@@ -1545,21 +1553,26 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Lowering pass to skip passing the trivial function.
   //
   const auto *cxxrd = clangThrowType->getAsCXXRecordDecl();
-  mlir::FlatSymbolRefAttr dtor{};
+  cir::PointerType dtorTy = builder.getVoidPtrTy();
+  mlir::Value dtor = builder.getNullPtr(dtorTy, subExprLoc);
   if (cxxrd && !cxxrd->hasTrivialDestructor()) {
     // __cxa_throw is declared to take its destructor as void (*)(void *). We
     // must match that if function pointers can be authenticated with a
     // discriminator based on their type.
     assert(!cir::MissingFeatures::pointerAuthentication());
     CXXDestructorDecl *dtorD = cxxrd->getDestructor();
-    dtor = mlir::FlatSymbolRefAttr::get(
-        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete))
-            .getSymNameAttr());
+    cir::FuncOp dtorFunc =
+        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete));
+    cir::PointerType dtorFuncPtrTy =
+        builder.getPointerTo(dtorFunc.getFunctionType());
+    dtor = cir::GetGlobalOp::create(builder, subExprLoc, dtorFuncPtrTy,
+                                    dtorFunc.getSymName());
+    dtor = builder.createBitcast(dtor, dtorTy);
   }
 
   // Now throw the exception.
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol(), dtor);
+  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo, dtor);
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
@@ -1632,7 +1645,9 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
     SourceLocation srcLoc) {
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = cgf.getLoc(srcLoc);
-  cir::PointerType tyPtr = builder.getPointerTo(ty);
+  auto globalsAddrSpace =
+      cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext());
+  cir::PointerType tyPtr = builder.getPointerTo(ty, globalsAddrSpace);
   auto *methodDecl = cast<CXXMethodDecl>(gd.getDecl());
   mlir::Value vtable = cgf.getVTablePtr(loc, thisAddr, methodDecl->getParent());
 
@@ -1649,7 +1664,8 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
       cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
     } else {
       auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
-          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
+          builder, loc, builder.getPointerTo(tyPtr, globalsAddrSpace), vtable,
+          vtableIndex);
       vfuncLoad = builder.createAlignedLoad(loc, tyPtr, vtableSlotPtr,
                                             cgf.getPointerAlign());
     }
@@ -1821,7 +1837,7 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   //                      std::ptrdiff_t src2dst_offset);
 
   mlir::Type voidPtrTy = cgf.getBuilder().getVoidPtrTy();
-  mlir::Type rttiPtrTy = cgf.getBuilder().getUInt8PtrTy();
+  mlir::Type rttiPtrTy = cgf.cgm.getGlobalsUInt8PtrTy();
   mlir::Type ptrDiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
 
   // TODO(cir): mark the function as willreturn readonly.

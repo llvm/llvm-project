@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -triple spir64 -fclangir -emit-llvm %s -o - | FileCheck %s -check-prefix=SPIR
+// RUN: %clang_cc1 -triple spir64 -emit-llvm %s -o - | FileCheck %s -check-prefix=SPIR
 
 struct A {
   A();
@@ -78,6 +80,12 @@ void f1(A *a) {
 // OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[A]]
 // OGCG:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
 // OGCG:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
+
+// SPIR-LABEL: define{{.*}} spir_func void @_Z2f1P1A
+// SPIR: %[[SPIR_VPTR:.*]] = load ptr addrspace(1), ptr %{{.*}}
+// SPIR: %[[SPIR_FN_PTR_PTR:.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) %[[SPIR_VPTR]]
+// SPIR: %[[SPIR_FN_PTR:.*]] = load ptr addrspace(1), ptr addrspace(1) %[[SPIR_FN_PTR_PTR]]
+// SPIR: call spir_func addrspace(1) void %[[SPIR_FN_PTR]]
 // OGCG:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
 
 struct B {
