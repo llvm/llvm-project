@@ -52,12 +52,14 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "achar" || name == "char") {
-    using IntT = SubscriptInteger;
-    return FoldElementalIntrinsic<T, IntT>(kind, {SubscriptIntegerKind},
-        context, std::move(funcRef),
-        ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
+    return FoldElementalIntrinsic<T, Type<TypeCategory::Integer>>(kind,
+        {SubscriptIntegerKind}, context, std::move(funcRef),
+        ScalarFunc<T,
+            Type<TypeCategory::Integer>>([&](const Scalar<
+                                             Type<TypeCategory::Integer>> &i) {
           if (i.IsNegative() ||
-              i.BGE(Scalar<IntT>{SubscriptIntegerKind, 0}.IBSET(8 * kind))) {
+              i.BGE(Scalar<Type<TypeCategory::Integer>>{SubscriptIntegerKind, 0}
+                      .IBSET(8 * kind))) {
             context.Warn(common::UsageWarning::FoldingValueChecks,
                 "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
                 parser::ToUpperCaseLetters(name),
@@ -93,11 +95,11 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
   } else if (name == "new_line") {
     return MakeConstantExpr<T>(kind, CharacterUtils::NEW_LINE(kind));
   } else if (name == "repeat") { // not elemental
-    if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
+    if (auto scalars{GetScalarConstantArguments<T, Type<TypeCategory::Integer>>(
             {kind, SubscriptIntegerKind}, context, funcRef.arguments(),
             /*hasOptionalArgument=*/false)}) {
       auto str{std::get<Scalar<T>>(*scalars)};
-      auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
+      auto n{std::get<Scalar<Type<TypeCategory::Integer>>>(*scalars).ToInt64()};
       if (n < 0) {
         context.messages().Say(
             "NCOPIES= argument to REPEAT() should be nonnegative, but is %jd"_err_en_US,

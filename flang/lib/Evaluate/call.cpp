@@ -258,7 +258,7 @@ std::string ProcedureDesignator::GetName() const {
       u);
 }
 
-std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> ProcedureRef::LEN() const {
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&proc_.u)}) {
     if (intrinsic->name == "repeat") {
       // LEN(REPEAT(ch,n)) == LEN(ch) * n

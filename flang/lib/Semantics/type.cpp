@@ -665,7 +665,8 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     auto restorer{foldingContext().messages().DiscardMessages()};
     if (MaybeExpr analyzed{AnalyzeExpr(scope_.context(), *originalKindExpr)}) {
       if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*analyzed)}) {
-        kindExpr = evaluate::ConvertToType<evaluate::SubscriptInteger>(
+        kindExpr = evaluate::ConvertToType<
+            evaluate::Type<common::TypeCategory::Integer>>(
             evaluate::SubscriptIntegerKind, std::move(*intExpr));
       }
     }

@@ -51,11 +51,12 @@ static inline std::string ToUpperCase(std::string_view str) {
 
 struct DynamicTypeWithLength : public DynamicType {
   explicit DynamicTypeWithLength(const DynamicType &t) : DynamicType{t} {}
-  std::optional<Expr<SubscriptInteger>> LEN() const;
-  std::optional<Expr<SubscriptInteger>> length;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> length;
 };
 
-std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+DynamicTypeWithLength::LEN() const {
   if (length) {
     return length;
   } else {
@@ -86,8 +87,9 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             DynamicTypeWithLength type{DynamicType{kind, len}};
             if (auto lenExpr{type.LEN()}) {
               type.length = Fold(context,
-                  AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
-                      MakeSubscriptIntExpr(0), std::move(*lenExpr)}));
+                  AsExpr(
+                      Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+                          MakeSubscriptIntExpr(0), std::move(*lenExpr)}));
             }
             return type;
           } else {
@@ -1023,7 +1025,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::HollerithLiteralConstant &x) {
   int kind{GetDefaultKind(TypeCategory::Character)};
   auto result{AnalyzeString(std::string{x.v}, kind)};
-  if (auto *constant{UnwrapConstantValue<Ascii>(AsciiKind, result)}) {
+  if (auto *constant{UnwrapConstantValue<Type<TypeCategory::Character>>(
+          AsciiKind, result)}) {
     constant->set_wasHollerith(true);
   }
   return result;
@@ -1267,7 +1270,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtValue &x) {
 }
 
 // Substring references
-std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::GetSubstringBound(
+std::optional<Expr<Type<TypeCategory::Integer>>>
+ExpressionAnalyzer::GetSubstringBound(
     const std::optional<parser::ScalarIntExpr> &bound) {
   if (bound) {
     if (MaybeExpr expr{Analyze(*bound)}) {
@@ -1275,12 +1279,13 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::GetSubstringBound(
         Say("substring bound expression has rank %d"_err_en_US, expr->Rank());
       }
       if (auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
-        if (auto *ssIntExpr{std::get_if<Expr<SubscriptInteger>>(&intExpr->u)};
+        if (auto *ssIntExpr{
+                std::get_if<Expr<Type<TypeCategory::Integer>>>(&intExpr->u)};
             ssIntExpr && ssIntExpr->kind() == SubscriptIntegerKind) {
           return {std::move(*ssIntExpr)};
         }
-        return {Expr<SubscriptInteger>{
-            Convert<SubscriptInteger, TypeCategory::Integer>{
+        return {Expr<Type<TypeCategory::Integer>>{
+            Convert<Type<TypeCategory::Integer>, TypeCategory::Integer>{
                 SubscriptIntegerKind, std::move(*intExpr)}}};
       } else {
         Say("substring bound expression is not INTEGER"_err_en_US);
@@ -1298,9 +1303,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
                 ExtractDataRef(std::move(*newBaseExpr))}) {
           const parser::SubstringRange &range{
               std::get<parser::SubstringRange>(ss.t)};
-          std::optional<Expr<SubscriptInteger>> first{
+          std::optional<Expr<Type<TypeCategory::Integer>>> first{
               Fold(GetSubstringBound(std::get<0>(range.t)))};
-          std::optional<Expr<SubscriptInteger>> last{
+          std::optional<Expr<Type<TypeCategory::Integer>>> last{
               Fold(GetSubstringBound(std::get<1>(range.t)))};
           const Symbol &symbol{checked->GetLastSymbol()};
           if (std::optional<DynamicType> dynamicType{
@@ -1347,13 +1352,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::CharLiteralConstantSubstring &x) {
   const parser::SubstringRange &range{std::get<parser::SubstringRange>(x.t)};
-  std::optional<Expr<SubscriptInteger>> lower{
+  std::optional<Expr<Type<TypeCategory::Integer>>> lower{
       GetSubstringBound(std::get<0>(range.t))};
-  std::optional<Expr<SubscriptInteger>> upper{
+  std::optional<Expr<Type<TypeCategory::Integer>>> upper{
       GetSubstringBound(std::get<1>(range.t))};
   if (MaybeExpr string{Analyze(std::get<parser::CharLiteralConstant>(x.t))}) {
     if (auto *charExpr{std::get_if<Expr<SomeCharacter>>(&string->u)}) {
-      Expr<SubscriptInteger> length{
+      Expr<Type<TypeCategory::Integer>> length{
           common::visit([](const auto &ckExpr) { return ckExpr.LEN().value(); },
               charExpr->u)};
       if (!lower) {
@@ -1400,20 +1405,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::SubstringInquiry &x) {
 }
 
 // Subscripted array references
-std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::AsSubscript(
-    MaybeExpr &&expr) {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+ExpressionAnalyzer::AsSubscript(MaybeExpr &&expr) {
   if (expr) {
     if (expr->Rank() > 1) {
       Say("Subscript expression has rank %d greater than 1"_err_en_US,
           expr->Rank());
     }
     if (auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
-      if (auto *ssIntExpr{std::get_if<Expr<SubscriptInteger>>(&intExpr->u)};
+      if (auto *ssIntExpr{
+              std::get_if<Expr<Type<TypeCategory::Integer>>>(&intExpr->u)};
           ssIntExpr && ssIntExpr->kind() == SubscriptIntegerKind) {
         return std::move(*ssIntExpr);
       } else {
-        return Expr<SubscriptInteger>{
-            Convert<SubscriptInteger, TypeCategory::Integer>{
+        return Expr<Type<TypeCategory::Integer>>{
+            Convert<Type<TypeCategory::Integer>, TypeCategory::Integer>{
                 SubscriptIntegerKind, std::move(*intExpr)}};
       }
     } else {
@@ -1423,8 +1429,8 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::AsSubscript(
   return std::nullopt;
 }
 
-std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::TripletPart(
-    const std::optional<parser::Subscript> &s) {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+ExpressionAnalyzer::TripletPart(const std::optional<parser::Subscript> &s) {
   if (s) {
     return AsSubscript(Analyze(*s));
   } else {
@@ -1692,13 +1698,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
         dataRef->GetLastSymbol().Rank() > 0) { // F'2023 C916
       Say("Subscripts must appear in a coindexed reference when its base is an array"_err_en_US);
     }
-    std::vector<Expr<SubscriptInteger>> cosubscripts;
+    std::vector<Expr<Type<TypeCategory::Integer>>> cosubscripts;
     bool cosubsOk{true};
     for (const auto &cosub :
         std::get<std::list<parser::Cosubscript>>(selector.t)) {
       MaybeExpr coex{Analyze(cosub)};
       if (auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(coex)}) {
-        cosubscripts.push_back(ConvertToType<SubscriptInteger>(
+        cosubscripts.push_back(ConvertToType<Type<TypeCategory::Integer>>(
             SubscriptIntegerKind, std::move(*intExpr)));
       } else {
         cosubsOk = false;
@@ -1781,7 +1787,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
 
 int ExpressionAnalyzer::IntegerTypeSpecKind(
     const parser::IntegerTypeSpec &spec) {
-  Expr<SubscriptInteger> value{
+  Expr<Type<TypeCategory::Integer>> value{
       AnalyzeKindSelector(TypeCategory::Integer, spec.v)};
   if (auto kind{ToInt64(value)}) {
     return static_cast<int>(*kind);
@@ -1868,7 +1874,7 @@ private:
   using ImpliedDoIntType = ResultType<ImpliedDoIndex>;
   static constexpr int ImpliedDoIntKind = ResultKind<ImpliedDoIndex>;
 
-  std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
+  std::optional<Expr<Type<TypeCategory::Integer>>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
       if (explicitType_ ||
@@ -4485,8 +4491,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
   return common::visit(
       common::visitors{
           [&](Expr<SomeDerived> &&elseVal) -> MaybeExpr {
-            Expr<LogicalResult> cond{
-                ConvertToType<LogicalResult>(LogicalResultKind,
+            Expr<Type<TypeCategory::Logical>> cond{
+                ConvertToType<Type<TypeCategory::Logical>>(LogicalResultKind,
                     std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
             Expr<SomeDerived> thenVal{
                 std::move(std::get<Expr<SomeDerived>>(thenExpr->u))};
@@ -4506,9 +4512,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
                   [&](auto &&elseKindExpr) -> MaybeExpr {
                     using T =
                         typename std::decay_t<decltype(elseKindExpr)>::Result;
-                    Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
-                        LogicalResultKind,
-                        std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
+                    Expr<Type<TypeCategory::Logical>> cond{
+                        ConvertToType<Type<TypeCategory::Logical>>(
+                            LogicalResultKind,
+                            std::move(
+                                std::get<Expr<SomeLogical>>(condExpr->u)))};
                     Expr<T> thenVal{std::move(std::get<Expr<T>>(
                         std::get<CategoryType>(thenExpr->u).u))};
                     return AsGenericExpr(CategoryType{
@@ -5013,7 +5021,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
   return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
-Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
+Expr<Type<TypeCategory::Integer>> ExpressionAnalyzer::AnalyzeKindSelector(
     TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
   int defaultKind{GetDefaultKind(category)};
@@ -5029,7 +5037,7 @@ Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
                   return MakeSubscriptIntExpr(*code);
                 }
               } else if (auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(*kind)}) {
-                return ConvertToType<SubscriptInteger>(
+                return ConvertToType<Type<TypeCategory::Integer>>(
                     SubscriptIntegerKind, std::move(*intExpr));
               }
             }
@@ -6075,13 +6083,14 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
       // Pad Hollerith actual argument with spaces up to a multiple of 8
       // bytes, in case the data are interpreted as double precision
       // (or a smaller numeric type) by legacy code.
-      if (auto hollerith{UnwrapExpr<Constant<Ascii>>(AsciiKind, *argExpr)};
+      if (auto hollerith{UnwrapExpr<Constant<Type<TypeCategory::Character>>>(
+              AsciiKind, *argExpr)};
           hollerith && hollerith->wasHollerith()) {
         auto bytes{hollerith->values()};
         while ((bytes.size() % 8) != 0) {
           bytes += ' ';
         }
-        Constant<Ascii> c{AsciiKind, std::move(bytes)};
+        Constant<Type<TypeCategory::Character>> c{AsciiKind, std::move(bytes)};
         c.set_wasHollerith(true);
         argExpr = AsGenericExpr(std::move(c));
       }
@@ -6361,8 +6370,8 @@ bool ArgumentAnalyzer::AnyMissingOperand() const {
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
-evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
-    SemanticsContext &context, common::TypeCategory category,
+evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>
+AnalyzeKindSelector(SemanticsContext &context, common::TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
   evaluate::ExpressionAnalyzer analyzer{context};
   CHECK(context.location().has_value());
@@ -6452,9 +6461,9 @@ bool ExprChecker::Pre(const parser::IfConstruct &construct) {
     } else if (state != WasKnownTrue) {
       state = NotYetKnownTrue;
       if (expr) {
-        if (auto known{
-                evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
-                    evaluate::LogicalResultKind, *expr)}) {
+        if (auto known{evaluate::GetScalarConstantValue<
+                evaluate::Type<common::TypeCategory::Logical>>(
+                evaluate::LogicalResultKind, *expr)}) {
           state = known->IsTrue() ? TrueNow : FalseNow;
           determiner = here;
         }

@@ -79,8 +79,8 @@ public:
   }
   static unsigned getHashValue(const Fortran::evaluate::CoarrayRef &x) {
     unsigned cosubs = 3u;
-    for (const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> &v :
-         x.cosubscript())
+    for (const Fortran::evaluate::Expr<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Integer>> &v : x.cosubscript())
       cosubs -= getHashValue(v);
     return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
            257u + getHashValue(x.team()) + getHashValue(x.notify());
@@ -522,8 +522,10 @@ public:
     }
     return true;
   }
-  static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
-                      const Fortran::evaluate::SubscriptInteger &y) {
+  static bool isEqual(
+      const Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer> &x,
+      const Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>
+          &y) {
     return x == y;
   }
   template <typename A>

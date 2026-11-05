@@ -156,7 +156,8 @@ public:
     return common::ScopedSet(useSavedTypedExprs_, false);
   }
 
-  Expr<SubscriptInteger> AnalyzeKindSelector(common::TypeCategory category,
+  Expr<Type<TypeCategory::Integer>> AnalyzeKindSelector(
+      common::TypeCategory category,
       const std::optional<parser::KindSelector> &);
 
   MaybeExpr Analyze(const parser::Expr &);
@@ -336,8 +337,8 @@ private:
   template <typename TYPES, TypeCategory CAT, typename PARSED>
   MaybeExpr IntLiteralConstant(const PARSED &, bool isNegated = false);
   MaybeExpr AnalyzeString(std::string &&, int kind);
-  std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
-  std::optional<Expr<SubscriptInteger>> TripletPart(
+  std::optional<Expr<Type<TypeCategory::Integer>>> AsSubscript(MaybeExpr &&);
+  std::optional<Expr<Type<TypeCategory::Integer>>> TripletPart(
       const std::optional<parser::Subscript> &);
   std::optional<Subscript> AnalyzeSectionSubscript(
       const parser::SectionSubscript &);
@@ -350,7 +351,7 @@ private:
   bool CheckRanks(const DataRef &); // Return false if error exists.
   bool CheckPolymorphic(const DataRef &); // ditto
   bool CheckDataRef(const DataRef &); // ditto
-  std::optional<Expr<SubscriptInteger>> GetSubstringBound(
+  std::optional<Expr<Type<TypeCategory::Integer>>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
   MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&,
       const Symbol *&, parser::CharBlock callSite);
@@ -484,8 +485,8 @@ std::optional<evaluate::Expr<evaluate::SomeType>> AnalyzeExpr(
 }
 
 // Semantic analysis of an intrinsic type's KIND parameter expression.
-evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
-    SemanticsContext &, common::TypeCategory,
+evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>
+AnalyzeKindSelector(SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
 
 void NoteUsedSymbols(

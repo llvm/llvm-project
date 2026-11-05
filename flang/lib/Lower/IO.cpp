@@ -802,18 +802,21 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
   // (enforced by semantics), so each narrows to Expr<SomeInteger>
   auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
     return Fortran::evaluate::ConvertToType<
-        Fortran::evaluate::SubscriptInteger>(
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>(
         Fortran::evaluate::SubscriptIntegerKind,
         Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
             DEREF(Fortran::evaluate::UnwrapExpr<
                   Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
                 expr))});
   };
-  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> lowerSub =
-      toSubscript(*lowerExpr);
-  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> upperSub =
-      toSubscript(*upperExpr);
-  std::optional<Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+  Fortran::evaluate::Expr<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
+      lowerSub = toSubscript(*lowerExpr);
+  Fortran::evaluate::Expr<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
+      upperSub = toSubscript(*upperExpr);
+  std::optional<Fortran::evaluate::Expr<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>>
       stepSub;
   if (stepExpr)
     stepSub = toSubscript(*stepExpr);
@@ -825,8 +828,10 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       stepSub ? Fortran::evaluate::ExtentExpr{*stepSub}
               : Fortran::evaluate::MakeExtentExpr(1));
 
-  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> loopSubExpr =
-      toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());
+  Fortran::evaluate::Expr<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
+      loopSubExpr =
+          toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());
 
   std::vector<Fortran::evaluate::Subscript> newSubscripts;
   newSubscripts.reserve(arrayRef->subscript().size());
@@ -837,7 +842,8 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
     if (!scalar)
       return std::nullopt; // already a triplet/vector subscript
 
-    const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+    const Fortran::evaluate::Expr<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
         &subExpr = scalar->value();
     if (subExpr == loopSubExpr) {
       if (foundLoopSubscript)
@@ -845,12 +851,10 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       foundLoopSubscript = true;
       newSubscripts.emplace_back(
           Fortran::evaluate::Subscript{Fortran::evaluate::Triplet{
-              std::optional<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
-                  lowerSub},
-              std::optional<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
-                  upperSub},
+              std::optional<Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                  Fortran::common::TypeCategory::Integer>>>{lowerSub},
+              std::optional<Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                  Fortran::common::TypeCategory::Integer>>>{upperSub},
               std::move(stepSub)}});
     } else {
       // Every other subscript is retained and evaluated once for the collapsed

@@ -119,7 +119,7 @@ bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &,
 
 // Fold and validate a MASK= argument.  Return null on error, absent MASK=, or
 // non-constant MASK=.
-Constant<LogicalResult> *GetReductionMASK(
+Constant<Type<TypeCategory::Logical>> *GetReductionMASK(
     std::optional<ActualArgument> &maskArg, const ConstantSubscripts &shape,
     FoldingContext &);
 
@@ -130,7 +130,7 @@ Constant<LogicalResult> *GetReductionMASK(
 // the mask.  If the result is present, the intrinsic call can be folded.
 template <typename T> struct ArrayAndMask {
   Constant<T> array;
-  Constant<LogicalResult> mask;
+  Constant<Type<TypeCategory::Logical>> mask;
 };
 template <typename T>
 std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
@@ -148,14 +148,15 @@ std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
     return std::nullopt;
   }
   std::size_t n{folded->size()};
-  std::vector<Scalar<LogicalResult>> maskElement;
+  std::vector<Scalar<Type<TypeCategory::Logical>>> maskElement;
   if (maskIndex && static_cast<std::size_t>(*maskIndex) < arg.size() &&
       arg[*maskIndex]) {
-    if (const Constant<LogicalResult> *origMask{
+    if (const Constant<Type<TypeCategory::Logical>> *origMask{
             GetReductionMASK(arg[*maskIndex], folded->shape(), context)}) {
       if (auto scalarMask{origMask->GetScalarValue()}) {
-        maskElement = std::vector<Scalar<LogicalResult>>(
-            n, Scalar<LogicalResult>{LogicalResultKind, scalarMask->IsTrue()});
+        maskElement = std::vector<Scalar<Type<TypeCategory::Logical>>>(n,
+            Scalar<Type<TypeCategory::Logical>>{
+                LogicalResultKind, scalarMask->IsTrue()});
       } else {
         maskElement = origMask->values();
       }
@@ -163,12 +164,12 @@ std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
       return std::nullopt;
     }
   } else {
-    maskElement = std::vector<Scalar<LogicalResult>>(
-        n, Scalar<LogicalResult>{LogicalResultKind, true});
+    maskElement = std::vector<Scalar<Type<TypeCategory::Logical>>>(
+        n, Scalar<Type<TypeCategory::Logical>>{LogicalResultKind, true});
   }
   return ArrayAndMask<T>{Constant<T>(*folded),
-      Constant<LogicalResult>{LogicalResultKind, std::move(maskElement),
-          ConstantSubscripts{folded->shape()}}};
+      Constant<Type<TypeCategory::Logical>>{LogicalResultKind,
+          std::move(maskElement), ConstantSubscripts{folded->shape()}}};
 }
 
 // Generalized reduction to an array of one dimension fewer (w/ DIM=)
@@ -177,7 +178,7 @@ std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
 Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
-    const Constant<LogicalResult> &mask, std::optional<int> &dim,
+    const Constant<Type<TypeCategory::Logical>> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
   ConstantSubscripts maskAt{mask.lbounds()};
@@ -251,10 +252,10 @@ public:
         return;
       }
     }
-    Expr<LogicalResult> test{
+    Expr<Type<TypeCategory::Logical>> test{
         PackageRelation(opr_, MakeConstantExpr<T>(kind(), aAt),
             MakeConstantExpr<T>(kind(), element))};
-    auto folded{GetScalarConstantValue<LogicalResult>(
+    auto folded{GetScalarConstantValue<Type<TypeCategory::Logical>>(
         LogicalResultKind, test.Rewrite(context_, std::move(test)))};
     CHECK(folded.has_value());
     if (folded->IsTrue()) {

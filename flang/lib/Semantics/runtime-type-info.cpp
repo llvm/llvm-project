@@ -106,7 +106,8 @@ private:
     }
   }
 
-  // Specialization for optional<Expr<SomeInteger and SubscriptInteger>>
+  // Specialization for optional<Expr<SomeInteger and
+  // INTEGER(SubscriptIntegerKind)>>
   template <typename T>
   evaluate::StructureConstructor GetValue(
       const std::optional<evaluate::Expr<T>> &expr,
@@ -490,10 +491,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         SomeExpr{evaluate::NullPointer{}});
   }
-  using Int8 = evaluate::Type<TypeCategory::Integer>;
-  using Int1 = evaluate::Type<TypeCategory::Integer>;
-  std::vector<Int8::Scalar> kinds;
-  std::vector<Int1::Scalar> lenKinds;
+  std::vector<evaluate::Type<TypeCategory::Integer>::Scalar> kinds;
+  std::vector<evaluate::Type<TypeCategory::Integer>::Scalar> lenKinds;
   if (parameters) {
     // Package the derived type's parameters in declaration order for
     // each category of parameter.  KIND= type parameters are described
@@ -523,11 +522,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     }
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
-      SaveNumericPointerTarget<Int8>(8, scope,
+      SaveNumericPointerTarget<evaluate::Type<TypeCategory::Integer>>(8, scope,
           SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
           std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
-      SaveNumericPointerTarget<Int1>(1, scope,
+      SaveNumericPointerTarget<evaluate::Type<TypeCategory::Integer>>(1, scope,
           SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
           std::move(lenKinds)));
   // Traverse the components of the derived type
@@ -748,10 +747,11 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
     object.set_type(scope.MakeCharacterType(
         ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)));
   }
-  using evaluate::Ascii, evaluate::AsciiKind, evaluate::MakeConstantExpr;
-  using AsciiExpr = evaluate::Expr<Ascii>;
-  object.set_init(
-      evaluate::AsGenericExpr(MakeConstantExpr<Ascii>(AsciiKind, name)));
+  using evaluate::AsciiKind, evaluate::MakeConstantExpr;
+  using AsciiExpr = evaluate::Expr<evaluate::Type<TypeCategory::Character>>;
+  object.set_init(evaluate::AsGenericExpr(
+      MakeConstantExpr<evaluate::Type<TypeCategory::Character>>(
+          AsciiKind, name)));
   Symbol &symbol{
       *scope
            .try_emplace(
@@ -760,7 +760,8 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
            .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      AsciiExpr{evaluate::Designator<Ascii>{AsciiKind, symbol}});
+      AsciiExpr{evaluate::Designator<evaluate::Type<TypeCategory::Character>>{
+          AsciiKind, symbol}});
 }
 
 evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
@@ -801,7 +802,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   if (dyType.category() == TypeCategory::Character && len) {
     // Ignore IDIM(x) (represented as MAX(0, x))
     if (const auto *clamped{evaluate::UnwrapExpr<
-            evaluate::Extremum<evaluate::SubscriptInteger>>(*len)}) {
+            evaluate::Extremum<evaluate::Type<common::TypeCategory::Integer>>>(
+            *len)}) {
       if (clamped->ordering == evaluate::Ordering::Greater &&
           clamped->left() == evaluate::MakeSubscriptIntExpr(0)) {
         len = common::Clone(clamped->right());

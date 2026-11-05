@@ -301,10 +301,11 @@ public:
         if (const auto *vecExpr{
                 std::get_if<evaluate::IndirectSubscriptIntegerExpr>(&ss.u)}) {
           auto folded{evaluate::Fold(foldingContext_,
-              evaluate::Expr<evaluate::SubscriptInteger>{vecExpr->value()})};
-          if (const auto *con{
-                  evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
-                      evaluate::SubscriptIntegerKind, folded)}) {
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>{
+                  vecExpr->value()})};
+          if (const auto *con{evaluate::UnwrapConstantValue<
+                  evaluate::Type<common::TypeCategory::Integer>>(
+                  evaluate::SubscriptIntegerKind, folded)}) {
             std::set<std::int64_t> values;
             for (const auto &j : con->values()) {
               if (auto pair{values.emplace(j.ToInt64())}; !pair.second) {

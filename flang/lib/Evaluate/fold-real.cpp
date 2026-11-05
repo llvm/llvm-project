@@ -18,14 +18,15 @@ static Expr<T> FoldTransformationalBessel(
   const int kind{funcRef.kind()};
   CHECK(funcRef.arguments().size() == 3);
   /// Bessel runtime functions use `int` integer arguments. Convert integer
-  /// arguments to Int4, any overflow error will be reported during the
+  /// arguments to Int, any overflow error will be reported during the
   /// conversion folding.
-  using Int4 = Type<TypeCategory::Integer>;
-  if (auto args{GetConstantArguments<Int4, Int4, T>({4, 4, kind}, context,
+  if (auto args{GetConstantArguments<Type<TypeCategory::Integer>,
+          Type<TypeCategory::Integer>, T>({4, 4, kind}, context,
           funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
     const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
     if (auto elementalBessel{
-            GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
+            GetHostRuntimeWrapper<T, Type<TypeCategory::Integer>, T>(
+                kind, {4, kind}, name)}) {
       std::vector<Scalar<T>> results;
       int n1{static_cast<int>(
           std::get<0>(*args)->GetScalarValue().value().ToInt64())};
@@ -141,8 +142,6 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Real>> &&funcRef) {
   const int kind{funcRef.kind()};
   using T = Type<TypeCategory::Real>;
-  using ComplexT = Type<TypeCategory::Complex>;
-  using Int4 = Type<TypeCategory::Integer>;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -182,8 +181,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
       if (auto callable{
-              GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
-        return FoldElementalIntrinsic<T, Int4, T>(
+              GetHostRuntimeWrapper<T, Type<TypeCategory::Integer>, T>(
+                  kind, {4, kind}, name)}) {
+        return FoldElementalIntrinsic<T, Type<TypeCategory::Integer>, T>(
             kind, {4, kind}, context, std::move(funcRef), *callable);
       } else {
         context.Warn(common::UsageWarning::FoldingFailure,
@@ -199,22 +199,25 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
       return FoldElementalIntrinsic<T, T>(
           kind, {kind}, context, std::move(funcRef), &Scalar<T>::ABS);
     } else if (UnwrapExpr<Expr<SomeComplex>>(args[0])) {
-      return FoldElementalIntrinsic<T, ComplexT>(kind, {kind}, context,
-          std::move(funcRef),
-          ScalarFunc<T, ComplexT>([&name, &context](
-                                      const Scalar<ComplexT> &z) -> Scalar<T> {
-            ValueWithRealFlags<Scalar<T>> y{z.ABS()};
-            if (y.flags.test(RealFlag::Overflow)) {
-              context.Warn(common::UsageWarning::FoldingException,
-                  "complex ABS intrinsic folding overflow"_warn_en_US, name);
-            }
-            return y.value;
-          }));
+      return FoldElementalIntrinsic<T, Type<TypeCategory::Complex>>(kind,
+          {kind}, context, std::move(funcRef),
+          ScalarFunc<T, Type<TypeCategory::Complex>>(
+              [&name, &context](
+                  const Scalar<Type<TypeCategory::Complex>> &z) -> Scalar<T> {
+                ValueWithRealFlags<Scalar<T>> y{z.ABS()};
+                if (y.flags.test(RealFlag::Overflow)) {
+                  context.Warn(common::UsageWarning::FoldingException,
+                      "complex ABS intrinsic folding overflow"_warn_en_US,
+                      name);
+                }
+                return y.value;
+              }));
     } else {
       common::die(" unexpected argument type inside abs");
     }
   } else if (name == "aimag") {
-    if (auto *zExpr{UnwrapExpr<Expr<ComplexT>>(kind, args[0])}) {
+    if (auto *zExpr{
+            UnwrapExpr<Expr<Type<TypeCategory::Complex>>>(kind, args[0])}) {
       return Fold(context, Expr<T>{ComplexComponent{true, std::move(*zExpr)}});
     }
   } else if (name == "aint" || name == "anint") {
@@ -452,10 +455,12 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
                 context, std::move(funcRef),
                 ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
                                          const Scalar<TY> &y) -> Scalar<T> {
-                  auto xBig{
-                      Scalar<LargestReal>::Convert(LargestRealKind, x).value};
-                  auto yBig{
-                      Scalar<LargestReal>::Convert(LargestRealKind, y).value};
+                  auto xBig{Scalar<Type<TypeCategory::Real>>::Convert(
+                      LargestRealKind, x)
+                          .value};
+                  auto yBig{Scalar<Type<TypeCategory::Real>>::Convert(
+                      LargestRealKind, y)
+                          .value};
                   switch (xBig.Compare(yBig)) {
                   case Relation::Unordered:
                     context.Warn(common::UsageWarning::FoldingValueChecks,

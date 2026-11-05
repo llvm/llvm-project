@@ -48,12 +48,13 @@ bool IsExplicitShape(const Symbol &original) {
   }
 }
 
-Shape GetShapeHelper::ConstantShape(const Constant<ExtentType> &arrayConstant) {
+Shape GetShapeHelper::ConstantShape(
+    const Constant<Type<TypeCategory::Integer>> &arrayConstant) {
   CHECK(arrayConstant.Rank() == 1);
   Shape result;
   std::size_t dimensions{arrayConstant.size()};
   for (std::size_t j{0}; j < dimensions; ++j) {
-    Scalar<ExtentType> extent{arrayConstant.values().at(j)};
+    Scalar<Type<TypeCategory::Integer>> extent{arrayConstant.values().at(j)};
     result.emplace_back(MakeExtentExpr(std::move(extent)));
   }
   return result;
@@ -63,12 +64,13 @@ auto GetShapeHelper::AsShapeResult(ExtentExpr &&arrayExpr) const -> Result {
   if (context_) {
     arrayExpr = Fold(*context_, std::move(arrayExpr));
   }
-  if (const auto *constArray{
-          UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, arrayExpr)}) {
+  if (const auto *constArray{UnwrapConstantValue<Type<TypeCategory::Integer>>(
+          SubscriptIntegerKind, arrayExpr)}) {
     return ConstantShape(*constArray);
   }
-  if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(
-          SubscriptIntegerKind, arrayExpr)}) {
+  if (auto *constructor{
+          UnwrapExpr<ArrayConstructor<Type<TypeCategory::Integer>>>(
+              SubscriptIntegerKind, arrayExpr)}) {
     Shape result;
     for (auto &value : *constructor) {
       auto *expr{std::get_if<ExtentExpr>(&value.u)};
@@ -93,7 +95,7 @@ Shape GetShapeHelper::CreateShape(int rank, NamedEntity &base) const {
 }
 
 std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &shape) {
-  ArrayConstructorValues<ExtentType> values;
+  ArrayConstructorValues<Type<TypeCategory::Integer>> values;
   for (const auto &dim : shape) {
     if (dim) {
       values.Push(common::Clone(*dim));
@@ -101,24 +103,25 @@ std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &shape) {
       return std::nullopt;
     }
   }
-  return ExtentExpr{
-      ArrayConstructor<ExtentType>{SubscriptIntegerKind, std::move(values)}};
+  return ExtentExpr{ArrayConstructor<Type<TypeCategory::Integer>>{
+      SubscriptIntegerKind, std::move(values)}};
 }
 
-std::optional<Constant<ExtentType>> AsConstantShape(
+std::optional<Constant<Type<TypeCategory::Integer>>> AsConstantShape(
     FoldingContext &context, const Shape &shape) {
   if (auto shapeArray{AsExtentArrayExpr(shape)}) {
     auto folded{Fold(context, std::move(*shapeArray))};
-    if (auto *p{
-            UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, folded)}) {
+    if (auto *p{UnwrapConstantValue<Type<TypeCategory::Integer>>(
+            SubscriptIntegerKind, folded)}) {
       return std::move(*p);
     }
   }
   return std::nullopt;
 }
 
-Constant<SubscriptInteger> AsConstantShape(const ConstantSubscripts &shape) {
-  using IntType = Scalar<SubscriptInteger>;
+Constant<Type<TypeCategory::Integer>> AsConstantShape(
+    const ConstantSubscripts &shape) {
+  using IntType = Scalar<Type<TypeCategory::Integer>>;
   std::vector<IntType> result;
   for (auto dim : shape) {
     result.emplace_back(SubscriptIntegerKind, dim);
@@ -127,7 +130,8 @@ Constant<SubscriptInteger> AsConstantShape(const ConstantSubscripts &shape) {
       ConstantSubscripts{GetRank(shape)}};
 }
 
-ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &shape) {
+ConstantSubscripts AsConstantExtents(
+    const Constant<Type<TypeCategory::Integer>> &shape) {
   ConstantSubscripts result;
   for (const auto &extent : shape.values()) {
     result.push_back(extent.ToInt64());
@@ -182,7 +186,7 @@ static ExtentExpr ComputeTripCount(
   ExtentExpr span{
       (std::move(upper) - std::move(lower) + std::move(strideCopy)) /
       std::move(stride)};
-  return ExtentExpr{Extremum<ExtentType>{
+  return ExtentExpr{Extremum<Type<TypeCategory::Integer>>{
       Ordering::Greater, std::move(span), MakeExtentExpr(0)}};
 }
 
@@ -252,7 +256,7 @@ bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
 template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
 template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeInteger> &);
 template bool ContainsUntaggedRankOneBoundElement(
-    const Expr<SubscriptInteger> &);
+    const Expr<Type<TypeCategory::Integer>> &);
 
 // Copies a declared bound out of its ShapeSpec.  A rank-1 array bound is stored
 // as a RankOneBoundElement wrapping the whole rank-1 expression; the copy is
@@ -537,15 +541,15 @@ static MaybeExtentExpr GetNonNegativeExtent(const NamedEntity &base,
     if (lval.value_or(0) == 1) {
       // max(0,ub) == max(0,UBOUND(a,dim)) for every ub when lb == 1, so a
       // surviving rank-1 bound element can carry ubound() provenance exactly.
-      return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
-              CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
+      return ExtentExpr{Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+          MakeExtentExpr(0),
+          CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
     } else {
       // Neither UBOUND() nor LBOUND() equals the declared bound of an empty
       // dimension, so the raw copies cannot carry provenance here.
-      return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
-              CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
+      return ExtentExpr{Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+          MakeExtentExpr(0),
+          CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
     }
   } else {
     return std::nullopt;
@@ -1150,9 +1154,11 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
                 auto specific{context_->intrinsics().Probe(
                     CallCharacteristics{"merge"}, toMerge, *context_)};
                 CHECK(specific);
-                return Shape{ExtentExpr{FunctionRef<ExtentType>{ExtentIntKind,
-                    ProcedureDesignator{std::move(specific->specificIntrinsic)},
-                    std::move(specific->arguments)}}};
+                return Shape{ExtentExpr{
+                    FunctionRef<Type<TypeCategory::Integer>>{ExtentIntKind,
+                        ProcedureDesignator{
+                            std::move(specific->specificIntrinsic)},
+                        std::move(specific->arguments)}}};
               }
             }
           } else {
@@ -1167,9 +1173,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             auto specific{context_->intrinsics().Probe(
                 CallCharacteristics{"count"}, toCount, *context_)};
             CHECK(specific);
-            return Shape{ExtentExpr{FunctionRef<ExtentType>{ExtentIntKind,
-                ProcedureDesignator{std::move(specific->specificIntrinsic)},
-                std::move(specific->arguments)}}};
+            return Shape{ExtentExpr{
+                FunctionRef<Type<TypeCategory::Integer>>{ExtentIntKind,
+                    ProcedureDesignator{std::move(specific->specificIntrinsic)},
+                    std::move(specific->arguments)}}};
           }
         }
       }
@@ -1179,8 +1186,9 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         if (const auto *shapeExpr{
                 call.arguments().at(1).value().UnwrapExpr()}) {
           auto shapeArg{std::get<Expr<SomeInteger>>(shapeExpr->u)};
-          if (auto result{AsShapeResult(ConvertToType<ExtentType>(
-                  ExtentIntKind, std::move(shapeArg)))}) {
+          if (auto result{
+                  AsShapeResult(ConvertToType<Type<TypeCategory::Integer>>(
+                      ExtentIntKind, std::move(shapeArg)))}) {
             return result;
           }
         }
@@ -1199,9 +1207,9 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  Extremum<SubscriptInteger>{Ordering::Greater,
+                  Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
                       MakeExtentExpr(0),
-                      ConvertToType<ExtentType>(
+                      ConvertToType<Type<TypeCategory::Integer>>(
                           ExtentIntKind, common::Clone(*nCopies))});
               return std::move(*arrayShape);
             }
@@ -1213,8 +1221,9 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         // SIZE= is present; shape is vector [SIZE=]
         if (const auto *size{
                 UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))}) {
-          return Shape{MaybeExtentExpr{
-              ConvertToType<ExtentType>(ExtentIntKind, common::Clone(*size))}};
+          return Shape{
+              MaybeExtentExpr{ConvertToType<Type<TypeCategory::Integer>>(
+                  ExtentIntKind, common::Clone(*size))}};
         }
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(

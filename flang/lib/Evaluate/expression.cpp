@@ -23,9 +23,9 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
-std::optional<Expr<SubscriptInteger>>
+std::optional<Expr<Type<TypeCategory::Integer>>>
 Expr<Type<TypeCategory::Character>>::LEN() const {
-  using T = std::optional<Expr<SubscriptInteger>>;
+  using T = std::optional<Expr<Type<TypeCategory::Integer>>>;
   return common::visit(
       common::visitors{
           [](const Constant<Result> &c) -> T {
@@ -54,8 +54,9 @@ Expr<Type<TypeCategory::Character>>::LEN() const {
           [](const Extremum<Result> &c) -> T {
             if (auto llen{c.left().LEN()}) {
               if (auto rlen{c.right().LEN()}) {
-                return Expr<SubscriptInteger>{Extremum<SubscriptInteger>{
-                    Ordering::Greater, *std::move(llen), *std::move(rlen)}};
+                return Expr<Type<TypeCategory::Integer>>{
+                    Extremum<Type<TypeCategory::Integer>>{
+                        Ordering::Greater, *std::move(llen), *std::move(rlen)}};
               }
             }
             return std::nullopt;
@@ -196,7 +197,7 @@ bool ArrayConstructorValues<R>::operator==(
 }
 
 auto ArrayConstructor<Type<TypeCategory::Character>>::set_LEN(
-    Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
+    Expr<Type<TypeCategory::Integer>> &&len) -> ArrayConstructor & {
   length_.emplace(std::move(len));
   return *this;
 }
@@ -362,7 +363,8 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
   delete p;
 }
 
-std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+Expr<SomeCharacter>::LEN() const {
   return common::visit([](const auto &kx) { return kx.LEN(); }, u);
 }
 

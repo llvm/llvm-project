@@ -218,7 +218,8 @@ public:
   template <typename T>
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
-      return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
+      return FoldExpr(evaluate::ConvertToType<
+          evaluate::Type<common::TypeCategory::Integer>>(
           evaluate::SubscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
@@ -2585,7 +2586,8 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   }
   symbol.SetIsCDefined(isCDefined_);
   std::optional<std::string> label;
-  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+  if (auto charVal{evaluate::GetScalarConstantValue<
+          evaluate::Type<common::TypeCategory::Character>>(
           evaluate::AsciiKind, bindName_)}) {
     label = charVal->AsStdString();
   }
@@ -9735,7 +9737,8 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+      if (auto charVal{evaluate::GetScalarConstantValue<
+              evaluate::Type<common::TypeCategory::Character>>(
               evaluate::AsciiKind, *folded)}) {
         if (auto str{charVal->AsStdString()}) {
           for (char ch : *str) {

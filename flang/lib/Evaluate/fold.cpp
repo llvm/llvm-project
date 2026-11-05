@@ -21,21 +21,23 @@ characteristics::TypeAndShape Fold(
   return std::move(x);
 }
 
-std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
+std::optional<Constant<Type<TypeCategory::Integer>>> GetConstantSubscript(
     FoldingContext &context, Subscript &ss, const NamedEntity &base, int dim) {
   ss = FoldOperation(context, std::move(ss));
   return common::visit(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
-              -> std::optional<Constant<SubscriptInteger>> {
-            if (const auto *constant{UnwrapConstantValue<SubscriptInteger>(
-                    SubscriptIntegerKind, expr.value())}) {
+              -> std::optional<Constant<Type<TypeCategory::Integer>>> {
+            if (const auto *constant{
+                    UnwrapConstantValue<Type<TypeCategory::Integer>>(
+                        SubscriptIntegerKind, expr.value())}) {
               return *constant;
             } else {
               return std::nullopt;
             }
           },
-          [&](Triplet &triplet) -> std::optional<Constant<SubscriptInteger>> {
+          [&](Triplet &triplet)
+              -> std::optional<Constant<Type<TypeCategory::Integer>>> {
             auto lower{triplet.lower()}, upper{triplet.upper()};
             std::optional<ConstantSubscript> stride{ToInt64(triplet.stride())};
             if (!lower) {
@@ -49,13 +51,13 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
             }
             auto lbi{ToInt64(lower)}, ubi{ToInt64(upper)};
             if (lbi && ubi && stride && *stride != 0) {
-              std::vector<SubscriptInteger::Scalar> values;
+              std::vector<Type<TypeCategory::Integer>::Scalar> values;
               while ((*stride > 0 && *lbi <= *ubi) ||
                   (*stride < 0 && *lbi >= *ubi)) {
                 values.emplace_back(SubscriptIntegerKind, *lbi);
                 *lbi += *stride;
               }
-              return Constant<SubscriptInteger>{SubscriptIntegerKind,
+              return Constant<Type<TypeCategory::Integer>>{SubscriptIntegerKind,
                   std::move(values),
                   ConstantSubscripts{
                       static_cast<ConstantSubscript>(values.size())}};
@@ -165,8 +167,8 @@ ArrayRef FoldOperation(FoldingContext &context, ArrayRef &&arrayRef) {
 
 CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
   DataRef base{FoldOperation(context, std::move(coarrayRef.base()))};
-  std::vector<Expr<SubscriptInteger>> cosubscript;
-  for (Expr<SubscriptInteger> x : coarrayRef.cosubscript()) {
+  std::vector<Expr<Type<TypeCategory::Integer>>> cosubscript;
+  for (Expr<Type<TypeCategory::Integer>> x : coarrayRef.cosubscript()) {
     cosubscript.emplace_back(Fold(context, std::move(x)));
   }
   CoarrayRef folded{std::move(base), std::move(cosubscript)};
@@ -341,7 +343,7 @@ static std::optional<ResolvedConsequent> FoldConditionalArgImpl(
   condArg.condition() = Fold(context, std::move(condArg.condition()));
 
   // Condition is constant - select appropriate branch and recursively fold it.
-  if (auto constCond{GetScalarConstantValue<LogicalResult>(
+  if (auto constCond{GetScalarConstantValue<Type<TypeCategory::Logical>>(
           LogicalResultKind, condArg.condition())}) {
     if (constCond->IsTrue()) {
       // .TRUE. — select this consequent.

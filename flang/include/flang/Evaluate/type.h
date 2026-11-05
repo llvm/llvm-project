@@ -60,34 +60,22 @@ class TargetCharacteristics;
 //       with TypeCategory.
 template <TypeCategory CATEGORY> class Type;
 
-// The type and kind used for array subscripts.
-// Be aware that SubscriptInteger alone matches INTEGER of any kind.
-using SubscriptInteger = Type<TypeCategory::Integer>;
+// The kind used for array subscripts (INTEGER).
 inline constexpr int SubscriptIntegerKind{8};
 
-// The type and kind used for int arguments in the C ABI.
-// Be aware that CInteger alone matches INTEGER of any kind.
-using CInteger = Type<TypeCategory::Integer>;
+// The kind used for int arguments in the C ABI (INTEGER).
 inline constexpr int CIntegerKind{4};
 
-// The type and kind of the largest supported integer.
-// Be aware that LargestInt alone matches INTEGER of any kind.
-using LargestInt = Type<TypeCategory::Integer>;
+// The kind of the largest supported integer (INTEGER).
 inline constexpr int LargestIntKind{16};
 
-// The type and kind of the result of relational and logical operations.
-// Be aware that LogicalResult alone matches LOGICAL of any kind.
-using LogicalResult = Type<TypeCategory::Logical>;
+// The kind of the result of relational and logical operations (LOGICAL).
 inline constexpr int LogicalResultKind{4};
 
-// The type and kind of the largest supported real.
-// Be aware that LargestReal alone matches REAL of any kind.
-using LargestReal = Type<TypeCategory::Real>;
+// The kind of the largest supported real (REAL).
 inline constexpr int LargestRealKind{16};
 
-// The type and kind of ASCII character strings.
-// Be aware that Ascii alone matches CHARACTER of any kind.
-using Ascii = Type<TypeCategory::Character>;
+// The kind of ASCII character strings (CHARACTER).
 inline constexpr int AsciiKind{1};
 
 // DynamicType is meant to be suitable for use as the result type for
@@ -167,11 +155,11 @@ public:
 #endif
     return knownLength_;
   }
-  std::optional<Expr<SubscriptInteger>> GetCharLength() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> GetCharLength() const;
 
   std::size_t GetAlignment(const TargetCharacteristics &) const;
-  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(FoldingContext &,
-      bool aligned,
+  std::optional<Expr<Type<TypeCategory::Integer>>> MeasureSizeInBytes(
+      FoldingContext &, bool aligned,
       std::optional<std::int64_t> charLength = std::nullopt) const;
 
   std::string AsFortran() const;
@@ -369,7 +357,7 @@ public:
 // Many expressions, including subscripts, CHARACTER lengths, array bounds,
 // and effective type parameter values, are of a maximal kind of INTEGER.
 using IndirectSubscriptIntegerExpr =
-    common::CopyableIndirection<Expr<SubscriptInteger>>;
+    common::CopyableIndirection<Expr<Type<TypeCategory::Integer>>>;
 
 // For each intrinsic type category CAT, CategoryTypes<CAT> is a singleton
 // tuple containing its runtime-kind Type<CAT>.

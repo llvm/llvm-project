@@ -66,7 +66,7 @@ public:
   const ConstantSubscripts &shape() const { return shape_; }
   int Rank() const { return GetRank(shape_); }
   static constexpr int Corank() { return 0; }
-  Constant<SubscriptInteger> SHAPE() const;
+  Constant<Type<TypeCategory::Integer>> SHAPE() const;
 
   // It is possible in this representation for a constant array to have
   // lower bounds other than 1, which is of course not expressible in
@@ -307,18 +307,20 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 };
 
-inline Constant<SubscriptInteger> MakeSubscriptIntConstant(int64_t v) {
-  return Constant<SubscriptInteger>{
-      SubscriptIntegerKind, Scalar<SubscriptInteger>{SubscriptIntegerKind, v}};
+inline Constant<Type<TypeCategory::Integer>> MakeSubscriptIntConstant(
+    int64_t v) {
+  return Constant<Type<TypeCategory::Integer>>{SubscriptIntegerKind,
+      Scalar<Type<TypeCategory::Integer>>{SubscriptIntegerKind, v}};
 }
 
-inline Constant<CInteger> MakeCIntegerConstant(int32_t v) {
-  return Constant<CInteger>{CIntegerKind, Scalar<CInteger>{CIntegerKind, v}};
+inline Constant<Type<TypeCategory::Integer>> MakeCIntegerConstant(int32_t v) {
+  return Constant<Type<TypeCategory::Integer>>{
+      CIntegerKind, Scalar<Type<TypeCategory::Integer>>{CIntegerKind, v}};
 }
 
-inline Constant<LogicalResult> MakeLogicalResultConstant(bool v) {
-  return Constant<LogicalResult>{
-      LogicalResultKind, Scalar<LogicalResult>{LogicalResultKind, v}};
+inline Constant<Type<TypeCategory::Logical>> MakeLogicalResultConstant(bool v) {
+  return Constant<Type<TypeCategory::Logical>>{LogicalResultKind,
+      Scalar<Type<TypeCategory::Logical>>{LogicalResultKind, v}};
 }
 
 template <typename T, typename CharT,

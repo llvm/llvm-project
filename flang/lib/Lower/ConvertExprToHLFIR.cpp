@@ -1699,8 +1699,9 @@ private:
     // BOZ literals reach lowering only from BGE/BGT/BLE/BLT intrinsics when at
     // least one operand is not constant (otherwise folds). For all other
     // intrinsics, semantics converts BOZ to the expected type before lowering.
-    Fortran::evaluate::Constant<Fortran::evaluate::LargestInt> intConstant{
-        Fortran::evaluate::LargestIntKind, expr};
+    Fortran::evaluate::Constant<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
+        intConstant{Fortran::evaluate::LargestIntKind, expr};
     return gen(intConstant);
   }
 

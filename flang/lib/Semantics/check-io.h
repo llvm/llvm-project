@@ -86,7 +86,8 @@ private:
       StatusReplace, StatusScratch, DataList)
 
   template <typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
-    using DefaultCharConstantType = evaluate::Ascii;
+    using DefaultCharConstantType =
+        evaluate::Type<common::TypeCategory::Character>;
     if (const SomeExpr * expr{GetExpr(context_, x)}) {
       const auto foldExpr{
           evaluate::Fold(context_.foldingContext(), common::Clone(*expr))};

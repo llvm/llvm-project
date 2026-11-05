@@ -331,7 +331,7 @@ struct ProcedureDesignator {
   bool IsElemental() const;
   bool IsPure() const;
   bool IsSimple() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::variant<SpecificIntrinsic, SymbolRef,
@@ -369,7 +369,7 @@ public:
   const Chevrons &chevrons() const { return chevrons_; }
   void set_chevrons(Chevrons &&chevrons) { chevrons_ = std::move(chevrons); }
 
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   int Rank() const;
   static constexpr int Corank() { return 0; } // TODO
   bool IsElemental() const { return proc_.IsElemental(); }

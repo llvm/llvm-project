@@ -464,7 +464,7 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
     const auto *someInt{evaluate::UnwrapExpr<SomeIntExpr>(folded)};
     CHECK(someInt);
     auto asSI{evaluate::Fold(context_.foldingContext(),
-        evaluate::ConvertToType<evaluate::SubscriptInteger>(
+        evaluate::ConvertToType<evaluate::Type<common::TypeCategory::Integer>>(
             evaluate::SubscriptIntegerKind, common::Clone(*someInt)))};
     if (folded.Rank() == 0) {
       // Scalar bound: broadcasts to every dimension.
@@ -575,8 +575,8 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   arraySpec_.set_rankOneBounds(
       result->lbound && isRankOne(*result->lbound), isRankOne(result->ubound));
   auto elementOf{[](const SubscriptIntExpr &base, int dim) {
-    if (const auto *constant{
-            evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(base)}) {
+    if (const auto *constant{evaluate::UnwrapConstantValue<
+            evaluate::Type<common::TypeCategory::Integer>>(base)}) {
       return evaluate::MakeSubscriptIntExpr(constant->values().at(dim));
     }
     return SubscriptIntExpr{
@@ -658,7 +658,8 @@ Bound ArraySpecAnalyzer::GetBound(const parser::SpecificationExpr &x) {
   if (MaybeExpr maybeExpr{AnalyzeExpr(context_, x.v)}) {
     if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
       expr = evaluate::Fold(context_.foldingContext(),
-          evaluate::ConvertToType<evaluate::SubscriptInteger>(
+          evaluate::ConvertToType<
+              evaluate::Type<common::TypeCategory::Integer>>(
               evaluate::SubscriptIntegerKind, std::move(*intExpr)));
     }
   }

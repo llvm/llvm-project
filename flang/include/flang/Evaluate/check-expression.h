@@ -40,7 +40,7 @@ extern template bool IsConstantExpr(
 extern template bool IsConstantExpr(
     const Expr<SomeInteger> &, const FoldingContext *);
 extern template bool IsConstantExpr(
-    const Expr<SubscriptInteger> &, const FoldingContext *);
+    const Expr<Type<TypeCategory::Integer>> &, const FoldingContext *);
 extern template bool IsConstantExpr(
     const StructureConstructor &, const FoldingContext *);
 
@@ -55,7 +55,7 @@ extern template bool IsScopeInvariantExpr(
 extern template bool IsScopeInvariantExpr(
     const Expr<SomeInteger> &, const FoldingContext *);
 extern template bool IsScopeInvariantExpr(
-    const Expr<SubscriptInteger> &, const FoldingContext *);
+    const Expr<Type<TypeCategory::Integer>> &, const FoldingContext *);
 
 // Predicate: true when an expression actually is a typed Constant<T>,
 // perhaps with parentheses and wrapping around it.  False for all typeless
@@ -63,9 +63,10 @@ extern template bool IsScopeInvariantExpr(
 template <typename A> bool IsActuallyConstant(const A &);
 extern template bool IsActuallyConstant(const Expr<SomeType> &);
 extern template bool IsActuallyConstant(const Expr<SomeInteger> &);
-extern template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 extern template bool IsActuallyConstant(
-    const std::optional<Expr<SubscriptInteger>> &);
+    const Expr<Type<TypeCategory::Integer>> &);
+extern template bool IsActuallyConstant(
+    const std::optional<Expr<Type<TypeCategory::Integer>>> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
@@ -106,9 +107,9 @@ extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
 extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
+extern template void CheckSpecificationExpr(
+    const Expr<Type<TypeCategory::Integer>> &x, const semantics::Scope &,
+    FoldingContext &, bool forElementalFunctionResult);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeType>> &x, const semantics::Scope &,
     FoldingContext &, bool forElementalFunctionResult);
@@ -116,8 +117,9 @@ extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeInteger>> &x, const semantics::Scope &,
     FoldingContext &, bool forElementalFunctionResult);
 extern template void CheckSpecificationExpr(
-    const std::optional<Expr<SubscriptInteger>> &x, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
+    const std::optional<Expr<Type<TypeCategory::Integer>>> &x,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 
 // Contiguity & "simple contiguity" (9.5.4)
 // Named constant sections are expressions, and as such their evaluation is

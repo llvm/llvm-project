@@ -166,8 +166,10 @@ public:
     type_ = t;
     return *this;
   }
-  const std::optional<Expr<SubscriptInteger>> &LEN() const { return LEN_; }
-  TypeAndShape &set_LEN(Expr<SubscriptInteger> &&len) {
+  const std::optional<Expr<Type<TypeCategory::Integer>>> &LEN() const {
+    return LEN_;
+  }
+  TypeAndShape &set_LEN(Expr<Type<TypeCategory::Integer>> &&len) {
     LEN_ = std::move(len);
     return *this;
   }
@@ -197,9 +199,9 @@ public:
       const char *thisIs = "pointer", const char *thatIs = "target",
       bool omitShapeConformanceCheck = false,
       enum CheckConformanceFlags::Flags = CheckConformanceFlags::None) const;
-  std::optional<Expr<SubscriptInteger>> MeasureElementSizeInBytes(
+  std::optional<Expr<Type<TypeCategory::Integer>>> MeasureElementSizeInBytes(
       FoldingContext &, bool align) const;
-  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
+  std::optional<Expr<Type<TypeCategory::Integer>>> MeasureSizeInBytes(
       FoldingContext &) const;
 
   bool IsExplicitShape() const {
@@ -223,7 +225,7 @@ private:
   void AcquireLEN(const semantics::Symbol &);
 
   DynamicType type_;
-  std::optional<Expr<SubscriptInteger>> LEN_;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN_;
   std::optional<Shape> shape_;
   Attrs attrs_;
   bool isPossibleSequenceAssociation_{false};
@@ -256,7 +258,7 @@ struct DummyDataObject {
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   TypeAndShape type;
-  std::vector<Expr<SubscriptInteger>> coshape;
+  std::vector<Expr<Type<TypeCategory::Integer>>> coshape;
   common::Intent intent{common::Intent::Default};
   Attrs attrs;
   common::IgnoreTKRSet ignoreTKR;

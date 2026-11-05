@@ -342,7 +342,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
 // Automatic conversion of different-kind LOGICAL scalar actual argument
 // expressions (not variables) to LOGICAL scalar dummies when the dummy is of
 // default logical kind. This allows expressions in dummy arguments to work when
-// the default logical kind is not the one used in LogicalResult. This will
+// the default logical kind is not the one used in LogicalResultKind. This will
 // always be safe even when downconverting so no warning is needed.
 static void ConvertLogicalActual(evaluate::Expr<evaluate::SomeType> &actual,
     const characteristics::TypeAndShape &dummyType,
@@ -420,7 +420,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // or error for this case.
   bool volatileOrAsyncNeedsTempDiagnosticIssued{false};
   if (typesCompatible) {
-    if (const auto *constantChar{evaluate::UnwrapConstantValue<evaluate::Ascii>(
+    if (const auto *constantChar{evaluate::UnwrapConstantValue<
+            evaluate::Type<common::TypeCategory::Character>>(
             evaluate::AsciiKind, actual)};
         constantChar && constantChar->wasHollerith() &&
         dummy.type.type().IsUnlimitedPolymorphic()) {

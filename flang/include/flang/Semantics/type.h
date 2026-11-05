@@ -49,7 +49,8 @@ using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using MaybeExpr = std::optional<SomeExpr>;
 using SomeIntExpr = evaluate::Expr<evaluate::SomeInteger>;
 using MaybeIntExpr = std::optional<SomeIntExpr>;
-using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
+using SubscriptIntExpr =
+    evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
 

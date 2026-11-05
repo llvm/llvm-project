@@ -1228,15 +1228,16 @@ static void PutRankOneBoundSide(
       return;
     }
   }
-  std::vector<evaluate::Scalar<evaluate::SubscriptInteger>> values;
+  std::vector<evaluate::Scalar<evaluate::Type<common::TypeCategory::Integer>>>
+      values;
   for (const ShapeSpec &spec : shape) {
     auto value{evaluate::ToInt64(boundOf(spec).GetExplicit())};
     // A rank-1 side without a RankOneBoundElement is a folded constant array.
     CHECK(value);
     values.emplace_back(evaluate::SubscriptIntegerKind, *value);
   }
-  evaluate::Constant<evaluate::SubscriptInteger>{evaluate::SubscriptIntegerKind,
-      std::move(values),
+  evaluate::Constant<evaluate::Type<common::TypeCategory::Integer>>{
+      evaluate::SubscriptIntegerKind, std::move(values),
       evaluate::ConstantSubscripts{
           static_cast<evaluate::ConstantSubscript>(shape.size())}}
       .AsFortran(os);

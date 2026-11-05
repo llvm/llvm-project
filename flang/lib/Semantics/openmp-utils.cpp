@@ -2377,9 +2377,9 @@ std::optional<bool> EvaluateUserCondition(
   if (auto constVal = evaluate::ToInt64(foldedExpr))
     return *constVal != 0;
 
-  if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
-              evaluate::LogicalResultKind, foldedExpr))
+  if (auto logicalVal = evaluate::GetScalarConstantValue<
+          evaluate::Type<common::TypeCategory::Logical>>(
+          evaluate::LogicalResultKind, foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
