@@ -58,11 +58,11 @@ static bool mayHaveBeenRoundedFromSubnormal(const APFloat &Result,
   llvm_unreachable("unknown rounding mode");
 }
 
-static bool containsSNaN(ArrayRef<APFloat> Args) {
+static APFloat::opStatus getSNaNStatus(ArrayRef<APFloat> Args) {
   for (const APFloat &Arg : Args)
     if (Arg.isSignaling())
-      return true;
-  return false;
+      return APFloat::opInvalidOp;
+  return APFloat::opOK;
 }
 
 /// The internal helper that dispatches to APFloat, and always produces
@@ -89,22 +89,22 @@ static APFloat::opStatus executeFold(FPOp Opcode, APFloat &Result,
       return Result.mod(Args[1]);
     case FPOp::MinNum:
       Result = minnum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     case FPOp::MaxNum:
       Result = maxnum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     case FPOp::Minimum:
       Result = minimum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     case FPOp::Maximum:
       Result = maximum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     case FPOp::MinimumNum:
       Result = minimumnum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     case FPOp::MaximumNum:
       Result = maximumnum(Result, Args[1]);
-      return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;
+      return getSNaNStatus(Args);
     }
   } else if (Args.size() == 1) {
     switch (Opcode) {
