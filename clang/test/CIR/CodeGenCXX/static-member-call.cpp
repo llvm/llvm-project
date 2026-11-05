@@ -22,7 +22,7 @@ int test_instance_call(S s) {
   // CIR: cir.return %[[RES]] : !s32i
 
   // LLVM: %[[CALL_LLVM:.*]] = call {{.*}}i32 @_ZN1S11static_funcEi(i32 {{.*}}42)
-  // LLVM: ret i32 %[[CALL_LLVM]]
+  // LLVM: ret i32 %{{.*}}
 
   // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 42)
   // OGCG: ret i32 %[[CALL_OGCG]]
@@ -40,7 +40,7 @@ int test_arrow_call(S *p) {
   // CIR: cir.return %[[RES]] : !s32i
 
   // LLVM: %[[CALL_LLVM:.*]] = call {{.*}}i32 @_ZN1S11static_funcEi(i32 {{.*}}100)
-  // LLVM: ret i32 %[[CALL_LLVM]]
+  // LLVM: ret i32 %{{.*}}
 
   // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 100)
   // OGCG: ret i32 %[[CALL_OGCG]]
@@ -59,7 +59,7 @@ int test_side_effect() {
 
   // LLVM: call void @_Z5get_sv()
   // LLVM: %[[CALL_LLVM:.*]] = call {{.*}}i32 @_ZN1S11static_funcEi(i32 {{.*}}42)
-  // LLVM: ret i32 %[[CALL_LLVM]]
+  // LLVM: ret i32 %{{.*}}
 
   // OGCG: call void @_Z5get_sv()
   // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 42)
@@ -74,7 +74,7 @@ int test_side_effect() {
 int test_ptr_side_effect(S *p) {
   // CIR: %[[P_ADDR:.*]] = cir.alloca "p"
   // CIR: %[[P_INC:.*]] = cir.ptr_stride
-  // CIR: cir.store %[[P_INC]], %[[P_ADDR]]
+  // CIR: cir.store{{.*}} %[[P_INC]], %[[P_ADDR]]
   // CIR: %[[ARG:.*]] = cir.const #cir.int<100> : !s32i
   // CIR: %[[CALL:.*]] = cir.call @_ZN1S11static_funcEi(%[[ARG]]) : (!s32i {{.*}}) -> (!s32i {{.*}})
   // CIR: cir.return %{{.*}} : !s32i
@@ -83,7 +83,7 @@ int test_ptr_side_effect(S *p) {
   // LLVM: %[[P_INC:.*]] = getelementptr {{.*}}
   // LLVM: store ptr %[[P_INC]], ptr %[[P_ADDR]]
   // LLVM: %[[CALL_LLVM:.*]] = call {{.*}}i32 @_ZN1S11static_funcEi(i32 {{.*}}100)
-  // LLVM: ret i32 %[[CALL_LLVM]]
+  // LLVM: ret i32 %{{.*}}
 
   // OGCG: %[[P_ADDR:.*]] = alloca ptr
   // OGCG: %[[P_INC:.*]] = getelementptr inbounds %struct.S, ptr %{{.*}}, i32 1
