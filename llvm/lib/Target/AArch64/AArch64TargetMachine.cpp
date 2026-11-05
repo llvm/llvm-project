@@ -82,6 +82,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
+  initializeAArch64IntrinsicsVerifierPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64PTrueCoalescingLegacyPass(PR);
@@ -567,6 +568,7 @@ void AArch64PassConfig::addIRPasses() {
 
 // Pass Pipeline Configuration
 bool AArch64PassConfig::addPreISel() {
+  addPass(createAArch64IntrinsicsVerifierPass());
   // Run promote constant before global merge, so that the promoted constants
   // get a chance to be merged
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_promote_const)

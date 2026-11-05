@@ -196,7 +196,9 @@ clang_tablegen(arm_sve_builtins.json -gen-arm-sve-builtins-json
   SOURCE arm_sve.td
   TARGET ClangARMSveBuiltinsJSON)
 clang_tablegen(arm_sve_builtin_cg.inc -gen-arm-sve-builtin-codegen
-  SOURCE arm_sve.td
+  SOURCE arm_sve_intrinsic_guards.td
+  DEPENDS ${LLVM_MAIN_SRC_DIR}/include/llvm/IR/Intrinsics.td
+          ${LLVM_MAIN_SRC_DIR}/include/llvm/IR/IntrinsicsAArch64.td
   TARGET ClangARMSveBuiltinCG)
 clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
   SOURCE arm_sve.td
@@ -214,7 +216,9 @@ clang_tablegen(arm_sme_builtins.json -gen-arm-sme-builtins-json
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltinsJSON)
 clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
-  SOURCE arm_sme.td
+  SOURCE arm_sme_intrinsic_guards.td
+  DEPENDS ${LLVM_MAIN_SRC_DIR}/include/llvm/IR/Intrinsics.td
+          ${LLVM_MAIN_SRC_DIR}/include/llvm/IR/IntrinsicsAArch64.td
   TARGET ClangARMSmeBuiltinCG)
 clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
   SOURCE arm_sme.td

@@ -366,25 +366,6 @@ define <vscale x 4 x float> @ldff1w_f32_reg(<vscale x 4 x i1> %pg, ptr %a, i64 %
   ret <vscale x 4 x float> %load
 }
 
-define <vscale x 2 x float> @ldff1w_2f32(<vscale x 2 x i1> %pg, ptr %a) {
-; CHECK-LABEL: ldff1w_2f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldff1w { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x float> @llvm.aarch64.sve.ldff1.nxv2f32(<vscale x 2 x i1> %pg, ptr %a)
-  ret <vscale x 2 x float> %load
-}
-
-define <vscale x 2 x float> @ldff1w_2f32_reg(<vscale x 2 x i1> %pg, ptr %a, i64 %offset) {
-; CHECK-LABEL: ldff1w_2f32_reg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldff1w { z0.d }, p0/z, [x0, x1, lsl #2]
-; CHECK-NEXT:    ret
-  %base = getelementptr float, ptr %a, i64 %offset
-  %load = call <vscale x 2 x float> @llvm.aarch64.sve.ldff1.nxv2f32(<vscale x 2 x i1> %pg, ptr %base)
-  ret <vscale x 2 x float> %load
-}
-
 ;
 ; LDFF1SW
 ;
@@ -463,7 +444,6 @@ declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ldff1.nxv8bf16(<vscale x 8 x i1>
 declare <vscale x 4 x i8> @llvm.aarch64.sve.ldff1.nxv4i8(<vscale x 4 x i1>, ptr)
 declare <vscale x 4 x i16> @llvm.aarch64.sve.ldff1.nxv4i16(<vscale x 4 x i1>, ptr)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.nxv4i32(<vscale x 4 x i1>, ptr)
-declare <vscale x 2 x float> @llvm.aarch64.sve.ldff1.nxv2f32(<vscale x 2 x i1>, ptr)
 declare <vscale x 4 x float> @llvm.aarch64.sve.ldff1.nxv4f32(<vscale x 4 x i1>, ptr)
 
 declare <vscale x 2 x i8> @llvm.aarch64.sve.ldff1.nxv2i8(<vscale x 2 x i1>, ptr)

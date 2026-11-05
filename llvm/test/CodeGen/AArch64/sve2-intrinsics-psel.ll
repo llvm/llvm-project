@@ -87,7 +87,7 @@ define <vscale x 16 x i1> @psel_d_imm(<vscale x 16 x i1> %p1, <vscale x 2 x i1> 
   ret <vscale x 16 x i1> %res
 }
 
-define target("aarch64.svcount") @psel_svcount_b(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_b(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_b:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -97,7 +97,7 @@ define target("aarch64.svcount") @psel_svcount_b(target("aarch64.svcount") %p1, 
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_b_imm(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_b_imm(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_b_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -108,7 +108,7 @@ define target("aarch64.svcount") @psel_svcount_b_imm(target("aarch64.svcount") %
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_h(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_h(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_h:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -118,7 +118,7 @@ define target("aarch64.svcount") @psel_svcount_h(target("aarch64.svcount") %p1, 
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_h_imm(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_h_imm(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_h_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -129,7 +129,7 @@ define target("aarch64.svcount") @psel_svcount_h_imm(target("aarch64.svcount") %
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_s(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_s(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -139,7 +139,7 @@ define target("aarch64.svcount") @psel_svcount_s(target("aarch64.svcount") %p1, 
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_s_imm(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_s_imm(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_s_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -150,7 +150,7 @@ define target("aarch64.svcount") @psel_svcount_s_imm(target("aarch64.svcount") %
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_d(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_d(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -160,7 +160,7 @@ define target("aarch64.svcount") @psel_svcount_d(target("aarch64.svcount") %p1, 
   ret target("aarch64.svcount") %res
 }
 
-define target("aarch64.svcount") @psel_svcount_d_imm(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) {
+define target("aarch64.svcount") @psel_svcount_d_imm(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) "target-features"="+sme2" {
 ; CHECK-LABEL: psel_svcount_d_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
