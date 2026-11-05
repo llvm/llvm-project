@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -311,20 +312,62 @@ void StartRssThread(Fuzzer *F, size_t RssLimitMb);
 // Fuchsia needs to do some book checking before starting the RssThread,
 // so it has its own implementation.
 #if !LIBFUZZER_FUCHSIA
-static void RssThread(Fuzzer *F, size_t RssLimitMb) {
-  while (true) {
-    SleepSeconds(1);
-    size_t Peak = GetPeakRSSMb();
-    if (Peak > RssLimitMb)
-      F->RssLimitCallback();
+class RssMonitor {
+public:
+  RssMonitor(Fuzzer *F, size_t RssLimitMb)
+      : Thread([this, F, RssLimitMb] {
+          std::unique_lock<std::mutex> Lock(Mutex);
+          while (!Wakeup.wait_for(Lock, std::chrono::seconds(1),
+                                  [this] { return StopRequested; })) {
+            Lock.unlock();
+            if (GetPeakRSSMb() > RssLimitMb)
+              F->RssLimitCallback();
+            Lock.lock();
+          }
+        }) {}
+
+  ~RssMonitor() {
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      StopRequested = true;
+    }
+    Wakeup.notify_one();
+    Thread.join();
   }
+
+  unsigned long GetOwnerPid() const { return OwnerPid; }
+
+private:
+  const unsigned long OwnerPid = GetPid();
+  std::mutex Mutex;
+  std::condition_variable Wakeup;
+  bool StopRequested = false;
+  std::thread Thread;
+};
+
+static RssMonitor *RssMonitorInstance;
+
+static void StopRssThread() {
+  // A child forked by the target must not join a thread from the parent
+  // process.
+  if (!RssMonitorInstance || RssMonitorInstance->GetOwnerPid() != GetPid())
+    return;
+  delete RssMonitorInstance;
+  RssMonitorInstance = nullptr;
 }
 
 void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   if (!RssLimitMb)
     return;
-  std::thread T(RssThread, F, RssLimitMb);
-  T.detach();
+  RssMonitorInstance = new RssMonitor(F, RssLimitMb);
+  // Stop the monitor before LeakSanitizer's process-exit check. In particular,
+  // release the C++ runtime's thread allocations instead of leaving it
+  // detached.
+  if (std::atexit(StopRssThread)) {
+    StopRssThread();
+    Printf("ERROR: failed to register RSS monitor cleanup\n");
+    exit(1);
+  }
 }
 #endif
 

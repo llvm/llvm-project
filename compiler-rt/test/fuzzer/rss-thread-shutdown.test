@@ -1,0 +1,15 @@
+REQUIRES: linux, lsan
+RUN: %cpp_compiler %S/RssThreadShutdownTest.cpp -o %t
+RUN: %env_asan_opts=detect_leaks=1 %run %t -runs=1000 -rss_limit_mb=512 -detect_leaks=1 2>&1 | FileCheck %s
+RUN: %env_asan_opts=detect_leaks=1 %run %t -runs=1000 -rss_limit_mb=0 -detect_leaks=1 2>&1 | FileCheck %s
+
+RUN: env LIBFUZZER_TEST_FORK=1 %env_asan_opts=detect_leaks=1 %run %t -runs=1000 -rss_limit_mb=512 -detect_leaks=1 -error_exitcode=77 -timeout=5 2>&1 | FileCheck %s
+RUN: not env LIBFUZZER_TEST_LEAK=1 %env_asan_opts=detect_leaks=1 %run %t -runs=1000 -rss_limit_mb=512 -detect_leaks=1 2>&1 | FileCheck %s --check-prefix=LEAK
+
+CHECK: Done 1000 runs
+CHECK: RSS monitor stopped before process exit
+CHECK-NOT: LeakSanitizer
+
+LEAK: RSS monitor stopped before process exit
+LEAK: ERROR: LeakSanitizer: detected memory leaks
+LEAK: Direct leak of 12345 byte(s)
