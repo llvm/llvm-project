@@ -1392,6 +1392,8 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::donothing:
   // Neither does the sideeffect intrinsic.
   case Intrinsic::sideeffect:
+  // Nor does llvm.omp.sync.marker, which only constrains the optimizer.
+  case Intrinsic::omp_sync_marker:
   // Neither does the assume intrinsic; it's also OK not to codegen its operand.
   case Intrinsic::assume:
   // Neither does the llvm.experimental.noalias.scope.decl intrinsic

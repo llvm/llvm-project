@@ -27,7 +27,9 @@ end subroutine
 !CHECK-LABEL: define void @sub_(
 !CHECK-SAME: ptr noalias {{.*}}%[[TMP:[0-9]+]])
 !CHECK: call void @__kmpc_critical(
+!CHECK-NEXT: call void @llvm.omp.sync.marker.p0(ptr {{.*}}%[[TMP]])
 !CHECK-NEXT: load double, ptr %[[TMP]]
 !CHECK-NOT: __kmpc_end_critical
 !CHECK: store double %{{.*}}, ptr %[[TMP]]
+!CHECK-NEXT: call void @llvm.omp.sync.marker.p0(ptr {{.*}}%[[TMP]])
 !CHECK-NEXT: call void @__kmpc_end_critical(

@@ -27691,6 +27691,36 @@ None.
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+(llvm_omp_sync_marker)=
+
+#### '`llvm.omp.sync.marker`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```
+declare void @llvm.omp.sync.marker.p0(ptr captures(none) <ptr>) nounwind willreturn memory(argmem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.omp.sync.marker` intrinsic marks a point where an OpenMP flush is
+implied for the memory that `<ptr>` points to, for example at a barrier. A
+frontend can use it for pointers that are `noalias` but whose memory may still
+be accessed by other threads that synchronize with this one, such as Fortran
+dummy arguments.
+
+##### Arguments:
+
+A pointer to the memory to keep ordered.
+
+##### Semantics:
+
+The intrinsic doesn't generate any code. Optimizers must assume that it reads
+and writes the memory that `<ptr>` points to, so accesses to that memory can't
+be moved across it. It doesn't capture `<ptr>`.
+
 (llvm_pseudoprobe)=
 
 #### '`llvm.pseudoprobe`' Intrinsic

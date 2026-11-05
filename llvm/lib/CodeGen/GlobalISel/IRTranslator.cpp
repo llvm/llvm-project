@@ -3292,7 +3292,9 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
-    // Discard annotate attributes, assumptions, and artificial side-effects.
+  case Intrinsic::omp_sync_marker:
+    // Discard annotate attributes, assumptions, artificial side-effects, and
+    // OpenMP sync markers.
     return true;
   case Intrinsic::read_volatile_register:
   case Intrinsic::read_register: {
