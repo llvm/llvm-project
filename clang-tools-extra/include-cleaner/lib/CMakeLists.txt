@@ -2,10 +2,11 @@ set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangIncludeCleaner STATIC
   Analysis.cpp
-  IncludeSpeller.cpp
   FindHeaders.cpp
   HTMLReport.cpp
+  IncludeSpeller.cpp
   LocateSymbol.cpp
+  MappingFile.cpp
   Record.cpp
   Types.cpp
   WalkAST.cpp
