@@ -2195,14 +2195,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         break;
       }
 
-      if (AMgr.options.ShouldEagerlyAssume &&
-          (B->isRelationalOp() || B->isEqualityOp())) {
-        ExplodedNodeSet Tmp;
-        VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Tmp);
-        evalEagerlyAssumeBifurcation(Dst, Tmp, cast<Expr>(S));
-      }
-      else
-        VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
+      VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
 
       break;
     }
@@ -2346,14 +2339,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Stmt::UnaryOperatorClass: {
-      const auto *U = cast<UnaryOperator>(S);
-      if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
-        ExplodedNodeSet Tmp;
-        VisitUnaryOperator(U, Pred, Tmp);
-        evalEagerlyAssumeBifurcation(Dst, Tmp, U);
-      }
-      else
-        VisitUnaryOperator(U, Pred, Dst);
+      VisitUnaryOperator(cast<UnaryOperator>(S), Pred, Dst);
       break;
     }
 
