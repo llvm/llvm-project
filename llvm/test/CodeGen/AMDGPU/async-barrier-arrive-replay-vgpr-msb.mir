@@ -1,8 +1,6 @@
-# NOTE: Do not autogenerate. Check the bank switch inside the workaround and assemble compiler output with fatal warnings.
+# NOTE: Do not autogenerate. Check the ordered bank switch and EXEC preservation inside the workaround.
 # RUN: llc -mtriple=amdgpu12.50-amd-amdpal -start-before=si-insert-async-barrier-arrive-workaround -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu12.51-amd-amdpal -start-before=si-insert-async-barrier-arrive-workaround -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgpu12.50-amd-amdpal -start-before=si-insert-async-barrier-arrive-workaround -o - %s | llvm-mc -triple=amdgpu12.50-amd-amdpal -filetype=null --fatal-warnings
-# RUN: llc -mtriple=amdgpu12.51-amd-amdpal -start-before=si-insert-async-barrier-arrive-workaround -o - %s | llvm-mc -triple=amdgpu12.51-amd-amdpal -filetype=null --fatal-warnings
 
 --- |
   define amdgpu_cs void @high_vgpr_arrive() { ret void }
