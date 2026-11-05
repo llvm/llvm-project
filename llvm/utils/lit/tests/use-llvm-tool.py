@@ -33,6 +33,14 @@
 # CHECK-NEXT: note: using case9: {{.*}}search2{{[\\/]}}case9
 # CHECK-NEXT: note: using case10: {{.*}}path{{[\\/]}}case10
 
+## Show that tools are still found when PATHEXT is unset, as can happen with
+## hermetic build systems (like Bazel) that strip environment variables.
+## Inputs provide both "case2" and "case2.exe", so match the extension
+## explicitly: without a fallback, lit finds the extension-less "case2".
+# RUN: %if system-windows %{ env -u PATHEXT %{lit} %{inputs}/use-llvm-tool 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-PATHEXT %}
+# NO-PATHEXT: note: using case2: {{.*}}build{{[\\/]}}case2.exe
+
 ## Test that if required is True, lit errors if the tool is not found.
 # RUN: not %{lit} %{inputs}/use-llvm-tool-required 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERROR

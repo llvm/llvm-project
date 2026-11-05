@@ -2,7 +2,7 @@
 ;; and profile section symbols with CUID-based naming. The __llvm_profile_sampling_gpu
 ;; library function handles 3D block linearization internally.
 
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof -S | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof -S | FileCheck %s
 
 @__hip_cuid_abcdef789 = addrspace(1) global i8 0
 @__profn_kernel_3d = private constant [9 x i8] c"kernel_3d"

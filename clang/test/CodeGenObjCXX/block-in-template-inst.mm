@@ -68,3 +68,14 @@ namespace PR9982 {
     auto t = c(1)(10)(100);
   }
 }
+
+namespace ThisCaptureViaDependentBase {
+  // This used to crash.
+  struct Base { int m; };
+
+  template <typename T> struct S : T {
+    void f() { ^{ (void)T::m; }(); }
+  };
+
+  template struct S<Base>;
+}

@@ -14,8 +14,6 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -271,9 +269,9 @@ public:
   }
 };
 
-#define LIST_FMOD_TESTS(T, func)                                               \
-  using LlvmLibcFmodTest = FmodTest<T>;                                        \
-  TEST_F(LlvmLibcFmodTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcFmodTest, RegularExtreme) { testRegularExtreme(&func); }
+#define LIST_FMOD_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FmodTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RegularExtreme) { testRegularExtreme(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H

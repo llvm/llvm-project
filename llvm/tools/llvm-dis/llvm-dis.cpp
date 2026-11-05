@@ -46,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
@@ -176,7 +177,9 @@ int main(int argc, char **argv) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": error: ");
 
   cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "llvm .bc -> .ll disassembler\n");
 
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");
@@ -190,6 +193,7 @@ int main(int argc, char **argv) {
     // Use a fresh context for each input to avoid state
     // cross-contamination across inputs (e.g. type name collisions).
     LLVMContext Context;
+    Context.getLibraryOptions().assign(LibraryOptions);
     Context.setDiagnosticHandler(
         std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
 
@@ -263,6 +267,7 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
+          M->renumberMetadataForAssembly();
           M->print(Out->os(), Annotator.get(),
                    /* ShouldPreserveUseListOrder */ false);
         }

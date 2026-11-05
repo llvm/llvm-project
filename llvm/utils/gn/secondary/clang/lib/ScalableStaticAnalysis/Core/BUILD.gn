@@ -20,6 +20,8 @@ static_library("Core") {
     "Serialization/JSONFormat/JSONFormatImpl.cpp",
     "Serialization/JSONFormat/LUSummary.cpp",
     "Serialization/JSONFormat/LUSummaryEncoding.cpp",
+    "Serialization/JSONFormat/MultiArchSharedLibrary.cpp",
+    "Serialization/JSONFormat/MultiArchStaticLibrary.cpp",
     "Serialization/JSONFormat/StaticLibrary.cpp",
     "Serialization/JSONFormat/TUSummary.cpp",
     "Serialization/JSONFormat/TUSummaryEncoding.cpp",

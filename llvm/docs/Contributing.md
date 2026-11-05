@@ -8,9 +8,6 @@ you can either use the [Forum] or, for a more interactive chat, go to our
 
 If you want to contribute code, please familiarize yourself with the {doc}`DeveloperPolicy`.
 
-```{contents}
-:local:
-```
 
 
 ## Ways to Contribute
@@ -47,11 +44,12 @@ you are interested in working on any of these projects, please post on the
 ## How to Submit a Patch
 Once you have a patch ready, it is time to submit it. The patch should:
 
+* have a single commit, up-to-date with the upstream `origin/main` branch, and don't have merges.
 * include a small unit test
-* conform to the {doc}`CodingStandards`. You can use the [clang-format-diff.py] or [git-clang-format] tools to automatically format your patch properly.
+* conform to the {doc}`CodingStandards`. See [format patches](#format patches) below. 
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit, up-to-date with the upstream `origin/main` branch, and don't have merges.
+* Follow the {ref}`GitHub review process <github-reviews>` from here on out.
 
 (format patches)=
 
@@ -66,7 +64,7 @@ recent commit:
 % git clang-format HEAD~1
 ```
 
-```{note}
+:::{note}
 For some patches, formatting them may add changes that obscure the intent of
 the patch. For example, adding to an enum that was not previously formatted
 may result in the entire enum being reformatted. This happens because not all
@@ -82,7 +80,7 @@ Request that will be merged before your actual changes.
 This means that if the formatting changes are the first commit, you will have
 an easier time doing this. If they are not, that is ok too, but you will have
 to do a bit more work to separate it out.
-```
+:::
 
 Note that `git clang-format` modifies the files, but does not commit them --
 you will likely want to run one of the following to add the changes to a commit:
@@ -94,17 +92,16 @@ you will likely want to run one of the following to add the changes to a commit:
 % git commit --amend -a
 ```
 
-```{note}
+:::{note}
 If you don't already have `clang-format` or `git clang-format` installed
 on your system, the `clang-format` binary will be built alongside clang, and
 the git integration can be run from
 `clang/tools/clang-format/git-clang-format`.
-```
+:::
 
-The LLVM project has migrated to GitHub Pull Requests as its review process.
+The LLVM project uses GitHub Pull Requests for code review.
 For more information about the workflow of using GitHub Pull Requests see our
-{ref}`GitHub <github-reviews>` documentation. We still have a read-only
-[LLVM's Phabricator](https://reviews.llvm.org) instance.
+{ref}`GitHub <github-reviews>` documentation.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review.
@@ -136,10 +133,10 @@ For more information on LLVM's code-review process, please see
 
 ### For developers to commit changes from Git
 
-```{note}
+:::{note}
 See also {ref}`GitHub <github-reviews>` for more details on merging your changes
 into LLVM project monorepo.
-```
+:::
 
 Once a pull request is approved, you can select the "Squash and merge" button in the
 GitHub web interface.

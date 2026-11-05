@@ -13,7 +13,7 @@
 ; ...
 ; CHECK:                    llgt  [[REG3:[0-9]+]],1208
 ; CHECK:                    clc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,4),152([[REG3]])
-; CHECK:                    jlh   [[FAIL_LABEL:L#BB[0-9_]+]]
+; CHECK:                    jne   [[FAIL_LABEL:L#BB[0-9_]+]]
 ; success block
 ; CHECK:                    aghi  4,[[#%u,mul(div(DSA_SIZE,32),32)]]
 ; CHECK:                    b     2(7)
@@ -44,7 +44,7 @@ define void @func0() sspreq {
 ; CHECK:                    llilh [[REG_CANARY_OFF_HIGH_2:[0-9]+]],[[#%u,CANARY_OFF_HIGH_2:div(DSA_SIZE,65536)]]
 ; CHECK:                    la    [[REG_CANARY_OFF_HIGH_2]],0([[REG_CANARY_OFF_HIGH_2]],4)
 ; CHECK:                    clc   [[#%u,2040+mul(div(DSA_SIZE,32),32)-mul(CANARY_OFF_HIGH_2,65536)]](8,[[REG_CANARY_OFF_HIGH_2]]),152([[REG3]])
-; CHECK:                    jlh   [[FAIL_LABEL:L#BB[0-9_]+]]
+; CHECK:                    jne   [[FAIL_LABEL:L#BB[0-9_]+]]
 ; success block
 ; CHECK:                    agfi  4,[[#%u,mul(div(DSA_SIZE,32),32)]]
 ; CHECK:                    b     2(7)
@@ -94,13 +94,13 @@ entry:
 ; CHECK-NEXT:               *   Bit 2: 1 = Uses alloca
 ; CHECK:                    stmg  4,[[SPILLHI:[0-9]+]],[[#%u,2048-mul(div(DSA_SIZE,32),32)]](4)
 ; CHECK:                    aghi  4,-[[#%u,mul(div(DSA_SIZE,32),32)]]
-; CHECK:                    llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    lgr   [[ALLOCAREG:[0-9]+]],4
+; CHECK:                    llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,[[ALLOCAREG]]),152([[REG1]])
 ; ...
 ; CHECK:                    llgt  [[REG3:[0-9]+]],1208
 ; CHECK:                    clc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,[[ALLOCAREG]]),152([[REG3]])
-; CHECK:                    jlh   [[FAIL_LABEL:L#BB[0-9_]+]]
+; CHECK:                    jne   [[FAIL_LABEL:L#BB[0-9_]+]]
 ; success block
 ; CHECK:                    lmg   4,[[SPILLHI]],2048(4)
 ; CHECK:                    b     2(7)

@@ -35,8 +35,9 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
   bool relaxOnce(int pass) const override;
@@ -192,8 +193,9 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -359,8 +361,8 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void SystemZ::scanSection(InputSectionBase &sec) {
-  elf::scanSection1<SystemZ, ELF64BE>(*this, sec);
+void SystemZ::scanSection(InputSectionBase &sec, unsigned shard) {
+  elf::scanSection1<SystemZ, ELF64BE>(*this, sec, shard);
 }
 
 RelType SystemZ::getDynRel(RelType type) const {

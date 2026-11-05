@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; Since this intrinsic is exposed as a constant after isel, use it to
 ; defeat the DAG's compare with constant canonicalizations.

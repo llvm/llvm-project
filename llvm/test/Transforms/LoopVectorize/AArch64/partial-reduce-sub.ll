@@ -43,7 +43,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -283,7 +283,7 @@ define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #2 {
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP0]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
@@ -314,12 +314,12 @@ define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #2 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 3
-; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP3]], 4
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE8:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[TMP0]], i64 [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP0]], align 2
@@ -367,7 +367,7 @@ define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #2 {
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP0]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
@@ -523,8 +523,8 @@ for.exit:
 
 !7 = distinct !{!7, !8, !9, !10}
 !8 = !{!"llvm.loop.mustprogress"}
-!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!10 = !{!"llvm.loop.vectorize.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.predicate.enable"}
+!10 = !{!"llvm.loop.vectorize.enable"}
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { "target-cpu"="apple-m1" }

@@ -7,7 +7,7 @@
 ; RUN: cat %s %t/1 > %t/2
 
 ; RUN: opt -passes=insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
-; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
+; RUN: llvm-cov gcov -n --dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
 ; RUN: opt -passes=insert-gcov-profiling -S < %t/2 -mtriple=s390x-unknown-linux | FileCheck --check-prefix EXT %s
 ; RUN: opt -passes=insert-gcov-profiling -S < %t/2 -mtriple=mips-linux-gnu | FileCheck --check-prefix MIPS_EXT %s
 ; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target

@@ -28,7 +28,7 @@ from dex.evaluation.Metrics import (
 )
 from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script import DexterScript, Scope
-from dex.test_script.Nodes import Expect, Line, Step, Value
+from dex.test_script.Nodes import Expect, ExpectAll, Line, Step
 
 class DebuggerStepMatch:
     """Class used to record the match between a DexterScript and a StepIR, including the state match, determining which
@@ -63,7 +63,9 @@ class DebuggerStepMatch:
                     expect_frame_idx
                 ].loc.lineno
                 return
-            assert isinstance(expect, Value), f"Unexpected expect node kind {expect}"
+            assert (
+                expect.get_watched_expr() is not None
+            ), f"Unexpected expect node kind {expect}"
             self.var_expect_matches[expect] = get_expect_match(
                 expect,
                 expected_value,
@@ -100,7 +102,7 @@ class DebuggerRunMatch(object):
 
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             self.expected_values[expect] = expected_value
-            if isinstance(expect, Value):
+            if expect.get_watched_expr() is not None:
                 self.per_var_expect_results[expect] = []
                 return
             assert isinstance(expect, Step), f"Unexpected expect node kind {expect}"

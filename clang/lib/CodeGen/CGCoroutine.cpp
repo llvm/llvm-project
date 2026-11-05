@@ -437,6 +437,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   llvm::Function *Fn = llvm::Function::Create(
       LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
@@ -444,6 +445,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   Fn->addParamAttr(1, llvm::Attribute::AttrKind::NoUndef);
 
   Fn->setMustProgress();
+  Fn->removeFnAttr(llvm::Attribute::AttrKind::NoInline);
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
@@ -878,6 +880,9 @@ struct GetReturnObjectManager {
     Builder.CreateCondBr(InRamp, ConvBB, AfterConvBB);
 
     CGF.EmitBlock(ConvBB);
+    if (auto *AI = dyn_cast<llvm::AllocaInst>(CGF.ReturnValue.getBasePointer()))
+      AI->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                      llvm::MDNode::get(CGF.getLLVMContext(), {}));
     CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                          S.getReturnValue()->getType().getQualifiers(),
                          /*IsInit*/ true);

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
@@ -47,6 +48,7 @@ enum class SummaryType {
   LU,
   StaticLibrary,
   MultiArchStaticLibrary,
+  MultiArchSharedLibrary,
   WPA
 };
 
@@ -77,6 +79,9 @@ cl::opt<SummaryType> Type(
                clEnumValN(SummaryType::MultiArchStaticLibrary,
                           "multi-arch-static-library",
                           "Multi-architecture static library"),
+               clEnumValN(SummaryType::MultiArchSharedLibrary,
+                          "multi-arch-shared-library",
+                          "Multi-architecture shared library"),
                clEnumValN(SummaryType::WPA, "wpa",
                           "Whole-program analysis suite")),
     cl::init(SummaryType::Auto), cl::cat(SsafFormatCategory));
@@ -321,6 +326,13 @@ void convert(const FormatInput &FI) {
     // readMultiArchStaticLibrary / writeMultiArchStaticLibrary.
     run(FI, &SerializationFormat::readMultiArchStaticLibrary,
         &SerializationFormat::writeMultiArchStaticLibrary);
+    return;
+  case SummaryType::MultiArchSharedLibrary:
+    // MultiArchSharedLibrary has only an encoded representation, so
+    // --encoding is a no-op here: both paths route to
+    // readMultiArchSharedLibrary / writeMultiArchSharedLibrary.
+    run(FI, &SerializationFormat::readMultiArchSharedLibrary,
+        &SerializationFormat::writeMultiArchSharedLibrary);
     return;
   case SummaryType::WPA:
     run(FI, &SerializationFormat::readWPASuite,

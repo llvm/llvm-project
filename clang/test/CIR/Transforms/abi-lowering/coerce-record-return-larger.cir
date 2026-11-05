@@ -3,8 +3,8 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Vec3   = !cir.struct<"Vec3"   {!s32i, !s32i, !s32i}>
-!rec_TwoI64 = !cir.struct<"TwoI64" {!s64i, !s64i}>
+!rec_Vec3   = !cir.struct<"Vec3"   {data !s32i, data !s32i, data !s32i}>
+!rec_TwoI64 = !cir.struct<"TwoI64" {data !s64i, data !s64i}>
 
 #coerce_vec3_return_to_twoi64 = {
   return = { kind = "direct", coerced_type = !rec_TwoI64 },
@@ -57,7 +57,8 @@ module attributes {
   // CHECK:        %[[RET:.*]] = cir.call @returns_vec3() : () -> !rec_TwoI64
   // CHECK:        cir.store %[[RET]], %{{.*}} : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
   // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec3>
-  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Vec3>, !rec_Vec3
+  // CHECK:        %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!rec_Vec3>
+  // CHECK:        cir.copy %[[RCAST]] align(8) to %[[R]] align(4) : !cir.ptr<!rec_Vec3>
   // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Vec3> -> !cir.ptr<!s32i>
 
 }

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -start-after=si-load-store-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-after=si-load-store-opt %s -o - | FileCheck %s
 
 # CHECK: misaligned_regsequence:
 # CHECK: ; %bb.0:
@@ -15,6 +15,8 @@
 ---
 name: misaligned_regsequence
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
     liveins: $sgpr4_sgpr5
@@ -24,7 +26,7 @@ body:             |
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vreg_64_align2 = COPY %1
     %4:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
-    %5:vreg_96_align2 = REG_SEQUENCE killed %2, %subreg.sub0, killed %4, %subreg.sub1_sub2
-    FLAT_STORE_DWORDX3 %3, killed %5, 0, 0, implicit $exec, implicit $flat_scr :: (store (s96), align 4)
+    %5:vreg_96_align2 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1_sub2
+    FLAT_STORE_DWORDX3 %3, %5, 0, 0, implicit $exec, implicit $flat_scr :: (store (s96), align 4)
     S_ENDPGM 0
 ...

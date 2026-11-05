@@ -83,7 +83,7 @@ void named(void) {
   char b  = '\N{DOLLAR SIGN}'; // ext-warning {{extension}} cxx23-warning {{C++23}}
   char b_ = '\N{ DOL-LAR _SIGN }'; // expected-error {{' DOL-LAR _SIGN ' is not a valid Unicode character name}} \
                                // expected-note {{character names in Unicode escape sequences are sensitive to case and whitespaces}} \
-                               // expected-note {{character '_' U+005F cannot appear in a Unicode character name}}
+                               // expected-note {{character '_' cannot appear in a Unicode character name}}
 
   char c = '\N{NOTATHING}'; // expected-error {{'NOTATHING' is not a valid Unicode character name}} \
                             // expected-note 5{{did you mean}}

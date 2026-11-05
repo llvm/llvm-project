@@ -30,11 +30,11 @@ contains
 !CHECK: omp.private {type = private} @_QFFtest_privateEpf_private_boxproc_i32_args_ref_i32 : !fir.boxproc<(!fir.ref<i32>) -> i32>
 
 !CHECK-LABEL: func private @_QFPtest_private
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEps")
 !CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0
 !CHECK:         %[[PF_BOX:.*]] = fir.box_addr %[[PF_VAL]]
 !CHECK:         fir.call %[[PF_BOX]]({{.*}})
@@ -55,11 +55,11 @@ subroutine test_private
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_firstprivate
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEps")
 subroutine test_firstprivate
   procedure(f), pointer :: pf
   procedure(sub), pointer :: ps
@@ -69,11 +69,11 @@ subroutine test_firstprivate
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_lastprivate
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEps")
 !CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0
 !CHECK:         fir.store %[[PF_VAL]] to %[[PF]]#0
 !CHECK:         %[[PS_VAL:.*]] = fir.load %[[PRIV_PS]]#0
@@ -90,12 +90,12 @@ subroutine test_lastprivate
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_sections
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEps"}
-!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEpf"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEps")
+!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEpf")
 !CHECK:       %[[PF_VAL:.*]] = fir.load %[[PF]]#0
 !CHECK:       fir.store %[[PF_VAL]] to %[[PRIV_PF]]#0
-!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEps"}
+!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEps")
 !CHECK:       %[[PS_VAL:.*]] = fir.load %[[PS]]#0
 !CHECK:       fir.store %[[PS_VAL]] to %[[PRIV_PS]]#0
 !CHECK:       omp.sections
@@ -108,6 +108,37 @@ subroutine test_sections
   procedure(sub), pointer :: ps
 
   !$omp sections firstprivate(pf, ps) lastprivate(pf, ps)
+  !$omp end sections
+end subroutine
+
+! Dummy procedure pointers are stored as an untyped !fir.boxproc<() -> ()>.
+! Their private copies must use the same type so that the firstprivate and
+! lastprivate copies are type consistent.
+!CHECK-LABEL: func private @_QFPtest_sections_dummy
+!CHECK-SAME:    %[[ARG_PF:[^:]*]]: !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK-SAME:    %[[ARG_PS:[^:]*]]: !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %[[ARG_PF]] {{.*}}uniq_name("_QFFtest_sections_dummyEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %[[ARG_PS]] {{.*}}uniq_name("_QFFtest_sections_dummyEps")
+!CHECK:       %[[PRIV_PF_ADDR:.*]] = fir.alloca !fir.boxproc<() -> ()> {{.*}}uniq_name = "_QFFtest_sections_dummyEpf"
+!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %[[PRIV_PF_ADDR]] {{.*}}uniq_name("_QFFtest_sections_dummyEpf")
+!CHECK:       %[[PF_VAL:.*]] = fir.load %[[PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       fir.store %[[PF_VAL]] to %[[PRIV_PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       %[[PRIV_PS_ADDR:.*]] = fir.alloca !fir.boxproc<() -> ()> {{.*}}uniq_name = "_QFFtest_sections_dummyEps"
+!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %[[PRIV_PS_ADDR]] {{.*}}uniq_name("_QFFtest_sections_dummyEps")
+!CHECK:       %[[PS_VAL:.*]] = fir.load %[[PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       fir.store %[[PS_VAL]] to %[[PRIV_PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       omp.sections
+!CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         fir.store %[[PF_VAL]] to %[[PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         %[[PS_VAL:.*]] = fir.load %[[PRIV_PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         fir.store %[[PS_VAL]] to %[[PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+subroutine test_sections_dummy(pf, ps)
+  procedure(f), pointer :: pf
+  procedure(sub), pointer :: ps
+
+  !$omp sections firstprivate(pf, ps) lastprivate(pf, ps)
+    pf => f
+    ps => sub
   !$omp end sections
 end subroutine
 

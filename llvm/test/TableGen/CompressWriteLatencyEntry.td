@@ -21,6 +21,9 @@ let CompleteModel = 0 in {
 
 def Read_D : SchedRead;
 
+// CHECK: static_assert(0 <= UINT8_MAX, "NumWriteProcResEntries does not fit in uint8_t");
+// CHECK-NEXT: static_assert(1 <= UINT8_MAX, "NumWriteLatencyEntries does not fit in uint8_t");
+
 // CHECK: extern const llvm::MCWriteLatencyEntry MyTargetWriteLatencyTable[] = {
 // CHECK-NEXT:  { 0,  0}, // Invalid
 // CHECK-NEXT:  { 1,  0}, // #1 Write_A_Write_C
@@ -34,9 +37,9 @@ def Read_D : SchedRead;
 
 // CHECK:  static const llvm::MCSchedClassDesc SchedModel_ASchedClasses[] = {
 // CHECK-NEXT:  {DBGFIELD(1)  8191, false, false, false, 0, 0,  0, 0,  0, 0},
-// CHECK-NEXT:  {DBGFIELD(/*Inst_A*/ {{[0-9]+}})             1, false, false, false,  0, 0,  1, 1,  0, 0}, // #1
-// CHECK-NEXT:  {DBGFIELD(/*Inst_B*/ {{[0-9]+}})             1, false, false, false,  0, 0,  2, 1,  0, 0}, // #2
-// CHECK-NEXT:  {DBGFIELD(/*Inst_C*/ {{[0-9]+}})             1, false, false, false,  0, 0,  1, 1,  1, 1}, // #3
+// CHECK-NEXT:  {DBGFIELD(/*Inst_A*/ {{[0-9]+}})             1, false, false, false,  0,  0,  1, 0, 0, 1}, // #1
+// CHECK-NEXT:  {DBGFIELD(/*Inst_B*/ {{[0-9]+}})             1, false, false, false,  0,  0,  2, 0, 0, 1}, // #2
+// CHECK-NEXT:  {DBGFIELD(/*Inst_C*/ {{[0-9]+}})             1, false, false, false,  1,  0,  1, 1, 0, 1}, // #3
 // CHECK-NEXT: }; // SchedModel_ASchedClasses
 
 let SchedModel = SchedModel_A in {

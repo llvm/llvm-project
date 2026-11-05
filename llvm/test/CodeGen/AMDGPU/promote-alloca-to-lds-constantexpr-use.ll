@@ -1,5 +1,5 @@
-; RUN: opt -S -disable-promote-alloca-to-vector -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -disable-promote-alloca-to-vector -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=ASM %s
+; RUN: opt -S -disable-promote-alloca-to-vector -mtriple=amdgpu9.00-amd-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
+; RUN: llc -disable-promote-alloca-to-vector -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=ASM %s
 
 @all_lds = internal unnamed_addr addrspace(3) global [16384 x i32] poison, align 4
 @some_lds = internal unnamed_addr addrspace(3) global [32 x i32] poison, align 4

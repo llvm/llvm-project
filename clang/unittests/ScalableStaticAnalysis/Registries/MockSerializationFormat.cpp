@@ -9,6 +9,7 @@
 #include "Registries/MockSerializationFormat.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
@@ -220,6 +221,18 @@ llvm::Error MockSerializationFormat::writeMultiArchStaticLibrary(
     const MultiArchStaticLibrary &M, llvm::StringRef Path) {
   llvm_unreachable(
       "MockSerializationFormat does not support MultiArchStaticLibrary");
+}
+
+llvm::Expected<MultiArchSharedLibrary>
+MockSerializationFormat::readMultiArchSharedLibrary(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support MultiArchSharedLibrary");
+}
+
+llvm::Error MockSerializationFormat::writeMultiArchSharedLibrary(
+    const MultiArchSharedLibrary &M, llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support MultiArchSharedLibrary");
 }
 
 llvm::Expected<WPASuite>

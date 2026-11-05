@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<mse>' -polly-print-mse -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<mse>' -plugin-arg=Polly,-polly-print-mse -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Array
 ;

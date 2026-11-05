@@ -1,7 +1,7 @@
 ; There should not be any mismatch for xqf with this testcase.
 
 ; RUN: llc -O3 -mv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat,+hvx-ieee-fp -enable-xqf-gen=true \
-; RUN: -mtriple=hexagon -hexagon-qfloat-mode=lossy < %s -o - | FileCheck %s
+; RUN: -mtriple=hexagon -hexagon-qfloat-mode=lossy -enable-postra-xqf-check < %s -o - | FileCheck %s
 
 ; CHECK-NOT: Mismatch
 

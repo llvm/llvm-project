@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -misched=converge -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -misched-regpressure=false -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=NORP
+# RUN: llc -mtriple=amdgpu6.00 -misched=converge -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -misched-regpressure=false -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=NORP
 
 # REQUIRES: asserts
 

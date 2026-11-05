@@ -1,4 +1,7 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s readability-trivial-switch %t
+// RUN: %check_clang_tidy -std=c++98-or-later -check-suffixes=,MACROS %s \
+// RUN:   readability-trivial-switch %t -- \
+// RUN:   -config="{CheckOptions: {readability-trivial-switch.IgnoreMacros: false}}"
 
 void bad(int I) {
   switch (I) {
@@ -41,4 +44,15 @@ void good(int I) {
   default:
     break;
   }
+}
+
+#define SINGLE_CASE_SWITCH(I)                                                  \
+  switch (I) {                                                                 \
+  case 0:                                                                      \
+    break;                                                                     \
+  }
+
+void macro(int I) {
+  SINGLE_CASE_SWITCH(I)
+  // CHECK-MESSAGES-MACROS: :[[@LINE-1]]:3: warning: switch with only one case; use an if statement
 }

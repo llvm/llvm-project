@@ -30,6 +30,11 @@ enum GDBStoppointType {
   eWatchpointReadWrite
 };
 
+// StringRef::getAsInteger()'s first argument specifies the
+// radix of the number it is parsing.  Define enums for easiser
+// searching/reading.
+enum { BASE_AUTOSENSE = 0, BASE_10 = 10, BASE_16 = 16 };
+
 enum class CompressionType {
   None = 0,    // no compression
   ZlibDeflate, // zlib's deflate compression scheme, requires zlib or Apple's
@@ -104,7 +109,10 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication();
+  /// Construct a GDB-remote communication channel named \p name.
+  ///
+  /// The name identifies the channel in packet logs.
+  explicit GDBRemoteCommunication(llvm::StringRef name);
 
   ~GDBRemoteCommunication() override;
 
@@ -194,6 +202,9 @@ protected:
   bool DecompressPacket();
 
 private:
+  /// The communication channel name included in packet logs.
+  const std::string m_name;
+
 #if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;

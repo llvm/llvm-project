@@ -9,6 +9,7 @@ set(LIBCXXABI_SOURCES
   cxa_handlers.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
+  cxa_thread_atexit.cpp
   # C++ STL files
   stdlib_exception.cpp
   stdlib_stdexcept.cpp
@@ -33,13 +34,6 @@ if (LIBCXXABI_ENABLE_EXCEPTIONS)
 else()
   list(APPEND LIBCXXABI_SOURCES
     cxa_noexception.cpp
-  )
-endif()
-
-if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
-    AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
-  list(APPEND LIBCXXABI_SOURCES
-    cxa_thread_atexit.cpp
   )
 endif()
 
@@ -195,6 +189,14 @@ if (LIBCXXABI_SUPPORTS_SHARED_LIBRARY)
   # Build with -fsized-deallocation, which is default in recent versions of Clang.
   # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
   target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
+  if (NOT WIN32)
+    # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+    # used, can trigger a Clang error (if Clang is built with asserts enabled),
+    # https://github.com/llvm/llvm-project/issues/207963
+    # Once fixed, we could consider allowing -fvisibility=hidden on
+    # Windows too (as it can be beneficial for static libraries).
+    target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fvisibility=hidden)
+  endif()
 
   add_library(cxxabi_shared SHARED)
   set_target_properties(cxxabi_shared
@@ -285,9 +287,16 @@ target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COM
 # Build with -fsized-deallocation, which is default in recent versions of Clang.
 # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
 target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
+if (NOT WIN32)
+  # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+  # used, can trigger a Clang error (if Clang is built with asserts enabled),
+  # https://github.com/llvm/llvm-project/issues/207963
+  # Once fixed, we could consider allowing -fvisibility=hidden on
+  # Windows too (as it can be beneficial for static libraries).
+  target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
+endif()
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
-  target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
   # If the hermetic library doesn't define the operator new/delete functions
   # then its code shouldn't declare them with hidden visibility.  They might
   # actually be provided by a shared library at link time.

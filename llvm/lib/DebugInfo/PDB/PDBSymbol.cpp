@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
-#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"

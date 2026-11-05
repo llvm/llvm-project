@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -122,6 +124,28 @@ Language *Language::FindPlugin(LanguageType language,
   if (!result)
     result = FindPlugin(file_path);
   return result;
+}
+
+Language *
+Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
+  // Mangled calls this for every name it demangles, so avoid the lock in
+  // FindPlugin(). Language instances are never destroyed, and the language of
+  // a scheme never changes, so the plugin can be cached once it's found.
+  static std::array<std::atomic<Language *>, Mangled::g_num_mangling_schemes>
+      g_plugins;
+  if (scheme >= g_plugins.size())
+    return nullptr;
+  if (Language *language = g_plugins[scheme].load(std::memory_order_acquire))
+    return language;
+
+  lldb::LanguageType language_type =
+      Mangled::GetLanguageForManglingScheme(scheme);
+  if (language_type == eLanguageTypeUnknown)
+    return nullptr;
+  Language *language = FindPlugin(language_type);
+  if (language)
+    g_plugins[scheme].store(language, std::memory_order_release);
+  return language;
 }
 
 void Language::ForEach(
@@ -390,6 +414,20 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool Language::LanguageIsFortran(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypeFortran95:
+  case eLanguageTypeFortran03:
+  case eLanguageTypeFortran08:
+  case eLanguageTypeFortran18:
     return true;
   default:
     return false;

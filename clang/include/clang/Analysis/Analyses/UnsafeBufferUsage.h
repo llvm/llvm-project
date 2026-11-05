@@ -129,6 +129,10 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
+  virtual void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                                 bool IsRelatedToDecl,
+                                                 ASTContext &Ctx) = 0;
+
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.
@@ -178,6 +182,11 @@ public:
   /// \return true iff unsafe libc call should NOT be reported at `Loc`
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff unsafe calls to functions with the format attribute
+  /// should NOT be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInFormatAttrCall(const SourceLocation &Loc) const = 0;
 
   /// \return true iff array subscript accesses on fixed size arrays should NOT
   /// be reported at `Loc`

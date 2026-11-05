@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -187,7 +188,7 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   return DAG;
 }
 
@@ -205,6 +206,7 @@ LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAlignGlobalArraysPass(PR);
   initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
@@ -250,6 +252,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonQFPOptimizerPass(PR);
   initializeHexagonXQFloatGeneratorPass(PR);
   initializeHexagonPostRAHandleQFPPass(PR);
+  initializeMachineKCFILegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -258,10 +261,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    // Specify the vector alignment explicitly. For v512x1, the calculated
-    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
-    // the required minimum of 64 bytes.
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
@@ -293,12 +293,12 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
@@ -371,7 +371,11 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() >= CodeGenOptLevel::Default;
+  }
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -387,6 +391,11 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
+    // Raise the alignment of global integer arrays to 8 bytes. At -O1/-O2,
+    // reduce .rodata size by keeping byte/half-word arrays at their natural
+    // alignment; apply full 8-byte alignment at -O3.
+    addPass(createHexagonAlignGlobalArrays(getOptLevel() !=
+                                           CodeGenOptLevel::Aggressive));
     if (EnableInstSimplify)
       addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());
@@ -470,27 +479,30 @@ bool HexagonPassConfig::addILPOpts() {
   return true;
 }
 
+void HexagonPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (EnableCExtOpt)
+    addPass(createHexagonConstExtenders());
+  if (!DisableStoreWidening)
+    addPass(createHexagonStoreWidening());
+  if (!DisableLoadWidening)
+    addPass(createHexagonLoadWidening());
+  if (EnableGenMemAbs)
+    addPass(createHexagonGenMemAbsolute());
+  if (!DisableHardwareLoops)
+    addPass(createHexagonHardwareLoops());
+}
+
 void HexagonPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (EnableCExtOpt)
-      addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (EnableCopyHoist)
       insertPass(&RegisterCoalescerID, &HexagonCopyHoistingID);
     if (EnableTfrCleanup)
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
-    if (!DisableStoreWidening)
-      addPass(createHexagonStoreWidening());
-    if (!DisableLoadWidening)
-      addPass(createHexagonLoadWidening());
-    if (EnableGenMemAbs)
-      addPass(createHexagonGenMemAbsolute());
-    if (!DisableHardwareLoops)
-      addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(&MachinePipelinerID);
   addPass(createHexagonHVXSaveRemark());
 }
 

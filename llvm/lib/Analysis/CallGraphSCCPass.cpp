@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,7 +33,6 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -46,10 +46,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cgscc-passmgr"
 
-namespace llvm {
-cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
-                                      cl::init(4));
-} // namespace llvm
+unsigned
+llvm::getMaxDevirtIterations(const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<AnalysisOptions>().max_devirt_iterations;
+}
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 
@@ -565,12 +565,14 @@ public:
 /// Execute all of the passes scheduled for execution.  Keep track of
 /// whether any of the passes modifies the module, and if so, return true.
 bool CGPassManager::runOnModule(Module &M) {
+  const unsigned MaxDevirtIterations =
+      getAnalysisOptions(M).max_devirt_iterations;
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   bool Changed = doInitialization(CG);
 
   // Walk the callgraph in bottom-up SCC order.
   AllSCCIterator SCCI(CG);
-  CallGraphSCC CurSCC(CG, &SCCI.getCGSCCIterator());
+  CallGraphSCC CurSCC(CG);
 
   // At the top level, we run all the passes in this pass manager on the
   // functions in this SCC.  However, we support iterative compilation in the
@@ -645,34 +647,6 @@ bool CGPassManager::doFinalization(CallGraph &CG) {
     }
   }
   return Changed;
-}
-
-//===----------------------------------------------------------------------===//
-// CallGraphSCC Implementation
-//===----------------------------------------------------------------------===//
-
-/// This informs the SCC and the pass manager that the specified
-/// Old node has been deleted, and New is to be used in its place.
-void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
-  assert(Old != New && "Should not replace node with self");
-  for (unsigned i = 0; ; ++i) {
-    assert(i != Nodes.size() && "Node not in SCC");
-    if (Nodes[i] != Old) continue;
-    if (New)
-      Nodes[i] = New;
-    else
-      Nodes.erase(Nodes.begin() + i);
-    break;
-  }
-
-  // Update the active scc_iterator so that it doesn't contain dangling
-  // pointers to the old CallGraphNode.
-  scc_iterator<CallGraph*> *CGI = (scc_iterator<CallGraph*>*)Context;
-  CGI->ReplaceNode(Old, New);
-}
-
-void CallGraphSCC::DeleteNode(CallGraphNode *Old) {
-  ReplaceNode(Old, /*New=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -756,7 +730,7 @@ namespace {
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
-      if (isFunctionInPrintList("*") && NeedModule) {
+      if (shouldPrintAllFunctions() && NeedModule) {
         PrintBannerOnce();
         OS << "\n";
         SCC.getCallGraph().getModule().print(OS, nullptr);
@@ -765,14 +739,14 @@ namespace {
       bool FoundFunction = false;
       for (CallGraphNode *CGN : SCC) {
         if (Function *F = CGN->getFunction()) {
-          if (!F->isDeclaration() && isFunctionInPrintList(F->getName())) {
+          if (!F->isDeclaration() && shouldPrintFunction(*F)) {
             FoundFunction = true;
             if (!NeedModule) {
               PrintBannerOnce();
               F->print(OS);
             }
           }
-        } else if (isFunctionInPrintList("*")) {
+        } else if (shouldPrintAllFunctions()) {
           PrintBannerOnce();
           OS << "\nPrinting <null> Function\n";
         }

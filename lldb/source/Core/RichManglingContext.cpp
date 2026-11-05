@@ -150,7 +150,7 @@ llvm::StringRef RichManglingContext::ParseFullName() {
     return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    return m_cxx_method_parser->GetFullName().GetStringRef();
+    return llvm::StringRef(m_cxx_method_parser->GetFullName());
   case None:
     return {};
   }

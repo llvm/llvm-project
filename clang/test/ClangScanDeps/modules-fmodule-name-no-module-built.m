@@ -11,7 +11,9 @@
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
 // RUN:   -mode preprocess-dependency-directives > %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-context-hash,clang-module-deps,clang-modulemap-file,context-hash,file-deps,input-file,link-libraries,name \
+// RUN:   | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 
 #import "header3.h"
 #import "header.h"
@@ -21,8 +23,6 @@
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": []
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
@@ -41,8 +41,6 @@
 // CHECK-NEXT:           "module-name": "header2"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
 // CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules-fmodule-name-no-module-built.m",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header3.h",

@@ -71,10 +71,8 @@ public:
     return (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
-  template <int KIND>
-  bool operator()(
-      const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
-    using T = Type<TypeCategory::Integer, KIND>;
+  bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
+    using T = Type<TypeCategory::Integer>;
     if ((*this)(division.left()) && (*this)(division.right())) {
       const auto divisor{GetScalarConstantValue<T>(division.right())};
       return !divisor || !divisor->IsZero();
@@ -90,6 +88,9 @@ public:
         (!IsDummy(sym) ||
             (IsIntentIn(sym) && !IsOptional(sym) &&
                 !sym.attrs().test(semantics::Attr::VALUE)));
+  }
+  bool operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   bool operator()(const ImpliedDoIndex &ido) const {
@@ -363,6 +364,9 @@ public:
         IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
+  bool operator()(const RankOneBoundElement &x) const {
+    return false;
+  } // unreachable
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
@@ -475,9 +479,9 @@ public:
   SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
       : Base{*this}, kind_{kind}, context_{c} {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -486,9 +490,9 @@ public:
       return false;
     }
   }
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Complex>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -497,13 +501,14 @@ public:
       return false;
     }
   }
-  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
-  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+  template <TypeCategory TOCAT, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT>, FROMCAT> &x) const {
+    const int toKind{x.kind()};
     if constexpr ((TOCAT == TypeCategory::Real ||
                       TOCAT == TypeCategory::Complex) &&
         (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
       auto fromType{x.left().GetType()};
-      if (!fromType || fromType->kind() < TOKIND) {
+      if (!fromType || fromType->kind() < toKind) {
         return false;
       }
     }
@@ -542,9 +547,8 @@ public:
   using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
   InexactLiteralConversionFlagClearer() : Base(*this) {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real> &>(x.result())};
     mut.set_isFromInexactLiteralConversion(false);
     return false;
   }
@@ -574,6 +578,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       }
     }
     if (converted) {
+      auto restorer{context.WithConstantContext()};
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
         InexactLiteralConversionFlagClearer{}(folded);
@@ -796,6 +801,10 @@ public:
     } else {
       return "non-constant descriptor inquiry not allowed for local object";
     }
+  }
+
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -1632,6 +1641,40 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
+bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+  if (auto dataRef{ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
+  }
+  return false;
+}
+
+bool AnyNamedConstantActualArguments(const ActualArguments &arguments) {
+  for (const auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void FoldNamedConstantActualArguments(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
@@ -1646,8 +1689,19 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           : nullptr};
   const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
-    // Expressions are copy-in, but not copy-out.
-    return forCopyIn;
+    // A designator whose base object is a named constant is not a variable,
+    // but it still designates an object with storage.  It never needs
+    // copy-out, since a named constant is not definable; whether it needs
+    // copy-in depends on its contiguity, like a variable, so fall through
+    // to the analysis below.  Other expressions are copy-in, but not
+    // copy-out.
+    const Expr<SomeType> *expr{actual->UnwrapExpr()};
+    if (!expr || !IsNamedConstantDesignator(*expr)) {
+      return forCopyIn;
+    }
+    if (forCopyOut) {
+      return false;
+    }
   }
   if (forCopyOut) {
     // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
@@ -1664,7 +1718,11 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       }
     }
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
+  // Copy decisions depend on the actual argument's physical contiguity,
+  // so do not let sections of named constants be presumed contiguous here
+  // (they are for IS_CONTIGUOUS(), but their storage is what it is).
+  auto maybeContigActual{
+      IsContiguous(*actual, fc, /*namedConstantSectionsAreContiguous=*/false)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1796,6 +1854,9 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

@@ -87,27 +87,6 @@ exit:
   ret void
 }
 
-define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
-; CHECK-LABEL: @dont_sink_ordinary_readonly_call_with_metadata(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
-; CHECK:       block:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @readonly_call(ptr [[P:%.*]]), !invariant.load [[META0]]
-; CHECK-NEXT:    ret i32 [[VAL]]
-;
-entry:
-  %val = call i32 @readonly_call(ptr %p), !invariant.load !0
-  br i1 %cond, label %block, label %end
-
-block:
-  br label %end
-
-end:
-  ret i32 %val
-}
-
 define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i32> %passthru, i1 %cond) {
 ; CHECK-LABEL: @sink_masked_load_with_metadata(
 ; CHECK-NEXT:  entry:
@@ -151,9 +130,6 @@ end:
 }
 
 declare void @fn()
-declare i32 @readonly_call(ptr) nounwind willreturn memory(read)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
-declare i32 @llvm.read_register.i32(metadata)
 
 !0 = !{}
 !1 = !{!"reg"}

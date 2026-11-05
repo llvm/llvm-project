@@ -176,6 +176,19 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
   CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
+
+  // The arguments of a variadic function, named ones included, are laid out as
+  // if on a stack whose first 64 bytes are loaded into x0-x7, so a composite is
+  // not kept in one register block: when only x7 is left, its first eight bytes
+  // go in x7 and the rest on the stack. SelectionDAG also flags a byval
+  // pointer as a block when its pointee is an array; it is left to
+  // CCPassByVal, as byval is only lowered as a stack argument.
+  CCIfConsecutiveRegs<CCIf<"!ArgFlags.isByVal()",
+                           CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3,
+                                                          X4, X5, X6, X7]>>>>,
+  CCIfConsecutiveRegs<CCIf<"!ArgFlags.isByVal()",
+                           CCIfType<[i64], CCAssignToStack<8, 8>>>>,
+
   CCDelegateTo<CC_AArch64_Win64PCS>
 ]>;
 
@@ -274,6 +287,9 @@ def CC_AArch64_Arm64EC_Thunk : CallingConv<[
   CCIfType<[f16],
            CCAssignToRegWithShadow<[H0, H1, H2, H3],
                                    [X0, X1, X2, X3]>>,
+  CCIfType<[bf16],
+           CCAssignToRegWithShadow<[H0, H1, H2, H3],
+                                   [X0, X1, X2, X3]>>,
   CCIfType<[f32],
            CCAssignToRegWithShadow<[S0, S1, S2, S3],
                                    [X0, X1, X2, X3]>>,
@@ -294,7 +310,7 @@ def CC_AArch64_Arm64EC_Thunk : CallingConv<[
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
-  CCIfType<[i8, i16, i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
+  CCIfType<[i8, i16, i32, i64, f16, bf16, f32, f64], CCAssignToStack<8, 8>>
 ]>;
 
 // The native side of ARM64EC thunks
@@ -313,6 +329,7 @@ def RetCC_AArch64_Arm64EC_Thunk : CallingConv<[
 
   // The X86-64 calling convention always returns FP values in XMM0.
   CCIfType<[f16], CCAssignToReg<[H0, H1]>>,
+  CCIfType<[bf16], CCAssignToReg<[H0, H1]>>,
   CCIfType<[f32], CCAssignToReg<[S0, S1]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
   CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
@@ -485,6 +502,11 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_AnyReg : CallingConv<[
+  CCCustom<"CC_AArch64_AnyReg_Error">
+]>;
+
 //===----------------------------------------------------------------------===//
 // ARM64 Calling Convention for GHC
 //===----------------------------------------------------------------------===//
@@ -536,7 +558,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
   // This handles the non-variadic parameter case. Variadic parameters
   // are handled in CCAssignFnForCall.
   CCIfVarArg<CCIfSubtarget<"isTargetDarwin()", CCDelegateTo<CC_AArch64_DarwinPCS>>>,
-  CCIfVarArg<CCIfSubtarget<"isTargetWindows()", CCDelegateTo<CC_AArch64_Win64PCS>>>,
+  CCIfVarArg<CCIfSubtarget<"isTargetWindowsOrUEFI()", CCDelegateTo<CC_AArch64_Win64PCS>>>,
   CCIfVarArg<CCDelegateTo<CC_AArch64_AAPCS>>,
 
   // We can pass arguments in all general registers, except:
@@ -565,9 +587,9 @@ def CC_AArch64_Preserve_None : CallingConv<[
                                  X12, X13, X14, X9]>>,
 
   // Windows uses X15 for stack allocation
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI()",
     CCIfType<[i32], CCAssignToReg<[W15]>>>,
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI()",
     CCIfType<[i64], CCAssignToReg<[X15]>>>,
 
   CCDelegateTo<CC_AArch64_AAPCS>

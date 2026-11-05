@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --binary %t -- %s \
+// RUN: %dexter_regression_test_run --binary %t -- %s \
 // RUN:   | FileCheck %s
 
 /// Test that Dexter respects for and after hit_counts.

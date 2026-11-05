@@ -9,7 +9,7 @@ define i32 @callee_with_coldcc() alwaysinline {
 
 define void @caller_with_coldcc() {
 ; CHECK-LABEL: @caller_with_coldcc(
-; CHECK-NEXT:  call cc42 void (...) @llvm.experimental.deoptimize.isVoid(i32 1) #1 [ "deopt"() ]
+; CHECK-NEXT:  call cc42 void (...) @llvm.experimental.deoptimize.isVoid(i32 1) #[[#ATTR:]] [ "deopt"() ]
 ; CHECK-NEXT:  ret void
 
   %val = call i32 @callee_with_coldcc()
@@ -19,4 +19,4 @@ define void @caller_with_coldcc() {
 attributes #0 = { "deopt-lowering"="live-in" }
 
 ; CHECK: declare cc42 void @llvm.experimental.deoptimize.isVoid(...)
-; CHECK: attributes #1 = { "deopt-lowering"="live-in" }
+; CHECK: attributes #[[#ATTR]] = { "deopt-lowering"="live-in" }

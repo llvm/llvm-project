@@ -291,7 +291,8 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const override;
+  bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                   unsigned OpIdx) const override;
 
   /// Add appropriate SExt nodes
   void AddSExt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -311,9 +312,13 @@ public:
   bool ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned, MVT MVTDst,
                        MVT MVTSrc) const;
 
+  /// Move from memory and expand register class without extension
+  bool ExpandMOVX_RM(MachineInstrBuilder &MIB, unsigned Opc, MVT MVTDst,
+                     MVT MVTSrc) const;
+
   /// Move from memory and extend
-  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
-                       const MCInstrDesc &Desc, MVT MVTDst, MVT MVTSrc) const;
+  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned, unsigned Opc,
+                       MVT MVTDst, MVT MVTSrc) const;
 
   /// Push/Pop to/from stack
   bool ExpandPUSH_POP(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
@@ -322,6 +327,10 @@ public:
   /// Expand all MOVEM pseudos into real MOVEMs
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
 
   /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the

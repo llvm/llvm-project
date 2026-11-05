@@ -20,7 +20,7 @@ module {
     return %y_out : tensor<1024xf64>
   }
 
-  memref.global "private" constant @__constant_64xf64 : memref<64xf64> = dense<1.000000e+00> {alignment = 64 : i64}
+  memref.global "private" constant @__constant_64xf64 : memref<64xf64> = dense<1.000000e+00> alignment = 64
 
   func.func @main() {
     %f0 = arith.constant 0.0 : f64

@@ -433,16 +433,21 @@ ComplexPairTy ComplexExprEmitter::EmitLoadOfLValue(LValue lvalue,
   Address SrcPtr = lvalue.getAddress();
   bool isVolatile = lvalue.isVolatileQualified();
 
-  llvm::Value *Real = nullptr, *Imag = nullptr;
+  QualType ElemTy = getComplexType(lvalue.getType())->getElementType();
+  TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAInfoForSubobject(lvalue, ElemTy);
+
+  llvm::LoadInst *Real = nullptr, *Imag = nullptr;
 
   if (!IgnoreReal || isVolatile) {
     Address RealP = CGF.emitAddrOfRealComponent(SrcPtr, lvalue.getType());
     Real = Builder.CreateLoad(RealP, isVolatile, SrcPtr.getName() + ".real");
+    CGF.CGM.DecorateInstructionWithTBAA(Real, TBAAInfo);
   }
 
   if (!IgnoreImag || isVolatile) {
     Address ImagP = CGF.emitAddrOfImagComponent(SrcPtr, lvalue.getType());
     Imag = Builder.CreateLoad(ImagP, isVolatile, SrcPtr.getName() + ".imag");
+    CGF.CGM.DecorateInstructionWithTBAA(Imag, TBAAInfo);
   }
 
   return ComplexPairTy(Real, Imag);
@@ -460,11 +465,16 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
+  QualType ElemTy = getComplexType(lvalue.getType())->getElementType();
+  TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAInfoForSubobject(lvalue, ElemTy);
+
   auto *R =
       Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
+  CGF.CGM.DecorateInstructionWithTBAA(R, TBAAInfo);
   CGF.addInstToCurrentSourceAtom(R, Val.first);
   auto *I =
       Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  CGF.CGM.DecorateInstructionWithTBAA(I, TBAAInfo);
   CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 
@@ -782,7 +792,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       4, Op.Ty->castAs<ComplexType>()->getElementType());
   QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
   const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, cast<FunctionType>(FQTy.getTypePtr()), false);
+      Args, cast<FunctionType>(FQTy.getTypePtr()), false,
+      CGF.getCurrentFunctionDecl());
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::FunctionCallee Func = CGF.CGM.CreateRuntimeFunction(
@@ -797,7 +808,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
 
 /// Lookup the libcall name for a given floating point type complex
 /// multiply.
-static StringRef getComplexMultiplyLibCallName(llvm::Type *Ty) {
+static StringRef getComplexMultiplyLibCallName(const llvm::Triple &T,
+                                               llvm::Type *Ty) {
   switch (Ty->getTypeID()) {
   default:
     llvm_unreachable("Unsupported floating point type!");
@@ -812,7 +824,7 @@ static StringRef getComplexMultiplyLibCallName(llvm::Type *Ty) {
   case llvm::Type::X86_FP80TyID:
     return "__mulxc3";
   case llvm::Type::FP128TyID:
-    return "__multc3";
+    return T.isPPC() ? "__mulkc3" : "__multc3";
   }
 }
 
@@ -879,8 +891,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       // Now emit the libcall on this slowest of the slow paths.
       CGF.EmitBlock(LibCallBB);
       Value *LibCallR, *LibCallI;
+      llvm::Triple Triple = CGF.getTarget().getTriple();
       std::tie(LibCallR, LibCallI) = EmitComplexBinOpLibCall(
-          getComplexMultiplyLibCallName(Op.LHS.first->getType()), Op);
+          getComplexMultiplyLibCallName(Triple, Op.LHS.first->getType()), Op);
       Builder.CreateBr(ContBB);
 
       // Finally continue execution by phi-ing together the different
@@ -1077,7 +1090,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       case llvm::Type::X86_FP80TyID:
         return EmitComplexBinOpLibCall("__divxc3", LibCallOp);
       case llvm::Type::FP128TyID:
-        return EmitComplexBinOpLibCall("__divtc3", LibCallOp);
+        return EmitComplexBinOpLibCall(
+            CGF.getTarget().getTriple().isPPC() ? "__divkc3" : "__divtc3",
+            LibCallOp);
       }
     } else {
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);

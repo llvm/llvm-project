@@ -4,7 +4,7 @@
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN: spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN: spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -O1 -o - | FileCheck %s --check-prefix=SPVCHECK
 
 

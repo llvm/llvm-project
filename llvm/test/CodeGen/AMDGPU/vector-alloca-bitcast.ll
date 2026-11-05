@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn- -passes=sroa %s -o %t.sroa.ll
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu- -passes=sroa %s -o %t.sroa.ll
+; RUN: llc -mtriple=amdgpu8.02-- -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mtriple=amdgpu8.02-- < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: opt -S -mtriple=amdgpu-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca
@@ -258,7 +258,7 @@ bb13:                                             ; preds = %.preheader
 ; OPT: store i32 %0, ptr addrspace(1) %out, align 4
 
 ; GCN-LABEL: {{^}}vector_read_alloca_bitcast_assume:
-; GCN-COUNT: buffer_store_dword
+; GCN-ALLOCA-COUNT-4: buffer_store_dword
 
 define amdgpu_kernel void @vector_read_alloca_bitcast_assume(ptr addrspace(1) %out, i32 %index) {
 entry:

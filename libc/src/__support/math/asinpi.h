@@ -43,12 +43,14 @@ LIBC_INLINE double asinpi(double x) {
       // The relative error of x/pi is:
       //   |asinpi(x) - x/pi| / |asinpi(x)| < x^2/6 < 2^-54.
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-      return x * ASINPI_COEFFS[0];
+      return x * asin_internal::ASINPIF_COEFFS[0];
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return x * asinpi_eval(x * x);
+    double xsq = x * x;
+    return x * fputil::multiply_add(xsq, asin_internal::asinpi_eval(xsq),
+                                    asin_internal::ASINPIF_COEFFS[0]);
 #else
     using DFloat128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
@@ -198,8 +200,10 @@ LIBC_INLINE double asinpi(double x) {
   double v_hi = fputil::sqrt<double>(u);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  double p = asinpi_eval(u);
-  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, 0.5);
+  double neg2_v = -2.0 * v_hi;
+  double r = x_sign * fputil::multiply_add(
+                          neg2_v * u, asin_internal::asinpi_eval(u),
+                          0.5 + neg2_v * asin_internal::ASINPIF_COEFFS[0]);
   return r;
 #else
   using DFloat128 = fputil::DyadicFloat<128>;

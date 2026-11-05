@@ -30,17 +30,20 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
-// Windows/MSVC doesn't support weak symbols properly, so provide a stub
-// implementation that will be used if compiler-rt is not linked.
-#ifdef _WIN32
-extern "C" int __llvm_write_custom_profile(
-    const char *Target, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
-    const uint64_t *VersionOverride) {
-  // Return error code indicating profiling is not available
+// Windows (MSVC/clang, but not MinGW) does not support __attribute__((weak)),
+// so provide a fallback stub via /alternatename. The linker picks compiler-rt's
+// strong definition when clang_rt.profile is linked; otherwise the stub is
+// used.
+#if defined(_WIN32) && !defined(__MINGW32__)
+extern "C" int __llvm_write_custom_profile_default(
+    const char *, const __llvm_profile_data *, const __llvm_profile_data *,
+    const char *, const char *, const char *, const char *, const char *,
+    const char *, const uint64_t *) {
   return -1;
 }
+#pragma comment(                                                               \
+    linker,                                                                    \
+    "/alternatename:__llvm_write_custom_profile=__llvm_write_custom_profile_default")
 #endif
 
 Expected<std::unique_ptr<ObjectFile>>
@@ -151,41 +154,59 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
         ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
         ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
-  // Setup the global symbol's address and size.
+  // Setup the global symbol's address and size. A symbol that exists but has
+  // no contents in the image (e.g. `.bss`) has a null address and size 0.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize((*SymOrErr)->getSize());
+  ImageGlobal.setSize(*AddrOrErr ? (*SymOrErr)->getSize() : 0);
 
   return Plugin::success();
 }
 
-Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
-                                                  DeviceImageTy &Image,
-                                                  const GlobalTy &HostGlobal) {
+bool GenericGlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return (Flags & SymbolRef::SF_Global) && !(Flags & Ignored);
+}
 
-  GlobalTy ImageGlobal(HostGlobal.getName(), -1);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, ImageGlobal))
-    return Err;
+std::optional<StringRef>
+GenericGlobalHandlerTy::matchSymbol(const ELFSymbolRef &Symbol, StringRef Name,
+                                    SymbolKindTy Kind) {
+  uint8_t Type = Kind == SymbolKindTy::Kernel ? ELF::STT_FUNC : ELF::STT_OBJECT;
+  if (Symbol.getELFType() != Type)
+    return std::nullopt;
+  return Name;
+}
 
-  if (ImageGlobal.getSize() != HostGlobal.getSize())
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "transfer failed because global symbol '%s' has "
-                         "%u bytes in the ELF image but %u bytes on the host",
-                         HostGlobal.getName().data(), ImageGlobal.getSize(),
-                         HostGlobal.getSize());
+Error GenericGlobalHandlerTy::iterateSymbols(
+    DeviceImageTy &Image, SymbolKindTy Kind,
+    function_ref<bool(StringRef)> Callback) {
+  auto ELFObjOrErr = getELFObjectFile(Image);
+  if (!ELFObjOrErr)
+    return ELFObjOrErr.takeError();
 
-  ODBG(OLDT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
-                          << "' was found in the ELF image and "
-                          << HostGlobal.getSize() << " bytes will copied from "
-                          << ImageGlobal.getPtr() << " to "
-                          << HostGlobal.getPtr() << ".";
+  auto &ELFObj = cast<ELFObjectFileBase>(**ELFObjOrErr);
+  auto Symbols = ELFObj.symbols();
+  if (Symbols.empty())
+    Symbols = ELFObj.getDynamicSymbolIterators();
 
-  assert(Image.getStart() <= ImageGlobal.getPtr() &&
-         utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
-             utils::advancePtr(Image.getStart(), Image.getSize()) &&
-         "Attempting to read outside the image!");
+  for (ELFSymbolRef Symbol : Symbols) {
+    auto FlagsOrErr = Symbol.getFlags();
+    if (!FlagsOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, FlagsOrErr.takeError(),
+                           "error reading ELF symbol");
 
-  // Perform the copy from the image to the host memory.
-  std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());
+    if (!isExportedSymbol(*FlagsOrErr))
+      continue;
+
+    auto NameOrErr = Symbol.getName();
+    if (!NameOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, NameOrErr.takeError(),
+                           "error reading ELF symbol name");
+
+    if (auto Name = matchSymbol(Symbol, *NameOrErr, Kind))
+      if (!Callback(*Name))
+        break;
+  }
 
   return Plugin::success();
 }
@@ -275,11 +296,14 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // On Windows (non-MinGW) the /alternatename stub above is never null.
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
+#endif
 
   // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.

@@ -40,8 +40,8 @@ static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
-    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
-    SanitizerKind::NumericalStability;
+    SanitizerKind::Thread | SanitizerKind::Concurrency | SanitizerKind::Memory |
+    SanitizerKind::DataFlow | SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
@@ -53,7 +53,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
+    SanitizerKind::Thread | SanitizerKind::Concurrency |
+    SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
     SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
@@ -162,6 +163,38 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Produce a string containing comma-separated names of sanitizers in \p
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
+
+/// Map a Hexagon callee-saved register number (16-27) to its -ffixed-rN
+/// option, used to check that the shadow call stack pointer is reserved.
+static options::ID getHexagonFixedRegOption(unsigned RegNo) {
+  switch (RegNo) {
+  case 16:
+    return options::OPT_ffixed_r16;
+  case 17:
+    return options::OPT_ffixed_r17;
+  case 18:
+    return options::OPT_ffixed_r18;
+  case 19:
+    return options::OPT_ffixed_r19;
+  case 20:
+    return options::OPT_ffixed_r20;
+  case 21:
+    return options::OPT_ffixed_r21;
+  case 22:
+    return options::OPT_ffixed_r22;
+  case 23:
+    return options::OPT_ffixed_r23;
+  case 24:
+    return options::OPT_ffixed_r24;
+  case 25:
+    return options::OPT_ffixed_r25;
+  case 26:
+    return options::OPT_ffixed_r26;
+  case 27:
+    return options::OPT_ffixed_r27;
+  }
+  llvm_unreachable("not a Hexagon callee-saved register");
+}
 
 /// Produce a string containing comma-separated names of sanitizers and
 /// sanitizer groups in \p Sanitizers set.
@@ -363,6 +396,10 @@ bool SanitizerArgs::needsUbsanRt() const {
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
+  // CSan provides coverage and is incompatible with UBSan.
+  if (needsCsanRt())
+    return false;
+
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
 }
@@ -496,18 +533,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
-      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-        StringRef CM = A->getValue();
-        if (CM != "small" &&
-            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
-          if (DiagnoseErrors)
-            D.Diag(diag::err_drv_argument_only_allowed_with)
-                << "-fsanitize=function"
-                << "-mcmodel=small";
-          Add &= ~SanitizerKind::Function;
-          DiagnosedKinds |= SanitizerKind::Function;
-        }
-      }
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
@@ -705,8 +730,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+                         SanitizerKind::Thread),
+      std::make_pair(SanitizerKind::Thread,
+                     SanitizerKind::Memory | SanitizerKind::Concurrency),
+      std::make_pair(
+          SanitizerKind::Concurrency,
+          SanitizerKind::Thread | SanitizerKind::Address |
+              SanitizerKind::Memory | SanitizerKind::Leak |
+              SanitizerKind::Undefined | SanitizerKind::Integer |
+              SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
+              SanitizerKind::LocalBounds | SanitizerKind::FloatDivideByZero),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,
@@ -784,11 +817,26 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if ((Kinds & SanitizerKind::ShadowCallStack) &&
-      TC.getTriple().getArch() == llvm::Triple::hexagon &&
-      !Args.hasArg(options::OPT_ffixed_r19) && DiagnoseErrors) {
-    D.Diag(diag::err_drv_argument_only_allowed_with)
-        << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
-        << "-ffixed-r19";
+      TC.getTriple().getArch() == llvm::Triple::hexagon && DiagnoseErrors) {
+    // The register holding the shadow call stack pointer must be reserved, so
+    // that neither the register allocator uses it nor the prologue saves and
+    // restores it as an ordinary callee-saved register.  It defaults to r18
+    // and is selectable with -mscs-reg=.
+    unsigned RegNo = 18;
+    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_scs_reg)) {
+      StringRef Val(A->getValue());
+      unsigned Parsed = 0;
+      // An out-of-range or malformed value is diagnosed by the toolchain; fall
+      // back to the default here so we do not emit a second, confusing error.
+      if (Val.consume_front("r") && !Val.getAsInteger(10, Parsed) &&
+          Parsed >= 16 && Parsed <= 27)
+        RegNo = Parsed;
+    }
+    if (!Args.hasArg(getHexagonFixedRegOption(RegNo)))
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << lastArgumentForMask(D, Args,
+                                 Kinds & SanitizerKind::ShadowCallStack)
+          << ("-ffixed-r" + Twine(RegNo)).str();
   }
 
   // Report error if there are non-trapping sanitizers that require
@@ -963,6 +1011,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
     KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
+
+    if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_kcfi_hash_EQ))
+      KcfiHash = A->getValue();
 
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1259,7 +1310,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           HwasanUseAliases);
   }
 
-  if (AllAddedKinds & SanitizerKind::SafeStack) {
+  if (Kinds & SanitizerKind::SafeStack) {
     // SafeStack runtime is built into the system on Android and Fuchsia.
     SafeStackRuntime =
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
@@ -1294,6 +1345,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
+
+  NeedsCopyProfRt =
+      Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
@@ -1572,6 +1626,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }
+
+  if (KcfiHash)
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-kcfi-hash=" + *KcfiHash));
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");

@@ -2,7 +2,7 @@
 ;; counters. The uniform counter is passed to __llvm_profile_instrument_gpu which
 ;; updates it when all lanes in the wave are active.
 
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof -S | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof -S | FileCheck %s
 
 @__hip_cuid_test123 = addrspace(1) global i8 0
 @__profn_test_kernel = private constant [11 x i8] c"test_kernel"

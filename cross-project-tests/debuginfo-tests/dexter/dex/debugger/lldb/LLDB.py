@@ -320,12 +320,12 @@ class LLDB(DebuggerBase):
         )
 
     def get_stack_frames(self, step_index: int) -> StepIR:
-        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
 
     def collect_watches(
         self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
     ):
-        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
 
     @property
     def is_running(self):
@@ -435,6 +435,14 @@ class LLDBDAP(DAP):
             "__libc_start_call_main",
             "_start",
         ]
+
+    def _sanitize_function_name(self, name: str):  # pylint: disable=no-self-use
+        # Remove the tags that LLDB may insert at the end of a function name; these appear in a fixed order, and we
+        # strip them in the reverse of that order below.
+        for tag in ["artificial", "inlined", "opt"]:
+            if name.endswith(f" [{tag}]"):
+                name = name[: -len(f" [{tag}]")]
+        return name
 
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""

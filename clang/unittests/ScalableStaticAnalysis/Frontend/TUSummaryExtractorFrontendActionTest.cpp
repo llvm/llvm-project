@@ -118,6 +118,16 @@ public:
     return failing("writeMultiArchStaticLibrary");
   }
 
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) override {
+    return failing("readMultiArchSharedLibrary");
+  }
+
+  llvm::Error writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
+                                          llvm::StringRef Path) override {
+    return failing("writeMultiArchSharedLibrary");
+  }
+
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override {
     return failing("readWPASuite");
   }
@@ -211,6 +221,14 @@ public:
     return llvm::createStringError("not implemented");
   }
   llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &,
+                                          llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeMultiArchSharedLibrary(const MultiArchSharedLibrary &,
                                           llvm::StringRef) override {
     return llvm::Error::success();
   }

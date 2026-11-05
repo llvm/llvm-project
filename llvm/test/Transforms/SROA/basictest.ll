@@ -110,7 +110,7 @@ define i64 @test2_addrspacecast_gep_offset(i64 %X) {
 ; CHECK-LABEL: @test2_addrspacecast_gep_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [10 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i16 2
+; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 2
 ; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_CAST:%.*]] = addrspacecast ptr [[A_SROA_0_2_GEPB_SROA_IDX]] to ptr addrspace(1)
 ; CHECK-NEXT:    store i64 [[X:%.*]], ptr addrspace(1) [[A_SROA_0_2_GEPB_SROA_CAST]], align 1
 ; CHECK-NEXT:    br label [[L2:%.*]]
@@ -1330,10 +1330,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
@@ -1518,7 +1518,7 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ;
 ; CHECK-MODIFY-CFG-LABEL: @PR16651.2(
 ; CHECK-MODIFY-CFG-NEXT:  entry:
-; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i32 0
+; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
 ; CHECK-MODIFY-CFG-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_THEN:%.*]], label [[ENTRY_CONT:%.*]]
 ; CHECK-MODIFY-CFG:       entry.then:
 ; CHECK-MODIFY-CFG-NEXT:    [[COND105_I_I_THEN_VAL:%.*]] = load float, ptr null, align 8

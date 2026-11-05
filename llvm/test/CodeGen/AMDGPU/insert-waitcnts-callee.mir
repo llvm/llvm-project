@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 --- |
   define float @entry_callee_wait(float %arg) #0 {
     ret float %arg
@@ -17,6 +17,7 @@ liveins:
   - { reg: '$vgpr0' }
 
 name: entry_callee_wait
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec

@@ -17,7 +17,10 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,10 +29,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-clean-code-after-trap"
 
 namespace {
-class WebAssemblyCleanCodeAfterTrap final : public MachineFunctionPass {
+class WebAssemblyCleanCodeAfterTrapLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyCleanCodeAfterTrap() : MachineFunctionPass(ID) {}
+  WebAssemblyCleanCodeAfterTrapLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Clean Code After Trap";
@@ -39,15 +42,15 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblyCleanCodeAfterTrap::ID = 0;
-INITIALIZE_PASS(WebAssemblyCleanCodeAfterTrap, DEBUG_TYPE,
+char WebAssemblyCleanCodeAfterTrapLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyCleanCodeAfterTrapLegacy, DEBUG_TYPE,
                 "WebAssembly Clean Code After Trap", false, false)
 
-FunctionPass *llvm::createWebAssemblyCleanCodeAfterTrap() {
-  return new WebAssemblyCleanCodeAfterTrap();
+FunctionPass *llvm::createWebAssemblyCleanCodeAfterTrapLegacyPass() {
+  return new WebAssemblyCleanCodeAfterTrapLegacy();
 }
 
-bool WebAssemblyCleanCodeAfterTrap::runOnMachineFunction(MachineFunction &MF) {
+static bool cleanCodeAfterTrap(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** CleanCodeAfterTrap **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -77,4 +80,17 @@ bool WebAssemblyCleanCodeAfterTrap::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return Changed;
+}
+
+bool WebAssemblyCleanCodeAfterTrapLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return cleanCodeAfterTrap(MF);
+}
+
+PreservedAnalyses
+WebAssemblyCleanCodeAfterTrapPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  return cleanCodeAfterTrap(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }
