@@ -22,31 +22,34 @@ define void @nested_inf_loop(i1 %0, i1 %1) {
 ; ISA-NEXT:    v_and_b32_e32 v0, 1, v0
 ; ISA-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v1
 ; ISA-NEXT:    v_cmp_ne_u32_e64 s[6:7], 1, v0
-; ISA-NEXT:    s_mov_b64 s[8:9], 0
-; ISA-NEXT:  .LBB0_1: ; %BB1
+; ISA-NEXT:  .LBB0_1: ; %BB1.outer
 ; ISA-NEXT:    ; =>This Loop Header: Depth=1
-; ISA-NEXT:    ; Child Loop BB0_3 Depth 2
+; ISA-NEXT:    ; Child Loop BB0_2 Depth 2
+; ISA-NEXT:    ; Child Loop BB0_4 Depth 2
+; ISA-NEXT:    s_mov_b64 s[8:9], 0
+; ISA-NEXT:  .LBB0_2: ; %BB1
+; ISA-NEXT:    ; Parent Loop BB0_1 Depth=1
+; ISA-NEXT:    ; => This Inner Loop Header: Depth=2
 ; ISA-NEXT:    s_and_b64 s[10:11], exec, s[6:7]
 ; ISA-NEXT:    s_or_b64 s[8:9], s[10:11], s[8:9]
 ; ISA-NEXT:    s_andn2_b64 exec, exec, s[8:9]
-; ISA-NEXT:    s_cbranch_execnz .LBB0_1
-; ISA-NEXT:  ; %bb.2: ; %BB2
+; ISA-NEXT:    s_cbranch_execnz .LBB0_2
+; ISA-NEXT:  ; %bb.3: ; %BB2
 ; ISA-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; ISA-NEXT:    s_mov_b64 s[8:9], 0
-; ISA-NEXT:  .LBB0_3: ; %BB4
+; ISA-NEXT:  .LBB0_4: ; %BB4
 ; ISA-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; ISA-NEXT:    ; => This Inner Loop Header: Depth=2
 ; ISA-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
 ; ISA-NEXT:    s_or_b64 s[8:9], s[10:11], s[8:9]
 ; ISA-NEXT:    s_andn2_b64 exec, exec, s[8:9]
-; ISA-NEXT:    s_cbranch_execnz .LBB0_3
-; ISA-NEXT:  ; %bb.4: ; %loop.exit.guard
+; ISA-NEXT:    s_cbranch_execnz .LBB0_4
+; ISA-NEXT:  ; %bb.5: ; %loop.exit.guard
 ; ISA-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[8:9]
-; ISA-NEXT:    s_mov_b64 s[8:9], 0
 ; ISA-NEXT:    s_branch .LBB0_1
-; ISA-NEXT:  ; %bb.5: ; %DummyReturnBlock
+; ISA-NEXT:  ; %bb.6: ; %DummyReturnBlock
 ; ISA-NEXT:    s_setpc_b64 s[30:31]
 BB:
   br label %BB1
