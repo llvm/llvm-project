@@ -6666,7 +6666,7 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // ldexp(poison, x) -> poison
   // ldexp(x, poison) -> poison
   if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-    return Op0;
+    return PoisonValue::get(Op0->getType());
 
   // ldexp(undef, x) -> nan
   if (Q.isUndefValue(Op0))
