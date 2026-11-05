@@ -1465,6 +1465,7 @@ void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
     bool forVirtualBase, bool delegating, CallArgList &args) {
   GlobalDecl gd(d, ctorType);
   assert(!cir::MissingFeatures::generateDebugInfo());
+  SymTableScopeTy varScope(symbolTable);
   InlinedInheritingConstructorScope scope(*this, gd);
   RunCleanupsScope RunCleanups(*this);
 
