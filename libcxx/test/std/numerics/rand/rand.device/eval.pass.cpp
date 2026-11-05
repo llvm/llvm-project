@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-random-device
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <random>
 
