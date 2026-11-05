@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT bfloat16 tanbf16(bfloat16 x) {
 
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits xbits(x);
@@ -60,7 +60,7 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
 
   double xd = static_cast<double>(xf);
   uint32_t x_abs_f = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
-  double sin_k, cos_k, sin_y, cosm1_y;
+  double sin_k{}, cos_k{}, sin_y{}, cosm1_y{};
 
   // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are
   // available

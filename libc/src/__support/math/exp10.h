@@ -66,7 +66,7 @@ LIBC_INLINE_VAR constexpr double EXP10_ERR_DD = 0x1.8p-99;
 // > P;
 // Error bounds:
 //   | output - (10^dx - 1) / dx | < 2^-52.
-LIBC_INLINE double exp10_poly_approx_d(double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double exp10_poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   double c0 =
@@ -83,7 +83,8 @@ LIBC_INLINE double exp10_poly_approx_d(double dx) {
 // > P = fpminimax((10^x - 1)/x, 5, [|DD...|], [-2^-14, 2^-14]);
 // Error bounds:
 //   | output - 10^(dx) | < 2^-101
-LIBC_INLINE DoubleDouble exp10_poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE constexpr DoubleDouble
+exp10_poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},
@@ -105,7 +106,7 @@ LIBC_INLINE DoubleDouble exp10_poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + a0 * dx + a1 * dx^2 + ... + a6 * dx^7
 // For |dx| < 2^-14:
 //   | output - 10^dx | < 1.5 * 2^-124.
-LIBC_INLINE DFloat128 exp10_poly_approx_f128(const DFloat128 &dx) {
+LIBC_INLINE constexpr DFloat128 exp10_poly_approx_f128(const DFloat128 &dx) {
   constexpr DFloat128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
@@ -126,7 +127,8 @@ LIBC_INLINE DFloat128 exp10_poly_approx_f128(const DFloat128 &dx) {
 // Compute 10^(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-LIBC_INLINE DFloat128 exp10_f128(double x, double kd, int idx1, int idx2) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128 exp10_f128(double x, double kd,
+                                                        int idx1, int idx2) {
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_M12_HI, x); // exact
   double t2 = kd * MLOG10_2_EXP2_M12_MID_32;                     // exact
   double t3 = kd * MLOG10_2_EXP2_M12_LO; // Error < 2^-144
@@ -157,8 +159,8 @@ LIBC_INLINE DFloat128 exp10_f128(double x, double kd, int idx1, int idx2) {
 }
 
 // Compute 10^x with double-double precision.
-LIBC_INLINE DoubleDouble exp10_double_double(double x, double kd,
-                                             const DoubleDouble &exp_mid) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DoubleDouble
+exp10_double_double(double x, double kd, const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log10(2)
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_M12_HI, x); // exact
@@ -180,7 +182,7 @@ LIBC_INLINE DoubleDouble exp10_double_double(double x, double kd,
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // When output is denormal.
-LIBC_INLINE double exp10_denorm(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double exp10_denorm(double x) {
   // Range reduction.
   double tmp = fputil::multiply_add(x, LOG2_10, 0x1.8000'0000'4p21);
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(tmp) >> 19);
@@ -248,7 +250,7 @@ LIBC_INLINE double exp10_denorm(double x) {
 //  * x >= log10(2^1024)
 //  * x <= log10(2^-1022)
 //  * x is inf or nan
-LIBC_INLINE double exp10_set_exceptional(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double exp10_set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -303,7 +305,7 @@ LIBC_INLINE double exp10_set_exceptional(double x) {
 
 namespace math {
 
-LIBC_INLINE double exp10(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double exp10(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 

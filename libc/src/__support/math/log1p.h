@@ -884,7 +884,7 @@ log1p_accurate(int e_x, int index, fputil::DoubleDouble m_x) {
 
 } // namespace log1p_internal
 
-LIBC_INLINE LIBC_CONSTEXPR double log1p(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log1p(double x) {
   using namespace log1p_internal;
   using FPBits_t = typename fputil::FPBits<double>;
 

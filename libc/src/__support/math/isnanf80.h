@@ -23,7 +23,7 @@ namespace math {
 
 using LIBC_NAMESPACE::fputil::Float80;
 
-LIBC_INLINE LIBC_CONSTEXPR int isnanf80(Float80 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int isnanf80(Float80 x) {
   return fputil::FPBits<Float80>(x).is_nan();
 }
 

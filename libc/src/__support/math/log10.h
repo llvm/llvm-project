@@ -745,7 +745,7 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log10_accurate(int e_x, int index,
 
 } // namespace log10_internal
 
-LIBC_INLINE LIBC_CONSTEXPR double log10(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log10(double x) {
   using namespace log10_internal;
   using namespace common_constants_internal;
   using FPBits_t = typename fputil::FPBits<double>;

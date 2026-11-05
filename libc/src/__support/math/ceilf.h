@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float ceilf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float ceilf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
     !defined(LIBC_USE_CONSTEXPR)
   return __builtin_ceilf(x);

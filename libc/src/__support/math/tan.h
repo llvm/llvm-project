@@ -38,8 +38,8 @@ namespace tan_internal {
 using DoubleDouble = fputil::DoubleDouble;
 using DFloat128 = typename fputil::DyadicFloat<128>;
 
-LIBC_INLINE LIBC_CONSTEXPR double tan_eval(const DoubleDouble &u,
-                                           DoubleDouble &result) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double tan_eval(const DoubleDouble &u,
+                                                   DoubleDouble &result) {
   // Evaluate tan(y) = tan(x - k * (pi/128))
   // We use the degree-9 Taylor approximation:
   //   tan(y) ~ P(y) = y + y^3/3 + 2*y^5/15 + 17*y^7/315 + 62*y^9/2835
@@ -77,7 +77,7 @@ LIBC_INLINE LIBC_CONSTEXPR double tan_eval(const DoubleDouble &u,
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Accurate evaluation of tan for small u.
-[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR DFloat128
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128
 tan_eval(const DFloat128 &u) {
   DFloat128 u_sq = fputil::quick_mul(u, u);
 
@@ -125,7 +125,7 @@ newton_raphson_div(const DFloat128 &a, DFloat128 b, double q) {
 
 } // namespace tan_internal
 
-LIBC_INLINE LIBC_CONSTEXPR double tan(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double tan(double x) {
   using namespace tan_internal;
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;

@@ -99,7 +99,8 @@ LIBC_INLINE_VAR constexpr Frac128 LOG2_POLY_128[16] = {
 // The value -log2(r) is provided by LOG2_RD_FRAC256[idx_x].
 // log2(1 + dx) is evaluated with a degree-15 minimax polynomial using a 2-tier
 // Horner scheme (Frac64 and Frac128).
-LIBC_INLINE DFloat128 log2_f128(int x_e, unsigned idx_x, double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128 log2_f128(int x_e, unsigned idx_x,
+                                                       double dx) {
   using FPBits = fputil::FPBits<double>;
 
   if (dx == 0.0) {
@@ -206,7 +207,7 @@ LIBC_INLINE_VAR constexpr Frac128 EXP2_POLY_128[12] = {
 // Then:
 //   2^z = 2^hi * EXP2_MID_FRAC256[idx] * 2^lo
 //       = 2^hi * EXP2_MID_FRAC256[idx] * (1 + lo * P(lo)).
-LIBC_INLINE DFloat128 exp2_f128(const DFloat128 &z) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128 exp2_f128(const DFloat128 &z) {
   double z_d = static_cast<double>(z);
   double z_scaled = z_d * 64.0;
   double kd = fputil::nearest_integer(z_scaled);
@@ -272,8 +273,10 @@ LIBC_INLINE DFloat128 exp2_f128(const DFloat128 &z) {
 }
 
 // Accurate pow(x, y) reusing range reduction parameters from the fast pass.
-LIBC_INLINE double pow_accurate(double x, double y, bool is_neg, int x_e,
-                                unsigned idx_x, double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double pow_accurate(double x, double y,
+                                                       bool is_neg, int x_e,
+                                                       unsigned idx_x,
+                                                       double dx) {
   DFloat128 log2_x = log2_f128(x_e, idx_x, dx);
   DFloat128 y_f128(y);
   DFloat128 z = fputil::quick_mul(y_f128, log2_x);

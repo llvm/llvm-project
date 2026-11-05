@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float roundevenf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float roundevenf(float x) {
 #if defined(__LIBC_USE_BUILTIN_ROUNDEVEN) && !defined(LIBC_USE_CONSTEXPR)
   return __builtin_roundevenf(x);
 #else

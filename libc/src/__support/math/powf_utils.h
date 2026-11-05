@@ -327,7 +327,7 @@ constexpr uint32_t Y_UPPER_BOUND = 0x4ecf'f1b4;
 // 0x2f5a740d
 constexpr uint32_t Y_LOWER_BOUND = 0x2f5a'740d;
 
-LIBC_INLINE float set_overflow(Sign sign = Sign::POS) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float set_overflow(Sign sign = Sign::POS) {
   fputil::set_errno_if_required(ERANGE);
   fputil::raise_overflow_except_if_required<float>();
   using FPBits = fputil::FPBits<float>;
@@ -346,7 +346,7 @@ LIBC_INLINE float set_overflow(Sign sign = Sign::POS) {
                        : FPBits::inf(Sign::POS).get_val();
 }
 
-LIBC_INLINE float set_underflow(Sign sign = Sign::POS) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float set_underflow(Sign sign = Sign::POS) {
   fputil::set_errno_if_required(ERANGE);
   fputil::raise_underflow_except_if_required<float>();
 
@@ -365,7 +365,8 @@ LIBC_INLINE float set_underflow(Sign sign = Sign::POS) {
 // Fast checks for special inputs:
 //   x = 0, +-1, 2^k, 10, +- Inf
 //   y = 0, +-1, 2, 0.5
-LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT cpp::optional<float>
+check_special_inputs(float x, float y) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x), ybits(y);
 
@@ -474,7 +475,7 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
 // determined, or nullopt if regular evaluation should proceed (in which case x,
 // y, ex, sign may be updated).
 template <typename SignType = uint64_t>
-LIBC_ALWAYS_INLINE cpp::optional<float>
+LIBC_ALWAYS_INLINE constexpr cpp::optional<float>
 check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
   using FloatBits = fputil::FPBits<float>;
   FloatBits xbits(x), ybits(y);
@@ -616,8 +617,9 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
 //      - The resulting significand (m^(2^f))^n <= 2^25.
 //
 // Returns true and sets exact_m and exact_exp if x^y is an exact boundary.
-LIBC_INLINE bool is_exact_rounding_boundary(float x, float y, uint32_t &exact_m,
-                                            int &exact_exp) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT bool
+is_exact_rounding_boundary(float x, float y, uint32_t &exact_m,
+                           int &exact_exp) {
   using FPBits = fputil::FPBits<float>;
 
   FPBits xbits(x);

@@ -46,7 +46,7 @@ namespace math {
 // So we will only use `__builtin_round` with clang on x86-64 if we assume
 // default rounding mode (FE_TONEAREST) only.
 
-LIBC_INLINE LIBC_CONSTEXPR double round(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double round(double x) {
 #if __has_builtin(__builtin_round) && !defined(LIBC_USE_CONSTEXPR) &&          \
     (defined(__LIBC_USE_BUILTIN_ROUND) ||                                      \
      (defined(LIBC_COMPILER_IS_CLANG) &&                                       \

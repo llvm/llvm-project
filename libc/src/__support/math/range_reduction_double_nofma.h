@@ -26,8 +26,8 @@ namespace range_reduction_double_internal {
 
 using fputil::DoubleDouble;
 
-LIBC_INLINE LIBC_CONSTEXPR unsigned LargeRangeReduction::fast(double x,
-                                                              DoubleDouble &u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT unsigned
+LargeRangeReduction::fast(double x, DoubleDouble &u) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 

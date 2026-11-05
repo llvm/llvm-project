@@ -34,7 +34,7 @@ LIBC_INLINE constexpr OutType fma(InType x, InType y, InType z) {
   return generic::fma<OutType>(x, y, z);
 }
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_USE_CONSTEXPR)
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 template <> LIBC_INLINE float fma(float x, float y, float z) {
@@ -68,7 +68,7 @@ template <> LIBC_INLINE double fma(double x, double y, double z) {
 }
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #endif // defined(LIBC_TARGET_CPU_HAS_FMA) &&
-       // !defined(LIBC_HAS_CONSTANT_EVALUATION)
+       // !defined(LIBC_USE_CONSTEXPR)
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

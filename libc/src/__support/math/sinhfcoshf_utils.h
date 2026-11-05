@@ -55,7 +55,8 @@ namespace sinhfcoshf_internal {
 // The main point of these formulas is that the expensive part of calculating
 // the polynomials approximating lower parts of e^(x) and e^(-x) are shared
 // and only done once.
-template <bool is_sinh> LIBC_INLINE LIBC_CONSTEXPR double exp_pm_eval(float x) {
+template <bool is_sinh>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double exp_pm_eval(float x) {
   double xd = static_cast<double>(x);
 
   // kd = round(x * log2(e) * 2^5)
