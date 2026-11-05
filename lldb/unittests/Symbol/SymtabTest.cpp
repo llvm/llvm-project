@@ -1603,7 +1603,7 @@ LinkEditData:
             NodeOffset:      14
             Name:            d
             Flags:           0x0
-            Address:         0x4000
+            Address:         0xC4000
             Other:           0x0
             ImportName:      ''
           - TerminalSize:    3
@@ -1715,7 +1715,7 @@ LinkEditData:
   // Compare the serialized buffers, they must be identical.
   //
   ASSERT_EQ(zero_filebytes, nonzero_filebytes);
-  //ASSERT_EQ(zero_filebytes, split_filebytes);
+  ASSERT_EQ(zero_filebytes, split_filebytes);
 
   //
   // Decoding one binary's serialized symtab with another binary's
