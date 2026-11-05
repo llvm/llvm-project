@@ -107,6 +107,7 @@ public:
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
   bool isPointerType() const { return getType().ends_with('*'); }
   bool isHandleType() const { return getType().ends_with("_handle_t"); }
+  bool isFptrType() const { return getType().ends_with("_cb_t"); }
 
 private:
   const Record *rec;

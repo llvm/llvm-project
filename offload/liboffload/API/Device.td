@@ -168,6 +168,21 @@ def olGetDeviceInfo : Function {
   ];
 }
 
+def olSetDeviceDiagnosticHandler : Function {
+  let desc = "Sets the handler used to report problems detected on the device.";
+  let details = [
+    "Problems detected on a device without a handler get minimal built-in reporting.",
+    "The handler is not copied: it must stay valid for as long as it is set on the device. Passing `NULL` removes the handler."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
+    Param<"const ol_diagnostic_handler_t*", "Handler", "the handler to use, or NULL to remove it", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_DEVICE">
+  ];
+}
+
 def olGetDeviceInfoSize : Function {
   let desc = "Returns the storage size of the given device query.";
   let details = [];

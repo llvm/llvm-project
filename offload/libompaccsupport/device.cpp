@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "DiagnosticPrinter.h"
 #include "OffloadEntry.h"
 #include "OmpAccError.h"
 #include "OpenMP/Mapping.h"
@@ -158,6 +159,11 @@ llvm::Error DeviceTy::init() {
 
   RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
   RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
+  if (auto Err = olSetDeviceDiagnosticHandler(
+          DeviceHandle, llvm::omp::target::getDiagnosticPrinter()))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to set diagnostic handler for device %d: %s",
+                       DeviceID, Err->Details);
 
   // Needs to be initialized before the GeometryProps.
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
