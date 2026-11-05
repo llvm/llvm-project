@@ -11710,9 +11710,17 @@ public:
     }
     // 2. Check, if operands can be vectorized. Skip for fmuladd; the
     // copyable operand is checked below and may legitimately hold many
-    // instructions.
+    // instructions. The instructions, built only from the first operand of the
+    // same lane and constants, are computed from the vectorized first
+    // operand, not gathered.
     if (Operands.size() == 2 &&
-        count_if(Operands.back(), IsaPred<Instruction>) > 1)
+        count_if(Operands.back(), IsaPred<Instruction>) > 1 &&
+        !all_of(zip(Operands.front(), Operands.back()), [](const auto &P) {
+          auto *I = dyn_cast<Instruction>(std::get<1>(P));
+          return !I || all_of(I->operands(), [&](Value *Op) {
+            return Op == std::get<0>(P) || isConstant(Op);
+          });
+        }))
       return OrigS;
     // Check the operand holding the copyable values.
     if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
@@ -16859,31 +16867,6 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
   return SpillsReloads;
 }
 
-/// Calculates a VectorInstrContext from the values in \p VL at indices in
-/// \p DemandedElts.
-static TTI::VectorInstrContext
-getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
-  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
-  for (unsigned I : seq(VL.size())) {
-    if (!DemandedElts[I])
-      continue;
-    Value *V = VL[I];
-    if (isa<UndefValue>(V))
-      continue;
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      return TTI::VectorInstrContext::None;
-    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
-    if (VIC == TTI::VectorInstrContext::None) {
-      VIC = IVIC;
-      continue;
-    }
-    if (VIC != IVIC)
-      return TTI::VectorInstrContext::None;
-  }
-  return VIC;
-}
-
 /// \returns the cast opcode, which gives the same result for the operand,
 /// demoted with the signedness \p IsSigned, as \p Opcode gives for the original
 /// operand, or std::nullopt if the operand must be extended back first.
@@ -17410,7 +17393,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     Cost -= getScalarizationOverhead(
         *TTI, Opts.slp_revec, ScalarTy, SrcVecTy, DemandedElts,
         /*Insert=*/true, /*Extract=*/false, CostKind, InMask.all(), AdjustedVL,
-        getVectorInstrContextHint(AdjustedVL, DemandedElts));
+        TTI::getVectorInstrContextHint(AdjustedVL, DemandedElts));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = cast<VectorType>(getWidenedType(ScalarTy, VecSz));

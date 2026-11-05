@@ -111,3 +111,6 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+
+- The CMake configuration-time option ``LIBCXX_PSTL_BACKEND`` has been removed. The PSTL backend is now chosen based
+  on the availability of threading (``_LIBCPP_HAS_THREADS``).
