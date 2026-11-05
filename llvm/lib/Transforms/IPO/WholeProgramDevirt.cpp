@@ -65,6 +65,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -98,6 +99,7 @@
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugCounter.h"
@@ -115,6 +117,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -1261,9 +1264,34 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // If fallback checking or speculative devirtualization are enabled,
       // add support to compare the virtual function pointer to the
       // devirtualized target. In case of a mismatch, fall back to indirect
-      // call.
+      // call. The guard's weights come from the indirect call's value
+      // profile when one is available.
       if (DevirtCheckMode == WPDCheckMode::Fallback || DevirtSpeculatively) {
-        MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
+        MDBuilder MDB(M.getContext());
+        uint64_t TotalCount = 0;
+        SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
+            CB, InstrProfValueKind::IPVK_IndirectCallTarget,
+            std::numeric_limits<uint32_t>::max(), TotalCount);
+        MDNode *Weights = nullptr;
+        if (ValueData.empty() || TotalCount == 0) {
+          Weights = MDB.createLikelyBranchWeights();
+        } else {
+          uint64_t TargetGUID = cast<GlobalValue>(TheFn)->getGUID();
+          auto It = llvm::find_if(ValueData, [&](const InstrProfValueData &VD) {
+            return VD.Value == TargetGUID;
+          });
+          if (It == ValueData.end()) {
+            // Not found is not confirmed cold. it could be a truncated
+            // profile, so do not guess a direction.
+            Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+                *CB.getFunction(), DEBUG_TYPE);
+          } else {
+            uint64_t FallbackCount =
+                TotalCount - std::min(TotalCount, It->Count);
+            Weights =
+                MDB.createBranchWeights(fitWeights({It->Count, FallbackCount}));
+          }
+        }
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
         // site will be executed.
