@@ -6081,17 +6081,15 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
 
-    // For a self-multiply both operands are the same value, so an unknown RHS
-    // implies an unknown LHS: bail out before the duplicated query.
-    if (SelfMultiply && RHSKnown.isUnknown())
-      break;
-
-    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
-
-    if (SelfMultiply)
+    KnownBits LHSKnown;
+    if (SelfMultiply) {
+      LHSKnown = RHSKnown;
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
           Depth + 1);
+    } else {
+      LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    }
 
     Known = computeKnownBitsForMul24(LHSKnown, RHSKnown,
                                      Op.getScalarValueSizeInBits(),
