@@ -159,16 +159,17 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       evalStore(Tmp2, B, LHS, N, State, LeftV, StoredInLeftV);
     }
   }
-  ExplodedNodeSet PostVisitedSet;
-  // FIXME: postvisits eventually go in ::Visit()
-  getCheckerManager().runCheckersForPostStmt(PostVisitedSet, Tmp2, B, *this);
 
+  ExplodedNodeSet AssumedSet;
   if (AMgr.options.ShouldEagerlyAssume &&
       (B->isRelationalOp() || B->isEqualityOp())) {
-    evalEagerlyAssumeBifurcation(Dst, PostVisitedSet, B);
+    evalEagerlyAssumeBifurcation(AssumedSet, Tmp2, B);
   } else {
-    Dst.insert(PostVisitedSet);
+    AssumedSet.insert(Tmp2);
   }
+  // FIXME: postvisits eventually go in ::Visit()
+  getCheckerManager().runCheckersForPostStmt(Dst, AssumedSet, B, *this);
+
 }
 
 void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
@@ -976,14 +977,13 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
     }
   }
 
-  ExplodedNodeSet PostVisitedSet;
-  getCheckerManager().runCheckersForPostStmt(PostVisitedSet, EvalSet, U, *this);
-
+  ExplodedNodeSet AssumedSet;
   if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
-    evalEagerlyAssumeBifurcation(Dst, PostVisitedSet, U);
+    evalEagerlyAssumeBifurcation(AssumedSet, EvalSet, U);
   } else {
-    Dst.insert(PostVisitedSet);
+    AssumedSet.insert(EvalSet);
   }
+  getCheckerManager().runCheckersForPostStmt(Dst, AssumedSet, U, *this);
 }
 
 void ExprEngine::VisitPseudoObjectExpr(const PseudoObjectExpr *PE,
