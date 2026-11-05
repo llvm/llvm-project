@@ -631,7 +631,7 @@ define void @non_callbr_in_callbr(i1 %c) {
 ; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[FALLTHROUGH]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[_TARGET_FALLTHROUGH:.*:]]
+; CHECK:       [[DOTTARGET_FALLTHROUGH]]:
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ;
   callbr void asm "", "!i"() to label %fallthrough [label %indirect]
@@ -1827,6 +1827,20 @@ exit:
 ; isAlreadyStructuredIsland to return false so handleIsland gets called, which
 ; calls isUnreachableTarget
 define void @callbr_duplicate_indirect_unreachable() {
+; CHECK-LABEL: define void @callbr_duplicate_indirect_unreachable() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm sideeffect "nop", "!i,!i"()
+; CHECK-NEXT:            to label %[[ENTRY_TARGET_EXIT:.*]] [label %[[UNREACHABLE_TARGET:.*]], label %[[UNREACHABLE_TARGET]]]
+; CHECK:       [[UNREACHABLE_TARGET]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[FLOW:.*]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ENTRY_TARGET_EXIT]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+;
 entry:
   callbr void asm sideeffect "nop", "!i,!i"() to label %exit [label %unreachable_target, label %unreachable_target]
 
