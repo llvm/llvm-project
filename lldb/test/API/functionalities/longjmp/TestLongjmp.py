@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 @requireNotWasm("setjmp/longjmp on wasm requires exception-handling support")
 class LongjmpTestCase(TestBase):
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
+    @skipIf(oslist=["windows"], archs=["aarch64"], bugnumber="llvm.org/pr239325")
     @expectedFlakeyNetBSD
     def test_step_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out."""
