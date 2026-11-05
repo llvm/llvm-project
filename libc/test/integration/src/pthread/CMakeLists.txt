@@ -321,7 +321,6 @@ add_integration_test(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
     libc.src.__support.CPP.new
-    libc.src.__support.CPP.optional
 )
 
 add_integration_test(
