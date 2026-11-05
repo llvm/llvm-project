@@ -233,8 +233,8 @@ public:
   // Ger or create the function name global string.
   Value *getOrCreateFunctionName(StringRef moduleName, StringRef kernelName);
 
-  // Create the void* kernel array for passing the arguments.
-  Value *createKernelArgArray(mlir::gpu::LaunchFuncOp op);
+  // Create the kernel argument struct and the void* array pointing into it.
+  std::pair<Value *, Value *> createKernelArgArray(mlir::gpu::LaunchFuncOp op);
 
   // Create the full kernel launch.
   llvm::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
@@ -361,20 +361,22 @@ llvm::Value *llvm::LaunchKernel::getOrCreateFunctionName(StringRef moduleName,
   return builder.CreateGlobalString(kernelName, globalName);
 }
 
-// Creates a struct containing all kernel parameters on the stack and returns
-// an array of type-erased pointers to the fields of the struct. The array can
-// then be passed to the CUDA / ROCm (HIP) kernel launch calls.
+// Creates a struct containing all kernel parameters on the stack and an array
+// of type-erased pointers to the fields of the struct, and returns both. The
+// array can then be passed to the CUDA / ROCm (HIP) kernel launch calls.
 // The generated code is essentially as follows:
 //
 // %struct = alloca(sizeof(struct { Parameters... }))
 // %array = alloca(NumParameters * sizeof(void *))
+// llvm.lifetime.start %struct
+// llvm.lifetime.start %array
 // for (i : [0, NumParameters))
 //   %fieldPtr = llvm.getelementptr %struct[0, i]
 //   llvm.store parameters[i], %fieldPtr
 //   %elementPtr = llvm.getelementptr %array[i]
 //   llvm.store %fieldPtr, %elementPtr
-// return %array
-llvm::Value *
+// return %struct, %array
+std::pair<llvm::Value *, llvm::Value *>
 llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
   SmallVector<Value *> args =
       moduleTranslation.lookupValues(op.getKernelOperands());
@@ -384,9 +386,15 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
     structTypes[i] = arg->getType();
 
   Type *structTy = StructType::create(module.getContext(), structTypes);
-  Value *argStruct = builder.CreateAlloca(structTy, 0u);
-  Value *argArray = builder.CreateAlloca(
+  // Allocate in the entry block, so that a launch in a loop does not grow the
+  // stack on every iteration.
+  BasicBlock &entry = builder.GetInsertBlock()->getParent()->getEntryBlock();
+  IRBuilder<> allocaBuilder(entry.getFirstInsertionPt());
+  Value *argStruct = allocaBuilder.CreateAlloca(structTy, 0u);
+  Value *argArray = allocaBuilder.CreateAlloca(
       ptrTy, ConstantInt::get(intPtrTy, structTypes.size()));
+  builder.CreateLifetimeStart(argStruct);
+  builder.CreateLifetimeStart(argArray);
 
   for (auto [i, arg] : enumerate(args)) {
     Value *structMember = builder.CreateStructGEP(structTy, argStruct, i);
@@ -394,7 +402,7 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
     Value *arrayMember = builder.CreateConstGEP1_32(ptrTy, argArray, i);
     builder.CreateStore(structMember, arrayMember);
   }
-  return argArray;
+  return {argStruct, argArray};
 }
 
 // Emits LLVM IR to launch a kernel function:
@@ -403,6 +411,7 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
 // %3 = call @mgpuStreamCreate()
 // %4 = <see createKernelArgArray()>
 // call @mgpuLaunchKernel(%2, ..., %3, %4, ...)
+// llvm.lifetime.end %struct, %array
 // call @mgpuStreamSynchronize(%3)
 // call @mgpuStreamDestroy(%3)
 llvm::LogicalResult
@@ -432,7 +441,7 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
     dynamicMemorySize = ConstantInt::get(i32Ty, 0);
 
   // Create the argument array.
-  Value *argArray = createKernelArgArray(op);
+  auto [argStruct, argArray] = createKernelArgArray(op);
 
   // Load the kernel function.
   StringRef moduleName = op.getKernelModuleName().getValue();
@@ -498,6 +507,9 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
                                           bz, dynamicMemorySize, stream,
                                           argArray, nullPtr, paramsCount}));
   }
+
+  builder.CreateLifetimeEnd(argStruct);
+  builder.CreateLifetimeEnd(argArray);
 
   return success();
 }
