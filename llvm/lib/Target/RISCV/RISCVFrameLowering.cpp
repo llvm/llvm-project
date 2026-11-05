@@ -2683,12 +2683,20 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       return true;
     }
 
-    // Add restore libcall via tail call.
+    // Add restore libcall via tail call. Use the software guarded variant when
+    // cf-protection-branch is enabled because the restore function does not
+    // contain an lpad.
+    unsigned TailOpc =
+        RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7 : RISCV::PseudoTAIL;
     MachineInstrBuilder NewMI =
-        BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
+        BuildMI(MBB, MI, DL, TII.get(TailOpc))
             .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
             .setMIFlag(MachineInstr::FrameDestroy)
             .addDef(RISCV::X2, RegState::ImplicitDefine);
+
+    // The restore function clobbers X6, but PseudoTAILX7 only defines X7.
+    if (TailOpc == RISCV::PseudoTAILX7)
+      NewMI.addDef(RISCV::X6, RegState::ImplicitDefine);
 
     // Add registers restored as implicit defined.
     for (auto &CS : CSI)
