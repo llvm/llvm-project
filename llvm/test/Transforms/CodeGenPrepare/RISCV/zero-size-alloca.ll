@@ -3,12 +3,10 @@
 
 ;; Zero-size allocas: the size can be zero from the allocated type, the array
 ;; operand, or both.
-;; FIXME: CodeGenPrepare leaves them allocating nothing, although codegen gives
-;; each a one-byte stack object.
 
 define void @zero_size_type() {
 ; CHECK-LABEL: define void @zero_size_type() {
-; CHECK-NEXT:    [[A:%.*]] = alloca [0 x i8], align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -19,7 +17,7 @@ define void @zero_size_type() {
 
 define void @empty_struct() {
 ; CHECK-LABEL: define void @empty_struct() {
-; CHECK-NEXT:    [[A:%.*]] = alloca {}, align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -30,7 +28,7 @@ define void @empty_struct() {
 
 define void @zero_array_operand() {
 ; CHECK-LABEL: define void @zero_array_operand() {
-; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 0, align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -41,7 +39,7 @@ define void @zero_array_operand() {
 
 define void @zero_size_type_and_array_operand() {
 ; CHECK-LABEL: define void @zero_size_type_and_array_operand() {
-; CHECK-NEXT:    [[A:%.*]] = alloca [0 x i8], i32 4, align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -52,7 +50,7 @@ define void @zero_size_type_and_array_operand() {
 
 define void @i64_array_operand() {
 ; CHECK-LABEL: define void @i64_array_operand() {
-; CHECK-NEXT:    [[A:%.*]] = alloca [0 x i8], i64 7, align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], i64 1, align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
