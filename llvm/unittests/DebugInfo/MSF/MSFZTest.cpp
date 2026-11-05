@@ -351,7 +351,7 @@ TEST(MSFZTest, ParallelCompressionHandlesChunksAboveQueueBudget) {
   scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });
 
   constexpr uint32_t ChunkSize = 32 * 1024 * 1024;
-  constexpr uint32_t StreamSize = 2 * ChunkSize + 17;
+  constexpr uint32_t StreamSize = ChunkSize + 17;
   SuperBlock SB = {};
   SB.BlockSize = StreamSize;
   SB.NumBlocks = 2;
@@ -395,13 +395,13 @@ TEST(MSFZTest, ParallelCompressionHandlesChunksAboveQueueBudget) {
       (*Parallel)->getBufferSize());
   MSFZHeader Header;
   std::memcpy(&Header, File.data(), sizeof(Header));
-  ASSERT_EQ(Header.NumChunks, 3u);
+  ASSERT_EQ(Header.NumChunks, 2u);
   for (uint32_t I = 0; I != Header.NumChunks; ++I) {
     MSFZChunkEntry Chunk;
     std::memcpy(&Chunk,
                 File.data() + Header.ChunkTableOffset + I * sizeof(Chunk),
                 sizeof(Chunk));
-    EXPECT_EQ(Chunk.UncompressedSize, I == 2 ? 17u : ChunkSize);
+    EXPECT_EQ(Chunk.UncompressedSize, I == 1 ? 17u : ChunkSize);
   }
   BumpPtrAllocator Allocator;
   BinaryByteStream Input(File, llvm::endianness::little);

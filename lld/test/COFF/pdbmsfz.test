@@ -1,4 +1,5 @@
 # REQUIRES: zstd
+# RUN: split-file %s %t.dir
 # RUN: yaml2obj %p/Inputs/empty.yaml -o %t.obj
 # RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdb:%t.pdb /pdbmsfz:1
 # RUN: cp %t.pdb %t.first.pdb
@@ -13,7 +14,7 @@
 # RUN: %python -c "open(r'%t.stream', 'wb').write(b'x' * 16385)"
 # RUN: lld-link /entry:main %t.obj /out:%t.small.exe /debug /pdb:%t.small.pdb /pdbmsfz:1 /pdbmsfzchunksize:4096 /pdbstream:large=%t.stream
 # RUN: llvm-pdbutil dump -summary %t.small.pdb | FileCheck --check-prefix=SUMMARY %s
-# RUN: %python -c "import struct; f=open(r'%t.small.pdb','rb').read(); t=struct.unpack_from('<Q',f,48)[0]; n=struct.unpack_from('<I',f,72)[0]; sizes=[struct.unpack_from('<I',f,t+i*20+16)[0] for i in range(n)]; assert n>4 and max(sizes)==4096 and min(sizes)>0, sizes"
+# RUN: %python %t.dir/check-chunks.py %t.small.pdb
 # RUN: not lld-link /entry:main %t.obj /debug /pdbmsfz:1 /pdbmsfzchunksize:4095 2>&1 | FileCheck --check-prefix=CHUNKSIZE %s
 # RUN: not lld-link /entry:main %t.obj /debug /pdbmsfz:1 /pdbmsfzchunksize:1073741825 2>&1 | FileCheck --check-prefix=CHUNKSIZE %s
 # RUN: not lld-link /entry:main %t.obj /debug /pdbmsfz:1 /pdbmsfzchunksize:abc 2>&1 | FileCheck --check-prefix=CHUNKSIZE %s
@@ -25,3 +26,23 @@
 # RANGE: compression level must be between
 # CHUNKSIZE: chunk size must be between 4096 and 1073741824 bytes
 # REQUIRES-MSFZ: /pdbmsfzchunksize requires /pdbmsfz
+
+#--- check-chunks.py
+import struct
+import sys
+
+with open(sys.argv[1], "rb") as f:
+    data = f.read()
+
+# MSFZ header fields: chunk table file offset at 48, chunk count at 72.
+chunk_table_offset = struct.unpack_from("<Q", data, 48)[0]
+num_chunks = struct.unpack_from("<I", data, 72)[0]
+# Each 20-byte chunk table entry ends with its uncompressed size.
+chunk_entry = struct.Struct("<QIII")
+sizes = [
+    chunk_entry.unpack_from(data, chunk_table_offset + i * chunk_entry.size)[3]
+    for i in range(num_chunks)
+]
+assert num_chunks > 4, f"expected multiple 4096-byte chunks, got {sizes}"
+assert all(0 < size <= 4096 for size in sizes), f"invalid chunk sizes: {sizes}"
+assert 4096 in sizes, f"expected a full 4096-byte chunk, got {sizes}"
