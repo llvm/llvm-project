@@ -452,6 +452,8 @@ LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
 LogicalResult
 TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
                                              PatternRewriter &rewriter) const {
+  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto subview = op.getBase().getDefiningOp<memref::SubViewOp>();
   if (!subview)
     return rewriter.notifyMatchFailure(op, "not accessing a subview");
@@ -489,6 +491,8 @@ TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
 
 LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
     VectorTransferOpInterface op, PatternRewriter &rewriter) const {
+  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto expand = op.getBase().getDefiningOp<memref::ExpandShapeOp>();
   if (!expand)
     return rewriter.notifyMatchFailure(op, "not accessing an expand_shape");
@@ -547,6 +551,8 @@ LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
 
 LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
     VectorTransferOpInterface op, PatternRewriter &rewriter) const {
+  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto collapse = op.getBase().getDefiningOp<memref::CollapseShapeOp>();
   if (!collapse)
     return rewriter.notifyMatchFailure(op, "not accessing a collapse_shape");

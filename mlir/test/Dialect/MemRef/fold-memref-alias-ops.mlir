@@ -315,6 +315,34 @@ func.func @fold_masked_vector_transfer_read_with_subview(
 
 // -----
 
+func.func @negative_fold_region_masked_transfer_read_with_subview(
+    %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
+    %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[%arg1, %arg2] [%arg3, %arg4] [1, 1]
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %1 = vector.mask %mask {
+    vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = [true]}
+        : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  return %1 : vector<4xf32>
+}
+//       CHECK: func @negative_fold_region_masked_transfer_read_with_subview
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>
+//       CHECK:    %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][%[[ARG1]], %[[ARG2]]] [%[[ARG3]], %[[ARG4]]] [1, 1]
+//       CHECK:    vector.mask %[[MASK]] { vector.transfer_read %[[SUBVIEW]][%[[ARG5]], %[[ARG6]]], %{{.*}} {in_bounds = [true]} : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+
+// -----
+
 func.func @fold_masked_vector_transfer_read_with_rank_reducing_subview(
     %arg0 : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
@@ -1062,6 +1090,26 @@ func.func @fold_vector_transfer_read_expand_shape(
 
 // -----
 
+func.func @negative_fold_region_masked_transfer_read_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.mask %mask { vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<4x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @negative_fold_region_masked_transfer_read_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[EXPAND]][%[[ARG1]], %[[C0]]], %[[PAD]] {in_bounds = [true]} : memref<4x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+
+// -----
+
 func.func @fold_vector_transfer_read_expand_shape_non_identity(
   %arg0 : memref<32x32xf32>, %arg1 : index, %arg2 : index) -> vector<8x8xf32> {
   %c0 = arith.constant 0 : index
@@ -1254,6 +1302,26 @@ func.func @fold_collapse_shape_transfer_read(
 //       CHECK:   %[[PAD:.*]] = ub.poison : f32
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 4)
 //       CHECK:   vector.transfer_read %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1, %[[C0]]], %[[PAD]] {in_bounds = [true]}
+
+// -----
+
+func.func @negative_fold_region_masked_transfer_read_collapse_shape(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.mask %mask { vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<16x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @negative_fold_region_masked_transfer_read_collapse_shape
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:    %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[COLLAPSE:.*]] = memref.collapse_shape %[[ARG0]]
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[COLLAPSE]][%[[ARG1]], %[[C0]]], %[[PAD]] {in_bounds = [true]} : memref<16x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
 
 // -----
 
