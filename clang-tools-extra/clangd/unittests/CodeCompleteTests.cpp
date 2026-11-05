@@ -147,7 +147,7 @@ CodeCompleteResult completions(llvm::StringRef Text,
   Annotations Test(Text);
   auto TU = TestTU::withCode(Test.code());
   // To make sure our tests for completiopns inside templates work on Windows.
-  TU.Filename = FilePath.str();
+  TU.Filename = FilePath.owned().raw();
   return completions(TU, Test.point(), std::move(IndexSymbols),
                      std::move(Opts));
 }
