@@ -780,16 +780,6 @@ def TENSTORRENT_ASCALON_XG : RISCVProcessorModel<"tt-ascalon-xg",
                                                  TTAscalonXGFeatures,
                                                  TTAscalonTuneFeatures>;
 
-// VeeR EH1 raises the minimum jump-table size: a jump-table dispatch costs
-// 4 to 10 cycles more than a predicted branch tree, and branch trees stay
-// ahead up to about 10 cases even when the switch value is random.
-class VeeREH1TuneInfo : RISCVTuneInfo {
-  let MinimumJumpTableEntries = 10;
-}
-
-// VeeR EH1 has no data cache and a single load/store unit, so clustering
-// loads gains no locality and only adds register pressure. Misaligned loads
-// and stores to idempotent memory are split by the core without a trap.
 def VEER_EH1 : RISCVProcessorModel<"veer-eh1",
                                    NoSchedModel,
                                    [Feature32Bit,
@@ -798,10 +788,7 @@ def VEER_EH1 : RISCVProcessorModel<"veer-eh1",
                                     FeatureStdExtZifencei,
                                     FeatureStdExtM,
                                     FeatureStdExtC,
-                                    FeatureUnalignedScalarMem],
-                                   [TuneNoDefaultUnroll,
-                                    TuneDisableMISchedLoadClustering]>,
-               VeeREH1TuneInfo;
+                                    FeatureUnalignedScalarMem]>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
