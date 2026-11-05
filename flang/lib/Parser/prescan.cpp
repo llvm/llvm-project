@@ -1620,7 +1620,8 @@ const char *Prescanner::GetFreeFormContinuationLine(
         // in -E mode, don't treat !$/!@acc/!@cuf as a continuation
         return nullptr;
       } else if (*p == '!') {
-        if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+        if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(
+                p + 1, LineKind::Continuation)}) {
           if (lClass->sentinel &&
               ((IsOpenMPConditionalLine(lClass->sentinel) &&
                    InOpenMPConditionalLine()) ||
@@ -1631,12 +1632,16 @@ const char *Prescanner::GetFreeFormContinuationLine(
             p += 1 + lClass->payloadOffset;
           }
         }
-        if (*p != '&' && !IsSpaceOrTab(p)) {
+        // In OpenMP conditional continuation lines, space or ampersand are
+        // optional.
+        if (*p == '!' ||
+            (*p != '&' && !IsSpaceOrTab(p) && !InOpenMPConditionalLine())) {
           return nullptr;
         }
       }
     } else if (*p == '!') {
-      if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+      if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(
+              p + 1, LineKind::Continuation)}) {
         if (lClass->sentinel &&
             std::strcmp(directiveSentinel_, lClass->sentinel) == 0) {
           p += 1 + lClass->payloadOffset;
@@ -1663,7 +1668,8 @@ const char *Prescanner::GetFreeFormContinuationLine(
   }
   if (p[0] == '!' && !preprocessingOnly_) {
     // Conditional lines can be continuations
-    if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+    if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(
+            p + 1, LineKind::Continuation)}) {
       if (lClass->sentinel &&
           ((IsOpenMPConditionalLine(lClass->sentinel) &&
                features_.IsEnabled(LanguageFeature::OpenMP)) ||
@@ -1977,44 +1983,58 @@ const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {
 }
 
 std::optional<std::pair<const char *, const char *>>
-Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
+Prescanner::IsCompilerDirectiveSentinel(
+    const char *p, LineKind lineKind) const {
   char sentinel[8];
-  for (std::size_t j{0}; j + 1 < sizeof sentinel; ++p, ++j) {
+  const char *originalP{p};
+  std::size_t j{0};
+  for (; j + 1 < sizeof sentinel; ++p, ++j) {
     if (int n{IsSpaceOrTab(p)};
         n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
-      if (j <= 1 && sentinel[0] == '$' && n == 0 && *p != '&' && *p != '\n') {
-        // Free form OpenMP conditional compilation line sentinels have to
-        // be immediately followed by a space or &, not a digit
-        // or anything else.  A newline also works for an initial line.
+      if (lineKind != LineKind::Continuation && j == 1 && sentinel[0] == '$' &&
+          n == 0 && *p != '\n' && *p != '&') {
+        // OpenMP conditional compilation line sentinels have to be
+        // immediately followed by a space or new line on initial lines.
+        // In free form continuation lines, the space is optional, and the
+        // sentinel may or may not be followed by &.
         break;
       }
-      if (*p != '!') {
-        sentinel[j] = '\0';
-        if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
-          return std::make_pair(sp, p);
-        }
+      if (*p == '!') {
+        return std::nullopt;
+      }
+      sentinel[j] = '\0';
+      if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
+        return std::make_pair(sp, p);
       }
       break;
     } else {
       sentinel[j] = ToLowerCaseLetter(*p);
     }
   }
+  if (!inFixedForm_ && lineKind == LineKind::Continuation && j >= 1 &&
+      sentinel[0] == '$') {
+    if (const char *sp{IsCompilerDirectiveSentinel("$", 1)}) {
+      // This is a free form OpenMP conditional compilation sentinel with the
+      // space omitted.
+      return std::make_pair(sp, originalP + 1);
+    }
+  }
   return std::nullopt;
 }
 
-auto Prescanner::IsCompilerDirectiveSentinelAfterKeywordMacro(
-    const char *p) const -> std::optional<LineClassification> {
+auto Prescanner::IsCompilerDirectiveSentinelAfterKeywordMacro(const char *p,
+    LineKind lineKind) const -> std::optional<LineClassification> {
   if (auto name{GetKeywordMacroName(p)}) {
     Provenance provenance{GetProvenance(p)};
     TokenSequence expansion{ExpandKeywordMacro(*name, provenance)};
     expansion.Put("\n", 1, provenance); // termination
     CharBlock block{expansion.ToLowerCase().ToCharBlock()};
-    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin())}) {
+    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin(), lineKind)}) {
       return LineClassification{
           LineClassification::Kind::CompilerDirectiveAfterMacroExpansion,
           name->size(), maybePair->first};
     }
-  } else if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
+  } else if (auto maybePair{IsCompilerDirectiveSentinel(p, lineKind)}) {
     return LineClassification{LineClassification::Kind::CompilerDirective,
         static_cast<std::size_t>(maybePair->second - p), maybePair->first};
   }
