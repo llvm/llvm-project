@@ -1063,6 +1063,10 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // blockDim=256x1x1
     accSupport.emitRemark(computeRegion, [&]() {
       auto getName = [&](Value val) -> std::string {
+        // A negative width leaves the size to the launch.
+        if (std::optional<int64_t> width = getConstantIntValue(val);
+            width && *width < 0)
+          return "(*)";
         std::string name = accSupport.getVariableName(val);
         return name.empty() ? "(*)" : name;
       };

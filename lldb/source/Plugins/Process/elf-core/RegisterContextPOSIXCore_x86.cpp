@@ -16,7 +16,7 @@ using namespace lldb_private;
 RegisterContextCorePOSIX_x86::RegisterContextCorePOSIX_x86(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_x86(thread, 0, register_info) {
+    : RegisterContextCore_x86(thread, 0, register_info) {
   size_t size, len;
 
   size = GetGPRSize();

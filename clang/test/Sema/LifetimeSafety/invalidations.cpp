@@ -1050,3 +1050,30 @@ void via_destructor_invalidated() {
   s.push_back('x'); // expected-note {{local variable 's' is invalidated here}}
 }                   // expected-note {{later used by the destructor of 'r' at scope exit}}
 } // namespace implicit_use_after_free
+
+namespace static_member_container {
+struct S {
+  static std::vector<int> v;
+};
+
+void ViaObject(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowQualifiedInvalidateViaObject(S &s) {
+  auto it = S::v.begin(); // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowViaObjectInvalidateQualified(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  S::v.push_back(1);      // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+} // namespace static_member_container
