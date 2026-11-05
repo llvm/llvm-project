@@ -2116,6 +2116,35 @@ bool BinaryFunction::postProcessIndirectBranches(
         BB.addSuccessor(SuccBB);
   };
 
+  // An indirect branch to an address loaded from a GOT entry is a tail call,
+  // as we don't allow internal function addresses to escape the function
+  // scope. Reject entries that point inside this function but not at one of
+  // its entry points.
+  auto isGOTTailCall = [&](BinaryBasicBlock &BB,
+                           BinaryBasicBlock::iterator II) {
+    std::optional<uint64_t> GOTEntry =
+        BC.MIB->getIndirectBranchGOTEntry(*II, BB.begin(), II);
+    if (!GOTEntry)
+      return false;
+
+    std::optional<uint64_t> Target;
+    if (const Relocation *Rel = BC.getDynamicRelocationAt(*GOTEntry)) {
+      if (!Rel->Symbol)
+        Target = Rel->Addend;
+      else if (ErrorOr<uint64_t> Value = BC.getSymbolValue(*Rel->Symbol))
+        Target = *Value + Rel->Addend;
+    } else if (ErrorOr<uint64_t> Value = BC.getPointerAtAddress(*GOTEntry)) {
+      Target = *Value;
+    }
+    if (!Target || !containsAddress(*Target))
+      return true;
+
+    const uint64_t TargetOffset = *Target - getAddress();
+    const BinaryBasicBlock *TargetBB = getBasicBlockAtOffset(TargetOffset);
+    return TargetBB && TargetBB->getOffset() == TargetOffset &&
+           isEntryPoint(*TargetBB);
+  };
+
   uint64_t NumIndirectJumps = 0;
   MCInst *LastIndirectJump = nullptr;
   BinaryBasicBlock *LastIndirectJumpBB = nullptr;
@@ -2186,9 +2215,10 @@ bool BinaryFunction::postProcessIndirectBranches(
       }
 
       // If this block contains epilogue code and has an indirect branch,
-      // then most likely it's a tail call. Otherwise, we cannot tell for
-      // sure what it is and conservatively reject the function's CFG.
-      if (BC.MIB->isEpilogue(BB)) {
+      // then most likely it's a tail call. Same if the branch target comes
+      // from a GOT entry. Otherwise, we cannot tell for sure what it is and
+      // conservatively reject the function's CFG.
+      if (BC.MIB->isEpilogue(BB) || isGOTTailCall(BB, II)) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
         continue;
