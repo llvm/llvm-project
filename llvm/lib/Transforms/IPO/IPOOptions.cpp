@@ -8,6 +8,7 @@
 
 #include "IPOOptions.h"
 #include "llvm/Option/LibraryOptions.h"
+#include "llvm/Transforms/IPO.h"
 
 #define OPTIONS_STRUCT_DEFS
 #include "IPOOptions.inc"
