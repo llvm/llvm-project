@@ -19,9 +19,9 @@ add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
-  DXContainerPDB.cpp
   DXILCBufferAccess.cpp
   DXILContainerGlobals.cpp
+  DXILContainerPDB.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
   DXILForwardHandleAccesses.cpp

@@ -15,10 +15,8 @@ define void @vhsubw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
 ; LA32-NEXT:    vpickod.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickev.b $vr1, $vr1, $vr1
-; LA32-NEXT:    vslti.b $vr2, $vr0, 0
-; LA32-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; LA32-NEXT:    vslti.b $vr2, $vr1, 0
-; LA32-NEXT:    vilvl.b $vr1, $vr2, $vr1
+; LA32-NEXT:    vsllwil.h.b $vr0, $vr0, 0
+; LA32-NEXT:    vsllwil.h.b $vr1, $vr1, 0
 ; LA32-NEXT:    vsub.h $vr0, $vr0, $vr1
 ; LA32-NEXT:    vstelm.w $vr0, $a2, 0, 0
 ; LA32-NEXT:    vstelm.w $vr0, $a2, 4, 1
@@ -32,10 +30,8 @@ define void @vhsubw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 0
 ; LA64-NEXT:    vpickod.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickev.b $vr1, $vr1, $vr1
-; LA64-NEXT:    vslti.b $vr2, $vr0, 0
-; LA64-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; LA64-NEXT:    vslti.b $vr2, $vr1, 0
-; LA64-NEXT:    vilvl.b $vr1, $vr2, $vr1
+; LA64-NEXT:    vsllwil.h.b $vr0, $vr0, 0
+; LA64-NEXT:    vsllwil.h.b $vr1, $vr1, 0
 ; LA64-NEXT:    vsub.h $vr0, $vr0, $vr1
 ; LA64-NEXT:    vstelm.d $vr0, $a2, 0, 0
 ; LA64-NEXT:    ret

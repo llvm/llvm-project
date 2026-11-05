@@ -505,7 +505,7 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
 // underlaying objects. If LocA and LocB are known to not alias (for any reason:
-// tbaa, non-overlapping regions etc), then it is known there is no dependecy.
+// tbaa, non-overlapping regions etc), then it is known there is no dependency.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
 static AliasResult underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,

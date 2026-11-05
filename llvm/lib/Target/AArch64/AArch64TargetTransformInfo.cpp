@@ -1348,6 +1348,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::mask_beforefirst: {
+    if (!ST->isSVEorStreamingSVEAvailable() ||
+        !isa<ScalableVectorType>(RetTy) ||
+        !TLI->isTypeLegal(getTLI()->getValueType(DL, RetTy)))
+      break;
+
+    // mask_beforefirst(mask) -> brkb_z(ptrue, mask) but we ignore ptrue
+    // because it's typically used by other instructions in the function.
+    return 1;
+  }
   case Intrinsic::loop_dependence_raw_mask:
   case Intrinsic::loop_dependence_war_mask: {
     // The whilewr/rw instructions require SVE2 or SME.
@@ -3400,10 +3410,15 @@ bool SimplifyValuePattern(SmallVector<Value *> &Vec, bool AllowPoison) {
 // to dupqlane(f64(C)) where C is A concatenated with B
 static std::optional<Instruction *> instCombineSVEDupqLane(InstCombiner &IC,
                                                            IntrinsicInst &II) {
+  // An out-of-range index generates an all zero result. This means only an
+  // index of zero has the same defined result across all vector lengths.
+  if (!match(II.getOperand(1), m_Zero()))
+    return std::nullopt;
+
   Value *CurrentInsertElt = nullptr, *Default = nullptr;
   if (!match(II.getOperand(0),
              m_Intrinsic<Intrinsic::vector_insert>(
-                 m_Value(Default), m_Value(CurrentInsertElt), m_Value())) ||
+                 m_Value(Default), m_Value(CurrentInsertElt), m_Zero())) ||
       !isa<FixedVectorType>(CurrentInsertElt->getType()))
     return std::nullopt;
   auto IIScalableTy = cast<ScalableVectorType>(II.getType());

@@ -627,19 +627,25 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Add multiple debug uses of Reg.
   B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
   B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
 
-  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+  EXPECT_FALSE(MRI->hasOneUse(Reg));
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Multiple non-debug uses of Reg.
   B.buildCast(LLT::pointer(1, 32), MIBAdd);
   EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+
+  // A value with only a debug use has no ordinary uses.
+  auto DebugOnlyAdd = B.buildAdd(s64, Copies[0], Copies[1]);
+  Register DebugOnlyReg = DebugOnlyAdd.getReg(0);
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {DebugOnlyReg});
+  EXPECT_TRUE(MRI->hasOneUse(DebugOnlyReg));
+  EXPECT_FALSE(
+      mi_match(DebugOnlyReg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstant) {

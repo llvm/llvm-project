@@ -562,6 +562,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      reallocarray
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       aligned_alloc
       DEPENDS
         ${SCUDO_DEPS}
@@ -590,6 +595,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       realloc
+    )
+    add_entrypoint_external(
+      reallocarray
     )
     add_entrypoint_external(
       aligned_alloc

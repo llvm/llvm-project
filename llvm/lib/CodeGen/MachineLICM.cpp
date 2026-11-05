@@ -303,6 +303,7 @@ namespace {
       AU.addRequired<MachineRegisterClassInfoWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -1706,8 +1707,8 @@ MachineBasicBlock *MachineLICMImpl::getOrCreatePreheader(MachineLoop *CurLoop) {
   // Try forming a preheader by splitting the critical edge between the single
   // predecessor and the loop header.
   if (MachineBasicBlock *Pred = CurLoop->getLoopPredecessor()) {
-    MachineBasicBlock *NewPreheader =
-        Pred->SplitCriticalEdge(CurLoop->getHeader(), LegacyPass, MFAM, MDTU);
+    MachineBasicBlock *NewPreheader = Pred->SplitCriticalEdge(
+        CurLoop->getHeader(), {nullptr, nullptr, MLI}, MDTU);
     if (NewPreheader)
       Changed = true;
     return NewPreheader;
@@ -1742,6 +1743,7 @@ PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 

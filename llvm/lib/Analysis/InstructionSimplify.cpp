@@ -5788,10 +5788,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   // provenance.
   Value *Ptr, *X;
   if (CastOpc == Instruction::PtrToAddr &&
-      match(Op,
-            m_PtrAdd(m_Value(Ptr),
-                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
-      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+      match(Op, m_PtrAdd(Q.DL, m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))))
     return X;
 
   // Fold a value-preserving zext/sext of a trunc back to the original value.
@@ -6665,11 +6663,6 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
 // TODO: Need to pass in FastMathFlags
 static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                             bool IsStrict) {
-  // ldexp(poison, x) -> poison
-  // ldexp(x, poison) -> poison
-  if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-    return Op0;
-
   // ldexp(undef, x) -> nan
   if (Q.isUndefValue(Op0))
     return ConstantFP::getNaN(Op0->getType());
