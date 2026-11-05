@@ -2406,10 +2406,10 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   ArrayRef<Expr *> Conditions = S.conditions();
   SmallVector<llvm::omp::VariantMatchInfo, 4> VMIs;
   SmallVector<unsigned, 4> VariantIdx;
-  const Stmt *Fallback = nullptr;
+  std::optional<unsigned> Fallback;
   for (auto [I, TI] : llvm::enumerate(S.traitInfos())) {
     if (TI->Sets.empty()) {
-      Fallback = Variants[I];
+      Fallback = I;
       continue;
     }
     llvm::omp::VariantMatchInfo &VMI = VMIs.emplace_back();
@@ -2425,6 +2425,9 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   }
 
   llvm::BasicBlock *EndBB = createBasicBlock("omp.metadirective.end");
+  SmallVector<llvm::BasicBlock *, 4> VariantBBs(Variants.size());
+  for (llvm::BasicBlock *&BB : VariantBBs)
+    BB = createBasicBlock("omp.metadirective.variant");
   while (!VMIs.empty()) {
     int Best = llvm::omp::getBestVariantMatchForContext(VMIs, OMPCtx);
     if (Best < 0)
@@ -2432,22 +2435,25 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
     unsigned I = VariantIdx[Best];
     VMIs.erase(VMIs.begin() + Best);
     VariantIdx.erase(VariantIdx.begin() + Best);
-    // Without a condition the variant always applies; later ones are unused.
+    // Without a condition the variant always applies; later ones never run.
     const Expr *Cond = Conditions[I];
     if (!Cond) {
-      Fallback = Variants[I];
+      Fallback = I;
       break;
     }
-    llvm::BasicBlock *WhenBB = createBasicBlock("omp.metadirective.when");
     llvm::BasicBlock *ElseBB = createBasicBlock("omp.metadirective.else");
-    EmitBranchOnBoolExpr(Cond, WhenBB, ElseBB, /*TrueCount=*/0);
-    EmitBlock(WhenBB);
-    EmitStmt(Variants[I]);
-    EmitBranch(EndBB);
+    EmitBranchOnBoolExpr(Cond, VariantBBs[I], ElseBB, /*TrueCount=*/0);
     EmitBlock(ElseBB);
   }
-  if (Fallback)
-    EmitStmt(Fallback);
+  EmitBranch(Fallback ? VariantBBs[*Fallback] : EndBB);
+
+  // Emit every variant in source order, as the device compilation does, so
+  // their target regions get the same names on both sides.
+  for (auto [V, BB] : llvm::zip_equal(Variants, VariantBBs)) {
+    EmitBlock(BB);
+    EmitStmt(V);
+    EmitBranch(EndBB);
+  }
   EmitBlock(EndBB, /*IsFinished=*/true);
 }
 
