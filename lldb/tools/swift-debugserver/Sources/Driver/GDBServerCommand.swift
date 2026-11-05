@@ -18,11 +18,13 @@ struct GDBServerCommand: Subcommand {
   static func parse(_ args: ArraySlice<String>)
       throws(ArgumentParseError) -> GDBServerCommand {
     var server = GDBServerCommand()
-    var remaining = args[...]
+    var remaining = args
     while let arg = remaining.popFirst() {
       // Options may be spelled `--name value` or `--name=value`.
-      let parts = arg.split(
-        separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+      let parts = arg.split(separator: "=", omittingEmptySubsequences: false)
+      guard parts.count <= 2 else {
+        throw .failure("Invalid argument: \(arg)")
+      }
       let name = String(parts[0])
       let storage = parts.count > 1 ? String(parts[1]) : nil
 

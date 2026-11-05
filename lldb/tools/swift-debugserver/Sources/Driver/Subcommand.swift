@@ -5,3 +5,19 @@ protocol Subcommand {
 
   func run()
 }
+
+extension Subcommand {
+  static func run(_ args: ArraySlice<String>) {
+    do {
+      try parse(args).run()
+    } catch {
+      switch error {
+      case .failure(let message):
+        print(message)
+      case .unexpectedArgument(let arg):
+        print("Unexpected argument: \(arg)")
+      }
+      print(helpText)
+    }
+  }
+}

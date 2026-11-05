@@ -24,25 +24,11 @@ private struct DebugServer {
 
     switch subcommandName {
     case "v", "version":
-      run(VersionCommand.self, subcommandArgs)
+      VersionCommand.run(subcommandArgs)
     case "g", "gdbserver":
-      run(GDBServerCommand.self, subcommandArgs)
+      GDBServerCommand.run(subcommandArgs)
     default:
       print(helpText)
-    }
-  }
-
-  static func run<C: Subcommand>(_: C.Type, _ args: ArraySlice<String>) {
-    do {
-      try C.parse(args).run()
-    } catch {
-      switch error {
-      case .failure(let message):
-        print(message)
-      case .unexpectedArgument(let arg):
-        print("Unexpected argument: \(arg)")
-      }
-      print(C.helpText)
     }
   }
 }
