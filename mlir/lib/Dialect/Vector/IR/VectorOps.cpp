@@ -8498,10 +8498,11 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRanges) {
   auto resultType = cast<VectorType>(getType());
+  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
   if (resultType.isScalable()) {
+    setResultRanges(getResult(), ConstantIntRanges::maxRange(bitwidth));
     return;
   }
-  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
   // The result holds the sequence [0, 1, ..., N-1], with each value truncated
   // to the result element type.
   uint64_t maxIndex = resultType.getDimSize(0) - 1;

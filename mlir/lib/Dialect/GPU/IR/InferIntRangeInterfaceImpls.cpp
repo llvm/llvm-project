@@ -270,17 +270,19 @@ void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
   setResultRange(getResult(), getIndexRange(1, max));
 }
 
-void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                 SetIntRangeFn setResultRange) {
-  auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
+void LaunchOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRange) {
+  auto setRange = [&](const IntegerValueRange &argRange, Value dimResult,
                       Value idxResult) {
-    if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
+    if (argRange.isUninitialized())
       return;
     ConstantIntRanges dimRange =
-        argRange.intersection(getIndexRange(1, kMaxDim));
+        argRange.getValue().intersection(getIndexRange(1, kMaxDim));
     setResultRange(dimResult, dimRange);
     ConstantIntRanges idxRange =
-        getIndexRange(0, dimRange.umax().getZExtValue() - 1);
+        dimRange.isEmpty()
+            ? dimRange
+            : getIndexRange(0, dimRange.umax().getZExtValue() - 1);
     setResultRange(idxResult, idxRange);
   };
 
@@ -295,4 +297,12 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setRange(argRanges[3], blockDims.x, threadIds.x);
   setRange(argRanges[4], blockDims.y, threadIds.y);
   setRange(argRanges[5], blockDims.z, threadIds.z);
+
+  if (auto clusterIds = getClusterIds()) {
+    KernelDim3 clusterDims = *getClusterSize();
+    for (Value id : {clusterIds->x, clusterIds->y, clusterIds->z})
+      setResultRange(id, getIndexRange(0, kMaxDim - 1));
+    for (Value dim : {clusterDims.x, clusterDims.y, clusterDims.z})
+      setResultRange(dim, getIndexRange(1, kMaxDim));
+  }
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
@@ -19,7 +20,12 @@ using namespace mlir::arith;
 using namespace mlir::intrange;
 
 static intrange::OverflowFlags
-convertArithOverflowFlags(arith::IntegerOverflowFlags flags) {
+getInferenceOverflowFlags(arith::IntegerOverflowFlags flags, Type type) {
+  // Index overflow depends on the target width. Use wrapping bounds so that
+  // overflow at the storage width does not exclude defined narrower results.
+  if (getElementTypeOrSelf(type).isIndex())
+    return intrange::OverflowFlags::None;
+
   intrange::OverflowFlags retFlags = intrange::OverflowFlags::None;
   if (bitEnumContainsAny(flags, arith::IntegerOverflowFlags::nsw))
     retFlags |= intrange::OverflowFlags::Nsw;
@@ -34,6 +40,8 @@ convertArithOverflowFlags(arith::IntegerOverflowFlags flags) {
 
 void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                           SetIntRangeFn setResultRange) {
+  if (!ConstantIntRanges::getStorageBitwidth(getType()))
+    return;
   if (auto scalarCstAttr = llvm::dyn_cast_or_null<IntegerAttr>(getValue())) {
     const APInt &value = scalarCstAttr.getValue();
     setResultRange(getResult(), ConstantIntRanges::constant(value));
@@ -41,8 +49,12 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
-    if (arrayCstAttr.empty())
+    if (arrayCstAttr.empty()) {
+      setResultRange(getResult(),
+                     ConstantIntRanges::empty(
+                         ConstantIntRanges::getStorageBitwidth(getType())));
       return;
+    }
 
     if (arrayCstAttr.isSplat()) {
       setResultRange(getResult(), ConstantIntRanges::constant(
@@ -59,6 +71,8 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(getResult(), *result);
     return;
   }
+  setResultRange(getResult(),
+                 IntegerValueRange::getMaxRange(getResult()).getValue());
 }
 
 //===----------------------------------------------------------------------===//
@@ -67,8 +81,9 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::AddIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferAdd(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  setResultRange(getResult(),
+                 inferAdd(argRanges, getInferenceOverflowFlags(
+                                         getOverflowFlags(), getType())));
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,8 +92,9 @@ void arith::AddIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::SubIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferSub(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  setResultRange(getResult(),
+                 inferSub(argRanges, getInferenceOverflowFlags(
+                                         getOverflowFlags(), getType())));
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,8 +103,9 @@ void arith::SubIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::MulIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMul(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  setResultRange(getResult(),
+                 inferMul(argRanges, getInferenceOverflowFlags(
+                                         getOverflowFlags(), getType())));
 }
 
 //===----------------------------------------------------------------------===//
@@ -298,6 +315,11 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(arithPred);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
+  if (lhs.isEmpty() || rhs.isEmpty()) {
+    setResultRange(getResult(), ConstantIntRanges::empty(1));
+    return;
+  }
+
   APInt min = APInt::getZero(1);
   APInt max = APInt::getAllOnes(1);
 
@@ -316,6 +338,13 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::SelectOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRange) {
+  unsigned width = ConstantIntRanges::getStorageBitwidth(getType());
+  if (!width)
+    return;
+  if (!argRanges[0].isUninitialized() && argRanges[0].getValue().isEmpty()) {
+    setResultRange(getResult(), ConstantIntRanges::empty(width));
+    return;
+  }
   std::optional<APInt> mbCondVal =
       argRanges[0].isUninitialized()
           ? std::nullopt
@@ -332,12 +361,9 @@ void arith::SelectOp::inferResultRangesFromOptional(
     return;
   }
 
-  // When one of the ranges is uninitialized, set the whole range to max
-  // otherwise the result will ignore the uninitialized range.
   if (trueCase.isUninitialized() || falseCase.isUninitialized())
-    setResultRange(getResult(), IntegerValueRange::getMaxRange(getResult()));
-  else
-    setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
+    return;
+  setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
 }
 
 //===----------------------------------------------------------------------===//
@@ -346,8 +372,9 @@ void arith::SelectOp::inferResultRangesFromOptional(
 
 void arith::ShLIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferShl(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  setResultRange(getResult(),
+                 inferShl(argRanges, getInferenceOverflowFlags(
+                                         getOverflowFlags(), getType())));
 }
 
 //===----------------------------------------------------------------------===//

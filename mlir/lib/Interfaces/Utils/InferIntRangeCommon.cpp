@@ -35,6 +35,14 @@ using namespace mlir;
 // General utilities
 //===----------------------------------------------------------------------===//
 
+static std::optional<ConstantIntRanges>
+checkEmpty(ArrayRef<ConstantIntRanges> ranges) {
+  for (const ConstantIntRanges &range : ranges)
+    if (range.isEmpty())
+      return range;
+  return std::nullopt;
+}
+
 /// Function that evaluates the result of doing something on arithmetic
 /// constants and returns std::nullopt on overflow.
 using ConstArithFn =
@@ -99,6 +107,8 @@ mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
 
   LLVM_DEBUG(llvm::dbgs() << "Index handling: 64-bit result = " << sixtyFour
                           << " 32-bit = " << thirtyTwo << "\n");
+  if (sixtyFour.isEmpty() || thirtyTwo.isEmpty())
+    return sixtyFour.rangeUnion(thirtyTwoAsSixtyFour);
   bool truncEqual = false;
   switch (mode) {
   case intrange::CmpMode::Both:
@@ -122,15 +132,16 @@ mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
 
 ConstantIntRanges mlir::intrange::extRange(const ConstantIntRanges &range,
                                            unsigned int destWidth) {
-  APInt umin = range.umin().zext(destWidth);
-  APInt umax = range.umax().zext(destWidth);
-  APInt smin = range.smin().sext(destWidth);
-  APInt smax = range.smax().sext(destWidth);
-  return {umin, umax, smin, smax};
+  if (range.isEmpty())
+    return ConstantIntRanges::empty(destWidth);
+  return {range.umin().zext(destWidth), range.umax().zext(destWidth),
+          range.smin().sext(destWidth), range.smax().sext(destWidth)};
 }
 
 ConstantIntRanges mlir::intrange::extUIRange(const ConstantIntRanges &range,
                                              unsigned destWidth) {
+  if (range.isEmpty())
+    return ConstantIntRanges::empty(destWidth);
   APInt umin = range.umin().zext(destWidth);
   APInt umax = range.umax().zext(destWidth);
   return ConstantIntRanges::fromUnsigned(umin, umax);
@@ -138,6 +149,8 @@ ConstantIntRanges mlir::intrange::extUIRange(const ConstantIntRanges &range,
 
 ConstantIntRanges mlir::intrange::extSIRange(const ConstantIntRanges &range,
                                              unsigned destWidth) {
+  if (range.isEmpty())
+    return ConstantIntRanges::empty(destWidth);
   APInt smin = range.smin().sext(destWidth);
   APInt smax = range.smax().sext(destWidth);
   return ConstantIntRanges::fromSigned(smin, smax);
@@ -145,6 +158,8 @@ ConstantIntRanges mlir::intrange::extSIRange(const ConstantIntRanges &range,
 
 ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
                                              unsigned int destWidth) {
+  if (range.isEmpty())
+    return ConstantIntRanges::empty(destWidth);
   // If you truncate the first four bytes in [0xaaaabbbb, 0xccccbbbb],
   // the range of the resulting value is not contiguous ind includes 0.
   // Ex. If you truncate [256, 258] from i16 to i8, you validly get [0, 2],
@@ -186,6 +201,8 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
 ConstantIntRanges
 mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn uadd = [=](const APInt &a,
@@ -219,6 +236,8 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
 ConstantIntRanges
 mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn usub = [=](const APInt &a,
@@ -251,6 +270,8 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
 ConstantIntRanges
 mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn umul = [=](const APInt &a,
@@ -291,9 +312,13 @@ using DivisionFixupFn = function_ref<std::optional<APInt>(
 static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
                                         const ConstantIntRanges &rhs,
                                         DivisionFixupFn fixup) {
+  if (lhs.isEmpty() || rhs.isEmpty())
+    return ConstantIntRanges::empty(lhs.getBitWidth());
   const APInt &lhsMin = lhs.umin(), &lhsMax = lhs.umax(), &rhsMin = rhs.umin(),
               &rhsMax = rhs.umax();
-  if (!rhsMin.isZero() && !rhsMax.isZero()) {
+  if (rhsMax.isZero())
+    return ConstantIntRanges::empty(rhs.getBitWidth());
+  if (!rhsMin.isZero()) {
     auto udiv = [&fixup](const APInt &a,
                          const APInt &b) -> std::optional<APInt> {
       return fixup(a, b, a.udiv(b));
@@ -303,7 +328,7 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
   }
 
   APInt umin = APInt::getZero(rhsMin.getBitWidth());
-  if (lhsMin.uge(rhsMax) && !rhsMax.isZero())
+  if (lhsMin.uge(rhsMax))
     umin = lhsMin.udiv(rhsMax);
 
   // X u/ Y u<= X.
@@ -313,6 +338,8 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
 
 ConstantIntRanges
 mlir::intrange::inferDivU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   return inferDivURange(argRanges[0], argRanges[1],
                         [](const APInt &lhs, const APInt &rhs,
                            const APInt &result) { return result; });
@@ -320,6 +347,8 @@ mlir::intrange::inferDivU(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
@@ -342,13 +371,11 @@ mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
 static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
                                         const ConstantIntRanges &rhs,
                                         DivisionFixupFn fixup) {
+  if (lhs.isEmpty() || rhs.isEmpty())
+    return ConstantIntRanges::empty(lhs.getBitWidth());
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
-  // An empty (min > max) divisor range can arise from poison, e.g. a
-  // saturated `nsw`/`nuw` subtraction. Don't trust its bounds.
   unsigned width = rhsMin.getBitWidth();
-  if (rhsMin.sgt(rhsMax))
-    return ConstantIntRanges::maxRange(width);
   bool canDivide = rhsMin.isStrictlyPositive() || rhsMax.isNegative();
 
   if (canDivide) {
@@ -372,11 +399,13 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
         lhs, ConstantIntRanges::fromSigned(APInt(width, 1), rhsMax), fixup);
     result = result ? result->rangeUnion(positive) : positive;
   }
-  return result.value_or(ConstantIntRanges::maxRange(width));
+  return result.value_or(ConstantIntRanges::empty(width));
 }
 
 ConstantIntRanges
 mlir::intrange::inferDivS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   return inferDivSRange(argRanges[0], argRanges[1],
                         [](const APInt &lhs, const APInt &rhs,
                            const APInt &result) { return result; });
@@ -384,6 +413,8 @@ mlir::intrange::inferDivS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
@@ -406,6 +437,8 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
     return result;
   };
   ConstantIntRanges result = inferDivSRange(lhs, rhs, ceilDivSIFix);
+  if (result.isEmpty())
+    return result;
   if (lhs.smin().isMinSignedValue() && lhs.smax().sgt(lhs.smin())) {
     // If lhs range includes INT_MIN and lhs is not a single value, we can
     // suddenly wrap to positive val, skipping entire negative range, add
@@ -424,6 +457,8 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
@@ -445,13 +480,15 @@ mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
 
   unsigned width = rhsMax.getBitWidth();
-  if (rhsMin.sgt(rhsMax) || (rhsMin.isZero() && rhsMax.isZero()))
-    return ConstantIntRanges::maxRange(width);
+  if (rhsMin.isZero() && rhsMax.isZero())
+    return ConstantIntRanges::empty(width);
 
   // Magnitudes are unsigned: abs(INT_MIN) is not a positive signed value.
   APInt maxDivisor = llvm::APIntOps::umax(rhsMin.abs(), rhsMax.abs());
@@ -482,10 +519,14 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &rhsMin = rhs.umin(), &rhsMax = rhs.umax();
 
   unsigned width = rhsMin.getBitWidth();
+  if (rhsMax.isZero())
+    return ConstantIntRanges::empty(width);
   APInt umin = APInt::getZero(width);
   // Remainder can't be larger than either of its arguments.
   APInt umax = llvm::APIntOps::umin((rhsMax - 1), lhs.umax());
@@ -513,6 +554,8 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferMaxS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   const APInt &smin = lhs.smin().sgt(rhs.smin()) ? lhs.smin() : rhs.smin();
@@ -522,6 +565,8 @@ mlir::intrange::inferMaxS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferMaxU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   const APInt &umin = lhs.umin().ugt(rhs.umin()) ? lhs.umin() : rhs.umin();
@@ -531,6 +576,8 @@ mlir::intrange::inferMaxU(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferMinS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   const APInt &smin = lhs.smin().slt(rhs.smin()) ? lhs.smin() : rhs.smin();
@@ -540,6 +587,8 @@ mlir::intrange::inferMinS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferMinU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   const APInt &umin = lhs.umin().ult(rhs.umin()) ? lhs.umin() : rhs.umin();
@@ -567,6 +616,8 @@ widenBitwiseBounds(const ConstantIntRanges &bound) {
 
 ConstantIntRanges
 mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
@@ -579,6 +630,8 @@ mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
@@ -601,6 +654,8 @@ static APInt getVaryingBitsMask(const ConstantIntRanges &bound) {
 
 ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   // Construct mask of varying bits for both ranges, xor values and then replace
   // masked bits with 0s and 1s to get min and max values respectively.
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
@@ -618,6 +673,8 @@ mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &rhsUMin = rhs.umin(), &rhsUMax = rhs.umax();
 
@@ -651,6 +708,8 @@ mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
 
 ConstantIntRanges
 mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ashr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
@@ -663,6 +722,8 @@ mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
+  if (auto empty = checkEmpty(argRanges))
+    return *empty;
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
@@ -745,6 +806,8 @@ static bool isStaticallyTrue(intrange::CmpPredicate pred,
 std::optional<bool> mlir::intrange::evaluatePred(CmpPredicate pred,
                                                  const ConstantIntRanges &lhs,
                                                  const ConstantIntRanges &rhs) {
+  if (lhs.isEmpty() || rhs.isEmpty())
+    return std::nullopt;
   if (isStaticallyTrue(pred, lhs, rhs))
     return true;
   if (isStaticallyTrue(invertPredicate(pred), lhs, rhs))
@@ -761,6 +824,8 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
                                           const IntegerValueRange &maybeDim) {
   unsigned width =
       ConstantIntRanges::getStorageBitwidth(op->getResult(0).getType());
+  if (!maybeDim.isUninitialized() && maybeDim.getValue().isEmpty())
+    return ConstantIntRanges::empty(width);
   APInt zero = APInt::getZero(width);
   APInt typeMax = APInt::getSignedMaxValue(width);
 
@@ -771,7 +836,7 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
   int64_t rank = shapedTy.getRank();
   int64_t minDim = 0;
   int64_t maxDim = rank - 1;
-  if (!maybeDim.isUninitialized()) {
+  if (!maybeDim.isUninitialized() && maybeDim.getValue().hasBounds()) {
     const ConstantIntRanges &dim = maybeDim.getValue();
     minDim = std::max(minDim, dim.smin().getSExtValue());
     maxDim = std::min(maxDim, dim.smax().getSExtValue());
@@ -800,6 +865,8 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
 //===----------------------------------------------------------------------===//
 
 static ConstantIntRanges clampToPositive(const ConstantIntRanges &val) {
+  if (val.isEmpty())
+    return val;
   unsigned width = val.smin().getBitWidth();
   APInt one(width, 1);
   APInt clampedUMin = val.umin().ult(one) ? one : val.umin();
@@ -856,6 +923,8 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    if (lhs.isEmpty() || rhs.isEmpty())
+      return ConstantIntRanges::empty(indexMaxWidth);
     // Affine mod is Euclidean modulo: result is always in [0, rhs-1].
     // This assumes RHS is positive (enforced by affine expr semantics).
     const APInt &lhsMin = lhs.smin();
@@ -898,31 +967,25 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
 
     return ConstantIntRanges::fromUnsigned(umin, umax);
   }
-  case AffineExprKind::FloorDiv: {
-    auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    // Affine floordiv requires strictly positive divisor (> 0).
-    // Clamp divisor lower bound to 1 for tighter range inference.
-    ConstantIntRanges clampedRhs = clampToPositive(rhs);
-    std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
-                                                 std::move(clampedRhs)};
-    return inferFloorDivS(operands);
-  }
+  case AffineExprKind::FloorDiv:
   case AffineExprKind::CeilDiv: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
     ConstantIntRanges lhs =
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    // Affine ceildiv requires strictly positive divisor (> 0).
-    // Clamp divisor lower bound to 1 for tighter range inference.
-    ConstantIntRanges clampedRhs = clampToPositive(rhs);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
-                                                 std::move(clampedRhs)};
-    return inferCeilDivS(operands);
+                                                 std::move(rhs)};
+    if (auto empty = checkEmpty(operands))
+      return *empty;
+    // Affine division requires a positive divisor. An index divisor with no
+    // positive values at the storage width can be positive at a narrower width.
+    // In that case, keep the result unconstrained instead of inferring poison.
+    operands[1] = clampToPositive(operands[1]);
+    if (operands[1].isEmpty())
+      return ConstantIntRanges::maxRange(operands[1].getBitWidth());
+    return expr.getKind() == AffineExprKind::FloorDiv ? inferFloorDivS(operands)
+                                                      : inferCeilDivS(operands);
   }
   }
   llvm_unreachable("unknown affine expression kind");

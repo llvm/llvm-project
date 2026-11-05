@@ -254,7 +254,7 @@ struct constant_int_predicate_matcher {
 };
 
 /// A matcher that matches a given a constant scalar / vector splat / tensor
-/// splat integer value or a constant integer range that fulfills a predicate.
+/// splat integer value or a nonempty integer range that fulfills a predicate.
 struct constant_int_range_predicate_matcher {
   bool (*predicate)(const ConstantIntRanges &);
 
@@ -274,7 +274,7 @@ struct constant_int_range_predicate_matcher {
     // `InferIntRangeInterface` interface.
     IntegerValueRange range;
     return infer_int_range_op_binder(&range).match(op) &&
-           predicate(range.getValue());
+           range.getValue().hasBounds() && predicate(range.getValue());
   }
 };
 

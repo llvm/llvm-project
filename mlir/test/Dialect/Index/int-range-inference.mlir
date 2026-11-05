@@ -4,6 +4,64 @@
 // Here, we add a few tests to ensure the "index can be 32- or 64-bit" handling
 // code is operating as expected.
 
+// CHECK-LABEL: func @castu_negative_i32
+// CHECK: %[[TRUE:.*]] = index.bool.constant true
+// CHECK: return %[[TRUE]]
+func.func @castu_negative_i32(%arg: i32) -> i1 {
+  %low = arith.constant -4 : i32
+  %high = arith.constant -1 : i32
+  %a = arith.maxsi %arg, %low : i32
+  %b = arith.minsi %a, %high : i32
+  %cast = index.castu %b : i32 to index
+  %limit = index.constant 4294967295
+  %result = index.cmp ule(%cast, %limit)
+  return %result : i1
+}
+
+// CHECK-LABEL: func @casts_negative_i32
+// CHECK: %[[TRUE:.*]] = index.bool.constant true
+// CHECK: return %[[TRUE]]
+func.func @casts_negative_i32(%arg: i32) -> i1 {
+  %low = arith.constant -4 : i32
+  %high = arith.constant -1 : i32
+  %a = arith.maxsi %arg, %low : i32
+  %b = arith.minsi %a, %high : i32
+  %cast = index.casts %b : i32 to index
+  %zero = index.constant 0
+  %result = index.cmp slt(%cast, %zero)
+  return %result : i1
+}
+
+// CHECK-LABEL: func @castu_signed_comparison
+// CHECK: %[[RESULT:.*]] = arith.cmpi slt
+// CHECK: return %[[RESULT]]
+func.func @castu_signed_comparison(%arg: i32) -> i1 {
+  %low = arith.constant -4 : i32
+  %high = arith.constant -1 : i32
+  %a = arith.maxsi %arg, %low : i32
+  %b = arith.minsi %a, %high : i32
+  %cast = index.castu %b : i32 to index
+  %zero = arith.constant 0 : index
+  // True for 32-bit index and false for 64-bit index.
+  %result = arith.cmpi slt, %cast, %zero : index
+  return %result : i1
+}
+
+// CHECK-LABEL: func @casts_unsigned_comparison
+// CHECK: %[[RESULT:.*]] = arith.cmpi ule
+// CHECK: return %[[RESULT]]
+func.func @casts_unsigned_comparison(%arg: i32) -> i1 {
+  %low = arith.constant -4 : i32
+  %high = arith.constant -1 : i32
+  %a = arith.maxsi %arg, %low : i32
+  %b = arith.minsi %a, %high : i32
+  %cast = index.casts %b : i32 to index
+  %limit = arith.constant 4294967295 : index
+  // True for 32-bit index and false for 64-bit index.
+  %result = arith.cmpi ule, %cast, %limit : index
+  return %result : i1
+}
+
 // CHECK-LABEL: func @add_same_for_both
 // CHECK: %[[true:.*]] = index.bool.constant true
 // CHECK: return %[[true]]

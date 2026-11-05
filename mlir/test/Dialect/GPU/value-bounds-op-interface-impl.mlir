@@ -195,3 +195,14 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @empty_block_dim_range
+func.func @empty_block_dim_range() {
+  %d = gpu.block_dim x upper_bound 0
+  %zero = arith.constant 0 : index
+  // expected-error @below{{unknown}}
+  "test.compare"(%d, %zero) {cmp = "GE"} : (index, index) -> ()
+  return
+}

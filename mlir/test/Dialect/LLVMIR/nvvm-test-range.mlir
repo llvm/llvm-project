@@ -1,11 +1,10 @@
 // RUN: mlir-opt -int-range-optimizations %s | FileCheck %s
 gpu.module @module{
-    gpu.func @kernel_1() kernel {
+    gpu.func @kernel_1(%cond: i1) kernel {
         %tidx = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
         %tidy = nvvm.read.ptx.sreg.tid.y range <i32, 0, 128> : i32
         %tidz = nvvm.read.ptx.sreg.tid.z range <i32, 0, 4> : i32
         %cidx = nvvm.read.ptx.sreg.cluster.ctaid.x : i32 // unspecified range
-        %cond = ub.poison : i1
         %c64 = arith.constant 64 : i32
         
         %1 = arith.cmpi sgt, %tidx, %c64 : i32

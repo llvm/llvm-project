@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_UB_IR_UBOPS_TD
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/IR/AttrTypeBase.td"
 
 include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
@@ -39,7 +40,8 @@ def PoisonAttr : UB_Attr<"Poison", "poison", [PoisonAttrInterface]> {
 // PoisonOp
 //===----------------------------------------------------------------------===//
 
-def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
+def PoisonOp : UB_Op<"poison", [ConstantLike, Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "Poisoned constant operation.";
   let description = [{
     The `poison` operation materializes a compile-time poisoned constant value

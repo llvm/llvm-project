@@ -345,3 +345,41 @@ func.func @broadcast(%idx: i32) {
   %5 = test.reflect_bounds %2 : index
   return
 }
+
+// -----
+
+// Async dependencies have no integer range and must not block dimension inference.
+// CHECK-LABEL: func @async_launch_ranges
+// CHECK: %[[TRUE:.*]] = arith.constant true
+// CHECK: gpu.launch async
+// CHECK-COUNT-6: memref.store %[[TRUE]]
+func.func @async_launch_ranges(%a: !gpu.async.token, %b: !gpu.async.token,
+                              %out: memref<6xi1>) -> !gpu.async.token {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %token = gpu.launch async [%a, %b]
+      blocks(%bx, %by, %bz) in (%gx = %c2, %gy = %c3, %gz = %c5)
+      threads(%tx, %ty, %tz) in (%dx = %c8, %dy = %c16, %dz = %c32) {
+    %x = arith.cmpi eq, %gx, %c2 : index
+    %y = arith.cmpi eq, %gy, %c3 : index
+    %z = arith.cmpi eq, %gz, %c5 : index
+    %u = arith.cmpi ult, %tx, %c8 : index
+    %v = arith.cmpi ult, %ty, %c16 : index
+    %w = arith.cmpi ult, %tz, %c32 : index
+    memref.store %x, %out[%c0] : memref<6xi1>
+    memref.store %y, %out[%c1] : memref<6xi1>
+    memref.store %z, %out[%c2] : memref<6xi1>
+    memref.store %u, %out[%c3] : memref<6xi1>
+    memref.store %v, %out[%c4] : memref<6xi1>
+    memref.store %w, %out[%c5] : memref<6xi1>
+    gpu.terminator
+  }
+  return %token : !gpu.async.token
+}

@@ -1,7 +1,11 @@
 add_mlir_unittest(MLIRArithTests
+  InferIntRangeTest.cpp
   ArithUtilsTest.cpp
 )
 mlir_target_link_libraries(MLIRArithTests
   PRIVATE
+  MLIRAnalysis
+  MLIRArithDialect
   MLIRArithUtils
+  MLIRInferIntRangeInterface
 )

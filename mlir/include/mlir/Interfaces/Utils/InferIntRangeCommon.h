@@ -63,8 +63,8 @@ ConstantIntRanges inferIndexOp(const InferRangeFn &inferFn,
                                ArrayRef<ConstantIntRanges> argRanges,
                                CmpMode mode);
 
-/// Independently zero-extend the unsigned values and sign-extend the signed
-/// values in `range` to `destWidth` bits, returning the resulting range.
+/// Return a range that contains both the zero-extended and sign-extended
+/// values in `range` at `destWidth` bits.
 ConstantIntRanges extRange(const ConstantIntRanges &range, unsigned destWidth);
 
 /// Use the unsigned values in `range` to zero-extend it to `destWidth`.

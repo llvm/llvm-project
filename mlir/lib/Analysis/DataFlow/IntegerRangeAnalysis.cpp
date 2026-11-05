@@ -46,7 +46,7 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
   if (!result || result->getValue().isUninitialized())
     return failure();
   const ConstantIntRanges &range = result->getValue().getValue();
-  return success(range.smin().isNonNegative());
+  return success(range.hasBounds() && range.smin().isNonNegative());
 }
 
 LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
@@ -71,7 +71,12 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 static constexpr unsigned kIntegerRangeWideningBudget = 128;
 
 ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
-  ChangeResult changed = Lattice::join(rhs);
+  if (!ConstantIntRanges::getStorageBitwidth(getAnchor().getType()))
+    return ChangeResult::NoChange;
+  ChangeResult changed =
+      ConstantIntRanges::getStorageBitwidth(rhs.getAnchor().getType())
+          ? Lattice::join(rhs)
+          : Lattice::join(IntegerValueRange::getMaxRange(getAnchor()));
   if (mergeChangeCount >= kIntegerRangeWideningBudget) {
     return changed | Lattice::join(IntegerValueRange::getMaxRange(
                          cast<Value>(getAnchor())));
@@ -122,21 +127,29 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     LDBG() << "Inferring ranges for "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
+    // Revisit the successor whose values depend on these operand ranges. For
+    // example, a gpu.launch dimension yielded by scf.execute_region can still
+    // be uninitialized when the launch body is first visited. When its range
+    // becomes available, revisit the body entry to infer the thread ID ranges.
+    // Revisiting the launch itself would skip its block arguments: a
+    // synchronous launch has no results. For operation results, revisit the
+    // point after the operation instead.
+    ProgramPoint *point =
+        successor.isRegion()
+            ? getProgramPointBefore(&successor.getSuccessor()->front())
+            : getProgramPointAfter(op);
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
+      return getLatticeElementFor(point, value)->getValue();
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
-      auto arg = dyn_cast<BlockArgument>(v);
-      if (!arg)
-        return;
-      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
+      auto it = llvm::find(nonSuccessorInputs, v);
+      if (it == nonSuccessorInputs.end())
         return;
 
       LDBG() << "Inferred range " << attrs;
-      auto it = llvm::find(successor.getSuccessor()->getArguments(), arg);
       unsigned nonSuccessorInputIdx =
-          std::distance(successor.getSuccessor()->getArguments().begin(), it);
+          std::distance(nonSuccessorInputs.begin(), it);
       IntegerValueRangeLattice *lattice =
           nonSuccessorInputLattices[nonSuccessorInputIdx];
       propagateIfChanged(lattice, lattice->join(attrs));
@@ -157,7 +170,8 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
       const IntegerValueRangeLattice *lattice =
           getLatticeElementFor(getProgramPointBefore(block), value);
-      if (lattice != nullptr && !lattice->getValue().isUninitialized())
+      if (lattice != nullptr && !lattice->getValue().isUninitialized() &&
+          lattice->getValue().getValue().hasBounds())
         return getUpper ? lattice->getValue().getValue().smax()
                         : lattice->getValue().getValue().smin();
     }
@@ -188,6 +202,11 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
           op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
     }
+    for (auto [value, lattice] :
+         llvm::zip_equal(nonSuccessorInputs, nonSuccessorInputLattices))
+      if (!llvm::is_contained(*maybeIvs, value))
+        setToEntryState(lattice);
+
     SmallVector<OpFoldResult> lowerBounds = *maybeLowerBounds;
     SmallVector<OpFoldResult> upperBounds = *maybeUpperBounds;
     SmallVector<OpFoldResult> steps = *maybeSteps;
@@ -210,13 +229,14 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         max -= 1;
       }
 
-      // If we infer the lower bound to be larger than the upper bound, the
-      // resulting range is meaningless and should not be used in further
-      // inferences.
+      IntegerValueRangeLattice *ivEntry = getLatticeElement(iv);
       if (max.sge(min)) {
-        IntegerValueRangeLattice *ivEntry = getLatticeElement(iv);
         auto ivRange = ConstantIntRanges::fromSigned(min, max);
         propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
+      } else {
+        // Signed bounds may not describe the loop, such as an unsigned loop
+        // that crosses the sign boundary. Its IV must not stay uninitialized.
+        setToEntryState(ivEntry);
       }
     }
     return;

@@ -18,12 +18,14 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -50,6 +52,14 @@ static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
   return inferredRange.getConstantValue();
 }
 
+static bool hasEmptyRange(DataFlowSolver &solver, Value value) {
+  auto *state = solver.lookupState<IntegerValueRangeLattice>(value);
+  return state && !state->getValue().isUninitialized() &&
+         state->getValue().getValue().isEmpty() &&
+         state->getValue().getValue().getBitWidth() ==
+             ConstantIntRanges::getStorageBitwidth(value.getType());
+}
+
 static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
                              Value newVal) {
   auto *oldState = solver.lookupState<IntegerValueRangeLattice>(oldVal);
@@ -65,6 +75,13 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
                                        RewriterBase &rewriter, Value value) {
   if (value.use_empty())
     return failure();
+  if (hasEmptyRange(solver, value)) {
+    Value poison =
+        ub::PoisonOp::create(rewriter, value.getLoc(), value.getType());
+    copyIntegerRange(solver, value, poison);
+    rewriter.replaceAllUsesWith(value, poison);
+    return success();
+  }
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
   if (!maybeConstValue.has_value())
     return failure();
@@ -152,6 +169,8 @@ struct MaterializeKnownConstantValues : public RewritePattern {
     auto needsReplacing = [&](Value v) {
       if (!getElementTypeOrSelf(v.getType()).isIntOrIndex())
         return false;
+      if (hasEmptyRange(solver, v))
+        return !v.use_empty();
       std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, v);
       if (!maybeConstValue.has_value() || v.use_empty())
         return false;
@@ -225,6 +244,8 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
     if (!maybeLhsRange || maybeLhsRange->getValue().isUninitialized())
       return failure();
     const ConstantIntRanges &lhsRange = maybeLhsRange->getValue().getValue();
+    if (!lhsRange.hasBounds())
+      return failure();
     const APInt &min = isUnsigned ? lhsRange.umin() : lhsRange.smin();
     const APInt &max = isUnsigned ? lhsRange.umax() : lhsRange.smax();
     if (min.getBitWidth() != modulus.getBitWidth() ||
@@ -262,6 +283,8 @@ static LogicalResult collectRanges(DataFlowSolver &solver, ValueRange values,
 
     const ConstantIntRanges &inferredRange =
         maybeInferredRange->getValue().getValue();
+    if (!inferredRange.hasBounds())
+      return failure();
     ranges.push_back(inferredRange);
   }
   return success();
@@ -652,11 +675,8 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         // produce incorrect results and break loop termination.
         // Both signed and unsigned interpretations must fit because loop
         // semantics are unknown (integer types are signless).
-        ConstantIntRanges indVarPlusStepRange(
-            indVarRange.smin().sadd_sat(stepRange.smin()),
-            indVarRange.smax().sadd_sat(stepRange.smax()),
-            indVarRange.umin().uadd_sat(stepRange.umin()),
-            indVarRange.umax().uadd_sat(stepRange.umax()));
+        ConstantIntRanges indVarPlusStepRange = intrange::inferAdd(
+            {indVarRange, stepRange}, intrange::OverflowFlags::None);
 
         if (checkTruncatability(indVarPlusStepRange, targetBitwidth) !=
             CastKind::Both)

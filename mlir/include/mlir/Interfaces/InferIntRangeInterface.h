@@ -22,33 +22,41 @@ namespace mlir {
 /// value. These bounds are inclusive on both ends, so
 /// bounds of [4, 5] mean 4 <= x <= 5. Separate bounds are tracked for
 /// the unsigned and signed interpretations of values in order to enable more
-/// precice inference of the interplay between operations with signed and
-/// unsigned semantics.
+/// precise inference of the interplay between operations with signed and
+/// unsigned semantics. Poison is represented by an empty range. For shaped
+/// values, the range covers the defined elements.
 class ConstantIntRanges {
 public:
   /// Bound umin <= (unsigned)x <= umax and smin <= signed(x) <= smax.
-  /// Non-integer values should be bounded by APInts of bitwidth 0.
+  /// The bounds must have the same nonzero bitwidth. An inverted signed or
+  /// unsigned interval gives an empty range. The two intervals need not share
+  /// bit patterns: index values can have different runtime widths.
   ConstantIntRanges(const APInt &umin, const APInt &umax, const APInt &smin,
-                    const APInt &smax)
-      : uminVal(umin), umaxVal(umax), sminVal(smin), smaxVal(smax) {
-    assert(uminVal.getBitWidth() == umaxVal.getBitWidth() &&
-           umaxVal.getBitWidth() == sminVal.getBitWidth() &&
-           sminVal.getBitWidth() == smaxVal.getBitWidth() &&
-           "All bounds in the ranges must have the same bitwidth");
-  }
+                    const APInt &smax);
+
+  /// Create an empty range.
+  static ConstantIntRanges empty(unsigned bitwidth);
+
+  bool isUnsignedEmpty() const { return uminVal.ugt(umaxVal); }
+  bool isSignedEmpty() const { return sminVal.sgt(smaxVal); }
+  bool isEmpty() const { return isUnsignedEmpty() || isSignedEmpty(); }
+  bool hasBounds() const { return !isEmpty(); }
+
+  /// Return the integer bitwidth.
+  unsigned getBitWidth() const { return uminVal.getBitWidth(); }
 
   bool operator==(const ConstantIntRanges &other) const;
 
-  /// The minimum value of an integer when it is interpreted as unsigned.
+  /// The minimum unsigned value. Requires hasBounds().
   const APInt &umin() const;
 
-  /// The maximum value of an integer when it is interpreted as unsigned.
+  /// The maximum unsigned value. Requires hasBounds().
   const APInt &umax() const;
 
-  /// The minimum value of an integer when it is interpreted as signed.
+  /// The minimum signed value. Requires hasBounds().
   const APInt &smin() const;
 
-  /// The maximum value of an integer when it is interpreted as signed.
+  /// The maximum signed value. Requires hasBounds().
   const APInt &smax() const;
 
   /// Return the bitwidth that should be used for integer ranges describing
@@ -100,6 +108,8 @@ public:
                                  const ConstantIntRanges &range);
 
 private:
+  explicit ConstantIntRanges(unsigned bitwidth);
+
   APInt uminVal, umaxVal, sminVal, smaxVal;
 };
 
@@ -110,7 +120,7 @@ class IntegerValueRange {
 public:
   /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
   /// range that is used to mark the value as unable to be analyzed further,
-  /// where `t` is the type of `value`.
+  /// where `t` is the type of `value`. Returns no range for non-integer values.
   static IntegerValueRange getMaxRange(Value value);
 
   /// Create an integer value range lattice value.
@@ -121,8 +131,8 @@ public:
       std::optional<ConstantIntRanges> value = std::nullopt)
       : value(std::move(value)) {}
 
-  /// Whether the range is uninitialized. This happens when the state hasn't
-  /// been set during the analysis.
+  /// Whether no integer range is stored. For integer values, inference has
+  /// not produced a result yet. Non-integer values have no integer range.
   bool isUninitialized() const { return !value.has_value(); }
 
   /// Get the known integer value range.
