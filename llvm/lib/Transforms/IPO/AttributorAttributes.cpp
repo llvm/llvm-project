@@ -303,8 +303,8 @@ static Value *constructPointer(Value *Ptr, int64_t Offset,
                     << "-bytes\n");
 
   if (Offset)
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
-                           Ptr->getName() + ".b" + Twine(Offset));
+    Ptr = IRB.CreatePtrAddWithSignedOffset(
+        Ptr, Offset, Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -5795,11 +5795,13 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
   // TODO: Once we have memory behavior attributes we should use them here.
 
   // If we know we cannot communicate or write to memory, we do not care about
-  // ptr2int anymore.
+  // ptr2int anymore. The value can still be captured by whether the function
+  // returns.
   bool ReadOnly = F.onlyReadsMemory();
   bool NoThrow = F.doesNotThrow();
+  bool WillReturn = F.willReturn();
   bool IsVoidReturn = F.getReturnType()->isVoidTy();
-  if (ReadOnly && NoThrow && IsVoidReturn) {
+  if (ReadOnly && NoThrow && WillReturn && IsVoidReturn) {
     State.addKnownBits(NO_CAPTURE);
     return;
   }
@@ -5825,7 +5827,7 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
     if (F.hasParamAttribute(U, Attribute::Returned)) {
       if (U == unsigned(ArgNo))
         State.removeAssumedBits(NOT_CAPTURED_IN_RET);
-      else if (ReadOnly)
+      else if (ReadOnly && WillReturn)
         State.addKnownBits(NO_CAPTURE);
       else
         State.addKnownBits(NOT_CAPTURED_IN_RET);
@@ -6004,11 +6006,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     bool UsedAssumedInformation = false;
     if (IsVoidTy || CheckReturnedArgs(UsedAssumedInformation)) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
-      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+      // If the function only reads memory and does not return the value, the
+      // value can still be captured by whether the function returns.
+      bool IsKnownWillReturn;
+      bool IsAssumedWillReturn = AA::hasAssumedIRAttr<Attribute::WillReturn>(
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownWillReturn);
+      if (IsAssumedWillReturn && T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
       if (IsKnownNoUnwind && (IsVoidTy || !UsedAssumedInformation)) {
         addKnownBits(NOT_CAPTURED_IN_RET);
-        if (isKnown(NOT_CAPTURED_IN_MEM))
+        if (IsKnownWillReturn && isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
       }
     }
@@ -6567,6 +6574,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [&](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          TailCalls.push_back(&CI);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
+
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
@@ -6728,6 +6751,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6816,6 +6848,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7549,21 +7584,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
-      return ChangeStatus::UNCHANGED;
-
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
     // determine the best alignment of loads.
@@ -7590,8 +7610,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          // The new alloca may escape into tail calls. Find them here, as calls
+          // may have been replaced or deleted since manifest.
+          for (Instruction &I : instructions(ReplacementFn)) {
+            auto *CI = dyn_cast<CallInst>(&I);
+            if (CI && CI->isTailCall() && !CI->isMustTailCall())
+              CI->setTailCall(false);
+          }
         };
 
     // Callback to repair a call site of the associated function. The elements

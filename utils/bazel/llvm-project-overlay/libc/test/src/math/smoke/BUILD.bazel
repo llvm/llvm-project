@@ -23,6 +23,13 @@ math_test(name = "acosf")
 
 math_test(name = "acoshf")
 
+math_test(
+    name = "acoshbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_test(name = "acosf16")
 
 math_test(name = "acoshf16")
@@ -2377,6 +2384,13 @@ math_test(
     deps = [
         "//libc:__support_macros_attributes",
         "//libc:__support_math_sinh_double_eval",
+    ],
+)
+
+math_test(
+    name = "sinhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
     ],
 )
 

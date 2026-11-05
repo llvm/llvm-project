@@ -914,6 +914,6 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_LOGICAL_KIND(template class ExpressionBase, )
+template class ExpressionBase<Type<TypeCategory::Logical>>;
 template class ExpressionBase<SomeLogical>;
 } // namespace Fortran::evaluate
