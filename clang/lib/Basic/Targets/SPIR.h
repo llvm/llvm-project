@@ -433,6 +433,23 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
+
+protected:
+  bool isSupportedOffloadArch(OffloadArch Arch) const override {
+    // Generic OffloadArch is used for SYCL JIT and should be accepted.
+    if (Arch.isGeneric())
+      // spirv64-*-chipstar or spirv64-*-vulkan triples shouldn't support
+      // offload arch.
+      return getTriple().getOS() == llvm::Triple::UnknownOS;
+
+    // Intel OffloadArch will be supported for SYCL and should be accepted.
+    if (Arch.isIntel())
+      return getTriple().getOS() == llvm::Triple::UnknownOS;
+
+    return false;
+  }
+
+public:
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
@@ -521,9 +538,6 @@ public:
   // __builtin_amdgcn_processor_is
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  // AMD does not rely on -target-cpu to set/track CPU/GPU architecture; setCPU
-  // for AMD should not be used and thus unconditionally return false.
-  bool setCPU(StringRef Name) override { return false; }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final

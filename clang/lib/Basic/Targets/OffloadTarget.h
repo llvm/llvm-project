@@ -26,19 +26,19 @@ class LLVM_LIBRARY_VISIBILITY OffloadTargetInfo : public TargetInfo {
 protected:
   OffloadArch DeviceArch = OffloadArch::getUnused();
 
+  /// \return true if \p Arch is an offload device architecture this target can
+  /// compile for.
+  virtual bool isSupportedOffloadArch(OffloadArch Arch) const { return false; }
+
 public:
   OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {}
 
   bool setCPU(StringRef Name) override {
-    // Clang driver emits -target-cpu to indicate offload device architecture
-    // for both CUDA and SYCL. We override setCPU to capture this offload device
-    // architecture information.
-    DeviceArch = StringToOffloadArch(Name);
-    return !DeviceArch.isUnknownOrUnused();
-  }
-
-  bool isValidCPUName(StringRef Name) const override {
-    return !StringToOffloadArch(Name).isUnknown();
+    OffloadArch Arch = StringToOffloadArch(Name);
+    if (!isSupportedOffloadArch(Arch))
+      return false;
+    DeviceArch = Arch;
+    return true;
   }
 
   OffloadArch getOffloadArch() const override { return DeviceArch; }
