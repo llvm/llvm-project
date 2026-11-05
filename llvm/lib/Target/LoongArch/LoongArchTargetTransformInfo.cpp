@@ -133,23 +133,6 @@ LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
 
 unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
 
-unsigned LoongArchTTIImpl::getPrefetchDistance() const {
-  return ST->getPrefetchDistance();
-}
-
-unsigned LoongArchTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
-                                                unsigned NumStridedMemAccesses,
-                                                unsigned NumPrefetches,
-                                                bool HasCall) const {
-  return ST->getMinPrefetchStride();
-}
-
-unsigned LoongArchTTIImpl::getMaxPrefetchIterationsAhead() const {
-  return ST->getMaxPrefetchIterationsAhead();
-}
-
-bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
-
 bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:

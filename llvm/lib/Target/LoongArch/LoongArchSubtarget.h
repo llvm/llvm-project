@@ -109,11 +109,17 @@ public:
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
-  unsigned getPrefetchDistance() const { return PrefetchDistance; }
-  unsigned getMinPrefetchStride() const { return MinPrefetchStride; }
-  unsigned getMaxPrefetchIterationsAhead() const {
+  unsigned getPrefetchDistance() const override { return PrefetchDistance; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return MinPrefetchStride;
+  }
+  unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
+  bool enableWritePrefetching() const override { return true; }
   bool enableMachineScheduler() const override { return true; }
   bool useAA() const override;
 };
