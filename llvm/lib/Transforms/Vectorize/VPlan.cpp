@@ -803,7 +803,6 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // Compute and return the cost of the branch on the mask in the entry, the
   // conditionally executed recipes and the unconditional branch from the
   // conditionally executed block to the exiting block for each lane.
-  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
 
   // If the vector loop executes at most once and the region is predicated on

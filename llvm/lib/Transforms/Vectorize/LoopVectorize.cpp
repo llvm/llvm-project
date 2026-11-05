@@ -2812,13 +2812,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
     for (ElementCount VF : Plan->vectorFactors()) {
-      // The VPlan-based cost model is designed for computing vector cost.
-      // Querying VPlan-based cost model with a scarlar VF will cause some
-      // errors because we expect the VF is vector for most of the widen
-      // recipes.
-      if (VF.isScalar())
-        continue;
-
       VPCostContext CostCtx(*TLI, *Plan, *CM, Config,
                             /*ReusePrintingSlotTracker=*/true);
       precomputeCosts(*Plan, VF, CostCtx);
@@ -3413,10 +3406,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0) {
-    if (VF.isScalar())
-      LoopCost = CM->expectedCost(VF);
-    else
-      LoopCost = cost(Plan, VF, &R, *CM);
+    LoopCost = cost(Plan, VF, &R, *CM);
     assert(LoopCost.isValid() && "Expected to have chosen a VF with valid cost");
 
     // Loop body is free and there is no need for interleaving.
@@ -5150,15 +5140,11 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         CM->collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
         buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF, *CM);
       }
-      if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
-        // For scalar VF, skip VPlan cost check as VPlan cost is designed for
-        // vector VFs only.
-        if (UserVF.isScalar() ||
-            cost(*VPlans.front(), UserVF, /*RU=*/nullptr, *CM).isValid()) {
-          LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-          LLVM_DEBUG(printPlans(dbgs()));
-          return;
-        }
+      if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF &&
+          cost(*VPlans.front(), UserVF, /*RU=*/nullptr, *CM).isValid()) {
+        LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        LLVM_DEBUG(printPlans(dbgs()));
+        return;
       }
       VPlans.clear();
       reportVectorizationInfo("UserVF ignored because of invalid costs.",

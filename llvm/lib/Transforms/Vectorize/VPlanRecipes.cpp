@@ -1494,6 +1494,11 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       Ctx.CostKind);
   }
   case VPInstruction::AnyOf: {
+    // For scalars, the operands are combined with ORs; no reduction is needed.
+    if (VF.isScalar())
+      return (getNumOperands() - 1) *
+             Ctx.TTI.getArithmeticInstrCost(
+                 Instruction::Or, this->getScalarType(), Ctx.CostKind);
     auto *VecTy = toVectorTy(this->getScalarType(), VF);
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
@@ -1535,15 +1540,22 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::ExtractLastActive: {
     Type *ScalarTy = this->getScalarType();
-    Type *VecTy = toVectorTy(ScalarTy, VF);
     Type *MaskTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    // For scalars, the active data is selected into the result.
+    if (VF.isScalar())
+      return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ScalarTy, MaskTy,
+                                        CmpInst::BAD_ICMP_PREDICATE,
+                                        Ctx.CostKind);
+    Type *VecTy = toVectorTy(ScalarTy, VF);
     IntrinsicCostAttributes ICA(
         Intrinsic::experimental_vector_extract_last_active, ScalarTy,
         {VecTy, MaskTy, ScalarTy});
     return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind);
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
-    assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
+    // The splice of scalars is the previous value itself.
+    if (VF.isScalar())
+      return 0;
     Type *VectorTy = toVectorTy(this->getScalarType(), VF);
     return Ctx.TTI.getShuffleCost(
         TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
@@ -1556,6 +1568,11 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         getOpcode() == VPInstruction::WideActiveLaneMask
             ? cast<VPConstantInt>(getOperand(2))->getZExtValue()
             : 1;
+    // A scalar active lane mask is generated as a single compare.
+    if (VF.isScalar() && Multiplier == 1)
+      return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ArgTy,
+                                        CmpInst::makeCmpResultType(ArgTy),
+                                        CmpInst::ICMP_ULT, Ctx.CostKind);
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});
@@ -3755,9 +3772,18 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   RecurKind RdxKind = getRecurrenceKind();
   Type *ElementTy = this->getScalarType();
-  auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlagsOrNone();
+
+  // A reduction of scalars is a single scalar operation.
+  if (VF.isScalar()) {
+    assert(!isPartialReduction() && "partial reduction with scalar VF");
+    assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
+           "in-loop min/max reductions are not supported");
+    return Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
+  }
+
+  auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   std::optional<FastMathFlags> OptionalFMF =
       ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
