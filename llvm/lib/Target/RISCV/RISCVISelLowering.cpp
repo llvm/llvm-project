@@ -18399,8 +18399,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (VT != MVT::i32 || !Subtarget.is64Bit())
         return;
       SDValue Rd = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3));
-      SDValue Rs1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Rs2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Rs1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Rs2 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
       SDValue Res = DAG.getNode(RISCVISD::MERGE, DL, MVT::i64, Rd, Rs1, Rs2);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
