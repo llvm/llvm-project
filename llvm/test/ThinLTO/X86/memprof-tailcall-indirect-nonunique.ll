@@ -17,6 +17,11 @@
 ;; contexts with a record for @t2. The second indirect tail call's VP lists @t2
 ;; before @t1, so the backend would see a stale @t1 record (with a single clone
 ;; entry) last.
+;;
+;; Note that the test is intentionally order-sensitive: it relies on @t1
+;; preceding @t2 in @mid's summary call edges (so the ambiguous chain's record
+;; is synthesized first), and on @t2 preceding @t1 in the second call's VP
+;; metadata (so the backend matches the stale record last).
 
 ; REQUIRES: asserts
 

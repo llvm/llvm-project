@@ -3373,7 +3373,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
   // chain. The CallsiteInfo records are only synthesized by the caller once
   // the search succeeds, since the chain is discarded if the profiled callee
   // is found through multiple chains.
-  auto SaveCallsiteInfo = [&](ValueInfo Callee, FunctionSummary *FS) {
+  auto SaveTailCall = [&](ValueInfo Callee, FunctionSummary *FS) {
     FoundCalleeChain.push_back({Callee, FS});
   };
 
@@ -3413,7 +3413,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           FoundProfiledCalleeMaxDepth = Depth;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        SaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
@@ -3430,7 +3430,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundSingleCalleeChain = true;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        SaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
