@@ -2745,8 +2745,7 @@ static std::string getSPIRVBuiltinName(unsigned BuiltinID, bool IsFloat = false,
   case Builtin::BIcoop_mat_length:
     return "__spirv_CooperativeMatrixLengthKHR";
   }
-  assert(0 && "Unexpected Builtin");
-  return "";
+  llvm_unreachable("Unsupported builtin");
 }
 
 static llvm::TargetExtType *getTargetExtType(CodeGenModule &CGM,
@@ -4889,7 +4888,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto *RetType = getTargetExtType(CGM, MTy);
     auto *AType = getTargetExtType(CGM, MATy);
     auto *BType = getTargetExtType(CGM, MBTy);
-    llvm::Type *ElTy = ConvertType(MTy->getElementType());
+    llvm::Type *ElTy = ConvertType(MATy->getElementType());
     // Check if the data is signed/unsigned
     QualType QT = MTy->getElementType();
     bool IsSigned = false;

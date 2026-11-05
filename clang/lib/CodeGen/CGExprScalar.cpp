@@ -959,11 +959,6 @@ public:
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
   Value *VisitBin##OP(const BinaryOperator *E) {                               \
-    if (E->getType()->isCooperativeMatrixType()) {                             \
-      return CGF.EmitCoopMatBinaryOp(                                          \
-          E->getOpcode(), CGF.EmitScalarExpr(E->getLHS()),                     \
-          CGF.EmitScalarExpr(E->getRHS()), E->getType());                      \
-    }                                                                          \
     QualType promotionTy = getPromotionType(E->getType());                     \
     auto result = Emit##OP(EmitBinOps(E, promotionTy));                        \
     if (result && !promotionTy.isNull())                                       \
@@ -1619,7 +1614,6 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
           IsSigned ? llvm::Intrinsic::fptosi_sat : llvm::Intrinsic::fptoui_sat;
       return Builder.CreateCall(CGF.CGM.getIntrinsic(IID, {DstTy, SrcTy}), Src);
     }
-
     if (IsSigned)
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");

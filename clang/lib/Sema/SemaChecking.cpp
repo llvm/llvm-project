@@ -17640,6 +17640,11 @@ ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
                                         ExprResult CallResult) {
   if (checkArgCount(TheCall, 4))
     return ExprError();
+  auto *MTy = TheCall->getArg(1)->getType()->getAs<CooperativeMatrixType>();
+  if (!MTy) {
+    Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_invalid_coopmat_arg);
+    return ExprError();
+  }
   if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
     return ExprError();
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(2)))
