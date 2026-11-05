@@ -8107,7 +8107,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: f32x4
 define hidden void @four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: four_floats_vary_op:
 ; CHECK:         .functype four_floats_vary_op (i32, i32, i32, i32) -> ()
@@ -8868,7 +8867,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: v128.load
 define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: four_floats_four_bytes_same_op:
 ; CHECK:         .functype four_floats_four_bytes_same_op (i32, i32, i32, i32) -> ()
@@ -9000,7 +8998,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: v128.load
 define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: four_floats_four_bytes_vary_op:
 ; CHECK:         .functype four_floats_four_bytes_vary_op (i32, i32, i32, i32) -> ()
@@ -9762,7 +9759,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: v128.load
 define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: four_floats_four_shorts_same_op:
 ; CHECK:         .functype four_floats_four_shorts_same_op (i32, i32, i32, i32) -> ()
@@ -9894,7 +9890,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: v128.load
 define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: four_floats_four_shorts_vary_op:
 ; CHECK:         .functype four_floats_four_shorts_vary_op (i32, i32, i32, i32) -> ()
@@ -10026,7 +10021,6 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-NOT: v128.load
 define hidden void @mac_3d_i8(ptr dead_on_unwind noalias writable writeonly sret(%struct.ThreeBytes) align 1 captures(none) %0, ptr noundef readonly captures(none) %1, ptr noundef readonly captures(none) %2, i32 noundef %3) {
 ; CHECK-LABEL: mac_3d_i8:
 ; CHECK:         .functype mac_3d_i8 (i32, i32, i32, i32) -> ()
