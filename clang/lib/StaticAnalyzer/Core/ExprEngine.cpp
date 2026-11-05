@@ -3725,6 +3725,8 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
+    // FIXME: This defensive logic was introduced in 2009 and I'm pretty sure
+    // this can no longer happen (in particular no LIT test triggers it).
     ProgramPoint P = Pred->getLocation();
     if (!P.getAs<PostStmt>() || P.castAs<PostStmt>().getStmt() != Ex) {
       Dst.insert(Pred);
