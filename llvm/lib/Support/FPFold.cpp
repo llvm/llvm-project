@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FPFold.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -15,7 +16,7 @@
 using namespace llvm;
 
 std::optional<APFloat> llvm::getFPValue(std::optional<FPFoldResult> Res) {
-  return Res ? std::optional<APFloat>(std::move(Res->Value)) : std::nullopt;
+  return llvm::transformOptional(std::move(Res), &FPFoldResult::Value);
 }
 
 static APFloat flush(APFloat Value, DenormalMode::DenormalModeKind Mode) {
