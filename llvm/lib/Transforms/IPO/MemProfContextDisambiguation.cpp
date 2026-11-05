@@ -1295,7 +1295,7 @@ private:
   bool sameCallee(IndexCall &Call1, IndexCall &Call2);
   bool findProfiledCalleeThroughTailCalls(
       ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-      std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+      std::vector<std::pair<ValueInfo, FunctionSummary *>> &FoundCalleeChain,
       bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(IndexCall &Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
@@ -3362,25 +3362,19 @@ bool ModuleCallsiteContextGraph::sameCallee(Instruction *Call1,
 
 bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-    std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+    std::vector<std::pair<ValueInfo, FunctionSummary *>> &FoundCalleeChain,
     bool &FoundMultipleCalleeChains) {
   // Stop recursive search if we have already explored the maximum specified
   // depth.
   if (Depth > TailCallSearchDepth)
     return false;
 
-  auto CreateAndSaveCallsiteInfo = [&](ValueInfo Callee, FunctionSummary *FS) {
-    // Make a CallsiteInfo for each discovered callee, if one hasn't already
-    // been synthesized.
-    if (!FunctionCalleesToSynthesizedCallsiteInfos.count(FS) ||
-        !FunctionCalleesToSynthesizedCallsiteInfos[FS].count(Callee))
-      // StackIds is empty (we don't have debug info available in the index for
-      // these callsites)
-      FunctionCalleesToSynthesizedCallsiteInfos[FS][Callee] =
-          std::make_unique<CallsiteInfo>(Callee, SmallVector<unsigned>());
-    CallsiteInfo *NewCallsiteInfo =
-        FunctionCalleesToSynthesizedCallsiteInfos[FS][Callee].get();
-    FoundCalleeChain.push_back({NewCallsiteInfo, FS});
+  // Record each discovered tail call (callee and calling function) in the
+  // chain. The CallsiteInfo records are only synthesized by the caller once
+  // the search succeeds, since the chain is discarded if the profiled callee
+  // is found through multiple chains.
+  auto SaveTailCall = [&](ValueInfo Callee, FunctionSummary *FS) {
+    FoundCalleeChain.push_back({Callee, FS});
   };
 
   // Look for tail calls in this function, and check if they either call the
@@ -3419,7 +3413,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           FoundProfiledCalleeMaxDepth = Depth;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        CreateAndSaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
@@ -3436,7 +3430,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundSingleCalleeChain = true;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        CreateAndSaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
@@ -3485,8 +3479,10 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
   // bookkeeping of the created chain of new nodes for each mismatch.
   unsigned Depth = 1;
   bool FoundMultipleCalleeChains = false;
-  if (!findProfiledCalleeThroughTailCalls(
-          FuncVI, Callee, Depth, FoundCalleeChain, FoundMultipleCalleeChains)) {
+  std::vector<std::pair<ValueInfo, FunctionSummary *>> FoundCalleeVIChain;
+  if (!findProfiledCalleeThroughTailCalls(FuncVI, Callee, Depth,
+                                          FoundCalleeVIChain,
+                                          FoundMultipleCalleeChains)) {
     LLVM_DEBUG(dbgs() << "Not found through unique tail call chain: " << FuncVI
                       << " from " << FSToVIMap[CallerFunc]
                       << " that actually called " << Callee
@@ -3497,6 +3493,22 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
     if (FoundMultipleCalleeChains)
       FoundProfiledCalleeNonUniquelyCount++;
     return false;
+  }
+
+  // Now that we know the chain is unique, synthesize a CallsiteInfo for each
+  // tail call in it, if one hasn't already been synthesized (e.g. for a chain
+  // to a different profiled callee through the same tail call). These are only
+  // added to the function summaries once the graph is destroyed (see
+  // ~IndexCallsiteContextGraph).
+  for (auto &[CalleeVI, FS] : FoundCalleeVIChain) {
+    auto &CallsiteInfoPtr =
+        FunctionCalleesToSynthesizedCallsiteInfos[FS][CalleeVI];
+    if (!CallsiteInfoPtr)
+      // StackIds is empty (we don't have debug info available in the index for
+      // these callsites)
+      CallsiteInfoPtr =
+          std::make_unique<CallsiteInfo>(CalleeVI, SmallVector<unsigned>());
+    FoundCalleeChain.push_back({CallsiteInfoPtr.get(), FS});
   }
 
   return true;

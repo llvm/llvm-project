@@ -3546,10 +3546,7 @@ void SectionsOp::getEffects(
         &effects) {
   // The presence of the nowait clause eliminates the implicit barrier at the
   // end of a sections construct
-  // TODO: Presence of a nowait clause does not currently eliminate an implicit
-  // barrier if the reduction clause is also present (when it should), so we
-  // keep the barrier.
-  if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
+  if (!getNowait()) {
     getBarrierEffects(effects);
   }
 

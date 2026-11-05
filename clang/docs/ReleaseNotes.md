@@ -329,6 +329,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
+- A relative `directory` in a JSON compilation database is now resolved against the directory containing the compilation database file.
+
 - On musl targets, the driver now links ``libssp_nonshared.a`` when stack
   protection is enabled and the library is present in the toolchain library
   paths, matching what musl distributions configure GCC to do.
@@ -851,6 +853,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
+- Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1568,6 +1571,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
   inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
   `order(concurrent)`) were incorrectly accepted.
+- Fixed a crash when a `tile` or `stripe` `sizes` argument has type `bool` or
+  `_BitInt`. (#GH229039)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
