@@ -26,8 +26,8 @@ class LLVM_LIBRARY_VISIBILITY OffloadTargetInfo : public TargetInfo {
 protected:
   OffloadArch DeviceArch = OffloadArch::getUnused();
 
-  /// \return true if \p Arch is an offload device architecture this target can
-  /// compile for.
+  /// \return true if \p Arch is an offload device architecture this target
+  /// should accept.
   virtual bool isSupportedOffloadArch(OffloadArch Arch) const { return false; }
 
 public:

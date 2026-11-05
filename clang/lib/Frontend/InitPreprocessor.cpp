@@ -1512,21 +1512,19 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // SYCL device compiler which doesn't produce host binary.
   if (LangOpts.SYCLIsDevice) {
     Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
-    if (OffloadArch Arch = TI.getOffloadArch(); !Arch.isUnknownOrUnused()) {
-      if (Arch.isIntelIGCA()) {
-        llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
+    if (OffloadArch Arch = TI.getOffloadArch(); Arch.isIntelIGCA()) {
+      llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
 
-        Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
-        if (IGCA.isAnyCompute())
-          Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
-        else if (IGCA.isAnyRender())
-          Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
+      if (IGCA.isAnyCompute())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
+      else if (IGCA.isAnyRender())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
 
-        if (IGCA.isComputeExact())
-          Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
-        else if (IGCA.isRenderExact())
-          Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
-      }
+      if (IGCA.isComputeExact())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
+      else if (IGCA.isRenderExact())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
     }
   }
 
