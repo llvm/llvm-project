@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -14545,6 +14546,24 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
 
+  // The C libcall may write fewer bits through an output pointer than the
+  // declared result type. So far this only applies to FREXP, whose exponent
+  // output is C int (the same mismatch is handled in SoftenFloatRes_FFREXP);
+  // MODF/SINCOS/SINCOSPI outputs use the floating-point type itself.
+  // Allocate temporaries, write and read back at the libcall's parameter
+  // width, and convert to the declared type when reading the result back.
+  bool IsFrexp = LC == RTLIB::getFREXP(VT);
+  EVT IntVT = EVT::getIntegerVT(Ctx, DAG.getLibInfo().getIntSize());
+  // The element type that the libcall actually writes for result ResNo.
+  auto LibcallOutputVT = [&](unsigned ResNo) {
+    EVT DeclaredVT = Node->getValueType(ResNo);
+    if (!IsFrexp || ResNo == CallRetResNo)
+      return DeclaredVT;
+    if (DeclaredVT.isVector())
+      return EVT::getVectorVT(Ctx, IntVT, DeclaredVT.getVectorElementCount());
+    return IntVT;
+  };
+
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
   SDValue StoresInChain;
@@ -14557,6 +14576,11 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     unsigned ResNo = StoreValue.getResNo();
     // Ensure the store corresponds to an output pointer.
     if (CallRetResNo == ResNo)
+      continue;
+    // Only reuse the store if its width matches what the libcall writes
+    // through the output pointer; a differently-sized destination must keep
+    // its store so that the converted result is stored in full afterwards.
+    if (StoreValue.getValueType() != LibcallOutputVT(ResNo))
       continue;
     // Ensure the store to the default address space and not atomic or volatile.
     if (!ST->isSimple() || ST->getAddressSpace() != 0)
@@ -14593,8 +14617,9 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
     if (ResNo == CallRetResNo)
       continue;
-    EVT ResVT = Node->getValueType(ResNo);
-    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(ResVT);
+    EVT ParamVT = LibcallOutputVT(ResNo);
+    SDValue ResultPtr =
+        ST ? ST->getBasePtr() : DAG.CreateStackTemporary(ParamVT);
     ResultPtrs[ResNo] = ResultPtr;
     Args.emplace_back(ResultPtr, PointerTy);
   }
@@ -14626,8 +14651,9 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
-    SDValue LoadResult = DAG.getLoad(Node->getValueType(ResNo), DL, CallChain,
-                                     ResultPtr, PtrInfo);
+    EVT ParamVT = LibcallOutputVT(ResNo);
+    SDValue LoadResult =
+        DAG.getLoad(ParamVT, DL, CallChain, ResultPtr, PtrInfo);
     SDValue OutChain = LoadResult.getValue(1);
 
     if (StoreSDNode *ST = ResultStores[ResNo]) {
@@ -14638,6 +14664,19 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       PtrInfo = MachinePointerInfo::getFixedStack(
           DAG.getMachineFunction(),
           cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+
+    if (ParamVT != Node->getValueType(ResNo)) {
+      // Convert the libcall output to the declared result type. Exponents
+      // are signed, so widen by sign extension; for declared types narrower
+      // than C int, truncation matches the constant folding behavior.
+      EVT DeclaredVT = Node->getValueType(ResNo);
+      if (DeclaredVT.getSizeInBits() < ParamVT.getSizeInBits())
+        LoadResult =
+            DAG.getNode(ISD::TRUNCATE, DL, DeclaredVT, LoadResult);
+      else
+        LoadResult =
+            DAG.getNode(ISD::SIGN_EXTEND, DL, DeclaredVT, LoadResult);
     }
 
     Results.push_back(LoadResult);
