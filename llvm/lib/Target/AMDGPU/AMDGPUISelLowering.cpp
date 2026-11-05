@@ -3842,13 +3842,6 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT(const SDValue Op,
   EVT SrcVT = Src.getValueType();
   EVT DestVT = Op.getValueType();
 
-  // Rounding down agrees with truncation for nonnegative inputs. Negative
-  // rounded results and nonfinite inputs already produce poison when converted.
-  if (OpOpcode == ISD::FP_TO_UINT && Src.getOpcode() == ISD::FFLOOR &&
-      Src.hasOneUse())
-    return DAG.getNode(OpOpcode, SDLoc(Op), DestVT, Src.getOperand(0),
-                       Op->getFlags());
-
   // Will be selected natively
   if (SrcVT == MVT::f16 && DestVT == MVT::i16)
     return Op;
