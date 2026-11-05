@@ -129,7 +129,7 @@ void RISCVTargetELFStreamer::finish() {
   else if (RISCVABI::isDoubleFP(ABI))
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
   else
-    assert(ABI == RISCVABI::ABI_Unknown);
+    assert(ABI == RISCVABI::ABI::Unknown);
 
   W.setELFHeaderEFlags(EFlags);
 }
