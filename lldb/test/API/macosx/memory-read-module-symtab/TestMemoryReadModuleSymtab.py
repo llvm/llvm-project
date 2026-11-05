@@ -28,7 +28,7 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
     def memory_read_requests(self, logfile):
         """Scan a gdb-remote packet log for memory read requests,
-        return an array of [start-address, end-address] entries."""
+        return an array of [start-address, end-address) entries."""
         self.assertTrue(os.path.exists(logfile), "packet log was created")
         log_text = [s.rstrip() for s in open(logfile).readlines()]
         read_lines = [line for line in log_text if "send packet: $x" in line]
@@ -155,28 +155,26 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         # The Mach-O header and load commands should have been read from
         # the 'headerbytes' DataCacheFile, and the SymbolTable aka LINKEDIT
         # should have been read from the 'symtab' DataCacheFile.
-        for addrs in memory_read_addrs:
-            for addr in addrs:
-                # Check that the address isn't in the range of the
-                # mach-o header and load commands.
-                if addr >= exe_header_start and addr < exe_header_end:
-                    print(
-                        "Address 0x%x was read from a.out's Mach-O header and load commands.  It should have been retrieved from the 'headerbytes' DataFileCache file."
-                        % addr
-                    )
-                    if self.TraceOn():
-                        self.runCmd("target modules dump sections a.out")
-                        print("Read of address 0x%x is within Mach-O header" % addr)
-                self.assertFalse(addr >= exe_header_start and addr < exe_header_end)
+        # All ranges are half-open [start, end).
+        for read_start, read_end in memory_read_addrs:
+            reads_header = read_start < exe_header_end and exe_header_start < read_end
+            reads_linkedit = (
+                read_start < linkedit_endaddr and linkedit_startaddr < read_end
+            )
+            if (reads_header or reads_linkedit) and self.TraceOn():
+                self.runCmd("target modules dump sections a.out")
 
-                # Check that the address isn't in the range of the
-                # LINKEDIT segment.
-                if addr >= linkedit_startaddr and addr < linkedit_endaddr:
-                    print(
-                        "Address 0x%x was read from a.out's __LINKEDIT; all symbol table information should have been retrieved from DataFileCache of it."
-                        % addr
-                    )
-                    if self.TraceOn():
-                        self.runCmd("target modules dump sections a.out")
-                        print("Read of address 0x%x is within LINKEDIT" % addr)
-                self.assertFalse(addr >= linkedit_startaddr and addr < linkedit_endaddr)
+            self.assertFalse(
+                reads_header,
+                "Read of [0x%x-0x%x) overlaps a.out's Mach-O header and load "
+                "commands [0x%x-0x%x); it should have been retrieved from the "
+                "'headerbytes' DataFileCache file."
+                % (read_start, read_end, exe_header_start, exe_header_end),
+            )
+            self.assertFalse(
+                reads_linkedit,
+                "Read of [0x%x-0x%x) overlaps a.out's __LINKEDIT [0x%x-0x%x); "
+                "the symbol table should have been retrieved from the 'symtab' "
+                "DataFileCache file."
+                % (read_start, read_end, linkedit_startaddr, linkedit_endaddr),
+            )
