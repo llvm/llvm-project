@@ -44,6 +44,27 @@
 ; RUN: rm -rf %t/cache
 ; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
 ; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+;; The second link keeps the existing hardlinks to the cache.
+; RUN: ls -l %t/lto-temps/1.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+
+;; When an input changes, the stale object in lto-temps is replaced by a
+;; hardlink to the new cache entry.
+; RUN: cp %t/lto-temps/2.x86_64.lto.o %t/large-old.lto.o
+; RUN: sed 's/AAAA/BBBB/' %S/Inputs/large-lto-object.ll | opt -thinlto-bc - -o %t/large.o
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: not cmp -s %t/lto-temps/2.x86_64.lto.o %t/large-old.lto.o
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+
+;; Changing the input order moves modules to other task indices; each object
+;; is relinked to the cache entry of the module now at that index.
+; RUN: %lld %t/large.o %t/test.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: llvm-nm %t/lto-temps/1.x86_64.lto.o | FileCheck %s --check-prefix=LARGE
+; RUN: llvm-nm %t/lto-temps/2.x86_64.lto.o | FileCheck %s --check-prefix=MAIN
+; RUN: ls -l %t/lto-temps/1.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; LARGE: D _dummy_data
+; MAIN: T _main
 
 ; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
 ; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp

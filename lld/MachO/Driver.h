@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
 
@@ -75,6 +76,7 @@ findPathCombination(const llvm::Twine &name,
 llvm::StringRef rerootPath(llvm::StringRef path);
 
 uint32_t getModTime(llvm::StringRef path);
+uint32_t getModTime(const llvm::sys::fs::file_status &stat);
 
 void printArchiveMemberLoad(StringRef reason, const InputFile *);
 
