@@ -649,9 +649,6 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
-  // The rewriter has no address space for the Indirect pointer yet.
-  if (info.isIndirect() && info.getIndirectAddrSpace() != 0)
-    return std::nullopt;
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal(),
