@@ -30,19 +30,19 @@ body:             |
     ; CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr_64(p4) = COPY killed $sgpr4_sgpr5
-    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %2:sreg_32 = S_MOV_B32 0
     undef %3.sub0:sgpr_128 = COPY %2
     %3.sub1:sgpr_128 = COPY %2
     %3.sub2:sgpr_128 = COPY %2
-    %3.sub3:sgpr_128 = COPY killed %2
-    %4:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET killed %3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
-    %5:vreg_64 = V_LSHRREV_B64_e64 24, killed %4, implicit $exec
-    undef %6.lo16:vgpr_32 = COPY killed %5.lo16
-    %7:vgpr_32 = V_LSHLREV_B32_e64 16, killed %6, implicit $exec
-    %8:vgpr_32 = V_PK_LSHLREV_B16 0, 8, 8, killed %7, 0, 0, 0, 0, 0, implicit $exec
-    %9:vreg_64 = COPY killed %1
-    FLAT_STORE_DWORD killed %9, killed %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
+    %3.sub3:sgpr_128 = COPY %2
+    %4:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
+    %5:vreg_64 = V_LSHRREV_B64_e64 24, %4, implicit $exec
+    undef %6.lo16:vgpr_32 = COPY %5.lo16
+    %7:vgpr_32 = V_LSHLREV_B32_e64 16, %6, implicit $exec
+    %8:vgpr_32 = V_PK_LSHLREV_B16 0, 8, 8, %7, 0, 0, 0, 0, 0, implicit $exec
+    %9:vreg_64 = COPY %1
+    FLAT_STORE_DWORD %9, %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_WAITCNT 0
     S_ENDPGM 0
 ...

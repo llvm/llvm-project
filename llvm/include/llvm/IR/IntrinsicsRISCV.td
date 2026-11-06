@@ -2146,7 +2146,7 @@ class RVPBinaryIntrinsic
   def int_riscv_predsum  : RVPReductionIntrinsic;
   def int_riscv_predsumu : RVPReductionIntrinsic;
 
-  // Packed Merge
+  // Packed Merge. Operands are (rs1, rs2, rd).
   class RVPTernaryIntrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>,
@@ -2323,6 +2323,19 @@ class RVPBinaryIntrinsic
   def int_riscv_pm2wsuba   : RVPHorizontalMulAccIntrinsic;
   def int_riscv_pm2wsuba_x : RVPHorizontalMulAccIntrinsic;
   def int_riscv_pm2waddasu : RVPHorizontalMulAccIntrinsic;
+
+  // Packed Multiplication with Horizontal Addition and Accumulate.
+  def int_riscv_pm2adda    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2adda_x  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2addau   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pmq2adda   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pmqr2adda  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2suba    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2suba_x  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2addasu  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4adda    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4addau   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4addasu  : RVPHorizontalMulAccIntrinsic;
 
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.

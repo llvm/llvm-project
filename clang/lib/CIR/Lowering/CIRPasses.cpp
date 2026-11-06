@@ -162,6 +162,7 @@ void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createCIRFlattenCFGPass());
   pm.addPass(createCIREHABILoweringPass());
   pm.addPass(createGotoSolverPass());
+  pm.addPass(createCIRFoldEmptyBranchesPass());
 }
 
 } // namespace mlir
