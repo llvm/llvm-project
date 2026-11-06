@@ -18,6 +18,7 @@
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
+#include "RecordReplay.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
@@ -44,12 +45,12 @@ using namespace llvm::omp::target::ompt;
 
 using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
 
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
-RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
                                          ol_device_handle_t Device,
                                          TargetAllocTy Kind, int64_t Size,
@@ -219,18 +220,25 @@ llvm::Error DeviceTy::init() {
     if (OMPX_RecordDevice != RTLDeviceID)
       return llvm::Error::success();
 
+    if (OMPX_RecordMemSize <= 0) {
+      REPORT() << "invalid LIBOMPTARGET_RECORD_MEMSIZE=" << OMPX_RecordMemSize;
+      return createError(ErrorCode::InvalidValue,
+                         "invalid LIBOMPTARGET_RECORD_MEMSIZE");
+    }
+
     // Print report if it was enabled explicitly or a report file was indicated.
     bool EmitReport =
         OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
 
-    int32_t Ret = RTL->initialize_record_replay(
-        RTLDeviceID, OMPX_RecordMemSize, nullptr,
-        /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
-        OMPX_RecordReportFilename.get().c_str(),
-        OMPX_RecordOutputDir.get().c_str());
-    if (Ret != OFFLOAD_SUCCESS)
+    if (auto Err = activateRecordReplay(OMPX_RecordMemSize, nullptr,
+                                        /*IsRecord=*/true, /*IsNative=*/true,
+                                        OMPX_RecordOutput, EmitReport,
+                                        OMPX_RecordReportFilename.get().c_str(),
+                                        OMPX_RecordOutputDir.get().c_str())) {
+      REPORT() << toString(std::move(Err));
       return createError(ErrorCode::BackendFailure,
-                         "failed to initialize RR in device %d\n", DeviceID);
+                         "failed to initialize RR in device %d", DeviceID);
+    }
   }
 
   return llvm::Error::success();
@@ -240,13 +248,54 @@ llvm::Error DeviceTy::deinit() {
   OMPT_IF_BUILT_AND_INITIALIZED(
       { performOmptCallback(device_finalize, DeviceID); });
 
+  // Keep tearing down even if record/replay fails to finish cleanly.
+  llvm::Error Result =
+      RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
+  RecordReplay.reset();
+
   if (!Context)
-    return llvm::Error::success();
+    return Result;
   if (auto Res = olDestroyContext(Context))
-    return createError(ErrorCode::BackendFailure,
-                       "failed to destroy context for device %d: %s", DeviceID,
-                       Res->Details);
+    Result = llvm::joinErrors(
+        std::move(Result),
+        createError(ErrorCode::BackendFailure,
+                    "failed to destroy context for device %d: %s", DeviceID,
+                    Res->Details));
   Context = nullptr;
+  return Result;
+}
+
+bool DeviceTy::isRecordingOrReplaying() const {
+  return RecordReplay && RecordReplay->isRecordingOrReplaying();
+}
+
+llvm::Error DeviceTy::activateRecordReplay(uint64_t MemorySize, void *VAddr,
+                                           bool IsRecord, bool IsNative,
+                                           bool SaveOutput, bool EmitReport,
+                                           const char *ReportFilename,
+                                           const char *OutputDirPath) {
+  if (RecordReplay)
+    return createError(ErrorCode::InvalidValue,
+                       "RR already initialized on device %d", DeviceID);
+  // Other formats could be supported in the future.
+  if (!IsNative)
+    return createError(ErrorCode::InvalidValue, "non-native RR not available");
+
+  RecordReplayTy::StatusTy Status = IsRecord
+                                        ? RecordReplayTy::StatusTy::Recording
+                                        : RecordReplayTy::StatusTy::Replaying;
+  auto RR = std::make_unique<NativeRecordReplayTy>(
+      Status, OutputDirPath ? OutputDirPath : "", SaveOutput, EmitReport,
+      ReportFilename ? ReportFilename : "", *this);
+  if (auto Err = RR->init(MemorySize, VAddr)) {
+    // Release anything init() acquired before failing.
+    llvm::consumeError(RR->deinit());
+    return createError(ErrorCode::BackendFailure,
+                       "failed to initialize RR with %" PRIu64
+                       " bytes on device %d: %s",
+                       MemorySize, DeviceID, toString(std::move(Err)).c_str());
+  }
+  RecordReplay = std::move(RR);
   return llvm::Error::success();
 }
 
@@ -266,8 +315,6 @@ DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
                        "(expected %zu, got %zu)",
                        Name, ExpectedSize, Size);
 
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   if (RecordReplay && RecordReplay->isRecording())
     RecordReplay->addGlobal(Name, Size, *AddrOrErr);
 
@@ -425,6 +472,19 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
+  // Record-replay serves every allocation from its preallocated region so
+  // recorded kernels can re-execute at their original addresses.
+  if (isRecordingOrReplaying()) {
+    auto AllocOrErr = RecordReplay->allocate(Size);
+    if (!AllocOrErr) {
+      REPORT() << "Failure to allocate record replay memory: "
+               << toString(AllocOrErr.takeError());
+      return nullptr;
+    }
+    // Set TargetPtr so the OMPT end callback sees the allocation.
+    return TargetPtr = *AllocOrErr;
+  }
+
   auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
       Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
   if (!AllocOrErr) {
@@ -445,6 +505,17 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
+  // Record/replay owns the memory: forward the deallocation to its region
+  // instead of the plugin.
+  if (isRecordingOrReplaying()) {
+    if (auto Err = RecordReplay->deallocate(TgtAllocBegin)) {
+      REPORT() << "Failure to free record replay memory: "
+               << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  }
+
   if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
           Context, DeviceHandle, TgtAllocBegin,
           static_cast<TargetAllocTy>(Kind))) {
@@ -458,6 +529,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
 
 llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
                                              ol_alloc_type_t Type) {
+  if (isRecordingOrReplaying())
+    return RecordReplay->allocate(Size);
+
   void *Ptr = nullptr;
   if (auto Res = olMemAlloc(Context, DeviceHandle, Type, Size, &Ptr))
     return createError(ErrorCode::BackendFailure,
@@ -467,6 +541,9 @@ llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
 }
 
 llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
+  if (isRecordingOrReplaying())
+    return RecordReplay->deallocate(Ptr);
+
   if (auto Res = olMemFree(Context, Ptr))
     return createError(ErrorCode::BackendFailure,
                        "failed to free memory %p on device %d: %s", Ptr,
@@ -781,8 +858,7 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
                            const DynBlockMemConfTy &DynBlockMemConf,
                            uint32_t DynCGroupMem, void **DynPtrSlot,
                            AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(Device.DeviceHandle);
+  RecordReplayTy *RecordReplay = Device.getRecordReplay();
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment, and launches with no reserved dyn_ptr slot (e.g. older
@@ -1335,8 +1411,6 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        KernelLaunchInfo.getExecutionModeName(), KernelArgs.Tripcount);
 
   // Record the kernel prologue data before the launch.
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {

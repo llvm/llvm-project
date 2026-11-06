@@ -387,14 +387,6 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   // predecessors to the headers.
   SmallVector<BasicBlock *> GuardBlocks;
 
-  // Minor optimization: The cycle entries are discovered in an order that is
-  // the opposite of the order in which these blocks appear as branch targets.
-  // This results in a lot of condition inversions in the control flow out of
-  // the new ControlFlowHub, which can be mitigated if the orders match. So we
-  // reverse the entries when adding them to the hub.
-  SetVector<BasicBlock *> Entries;
-  Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
-
   CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
