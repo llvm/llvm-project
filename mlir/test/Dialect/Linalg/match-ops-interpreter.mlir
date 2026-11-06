@@ -546,7 +546,7 @@ module attributes { transform.with_named_sequence } {
   func.func @payload(%f32: f32,
             // expected-remark @below {{output 0}}
             // expected-remark @below {{all output}}
-            // expected-note @below {{value handle points to a block argument #1 in block #0 in region #0}}
+            // expected-note @below 2 {{value handle points to a block argument #1 in block #0 in region #0}}
             %tf32: tensor<?xf32>,
             // expected-remark @below {{all output}}
             // expected-note @below {{value handle points to a block argument #2 in block #0 in region #0}}
@@ -555,7 +555,7 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{output 0}}
     // expected-remark @below {{output producer}}
     // expected-remark @below {{all output}}
-    // expected-note @below {{value handle points to an op result #0}}
+    // expected-note @below 2 {{value handle points to an op result #0}}
     %0 = linalg.fill ins(%f32: f32) outs(%tf32: tensor<?xf32>) -> tensor<?xf32>
 
     linalg.generic {

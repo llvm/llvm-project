@@ -435,7 +435,8 @@ module attributes {transform.with_named_sequence}  {
 // Consuming the same handle repeatedly in the region should trigger an error.
 module attributes {transform.with_named_sequence}  {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
-    // expected-note @below {{payload op}}
+    // expected-note @below {{ancestor payload op}}
+    // expected-note @below {{nested payload op}}
     // expected-note @below {{handle to invalidated ops}}
     %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
     transform.test_re_enter_region {
