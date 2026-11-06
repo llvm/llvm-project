@@ -198,7 +198,8 @@ define double @round_double(double %a) {
 ; CHECK-LABEL: round_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b64 %rd<11>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [round_double_param_0];
@@ -207,10 +208,18 @@ define double @round_double(double %a) {
 ; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
 ; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
-; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd5; }
+; CHECK-NEXT:    shr.u64 %rd6, %rd5, 32;
+; CHECK-NEXT:    shr.u64 %rd7, %rd1, 32;
+; CHECK-NEXT:    xor.b64 %rd8, %rd6, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd8;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    xor.b32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    mov.b64 %rd9, {%r5, %r4};
 ; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
-; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd7;
+; CHECK-NEXT:    selp.f64 %rd10, %rd1, %rd9, %p2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd10;
 ; CHECK-NEXT:    ret;
   %b = call double @llvm.round.f64(double %a)
   ret double %b
@@ -273,8 +282,8 @@ define i32 @lround_i32_double(double %a) {
 ; CHECK-LABEL: lround_i32_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b64 %rd<11>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [lround_i32_double_param_0];
@@ -283,11 +292,19 @@ define i32 @lround_i32_double(double %a) {
 ; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
 ; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
-; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd5; }
+; CHECK-NEXT:    shr.u64 %rd6, %rd5, 32;
+; CHECK-NEXT:    shr.u64 %rd7, %rd1, 32;
+; CHECK-NEXT:    xor.b64 %rd8, %rd6, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd8;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    xor.b32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    mov.b64 %rd9, {%r5, %r4};
 ; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
-; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
-; CHECK-NEXT:    cvt.rzi.s32.f64 %r1, %rd7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    selp.f64 %rd10, %rd1, %rd9, %p2;
+; CHECK-NEXT:    cvt.rzi.s32.f64 %r6, %rd10;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %b = call i32 @llvm.lround.i32.f64(double %a)
   ret i32 %b
@@ -297,7 +314,8 @@ define i64 @lround_i64_double(double %a) {
 ; CHECK-LABEL: lround_i64_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b64 %rd<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [lround_i64_double_param_0];
@@ -306,11 +324,19 @@ define i64 @lround_i64_double(double %a) {
 ; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
 ; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
-; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd5; }
+; CHECK-NEXT:    shr.u64 %rd6, %rd5, 32;
+; CHECK-NEXT:    shr.u64 %rd7, %rd1, 32;
+; CHECK-NEXT:    xor.b64 %rd8, %rd6, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd8;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    xor.b32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    mov.b64 %rd9, {%r5, %r4};
 ; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
-; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
-; CHECK-NEXT:    cvt.rzi.s64.f64 %rd8, %rd7;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
+; CHECK-NEXT:    selp.f64 %rd10, %rd1, %rd9, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd11, %rd10;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd11;
 ; CHECK-NEXT:    ret;
   %b = call i64 @llvm.lround.i64.f64(double %a)
   ret i64 %b
@@ -348,7 +374,8 @@ define i64 @cpu_lround_i64_double(double %a) {
 ; CHECK-LABEL: cpu_lround_i64_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b64 %rd<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [cpu_lround_i64_double_param_0];
@@ -357,11 +384,19 @@ define i64 @cpu_lround_i64_double(double %a) {
 ; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
 ; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
-; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd5; }
+; CHECK-NEXT:    shr.u64 %rd6, %rd5, 32;
+; CHECK-NEXT:    shr.u64 %rd7, %rd1, 32;
+; CHECK-NEXT:    xor.b64 %rd8, %rd6, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd8;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    xor.b32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    mov.b64 %rd9, {%r5, %r4};
 ; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
-; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
-; CHECK-NEXT:    cvt.rzi.s64.f64 %rd8, %rd7;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
+; CHECK-NEXT:    selp.f64 %rd10, %rd1, %rd9, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd11, %rd10;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd11;
 ; CHECK-NEXT:    ret;
   %b = call i64 @llvm.lround.i64.f64(double %a)
   ret i64 %b
