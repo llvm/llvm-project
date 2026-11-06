@@ -105,6 +105,8 @@ endif()
 # going unnoticed.
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
+  bedrock/ControllerHandlerTagCTest.c
+  bedrock/ControllerHandlerTagTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
   bedrock/NativeDylibManagerTest.cpp
