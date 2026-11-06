@@ -387,7 +387,11 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
-  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
+        if (NewCI->getType()->isVoidTy()) {
+  for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+          NewCI->removeParamAttr(I, Attribute::Returned);
+        }
+      NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
       NewCI->getType(), NewCI->getRetAttributes()));
   for (unsigned I = 0; I < NewCI->arg_size(); ++I)
     NewCI->removeParamAttrs(
