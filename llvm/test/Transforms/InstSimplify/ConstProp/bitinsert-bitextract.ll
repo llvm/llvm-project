@@ -377,6 +377,38 @@ define b256 @neg_bitinsert_ppc_fp128() {
   ret b256 %r
 }
 
+define <2 x i8> @bitextract_vec_poison_src() {
+; CHECK-LABEL: define <2 x i8> @bitextract_vec_poison_src() {
+; CHECK-NEXT:    ret <2 x i8> poison
+;
+  %r = bitextract <2 x i8>, <2 x b32> poison, <2 x i32> splat (i32 8)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @bitextract_vec_undef_offset() {
+; CHECK-LABEL: define <2 x i8> @bitextract_vec_undef_offset() {
+; CHECK-NEXT:    ret <2 x i8> poison
+;
+  %r = bitextract <2 x i8>, <2 x b32> <b32 1, b32 2>, <2 x i32> undef
+  ret <2 x i8> %r
+}
+
+define <2 x b32> @bitinsert_vec_poison_poison() {
+; CHECK-LABEL: define <2 x b32> @bitinsert_vec_poison_poison() {
+; CHECK-NEXT:    ret <2 x b32> poison
+;
+  %r = bitinsert <2 x b32> poison, <2 x i8> poison, <2 x i32> splat (i32 8)
+  ret <2 x b32> %r
+}
+
+define <2 x b32> @bitinsert_vec_undef_offset() {
+; CHECK-LABEL: define <2 x b32> @bitinsert_vec_undef_offset() {
+; CHECK-NEXT:    ret <2 x b32> poison
+;
+  %r = bitinsert <2 x b32> <b32 1, b32 2>, <2 x i8> <i8 3, i8 4>, <2 x i32> undef
+  ret <2 x b32> %r
+}
+
 define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
 ; CHECK-LABEL: define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
 ; CHECK-NEXT:    [[R:%.*]] = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> splat (b32 305419896), <vscale x 4 x i32> splat (i32 16)
