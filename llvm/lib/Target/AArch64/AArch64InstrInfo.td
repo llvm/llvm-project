@@ -3975,6 +3975,19 @@ defm LDNPD : LoadPairNoAlloc<0b01, 1, FPR64Op, simm7s8, "ldnp">;
 defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
 }
 
+multiclass LDNPQLoadIntrinsic<ValueType VecTy> {
+    def : Pat<([VecTy, VecTy] (int_aarch64_neon_vldnq_x2 GPR64sp:$Rn)),
+              ([VecTy, VecTy] (LDNPQi GPR64sp:$Rn, 0))>;
+}
+defm : LDNPQLoadIntrinsic<v16i8>;
+defm : LDNPQLoadIntrinsic<v8i16>;
+defm : LDNPQLoadIntrinsic<v4i32>;
+defm : LDNPQLoadIntrinsic<v2i64>;
+defm : LDNPQLoadIntrinsic<v8f16>;
+defm : LDNPQLoadIntrinsic<v8bf16>;
+defm : LDNPQLoadIntrinsic<v4f32>;
+defm : LDNPQLoadIntrinsic<v2f64>;
+
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (LDPXi GPR64sp:$Rn, simm7s8:$offset)>;
 
@@ -4876,6 +4889,19 @@ defm STNPS : StorePairNoAlloc<0b00, 1, FPR32Op, simm7s4, "stnp">;
 defm STNPD : StorePairNoAlloc<0b01, 1, FPR64Op, simm7s8, "stnp">;
 defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
 }
+
+multiclass STNPQStoreIntrinsic<ValueType VecTy> {
+    def : Pat<(int_aarch64_neon_vstnq_x2 (VecTy FPR128:$Rt1), (VecTy FPR128:$Rt2), GPR64sp:$Rn),
+              (STNPQi FPR128:$Rt1, FPR128:$Rt2, GPR64sp:$Rn, 0)>;
+}
+defm : STNPQStoreIntrinsic<v16i8>;
+defm : STNPQStoreIntrinsic<v8i16>;
+defm : STNPQStoreIntrinsic<v4i32>;
+defm : STNPQStoreIntrinsic<v2i64>;
+defm : STNPQStoreIntrinsic<v8f16>;
+defm : STNPQStoreIntrinsic<v8bf16>;
+defm : STNPQStoreIntrinsic<v4f32>;
+defm : STNPQStoreIntrinsic<v2f64>;
 
 // Armv9.6-a Load/store pair (FEAT_LSUI)
 let Predicates = [HasLSUI] in {

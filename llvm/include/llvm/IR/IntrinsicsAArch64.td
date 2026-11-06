@@ -693,6 +693,16 @@ def int_aarch64_neon_st2lane  : AdvSIMD_2Vec_Store_Lane_Intrinsic;
 def int_aarch64_neon_st3lane  : AdvSIMD_3Vec_Store_Lane_Intrinsic;
 def int_aarch64_neon_st4lane  : AdvSIMD_4Vec_Store_Lane_Intrinsic;
 
+// Non-Temporal Pair Load/Store
+let TargetPrefix = "aarch64" in {
+def int_aarch64_neon_vstnq_x2: DefaultAttrsIntrinsic<[],
+                                  [llvm_anyvector_ty, LLVMMatchType<0>, llvm_ptr_ty],
+                                  [IntrWriteMem, IntrArgMemOnly,  NoCapture<ArgIndex<2>>]>;
+def int_aarch64_neon_vldnq_x2 : DefaultAttrsIntrinsic<[LLVMMatchType<0>, llvm_anyvector_ty],
+                                  [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+}
+
+
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_Tbl1_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_v16i8_ty, LLVMMatchType<0>],
