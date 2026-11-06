@@ -8,12 +8,15 @@
 # ===----------------------------------------------------------------------===##
 """Unit tests for docgen and header implementation status evaluation."""
 
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).parent))
+from docgen import print_header_status_md
 from header import Header, _is_stub_file
 
 
@@ -71,6 +74,47 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
         self.assertTrue(Header("float.h").implements_macro("NAN"))
+
+    def test_md_output_generation(self):
+        hdr = Header("stdio.h")
+        api = {
+            "macros": {"EOF": {"c-definition": "7.23.1", "in-latest-posix": None}},
+            "functions": {
+                "printf": {"c-definition": "7.23.6.3", "in-latest-posix": None},
+                "missing_fn": {"c-definition": "7.23.6.99"},
+            },
+        }
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(hdr, api)
+        out = buf.getvalue()
+        lines = {line.strip() for line in out.splitlines()}
+        self.assertIn("# stdio.h", out)
+        self.assertIn("## Macros", out)
+        self.assertIn("## Functions", out)
+        self.assertIn('<table class="hc-table">', out)
+        self.assertTrue(
+            any(
+                'id="macro-EOF"' in l
+                and 'title="Implemented"' in l
+                and "basedefs/stdio.h.html" in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-printf"' in l
+                and 'title="Implemented"' in l
+                and "functions/printf.html" in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-missing_fn"' in l and 'title="Not Implemented"' in l
+                for l in lines
+            )
+        )
 
 
 if __name__ == "__main__":
