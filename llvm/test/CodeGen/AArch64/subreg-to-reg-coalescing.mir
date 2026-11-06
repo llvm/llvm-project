@@ -4,59 +4,10 @@
 # RUN:   -o - %s | FileCheck %s
 
 # The tests insert the w0 register into the low bits of two gpr64 registers: src_as_64b and src_as_64b_2.
-# Regardless of the instructions used for that (INSERT_SUBREG, SUBREG_TO_REG or COPY), those two vregs can get coalesced into one.
-# SUBREG_TO_REG doesn't make coalescing safer, neither does it ensure that a MOV will be created.
 
----
-name: insert_subreg
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $w0
-    ; CHECK-LABEL: name: insert_subreg
-    ; CHECK: liveins: $w0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
-    ; CHECK-NEXT: %used:gpr64common = UBFMXri %src_as_64b_2, 63, 31
-    ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    ; CHECK-NEXT: $x1 = COPY %used
-    ; CHECK-NEXT: $x0 = COPY %result
-    ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
-    %src:gpr32common = COPY $w0
-    %src_as_64b:gpr64 = INSERT_SUBREG undef %passthrough:gpr64all, %src, %subreg.sub_32
-    %used:gpr64common = UBFMXri %src_as_64b, 63, 31
-    %src_as_64b_2:gpr64sp = INSERT_SUBREG undef %passthrough2:gpr64all, %src, %subreg.sub_32
-    %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    $x1 = COPY %used
-    $x0 = COPY %result
-    RET_ReallyLR implicit $x0, implicit $x1
-...
-
----
-name: insert_subreg_mix_subreg_to_reg
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $w0
-    ; CHECK-LABEL: name: insert_subreg_mix_subreg_to_reg
-    ; CHECK: liveins: $w0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
-    ; CHECK-NEXT: undef %src_as_64b.sub_32:gpr64 = COPY %src_as_64b_2.sub_32
-    ; CHECK-NEXT: %used:gpr64common = UBFMXri %src_as_64b, 63, 31
-    ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    ; CHECK-NEXT: $x1 = COPY %used
-    ; CHECK-NEXT: $x0 = COPY %result
-    ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
-    %src:gpr32common = COPY $w0
-    %src_as_64b:gpr64 = INSERT_SUBREG undef %passthrough:gpr64all, %src, %subreg.sub_32
-    %used:gpr64common = UBFMXri %src_as_64b, 63, 31
-    %src_as_64b_2:gpr64sp = SUBREG_TO_REG %src, %subreg.sub_32
-    %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    $x1 = COPY %used
-    $x0 = COPY %result
-    RET_ReallyLR implicit $x0, implicit $x1
-...
+# They show that SUBREG_TO_REG can get eliminated through coalescing, just like a plain COPY.
+# Thus, SUBREG_TO_REG guarantees neither that the two live ranges remain separate,
+# nor that a MOV will be generated to zero-extend the output.
 
 ---
 name: subreg_copy
@@ -68,21 +19,23 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
-    ; CHECK-NEXT: %used:gpr64common = UBFMXri %src_as_64b_2, 63, 31
+    ; CHECK-NEXT: %result2:gpr64common = UBFMXri %src_as_64b_2, 63, 31
     ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    ; CHECK-NEXT: $x1 = COPY %used
+    ; CHECK-NEXT: $x1 = COPY %result2
     ; CHECK-NEXT: $x0 = COPY %result
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
     %src:gpr32common = COPY $w0
     undef %src_as_64b.sub_32:gpr64 = COPY %src
-    %used:gpr64common = UBFMXri %src_as_64b, 63, 31
+    %result2:gpr64common = UBFMXri %src_as_64b, 63, 31
     undef %src_as_64b_2.sub_32:gpr64sp = COPY %src
     %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    $x1 = COPY %used
+    $x1 = COPY %result2
     $x0 = COPY %result
     RET_ReallyLR implicit $x0, implicit $x1
 ...
 
+# Using a mix of SUBREG_TO_REG and REG_SEQUENCE/INSERT_SUBREG (both lowered to
+# COPY) in patterns can prevent coalescing due to our existing shouldCoalesce rules.
 ---
 name: subreg_copy_mix_subreg_to_reg
 tracksRegLiveness: true
@@ -94,17 +47,17 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
     ; CHECK-NEXT: undef %src_as_64b.sub_32:gpr64 = COPY %src_as_64b_2.sub_32
-    ; CHECK-NEXT: %used:gpr64common = UBFMXri %src_as_64b, 63, 31
+    ; CHECK-NEXT: %result2:gpr64common = UBFMXri %src_as_64b, 63, 31
     ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    ; CHECK-NEXT: $x1 = COPY %used
+    ; CHECK-NEXT: $x1 = COPY %result2
     ; CHECK-NEXT: $x0 = COPY %result
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
     %src:gpr32common = COPY $w0
     undef %src_as_64b.sub_32:gpr64 = COPY %src
-    %used:gpr64common = UBFMXri %src_as_64b, 63, 31
+    %result2:gpr64common = UBFMXri %src_as_64b, 63, 31
     %src_as_64b_2:gpr64sp = SUBREG_TO_REG %src, %subreg.sub_32
     %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    $x1 = COPY %used
+    $x1 = COPY %result2
     $x0 = COPY %result
     RET_ReallyLR implicit $x0, implicit $x1
 ...
@@ -119,17 +72,17 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
-    ; CHECK-NEXT: %used:gpr64common = UBFMXri %src_as_64b_2, 63, 31
+    ; CHECK-NEXT: %result2:gpr64common = UBFMXri %src_as_64b_2, 63, 31
     ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    ; CHECK-NEXT: $x1 = COPY %used
+    ; CHECK-NEXT: $x1 = COPY %result2
     ; CHECK-NEXT: $x0 = COPY %result
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
     %src:gpr32common = COPY $w0
     %src_as_64b:gpr64 = SUBREG_TO_REG %src, %subreg.sub_32
-    %used:gpr64common = UBFMXri %src_as_64b, 63, 31
+    %result2:gpr64common = UBFMXri %src_as_64b, 63, 31
     %src_as_64b_2:gpr64sp = SUBREG_TO_REG %src, %subreg.sub_32
     %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
-    $x1 = COPY %used
+    $x1 = COPY %result2
     $x0 = COPY %result
     RET_ReallyLR implicit $x0, implicit $x1
 ...
