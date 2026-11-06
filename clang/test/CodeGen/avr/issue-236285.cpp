@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple avr -mconstructor-aliases -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple avr -mconstructor-aliases -emit-llvm -o - %s | FileCheck %s %}
 
 // This test case verifies https://github.com/llvm/llvm-project/issues/236285 .
 

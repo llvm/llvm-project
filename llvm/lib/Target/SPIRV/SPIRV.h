@@ -54,6 +54,14 @@ public:
 
 FunctionPass *createSPIRVStructurizerPass();
 
+class SPIRVRemoveUnusedResourcesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveUnusedResourcesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveUnusedResourcesLegacyPass();
+
 class SPIRVCBufferAccessPass
     : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
 public:
@@ -209,6 +217,7 @@ void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareModuleAnalysisLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveUnusedResourcesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);

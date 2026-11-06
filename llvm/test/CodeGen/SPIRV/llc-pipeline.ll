@@ -19,8 +19,8 @@
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
 ; SPIRV-O0-NEXT:Library Function Lowering Analysis
-; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
+; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Machine Branch Probability Analysis
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
@@ -200,7 +200,6 @@
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Early Machine Loop Invariant Code Motion
-; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination

@@ -5911,11 +5911,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
   }
 
-  if (NumElts != 1 && !TLI.canOpTrap(N->getOpcode(), VT)) {
+  if (NumElts != 1 && DAG.isSafeToSpeculativelyExecute(Opcode)) {
     // Operation doesn't trap so just widen as normal.
     SDValue InOp1 = GetWidenedVector(N->getOperand(0));
     SDValue InOp2 = GetWidenedVector(N->getOperand(1));
-    return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
+    return DAG.getNode(Opcode, dl, WidenVT, InOp1, InOp2, Flags);
   }
 
   // Generate a vp.op if it is custom/legal for the target.  This avoids need
