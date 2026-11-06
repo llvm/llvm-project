@@ -1345,7 +1345,7 @@ def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
   }];
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Arrive Op";
