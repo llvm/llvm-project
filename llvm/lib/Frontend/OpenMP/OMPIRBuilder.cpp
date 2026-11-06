@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -928,6 +929,38 @@ static void hoistNonEntryAllocasToEntryBlock(llvm::Function *Func) {
       hoistNonEntryAllocasToEntryBlock(BB);
 }
 
+#ifndef NDEBUG
+/// Return true if \p Name names an OpenMP runtime function.
+static bool isRuntimeFunctionName(StringRef Name) {
+  static const StringSet<> Names = {
+#define OMP_RTL(Enum, Str, ...) Str,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  };
+  return Names.contains(Name);
+}
+
+/// Assert that every direct call to an OpenMP runtime function in \p M has a
+/// debug location if its function has a subprogram.
+static void checkRuntimeCallDebugLocs(Module &M) {
+  for (Function &F : M) {
+    if (!F.getSubprogram())
+      continue;
+    for (Instruction &I : instructions(F)) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || CB->getDebugLoc())
+        continue;
+      Function *Callee = CB->getCalledFunction();
+      if (Callee && isRuntimeFunctionName(Callee->getName())) {
+        errs() << "OpenMP runtime call to '" << Callee->getName()
+               << "' in function '" << F.getName()
+               << "' has no debug location\n";
+        llvm_unreachable("OpenMP runtime call has no debug location");
+      }
+    }
+  }
+}
+#endif
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -1077,6 +1110,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   }
 
   IsFinalized = true;
+
+#ifndef NDEBUG
+  // A caller finalizing one function at a time would have the module walked
+  // once per function, so only check when the whole module is finalized.
+  if (!Fn)
+    checkRuntimeCallDebugLocs(M);
+#endif
 }
 
 bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
