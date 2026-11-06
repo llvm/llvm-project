@@ -1177,7 +1177,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
-      - Globally Accessible Scratch
+      - Globally Accessible Scratch (see {ref}`GAS<amdgpu-feature-globally-addressable-scratch>`)
       - Workgroup Clusters
     -
     - *TBA*
@@ -1193,7 +1193,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
-      - Globally Accessible Scratch
+      - Globally Accessible Scratch (see {ref}`GAS<amdgpu-feature-globally-addressable-scratch>`)
       - Workgroup Clusters
     -
     - *TBA*
@@ -1209,7 +1209,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
-      - Globally Accessible Scratch
+      - Globally Accessible Scratch (see {ref}`GAS<amdgpu-feature-globally-addressable-scratch>`)
       - Workgroup Clusters
     -
     - *TBA*
@@ -1513,6 +1513,21 @@ For example:
       If enabled in the device, then if a page fault occurs the code may execute incorrectly unless generated with XNACK replay enabled, or generated for code object V4 or above without specifying XNACK replay.
       Executing code that was generated with XNACK replay enabled, or generated for code object V4 or above without specifying XNACK replay, on a device that does not have XNACK replay enabled will execute correctly but may be less performant than code generated for XNACK replay disabled.
   :::
+
+(amdgpu-feature-globally-addressable-scratch)=
+#### Globally Addressable Scratch Availability and Usage
+
+When a target is said to support "Globally Addressable Scratch", it is
+understood that it has the *capability* to use it
+(which changes how it addresses private memory, for example).
+
+However, sharing private (scratch) memory across threads is not supported by default,
+but can be enabled using``--amdgpu-enable-globally-addressable-scratch``.
+It is considered an experimental feature, which means:
+
+- There is limited support for it.
+- The ABI does not take it into account; linking modules that mix GAS settings is undefined behavior
+  that the linker does not warn about.
 
 (amdgpu-module-flags)=
 
@@ -8662,10 +8677,16 @@ termed vector memory operations.
 `global_load_lds` or `buffer/global_load` instructions with the `lds` flag
 are {ref}`LDS DMA operations<amdgpu-dma-operations>`.
 
-Private address space uses `buffer_load/store` using the scratch V#
-(GFX6-GFX8), or `scratch_load/store` (GFX9-GFX11). Since only a single thread
-is accessing the memory, atomic memory orderings are not meaningful, and all
-accesses are treated as non-atomic.
+Private address space uses ``buffer_load/store`` using the scratch V#
+(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11).
+
+* On targets where globally addressable scratch is not supported, or not enabled,
+  Only a single thread can access private memory. Thus, atomic memory orderings
+  are not meaningful, and all private accesses are treated as non-atomic.
+* On targets where globally addressable scratch is supported **and** enabled
+  (see {ref}`amdgpu-feature-globally-addressable-scratch`), private
+  atomic accesses are converted into atomics in the generic (``flat``) address space.
+  All properties of the atomic (atomic ordering, volatility, alignment, etc.) are preserved.
 
 Constant address space uses `buffer/global_load` instructions (or equivalent
 scalar memory instructions). Since the constant address space contents do not
