@@ -1612,6 +1612,8 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
+  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+      *MemSet->getFunction(), DEBUG_TYPE);
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {
@@ -1619,11 +1621,12 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
       Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
                                     "len.ge" + Twine(Size));
       if (Size == MinStoreSize) {
-        StoreBefore = SplitBlockAndInsertIfThen(Cond, InsertBefore, false);
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
       } else {
         Instruction *ElseTerm;
         SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
-                                      &ElseTerm);
+                                      &ElseTerm, Weights);
         ElseTerm->getParent()->setName("memset_lt" + Twine(Size));
         InsertBefore = ElseTerm;
       }

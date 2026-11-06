@@ -31,7 +31,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -47,7 +46,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
 #include <cassert>
@@ -1140,6 +1138,24 @@ static LogicalResult verifyOutputShape(
   return success();
 }
 
+// Find a one-sided reduction dim, i.e. a reduction dim that is present in only
+// one of the inputs.
+static std::optional<int64_t>
+getOneSidedReductionDim(vector::ContractionOp *contract) {
+  auto maps = contract->getIndexingMapsArray();
+  AffineMap lhsMap = maps[0];
+  AffineMap rhsMap = maps[1];
+
+  for (auto [dim, attr] : llvm::enumerate(contract->getIteratorTypes())) {
+    auto iteratorType = cast<vector::IteratorTypeAttr>(attr).getValue();
+    if (iteratorType == vector::IteratorType::reduction &&
+        (!lhsMap.isFunctionOfDim(dim) || !rhsMap.isFunctionOfDim(dim)))
+      return dim;
+  }
+
+  return std::nullopt;
+}
+
 LogicalResult ContractionOp::verify() {
   VectorType lhsType = getLhsType();
   VectorType rhsType = getRhsType();
@@ -1179,6 +1195,12 @@ LogicalResult ContractionOp::verify() {
       return emitOpError("expected indexing map ")
              << index << " to be a projected permutation of its inputs";
   }
+
+  // TODO: For better code re-use, unify this with linalg.contract.
+  auto dimIdx = getOneSidedReductionDim(this);
+  if (dimIdx.has_value())
+    return emitOpError("reduction dim at index ")
+           << dimIdx.value() << " must appear in both LHS and RHS";
 
   auto contractingDimMap = getContractingDimMap();
   auto batchDimMap = getBatchDimMap();

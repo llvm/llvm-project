@@ -892,11 +892,12 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
-  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  const auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
   const Descriptor *BlockDesc = B->getDescriptor();
   if (!Desc.IsInitialized)
-    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
-  if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
+    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B,
+                                 Desc.getLifetime());
+  if (!CheckLifetime(S, OpPC, Desc.getLifetime(), B, AK_Read))
     return false;
   if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
@@ -3061,7 +3062,7 @@ bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
     return true;
   }
 
-  const auto &ID = B->getBlockDesc<InlineDescriptor>();
+  const auto &ID = B->getBlockDesc<LocalInlineDescriptor>();
   if (!ID.IsInitialized) {
     if (!S.checkingPotentialConstantExpression())
       S.FFDiag(S.Current->getSource(OpPC),
@@ -3360,7 +3361,7 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     if (!LocalBlock->isInitialized())
       continue;
 
-    if (LocalBlock->getBlockDesc<InlineDescriptor>().LifeState ==
+    if (LocalBlock->getBlockDesc<LocalInlineDescriptor>().getLifetime() ==
         Lifetime::Ended) {
       const Pointer Ptr = S.Current->getLocalPointer(Local.Offset);
       return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);

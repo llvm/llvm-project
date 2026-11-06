@@ -101,6 +101,6 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
+template class ExpressionBase<Type<TypeCategory::Complex>>;
 template class ExpressionBase<SomeComplex>;
 } // namespace Fortran::evaluate

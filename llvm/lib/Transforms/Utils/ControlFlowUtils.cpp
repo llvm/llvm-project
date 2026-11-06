@@ -232,9 +232,10 @@ static void convertToGuardPredicates(
 // To match this new control flow, the values for the redirected edges are
 // moved from each PHINode to a new PHINode in the first guard block of the hub.
 //
-// This operation cannot be performed with SSAUpdater, because it involves one
-// new use: If the block Out is in the list of Incoming blocks, then the newly
-// created PHI in the Hub will use itself along that edge from Out to Hub.
+// If Out is itself an incoming block of the hub (a self-loop that is
+// redirected through the hub), the new PHINode receives the value that the
+// original PHINode received along the self-loop. If that value is the original
+// PHINode itself, it becomes the new PHINode when the original is replaced.
 static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
                           ArrayRef<EdgeDescriptor> Incoming,
                           BasicBlock *FirstGuardBlock) {
@@ -257,9 +258,6 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
         if (Succ0 && Succ1 && Succ0 == Succ1 &&
             Phi->getBasicBlockIndex(BB) != -1)
           Phi->removeIncomingValue(BB, false);
-        if (BB == Out) {
-          V = NewPhi;
-        }
         AllUndef &= isa<UndefValue>(V);
         AllPoison &= isa<PoisonValue>(V);
       }

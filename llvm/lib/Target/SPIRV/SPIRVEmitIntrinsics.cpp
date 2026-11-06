@@ -19,6 +19,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -197,7 +198,7 @@ class SPIRVEmitIntrinsicsImpl
   SmallPtrSet<Value *, 0> Named;
 
   // map of function declarations to <pointer arg index => element type>
-  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
+  MapVector<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -3189,7 +3190,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
 
 static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
     const Module &M,
-    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+    MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
         &FPFastMathDefaultInfoMap,
     Function *F) {
   auto it = FPFastMathDefaultInfoMap.find(F);
@@ -3263,7 +3264,7 @@ void SPIRVEmitIntrinsicsImpl::insertConstantsForFPFastMathDefault(Module &M) {
   // type. The first element is the smallest bit width, and the last element
   // is the largest bit width, therefore, we will have {half, float, double}
   // in the order of their bit widths.
-  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+  MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   for (unsigned i = 0; i < Node->getNumOperands(); i++) {

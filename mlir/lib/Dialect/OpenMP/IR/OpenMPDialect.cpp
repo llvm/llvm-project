@@ -17,7 +17,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -30,7 +29,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
@@ -3547,10 +3545,7 @@ void SectionsOp::getEffects(
         &effects) {
   // The presence of the nowait clause eliminates the implicit barrier at the
   // end of a sections construct
-  // TODO: Presence of a nowait clause does not currently eliminate an implicit
-  // barrier if the reduction clause is also present (when it should), so we
-  // keep the barrier.
-  if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
+  if (!getNowait()) {
     getBarrierEffects(effects);
   }
 

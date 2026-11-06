@@ -9,6 +9,8 @@
 #include "Program.h"
 #include "OffloadError.h"
 
+#include "llvm/BinaryFormat/Magic.h"
+
 #include <cstdint>
 #include <cstring>
 
@@ -26,7 +28,31 @@ Expected<ProgramTy> ProgramTy::create(ol_context_handle_t Context,
                                      "failed to load binary %p: %s", Img,
                                      Res->Details);
 
-  return ProgramTy(Handle);
+  StringRef Input(reinterpret_cast<const char *>(Img->ImageStart), ImageSize);
+  MemoryBufferRef IRImage;
+  if (identify_magic(Input) == file_magic::bitcode)
+    IRImage = MemoryBufferRef(Input, "IRImage");
+  return ProgramTy(Handle, IRImage);
+}
+
+Expected<MemoryBufferRef> ProgramTy::getImage() const {
+  void *Base = nullptr;
+  size_t Size = 0;
+  if (auto Res = olGetProgramInfo(Handle, OL_PROGRAM_INFO_IMAGE_BASE,
+                                  sizeof(Base), &Base))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to get program image address: %s",
+                                     Res->Details);
+  if (auto Res = olGetProgramInfo(Handle, OL_PROGRAM_INFO_IMAGE_SIZE,
+                                  sizeof(Size), &Size))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to get program image size: %s",
+                                     Res->Details);
+  if (!Base || !Size)
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "program has an empty image");
+  return MemoryBufferRef(StringRef(static_cast<const char *>(Base), Size),
+                         "Image");
 }
 
 Expected<void *> ProgramTy::getGlobalAddress(const char *Name,

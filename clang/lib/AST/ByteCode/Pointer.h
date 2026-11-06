@@ -310,7 +310,7 @@ struct PtrView {
         return GD.InitState == GlobalInitState::Initialized;
       }
       if (Pointee->isLocal()) {
-        const auto &LD = Pointee->getBlockDesc<InlineDescriptor>();
+        const auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
         return LD.IsInitialized;
       }
       return true;
