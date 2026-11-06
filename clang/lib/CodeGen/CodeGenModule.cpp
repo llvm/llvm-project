@@ -6573,14 +6573,13 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // TODO(Reflection): add support for consteval-only types.
 
-  // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen.
-  // Also skip emitting globals for structs or arrays of structs containing only
-  // resource constants, which should have already been flattened into separate
-  // variables.
-  if (getLangOpts().HLSL &&
-      (ASTTy.getAddressSpace() == LangAS::hlsl_constant ||
-       (D->getStorageClass() != SC_Static &&
-        hlsl::isStructOrArrayOfWithResources(ASTTy)))) {
+  // HLSL default buffer constants will be emitted during HLSLBufferDecl
+  // codegen. Also skip emitting globals for structs or arrays of structs
+  // containing only resource constants, which should have already been
+  // flattened into separate variables.
+  if (getLangOpts().HLSL && (ASTTy.getAddressSpace() == LangAS::hlsl_constant ||
+                             (D->getStorageClass() != SC_Static &&
+                              hlsl::isStructOrArrayOfWithResources(ASTTy)))) {
     return;
   }
 
