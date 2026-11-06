@@ -175,13 +175,13 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 
 /// @C shouldLoopVersion
 ///
-/// Check if Loop Versioning should be enabled.
+/// Check if a loop versioning pass should be enabled.
 /// We look for the last of one of the following:
-///   -Ofast, -O4, -O<number> and -f[no-]version-loops-for-stride.
-/// Loop versioning is disabled if the last option is
-///  -fno-version-loops-for-stride.
+///   -Ofast, -O4, -O<number>, -O0 and the pass's -f[no-]version-loops-for-*
+///   flag.
+/// Loop versioning is disabled if the last option is the -fno- flag or -O0.
 /// Loop versioning is enabled if the last option is one of:
-///  -floop-versioning
+///  the -f flag
 ///  -Ofast
 ///  -O4
 ///  -O3
@@ -190,17 +190,19 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
 /// @return true if loop-versioning should be enabled, otherwise false.
-static bool shouldLoopVersion(const ArgList &Args) {
-  const Arg *LoopVersioningArg = Args.getLastArg(
-      options::OPT_Ofast, options::OPT_O, options::OPT_O4,
-      options::OPT_floop_versioning, options::OPT_fno_loop_versioning);
+static bool shouldLoopVersion(const ArgList &Args, options::ID PosFlag,
+                              options::ID NegFlag) {
+  const Arg *LoopVersioningArg =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+                      options::OPT_O0, PosFlag, NegFlag);
   if (!LoopVersioningArg)
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_fno_loop_versioning))
+  if (LoopVersioningArg->getOption().matches(NegFlag) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O0))
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_floop_versioning))
+  if (LoopVersioningArg->getOption().matches(PosFlag))
     return true;
 
   if (LoopVersioningArg->getOption().matches(options::OPT_Ofast) ||
@@ -222,6 +224,48 @@ static bool shouldLoopVersion(const ArgList &Args) {
   return false;
 }
 
+/// Return the kind of split DWARF that \p JA generates, or None if it generates
+/// none. Diagnoses a -gsplit-dwarf that cannot be honoured.
+static DwarfFissionKind
+getSplitDWARFKind(const ArgList &Args, const JobAction &JA, const ToolChain &TC,
+                  llvm::codegenoptions::DebugInfoKind DebugInfoKind) {
+  const Driver &D = TC.getDriver();
+  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
+      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
+    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
+    if (TC.getTriple().isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
+          << TC.getTriple().str();
+      return DwarfFissionKind::None;
+    }
+    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
+      return DwarfFissionKind::None;
+
+    Arg *SplitDWARFArg;
+    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
+
+    if (DwarfFission == DwarfFissionKind::None ||
+        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
+      return DwarfFissionKind::None;
+
+    if (!TC.getTriple().isOSBinFormatELF() &&
+        !TC.getTriple().isOSBinFormatWasm() &&
+        !TC.getTriple().isOSBinFormatCOFF()) {
+      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
+      return DwarfFissionKind::None;
+    }
+
+    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
+        isa<BackendJobAction>(JA))
+      return DwarfFissionKind::None;
+
+    return DwarfFission;
+  }
+  return DwarfFissionKind::None;
+}
+
 void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                             const InputInfo &Output, const InputInfo &Input,
                             llvm::opt::ArgStringList &CmdArgs) const {
@@ -240,8 +284,6 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fno_underscoring,
                    options::OPT_funsigned,
                    options::OPT_fno_unsigned,
-                   options::OPT_fenumeration_type,
-                   options::OPT_fno_enumeration_type,
                    options::OPT_fout_of_bounds_subscripts,
                    options::OPT_fno_out_of_bounds_subscripts,
                    options::OPT_fopenacc_default_none_scalars_strict,
@@ -273,37 +315,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
   }
-  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
-      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
-    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
-    if (TC.getTriple().isOSAIX()) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
-          << TC.getTriple().str();
-      return;
-    }
-    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
-      return;
 
-    Arg *SplitDWARFArg;
-    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
-
-    if (DwarfFission == DwarfFissionKind::None ||
-        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
-      return;
-
-    if (!TC.getTriple().isOSBinFormatELF() &&
-        !TC.getTriple().isOSBinFormatWasm() &&
-        !TC.getTriple().isOSBinFormatCOFF()) {
-      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
-          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
-      return;
-    }
-
-    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
-        isa<BackendJobAction>(JA))
-      return;
-
+  DwarfFissionKind DwarfFission =
+      getSplitDWARFKind(Args, JA, TC, DebugInfoKind);
+  if (DwarfFission != DwarfFissionKind::None) {
     const char *SplitDWARFOut = SplitDebugName(JA, Args, Input, Output);
     CmdArgs.push_back("-split-dwarf-file");
     CmdArgs.push_back(SplitDWARFOut);
@@ -311,6 +326,22 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back("-split-dwarf-output");
       CmdArgs.push_back(SplitDWARFOut);
     }
+  }
+
+  // Handle name table requests (-gpubnames, -ggnu-pubnames). As in clang,
+  // split DWARF implies -ggnu-pubnames unless one of these says otherwise.
+  // TODO: Clang does not imply it when tuning for LLDB. Add that exception once
+  // flang has debugger tuning options (-glldb, -ggdb).
+  const Arg *PubnamesArg =
+      Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+                      options::OPT_gpubnames, options::OPT_gno_pubnames);
+  if (DwarfFission != DwarfFissionKind::None ||
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
+    if (!PubnamesArg ||
+        PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames))
+      CmdArgs.push_back("-ggnu-pubnames");
+    else if (PubnamesArg->getOption().matches(options::OPT_gpubnames))
+      CmdArgs.push_back("-gpubnames");
   }
 
   // Handle compressed debug sections (-gz).
@@ -367,8 +398,12 @@ void Flang::addCodegenOptions(const ArgList &Args,
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
 
-  if (shouldLoopVersion(Args))
+  if (shouldLoopVersion(Args, options::OPT_floop_versioning,
+                        options::OPT_fno_loop_versioning))
     CmdArgs.push_back("-fversion-loops-for-stride");
+  if (shouldLoopVersion(Args, options::OPT_floop_tripcount_versioning,
+                        options::OPT_fno_loop_tripcount_versioning))
+    CmdArgs.push_back("-fversion-loops-for-trip-count");
 
   for (const auto &arg :
        Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
@@ -394,6 +429,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
                      options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  // Only ELF x86 and AArch64 use -fno-plt. The default is PLT,
+  // so only an explicit -fno-plt (last flag wins) is forwarded.
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
   addSeparateSectionFlags(Triple, Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_fcoarray))
@@ -876,6 +915,16 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
                    /*Default=*/false))
     CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
+  // This forwards the option to switch off/on mapper generation for scenarios
+  // where the compiler considers it neccessary to generate a mapper to cover
+  // implicit allocatable member mapping inside of derived types to adhere to
+  // specification compliance.
+  if (!Args.hasFlag(
+          options::OPT_fimplicit_default_mapper_allocatable_members,
+          options::OPT_fno_implicit_default_mapper_allocatable_members,
+          /*Default=*/true))
+    CmdArgs.push_back("-fno-implicit-default-mapper-allocatable-members");
+
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is
     // generating code for a device, so that only the relevant code is emitted.
@@ -1347,6 +1396,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
       A->claim();
     }
+  }
+
+  // Reject AIX-specific link option on other targets.
+  if (!Triple.isOSAIX()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_b))
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.str();
   }
 
   const InputInfo &Input = Inputs[0];

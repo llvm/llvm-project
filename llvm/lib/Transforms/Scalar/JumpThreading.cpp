@@ -268,7 +268,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 BlockFrequencyInfo *BFI_,
                                 BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
-  Opts = &ScalarOptions::Global;
+  Opts = &getScalarOptions(F_);
   F = &F_;
   FAM = FAM_;
   TLI = TLI_;
@@ -2522,7 +2522,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
 bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
-  if (!TI || TI->getNumSuccessors() < 2)
+  if (TI->getNumSuccessors() < 2)
     return false;
 
   return hasValidBranchWeightMD(*TI);
@@ -3060,6 +3060,9 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
         setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
                                                     DEBUG_TYPE);
       }
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
+                                                  DEBUG_TYPE);
     }
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.

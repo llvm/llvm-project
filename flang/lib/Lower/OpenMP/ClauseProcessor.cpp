@@ -707,6 +707,40 @@ bool ClauseProcessor::processNogroup(
   return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
 }
 
+bool ClauseProcessor::processNocontext(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NocontextClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Nocontext>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value nocontextVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.nocontext = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), nocontextVal);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNovariants(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NovariantsClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Novariants>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value novariantsVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.novariants = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), novariantsVal);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
@@ -1287,7 +1321,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   std::string copyFuncName =
       fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = builder.getNamedFunction(copyFuncName))
     return decl;
 
   // create function
@@ -1298,6 +1332,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
@@ -1745,8 +1780,9 @@ bool ClauseProcessor::processIsDevicePtr(
   return clauseFound;
 }
 
-bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
-                                    bool isDeclareSimd) const {
+bool ClauseProcessor::processLinear(
+    mlir::omp::LinearClauseOps &result, bool isDeclareSimd,
+    llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms) const {
   lower::StatementContext stmtCtx;
   std::vector<mlir::Attribute> typeAttrs;
   std::vector<mlir::Attribute> linearModAttrs;
@@ -1776,6 +1812,8 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      if (linearSyms)
+        linearSyms->push_back(sym);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
 
@@ -1784,7 +1822,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
                   clause.t)) {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1792,7 +1830,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
         mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
         mlir::Value operand =
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       }
 
       // Determine the linear modifier:
@@ -2105,7 +2143,9 @@ bool ClauseProcessor::processReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
     const {
-  return findRepeatableClause<omp::clause::Reduction>(
+  llvm::SmallVector<mlir::Attribute> modifiers;
+  bool hasExplicitModifier = false;
+  bool found = findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;
         llvm::SmallVector<bool> reduceVarByRef;
@@ -2116,11 +2156,7 @@ bool ClauseProcessor::processReduction(
             getObjectsSyms(reductionObjects);
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
-        if (mod.has_value()) {
-          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-              converter.getFirOpBuilder().getContext(),
-              translateReductionModifier(mod.value()));
-        }
+        hasExplicitModifier |= mod.has_value();
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -2129,6 +2165,11 @@ bool ClauseProcessor::processReduction(
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
                 reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
+        auto modifier = mlir::omp::ReductionModifierAttr::get(
+            converter.getFirOpBuilder().getContext(),
+            translateReductionModifier(
+                mod.value_or(ReductionModifier::Default)));
+        modifiers.append(reductionVars.size(), modifier);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -2136,6 +2177,9 @@ bool ClauseProcessor::processReduction(
                    std::back_inserter(result.reductionSyms));
         llvm::copy(reductionObjects, std::back_inserter(outReductionObjects));
       });
+  if (hasExplicitModifier)
+    result.reductionMods = std::move(modifiers);
+  return found;
 }
 
 bool ClauseProcessor::processTaskReduction(

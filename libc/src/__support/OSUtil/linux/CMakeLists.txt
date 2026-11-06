@@ -67,6 +67,25 @@ add_header_library(
 )
 
 add_header_library(
+  shell_fork
+  HDRS
+    shell_fork.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.common
+    libc.src.__support.CPP.functional
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.unistd.environ
+)
+
+add_header_library(
   sigmask
   HDRS
     sigmask.h

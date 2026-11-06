@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -862,8 +863,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || D.hasGroupingParens() ||
+      D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
        D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
     Diag(Decomp.getLSquareLoc(),
@@ -879,6 +880,17 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // shouldn't be called for such a type.
     if (R->isFunctionType())
       D.setInvalidType();
+
+    // Recover from an invalid 'auto *' structured binding by removing the
+    // pointer declarator. This allows type deduction to proceed and keeps
+    // the bindings usable in subsequent code.
+    if (D.getNumTypeObjects() == 1 &&
+        D.getTypeObject(0).Kind == DeclaratorChunk::Pointer &&
+        D.getTypeObject(0).Ptr.TypeQuals == 0) {
+      D.DropFirstTypeObject();
+      TInfo = GetTypeForDeclarator(D);
+      R = TInfo->getType();
+    }
   }
 
   // Constrained auto is prohibited by [decl.pre]p6, so check that here.
@@ -2256,6 +2268,16 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
                            SourceLocation &Cxx1yLoc, SourceLocation &Cxx2aLoc,
                            SourceLocation &Cxx2bLoc,
                            Sema::CheckConstexprKind Kind) {
+  auto CheckChildren = [&] {
+    for (Stmt *SubStmt : S->children()) {
+      if (SubStmt &&
+          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+        return false;
+    }
+    return true;
+  };
+
   // - its function-body shall be [...] a compound-statement that contains only
   switch (S->getStmtClass()) {
   case Stmt::NullStmtClass:
@@ -2286,9 +2308,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     //   - using-directives,
     //   - typedef declarations and alias-declarations that do not define
     //     classes or enumerations,
-    if (!CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind))
-      return false;
-    return true;
+    return CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind);
   }
 
   case Stmt::ReturnStmtClass:
@@ -2310,19 +2330,11 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
         SemaRef, Dcl, cast<AttributedStmt>(S)->getSubStmt(), ReturnStmts,
         Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind);
 
-  case Stmt::CompoundStmtClass: {
+  case Stmt::CompoundStmtClass:
     // C++1y allows compound-statements.
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-
-    CompoundStmt *CompStmt = cast<CompoundStmt>(S);
-    for (auto *BodyIt : CompStmt->body()) {
-      if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
-  }
+    return CheckChildren();
 
   case Stmt::IfStmtClass: {
     // C++1y allows if-statements.
@@ -2349,15 +2361,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // because they don't make sense without variable mutation.
     if (!SemaRef.getLangOpts().CPlusPlus14)
       break;
-    if (!Cxx1yLoc.isValid())
-      Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    [[fallthrough]];
 
   case Stmt::SwitchStmtClass:
   case Stmt::CaseStmtClass:
@@ -2367,26 +2371,14 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // mutation, we can reasonably allow them in C++11 as an extension.
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
@@ -2394,22 +2386,14 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
   case Stmt::CXXTryStmtClass:
     if (Cxx2aLoc.isInvalid())
       Cxx2aLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::CXXCatchStmtClass:
     // Do not bother checking the language mode (already covered by the
     // try block check).
-    if (!CheckConstexprFunctionStmt(
-            SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
-            Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-      return false;
-    return true;
+    return CheckConstexprFunctionStmt(
+        SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
+        Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind);
 
   default:
     if (!isa<Expr>(S))
@@ -12097,8 +12081,16 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
                                       &IsInline, PrevNS);
   }
 
+  // Namespace lookup can find a namespace in an inline namespace. An extension
+  // of that namespace retains its semantic parent, even when it is written in
+  // an enclosing namespace.
+  DeclContext *SemanticContext = CurContext;
+  if (PrevNS && !CurContext->getRedeclContext()->Equals(
+                    PrevNS->getDeclContext()->getRedeclContext()))
+    SemanticContext = PrevNS->getDeclContext();
   NamespaceDecl *Namespc = NamespaceDecl::Create(
-      Context, CurContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+      Context, SemanticContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+  Namespc->setLexicalDeclContext(CurContext);
   if (IsInvalid)
     Namespc->setInvalidDecl();
 
@@ -14195,7 +14187,7 @@ bool Sema::tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec) {
 
 ExplicitSpecifier Sema::ActOnExplicitBoolSpecifier(Expr *ExplicitExpr) {
   ExplicitSpecifier ES(ExplicitExpr, ExplicitSpecKind::Unresolved);
-  if (!ExplicitExpr->isTypeDependent())
+  if (!ExplicitExpr->isTypeDependent() && !ExplicitExpr->containsErrors())
     tryResolveExplicitSpecifier(ES);
   return ES;
 }
@@ -15574,7 +15566,6 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Build references to the field in the object we're copying from and to.
-    CXXScopeSpec SS; // Intentionally empty
     LookupResult MemberLookup(*this, Field->getDeclName(), Loc,
                               LookupMemberName);
     MemberLookup.addDecl(Field);
@@ -16599,7 +16590,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
     if (VD->getInit() && !VD->getInit()->isValueDependent())
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
+    sema::EvalProxy SProxy(*this);
+    if (!VD->evaluateConstantDestruction(Notes, SProxy) && VD->isConstexpr() &&
         HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
@@ -17971,8 +17963,6 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
     SemaRef.LookupQualifiedName(MemberLookup, RD);
-    OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
-                                    OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;
     return std::move(MemberLookup);
@@ -18040,8 +18030,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   Expr::EvalResult Status;
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
+  sema::EvalProxy SProxy(SemaRef);
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx, SProxy,
+                                          Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
@@ -18144,7 +18136,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
         const ASTConstraintSatisfaction &Satisfaction =
             ConceptIDExpr->getSatisfaction();
-        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+        if (!Satisfaction.containsErrors() || Satisfaction.record_size()) {
           Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
               << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
           // Drill down into concept specialization expressions to see why they

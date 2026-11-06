@@ -131,8 +131,8 @@ class AccessPath {
   /// NOTE: Keep the number of alternatives low; PointerUnion packs the
   /// discriminator in the low bits of the pointer, so more alternatives
   /// require more alignment than 32-bit builds can always provide.
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const PlaceholderBase *, const clang::Expr *>
+  const llvm::PointerUnion<const clang::ValueDecl *, const PlaceholderBase *,
+                           const clang::Expr *>
       Base;
   /// The path elements representing field accesses and access to unnamed
   /// interior regions.

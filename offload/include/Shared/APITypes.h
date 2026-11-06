@@ -38,12 +38,6 @@ struct __tgt_device_image {
   llvm::offloading::EntryTy *EntriesEnd; // End of table (non inclusive)
 };
 
-struct __tgt_device_info {
-  void *Context = nullptr;
-  void *Device = nullptr;
-  void *Platform = nullptr;
-};
-
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {
@@ -62,11 +56,6 @@ struct __tgt_target_table {
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
-/// This struct contains a handle to a loaded binary in the plugin device.
-struct __tgt_device_binary {
-  uintptr_t handle;
-};
-
 // clang-format on
 
 /// This struct contains information exchanged between different asynchronous
@@ -83,11 +72,6 @@ struct __tgt_async_info {
 
   /// Mutex to guard access to AssociatedAllocations and the Queue.
   std::mutex Mutex;
-
-  /// The kernel launch environment used to issue a kernel. Stored here to
-  /// ensure it is a valid location while the transfer to the device is
-  /// happening.
-  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 
   /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
   /// Owned by the profiler; the runtime threads this pointer through the plugin

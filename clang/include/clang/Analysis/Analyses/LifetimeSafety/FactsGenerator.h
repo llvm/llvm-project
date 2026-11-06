@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::lifetimes::internal {
@@ -175,7 +176,7 @@ private:
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
-  void issueFieldPlaceholderLoans(const CXXMethodDecl *MD,
+  void issueFieldPlaceholderLoans(const CXXRecordDecl *ClassDef,
                                   llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
@@ -185,6 +186,10 @@ private:
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
+  // Lifetime-extended temporaries, keyed by the variable they expire with.
+  llvm::DenseMap<const ValueDecl *,
+                 llvm::SmallVector<const MaterializeTemporaryExpr *, 1>>
+      ExtendedTemporaries;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };

@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def AArch64Options : OptionsStruct<prefix = "aarch64-", perContext = false>;
+def AArch64Options : OptionsStruct<prefix = "aarch64-">;
 
 // AArch64A57FPLoadBalancing.cpp
 // Enforce the algorithm to use the scavenged register even when the original
@@ -279,9 +279,7 @@ defm : BoolField<"aarch64-enable-loop-data-prefetch", "true",
   "Enable the loop data prefetch pass">;
 defm : BoolField<"aarch64-enable-mcr", "true",
   "Enable the machine combiner pass">;
-defm : BoolField<"aarch64-enable-pipeliner", "false",
-  "Enable Machine Pipeliner for AArch64">;
-defm : BoolField<"aarch64-enable-predicate-as-counter-loop-rewrites", "false",
+defm : BoolField<"aarch64-enable-predicate-as-counter-loop-rewrites", "true",
   "Enable rewriting loops with wide loop-carried masks to use predicate-as-counter">;
 defm : BoolField<"aarch64-enable-promote-const", "true",
   "Enable the promote constant pass">;
