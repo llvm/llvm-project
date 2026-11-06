@@ -22,19 +22,6 @@
 
 namespace clang {
 namespace format {
-
-static bool mustBreakAfterAttributes(const FormatToken &Tok,
-                                     const FormatStyle &Style) {
-  switch (Style.BreakAfterAttributes) {
-  case FormatStyle::ABS_Always:
-    return true;
-  case FormatStyle::ABS_Never:
-    return false;
-  default: // ABS_Leave and ABS_LeaveAll
-    return Tok.NewlinesBefore > 0;
-  }
-}
-
 namespace {
 
 /// Returns \c true if the line starts with a token that can start a statement
@@ -87,8 +74,9 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
     return false;
-  // The first square bracket is part of an ObjC array literal
-  if (Tok.Previous && Tok.Previous->is(tok::at))
+  // The first square bracket belongs to an ObjC array literal or malformed
+  // nested-bracket input.
+  if (Tok.Previous && Tok.Previous->isOneOf(tok::at, tok::l_square))
     return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)
@@ -449,7 +437,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
@@ -1333,7 +1321,7 @@ private:
       if (Prev && Prev->is(TT_AttributeRSquare) &&
           CurrentToken->isOneOf(tok::kw_if, tok::kw_switch, tok::kw_case,
                                 tok::kw_default, tok::kw_for, tok::kw_while) &&
-          mustBreakAfterAttributes(*CurrentToken, Style)) {
+          CurrentToken->mustBreakAfterAttributes(Style)) {
         CurrentToken->MustBreakBefore = true;
       }
     }
@@ -2307,7 +2295,8 @@ private:
           }
           if (Previous->opensScope())
             break;
-          if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
+          if (!Previous->isTypeFinalized() &&
+              Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isPointerOrReference() && Previous->Previous &&
               Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);
@@ -3435,7 +3424,7 @@ private:
           Current->isOneOf(Keywords.kw_in, Keywords.kw_as)) {
         return prec::Relational;
       }
-      if (Current->isOneOf(TT_BinaryOperator, tok::comma))
+      if (Current->isOneOf(TT_BinaryOperator, TT_EnumEqual, tok::comma))
         return Current->getPrecedence();
       if (Current->isOneOf(tok::period, tok::arrow) &&
           Current->isNot(TT_TrailingReturnArrow)) {
@@ -4204,7 +4193,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     if (SeenName && AfterLastAttribute &&
-        mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
+        AfterLastAttribute->mustBreakAfterAttributes(Style)) {
       AfterLastAttribute->MustBreakBefore = true;
       if (LineIsFunctionDeclaration)
         Line.ReturnTypeWrapped = true;
@@ -4370,15 +4359,13 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       const auto *RParen = Prev->MatchingParen;
       for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
            ParamTok = ParamTok->Next) {
-        if (ParamTok->opensScope()) {
-          ParamTok = ParamTok->MatchingParen;
-          continue;
-        }
 
         if (startsNextParameter(*ParamTok, Style)) {
           ParamTok->MustBreakBefore = true;
           ParamTok->CanBreakBefore = true;
         }
+        if (ParamTok->opensScope())
+          ParamTok = ParamTok->MatchingParen;
       }
     }
 
@@ -5582,6 +5569,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
+    // Add space in the dist list like `x dist {100 := 1};`.
+    if (Right.is(tok::colon) &&
+        (Right.TokenText == ":=" || Right.TokenText == ":/")) {
+      return true;
+    }
     // Add space before drive strength like in `wire (strong1, pull0)`.
     if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
       return true;
@@ -6231,6 +6223,17 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
     return true;
   }
 
+  // SLS_Inline and SLS_All may keep short lambdas inline, so the break is
+  // decided later in ContinuationIndenter::mustBreak().
+  if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
+      IsFunctionArgument(Right)) {
+    const auto SLS = Style.AllowShortLambdasOnASingleLine;
+    if (SLS == FormatStyle::SLS_None ||
+        (SLS == FormatStyle::SLS_Empty && !Right.Children.empty())) {
+      return true;
+    }
+  }
+
   // Put multiple Java annotation on a new line.
   if ((Style.isJava() || Style.isJavaScript()) &&
       Left.is(TT_LeadingJavaAnnotation) &&
@@ -6720,6 +6723,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
+  }
+
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
   }
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;

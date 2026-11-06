@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -28,10 +27,14 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(load.getMemref());
   else if (auto ba = mlir::dyn_cast<fir::BoxAddrOp>(op))
     return getFullUniqName(ba.getVal());
+  else if (auto c = mlir::dyn_cast<fir::ConvertOp>(op))
+    return getFullUniqName(c.getValue());
   else if (auto rb = mlir::dyn_cast<fir::ReboxOp>(op))
     return getFullUniqName(rb.getBox());
   else if (auto eb = mlir::dyn_cast<fir::EmboxOp>(op))
     return getFullUniqName(eb.getMemref());
+  else if (auto ac = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+    return getFullUniqName(ac.getMemref());
   else if (auto ebc = mlir::dyn_cast<fir::EmboxCharOp>(op))
     return getFullUniqName(ebc.getMemref());
   else if (auto c = mlir::dyn_cast<fir::CoordinateOp>(op)) {
@@ -79,4 +82,25 @@ mlir::Value mif::genImageIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   if (subCastAndCleanup.second)
     (*subCastAndCleanup.second)();
   return imageIndex;
+}
+
+mlir::func::FuncOp mif::getOrCreateInitFunc(fir::FirOpBuilder &builder,
+                                            mlir::ModuleOp mod,
+                                            llvm::StringRef name) {
+  mlir::Location loc = mod.getLoc();
+  auto funcType = builder.getFunctionType({}, {});
+  auto func = builder.createFunction(loc, name, funcType);
+  if (!func.empty())
+    return func;
+
+  func.setPublic();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+
+  func.addEntryBlock();
+  builder.setInsertionPointToEnd(&func.getBody().front());
+  mif::InitOp::create(builder, loc);
+  mlir::func::ReturnOp::create(builder, loc);
+
+  return func;
 }

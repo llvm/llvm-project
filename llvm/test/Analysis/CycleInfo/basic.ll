@@ -204,7 +204,7 @@ exit:
 
 define void @irreducible_into_simple_cycle(i1 %arg) {
 ; CHECK-LABEL: CycleInfo for function: irreducible_into_simple_cycle
-; CHECK:           depth=1: entries(F C A) E D B
+; CHECK:           depth=1: entries(F A C) B D E
 entry:
   switch i32 undef, label %A [ i32 0, label %C
                                i32 1, label %F ]

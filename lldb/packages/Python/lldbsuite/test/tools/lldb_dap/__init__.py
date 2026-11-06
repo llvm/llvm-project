@@ -1,5 +1,13 @@
-from .lldb_dap_testcase import DAPTestCaseBase
-from .session_helpers import DAPTestSession
-from .utils import DebugAdapter, DebugAdapterOptions
+from .testcase import DAPTestCaseBase
+from .session_helpers import DAPTestSession, ExpectEval, ExpectVar
+from .utils import DAPConnection, DebugAdapter, DebugAdapterOptions
 
-__all__ = ["DAPTestCaseBase", "DAPTestSession", "DebugAdapter", "DebugAdapterOptions"]
+__all__ = [
+    "DAPConnection",
+    "DAPTestCaseBase",
+    "DAPTestSession",
+    "DebugAdapter",
+    "DebugAdapterOptions",
+    "ExpectEval",
+    "ExpectVar",
+]

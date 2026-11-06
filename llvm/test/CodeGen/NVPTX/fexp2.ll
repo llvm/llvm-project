@@ -271,20 +271,21 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-FP16-LABEL: exp2_bf16_test(
 ; CHECK-FP16:       {
 ; CHECK-FP16-NEXT:    .reg .pred %p<2>;
-; CHECK-FP16-NEXT:    .reg .b32 %r<10>;
+; CHECK-FP16-NEXT:    .reg .b32 %r<11>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.b16 %r1, [exp2_bf16_test_param_0];
 ; CHECK-FP16-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-FP16-NEXT:    ex2.approx.f32 %r3, %r2;
-; CHECK-FP16-NEXT:    bfe.u32 %r4, %r3, 16, 1;
-; CHECK-FP16-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-FP16-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-FP16-NEXT:    shr.u32 %r4, %r3, 16;
+; CHECK-FP16-NEXT:    and.b32 %r5, %r4, 1;
+; CHECK-FP16-NEXT:    add.s32 %r6, %r5, %r3;
+; CHECK-FP16-NEXT:    add.s32 %r7, %r6, 32767;
 ; CHECK-FP16-NEXT:    setp.nan.f32 %p1, %r3, %r3;
-; CHECK-FP16-NEXT:    or.b32 %r7, %r3, 4194304;
-; CHECK-FP16-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-FP16-NEXT:    shr.u32 %r9, %r8, 16;
-; CHECK-FP16-NEXT:    st.param.b16 [func_retval0], %r9;
+; CHECK-FP16-NEXT:    or.b32 %r8, %r3, 4194304;
+; CHECK-FP16-NEXT:    selp.b32 %r9, %r8, %r7, %p1;
+; CHECK-FP16-NEXT:    shr.u32 %r10, %r9, 16;
+; CHECK-FP16-NEXT:    st.param.b16 [func_retval0], %r10;
 ; CHECK-FP16-NEXT:    ret;
 ;
 ; CHECK-BF16-LABEL: exp2_bf16_test(
@@ -337,30 +338,32 @@ define <2 x bfloat> @exp2_bf16_test_v(<2 x bfloat> %in) {
 ; CHECK-FP16:       {
 ; CHECK-FP16-NEXT:    .reg .pred %p<3>;
 ; CHECK-FP16-NEXT:    .reg .b16 %rs<3>;
-; CHECK-FP16-NEXT:    .reg .b32 %r<18>;
+; CHECK-FP16-NEXT:    .reg .b32 %r<20>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [exp2_bf16_test_v_param_0];
 ; CHECK-FP16-NEXT:    cvt.u32.u16 %r1, %rs2;
 ; CHECK-FP16-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-FP16-NEXT:    ex2.approx.f32 %r3, %r2;
-; CHECK-FP16-NEXT:    bfe.u32 %r4, %r3, 16, 1;
-; CHECK-FP16-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-FP16-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-FP16-NEXT:    shr.u32 %r4, %r3, 16;
+; CHECK-FP16-NEXT:    and.b32 %r5, %r4, 1;
+; CHECK-FP16-NEXT:    add.s32 %r6, %r5, %r3;
+; CHECK-FP16-NEXT:    add.s32 %r7, %r6, 32767;
 ; CHECK-FP16-NEXT:    setp.nan.f32 %p1, %r3, %r3;
-; CHECK-FP16-NEXT:    or.b32 %r7, %r3, 4194304;
-; CHECK-FP16-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-FP16-NEXT:    cvt.u32.u16 %r9, %rs1;
-; CHECK-FP16-NEXT:    shl.b32 %r10, %r9, 16;
-; CHECK-FP16-NEXT:    ex2.approx.f32 %r11, %r10;
-; CHECK-FP16-NEXT:    bfe.u32 %r12, %r11, 16, 1;
-; CHECK-FP16-NEXT:    add.s32 %r13, %r12, %r11;
-; CHECK-FP16-NEXT:    add.s32 %r14, %r13, 32767;
-; CHECK-FP16-NEXT:    setp.nan.f32 %p2, %r11, %r11;
-; CHECK-FP16-NEXT:    or.b32 %r15, %r11, 4194304;
-; CHECK-FP16-NEXT:    selp.b32 %r16, %r15, %r14, %p2;
-; CHECK-FP16-NEXT:    prmt.b32 %r17, %r16, %r8, 0x7632U;
-; CHECK-FP16-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-FP16-NEXT:    or.b32 %r8, %r3, 4194304;
+; CHECK-FP16-NEXT:    selp.b32 %r9, %r8, %r7, %p1;
+; CHECK-FP16-NEXT:    cvt.u32.u16 %r10, %rs1;
+; CHECK-FP16-NEXT:    shl.b32 %r11, %r10, 16;
+; CHECK-FP16-NEXT:    ex2.approx.f32 %r12, %r11;
+; CHECK-FP16-NEXT:    shr.u32 %r13, %r12, 16;
+; CHECK-FP16-NEXT:    and.b32 %r14, %r13, 1;
+; CHECK-FP16-NEXT:    add.s32 %r15, %r14, %r12;
+; CHECK-FP16-NEXT:    add.s32 %r16, %r15, 32767;
+; CHECK-FP16-NEXT:    setp.nan.f32 %p2, %r12, %r12;
+; CHECK-FP16-NEXT:    or.b32 %r17, %r12, 4194304;
+; CHECK-FP16-NEXT:    selp.b32 %r18, %r17, %r16, %p2;
+; CHECK-FP16-NEXT:    prmt.b32 %r19, %r18, %r9, 0x7632U;
+; CHECK-FP16-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-FP16-NEXT:    ret;
 ;
 ; CHECK-BF16-LABEL: exp2_bf16_test_v(

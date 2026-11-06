@@ -106,3 +106,13 @@
 // CHECK_MINGW_NOLIBC-NOT: "-lmsvcrt"
 // CHECK_MINGW_NOLIBC-NOT: "-lshell32"
 // CHECK_MINGW_NOLIBC-NOT: "-luser32"
+
+// RUN: %clang --target=i686-pc-windows-gnu -### --sysroot=%S/Inputs/mingw_msys2_tree/msys64/mingw32 %s 2>&1 | FileCheck %s --check-prefix=CHECK_MINGW_MANIFEST_PROVIDED
+// CHECK_MINGW_MANIFEST_PROVIDED: "{{[^"]+}}/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}lib{{/|\\\\}}default-manifest.o"
+
+// RUN: %clang --target=i686-pc-windows-gnu -### --sysroot=%S/Inputs/mingw_msys2_tree/msys64/mingw32 %s -mdll 2>&1 | FileCheck %s --check-prefix=CHECK_MINGW_MANIFEST_UNUSED_FOR_DLL
+// RUN: %clang --target=i686-pc-windows-gnu -### --sysroot=%S/Inputs/mingw_msys2_tree/msys64/mingw32 %s -shared 2>&1 | FileCheck %s --check-prefix=CHECK_MINGW_MANIFEST_UNUSED_FOR_DLL
+// CHECK_MINGW_MANIFEST_UNUSED_FOR_DLL-NOT: default-manifest
+
+// RUN: %clang --target=x86_64-pc-windows-gnu -### --sysroot=%S/Inputs/mingw_arch_tree %s 2>&1 | FileCheck %s --check-prefix=CHECK_MINGW_MANIFEST_ABSENT
+// CHECK_MINGW_MANIFEST_ABSENT-NOT: default-manifest

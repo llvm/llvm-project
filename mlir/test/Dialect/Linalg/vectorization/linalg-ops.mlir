@@ -196,7 +196,7 @@ func.func @dynamic_generic_with_reduction_and_broadcast(%arg0: tensor<?x?xf32>, 
     ins(%arg0 : tensor<?x?xf32>)
     outs(%init : tensor<?x?xf32>) {
   ^bb0(%in: f32, %out: f32):
-    %1 = arith.addf %in, %out : f32
+    %1 = arith.addf %in, %out fastmath<reassoc> : f32
     linalg.yield %1 : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -217,7 +217,7 @@ func.func @dynamic_generic_with_reduction_and_broadcast(%arg0: tensor<?x?xf32>, 
 // CHECK:           %[[VAL_10:.*]] = ub.poison : f32
 // CHECK:           %[[VAL_11:.*]] = vector.create_mask %[[VAL_3]] : vector<4xi1>
 // CHECK:           %[[VAL_12:.*]] = vector.mask %[[VAL_11]] { vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_6]], %[[VAL_6]]], %[[VAL_10]] {in_bounds = [true], permutation_map = #[[$MAP]]} : tensor<?x?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
-// CHECK:           %[[VAL_13:.*]] = vector.mask %[[VAL_8]] { vector.multi_reduction <add>, %[[VAL_9]], %[[VAL_12]] [1] : vector<4x4xf32> to vector<4xf32> } : vector<4x4xi1> -> vector<4xf32>
+// CHECK:           %[[VAL_13:.*]] = vector.mask %[[VAL_8]] { vector.multi_reduction <add>, %[[VAL_9]], %[[VAL_12]] fastmath<reassoc> [1] : vector<4x4xf32> to vector<4xf32> } : vector<4x4xi1> -> vector<4xf32>
 // CHECK:           %[[VAL_14:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_15:.*]] = vector.mask %[[VAL_11]] { vector.transfer_write %[[VAL_13]], %[[VAL_1]]{{\[}}%[[VAL_14]], %[[VAL_14]]] {in_bounds = [true], permutation_map = #[[$MAP]]} : vector<4xf32>, tensor<?x?xf32> } : vector<4xi1> -> tensor<?x?xf32>
 // CHECK:           return %[[VAL_15]] : tensor<?x?xf32>
@@ -933,7 +933,7 @@ func.func @mmt4d_scalable_with_assume(%A: memref<16x16x8x1xf32>, %B: memref<16x1
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %mmt4d = transform.structured.match ops{["linalg.mmt4d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %mmt4d vector_sizes [16, 16, 16, 8, [4], 1] {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
+    transform.structured.vectorize %mmt4d vector_sizes [16, 16, 16, 8, [4], 1] assume_dynamic_dims_match_vec_sizes : !transform.any_op
     transform.yield
   }
 }
@@ -1031,7 +1031,7 @@ func.func @batch_mmt4d_scalable_with_assume(%A: memref<2x16x16x8x1xf32>, %B: mem
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %batch_mmt4d = transform.structured.match ops{["linalg.batch_mmt4d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %batch_mmt4d vector_sizes [2, 16, 16, 16, 8, [4], 1] {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
+    transform.structured.vectorize %batch_mmt4d vector_sizes [2, 16, 16, 16, 8, [4], 1] assume_dynamic_dims_match_vec_sizes : !transform.any_op
     transform.yield
   }
 }

@@ -37,10 +37,18 @@ namespace clang::lifetimes {
 struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
-  size_t MaxCFGBlocks;
+  size_t MaxCFGBlocks = 0;
 
   /// Whether to suggest lifetime annotations.
-  bool SuggestAnnotations;
+  bool SuggestAnnotations = false;
+
+  bool CheckNoescapeViolations = false;
+  bool CheckLifetimeboundViolations = false;
+  bool CheckMisplacedLifetimebound = false;
+  bool CheckInapplicableLifetimebound = false;
+  bool CheckFieldOriginEscape = false;
+  /// Whether to model non-trivial destructors at scope exit as uses.
+  bool CheckDestructorUses = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -64,45 +72,60 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+  virtual void reportUseAfterScope(const Expr *IssueExpr, const UseSite &Use,
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // TODO: Report where the object was destroyed when that happens before the
+  // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr) {}
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
-                                   SourceLocation ExpiryLoc) {}
+                                   bool IsCapturedByLambda,
+                                   SourceLocation ExpiryLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingGlobal(const Expr *IssueExpr,
                                     const VarDecl *DanglingGlobal,
                                     const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    SourceLocation ExpiryLoc,
+                                    llvm::ArrayRef<const Expr *> ExprChain,
+                                    bool IsMain = false) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
-  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
-  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const UseSite &Use,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const UseSite &Use,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
-                                      const Expr *InvalidationExpr) {}
+                                      const Expr *InvalidationExpr,
+                                      llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const ParmVarDecl *PVD,
                                       const FieldDecl *Field,
-                                      const Expr *InvalidationExpr) {}
+                                      const Expr *InvalidationExpr,
+                                      llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
                                        const VarDecl *Global,
-                                       const Expr *InvalidationExpr) {}
+                                       const Expr *InvalidationExpr,
+                                       llvm::ArrayRef<const Expr *> ExprChain) {
+  }
   virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
                                        const VarDecl *Global,
-                                       const Expr *InvalidationExpr) {}
+                                       const Expr *InvalidationExpr,
+                                       llvm::ArrayRef<const Expr *> ExprChain) {
+  }
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
@@ -152,6 +175,11 @@ public:
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
 
+  // Reports when a member function returns an origin of a field.
+  virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
+                                       const FieldDecl *FD,
+                                       const Expr *EscapeExpr) {}
+
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.
   virtual void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) {}
@@ -171,10 +199,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
-  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
+  OriginLoanMap::Factory OriginMapFactory;
+  LoanSet::Factory LoanSetFactory;
+  MovedLoansMap::Factory MovedLoansMapFactory;
+  LivenessMap::Factory LivenessMapFactory;
 };
 
 /// Running the lifetime safety analysis and querying its results. It

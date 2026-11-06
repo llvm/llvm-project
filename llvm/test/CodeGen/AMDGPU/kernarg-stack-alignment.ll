@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgpu6.00 < %s | FileCheck %s
 
 ; Test that the alignment of kernel arguments does not impact the
 ; alignment of the stack

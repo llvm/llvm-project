@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
 
 @ptr_load = addrspace(3) global ptr addrspace(4) poison, align 8
 

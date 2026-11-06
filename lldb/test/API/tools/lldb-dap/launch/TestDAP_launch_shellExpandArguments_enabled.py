@@ -4,11 +4,12 @@ Test lldb-dap launch request.
 
 import os
 
-from lldbsuite.test.decorators import expectedFailureAll, skipIfLinux
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.decorators import *
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
+@skipIfWasm  # a Wasm runtime is handed its arguments directly, with no shell to expand them
 class TestDAP_launch_shellExpandArguments_enabled(DAPTestCaseBase):
     """
     Tests the default launch of a simple program with shell expansion

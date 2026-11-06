@@ -115,10 +115,6 @@ public:
   // Get filename to use for linker script processing.
   StringRef getNameForScript() const;
 
-  // Check if a non-common symbol should be extracted to override a common
-  // definition.
-  bool shouldExtractForCommon(StringRef name) const;
-
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
   InputSection *ppc32Got2 = nullptr;
@@ -268,6 +264,9 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
+  // Embedded unoptimized dynamic debug input section.
+  std::unique_ptr<InputSection> dynDbgSec;
+
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
   uint32_t cgProfileSectionIndex = 0;
 
@@ -294,6 +293,7 @@ private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
+  void initDynDbgSymbols();
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
@@ -389,6 +389,8 @@ std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
+// Name of embedded unoptimized dynamic debug input/output section.
+constexpr StringRef dynDbgSecName = ".debug_llvm_dyndbg";
 } // namespace elf
 } // namespace lld
 

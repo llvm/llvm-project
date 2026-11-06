@@ -1,4 +1,4 @@
-; RUN: llc -O0 -verify-machineinstrs -fast-isel-abort=1 -optimize-regalloc -regalloc=basic < %s
+; RUN: llc -O0 -verify-machineinstrs -fast-isel-abort=1 -regalloc=basic < %s
 ; This isn't exactly a useful set of command-line options, but check that it
 ; doesn't crash.  (It was crashing because a register was getting redefined.)
 

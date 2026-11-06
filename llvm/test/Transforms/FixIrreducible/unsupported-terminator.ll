@@ -1,19 +1,16 @@
 ; RUN: not opt < %s -passes=fix-irreducible -S 2>&1 | FileCheck %s
-; CHECK: LLVM ERROR: unsupported block terminator: fix-irreducible only supports br and callbr instructions
+; CHECK: LLVM ERROR: unsupported block terminator: fix-irreducible only supports br, callbr, and switch instructions
 
-define void @loop_1(i32 %Value, i1 %PredEntry) {
+define i32 @test(i1 %cond) {
 entry:
-  br i1 %PredEntry, label %A, label %B
+  %target = select i1 %cond,
+                   ptr blockaddress(@test, %then),
+                   ptr blockaddress(@test, %else)
+  indirectbr ptr %target, [label %then, label %else]
 
-A:
-  br label %B
+then:
+  br label %else
 
-B:
-  switch i32 %Value, label %exit [
-    i32 0, label %A
-    i32 1, label %B
-  ]
-
-exit:
-  ret void
+else:
+  br label %then
 }

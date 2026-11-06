@@ -13,11 +13,16 @@
 
 namespace llvm {
 
-class SIFixSGPRCopiesPass : public OptionalPassInfoMixin<SIFixSGPRCopiesPass> {
+class SIFixSGPRCopiesPass : public RequiredPassInfoMixin<SIFixSGPRCopiesPass> {
 public:
   SIFixSGPRCopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+
+  // Waterfall expansion may introduce PHIs.
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs();
+  }
 };
 
 } // namespace llvm

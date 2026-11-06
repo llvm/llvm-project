@@ -9,17 +9,22 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINPI_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINPI_H
 
-#include "asin_utils.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/math/asin_utils.h"
+#include "src/__support/sign.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -43,12 +48,14 @@ LIBC_INLINE double asinpi(double x) {
       // The relative error of x/pi is:
       //   |asinpi(x) - x/pi| / |asinpi(x)| < x^2/6 < 2^-54.
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-      return x * ASINPI_COEFFS[0];
+      return x * asin_internal::ASINPIF_COEFFS[0];
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return x * asinpi_eval(x * x);
+    double xsq = x * x;
+    return x * fputil::multiply_add(xsq, asin_internal::asinpi_eval(xsq),
+                                    asin_internal::ASINPIF_COEFFS[0]);
 #else
     using DFloat128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
@@ -108,7 +115,7 @@ LIBC_INLINE double asinpi(double x) {
           }
         }
         if (raise_underflow)
-          fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+          fputil::raise_underflow_except_if_required<double>();
       }
       return result;
     }
@@ -198,8 +205,10 @@ LIBC_INLINE double asinpi(double x) {
   double v_hi = fputil::sqrt<double>(u);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  double p = asinpi_eval(u);
-  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, 0.5);
+  double neg2_v = -2.0 * v_hi;
+  double r = x_sign * fputil::multiply_add(
+                          neg2_v * u, asin_internal::asinpi_eval(u),
+                          0.5 + neg2_v * asin_internal::ASINPIF_COEFFS[0]);
   return r;
 #else
   using DFloat128 = fputil::DyadicFloat<128>;

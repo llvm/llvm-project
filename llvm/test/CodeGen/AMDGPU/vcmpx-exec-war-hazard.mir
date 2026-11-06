@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
@@ -7,6 +7,7 @@
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -25,6 +26,7 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -42,6 +44,7 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_vmov_exec_lo
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -58,6 +61,7 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_valu_impuse_exec
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -75,6 +79,7 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_imp
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -94,6 +99,7 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -113,6 +119,7 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_depctr_fffe
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -133,6 +140,7 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_ffff
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -152,12 +160,32 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_effe
+tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     S_WAITCNT_DEPCTR .VaVdst_14_SaSdst_0
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_debug_use_exec
+# GCN:        $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT:   DBG_VALUE $exec, $noreg
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_debug_use_exec
+tracksRegLiveness: false
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    DBG_VALUE $exec, $noreg
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 

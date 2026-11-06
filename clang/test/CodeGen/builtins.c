@@ -4,9 +4,11 @@
 // RUN: not grep __builtin %t
 
 // RUN: %clang_cc1 -emit-llvm -triple armv7-darwin-apple  -o - %s | FileCheck %s --check-prefixes=CHECK,LD64,LONG32
-// RUN: %clang_cc1 -emit-llvm -triple arm64-darwin-apple  -o - %s | FileCheck %s --check-prefixes=CHECK,LD64,I128,LONG64
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s | FileCheck %s --check-prefixes=CHECK,LD80,I128,LONG64
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefixes=CHECK,LD80,I128,LONG64 %s
+// RUN: %clang_cc1 -emit-llvm -triple arm64-darwin-apple  -o - %s | FileCheck %s --check-prefixes=CHECK,LD64,I128,LONG64,BITCOUNTG,BITCOUNTG-LE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s | FileCheck %s --check-prefixes=CHECK,LD80,I128,LONG64,BITCOUNTG,BITCOUNTG-LE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefixes=CHECK,LD80,I128,LONG64,BITCOUNTG,BITCOUNTG-LE %s
+// RUN: %clang_cc1 -emit-llvm -triple aarch64_be-apple-darwin -mlong-double-64 -o - %s | FileCheck %s --check-prefixes=CHECK,LD64,I128,LONG64,BITCOUNTG,BITCOUNTG-BE
+// RUN: %clang_cc1 -emit-llvm -triple aarch64_be-apple-darwin -mlong-double-64 -O1 -o - %s | FileCheck %s --check-prefix=POPCOUNTG-BE-O1
 
 int printf(const char *, ...);
 
@@ -610,64 +612,59 @@ void test___warn_memset_zero_len(void) {
   __warn_memset_zero_len();
 }
 
-// I128-LABEL: define{{.*}} void @test_builtin_popcountg
+#endif
+
+// POPCOUNTG-BE-O1-LABEL: define{{.*}} void @test_builtin_popcountg
+// POPCOUNTG-BE-O1-NOT: @llvm.bitreverse
+// POPCOUNTG-BE-O1: ret void
+// BITCOUNTG-LABEL: define{{.*}} void @test_builtin_popcountg
 void test_builtin_popcountg(unsigned char uc, unsigned short us,
                             unsigned int ui, unsigned long ul,
-                            unsigned long long ull, unsigned __int128 ui128,
-                            unsigned _BitInt(128) ubi128,
+                            unsigned long long ull,
                             _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int pop;
 #if __aarch64__
   int x = 0;
   x = x * 2;
 #endif
-  //      I128: %2 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT: %3 = call i8 @llvm.ctpop.i8(i8 %2)
-  // I128-NEXT: %cast = zext i8 %3 to i32
-  // I128-NEXT: store volatile i32 %cast, ptr %pop, align 4
+  //      BITCOUNTG: %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i8 @llvm.ctpop.i8(i8 %{{[0-9]+}})
+  // BITCOUNTG-NEXT: [[POP_UC:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[POP_UC]], ptr %pop, align 4
   pop = __builtin_popcountg(uc);
-  //      I128: %4 = load i16, ptr %us.addr, align 2
-  // I128-NEXT: %5 = call i16 @llvm.ctpop.i16(i16 %4)
-  // I128-NEXT: %cast2 = zext i16 %5 to i32
-  // I128-NEXT: store volatile i32 %cast2, ptr %pop, align 4
+  //      BITCOUNTG: %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i16 @llvm.ctpop.i16(i16 %{{[0-9]+}})
+  // BITCOUNTG-NEXT: [[POP_US:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[POP_US]], ptr %pop, align 4
   pop = __builtin_popcountg(us);
-  //      I128: %6 = load i32, ptr %ui.addr, align 4
-  // I128-NEXT: %7 = call i32 @llvm.ctpop.i32(i32 %6)
-  // I128-NEXT: store volatile i32 %7, ptr %pop, align 4
+  //      BITCOUNTG: %{{[0-9]+}} = load i32, ptr %ui.addr, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i32 @llvm.ctpop.i32(i32 %{{[0-9]+}})
+  // BITCOUNTG-NEXT: store volatile i32 %{{[0-9]+}}, ptr %pop, align 4
   pop = __builtin_popcountg(ui);
-  // I128: %8 = load i64, ptr %ul.addr, align 8
-  // I128-NEXT: %9 = call i64 @llvm.ctpop.i64(i64 %8)
-  // I128-NEXT: %cast3 = trunc i64 %9 to i32
-  // I128-NEXT: store volatile i32 %cast3, ptr %pop, align 4
+  // BITCOUNTG: %{{[0-9]+}} = load i64, ptr %ul.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.ctpop.i64(i64 %{{[0-9]+}})
+  // BITCOUNTG-NEXT: [[POP_UL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[POP_UL]], ptr %pop, align 4
   pop = __builtin_popcountg(ul);
-  //      I128: %10 = load i64, ptr %ull.addr, align 8
-  // I128-NEXT: %11 = call i64 @llvm.ctpop.i64(i64 %10)
-  // I128-NEXT: %cast4 = trunc i64 %11 to i32
-  // I128-NEXT: store volatile i32 %cast4, ptr %pop, align 4
+  //      BITCOUNTG: %{{[0-9]+}} = load i64, ptr %ull.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.ctpop.i64(i64 %{{[0-9]+}})
+  // BITCOUNTG-NEXT: [[POP_ULL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[POP_ULL]], ptr %pop, align 4
   pop = __builtin_popcountg(ull);
-  //      I128: %12 = load i128, ptr %ui128.addr, align 16
-  // I128-NEXT: %13 = call i128 @llvm.ctpop.i128(i128 %12)
-  // I128-NEXT: %cast5 = trunc i128 %13 to i32
-  // I128-NEXT: store volatile i32 %cast5, ptr %pop, align 4
-  pop = __builtin_popcountg(ui128);
-  //      I128: %14 = load i128, ptr %ubi128.addr
-  // I128-NEXT: %15 = call i128 @llvm.ctpop.i128(i128 %14)
-  // I128-NEXT: %cast6 = trunc i128 %15 to i32
-  // I128-NEXT: store volatile i32 %cast6, ptr %pop, align 4
-  pop = __builtin_popcountg(ubi128);
-  //      I128: %load_bits7 = load i8, ptr %vb8.addr, align 1
-  // I128-NEXT: %16 = bitcast i8 %load_bits7 to <8 x i1>
-  // I128-NEXT: %17 = bitcast <8 x i1> %16 to i8
-  // I128-NEXT: %18 = call i8 @llvm.ctpop.i8(i8 %17)
-  // I128-NEXT: %cast8 = zext i8 %18 to i32
-  // I128-NEXT: store volatile i32 %cast8, ptr %pop, align 4
+  //         BITCOUNTG: [[POP_LOAD:%.*]] = load i8, ptr %vb8.addr, align 1
+  //    BITCOUNTG-NEXT: [[POP_VEC:%.*]] = bitcast i8 [[POP_LOAD]] to <8 x i1>
+  //    BITCOUNTG-NEXT: [[POP_BITS:%.*]] = bitcast <8 x i1> [[POP_VEC]] to i8
+  // BITCOUNTG-LE-NEXT: call i8 @llvm.ctpop.i8(i8 [[POP_BITS]])
+  // BITCOUNTG-BE-NEXT: [[POP_REVERSED:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[POP_BITS]])
+  // BITCOUNTG-BE-NEXT: call i8 @llvm.ctpop.i8(i8 [[POP_REVERSED]])
+  //    BITCOUNTG-NEXT: [[POP_EXT:%.*]] = zext i8 %{{.*}} to i32
+  //    BITCOUNTG-NEXT: store volatile i32 [[POP_EXT]], ptr %pop, align 4
   pop = __builtin_popcountg(vb8);
 }
 
-// I128-LABEL: define{{.*}} void @test_builtin_clzg
+// BITCOUNTG-LABEL: define{{.*}} void @test_builtin_clzg
 void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
-                       unsigned __int128 ui128, unsigned _BitInt(128) ubi128,
                        signed char sc, short s, int i,
                        _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int lz;
@@ -675,122 +672,100 @@ void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
   int x = 0;
   x = x * 2;
 #endif
-  //      I128:  %2 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT:  %3 = call i8 @llvm.ctlz.i8(i8 %2, i1
-  // I128-NEXT:  %cast = zext i8 %3 to i32
-  // I128-NEXT:  store volatile i32 %cast, ptr %lz, align 4
+  //      BITCOUNTG:  %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i8 @llvm.ctlz.i8(i8 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_UC:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_UC]], ptr %lz, align 4
   lz = __builtin_clzg(uc);
-  // I128-NEXT:  %4 = load i16, ptr %us.addr, align 2
-  // I128-NEXT:  %5 = call i16 @llvm.ctlz.i16(i16 %4, i1
-  // I128-NEXT:  %cast2 = zext i16 %5 to i32
-  // I128-NEXT:  store volatile i32 %cast2, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i16 @llvm.ctlz.i16(i16 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_US:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_US]], ptr %lz, align 4
   lz = __builtin_clzg(us);
-  // I128-NEXT:  %6 = load i32, ptr %ui.addr, align 4
-  // I128-NEXT:  %7 = call i32 @llvm.ctlz.i32(i32 %6, i1
-  // I128-NEXT:  store volatile i32 %7, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i32, ptr %ui.addr, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i32 @llvm.ctlz.i32(i32 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  store volatile i32 %{{[0-9]+}}, ptr %lz, align 4
   lz = __builtin_clzg(ui);
-  // I128-NEXT:  %8 = load i64, ptr %ul.addr, align 8
-  // I128-NEXT:  %9 = call i64 @llvm.ctlz.i64(i64 %8, i1
-  // I128-NEXT:  %cast3 = trunc i64 %9 to i32
-  // I128-NEXT:  store volatile i32 %cast3, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i64, ptr %ul.addr, align 8
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i64 @llvm.ctlz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_UL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_UL]], ptr %lz, align 4
   lz = __builtin_clzg(ul);
-  // I128-NEXT:  %10 = load i64, ptr %ull.addr, align 8
-  // I128-NEXT:  %11 = call i64 @llvm.ctlz.i64(i64 %10, i1
-  // I128-NEXT:  %cast4 = trunc i64 %11 to i32
-  // I128-NEXT:  store volatile i32 %cast4, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i64, ptr %ull.addr, align 8
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i64 @llvm.ctlz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_ULL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_ULL]], ptr %lz, align 4
   lz = __builtin_clzg(ull);
-  // I128-NEXT:  %12 = load i128, ptr %ui128.addr, align 16
-  // I128-NEXT:  %13 = call i128 @llvm.ctlz.i128(i128 %12, i1
-  // I128-NEXT:  %cast5 = trunc i128 %13 to i32
-  // I128-NEXT:  store volatile i32 %cast5, ptr %lz, align 4
-  lz = __builtin_clzg(ui128);
-  // I128-NEXT:  %14 = load i128, ptr %ubi128.addr
-  // I128-NEXT:  %15 = call i128 @llvm.ctlz.i128(i128 %14, i1
-  // I128-NEXT:  %cast6 = trunc i128 %15 to i32
-  // I128-NEXT:  store volatile i32 %cast6, ptr %lz, align 4
-  lz = __builtin_clzg(ubi128);
-  // I128-NEXT:  %load_bits7 = load i8, ptr %vb8.addr, align 1
-  // I128-NEXT:  %16 = bitcast i8 %load_bits7 to <8 x i1>
-  // I128-NEXT:  %17 = bitcast <8 x i1> %16 to i8
-  // I128-NEXT:  %18 = call i8 @llvm.ctlz.i8(i8 %17, i1
-  // I128-NEXT:  %cast8 = zext i8 %18 to i32
-  // I128-NEXT:  store volatile i32 %cast8, ptr %lz, align 4
+  //         BITCOUNTG: [[CLZ_LOAD:%.*]] = load i8, ptr %vb8.addr, align 1
+  //    BITCOUNTG-NEXT: [[CLZ_VEC:%.*]] = bitcast i8 [[CLZ_LOAD]] to <8 x i1>
+  //    BITCOUNTG-NEXT: [[CLZ_BITS:%.*]] = bitcast <8 x i1> [[CLZ_VEC]] to i8
+  // BITCOUNTG-LE-NEXT: call i8 @llvm.ctlz.i8(i8 [[CLZ_BITS]], i1
+  // BITCOUNTG-BE-NEXT: [[CLZ_REVERSED:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[CLZ_BITS]])
+  // BITCOUNTG-BE-NEXT: call i8 @llvm.ctlz.i8(i8 [[CLZ_REVERSED]], i1 false)
+  //    BITCOUNTG-NEXT: [[CLZ_EXT:%.*]] = zext i8 %{{.*}} to i32
+  //    BITCOUNTG-NEXT: store volatile i32 [[CLZ_EXT]], ptr %lz, align 4
   lz = __builtin_clzg(vb8);
-  // I128-NEXT:  %19 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT:  %20 = call i8 @llvm.ctlz.i8(i8 %19, i1
-  // I128-NEXT:  %cast9 = zext i8 %20 to i32
-  // I128-NEXT:  %iszero = icmp eq i8 %19, 0
-  // I128-NEXT:  %21 = load i8, ptr %sc.addr, align 1
-  // I128-NEXT:  %conv = sext i8 %21 to i32
-  // I128-NEXT:  %clzg = select i1 %iszero, i32 %conv, i32 %cast9
-  // I128-NEXT:  store volatile i32 %clzg, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i8 @llvm.ctlz.i8(i8 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_UC_FALLBACK_EXT:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_UC_FALLBACK_ISZERO:%.*]] = icmp eq i8 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i8, ptr %sc.addr, align 1
+  // BITCOUNTG-NEXT:  [[CLZ_UC_FALLBACK:%.*]] = sext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_UC_SELECT:%.*]] = select i1 [[CLZ_UC_FALLBACK_ISZERO]], i32 [[CLZ_UC_FALLBACK]], i32 [[CLZ_UC_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_UC_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(uc, sc);
-  // I128-NEXT:  %22 = load i16, ptr %us.addr, align 2
-  // I128-NEXT:  %23 = call i16 @llvm.ctlz.i16(i16 %22, i1
-  // I128-NEXT:  %cast10 = zext i16 %23 to i32
-  // I128-NEXT:  %iszero11 = icmp eq i16 %22, 0
-  // I128-NEXT:  %24 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT:  %conv12 = zext i8 %24 to i32
-  // I128-NEXT:  %clzg13 = select i1 %iszero11, i32 %conv12, i32 %cast10
-  // I128-NEXT:  store volatile i32 %clzg13, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i16 @llvm.ctlz.i16(i16 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_US_FALLBACK_EXT:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_US_FALLBACK_ISZERO:%.*]] = icmp eq i16 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT:  [[CLZ_US_FALLBACK:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_US_SELECT:%.*]] = select i1 [[CLZ_US_FALLBACK_ISZERO]], i32 [[CLZ_US_FALLBACK]], i32 [[CLZ_US_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_US_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(us, uc);
-  // I128-NEXT:  %25 = load i32, ptr %ui.addr, align 4
-  // I128-NEXT:  %26 = call i32 @llvm.ctlz.i32(i32 %25, i1
-  // I128-NEXT:  %iszero14 = icmp eq i32 %25, 0
-  // I128-NEXT:  %27 = load i16, ptr %s.addr, align 2
-  // I128-NEXT:  %conv15 = sext i16 %27 to i32
-  // I128-NEXT:  %clzg16 = select i1 %iszero14, i32 %conv15, i32 %26
-  // I128-NEXT:  store volatile i32 %clzg16, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i32, ptr %ui.addr, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i32 @llvm.ctlz.i32(i32 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_UI_FALLBACK_ISZERO:%.*]] = icmp eq i32 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i16, ptr %s.addr, align 2
+  // BITCOUNTG-NEXT:  [[CLZ_UI_FALLBACK:%.*]] = sext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_UI_SELECT:%.*]] = select i1 [[CLZ_UI_FALLBACK_ISZERO]], i32 [[CLZ_UI_FALLBACK]], i32 %{{[0-9]+}}
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_UI_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(ui, s);
-  // I128-NEXT:  %28 = load i64, ptr %ul.addr, align 8
-  // I128-NEXT:  %29 = call i64 @llvm.ctlz.i64(i64 %28, i1
-  // I128-NEXT:  %cast17 = trunc i64 %29 to i32
-  // I128-NEXT:  %iszero18 = icmp eq i64 %28, 0
-  // I128-NEXT:  %30 = load i16, ptr %us.addr, align 2
-  // I128-NEXT:  %conv19 = zext i16 %30 to i32
-  // I128-NEXT:  %clzg20 = select i1 %iszero18, i32 %conv19, i32 %cast17
-  // I128-NEXT:  store volatile i32 %clzg20, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i64, ptr %ul.addr, align 8
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i64 @llvm.ctlz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_UL_FALLBACK_EXT:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_UL_FALLBACK_ISZERO:%.*]] = icmp eq i64 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT:  [[CLZ_UL_FALLBACK:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_UL_SELECT:%.*]] = select i1 [[CLZ_UL_FALLBACK_ISZERO]], i32 [[CLZ_UL_FALLBACK]], i32 [[CLZ_UL_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_UL_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(ul, us);
-  // I128-NEXT:  %31 = load i64, ptr %ull.addr, align 8
-  // I128-NEXT:  %32 = call i64 @llvm.ctlz.i64(i64 %31, i1
-  // I128-NEXT:  %cast21 = trunc i64 %32 to i32
-  // I128-NEXT:  %iszero22 = icmp eq i64 %31, 0
-  // I128-NEXT:  %33 = load i32, ptr %i.addr, align 4
-  // I128-NEXT:  %clzg23 = select i1 %iszero22, i32 %33, i32 %cast21
-  // I128-NEXT:  store volatile i32 %clzg23, ptr %lz, align 4
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i64, ptr %ull.addr, align 8
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = call i64 @llvm.ctlz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT:  [[CLZ_ULL_FALLBACK_EXT:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT:  [[CLZ_ULL_FALLBACK_ISZERO:%.*]] = icmp eq i64 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT:  %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // BITCOUNTG-NEXT:  [[CLZ_ULL_SELECT:%.*]] = select i1 [[CLZ_ULL_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CLZ_ULL_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT:  store volatile i32 [[CLZ_ULL_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(ull, i);
-  // I128-NEXT:  %34 = load i128, ptr %ui128.addr, align 16
-  // I128-NEXT:  %35 = call i128 @llvm.ctlz.i128(i128 %34, i1
-  // I128-NEXT:  %cast24 = trunc i128 %35 to i32
-  // I128-NEXT:  %iszero25 = icmp eq i128 %34, 0
-  // I128-NEXT:  %36 = load i32, ptr %i.addr, align 4
-  // I128-NEXT:  %clzg26 = select i1 %iszero25, i32 %36, i32 %cast24
-  // I128-NEXT:  store volatile i32 %clzg26, ptr %lz, align 4
-  lz = __builtin_clzg(ui128, i);
-  // I128-NEXT:  %37 = load i128, ptr %ubi128.addr
-  // I128-NEXT:  %38 = call i128 @llvm.ctlz.i128(i128 %37, i1
-  // I128-NEXT:  %cast27 = trunc i128 %38 to i32
-  // I128-NEXT:  %iszero28 = icmp eq i128 %37, 0
-  // I128-NEXT:  %39 = load i32, ptr %i.addr, align 4
-  // I128-NEXT:  %clzg29 = select i1 %iszero28, i32 %39, i32 %cast27
-  // I128-NEXT:  store volatile i32 %clzg29, ptr %lz, align 4
-  lz = __builtin_clzg(ubi128, i);
-  // I128-NEXT:  %load_bits30 = load i8, ptr %vb8.addr, align 1
-  // I128-NEXT:  %40 = bitcast i8 %load_bits30 to <8 x i1>
-  // I128-NEXT:  %41 = bitcast <8 x i1> %40 to i8
-  // I128-NEXT:  %42 = call i8 @llvm.ctlz.i8(i8 %41, i1
-  // I128-NEXT:  %cast31 = zext i8 %42 to i32
-  // I128-NEXT:  %iszero32 = icmp eq i8 %41, 0
-  // I128-NEXT:  %43 = load i32, ptr %i.addr, align 4
-  // I128-NEXT:  %clzg33 = select i1 %iszero32, i32 %43, i32 %cast31
-  // I128-NEXT:  store volatile i32 %clzg33, ptr %lz, align 4
+  //         BITCOUNTG: [[CLZ_LOAD_WITH_FALLBACK:%.*]] = load i8, ptr %vb8.addr, align 1
+  //    BITCOUNTG-NEXT: [[CLZ_VEC_WITH_FALLBACK:%.*]] = bitcast i8 [[CLZ_LOAD_WITH_FALLBACK]] to <8 x i1>
+  //    BITCOUNTG-NEXT: [[CLZ_BITS_WITH_FALLBACK:%.*]] = bitcast <8 x i1> [[CLZ_VEC_WITH_FALLBACK]] to i8
+  // BITCOUNTG-LE-NEXT: call i8 @llvm.ctlz.i8(i8 [[CLZ_BITS_WITH_FALLBACK]], i1 true)
+  // BITCOUNTG-BE-NEXT: [[CLZ_REVERSED_WITH_FALLBACK:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[CLZ_BITS_WITH_FALLBACK]])
+  // BITCOUNTG-BE-NEXT: call i8 @llvm.ctlz.i8(i8 [[CLZ_REVERSED_WITH_FALLBACK]], i1 true)
+  //    BITCOUNTG-NEXT: [[CLZ_EXT_WITH_FALLBACK:%.*]] = zext i8 %{{.*}} to i32
+  // BITCOUNTG-LE-NEXT: icmp eq i8 [[CLZ_BITS_WITH_FALLBACK]], 0
+  // BITCOUNTG-BE-NEXT: icmp eq i8 [[CLZ_REVERSED_WITH_FALLBACK]], 0
+  //    BITCOUNTG-NEXT: [[CLZ_FALLBACK:%.*]] = load i32, ptr %i.addr, align 4
+  //    BITCOUNTG-NEXT: [[CLZ_SELECT:%.*]] = select i1 %{{.*}}, i32 [[CLZ_FALLBACK]], i32 [[CLZ_EXT_WITH_FALLBACK]]
+  //    BITCOUNTG-NEXT: store volatile i32 [[CLZ_SELECT]], ptr %lz, align 4
   lz = __builtin_clzg(vb8, i);
 }
 
-// I128-LABEL: define{{.*}} void @test_builtin_ctzg
+// BITCOUNTG-LABEL: define{{.*}} void @test_builtin_ctzg
 void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
-                       unsigned __int128 ui128, unsigned _BitInt(128) ubi128,
                        signed char sc, short s, int i,
                        _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int tz;
@@ -798,116 +773,177 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
   int x = 0;
   x = x * 2;
 #endif
-  //      I128: %2 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT: %3 = call i8 @llvm.cttz.i8(i8 %2, i1
-  // I128-NEXT: %cast = zext i8 %3 to i32
-  // I128-NEXT: store volatile i32 %cast, ptr %tz, align 4
+  //      BITCOUNTG: %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i8 @llvm.cttz.i8(i8 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_UC:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_UC]], ptr %tz, align 4
   tz = __builtin_ctzg(uc);
-  // I128-NEXT: %4 = load i16, ptr %us.addr, align 2
-  // I128-NEXT: %5 = call i16 @llvm.cttz.i16(i16 %4, i1
-  // I128-NEXT: %cast2 = zext i16 %5 to i32
-  // I128-NEXT: store volatile i32 %cast2, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i16 @llvm.cttz.i16(i16 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_US:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_US]], ptr %tz, align 4
   tz = __builtin_ctzg(us);
-  // I128-NEXT: %6 = load i32, ptr %ui.addr, align 4
-  // I128-NEXT: %7 = call i32 @llvm.cttz.i32(i32 %6, i1
-  // I128-NEXT: store volatile i32 %7, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i32, ptr %ui.addr, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i32 @llvm.cttz.i32(i32 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: store volatile i32 %{{[0-9]+}}, ptr %tz, align 4
   tz = __builtin_ctzg(ui);
-  // I128-NEXT: %8 = load i64, ptr %ul.addr, align 8
-  // I128-NEXT: %9 = call i64 @llvm.cttz.i64(i64 %8, i1
-  // I128-NEXT: %cast3 = trunc i64 %9 to i32
-  // I128-NEXT: store volatile i32 %cast3, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i64, ptr %ul.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.cttz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_UL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_UL]], ptr %tz, align 4
   tz = __builtin_ctzg(ul);
-  // I128-NEXT: %10 = load i64, ptr %ull.addr, align 8
-  // I128-NEXT: %11 = call i64 @llvm.cttz.i64(i64 %10, i1
-  // I128-NEXT: %cast4 = trunc i64 %11 to i32
-  // I128-NEXT: store volatile i32 %cast4, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i64, ptr %ull.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.cttz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_ULL:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_ULL]], ptr %tz, align 4
   tz = __builtin_ctzg(ull);
-  // I128-NEXT: %12 = load i128, ptr %ui128.addr, align 16
-  // I128-NEXT: %13 = call i128 @llvm.cttz.i128(i128 %12, i1
-  // I128-NEXT: %cast5 = trunc i128 %13 to i32
-  // I128-NEXT: store volatile i32 %cast5, ptr %tz, align 4
-  tz = __builtin_ctzg(ui128);
-  // I128-NEXT: %14 = load i128, ptr %ubi128.addr
-  // I128-NEXT: %15 = call i128 @llvm.cttz.i128(i128 %14, i1
-  // I128-NEXT: %cast6 = trunc i128 %15 to i32
-  // I128-NEXT: store volatile i32 %cast6, ptr %tz, align 4
-  tz = __builtin_ctzg(ubi128);
-  // I128-NEXT: %load_bits7 = load i8, ptr %vb8.addr, align 1
-  // I128-NEXT: %16 = bitcast i8 %load_bits7 to <8 x i1>
-  // I128-NEXT: %17 = bitcast <8 x i1> %16 to i8
-  // I128-NEXT: %18 = call i8 @llvm.cttz.i8(i8 %17, i1
-  // I128-NEXT: %cast8 = zext i8 %18 to i32
-  // I128-NEXT: store volatile i32 %cast8, ptr %tz, align 4
+  //         BITCOUNTG: [[CTZ_LOAD:%.*]] = load i8, ptr %vb8.addr, align 1
+  //    BITCOUNTG-NEXT: [[CTZ_VEC:%.*]] = bitcast i8 [[CTZ_LOAD]] to <8 x i1>
+  //    BITCOUNTG-NEXT: [[CTZ_BITS:%.*]] = bitcast <8 x i1> [[CTZ_VEC]] to i8
+  // BITCOUNTG-LE-NEXT: call i8 @llvm.cttz.i8(i8 [[CTZ_BITS]], i1
+  // BITCOUNTG-BE-NEXT: [[CTZ_REVERSED:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[CTZ_BITS]])
+  // BITCOUNTG-BE-NEXT: call i8 @llvm.cttz.i8(i8 [[CTZ_REVERSED]], i1 false)
+  //    BITCOUNTG-NEXT: [[CTZ_EXT:%.*]] = zext i8 %{{.*}} to i32
+  //    BITCOUNTG-NEXT: store volatile i32 [[CTZ_EXT]], ptr %tz, align 4
   tz = __builtin_ctzg(vb8);
-  // I128-NEXT: %19 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT: %20 = call i8 @llvm.cttz.i8(i8 %19, i1
-  // I128-NEXT: %cast9 = zext i8 %20 to i32
-  // I128-NEXT: %iszero = icmp eq i8 %19, 0
-  // I128-NEXT: %21 = load i8, ptr %sc.addr, align 1
-  // I128-NEXT: %conv = sext i8 %21 to i32
-  // I128-NEXT: %ctzg = select i1 %iszero, i32 %conv, i32 %cast9
-  // I128-NEXT: store volatile i32 %ctzg, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i8 @llvm.cttz.i8(i8 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_UC_FALLBACK_EXT:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_UC_FALLBACK_ISZERO:%.*]] = icmp eq i8 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i8, ptr %sc.addr, align 1
+  // BITCOUNTG-NEXT: [[CTZ_UC_FALLBACK:%.*]] = sext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_UC_SELECT:%.*]] = select i1 [[CTZ_UC_FALLBACK_ISZERO]], i32 [[CTZ_UC_FALLBACK]], i32 [[CTZ_UC_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_UC_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(uc, sc);
-  // I128-NEXT: %22 = load i16, ptr %us.addr, align 2
-  // I128-NEXT: %23 = call i16 @llvm.cttz.i16(i16 %22, i1
-  // I128-NEXT: %cast10 = zext i16 %23 to i32
-  // I128-NEXT: %iszero11 = icmp eq i16 %22, 0
-  // I128-NEXT: %24 = load i8, ptr %uc.addr, align 1
-  // I128-NEXT: %conv12 = zext i8 %24 to i32
-  // I128-NEXT: %ctzg13 = select i1 %iszero11, i32 %conv12, i32 %cast10
-  // I128-NEXT: store volatile i32 %ctzg13, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i16 @llvm.cttz.i16(i16 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_US_FALLBACK_EXT:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_US_FALLBACK_ISZERO:%.*]] = icmp eq i16 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i8, ptr %uc.addr, align 1
+  // BITCOUNTG-NEXT: [[CTZ_US_FALLBACK:%.*]] = zext i8 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_US_SELECT:%.*]] = select i1 [[CTZ_US_FALLBACK_ISZERO]], i32 [[CTZ_US_FALLBACK]], i32 [[CTZ_US_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_US_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(us, uc);
-  // I128-NEXT: %25 = load i32, ptr %ui.addr, align 4
-  // I128-NEXT: %26 = call i32 @llvm.cttz.i32(i32 %25, i1
-  // I128-NEXT: %iszero14 = icmp eq i32 %25, 0
-  // I128-NEXT: %27 = load i16, ptr %s.addr, align 2
-  // I128-NEXT: %conv15 = sext i16 %27 to i32
-  // I128-NEXT: %ctzg16 = select i1 %iszero14, i32 %conv15, i32 %26
-  // I128-NEXT: store volatile i32 %ctzg16, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i32, ptr %ui.addr, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i32 @llvm.cttz.i32(i32 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_UI_FALLBACK_ISZERO:%.*]] = icmp eq i32 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i16, ptr %s.addr, align 2
+  // BITCOUNTG-NEXT: [[CTZ_UI_FALLBACK:%.*]] = sext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_UI_SELECT:%.*]] = select i1 [[CTZ_UI_FALLBACK_ISZERO]], i32 [[CTZ_UI_FALLBACK]], i32 %{{[0-9]+}}
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_UI_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(ui, s);
-  // I128-NEXT: %28 = load i64, ptr %ul.addr, align 8
-  // I128-NEXT: %29 = call i64 @llvm.cttz.i64(i64 %28, i1
-  // I128-NEXT: %cast17 = trunc i64 %29 to i32
-  // I128-NEXT: %iszero18 = icmp eq i64 %28, 0
-  // I128-NEXT: %30 = load i16, ptr %us.addr, align 2
-  // I128-NEXT: %conv19 = zext i16 %30 to i32
-  // I128-NEXT: %ctzg20 = select i1 %iszero18, i32 %conv19, i32 %cast17
-  // I128-NEXT: store volatile i32 %ctzg20, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i64, ptr %ul.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.cttz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_UL_FALLBACK_EXT:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_UL_FALLBACK_ISZERO:%.*]] = icmp eq i64 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i16, ptr %us.addr, align 2
+  // BITCOUNTG-NEXT: [[CTZ_UL_FALLBACK:%.*]] = zext i16 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_UL_SELECT:%.*]] = select i1 [[CTZ_UL_FALLBACK_ISZERO]], i32 [[CTZ_UL_FALLBACK]], i32 [[CTZ_UL_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_UL_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(ul, us);
-  // I128-NEXT: %31 = load i64, ptr %ull.addr, align 8
-  // I128-NEXT: %32 = call i64 @llvm.cttz.i64(i64 %31, i1
-  // I128-NEXT: %cast21 = trunc i64 %32 to i32
-  // I128-NEXT: %iszero22 = icmp eq i64 %31, 0
-  // I128-NEXT: %33 = load i32, ptr %i.addr, align 4
-  // I128-NEXT: %ctzg23 = select i1 %iszero22, i32 %33, i32 %cast21
-  // I128-NEXT: store volatile i32 %ctzg23, ptr %tz, align 4
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i64, ptr %ull.addr, align 8
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = call i64 @llvm.cttz.i64(i64 %{{[0-9]+}}, i1
+  // BITCOUNTG-NEXT: [[CTZ_ULL_FALLBACK_EXT:%.*]] = trunc i64 %{{[0-9]+}} to i32
+  // BITCOUNTG-NEXT: [[CTZ_ULL_FALLBACK_ISZERO:%.*]] = icmp eq i64 %{{[0-9]+}}, 0
+  // BITCOUNTG-NEXT: %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // BITCOUNTG-NEXT: [[CTZ_ULL_SELECT:%.*]] = select i1 [[CTZ_ULL_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CTZ_ULL_FALLBACK_EXT]]
+  // BITCOUNTG-NEXT: store volatile i32 [[CTZ_ULL_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(ull, i);
-  // I128-NEXT: %34 = load i128, ptr %ui128.addr, align 16
-  // I128-NEXT: %35 = call i128 @llvm.cttz.i128(i128 %34, i1
-  // I128-NEXT: %cast24 = trunc i128 %35 to i32
-  // I128-NEXT: %iszero25 = icmp eq i128 %34, 0
-  // I128-NEXT: %36 = load i32, ptr %i.addr, align 4
-  // I128-NEXT: %ctzg26 = select i1 %iszero25, i32 %36, i32 %cast24
-  // I128-NEXT: store volatile i32 %ctzg26, ptr %tz, align 4
-  tz = __builtin_ctzg(ui128, i);
-  // I128-NEXT: %37 = load i128, ptr %ubi128.addr
-  // I128-NEXT: %38 = call i128 @llvm.cttz.i128(i128 %37, i1
-  // I128-NEXT: %cast27 = trunc i128 %38 to i32
-  // I128-NEXT: %iszero28 = icmp eq i128 %37, 0
-  // I128-NEXT: %39 = load i32, ptr %i.addr, align 4
-  // I128-NEXT: %ctzg29 = select i1 %iszero28, i32 %39, i32 %cast27
-  // I128-NEXT: store volatile i32 %ctzg29, ptr %tz, align 4
-  tz = __builtin_ctzg(ubi128, i);
-  // I128-NEXT: %load_bits30 = load i8, ptr %vb8.addr, align 1
-  // I128-NEXT: %40 = bitcast i8 %load_bits30 to <8 x i1>
-  // I128-NEXT: %41 = bitcast <8 x i1> %40 to i8
-  // I128-NEXT: %42 = call i8 @llvm.cttz.i8(i8 %41, i1
-  // I128-NEXT: %cast31 = zext i8 %42 to i32
-  // I128-NEXT: %iszero32 = icmp eq i8 %41, 0
-  // I128-NEXT: %43 = load i32, ptr %i.addr, align 4
-  // I128-NEXT: %ctzg33 = select i1 %iszero32, i32 %43, i32 %cast31
-  // I128-NEXT: store volatile i32 %ctzg33, ptr %tz, align 4
+  //         BITCOUNTG: [[CTZ_LOAD_WITH_FALLBACK:%.*]] = load i8, ptr %vb8.addr, align 1
+  //    BITCOUNTG-NEXT: [[CTZ_VEC_WITH_FALLBACK:%.*]] = bitcast i8 [[CTZ_LOAD_WITH_FALLBACK]] to <8 x i1>
+  //    BITCOUNTG-NEXT: [[CTZ_BITS_WITH_FALLBACK:%.*]] = bitcast <8 x i1> [[CTZ_VEC_WITH_FALLBACK]] to i8
+  // BITCOUNTG-LE-NEXT: call i8 @llvm.cttz.i8(i8 [[CTZ_BITS_WITH_FALLBACK]], i1 true)
+  // BITCOUNTG-BE-NEXT: [[CTZ_REVERSED_WITH_FALLBACK:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[CTZ_BITS_WITH_FALLBACK]])
+  // BITCOUNTG-BE-NEXT: call i8 @llvm.cttz.i8(i8 [[CTZ_REVERSED_WITH_FALLBACK]], i1 true)
+  //    BITCOUNTG-NEXT: [[CTZ_EXT_WITH_FALLBACK:%.*]] = zext i8 %{{.*}} to i32
+  // BITCOUNTG-LE-NEXT: icmp eq i8 [[CTZ_BITS_WITH_FALLBACK]], 0
+  // BITCOUNTG-BE-NEXT: icmp eq i8 [[CTZ_REVERSED_WITH_FALLBACK]], 0
+  //    BITCOUNTG-NEXT: [[CTZ_FALLBACK:%.*]] = load i32, ptr %i.addr, align 4
+  //    BITCOUNTG-NEXT: [[CTZ_SELECT:%.*]] = select i1 %{{.*}}, i32 [[CTZ_FALLBACK]], i32 [[CTZ_EXT_WITH_FALLBACK]]
+  //    BITCOUNTG-NEXT: store volatile i32 [[CTZ_SELECT]], ptr %tz, align 4
   tz = __builtin_ctzg(vb8, i);
+}
+
+#ifdef __SIZEOF_INT128__
+
+// I128-LABEL: define{{.*}} void @test_builtin_popcountg_i128
+void test_builtin_popcountg_i128(unsigned __int128 ui128,
+                                 unsigned _BitInt(128) ubi128) {
+  volatile int pop;
+  //      I128: %{{[0-9]+}} = load i128, ptr %ui128.addr, align 16
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctpop.i128(i128 %{{[0-9]+}})
+  // I128-NEXT: [[POP_UI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[POP_UI128]], ptr %pop, align 4
+  pop = __builtin_popcountg(ui128);
+  //      I128: %{{[0-9]+}} = load i128, ptr %ubi128.addr
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctpop.i128(i128 %{{[0-9]+}})
+  // I128-NEXT: [[POP_UBI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[POP_UBI128]], ptr %pop, align 4
+  pop = __builtin_popcountg(ubi128);
+}
+
+// I128-LABEL: define{{.*}} void @test_builtin_clzg_i128
+void test_builtin_clzg_i128(unsigned __int128 ui128,
+                            unsigned _BitInt(128) ubi128, int i) {
+  volatile int lz;
+  //      I128: %{{[0-9]+}} = load i128, ptr %ui128.addr, align 16
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctlz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CLZ_UI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[CLZ_UI128]], ptr %lz, align 4
+  lz = __builtin_clzg(ui128);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ubi128.addr
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctlz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CLZ_UBI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[CLZ_UBI128]], ptr %lz, align 4
+  lz = __builtin_clzg(ubi128);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ui128.addr, align 16
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctlz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CLZ_UI128_FALLBACK_EXT:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: [[CLZ_UI128_FALLBACK_ISZERO:%.*]] = icmp eq i128 %{{[0-9]+}}, 0
+  // I128-NEXT: %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // I128-NEXT: [[CLZ_UI128_SELECT:%.*]] = select i1 [[CLZ_UI128_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CLZ_UI128_FALLBACK_EXT]]
+  // I128-NEXT: store volatile i32 [[CLZ_UI128_SELECT]], ptr %lz, align 4
+  lz = __builtin_clzg(ui128, i);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ubi128.addr
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.ctlz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CLZ_UBI128_FALLBACK_EXT:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: [[CLZ_UBI128_FALLBACK_ISZERO:%.*]] = icmp eq i128 %{{[0-9]+}}, 0
+  // I128-NEXT: %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // I128-NEXT: [[CLZ_UBI128_SELECT:%.*]] = select i1 [[CLZ_UBI128_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CLZ_UBI128_FALLBACK_EXT]]
+  // I128-NEXT: store volatile i32 [[CLZ_UBI128_SELECT]], ptr %lz, align 4
+  lz = __builtin_clzg(ubi128, i);
+}
+
+// I128-LABEL: define{{.*}} void @test_builtin_ctzg_i128
+void test_builtin_ctzg_i128(unsigned __int128 ui128,
+                            unsigned _BitInt(128) ubi128, int i) {
+  volatile int tz;
+  //      I128: %{{[0-9]+}} = load i128, ptr %ui128.addr, align 16
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.cttz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CTZ_UI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[CTZ_UI128]], ptr %tz, align 4
+  tz = __builtin_ctzg(ui128);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ubi128.addr
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.cttz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CTZ_UBI128:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: store volatile i32 [[CTZ_UBI128]], ptr %tz, align 4
+  tz = __builtin_ctzg(ubi128);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ui128.addr, align 16
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.cttz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CTZ_UI128_FALLBACK_EXT:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: [[CTZ_UI128_FALLBACK_ISZERO:%.*]] = icmp eq i128 %{{[0-9]+}}, 0
+  // I128-NEXT: %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // I128-NEXT: [[CTZ_UI128_SELECT:%.*]] = select i1 [[CTZ_UI128_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CTZ_UI128_FALLBACK_EXT]]
+  // I128-NEXT: store volatile i32 [[CTZ_UI128_SELECT]], ptr %tz, align 4
+  tz = __builtin_ctzg(ui128, i);
+  // I128-NEXT: %{{[0-9]+}} = load i128, ptr %ubi128.addr
+  // I128-NEXT: %{{[0-9]+}} = call i128 @llvm.cttz.i128(i128 %{{[0-9]+}}, i1
+  // I128-NEXT: [[CTZ_UBI128_FALLBACK_EXT:%.*]] = trunc i128 %{{[0-9]+}} to i32
+  // I128-NEXT: [[CTZ_UBI128_FALLBACK_ISZERO:%.*]] = icmp eq i128 %{{[0-9]+}}, 0
+  // I128-NEXT: %{{[0-9]+}} = load i32, ptr %i.addr, align 4
+  // I128-NEXT: [[CTZ_UBI128_SELECT:%.*]] = select i1 [[CTZ_UBI128_FALLBACK_ISZERO]], i32 %{{[0-9]+}}, i32 [[CTZ_UBI128_FALLBACK_EXT]]
+  // I128-NEXT: store volatile i32 [[CTZ_UBI128_SELECT]], ptr %tz, align 4
+  tz = __builtin_ctzg(ubi128, i);
 }
 
 #endif

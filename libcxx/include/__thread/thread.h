@@ -28,6 +28,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>

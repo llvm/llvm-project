@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -disable-block-placement < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 -disable-block-placement < %s | FileCheck %s
 
 ; Check that invariant compare is hoisted out of the loop.
 ; At the same time condition shall not be serialized into a VGPR and deserialized later

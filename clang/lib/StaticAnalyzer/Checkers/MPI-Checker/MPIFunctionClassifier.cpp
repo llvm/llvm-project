@@ -174,6 +174,43 @@ void MPIFunctionClassifier::initCollectiveIdentifiers(ASTContext &ASTCtx) {
   MPINonBlockingTypes.push_back(IdentInfo_MPI_Ialltoall);
   MPIType.push_back(IdentInfo_MPI_Ialltoall);
   assert(IdentInfo_MPI_Ialltoall);
+
+  auto AddCollective = [&](StringRef Name) {
+    IdentifierInfo *II = &ASTCtx.Idents.get(Name);
+    MPICollectiveTypes.push_back(II);
+    MPIType.push_back(II);
+    return II;
+  };
+  auto AddNonBlockingCollective = [&](StringRef Name) {
+    MPINonBlockingTypes.push_back(AddCollective(Name));
+  };
+
+  // Vector ("v"/"w") variants of the collectives above.
+  AddCollective("MPI_Scatterv");
+  AddNonBlockingCollective("MPI_Iscatterv");
+  AddCollective("MPI_Gatherv");
+  AddNonBlockingCollective("MPI_Igatherv");
+  AddCollective("MPI_Allgatherv");
+  AddNonBlockingCollective("MPI_Iallgatherv");
+  AddCollective("MPI_Alltoallv");
+  AddNonBlockingCollective("MPI_Ialltoallv");
+  AddCollective("MPI_Alltoallw");
+  AddNonBlockingCollective("MPI_Ialltoallw");
+
+  // Nonblocking barrier.
+  AddNonBlockingCollective("MPI_Ibarrier");
+
+  // Prefix reductions (scans).
+  AddCollective("MPI_Scan");
+  AddNonBlockingCollective("MPI_Iscan");
+  AddCollective("MPI_Exscan");
+  AddNonBlockingCollective("MPI_Iexscan");
+
+  // Reduce-scatter family.
+  AddCollective("MPI_Reduce_scatter");
+  AddNonBlockingCollective("MPI_Ireduce_scatter");
+  AddCollective("MPI_Reduce_scatter_block");
+  AddNonBlockingCollective("MPI_Ireduce_scatter_block");
 }
 
 void MPIFunctionClassifier::initAdditionalIdentifiers(ASTContext &ASTCtx) {

@@ -3,7 +3,7 @@
 
 # Memory operand not formatted correctly.
 prefetch.i a0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be a multiple of 32 bytes in the range [-2048, 2016]
-prefetch.r 32, a0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+prefetch.r 32, a0 # CHECK: :[[@LINE]]:16: error: expected '('
 prefetch.w a0(32) # CHECK: :[[@LINE]]:14: error: unexpected token
 
 # Out of range offset.

@@ -49,7 +49,6 @@
 
 ; SJLJ:       LBB0_3:
 ; SJLJ-NEXT:          endbr32
-; SJLJ-NEXT:          leal
 ; SJLJ-NEXT:          movl
 ; SJLJ-NEXT:          cmpl
 ; SJLJ-NEXT:          jb      LBB0_4

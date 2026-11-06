@@ -341,13 +341,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
-        Token Caret;
-        {
-          Caret.startToken();
-          Caret.setKind(tok::caret);
-          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
-          Caret.setLength(1);
-        }
+        Token Caret = Token::create(
+            tok::caret, OpToken.getLocation().getLocWithOffset(1), 1);
         UnconsumeToken(OpToken);
         PP.EnterToken(Caret, /*IsReinject=*/true);
         return ParseRHSOfBinaryExpression(LHS, MinPrec);
@@ -525,8 +520,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!RHS.isInvalid() && RHSIsInitList) {
       if (ThisPrec == prec::Assignment) {
-        Diag(OpToken, diag::warn_cxx98_compat_generalized_initializer_lists)
-          << Actions.getExprRange(RHS.get());
+        Diag(OpToken, diag::compat_cxx11_generalized_initializer_lists)
+            << Actions.getExprRange(RHS.get());
       } else if (ColonLoc.isValid()) {
         Diag(ColonLoc, diag::err_init_list_bin_op)
           << /*RHS*/1 << ":"
@@ -710,7 +705,7 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
   }
@@ -902,8 +897,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
         // Annotate the token and tail recurse.
         // If the token is not annotated, then it might be an expression pack
         // indexing
-        if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.isOneOf(tok::annot_pack_indexing_type, tok::annot_cxxscope))
+        if (TryAnnotateTypeOrScopeToken())
+          return ExprError();
+        if (Tok.isOneOf(tok::annot_cxxscope, tok::annot_pack_indexing_type,
+                        tok::annot_template_id, tok::annot_typename))
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      CorrectionBehavior, isVectorLiteral,
                                      NotPrimaryExpression);
@@ -1352,6 +1349,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
   {
     if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);
@@ -1386,7 +1385,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                          << DS.getSourceRange());
 
     if (Tok.is(tok::l_brace))
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
 
     Res = ParseCXXTypeConstructExpression(DS);
     break;
@@ -1563,7 +1562,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     // HACK: libstdc++ uses some of the transform-type-traits as alias
     // templates, so we need to work around this.
     if (!NextToken().is(tok::l_paren)) {
@@ -1735,7 +1734,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-            Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+            Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
             Idx = ParseBraceInitializer();
           } else {
             Idx = ParseExpression(); // May be a comma expression
@@ -2663,6 +2662,10 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                              ParsedType &CastTy, SourceLocation &RParenLoc) {
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
+  GenericAssociationTypeRAIIObject NotParsingGenericAssociationType(
+      *this,
+      /*Value=*/false);
+
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen())
     return ExprError();
@@ -3068,8 +3071,7 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
-                                : diag::ext_c2y_generic_with_type_arg);
+    DiagCompat(Loc, diag_compat::generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
@@ -3104,7 +3106,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
       DefaultLoc = ConsumeToken();
       Ty = nullptr;
     } else {
-      ColonProtectionRAIIObject X(*this);
+      GenericAssociationTypeRAIIObject X(*this);
+
       TypeResult TR = ParseTypeName(nullptr, DeclaratorContext::Association);
       if (TR.isInvalid()) {
         SkipUntil(tok::r_paren, StopAtSemi);
@@ -3178,9 +3181,7 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
     }
   }
 
-  Diag(EllipsisLoc, getLangOpts().CPlusPlus17
-                        ? diag::warn_cxx14_compat_fold_expression
-                        : diag::ext_fold_expression);
+  DiagCompat(EllipsisLoc, diag_compat::fold_expression);
 
   T.consumeClose();
   return Actions.ActOnCXXFoldExpr(getCurScope(), T.getOpenLocation(), LHS.get(),
@@ -3196,15 +3197,10 @@ void Parser::injectEmbedTokens() {
                               Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
-    Toks[I].startToken();
-    Toks[I].setKind(tok::binary_data);
-    Toks[I].setLocation(Tok.getLocation());
-    Toks[I].setLength(1);
+    Toks[I] = Token::create(tok::binary_data, Tok.getLocation(), 1);
     Toks[I].setLiteralData(&Byte);
     if (I != ((Data->BinaryData.size() - 1) * 2)) {
-      Toks[I + 1].startToken();
-      Toks[I + 1].setKind(tok::comma);
-      Toks[I + 1].setLocation(Tok.getLocation());
+      Toks[I + 1] = Token::create(tok::comma, Tok.getLocation());
     }
     I += 2;
   }
@@ -3224,7 +3220,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
 
     ExprResult Expr;
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
     } else
       Expr = ParseAssignmentExpression();

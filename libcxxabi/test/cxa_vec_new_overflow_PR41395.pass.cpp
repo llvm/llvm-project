@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// This test requires the fix in http://llvm.org/PR41395 (c4225e124f9e).
-// XFAIL: using-built-library-before-llvm-9
-
 #include "cxxabi.h"
 #include <cassert>
 #include <cstddef>

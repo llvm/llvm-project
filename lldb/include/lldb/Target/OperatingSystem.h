@@ -49,10 +49,15 @@ public:
 
   virtual void ThreadWasSelected(Thread *thread) = 0;
 
+  /// RegisterContextThreadMemory gets the RegisterContext from the backing
+  /// thread when it exists; when it doesn't, the OS plugin is used through
+  /// this API.
   virtual lldb::RegisterContextSP
   CreateRegisterContextForThread(Thread *thread,
                                  lldb::addr_t reg_data_addr) = 0;
 
+  /// ThreadMemory gets the StopReason from the backing thread when it exists;
+  /// when it doesn't, the OS plugin is used through this API.
   virtual lldb::StopInfoSP CreateThreadStopReason(Thread *thread) = 0;
 
   virtual lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) {

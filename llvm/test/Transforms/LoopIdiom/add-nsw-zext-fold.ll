@@ -12,7 +12,7 @@ define void @fold_add_zext_to_sext(ptr %dst, i1 %start) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i32 [[START_EXT]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 100, [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 range(i64 0, 101) [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_EXT]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -61,9 +61,9 @@ define void @test_memset_size_can_use_info_from_guards(i32 %x, ptr %dst) {
 ; CHECK:       [[LOOP1_BACKEDGE]]:
 ; CHECK-NEXT:    br label %[[LOOP1]]
 ; CHECK:       [[LOOP2_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SUB]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SHR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[UMAX:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[UMAX]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP2]]:

@@ -481,8 +481,10 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
 
         // Prepare to tag this location with a label if we need to keep track of
-        // the location of calls/returns for BOLT address translation maps
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(Instr)) {
+        // an instruction's output address to augment the IO address map (BAT,
+        // SDT/probe address translation, or --update-debug-sections DWARF range
+        // updates).
+        if (BF.requiresPreciseAddressMap() && BC.MIB->getOffset(Instr)) {
           const uint32_t Offset = *BC.MIB->getOffset(Instr);
           if (!InstrLabel)
             InstrLabel = BC.Ctx->createTempSymbol();
@@ -492,6 +494,12 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         if (InstrLabel)
           Streamer.emitLabel(InstrLabel);
       }
+
+      // RISC-V PCREL_LO12 fixups refer to labels on their AUIPC instructions.
+      // Size estimation needs those labels too, even when omitting metadata.
+      if (BC.isRISCV() && EmitCodeOnly)
+        if (MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr))
+          Streamer.emitLabel(InstrLabel);
 
       // Emit sized NOPs via MCAsmBackend::writeNopData() interface on x86.
       // This is a workaround for invalid NOPs handling by asm/disasm layer.
@@ -579,6 +587,8 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
       if (FunctionOffset >= EndOffset)
         return;
 
+      const RelocationHandler &RH = BC.getRelocationHandler();
+
       for (auto It = Islands.Relocations.lower_bound(FunctionOffset);
            It != Islands.Relocations.end(); ++It) {
         if (It->first >= EndOffset)
@@ -591,13 +601,13 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
           FunctionOffset = Relocation.Offset;
         }
 
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: emitting constant island relocation"
-                   << " for " << BF << " at offset 0x"
-                   << Twine::utohexstr(Relocation.Offset) << " with size "
-                   << Relocation::getSizeForType(Relocation.Type) << '\n');
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting constant island relocation"
+                          << " for " << BF << " at offset 0x"
+                          << Twine::utohexstr(Relocation.Offset)
+                          << " with size " << RH.getSizeForType(Relocation.Type)
+                          << '\n');
 
-        FunctionOffset += Relocation.emit(&Streamer);
+        FunctionOffset += Relocation.emit(&Streamer, RH);
       }
 
       assert(FunctionOffset <= EndOffset && "overflow error");
@@ -1035,7 +1045,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit encoding of entries in the call site table. The format is used for the
   // call site start, length, and corresponding landing pad.
   if (!LPStartSymbol)
-    Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+    Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1);
   else
     Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
 

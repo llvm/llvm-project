@@ -174,6 +174,14 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
+    if (Feature == "+apxf" || Feature == "-apxf") {
+      char Sign = Feature[0];
+      for (const char *Sub :
+           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+        UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
+      continue;
+    }
+
     UpdatedFeaturesVec.push_back(Feature);
   }
 
@@ -281,6 +289,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+avx10.2") {
       HasAVX10_2 = true;
       HasFullBFloat16 = true;
+    } else if (Feature == "+avx10v2aux") {
+      HasAVX10_V2_AUX = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -840,6 +850,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX10_2__");
     Builder.defineMacro("__AVX10_2_512__");
   }
+  if (HasAVX10_V2_AUX)
+    Builder.defineMacro("__AVX10_V2_AUX__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -1090,6 +1102,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
+      .Case("avx10v2aux", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1184,6 +1197,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("apxf", true)
       .Case("egpr", true)
       .Case("push2pop2", true)
       .Case("ppx", true)
@@ -1211,6 +1225,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)
+      .Case("avx10v2aux", HasAVX10_V2_AUX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
@@ -1873,5 +1888,24 @@ MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
   unsigned Align =
       WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
+  // Skip the MSVC size-based global-alignment increase under
+  // -fclang-abi-compat<=22.
+  if (!UseMSVCCompatGlobalAlign)
+    return Align;
+
   return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
+}
+
+void MicrosoftX86_64TargetInfo::adjust(DiagnosticsEngine &Diags,
+                                       LangOptions &Opts,
+                                       const TargetInfo *Aux) {
+  WindowsX86_64TargetInfo::adjust(Diags, Opts, Aux);
+  // Under -fclang-abi-compat<=22, restore the prior x86_64-windows-msvc
+  // behavior: apply the Sys V "large array" alignment increase and skip the
+  // MSVC size-based global-alignment increase.
+  if (Opts.isCompatibleWith(LangOptions::ClangABI::Ver22)) {
+    UseMSVCCompatGlobalAlign = false;
+    LargeArrayMinWidth = 128;
+    LargeArrayAlign = 128;
+  }
 }

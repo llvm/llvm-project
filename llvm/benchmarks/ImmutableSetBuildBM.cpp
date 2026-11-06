@@ -28,6 +28,10 @@ using namespace llvm;
 
 namespace {
 
+// Non-canonicalizing set (matches the dataflow analyses' usage).
+using IntSet =
+    ImmutableSet<int, ImutContainerInfo<int>, /*Canonicalize=*/false>;
+
 // A shuffled [0, N) key sequence, so the tree is built in random order.
 static std::vector<int> shuffledKeys(size_t N) {
   std::vector<int> Vals(N);
@@ -41,8 +45,8 @@ static void BM_Build(benchmark::State &State) {
   const size_t N = State.range(0);
   std::vector<int> Vals = shuffledKeys(N);
   for (auto _ : State) {
-    ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-    ImmutableSet<int> S = F.getEmptySet();
+    IntSet::Factory F;
+    IntSet S = F.getEmptySet();
     for (int V : Vals)
       S = F.add(S, V);
     benchmark::DoNotOptimize(S.getRootWithoutRetain());
@@ -54,8 +58,8 @@ static void BM_BuildRemove(benchmark::State &State) {
   const size_t N = State.range(0);
   std::vector<int> Vals = shuffledKeys(N);
   for (auto _ : State) {
-    ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-    ImmutableSet<int> S = F.getEmptySet();
+    IntSet::Factory F;
+    IntSet S = F.getEmptySet();
     for (int V : Vals)
       S = F.add(S, V);
     for (int V : Vals)

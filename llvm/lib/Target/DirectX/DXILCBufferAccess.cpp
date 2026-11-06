@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILCBufferAccess.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
@@ -41,7 +40,7 @@ static void replaceUsersOfGlobal(GlobalVariable *Global,
     U.set(Ptr);
   }
 
-  Global->removeFromParent();
+  Global->eraseFromParent();
 }
 
 static bool replaceCBufferAccesses(Module &M) {
@@ -75,7 +74,8 @@ static bool replaceCBufferAccesses(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILCBufferAccess::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILCBufferAccessPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   bool Changed = replaceCBufferAccesses(M);
 

@@ -17,3 +17,16 @@ struct X0 {
 
 template <typename... Ts>
 void defaultpack(Ts... = 0) {} // expected-error{{parameter pack cannot have a default argument}}
+
+// A lambda parameter pack whose default argument is a pack expansion
+// referencing the enclosing function's parameter pack must be diagnosed
+// without crashing.
+template <class... Types> void lambda_pack_default_arg(Types... args) {
+  // FIXME: do not produce these diagnostics. The '...' is the parameter
+  // pack's own ellipsis, not an ambiguous C-style varargs ellipsis, so the
+  // -Wambiguous-ellipsis warning and its notes should not be emitted here.
+  auto lm = [](Types... = args...) {}; // expected-error{{parameter pack cannot have a default argument}} \
+                                       // expected-warning{{'...' in this location creates a C-style varargs function}} \
+                                       // expected-note{{preceding '...' declares a function parameter pack}} \
+                                       // expected-note{{insert ',' before '...' to silence this warning}}
+}

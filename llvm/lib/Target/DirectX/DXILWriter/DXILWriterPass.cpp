@@ -12,8 +12,7 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
-#include "llvm/ADT/DenseMap.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -29,14 +28,17 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-extern cl::opt<bool> EmbedDebug;
-extern cl::opt<std::string> PdbDebugPath;
+cl::opt<bool> dxil::SourceInDebugModule(
+    "dx-source-in-debug-module",
+    cl::desc("Embed source code into debug module on DirectX target"),
+    cl::init(false));
 
 namespace {
 class WriteDXILPass : public llvm::ModulePass {
@@ -55,8 +57,7 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -160,15 +161,16 @@ class EmbedDXILPass : public llvm::ModulePass {
 
     if (HasDebugInfo) {
       if (WriteDebug) {
-        // Replace dx.source metadata nodes with stubs.
-        // TODO: Add /Qsource_in_debug_module flag to enable/disable this.
-        LLVMContext &Ctx = M.getContext();
-        MDString *EmptyString = MDString::get(Ctx, "");
-        replaceNamedMetadataArray(M, "dx.source.contents",
-                                  {EmptyString, EmptyString});
-        replaceNamedMetadataArray(M, "dx.source.defines", {});
-        replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
-        replaceNamedMetadataArray(M, "dx.source.args", {});
+        if (!SourceInDebugModule) {
+          // Replace dx.source metadata nodes with stubs.
+          LLVMContext &Ctx = M.getContext();
+          MDString *EmptyString = MDString::get(Ctx, "");
+          replaceNamedMetadataArray(M, "dx.source.contents",
+                                    {EmptyString, EmptyString});
+          replaceNamedMetadataArray(M, "dx.source.defines", {});
+          replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
+          replaceNamedMetadataArray(M, "dx.source.args", {});
+        }
       } else {
         // If we have an ILDB part, strip DXIL from all debug info.
         StripDebugInfo(M);
@@ -198,8 +200,7 @@ class EmbedDXILPass : public llvm::ModulePass {
           "Shader modules with debug info must have !DICompileUnit metadata.");
 #endif
     }
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return Data;
   }
 
@@ -231,14 +232,11 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
-      EmbedDebug = true;
+    if (SlimDebug && EmbedDebug)
+      reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(
           "Missing debug info for embedding into the container");
-    // TODO: move this check to DXContainerPDB.cpp when /Zs is implemented.
     if (!HasDebugInfo && !PdbDebugPath.empty())
       reportFatalUsageError("Missing debug info for writing to the PDB file");
 

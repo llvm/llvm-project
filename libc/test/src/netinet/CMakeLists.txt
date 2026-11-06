@@ -1,13 +1,17 @@
-add_custom_target(libc_netinet_unittests)
+add_libc_testsuite(libc-netinet-tests)
 
-add_libc_unittest(
+add_subdirectory(ether)
+
+add_libc_test(
   in_test
   SUITE
-    libc_netinet_unittests
+    libc-netinet-tests
   SRCS
     in_test.cpp
   DEPENDS
     libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_group_req
+    libc.hdr.types.struct_group_source_req
     libc.hdr.types.struct_in6_addr
     libc.hdr.types.struct_ip_mreq
     libc.hdr.types.struct_ip_mreq_source
@@ -23,10 +27,10 @@ add_libc_unittest(
     libc.src.string.memcmp
 )
 
-add_libc_unittest(
+add_libc_test(
   udp_test
   SUITE
-    libc_netinet_unittests
+    libc-netinet-tests
   SRCS
     udp_test.cpp
   DEPENDS

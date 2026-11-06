@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InlineSpiller.h"
 #include "AllocationOrder.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -216,8 +217,7 @@ private:
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
-  void markValueUsed(LiveInterval*, VNInfo*);
-  bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
+  void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
   void reMaterializeAll();
@@ -226,7 +226,7 @@ private:
   bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
   void insertReload(Register VReg, SlotIndex, MachineBasicBlock::iterator MI);
-  void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI);
+  void insertSpill(Register VReg, MachineBasicBlock::iterator MI);
 
   void spillAroundUses(Register Reg);
   void spillAll();
@@ -454,6 +454,34 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  MachineBasicBlock *MBB = DefMBB;
+  MachineBasicBlock::iterator MII;
+  if (SrcVNI->isPHIDef())
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+  else {
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+    assert(DefMI && "Defining instruction disappeared");
+    MII = DefMI;
+    ++MII;
+  }
+
+  // When the def is a PHI, the store may be inserted after the prologue
+  // instructions. In that case, the segment may need to be extended to the
+  // store (see below). Do not hoist if there is an interference between the end
+  // of the segment and the insertion point.
+  if (SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
+    // Here, MII points to the instruction before which the store will be
+    // inserted. Using that instruction's base index is a safe upper bound for
+    // the interference check.
+    SlotIndex InsertIdx = MII == MBB->end()
+                              ? LIS.getMBBEndIdx(MBB)
+                              : LIS.getInstructionIndex(*MII).getBaseIndex();
+    if (SrcQ.endPoint() < InsertIdx &&
+        Matrix->checkInterference(SrcQ.endPoint(), InsertIdx,
+                                  VRM.getPhys(SrcReg)))
+      return false;
+  }
+
   // Conservatively extend the stack slot range to the range of the original
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
@@ -468,16 +496,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // any later spills of the same value.
   eliminateRedundantSpills(SrcLI, SrcVNI);
 
-  MachineBasicBlock *MBB = LIS.getMBBFromIndex(SrcVNI->def);
-  MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
-    assert(DefMI && "Defining instruction disappeared");
-    MII = DefMI;
-    ++MII;
-  }
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
@@ -497,7 +515,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   }
 
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (MIS.begin() == MII)
     HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
@@ -601,8 +619,8 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
-bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
-                                                     MachineInstr &MI) {
+bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg,
+                                            const MachineInstr &MI) {
   if (!RestrictStatepointRemat)
     return true;
   // Here's a quick explanation of the problem we're trying to handle here:
@@ -628,7 +646,7 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
   for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                 EndIdx = MI.getNumOperands();
        Idx < EndIdx; ++Idx) {
-    MachineOperand &MO = MI.getOperand(Idx);
+    const MachineOperand &MO = MI.getOperand(Idx);
     if (MO.isReg() && MO.getReg() == VReg)
       return false;
   }
@@ -800,10 +818,8 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Replace operands
   for (const auto &OpPair : Ops) {
     MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-    if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg())
       MO.setReg(NewVReg);
-      MO.setIsKill();
-    }
   }
   LLVM_DEBUG(dbgs() << "\t        " << UseIdx << '\t' << MI << '\n');
 
@@ -1217,7 +1233,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   else if (Ops.front().second == 0) {
     ++NumSpills;
     // If there is only 1 store instruction is required for spill, add it
-    // to mergeable list. In X86 AMX, 2 intructions are required to store.
+    // to mergeable list. In X86 AMX, 2 instructions are required to store.
     // We disable the merge for this case.
     if (std::distance(MIS.begin(), MIS.end()) <= 1)
       HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
@@ -1256,8 +1272,8 @@ static bool isRealSpill(const MachineInstr &Def) {
 }
 
 /// insertSpill - Insert a spill of NewVReg after MI.
-void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
-                                 MachineBasicBlock::iterator MI) {
+void InlineSpiller::insertSpill(Register NewVReg,
+                                MachineBasicBlock::iterator MI) {
   // Spill are not terminators, so inserting spills after terminators will
   // violate invariants in MachineVerifier.
   assert(!MI->isTerminator() && "Inserting a spill after a terminator");
@@ -1268,7 +1284,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   bool IsRealSpill = isRealSpill(*MI);
 
   if (IsRealSpill)
-    TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
+    TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, false, StackSlot,
                             MRI.getRegClass(NewVReg), Register());
   else
     // Don't spill undef value.
@@ -1276,7 +1292,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
     // uninitialized is a viable option and it saves code size and
     // run time.
     BuildMI(MBB, SpillBefore, MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
-        .addReg(NewVReg, getKillRegState(isKill));
+        .addReg(NewVReg);
 
   MachineBasicBlock::iterator Spill = std::next(MI);
   LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
@@ -1287,7 +1303,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
       dumpMachineInstrRangeWithSlotIndex(Spill, MIS.end(), LIS, "spill"));
   ++NumSpills;
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (IsRealSpill && std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);
@@ -1372,20 +1388,15 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     for (const auto &OpPair : Ops) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
-      if (MO.isUse()) {
-        if (!OpPair.first->isRegTiedToDefOperand(OpPair.second))
-          MO.setIsKill();
-      } else {
-        if (!MO.isDead())
-          hasLiveDef = true;
-      }
+      if (MO.isDef() && !MO.isDead())
+        hasLiveDef = true;
     }
     LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << MI << '\n');
 
     // FIXME: Use a second vreg if instruction has no tied ops.
     if (RI.Writes)
       if (hasLiveDef)
-        insertSpill(NewVReg, true, &MI);
+        insertSpill(NewVReg, &MI);
   }
 }
 

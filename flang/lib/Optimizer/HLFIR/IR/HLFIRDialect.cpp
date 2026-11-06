@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SmallVector.h"
@@ -227,6 +226,25 @@ mlir::Type hlfir::getExprType(mlir::Type variableType) {
   }
   return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
                               isPolymorphic);
+}
+
+mlir::Type hlfir::getVariableType(hlfir::ExprType exprType) {
+  const mlir::Type dataType{hlfir::getFortranElementOrSequenceType(exprType)};
+  // Polymorphic: fir.class<T>.
+  if (exprType.isPolymorphic())
+    return fir::ClassType::get(dataType);
+  // Non-polymorphic arrays need a box to carry shape information.
+  if (exprType.isArray())
+    return fir::BoxType::get(dataType);
+  // Scalar dynamic-length character: fir.boxchar<kind>.
+  if (auto charTy{mlir::dyn_cast<fir::CharacterType>(dataType)})
+    if (charTy.hasDynamicLen())
+      return fir::BoxCharType::get(dataType.getContext(), charTy.getFKind());
+  // Scalar derived type with type parameters: fir.box<T>.
+  if (fir::isRecordWithTypeParameters(dataType))
+    return fir::BoxType::get(dataType);
+  // Simple scalar: fir.ref<T>.
+  return fir::ReferenceType::get(dataType);
 }
 
 bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {

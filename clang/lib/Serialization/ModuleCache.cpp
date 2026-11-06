@@ -8,6 +8,7 @@
 
 #include "clang/Serialization/ModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -220,10 +221,15 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
 }
 
 namespace {
+
+static AtomicLineLogger NoOpLogger;
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
+  explicit CrossProcessModuleCache()
+      : ModuleCache(NoOpLogger), InMemory(NoOpLogger) {}
+
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);

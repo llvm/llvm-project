@@ -14,12 +14,16 @@
 #define FORTRAN_LOWER_OPENMP_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cinttypes>
 
 namespace mlir {
 class Operation;
 class Location;
+class Type;
+class Value;
+class OpBuilder;
 namespace omp {
 enum class DeclareTargetDeviceType : uint32_t;
 enum class DeclareTargetCaptureClause : uint32_t;
@@ -31,6 +35,10 @@ class FirOpBuilder;
 } // namespace fir
 
 namespace Fortran {
+namespace evaluate {
+class ProcedureRef;
+} // namespace evaluate
+
 namespace parser {
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
@@ -103,6 +111,49 @@ void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 void materializeOpenMPDeclareMappers(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     const Fortran::semantics::Scope *scope = nullptr);
+
+// Mark declare target globals and functions that were imported from a
+// module file.
+void markOpenMPImportedDeclareTargets(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx);
+
+namespace omp {
+bool isDispatchTargetCall(const Fortran::evaluate::ProcedureRef &proc,
+                          AbstractConverter &converter);
+
+/// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
+/// that best matches the enclosing OpenMP context, or nullptr if none matches.
+/// \p base is expected to have variant entries. When \p excludeDispatchContext
+/// is set, the innermost enclosing `dispatch` construct is removed from the
+/// context before matching, implementing the `nocontext` clause.
+const Fortran::semantics::Symbol *
+resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
+                            AbstractConverter &converter,
+                            bool excludeDispatchContext = false);
+
+/// Return the i1 `novariants` value of an enclosing `omp.dispatch`, or a null
+/// Value if there is none.
+mlir::Value getEnclosingDispatchNovariants(mlir::OpBuilder &builder);
+
+/// Return the i1 `nocontext` value of an enclosing `omp.dispatch`, or a null
+/// Value if there is none.
+mlir::Value getEnclosingDispatchNocontext(mlir::OpBuilder &builder);
+} // namespace omp
+
+// Materialize (idempotently) the omp.declare_reduction op for one already-
+// resolved imported user reduction and one requested element type, at module
+// scope, for separate compilation. Only the per-type instance whose scoped op
+// name equals \p requestedOpName is emitted, so a multi-type declaration's
+// other listed types (and any unsupported sibling type) are left alone. No-op
+// if the requested type's shape is not lowerable (a combiner-in-clause form or
+// an unsupported element type) or the op already exists. Safe to call
+// mid-function (uses createDeclareReductionHelper's InsertionGuard). \p
+// isByRef selects the by-ref/by-value naming variant used by the clause.
+void materializeUserReduction(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    const Fortran::semantics::Symbol &resolvedReduction,
+    llvm::StringRef requestedOpName, mlir::Type requestedType, bool isByRef);
 
 } // namespace lower
 } // namespace Fortran

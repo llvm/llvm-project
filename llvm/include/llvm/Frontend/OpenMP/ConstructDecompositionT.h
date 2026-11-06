@@ -78,12 +78,14 @@ enum struct ErrorCode : int {
 // ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.
 //   This is the clause representation in the code using this infrastructure.
 //
-// HelperType: A class that implements two member functions:
+// HelperType: A class that implements three member functions:
 //   // Return the base object of the given object, if any.
 //   std::optional<Object> getBaseObject(const Object &object) const
 //   // Return the iteration variable of the outermost loop associated
 //   // with the construct being worked on, if any.
 //   std::optional<Object> getLoopIterVar() const
+//   // Is clause C allowed on directive D in version V.
+//   bool isClauseAllowedOnDirective(Clause C, Directive D, Version V) const
 
 template <typename ClauseType, typename HelperType>
 struct ConstructDecompositionT {
@@ -97,7 +99,7 @@ struct ConstructDecompositionT {
 
   using ClauseSet = std::unordered_set<const ClauseTy *>;
 
-  ConstructDecompositionT(uint32_t ver, HelperType &helper,
+  ConstructDecompositionT(llvm::omp::Version ver, HelperType &helper,
                           llvm::omp::Directive dir,
                           llvm::ArrayRef<ClauseTy> clauses)
       : version(ver), helper(helper), inputDirective(dir) {
@@ -263,7 +265,7 @@ private:
   applyClause(const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
               const ClauseTy *);
 
-  uint32_t version;
+  llvm::omp::Version version;
   HelperType &helper;
   llvm::omp::Directive inputDirective;
   tomp::ListT<const ClauseTy *> inputClauses;
@@ -277,7 +279,7 @@ private:
 
 // Deduction guide
 template <typename ClauseType, typename HelperType>
-ConstructDecompositionT(uint32_t, HelperType &, llvm::omp::Directive,
+ConstructDecompositionT(llvm::omp::Version, HelperType &, llvm::omp::Directive,
                         llvm::ArrayRef<ClauseType>)
     -> ConstructDecompositionT<ClauseType, HelperType>;
 
@@ -398,8 +400,8 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *input) {
-  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
-    return llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version);
+  auto unique = ::detail::find_unique(leafs, [=](const auto &leaf) {
+    return helper.isClauseAllowedOnDirective(input->id, leaf.id, version);
   });
 
   if (unique != leafs.end()) {
@@ -419,7 +421,7 @@ bool ConstructDecompositionT<C, H>::applyToFirst(
     return false;
 
   for (auto &leaf : range) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     leaf.clauses.push_back(input);
     return true;
@@ -447,7 +449,7 @@ bool ConstructDecompositionT<C, H>::applyIf(const ClauseTy *input,
                                             Predicate shouldApply) {
   bool applied = false;
   for (auto &leaf : leafs) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     if (!shouldApply(leaf))
       continue;
@@ -612,17 +614,20 @@ bool ConstructDecompositionT<C, H>::applyClause(
   }
 
   // [5.2:340:8]
-  auto findWorksharing = [&]() {
+  // Match only a worksharing construct that accepts firstprivate; "workshare"
+  // does not, so it falls through to "parallel" per [5.2:340:10].
+  auto findWorksharingAcceptingFirstprivate = [&]() {
     auto worksharing = getWorksharing();
     for (auto &leaf : leafs) {
       auto found = llvm::find(worksharing, leaf.id);
-      if (found != std::end(worksharing))
+      if (found != std::end(worksharing) &&
+          helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
         return &leaf;
     }
     return static_cast<typename decltype(leafs)::value_type *>(nullptr);
   };
 
-  auto dirWorksharing = findWorksharing();
+  auto dirWorksharing = findWorksharingAcceptingFirstprivate();
   if (dirWorksharing != nullptr) {
     dirWorksharing->clauses.push_back(input);
     applied = true;
@@ -860,8 +865,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
     // which will fail, since "simd" does not allow it. Add the firstprivate
     // only if some leaf allows it.
     bool allowed = llvm::any_of(leafs, [this](const LeafReprInternal &leaf) {
-      return llvm::omp::isAllowedClauseForDirective(
-          leaf.id, llvm::omp::Clause::OMPC_firstprivate, version);
+      return helper.isClauseAllowedOnDirective(
+          llvm::omp::Clause::OMPC_firstprivate, leaf.id, version);
     });
     if (allowed) {
       auto *firstp = makeClause(
@@ -1055,7 +1060,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.
   for (auto &leaf : llvm::reverse(leafs)) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     // Found a leaf that allows this clause. Keep track of this for better
     // error reporting.

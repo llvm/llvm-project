@@ -330,6 +330,12 @@ void runtime_only_test_case() {
     auto const expected = triangular_sum(data);
     check(data, 0, std::plus<long>(), static_cast<long>(expected));
   }
+
+  {
+    auto const data = std::vector<int>{1, 2, 3, 4};
+    auto concat     = [](std::string s, int x) { return s + ':' + std::to_string(x); };
+    check(data, "A", concat, std::string{"A:1:2:3:4"});
+  }
 }
 
 int main(int, char**) {

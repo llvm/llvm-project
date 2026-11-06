@@ -9,18 +9,12 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATION_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATION_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationDialect.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
-
-//===----------------------------------------------------------------------===//
-// Bufferization Dialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Bufferization/IR/BufferizationOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Operations
