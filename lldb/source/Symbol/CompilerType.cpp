@@ -325,7 +325,7 @@ bool CompilerType::HasPointerAuthQualifier() const {
   return false;
 }
 
-std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+std::optional<lldb::addr_space_t> CompilerType::GetTargetAddressSpace() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetTargetAddressSpace(m_type);
@@ -702,12 +702,12 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
-CompilerType
-CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+llvm::Expected<CompilerType>
+CompilerType::AddAddressSpaceModifier(lldb::addr_space_t address_space) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
-  return CompilerType();
+  return llvm::createStringError(std::errc::invalid_argument, "invalid type");
 }
 
 CompilerType CompilerType::GetLValueReferenceType() const {

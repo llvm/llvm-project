@@ -1704,6 +1704,38 @@ std::optional<addr_t> ValueObject::GetStrippedPointerValue(addr_t address) {
   return std::nullopt;
 }
 
+/// Returns the target address space ID of the pointee of \p type, or
+/// LLDB_DEFAULT_ADDRESS_SPACE_ID.
+static lldb::addr_space_t GetPointeeAddressSpace(const CompilerType &type) {
+  CompilerType pointee;
+  if (!type.IsPointerOrReferenceType(&pointee))
+    return LLDB_DEFAULT_ADDRESS_SPACE_ID;
+  return pointee.GetTargetAddressSpace().value_or(
+      LLDB_DEFAULT_ADDRESS_SPACE_ID);
+}
+
+ValueObject::AddrAndType
+ValueObject::MapPointerToLoadAddress(AddrAndType pointer) {
+  if (pointer.address == LLDB_INVALID_ADDRESS ||
+      pointer.type != eAddressTypeLoad)
+    return pointer;
+  CompilerType type = GetCompilerType();
+  if (!type.IsPointerOrReferenceType())
+    return pointer;
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  if (Process *process = exe_ctx.GetProcessPtr()) {
+    llvm::Expected<ProcessAddress> load_addr = process->PointerToLoadAddress(
+        pointer.address, GetPointeeAddressSpace(type));
+    if (load_addr)
+      pointer.address = load_addr->GetValue();
+    else {
+      llvm::consumeError(load_addr.takeError());
+      pointer.address = LLDB_INVALID_ADDRESS;
+    }
+  }
+  return pointer;
+}
+
 ValueObject::AddrAndType ValueObject::GetPointerValue() {
   if (!UpdateValueIfNeeded(false))
     return {};
@@ -1712,14 +1744,16 @@ ValueObject::AddrAndType ValueObject::GetPointerValue() {
   case Value::ValueType::Invalid:
     return {};
   case Value::ValueType::Scalar:
-    return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
-            GetAddressTypeOfChildren()};
+    return MapPointerToLoadAddress(
+        {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+         GetAddressTypeOfChildren()});
 
   case Value::ValueType::HostAddress:
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
-    return {m_data.GetAddress(&data_offset), GetAddressTypeOfChildren()};
+    return MapPointerToLoadAddress(
+        {m_data.GetAddress(&data_offset), GetAddressTypeOfChildren()});
   }
   }
 
@@ -3001,6 +3035,22 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         std::string name(1, '&');
         name.append(m_name.AsCString(""));
         ExecutionContext exe_ctx(GetExecutionContextRef());
+
+        // The resulting pointer holds the target's pointer encoding of addr.
+        if (address_type == eAddressTypeLoad) {
+          if (Process *process = exe_ctx.GetProcessPtr()) {
+            llvm::Expected<ProcessAddress> ptr_addr =
+                process->LoadAddressToPointer(
+                    addr, GetCompilerType().GetTargetAddressSpace().value_or(
+                              LLDB_DEFAULT_ADDRESS_SPACE_ID));
+            if (ptr_addr)
+              addr = ptr_addr->GetValue();
+            else {
+              error = Status::FromError(ptr_addr.takeError());
+              return ValueObjectSP();
+            }
+          }
+        }
 
         lldb::DataBufferSP buffer(
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
