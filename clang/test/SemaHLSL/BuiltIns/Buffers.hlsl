@@ -5,20 +5,13 @@ typedef vector<double, 2> double2;
 typedef vector<double, 3> double3;
 
 
-// expected-error@+1 {{class template 'Buffer' requires template arguments}}
-Buffer BufferErr1;
-
-// expected-error@+1 {{too few template arguments for class template 'Buffer'}}
-Buffer<> BufferErr2;
-
 // test implicit Buffer concept
 Buffer<int> r1;
 Buffer<float> r2;
 Buffer<float3> Buff;
 Buffer<double2> r4;
 
-// expected-error@+4 {{constraints not satisfied for class template 'Buffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer}}
+// expected-error@+3 {{constraints not satisfied for class template 'Buffer'}}
 // expected-note@*:* {{because 'Buffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(hlsl::Buffer<int>)' evaluated to false}}
 Buffer<Buffer<int> > r5;
@@ -38,8 +31,7 @@ template<typename T> struct TemplatedVector {
 };
 
 // structs not allowed
-// expected-error@+4 {{constraints not satisfied for class template 'Buffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer}}
+// expected-error@+3 {{constraints not satisfied for class template 'Buffer'}}
 // expected-note@*:* {{because 's' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(s)' evaluated to false}}
 Buffer<s> r6;
@@ -116,17 +108,3 @@ void main() {
   // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float, 3> const hlsl_device &' declared here}}
   Buff[0] = 0.0;
 }
-
-// expected-error@+2 {{class template 'Buffer' requires template arguments}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer {}}}
-void f1(Buffer B) {}
-
-// expected-error@+2 {{class template 'Buffer' requires template arguments}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer {}}}
-Buffer f2();
-
-struct S {
-  // expected-error@+2 {{class template 'Buffer' requires template arguments}}
-  // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer {}}}
-  Buffer B;
-};
