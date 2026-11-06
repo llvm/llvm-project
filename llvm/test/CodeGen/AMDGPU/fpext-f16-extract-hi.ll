@@ -16,11 +16,9 @@ define amdgpu_kernel void @fpext_extract_hi(ptr addrspace(1) %out, <4 x half> %x
 ; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1150-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1150-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
-; GFX1150-NEXT:    s_mov_b32 s4, 16
-; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1150-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
 ; GFX1150-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1150-NEXT:    s_cvt_f32_f16 s2, s2
+; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1150-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1150-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1150-NEXT:    s_endpgm
@@ -34,11 +32,9 @@ define amdgpu_kernel void @fpext_extract_hi(ptr addrspace(1) %out, <4 x half> %x
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1200-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
-; GFX1200-NEXT:    s_mov_b32 s4, 16
-; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
 ; GFX1200-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1200-NEXT:    s_cvt_f32_f16 s2, s2
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1200-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1200-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1200-NEXT:    s_endpgm
@@ -56,12 +52,9 @@ define amdgpu_kernel void @fpext_extract_hi(ptr addrspace(1) %out, <4 x half> %x
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 s4, 16
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
 ; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1250-NEXT:    s_cvt_f32_f16 s2, s2
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -87,13 +80,13 @@ define amdgpu_kernel void @fpext_shift_hi(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1150-NEXT:    s_load_b64 s[2:3], s[2:3], 0x10
 ; GFX1150-NEXT:    s_mov_b32 s6, 16
 ; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1150-NEXT:    s_lshr_b64 s[2:3], s[2:3], s6
-; GFX1150-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1150-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1150-NEXT:    s_lshr_b64 s[6:7], s[2:3], s6
+; GFX1150-NEXT:    v_mov_b32_e32 v1, s6
+; GFX1150-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1150-NEXT:    global_store_b64 v0, v[1:2], s[4:5] dlc
 ; GFX1150-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1150-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1150-NEXT:    s_cvt_f32_f16 s2, s2
+; GFX1150-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1150-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1150-NEXT:    s_endpgm
@@ -113,9 +106,9 @@ define amdgpu_kernel void @fpext_shift_hi(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1200-NEXT:    s_load_b64 s[2:3], s[2:3], 0x10
 ; GFX1200-NEXT:    s_mov_b32 s6, 16
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_lshr_b64 s[2:3], s[2:3], s6
-; GFX1200-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1200-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1200-NEXT:    s_lshr_b64 s[6:7], s[2:3], s6
+; GFX1200-NEXT:    v_mov_b32_e32 v1, s6
+; GFX1200-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
@@ -124,8 +117,7 @@ define amdgpu_kernel void @fpext_shift_hi(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1200-NEXT:    global_store_b64 v0, v[1:2], s[4:5] scope:SCOPE_SYS
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1200-NEXT:    s_cvt_f32_f16 s2, s2
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1200-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1200-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1200-NEXT:    s_endpgm
@@ -150,13 +142,13 @@ define amdgpu_kernel void @fpext_shift_hi(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[2:3], 0x10 nv
 ; GFX1250-NEXT:    s_mov_b32 s6, 16
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b64 s[2:3], s[2:3], s6
-; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-NEXT:    s_lshr_b64 s[6:7], s[2:3], s6
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v0, v[2:3], s[4:5] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1250-NEXT:    s_cvt_f32_f16 s2, s2
+; GFX1250-NEXT:    s_cvt_hi_f32_f16 s2, s2
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -183,20 +175,17 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1150-NEXT:    global_load_b64 v[2:3], v0, s[2:3] glc dlc
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v1, v2
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1150-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
 ; GFX1150-NEXT:    s_mov_b32 s2, 48
 ; GFX1150-NEXT:    v_lshrrev_b64 v[4:5], s2, v[2:3]
 ; GFX1150-NEXT:    ; kill: def $vgpr4 killed $vgpr4 killed $vgpr4_vgpr5 killed $exec
 ; GFX1150-NEXT:    v_cvt_f32_f16_e64 v5, v4.l
 ; GFX1150-NEXT:    s_mov_b32 s2, 32
-; GFX1150-NEXT:    v_lshrrev_b64 v[6:7], s2, v[2:3]
-; GFX1150-NEXT:    v_mov_b32_e32 v4, v6
-; GFX1150-NEXT:    v_cvt_f32_f16_e64 v6, v4.l
-; GFX1150-NEXT:    s_mov_b32 s2, 16
 ; GFX1150-NEXT:    v_lshrrev_b64 v[2:3], s2, v[2:3]
 ; GFX1150-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $vgpr2_vgpr3 killed $exec
-; GFX1150-NEXT:    v_cvt_f32_f16_e64 v7, v2.l
-; GFX1150-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v6, v2.l
 ; GFX1150-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; GFX1150-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
 ; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
@@ -221,6 +210,8 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1200-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v2
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
 ; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, 48
 ; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[4:5], s2, v[2:3]
@@ -228,15 +219,9 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v5, v4.l
 ; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, 32
 ; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[2:3]
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v4, v6
-; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v4.l
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, 16
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[2:3], s2, v[2:3]
 ; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $vgpr2_vgpr3 killed $exec
-; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v2.l
-; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v2.l
 ; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
 ; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
@@ -261,6 +246,9 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1200-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v2
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v1, v1
 ; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, 48
 ; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[4:5], s2, v[2:3]
@@ -268,15 +256,9 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v5, v4
 ; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, 32
 ; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[2:3]
-; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v4, v6
-; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v4
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, 16
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[2:3], s2, v[2:3]
 ; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $vgpr2_vgpr3 killed $exec
-; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v2
-; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v2
 ; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
 ; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
@@ -304,20 +286,17 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1250-TRUE16-NEXT:    global_load_b64 v[4:5], v0, s[2:3] scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v4
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v2, v1.l
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, 48
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[4:5]
-; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v6
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[8:9], s2, v[4:5]
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v8
 ; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, 32
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[4:5]
-; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v6
-; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v3.l
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, 16
 ; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[4:5], s2, v[4:5]
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v4
-; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v3.l
-; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v3.l
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
 ; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
@@ -345,20 +324,18 @@ define amdgpu_kernel void @fpext_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1250-FAKE16-NEXT:    global_load_b64 v[4:5], v0, s[2:3] scope:SCOPE_SYS
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v4
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v2, v1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, 48
-; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[4:5]
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v6
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[8:9], s2, v[4:5]
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v8
 ; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v1, v1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, 32
-; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[6:7], s2, v[4:5]
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v3, v6
-; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v3
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, 16
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[4:5], s2, v[4:5]
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v3, v4
-; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v3
-; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v3
 ; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
 ; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
@@ -384,70 +361,63 @@ define amdgpu_kernel void @fpext_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1150-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1150-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
 ; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1150-NEXT:    global_load_b128 v[1:4], v0, s[2:3] glc dlc
+; GFX1150-NEXT:    global_load_b128 v[7:10], v0, s[2:3] glc dlc
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; GFX1150-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1150-NEXT:    v_readfirstlane_b32 s12, v3
-; GFX1150-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
-; GFX1150-NEXT:    s_mov_b32 s13, s2
-; GFX1150-NEXT:    s_mov_b32 s2, s12
-; GFX1150-NEXT:    s_cvt_f32_f16 s5, s2
-; GFX1150-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1150-NEXT:    v_readfirstlane_b32 s10, v1
-; GFX1150-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GFX1150-NEXT:    s_mov_b32 s11, s2
-; GFX1150-NEXT:    s_mov_b32 s2, s10
-; GFX1150-NEXT:    s_cvt_f32_f16 s8, s2
-; GFX1150-NEXT:    s_mov_b32 s6, 48
-; GFX1150-NEXT:    s_lshr_b64 s[2:3], s[12:13], s6
-; GFX1150-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1150-NEXT:    s_cvt_f32_f16 s2, s2
-; GFX1150-NEXT:    s_mov_b32 s7, 32
-; GFX1150-NEXT:    s_lshr_b64 s[14:15], s[12:13], s7
-; GFX1150-NEXT:    s_mov_b32 s3, s14
-; GFX1150-NEXT:    s_cvt_f32_f16 s3, s3
-; GFX1150-NEXT:    s_mov_b32 s9, 16
-; GFX1150-NEXT:    s_lshr_b64 s[12:13], s[12:13], s9
-; GFX1150-NEXT:    s_mov_b32 s4, s12
-; GFX1150-NEXT:    s_cvt_f32_f16 s4, s4
-; GFX1150-NEXT:    s_lshr_b64 s[12:13], s[10:11], s6
-; GFX1150-NEXT:    s_mov_b32 s6, s12
-; GFX1150-NEXT:    s_cvt_f32_f16 s6, s6
-; GFX1150-NEXT:    s_lshr_b64 s[12:13], s[10:11], s7
-; GFX1150-NEXT:    s_mov_b32 s7, s12
-; GFX1150-NEXT:    s_cvt_f32_f16 s7, s7
-; GFX1150-NEXT:    s_lshr_b64 s[10:11], s[10:11], s9
-; GFX1150-NEXT:    s_mov_b32 s9, s10
-; GFX1150-NEXT:    s_cvt_f32_f16 s16, s9
-; GFX1150-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-; GFX1150-NEXT:    s_mov_b32 s9, s16
-; GFX1150-NEXT:    s_mov_b32 s10, s7
-; GFX1150-NEXT:    s_mov_b32 s11, s6
-; GFX1150-NEXT:    s_mov_b32 s12, s5
-; GFX1150-NEXT:    s_mov_b32 s13, s4
-; GFX1150-NEXT:    s_mov_b32 s14, s3
-; GFX1150-NEXT:    s_mov_b32 s15, s2
-; GFX1150-NEXT:    s_mov_b32 s2, s15
-; GFX1150-NEXT:    s_mov_b32 s3, s14
-; GFX1150-NEXT:    s_mov_b32 s4, s13
-; GFX1150-NEXT:    s_mov_b32 s5, s12
-; GFX1150-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1150-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1150-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1150-NEXT:    v_mov_b32_e32 v5, s2
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1150-NEXT:    v_mov_b32_e32 v5, v9
+; GFX1150-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
+; GFX1150-NEXT:    v_mov_b32_e32 v6, v1
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v3, v1.h
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v4, v1.l
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v8
+; GFX1150-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1150-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10 killed $exec
+; GFX1150-NEXT:    v_mov_b32_e32 v10, v1
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v8, v1.l
+; GFX1150-NEXT:    s_mov_b32 s3, 48
+; GFX1150-NEXT:    v_lshrrev_b64 v[1:2], s3, v[5:6]
+; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
+; GFX1150-NEXT:    s_mov_b32 s2, 32
+; GFX1150-NEXT:    v_lshrrev_b64 v[5:6], s2, v[5:6]
+; GFX1150-NEXT:    v_mov_b32_e32 v2, v5
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v2, v2.l
+; GFX1150-NEXT:    v_lshrrev_b64 v[5:6], s3, v[9:10]
+; GFX1150-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6 killed $exec
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v5, v5.l
+; GFX1150-NEXT:    v_lshrrev_b64 v[9:10], s2, v[9:10]
+; GFX1150-NEXT:    v_mov_b32_e32 v6, v9
+; GFX1150-NEXT:    v_cvt_f32_f16_e64 v6, v6.l
+; GFX1150-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
+; GFX1150-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
+; GFX1150-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
+; GFX1150-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GFX1150-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1150-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1150-NEXT:    v_mov_b32_e32 v11, v5
+; GFX1150-NEXT:    v_mov_b32_e32 v12, v4
+; GFX1150-NEXT:    v_mov_b32_e32 v13, v3
+; GFX1150-NEXT:    v_mov_b32_e32 v14, v2
+; GFX1150-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1150-NEXT:    v_mov_b32_e32 v5, v15
+; GFX1150-NEXT:    v_mov_b32_e32 v6, v14
+; GFX1150-NEXT:    v_mov_b32_e32 v7, v13
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v12
 ; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
 ; GFX1150-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX1150-NEXT:    v_mov_b32_e32 v3, v6
 ; GFX1150-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX1150-NEXT:    global_store_b128 v0, v[1:4], s[0:1] offset:16
-; GFX1150-NEXT:    s_mov_b32 s2, s11
-; GFX1150-NEXT:    s_mov_b32 s3, s10
-; GFX1150-NEXT:    s_mov_b32 s4, s9
-; GFX1150-NEXT:    s_mov_b32 s5, s8
-; GFX1150-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1150-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1150-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1150-NEXT:    v_mov_b32_e32 v5, s2
+; GFX1150-NEXT:    v_mov_b32_e32 v5, v11
+; GFX1150-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1150-NEXT:    v_mov_b32_e32 v7, v9
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v8
 ; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
 ; GFX1150-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX1150-NEXT:    v_mov_b32_e32 v3, v6
@@ -455,176 +425,323 @@ define amdgpu_kernel void @fpext_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1150-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
 ; GFX1150-NEXT:    s_endpgm
 ;
-; GFX1200-LABEL: fpext_v8f16:
-; GFX1200:       ; %bb.0:
-; GFX1200-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GFX1200-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1200-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
-; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_load_b128 v[1:4], v0, s[2:3] scope:SCOPE_SYS
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1200-NEXT:    v_readfirstlane_b32 s12, v3
-; GFX1200-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
-; GFX1200-NEXT:    s_mov_b32 s13, s2
-; GFX1200-NEXT:    s_mov_b32 s2, s12
-; GFX1200-NEXT:    s_cvt_f32_f16 s5, s2
-; GFX1200-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1200-NEXT:    v_readfirstlane_b32 s10, v1
-; GFX1200-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GFX1200-NEXT:    s_mov_b32 s11, s2
-; GFX1200-NEXT:    s_mov_b32 s2, s10
-; GFX1200-NEXT:    s_cvt_f32_f16 s8, s2
-; GFX1200-NEXT:    s_mov_b32 s6, 48
-; GFX1200-NEXT:    s_lshr_b64 s[2:3], s[12:13], s6
-; GFX1200-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1200-NEXT:    s_cvt_f32_f16 s2, s2
-; GFX1200-NEXT:    s_mov_b32 s7, 32
-; GFX1200-NEXT:    s_lshr_b64 s[14:15], s[12:13], s7
-; GFX1200-NEXT:    s_mov_b32 s3, s14
-; GFX1200-NEXT:    s_cvt_f32_f16 s3, s3
-; GFX1200-NEXT:    s_mov_b32 s9, 16
-; GFX1200-NEXT:    s_lshr_b64 s[12:13], s[12:13], s9
-; GFX1200-NEXT:    s_mov_b32 s4, s12
-; GFX1200-NEXT:    s_cvt_f32_f16 s4, s4
-; GFX1200-NEXT:    s_lshr_b64 s[12:13], s[10:11], s6
-; GFX1200-NEXT:    s_mov_b32 s6, s12
-; GFX1200-NEXT:    s_cvt_f32_f16 s6, s6
-; GFX1200-NEXT:    s_lshr_b64 s[12:13], s[10:11], s7
-; GFX1200-NEXT:    s_mov_b32 s7, s12
-; GFX1200-NEXT:    s_cvt_f32_f16 s7, s7
-; GFX1200-NEXT:    s_lshr_b64 s[10:11], s[10:11], s9
-; GFX1200-NEXT:    s_mov_b32 s9, s10
-; GFX1200-NEXT:    s_cvt_f32_f16 s16, s9
-; GFX1200-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-; GFX1200-NEXT:    s_mov_b32 s9, s16
-; GFX1200-NEXT:    s_mov_b32 s10, s7
-; GFX1200-NEXT:    s_mov_b32 s11, s6
-; GFX1200-NEXT:    s_mov_b32 s12, s5
-; GFX1200-NEXT:    s_mov_b32 s13, s4
-; GFX1200-NEXT:    s_mov_b32 s14, s3
-; GFX1200-NEXT:    s_mov_b32 s15, s2
-; GFX1200-NEXT:    s_mov_b32 s2, s15
-; GFX1200-NEXT:    s_mov_b32 s3, s14
-; GFX1200-NEXT:    s_mov_b32 s4, s13
-; GFX1200-NEXT:    s_mov_b32 s5, s12
-; GFX1200-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1200-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1200-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1200-NEXT:    v_mov_b32_e32 v5, s2
-; GFX1200-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
-; GFX1200-NEXT:    v_mov_b32_e32 v2, v7
-; GFX1200-NEXT:    v_mov_b32_e32 v3, v6
-; GFX1200-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1200-NEXT:    global_store_b128 v0, v[1:4], s[0:1] offset:16
-; GFX1200-NEXT:    s_mov_b32 s2, s11
-; GFX1200-NEXT:    s_mov_b32 s3, s10
-; GFX1200-NEXT:    s_mov_b32 s4, s9
-; GFX1200-NEXT:    s_mov_b32 s5, s8
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1200-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1200-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1200-NEXT:    v_mov_b32_e32 v5, s2
-; GFX1200-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
-; GFX1200-NEXT:    v_mov_b32_e32 v2, v7
-; GFX1200-NEXT:    v_mov_b32_e32 v3, v6
-; GFX1200-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1200-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
-; GFX1200-NEXT:    s_endpgm
+; GFX1200-TRUE16-LABEL: fpext_v8f16:
+; GFX1200-TRUE16:       ; %bb.0:
+; GFX1200-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1200-TRUE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-TRUE16-NEXT:    global_load_b128 v[7:10], v0, s[2:3] scope:SCOPE_SYS
+; GFX1200-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v5, v9
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v6, v1
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v3, v1.h
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v4, v1.l
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v8
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10 killed $exec
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v10, v1
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v8, v1.l
+; GFX1200-TRUE16-NEXT:    s_mov_b32 s3, 48
+; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[1:2], s3, v[5:6]
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
+; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, 32
+; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[5:6], s2, v[5:6]
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v2, v5
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v2, v2.l
+; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[5:6], s3, v[9:10]
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6 killed $exec
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v5, v5.l
+; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[9:10], s2, v[9:10]
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v6, v9
+; GFX1200-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v6.l
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v11, v5
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v12, v4
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v13, v3
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v14, v2
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v5, v15
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v6, v14
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v7, v13
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v2, v7
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v3, v6
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v4, v5
+; GFX1200-TRUE16-NEXT:    global_store_b128 v0, v[1:4], s[0:1] offset:16
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v5, v11
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v7, v9
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v1, v8
+; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v2, v7
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v3, v6
+; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v4, v5
+; GFX1200-TRUE16-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
+; GFX1200-TRUE16-NEXT:    s_endpgm
 ;
-; GFX1250-LABEL: fpext_v8f16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b128 v[2:5], v0, s[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readfirstlane_b32 s2, v5
-; GFX1250-NEXT:    v_readfirstlane_b32 s12, v4
-; GFX1250-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
-; GFX1250-NEXT:    s_mov_b32 s13, s2
-; GFX1250-NEXT:    s_mov_b32 s2, s12
-; GFX1250-NEXT:    s_cvt_f32_f16 s5, s2
-; GFX1250-NEXT:    v_readfirstlane_b32 s2, v3
-; GFX1250-NEXT:    v_readfirstlane_b32 s10, v2
-; GFX1250-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GFX1250-NEXT:    s_mov_b32 s11, s2
-; GFX1250-NEXT:    s_mov_b32 s2, s10
-; GFX1250-NEXT:    s_cvt_f32_f16 s8, s2
-; GFX1250-NEXT:    s_mov_b32 s6, 48
-; GFX1250-NEXT:    s_lshr_b64 s[2:3], s[12:13], s6
-; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX1250-NEXT:    s_cvt_f32_f16 s2, s2
-; GFX1250-NEXT:    s_mov_b32 s7, 32
-; GFX1250-NEXT:    s_lshr_b64 s[14:15], s[12:13], s7
-; GFX1250-NEXT:    s_mov_b32 s3, s14
-; GFX1250-NEXT:    s_cvt_f32_f16 s3, s3
-; GFX1250-NEXT:    s_mov_b32 s9, 16
-; GFX1250-NEXT:    s_lshr_b64 s[12:13], s[12:13], s9
-; GFX1250-NEXT:    s_mov_b32 s4, s12
-; GFX1250-NEXT:    s_cvt_f32_f16 s4, s4
-; GFX1250-NEXT:    s_lshr_b64 s[12:13], s[10:11], s6
-; GFX1250-NEXT:    s_mov_b32 s6, s12
-; GFX1250-NEXT:    s_cvt_f32_f16 s6, s6
-; GFX1250-NEXT:    s_lshr_b64 s[12:13], s[10:11], s7
-; GFX1250-NEXT:    s_mov_b32 s7, s12
-; GFX1250-NEXT:    s_cvt_f32_f16 s7, s7
-; GFX1250-NEXT:    s_lshr_b64 s[10:11], s[10:11], s9
-; GFX1250-NEXT:    s_mov_b32 s9, s10
-; GFX1250-NEXT:    s_cvt_f32_f16 s16, s9
-; GFX1250-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-; GFX1250-NEXT:    s_mov_b32 s9, s16
-; GFX1250-NEXT:    s_mov_b32 s10, s7
-; GFX1250-NEXT:    s_mov_b32 s11, s6
-; GFX1250-NEXT:    s_mov_b32 s12, s5
-; GFX1250-NEXT:    s_mov_b32 s13, s4
-; GFX1250-NEXT:    s_mov_b32 s14, s3
-; GFX1250-NEXT:    s_mov_b32 s15, s2
-; GFX1250-NEXT:    s_mov_b32 s2, s15
-; GFX1250-NEXT:    s_mov_b32 s3, s14
-; GFX1250-NEXT:    s_mov_b32 s4, s13
-; GFX1250-NEXT:    s_mov_b32 s5, s12
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s5
-; GFX1250-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1250-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GFX1250-NEXT:    v_mov_b32_e32 v3, v7
-; GFX1250-NEXT:    v_mov_b32_e32 v4, v6
-; GFX1250-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1250-NEXT:    global_store_b128 v0, v[2:5], s[0:1] offset:16
-; GFX1250-NEXT:    s_mov_b32 s2, s11
-; GFX1250-NEXT:    s_mov_b32 s3, s10
-; GFX1250-NEXT:    s_mov_b32 s4, s9
-; GFX1250-NEXT:    s_mov_b32 s5, s8
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s5
-; GFX1250-NEXT:    v_mov_b32_e32 v7, s4
-; GFX1250-NEXT:    v_mov_b32_e32 v6, s3
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GFX1250-NEXT:    v_mov_b32_e32 v3, v7
-; GFX1250-NEXT:    v_mov_b32_e32 v4, v6
-; GFX1250-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1250-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1200-FAKE16-LABEL: fpext_v8f16:
+; GFX1200-FAKE16:       ; %bb.0:
+; GFX1200-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1200-FAKE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-FAKE16-NEXT:    global_load_b128 v[7:10], v0, s[2:3] scope:SCOPE_SYS
+; GFX1200-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v5, v9
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v6, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v3, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v4, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v8
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10 killed $exec
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v10, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v8, v1
+; GFX1200-FAKE16-NEXT:    s_mov_b32 s3, 48
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[1:2], s3, v[5:6]
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v1, v1
+; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, 32
+; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[5:6], s2, v[5:6]
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v2, v5
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v2, v2
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[5:6], s3, v[9:10]
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6 killed $exec
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v5, v5
+; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[9:10], s2, v[9:10]
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v6, v9
+; GFX1200-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v6
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v11, v5
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v12, v4
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v13, v3
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v14, v2
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v5, v15
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v6, v14
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v7, v13
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v2, v7
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v3, v6
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v4, v5
+; GFX1200-FAKE16-NEXT:    global_store_b128 v0, v[1:4], s[0:1] offset:16
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v5, v11
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v7, v9
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v8
+; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v2, v7
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v3, v6
+; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v4, v5
+; GFX1200-FAKE16-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
+; GFX1200-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-TRUE16-LABEL: fpext_v8f16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
+; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    global_load_b128 v[6:9], v0, s[2:3] scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v12, v8
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr12 killed $vgpr12 def $vgpr12_vgpr13 killed $exec
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v13, v1
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v3, v1.h
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v4, v1.l
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v7
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11 killed $exec
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v11, v1
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v7, v1.h
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v8, v1.l
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s3, 48
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[14:15], s3, v[12:13]
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v14
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, v1.l
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, 32
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[12:13], s2, v[12:13]
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v2, v2.l
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[12:13], s3, v[10:11]
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v5, v12
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v5, v5.l
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b64 v[10:11], s2, v[10:11]
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1250-TRUE16-NEXT:    v_cvt_f32_f16_e64 v6, v6.l
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v11, v5
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v12, v4
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v13, v3
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v14, v2
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v15
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v6, v14
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v7, v13
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v4, v6
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-TRUE16-NEXT:    global_store_b128 v0, v[2:5], s[0:1] offset:16
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, v11
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v7, v9
+; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v2, v8
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v4, v6
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-TRUE16-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
+; GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GFX1250-FAKE16-LABEL: fpext_v8f16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
+; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    global_load_b128 v[6:9], v0, s[2:3] scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v9
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v12, v8
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr12 killed $vgpr12 def $vgpr12_vgpr13 killed $exec
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v13, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v3, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v12
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v4, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v7
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11 killed $exec
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v11, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e64 v1, 16, v1
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v7, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v10
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v8, v1
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s3, 48
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[14:15], s3, v[12:13]
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v14
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v1, v1
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, 32
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[12:13], s2, v[12:13]
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v2, v2
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[12:13], s3, v[10:11]
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v5, v12
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v5, v5
+; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[10:11], s2, v[10:11]
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e64 v6, v6
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v9, v7
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v10, v6
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v11, v5
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v12, v4
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v13, v3
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v14, v2
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v15
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v6, v14
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v7, v13
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v4, v6
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-FAKE16-NEXT:    global_store_b128 v0, v[2:5], s[0:1] offset:16
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v11
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v6, v10
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v7, v9
+; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v2, v8
+; GFX1250-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v4, v6
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-FAKE16-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
+; GFX1250-FAKE16-NEXT:    s_endpgm
   %x = load volatile <8 x half>, ptr addrspace(1) %a
   %f = fpext <8 x half> %x to <8 x float>
   store <8 x float> %f, ptr addrspace(1) %out
@@ -638,10 +755,8 @@ define float @fpext_hi_trunc64(i64 inreg %x) {
 ; GFX1150-NEXT:    s_mov_b32 s2, s1
 ; GFX1150-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
 ; GFX1150-NEXT:    s_mov_b32 s1, s2
-; GFX1150-NEXT:    s_mov_b32 s2, 16
-; GFX1150-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX1150-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1150-NEXT:    s_cvt_f32_f16 s0, s0
+; GFX1150-NEXT:    s_cvt_hi_f32_f16 s0, s0
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -656,12 +771,8 @@ define float @fpext_hi_trunc64(i64 inreg %x) {
 ; GFX1200-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
 ; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-NEXT:    s_mov_b32 s1, s2
-; GFX1200-NEXT:    s_mov_b32 s2, 16
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX1200-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    s_cvt_f32_f16 s0, s0
+; GFX1200-NEXT:    s_cvt_hi_f32_f16 s0, s0
 ; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
@@ -673,10 +784,8 @@ define float @fpext_hi_trunc64(i64 inreg %x) {
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
 ; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
 ; GFX1250-NEXT:    s_mov_b32 s1, s2
-; GFX1250-NEXT:    s_mov_b32 s2, 16
-; GFX1250-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1250-NEXT:    s_cvt_f32_f16 s0, s0
+; GFX1250-NEXT:    s_cvt_hi_f32_f16 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %w = lshr i64 %x, 16
@@ -850,236 +959,116 @@ define float @fadd_fpext_hi_cross_block(ptr addrspace(4) inreg %p, float %y) {
 ; GFX1150-NEXT:    s_mov_b32 s0, s6
 ; GFX1150-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
 ; GFX1150-NEXT:    s_mov_b32 s1, s2
-; GFX1150-NEXT:    s_mov_b32 s2, 16
-; GFX1150-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX1150-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1150-NEXT:    s_mov_b32 s0, s0
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; GFX1150-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
+; GFX1150-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel:[1,0,0] op_sel_hi:[1,1,0]
 ; GFX1150-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX1150-NEXT:    scratch_load_b32 v1, off, s32 offset:8 ; 4-byte Folded Reload
 ; GFX1150-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1200-TRUE16-LABEL: fadd_fpext_hi_cross_block:
-; GFX1200-TRUE16:       ; %bb.0: ; %entry
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_xor_saveexec_b32 s2, -1
-; GFX1200-TRUE16-NEXT:    scratch_store_b32 off, v1, s32 offset:8 ; 4-byte Folded Spill
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 exec_lo, s2
-; GFX1200-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, s1
-; GFX1200-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s1, s2
-; GFX1200-TRUE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX1200-TRUE16-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-TRUE16-NEXT:    v_writelane_b32 v1, s0, 0
-; GFX1200-TRUE16-NEXT:    v_writelane_b32 v1, s1, 1
-; GFX1200-TRUE16-NEXT:    v_writelane_b32 v1, s2, 2
-; GFX1200-TRUE16-NEXT:    v_writelane_b32 v1, s3, 3
-; GFX1200-TRUE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1200-TRUE16-NEXT:    scratch_store_b32 off, v1, s32 ; 4-byte Folded Spill
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1200-TRUE16-NEXT:  ; %bb.1: ; %use
-; GFX1200-TRUE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1200-TRUE16-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-TRUE16-NEXT:    v_readlane_b32 s4, v1, 0
-; GFX1200-TRUE16-NEXT:    v_readlane_b32 s5, v1, 1
-; GFX1200-TRUE16-NEXT:    v_readlane_b32 s6, v1, 2
-; GFX1200-TRUE16-NEXT:    v_readlane_b32 s7, v1, 3
-; GFX1200-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, s7
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s0, s6
-; GFX1200-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s1, s2
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s2, 16
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; GFX1200-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s0, s0
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
-; GFX1200-TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1200-TRUE16-NEXT:    scratch_load_b32 v1, off, s32 offset:8 ; 4-byte Folded Reload
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: fadd_fpext_hi_cross_block:
+; GFX1200:       ; %bb.0: ; %entry
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    s_xor_saveexec_b32 s2, -1
+; GFX1200-NEXT:    scratch_store_b32 off, v1, s32 offset:8 ; 4-byte Folded Spill
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1200-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
+; GFX1200-NEXT:    s_mov_b32 s2, s1
+; GFX1200-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 s1, s2
+; GFX1200-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1200-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    v_writelane_b32 v1, s0, 0
+; GFX1200-NEXT:    v_writelane_b32 v1, s1, 1
+; GFX1200-NEXT:    v_writelane_b32 v1, s2, 2
+; GFX1200-NEXT:    v_writelane_b32 v1, s3, 3
+; GFX1200-NEXT:    s_or_saveexec_b32 s9, -1
+; GFX1200-NEXT:    scratch_store_b32 off, v1, s32 ; 4-byte Folded Spill
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s9
+; GFX1200-NEXT:  ; %bb.1: ; %use
+; GFX1200-NEXT:    s_or_saveexec_b32 s9, -1
+; GFX1200-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s9
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    v_readlane_b32 s4, v1, 0
+; GFX1200-NEXT:    v_readlane_b32 s5, v1, 1
+; GFX1200-NEXT:    v_readlane_b32 s6, v1, 2
+; GFX1200-NEXT:    v_readlane_b32 s7, v1, 3
+; GFX1200-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
+; GFX1200-NEXT:    s_mov_b32 s2, s7
+; GFX1200-NEXT:    s_mov_b32 s0, s6
+; GFX1200-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 s1, s2
+; GFX1200-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX1200-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1200-NEXT:    scratch_load_b32 v1, off, s32 offset:8 ; 4-byte Folded Reload
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1200-FAKE16-LABEL: fadd_fpext_hi_cross_block:
-; GFX1200-FAKE16:       ; %bb.0: ; %entry
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_xor_saveexec_b32 s2, -1
-; GFX1200-FAKE16-NEXT:    scratch_store_b32 off, v1, s32 offset:8 ; 4-byte Folded Spill
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 exec_lo, s2
-; GFX1200-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, s1
-; GFX1200-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s1, s2
-; GFX1200-FAKE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX1200-FAKE16-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-FAKE16-NEXT:    v_writelane_b32 v1, s0, 0
-; GFX1200-FAKE16-NEXT:    v_writelane_b32 v1, s1, 1
-; GFX1200-FAKE16-NEXT:    v_writelane_b32 v1, s2, 2
-; GFX1200-FAKE16-NEXT:    v_writelane_b32 v1, s3, 3
-; GFX1200-FAKE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1200-FAKE16-NEXT:    scratch_store_b32 off, v1, s32 ; 4-byte Folded Spill
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1200-FAKE16-NEXT:  ; %bb.1: ; %use
-; GFX1200-FAKE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1200-FAKE16-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-FAKE16-NEXT:    v_readlane_b32 s4, v1, 0
-; GFX1200-FAKE16-NEXT:    v_readlane_b32 s5, v1, 1
-; GFX1200-FAKE16-NEXT:    v_readlane_b32 s6, v1, 2
-; GFX1200-FAKE16-NEXT:    v_readlane_b32 s7, v1, 3
-; GFX1200-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, s7
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s0, s6
-; GFX1200-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s1, s2
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s2, 16
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; GFX1200-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
-; GFX1200-FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1200-FAKE16-NEXT:    scratch_load_b32 v1, off, s32 offset:8 ; 4-byte Folded Reload
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-TRUE16-LABEL: fadd_fpext_hi_cross_block:
-; GFX1250-TRUE16:       ; %bb.0: ; %entry
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_xor_saveexec_b32 s2, -1
-; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v1, s32 offset:8 nv ; 4-byte Folded Spill
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_mov_b32 exec_lo, s2
-; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 nv ; 4-byte Folded Spill
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, s1
-; GFX1250-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s1, s2
-; GFX1250-TRUE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_writelane_b32 v1, s0, 0
-; GFX1250-TRUE16-NEXT:    v_writelane_b32 v1, s1, 1
-; GFX1250-TRUE16-NEXT:    v_writelane_b32 v1, s2, 2
-; GFX1250-TRUE16-NEXT:    v_writelane_b32 v1, s3, 3
-; GFX1250-TRUE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v1, s32 nv ; 4-byte Folded Spill
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1250-TRUE16-NEXT:  ; %bb.1: ; %use
-; GFX1250-TRUE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v1, off, s32 nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_readlane_b32 s4, v1, 0
-; GFX1250-TRUE16-NEXT:    v_readlane_b32 s5, v1, 1
-; GFX1250-TRUE16-NEXT:    v_readlane_b32 s6, v1, 2
-; GFX1250-TRUE16-NEXT:    v_readlane_b32 s7, v1, 3
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, s7
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, s6
-; GFX1250-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s1, s2
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, 16
-; GFX1250-TRUE16-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; GFX1250-TRUE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, s0
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v1, off, s32 offset:8 nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-FAKE16-LABEL: fadd_fpext_hi_cross_block:
-; GFX1250-FAKE16:       ; %bb.0: ; %entry
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_xor_saveexec_b32 s2, -1
-; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v1, s32 offset:8 nv ; 4-byte Folded Spill
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_mov_b32 exec_lo, s2
-; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 nv ; 4-byte Folded Spill
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, s1
-; GFX1250-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s1, s2
-; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX1250-FAKE16-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_writelane_b32 v1, s0, 0
-; GFX1250-FAKE16-NEXT:    v_writelane_b32 v1, s1, 1
-; GFX1250-FAKE16-NEXT:    v_writelane_b32 v1, s2, 2
-; GFX1250-FAKE16-NEXT:    v_writelane_b32 v1, s3, 3
-; GFX1250-FAKE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v1, s32 nv ; 4-byte Folded Spill
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1250-FAKE16-NEXT:  ; %bb.1: ; %use
-; GFX1250-FAKE16-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1250-FAKE16-NEXT:    scratch_load_b32 v1, off, s32 nv ; 4-byte Folded Reload
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_readlane_b32 s4, v1, 0
-; GFX1250-FAKE16-NEXT:    v_readlane_b32 s5, v1, 1
-; GFX1250-FAKE16-NEXT:    v_readlane_b32 s6, v1, 2
-; GFX1250-FAKE16-NEXT:    v_readlane_b32 s7, v1, 3
-; GFX1250-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 nv ; 4-byte Folded Reload
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, s7
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s0, s6
-; GFX1250-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s1, s2
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, 16
-; GFX1250-FAKE16-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; GFX1250-FAKE16-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-FAKE16-NEXT:    scratch_load_b32 v1, off, s32 offset:8 nv ; 4-byte Folded Reload
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: fadd_fpext_hi_cross_block:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_xor_saveexec_b32 s2, -1
+; GFX1250-NEXT:    scratch_store_b32 off, v1, s32 offset:8 nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1250-NEXT:    scratch_store_b32 off, v0, s32 offset:4 nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GFX1250-NEXT:    s_mov_b32 s1, s2
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1250-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_writelane_b32 v1, s0, 0
+; GFX1250-NEXT:    v_writelane_b32 v1, s1, 1
+; GFX1250-NEXT:    v_writelane_b32 v1, s2, 2
+; GFX1250-NEXT:    v_writelane_b32 v1, s3, 3
+; GFX1250-NEXT:    s_or_saveexec_b32 s9, -1
+; GFX1250-NEXT:    scratch_store_b32 off, v1, s32 nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s9
+; GFX1250-NEXT:  ; %bb.1: ; %use
+; GFX1250-NEXT:    s_or_saveexec_b32 s9, -1
+; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s9
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_readlane_b32 s4, v1, 0
+; GFX1250-NEXT:    v_readlane_b32 s5, v1, 1
+; GFX1250-NEXT:    v_readlane_b32 s6, v1, 2
+; GFX1250-NEXT:    v_readlane_b32 s7, v1, 3
+; GFX1250-NEXT:    scratch_load_b32 v0, off, s32 offset:4 nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_mov_b32 s2, s7
+; GFX1250-NEXT:    s_mov_b32 s0, s6
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GFX1250-NEXT:    s_mov_b32 s1, s2
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_fma_mix_f32 v0, s0, 1.0, v0 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 offset:8 nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %v = load <8 x half>, ptr addrspace(4) %p
   br label %use
@@ -1095,81 +1084,42 @@ define <2 x half> @d16_lo_hi_from_i64(ptr addrspace(1) %p, i64 %x) {
 ; GFX1150-LABEL: d16_lo_hi_from_i64:
 ; GFX1150:       ; %bb.0:
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1150-NEXT:    v_mov_b32_e32 v4, v3
-; GFX1150-NEXT:    scratch_store_b32 off, v2, s32 offset:4 ; 4-byte Folded Spill
-; GFX1150-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1150-NEXT:    scratch_load_b32 v1, off, s32 offset:4 ; 4-byte Folded Reload
-; GFX1150-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
-; GFX1150-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1150-NEXT:    scratch_store_b32 off, v3, s32 ; 4-byte Folded Spill
+; GFX1150-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1150-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1150-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GFX1150-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1150-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX1150-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1150-NEXT:    global_load_d16_b16 v0, v[3:4], off
-; GFX1150-NEXT:    s_mov_b32 s0, 16
-; GFX1150-NEXT:    v_lshrrev_b64 v[1:2], s0, v[1:2]
-; GFX1150-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 killed $vgpr1_vgpr2 killed $exec
-; GFX1150-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
+; GFX1150-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1150-NEXT:    global_load_d16_b16 v0, v[1:2], off
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; GFX1150-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1200-TRUE16-LABEL: d16_lo_hi_from_i64:
-; GFX1200-TRUE16:       ; %bb.0:
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
-; GFX1200-TRUE16-NEXT:    scratch_store_b32 off, v2, s32 offset:4 ; 4-byte Folded Spill
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1200-TRUE16-NEXT:    scratch_load_b32 v1, off, s32 offset:4 ; 4-byte Folded Reload
-; GFX1200-TRUE16-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
-; GFX1200-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
-; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v2, v4
-; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-TRUE16-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1200-TRUE16-NEXT:    global_load_d16_b16 v0, v[3:4], off
-; GFX1200-TRUE16-NEXT:    s_mov_b32 s0, 16
-; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-TRUE16-NEXT:    v_lshrrev_b64 v[1:2], s0, v[1:2]
-; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr1_lo16 killed $vgpr1_lo16 killed $vgpr1_vgpr2 killed $exec
-; GFX1200-TRUE16-NEXT:    ; kill: def $vgpr0_lo16 killed $vgpr0_lo16 def $vgpr0 killed $exec
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX1200-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1200-FAKE16-LABEL: d16_lo_hi_from_i64:
-; GFX1200-FAKE16:       ; %bb.0:
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-FAKE16-NEXT:    scratch_store_b32 off, v3, s32 ; 4-byte Folded Spill
-; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1200-FAKE16-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
-; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v3, v1
-; GFX1200-FAKE16-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
-; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v1, v4
-; GFX1200-FAKE16-NEXT:    global_load_u16 v1, v[0:1], off
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s0, 16
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    v_lshrrev_b64 v[2:3], s0, v[2:3]
-; GFX1200-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1200-FAKE16-NEXT:    s_mov_b32 s0, 0x5040100
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, s0
-; GFX1200-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: d16_lo_hi_from_i64:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    scratch_store_b32 off, v3, s32 ; 4-byte Folded Spill
+; GFX1200-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1200-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1200-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1200-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
+; GFX1200-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GFX1200-NEXT:    v_mov_b32_e32 v2, v4
+; GFX1200-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1200-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1200-NEXT:    global_load_d16_b16 v0, v[1:2], off
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-TRUE16-LABEL: d16_lo_hi_from_i64:
 ; GFX1250-TRUE16:       ; %bb.0:
