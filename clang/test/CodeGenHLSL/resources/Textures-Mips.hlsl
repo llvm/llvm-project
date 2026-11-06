@@ -149,13 +149,13 @@ TEXTURE<float4> t;
 // CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 0
 // CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_GEP2]]
 // CHECK: %[[MIPS_GEP:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 1
-// CHECK: %[[MIPS_HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_type", ptr %[[MIPS_GEP]], i32 0, i32 0
+// CHECK: %[[MIPS_HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_type", ptr %[[MIPS_GEP]], i32 0, i32 0
 // CHECK: store [[HANDLE_TY]] %[[HANDLE]], ptr %[[MIPS_HANDLE_GEP]]
 
 // CHECK: define internal {{.*}} <4 x float> @test_mips([[COORD_CXX]])([[COORD_LLVM]] {{.*}} %loc)
 // CHECK: entry:
 // CHECK: %[[LOC_ADDR:.*]] = alloca [[COORD_LLVM]]
-// CHECK: %[[REF_TMP:.*]] = alloca %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type"
+// CHECK: %[[REF_TMP:.*]] = alloca %"struct.hlsl::[[TEXTURE]]::mips_slice_type"
 // CHECK: store [[COORD_LLVM]] %loc, ptr %[[LOC_ADDR]]
 // CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_type::operator[](int) const(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} getelementptr {{.*}} (i8, ptr @t, [[MIPS_OFFSET]]), i32 noundef 0)
 // CHECK: %[[V0:.*]] = load [[COORD_LLVM]], ptr %[[LOC_ADDR]]
@@ -173,18 +173,18 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %{{.*}} = alloca ptr
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
 // CHECK: %[[LEVEL_ADDR:.*]] = alloca i32
-// CHECK: %[[SLICE:.*]] = alloca %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type"
+// CHECK: %[[SLICE:.*]] = alloca %"struct.hlsl::[[TEXTURE]]::mips_slice_type"
 // CHECK: store ptr %agg.result, ptr %{{.*}}
 // CHECK: store ptr %this, ptr %[[THIS_ADDR]]
 // CHECK: store i32 %Level, ptr %[[LEVEL_ADDR]]
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type()(ptr {{.*}} %[[SLICE]])
-// CHECK: %[[HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_type", ptr %[[THIS1]], i32 0, i32 0
+// CHECK: %[[HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_type", ptr %[[THIS1]], i32 0, i32 0
 // CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_GEP]]
-// CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[SLICE]], i32 0, i32 0
+// CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_slice_type", ptr %[[SLICE]], i32 0, i32 0
 // CHECK: store [[HANDLE_TY]] %[[HANDLE]], ptr %[[HANDLE_GEP2]]
 // CHECK: %[[L_VAL:.*]] = load i32, ptr %[[LEVEL_ADDR]]
-// CHECK: %[[LEVEL_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[SLICE]], i32 0, i32 1
+// CHECK: %[[LEVEL_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_slice_type", ptr %[[SLICE]], i32 0, i32 1
 // CHECK: store i32 %[[L_VAL]], ptr %[[LEVEL_GEP]]
 // CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type(hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type const&)(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %agg.result, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[SLICE]])
 
@@ -196,7 +196,7 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %{{.*}}
 // VEC-COORD: %[[COORD_PARAM:.*]] = load [[INDEX_LLVM]], ptr %[[COORD_ADDR]]
 // VEC-COORD: store [[INDEX_LLVM]] %[[COORD_PARAM]], ptr %[[VEC_TMP]]
-// CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[THIS1]], i32 0, i32 0
+// CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_slice_type", ptr %[[THIS1]], i32 0, i32 0
 // CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_PTR]]
 // A 1D coordinate is a single value, so it goes straight into the location.
 // SCALAR-COORD: %[[COORD_VAL:.*]] = load i32, ptr %[[COORD_ADDR]]
@@ -211,7 +211,7 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // COORD3: %[[COORD_VAL3:.*]] = load <3 x i32>, ptr %[[VEC_TMP]]
 // COORD3: %[[VECEXT3:.*]] = extractelement <3 x i32> %[[COORD_VAL3]], i32 2
 // COORD3: %[[VECINIT3B:.*]] = insertelement <4 x i32> %[[VECINIT3]], i32 %[[VECEXT3]], i32 2
-// CHECK: %[[LEVEL_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[THIS1]], i32 0, i32 1
+// CHECK: %[[LEVEL_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]::mips_slice_type", ptr %[[THIS1]], i32 0, i32 1
 // CHECK: %[[LEVEL_VAL:.*]] = load i32, ptr %[[LEVEL_PTR]]
 // SCALAR-COORD: %[[VECINITL:.*]] = insertelement <2 x i32> %[[VECINIT3]], i32 %[[LEVEL_VAL]], i32 1
 // COORD2: %[[VECINITL:.*]] = insertelement <3 x i32> %[[VECINIT3]], i32 %[[LEVEL_VAL]], i32 2

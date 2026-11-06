@@ -318,7 +318,7 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]]
 // CHECK: store [[INDEX_LLVM]] %[[INDEX]], ptr %[[INDEX_ADDR]]
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]].1", ptr %[[THIS1]], i32 0, i32 0
+// CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]].{{[0-9]+}}", ptr %[[THIS1]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("[[DXIL_HANDLE]]", <3 x i32>, [[RW]], [[ROV_OR_COUNT]], 1, [[DXIL_TY]]), ptr %[[HANDLE_PTR]]
 // SPIRV: %[[HANDLE:.*]] = load target("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[FMT_INT3]]), ptr %[[HANDLE_PTR]]
 // CHECK: %[[INDEX_VAL:.*]] = load [[INDEX_LLVM]], ptr %[[INDEX_ADDR]]

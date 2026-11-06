@@ -50,7 +50,7 @@ struct msvc_dcas_x86 {
 
 template void msvc_dcas_x86<false>::store();
 // CHECK: define weak_odr void @"\01PR26001"(
-// CHECK: %[[P:.*]] = alloca %"struct.make_storage_type<false>::type", align 4
-// CHECK: %[[B:.*]] = getelementptr inbounds nuw %"struct.make_storage_type<false>::type", ptr %[[P]], i32 0, i32 0
-// CHECK: %[[X:.*]] = getelementptr inbounds nuw %"struct.make_storage_type<false>::type::B", ptr %[[B]], i32 0, i32 1
+// CHECK: %[[P:.*]] = alloca %"struct.make_storage_type::type", align 4
+// CHECK: %[[B:.*]] = getelementptr inbounds nuw %"struct.make_storage_type::type", ptr %[[P]], i32 0, i32 0
+// CHECK: %[[X:.*]] = getelementptr inbounds nuw %"struct.make_storage_type::type::B", ptr %[[B]], i32 0, i32 1
 // CHECK: call void asm sideeffect inteldialect "mov edx, $0", "*m,~{edx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %[[X]])

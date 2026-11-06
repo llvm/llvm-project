@@ -64,6 +64,9 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
       llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
+  // The template arguments of enclosing specializations can be enormous, and
+  // the IR name is made unique regardless.
+  Policy.SuppressTemplateArgsInScope = true;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available

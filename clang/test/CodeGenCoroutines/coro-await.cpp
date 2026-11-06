@@ -132,7 +132,7 @@ struct std::coroutine_traits<void, int> {
 
 // CHECK-LABEL: f1(
 extern "C" void f1(int) {
-  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void, int>::promise_type"
+  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits::promise_type{{(\.[0-9]+)?}}"
   // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   co_yield 42;
   // CHECK: call void @_ZNSt16coroutine_traitsIJviEE12promise_type11yield_valueEi(ptr dead_on_unwind writable sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], ptr {{[^,]*}} %[[PROMISE]], i32 42)
@@ -357,7 +357,7 @@ struct TailCallAwait {
 
 // CHECK-LABEL: @TestTailcall(
 extern "C" void TestTailcall() {
-  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void>::promise_type"
+  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits::promise_type{{(\.[0-9]+)?}}"
   // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   co_await TailCallAwait{};
   // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13TailCallAwait11await_readyEv(ptr {{[^,]*}} %[[AWAITABLE:.+]])
