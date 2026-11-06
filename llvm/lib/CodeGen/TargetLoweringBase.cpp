@@ -2062,9 +2062,9 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   }
 }
 
-Value *
-TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                                       bool UseTLS) const {
+Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls,
+    bool UseTLS) const {
   // compiler-rt provides a variable with a magic name.  Targets that do not
   // link with compiler-rt may also provide such a variable.
   Module *M = IRB.getModule();
@@ -2110,7 +2110,7 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(
   RTLIB::LibcallImpl SafestackPointerAddressImpl =
       Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
   if (SafestackPointerAddressImpl == RTLIB::Unsupported)
-    return getDefaultSafeStackPointerLocation(IRB, true);
+    return getDefaultSafeStackPointerLocation(IRB, Libcalls, true);
 
   Module *M = IRB.getModule();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
