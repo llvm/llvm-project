@@ -14,32 +14,31 @@ declare void @ext_take(x86_fp80)
 
 ; The value is an i128 in an even-aligned register pair, so having a 32-bit
 ; argument in x0 puts it in x2:x3, and it is returned in x1:x0.
-define dso_local x86_fp80 @use_f80(i32 %x, x86_fp80 %v) {
+define x86_fp80 @use_f80(i32 %x, x86_fp80 %v) {
   ret x86_fp80 %v
 }
 
-define dso_local x86_fp80 @pass_f80(x86_fp80 %v) {
+define x86_fp80 @pass_f80(x86_fp80 %v) {
   ret x86_fp80 %v
 }
 
-define dso_local void @take_f80(i32 %x, x86_fp80 %v) {
+define void @take_f80(i32 %x, x86_fp80 %v) {
   ret void
 }
 
 ; With seven integer arguments the pair no longer fits in the argument
 ; registers and is passed on the stack, by value on the ARM64EC side and by
 ; reference on the x64 side.
-define dso_local void @stack_f80(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
-                                i64 %f, i64 %g, x86_fp80 %v) {
+define void @stack_f80(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, x86_fp80 %v) {
   ret void
 }
 
-define dso_local x86_fp80 @ec_caller_ret() {
+define x86_fp80 @ec_caller_ret() {
   %r = call x86_fp80 @ext_ret()
   ret x86_fp80 %r
 }
 
-define dso_local void @ec_caller_take(x86_fp80 %v) {
+define void @ec_caller_take(x86_fp80 %v) {
   call void @ext_take(x86_fp80 %v)
   ret void
 }
