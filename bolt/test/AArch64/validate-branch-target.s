@@ -45,3 +45,6 @@ constant_island_2:
     .word 0xffffffff // data in code
     ret
 .size   external_func_2,.-external_func_2
+
+# Force relocation mode.
+.reloc 0, R_AARCH64_NONE

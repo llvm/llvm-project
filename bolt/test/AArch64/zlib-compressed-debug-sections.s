@@ -4,7 +4,7 @@
 # REQUIRES: zlib
 #
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %s -o %t.o
-# RUN: %clang %cflags %t.o -o %t.exe
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-dwarfdump --verify %t.exe 2>&1 | FileCheck %s --check-prefix=VERIFY-DWARF
 # RUN: llvm-objcopy --compress-debug-sections=zlib %t.exe %t.zlib
 # RUN: llvm-readelf -t %t.zlib | FileCheck %s --check-prefix=INPUT-ELF

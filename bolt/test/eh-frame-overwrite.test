@@ -2,7 +2,7 @@
 
 REQUIRES: system-linux
 
-RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q,-T,%p/Inputs/eh-frame-overwrite-padding.ld
 RUN: llvm-bolt %t -o %t.bolt --strict | FileCheck %s
 
 CHECK: rewriting .eh_frame in-place

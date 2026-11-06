@@ -37,9 +37,13 @@ static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-    ExperimentalRelaxation("relax-exp",
-                           cl::desc("run experimental relaxation pass"),
-                           cl::init(false), cl::cat(BoltOptCategory));
+    RelaxWithClusters("relax-with-clusters",
+                      cl::desc("run clustered relaxation pass"), cl::init(true),
+                      cl::cat(BoltOptCategory));
+
+static cl::alias RelaxExp("relax-exp",
+                          cl::desc("alias for --relax-with-clusters"),
+                          cl::aliasopt(RelaxWithClusters), cl::Hidden);
 
 static cl::opt<unsigned long long> MaxClusterSize(
     "max-cluster-size",
@@ -1747,12 +1751,17 @@ void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
-  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
+  assert((opts::CompactCodeModel || opts::RelaxWithClusters ||
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
+  if (opts::RelaxWithClusters && !BC.HasRelocations)
+    return createFatalBOLTError(
+        "clustered relaxation requires relocations against code; link with "
+        "--emit-relocs or pass --relax-with-clusters=false");
+
   // Reserve at least one huge page of headroom for text-section alignment.
-  if (opts::ExperimentalRelaxation &&
+  if (opts::RelaxWithClusters &&
       opts::MaxClusterSize > LongestJumpSpan - BinaryContext::HugePageSize)
     return createFatalBOLTError("--max-cluster-size must be at most 126 MiB");
 
@@ -1777,7 +1786,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     return It == BranchLiveness.end() ? nullptr : &It->second;
   };
 
-  if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
+  if (opts::CompactCodeModel || opts::RelaxWithClusters) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
@@ -1800,10 +1809,10 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     if (HasFatal)
       return createFatalBOLTError("branch relaxation failure");
 
-    if (!opts::ExperimentalRelaxation)
+    if (!opts::RelaxWithClusters)
       return Error::success();
 
-    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
+    BC.outs() << "BOLT-INFO: starting clustered relaxation pass\n";
     relaxWithClusters(BC);
     return Error::success();
   }

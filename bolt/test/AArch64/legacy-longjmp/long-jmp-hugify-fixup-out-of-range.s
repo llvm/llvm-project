@@ -10,7 +10,7 @@
 # RUN: %clang %cflags -Wl,-q %s -o %t
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --hugify
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --hugify --relax-with-clusters=false
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
   .globl foo
