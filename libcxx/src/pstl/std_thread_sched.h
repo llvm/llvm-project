@@ -10,6 +10,7 @@
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
 #include <__atomic/atomic_ref.h>
+#include <__bit/bit_ceil.h>
 #include <__config>
 #include <__mutex/lock_guard.h>
 #include <__mutex/mutex.h>
@@ -46,37 +47,30 @@ namespace __pstl::__statpart {
 
 struct Task;
 
-// Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev.
+// Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev, but with a fixed-size buffer.
 // The element type is a pointer to Task, nullptr is not a valid value.
 struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
-  static constexpr unsigned log_initial_size = 6; // 64 elements by default
-
-  SPMCQueue() noexcept : bottom(0), top(0), buffer(alloc_buffer(log_initial_size)) {}
+  SPMCQueue() noexcept                   = default;
   SPMCQueue(const SPMCQueue&)            = delete;
   SPMCQueue& operator=(const SPMCQueue&) = delete;
-  ~SPMCQueue() { ::operator delete(buffer); }
+
+  // Allocates the buffer, must be called before the queue is used by any thread.
+  // The capacity is rounded up to the next power of two.
+  void init(std::size_t capacity) {
+    // TODO: make this function nothrow and return a boolean to signal malloc failures
+    capacity = std::bit_ceil(std::max<std::size_t>(capacity, 1));
+    elements = std::make_unique<Task*[]>(capacity);
+    mask     = capacity - 1;
+  }
 
   // Pushes the new task at the bottom of the queue, only called by the owner.
-  // Can return false if the allocation of grown buffer fails.
+  // Returns false if the queue is full.
   bool push(Task* task) noexcept {
-    std::uint64_t b    = bottom.load();
-    std::uint64_t t    = top.load();
-    std::uint64_t size = b - t;
-    if (size >= buffer_size(buffer) - 1) {
-      Buffer* grown = grow_buffer(buffer, b, t);
-      if (grown == nullptr) {
-        return false;
-      }
-      Buffer* current;
-      {
-        std::lock_guard lock{mut};
-        current = std::exchange(buffer, grown);
-      }
-      if (current->ref_count.fetch_sub(1) == 1) {
-        ::operator delete(current);
-      }
-    }
-    put(buffer, b, task);
+    std::uint64_t b = bottom.load();
+    std::uint64_t t = top.load();
+    if (b - t > mask)
+      return false;
+    put(b, task);
     bottom.store(b + 1);
     return true;
   }
@@ -91,7 +85,7 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
     bottom.store(b);
     std::uint64_t t = top.load();
     if (t <= b) {
-      Task* task = get(buffer, b);
+      Task* task = get(b);
       if (b > t)
         return task;
       if (top.compare_exchange_strong(t, t + 1)) {
@@ -115,72 +109,28 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
     if (t >= b)
       return nullptr;
 
-    Buffer* current;
-    {
-      std::lock_guard lock{mut};
-      current = buffer;
-      current->ref_count.fetch_add(1);
-    }
-    Task* task = get(current, t);
-    if (current->ref_count.fetch_sub(1) == 1) {
-      ::operator delete(current);
-    }
-
+    Task* task = get(t);
     if (top.compare_exchange_strong(t, t + 1))
       return task;
     else
       return nullptr;
-
-    return nullptr;
   }
 
 private:
-  struct Buffer {
-    std::uint32_t log_size;
-    std::atomic_int32_t ref_count;
-  };
-
-  static Buffer* alloc_buffer(unsigned log_size) noexcept {
-    std::size_t size  = 1Z << log_size;
-    std::size_t bytes = sizeof(SPMCQueue) + sizeof(Task*) * size;
-    Buffer* buffer    = static_cast<Buffer*>(::operator new(bytes, std::nothrow));
-    if (buffer == nullptr)
-      return nullptr;
-    buffer->log_size  = log_size;
-    buffer->ref_count = 1;
-    return buffer;
-  }
-
-  static Buffer* grow_buffer(Buffer* existing, std::uint64_t bottom, std::uint64_t top) noexcept {
-    Buffer* grown = alloc_buffer(existing->log_size + 1);
-    if (grown == nullptr)
-      return nullptr;
-    for (std::uint64_t i = top; i != bottom; ++i) {
-      put(grown, i, get(existing, i));
-    }
-    return grown;
-  }
-
-  static std::size_t buffer_size(Buffer* buffer) noexcept { return 1Z << buffer->log_size; }
-
-  static Task* get(Buffer* buffer, std::size_t index) noexcept {
-    Task** elements  = reinterpret_cast<Task**>(reinterpret_cast<std::byte*>(buffer) + sizeof(Buffer));
-    std::size_t mask = (1Z << buffer->log_size) - 1;
+  Task* get(std::uint64_t index) const noexcept {
     // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
     return std::atomic_ref<Task*>(elements[index & mask]).load(std::memory_order_relaxed);
   }
 
-  static void put(Buffer* buffer, std::size_t index, Task* task) noexcept {
-    Task** elements  = reinterpret_cast<Task**>(reinterpret_cast<std::byte*>(buffer) + sizeof(Buffer));
-    std::size_t mask = (1Z << buffer->log_size) - 1;
+  void put(std::uint64_t index, Task* task) noexcept {
     // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
     std::atomic_ref<Task*>(elements[index & mask]).store(task, std::memory_order_relaxed);
   }
 
-  std::atomic_uint64_t bottom;
-  std::atomic_uint64_t top;
-  Buffer* buffer;
-  std::mutex mut;
+  std::atomic_uint64_t bottom{0};
+  std::atomic_uint64_t top{0};
+  std::unique_ptr<Task*[]> elements;
+  std::size_t mask{0};
 };
 
 // Task represent the user request to apply a function to a range of iterations.
@@ -223,7 +173,9 @@ public:
 
     m_queues_count = cpu_threads * 2;
     m_queues       = std::make_unique<SPMCQueue[]>(m_queues_count);
-    m_queue_ids    = std::make_unique<QueueID[]>(m_queues_count);
+    for (size_t i = 0; i < m_queues_count; ++i)
+      m_queues[i].init(cpu_threads * 2);
+    m_queue_ids = std::make_unique<QueueID[]>(m_queues_count);
 
     m_workers_count = cpu_threads - 1;
     m_workers       = std::make_unique<std::thread[]>(m_workers_count);
@@ -346,8 +298,8 @@ void Sched::worker_thread(size_t worker_num) noexcept {
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
 void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
-  if (m_workers_count == 0) {
-    // No worker threads available, fallback to serial execution
+  if (iterations < 2 || m_workers_count == 0) {
+    // No worker threads available or not enough iteration requested, fallback to serial execution
     apply_serial(iterations, ctxt, func);
     return;
   }
@@ -379,8 +331,8 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
   LOG("New root task %p of %zu iterations with %zu requests\n", &root_task, iterations, num_requests);
 
   // Push all but one request to the queue, and process the last one directly in this thread.
-  // Also support an edge-case when the queue fails to grow, in this case the caller thread will process all remaining
-  // requests directly.
+  // If the queue is full (e.g. due to deep nested parallelism), the caller thread will process all remaining requests
+  // directly.
   while (num_requests > 1) {
     if (!queue->push(&root_task)) {
       break;
