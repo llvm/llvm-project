@@ -943,15 +943,24 @@ void Symtab::InitAddressIndexes() {
             m_file_addr_to_index.GetMutableEntryAtIndex(i);
         if (entry->GetByteSize() == 0) {
           addr_t curr_base_addr = entry->GetRangeBase();
-          const RangeVector<addr_t, addr_t>::Entry *containing_section =
-              section_ranges.FindEntryThatContains(curr_base_addr);
+          Symbol &symbol = m_symbols[entry->data];
 
-          // Use the end of the section as the default max size of the symbol
+          // Use the end of the section as the default max size of the symbol.
+          // Sections of an object file can share addresses, so prefer the
+          // section the symbol is defined in over one found by its address.
           addr_t sym_size = 0;
-          if (containing_section) {
+          SectionSP symbol_section = symbol.GetAddressRef().GetSection();
+          if (symbol_section &&
+              symbol_section->ContainsFileAddress(curr_base_addr)) {
+            sym_size = symbol_section->GetFileAddress() +
+                       symbol_section->GetByteSize() - curr_base_addr;
+          } else if (const RangeVector<addr_t, addr_t>::Entry
+                         *containing_section =
+                             section_ranges.FindEntryThatContains(
+                                 curr_base_addr)) {
             sym_size =
                 containing_section->GetByteSize() -
-                (entry->GetRangeBase() - containing_section->GetRangeBase());
+                (curr_base_addr - containing_section->GetRangeBase());
           }
 
           for (size_t j = i; j < num_entries; j++) {
@@ -972,7 +981,6 @@ void Symtab::InitAddressIndexes() {
 
           if (sym_size > 0) {
             entry->SetByteSize(sym_size);
-            Symbol &symbol = m_symbols[entry->data];
             symbol.SetByteSize(sym_size);
             symbol.SetSizeIsSynthesized(true);
           }
