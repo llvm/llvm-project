@@ -10,21 +10,21 @@ define void @bitextract(b16 %b16, b32 %b32, b64 %b64, b128 %b128, <8 x b16> %v8b
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i32.b32 = bitextract i32, b32 %b32, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i32.b64 = bitextract i32, b64 %b64, i32 32
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i32.b64.var = bitextract i32, b64 %b64, i32 %off
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i32.b128 = bitextract i32, b128 %b128, i32 16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i32.b128.var = bitextract i32, b128 %b128, i32 %off
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8.v8b16 = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> splat (i32 8)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8.v8b16.var = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> %v8off
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i32.b128 = bitextract i32, b128 %b128, i32 16
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i32.b128.var = bitextract i32, b128 %b128, i32 %off
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i8.v8b16 = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> splat (i32 8)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v8i8.v8b16.var = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> %v8off
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v8off.ins = insertelement <8 x i32> poison, i32 %off, i64 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8off.splat = shufflevector <8 x i32> %v8off.ins, <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8.v8b16.splat = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> %v8off.splat
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8.v4b32 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8.v4b32.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16.v8b32 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16.v8b32.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i16.v16b32 = bitextract <16 x i16>, <16 x b32> %v16b32, <16 x i32> splat (i32 16)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i16.v16b32.var = bitextract <16 x i16>, <16 x b32> %v16b32, <16 x i32> %v16off
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32.v2b64 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32.v2b64.var = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> %v2off
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i8.v8b16.splat = bitextract <8 x i8>, <8 x b16> %v8b16, <8 x i32> %v8off.splat
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i8.v4b32 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i8.v4b32.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v8i16.v8b32 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v8i16.v8b32.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %v16i16.v16b32 = bitextract <16 x i16>, <16 x b32> %v16b32, <16 x i32> splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %v16i16.v16b32.var = bitextract <16 x i16>, <16 x b32> %v16b32, <16 x i32> %v16off
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v2f32.v2b64 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2f32.v2b64.var = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> %v2off
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2ptr.v2b64 = bitextract <2 x ptr>, <2 x b64> %v2b64, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

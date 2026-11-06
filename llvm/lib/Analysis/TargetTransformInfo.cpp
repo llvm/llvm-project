@@ -1324,6 +1324,26 @@ InstructionCost TargetTransformInfo::getInsertExtractValueCost(
   return Cost;
 }
 
+InstructionCost
+TargetTransformInfo::getBitInsertCost(Type *Base, Type *Val,
+                                      TTI::TargetCostKind CostKind,
+                                      OperandValueInfo OffsetInfo) const {
+  InstructionCost Cost =
+      TTIImpl->getBitInsertCost(Base, Val, CostKind, OffsetInfo);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost
+TargetTransformInfo::getBitExtractCost(Type *Dst, Type *Src,
+                                       TTI::TargetCostKind CostKind,
+                                       OperandValueInfo OffsetInfo) const {
+  InstructionCost Cost =
+      TTIImpl->getBitExtractCost(Dst, Src, CostKind, OffsetInfo);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
     Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
     TTI::TargetCostKind CostKind) const {
