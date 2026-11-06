@@ -2891,9 +2891,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
     If the output mode is `preservesign`, or `positivezero`,
     denormal outputs may be flushed to zero by standard floating-point
-    operations. On some targets, outputs that are rounded up to the smallest
-    positive normal number, or rounded down to the smallest negative normal
-    number may also be flushed to zero. It is not mandated that
+    operations. Note that on some targets, the determination of whether to
+    flush is tied to underflow detection rather than to whether the final
+    result is denormal. Underflow may be detected before the final normalization
+    and rounding steps. This means flushing may occur even when the final
+    result would round up to the smallest normal number (or round down to
+    the smallest negative normal number). It is not mandated that
     flushing to zero occurs, but if an output is flushed to zero,
     it must respect the sign mode. Not all targets support all modes.
 
