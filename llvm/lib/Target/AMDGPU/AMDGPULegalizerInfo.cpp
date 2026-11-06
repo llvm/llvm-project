@@ -23,6 +23,7 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -3726,6 +3727,22 @@ AMDGPULegalizerInfo::getScaledLogInput(MachineIRBuilder &B, Register Src,
                                        unsigned Flags) const {
   if (!needsDenormHandlingF32(B.getMF(), Src, Flags))
     return {};
+
+  GISelValueTracking VT(B.getMF());
+  if (VT.computeKnownFPClass(Src, fcSubnormal).isKnownNeverSubnormal())
+    return {};
+
+  // TODO: Teach GISelValueTracking::computeKnownFPClass to infer FP classes
+  // from the known bits of a G_BITCAST source.
+  const MachineRegisterInfo &MRI = *B.getMRI();
+  const MachineInstr *Def = getDefIgnoringCopies(Src, MRI);
+  if (Def && Def->getOpcode() == TargetOpcode::G_BITCAST) {
+    Register BitsReg = Def->getOperand(1).getReg();
+    if (MRI.getType(BitsReg) == S32 &&
+        KnownFPClass::bitcast(APFloat::IEEEsingle(), VT.getKnownBits(BitsReg))
+            .isKnownNeverSubnormal())
+      return {};
+  }
 
   auto SmallestNormal = B.buildFConstant(
       F32, APFloat::getSmallestNormalized(APFloat::IEEEsingle()));
