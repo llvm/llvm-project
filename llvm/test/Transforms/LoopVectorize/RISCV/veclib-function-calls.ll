@@ -1313,6 +1313,7 @@ define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @ilogb_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NOT: Sleef
 ; CHECK:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
 ;
   entry:
@@ -1367,6 +1368,7 @@ define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; CHECK-LABEL: define void @ldexp_f32
 ; CHECK-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NOT: Sleef
 ; CHECK:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
 ;
   entry:
