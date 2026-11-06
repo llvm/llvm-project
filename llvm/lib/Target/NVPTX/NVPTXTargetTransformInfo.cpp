@@ -535,22 +535,13 @@ InstructionCost NVPTXTTIImpl::getShuffleCost(
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
     VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
     TTI::VectorInstrContext VIC) const {
-  InstructionCost Cost = BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind,
-                                               Mask, Index, SubTp, Args, CxtI);
-
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return Cost;
-
-  // A scalar f32 broadcast feeding f32x2 arithmetic can use the scalar operand
-  // form of the packed PTX instruction, so do not charge a shuffle for it.
-  if (isNativeV2F32(DstTy, *ST) &&
+  if (CostKind == TTI::TCK_RecipThroughput && isNativeV2F32(DstTy, *ST) &&
       (Kind == TTI::SK_Broadcast ||
        (Kind == TTI::SK_PermuteSingleSrc &&
-        ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())))) {
+        ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))))
     return TTI::TCC_Free;
-  }
-
-  return Cost;
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CxtI);
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
