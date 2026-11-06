@@ -33,6 +33,7 @@ enum class AMDGPUSchedReason : uint8_t {
   None,
   Stall,
   MemoryPipeline,
+  CoexecSlot,
   CritResourceBalance, // tryCriticalResource chose based on resource pressure
   CritResourceDep,     // tryCriticalResourceDependency chose based on enabling
   NUM_REASONS
@@ -46,6 +47,8 @@ inline StringRef getReasonName(AMDGPUSchedReason R) {
     return "Stall";
   case AMDGPUSchedReason::MemoryPipeline:
     return "MemoryPipeline";
+  case AMDGPUSchedReason::CoexecSlot:
+    return "CoexecSlot";
   case AMDGPUSchedReason::CritResourceBalance:
     return "CritResource";
   case AMDGPUSchedReason::CritResourceDep:
@@ -292,6 +295,12 @@ public:
   bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
                          GenericSchedulerBase::SchedCandidate &Cand,
                          SchedBoundary &Zone);
+
+  /// If we are in an active co-execution slot that has flavor preferences
+  /// and/or avoidances, bias candidate selection to honor them.
+  bool tryCoexecSlot(GenericSchedulerBase::SchedCandidate &TryCand,
+                     GenericSchedulerBase::SchedCandidate &Cand,
+                     SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
   /// the most prioritized HardwareUnit. If both candidates use the same
