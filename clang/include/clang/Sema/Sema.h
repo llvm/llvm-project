@@ -16112,7 +16112,7 @@ public:
   ///@}
 };
 
-enum class DestructorFormat {
+enum class DestructorKind {
   // SMF is deleted, private, protected, or otherwise inaccessible.
   NotAvailable,
 
@@ -16124,7 +16124,8 @@ enum class DestructorFormat {
 };
 
 /// Returns whether a type is trivially-destructible, non-trivially
-/// destructible, or cannot be destroyed in the current context.
+/// destructible, or cannot be destroyed in the current context, and a
+/// pointer type's destructor, if it is a class type (otherwise null).
 ///
 /// It is possible for a type to have a trivial destructor without being
 /// trivially-destructible. For example, `struct S { ~S() = delete; };`
@@ -16137,12 +16138,14 @@ enum class DestructorFormat {
 ///
 /// This would ideally be placed in `QualType`, but libClangBasic
 /// doesn't include `Sema`.
-DestructorFormat GetDestructorFormat(Sema &S, const ASTContext &C,
-                                     SourceLocation Loc, QualType T);
+std::pair<DestructorKind, const CXXDestructorDecl *>
+GetDestructorKind(Sema &S, const ASTContext &C, SourceLocation Loc, QualType T);
 
-/// Returns whether a type's destructor is nothrow.
+/// Returns true if a class type's destructor is nothrow.
+///
+///
 bool IsDestructorNoThrow(Sema &S, const ASTContext &C, SourceLocation Loc,
-                         QualType T);
+                         const CXXDestructorDecl *Destructor);
 
 DeductionFailureInfo
 MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
