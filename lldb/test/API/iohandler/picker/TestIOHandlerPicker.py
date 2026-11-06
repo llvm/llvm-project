@@ -20,7 +20,9 @@ class IOHandlerPickerTest(PExpectTest):
 
     def start_picker(self, command, header, dimensions=(24, 120)):
         # `test-picker` is only registered in builds with assertions enabled.
-        if not self.dbg.GetCommandInterpreter().CommandExists("test-picker"):
+        if command.startswith("test-picker") and not (
+            self.dbg.GetCommandInterpreter().CommandExists("test-picker")
+        ):
             self.skipTest("test-picker requires a build with assertions")
         self.launch(dimensions=dimensions)
         # launch() runs "settings clear --all", which resets the terminal size.
@@ -156,3 +158,9 @@ class IOHandlerPickerTest(PExpectTest):
         # stay pre-selected.
         self.child.send("/ch\r \r")
         self.finish("selected: 5", "selected: 4", "selected: 1")
+
+    def test_process_attach_picker(self):
+        """`process attach` without a pid, name, or target opens the picker."""
+        self.start_picker("process attach", "Select a process to attach to:")
+        self.child.send(self.escape_key)
+        self.finish("no process selected")
