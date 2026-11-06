@@ -332,9 +332,10 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<CharSourceRange, 8> RelatedLocations;
+  llvm::SmallVector<std::pair<CharSourceRange, std::string>> RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
+  llvm::StringMap<std::string> Properties;
 
   SarifResult() = delete;
   explicit SarifResult(uint32_t RuleIdx) : RuleIdx(RuleIdx) {}
@@ -373,7 +374,8 @@ public:
     return *this;
   }
 
-  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
+                                  llvm::StringRef Message = "") {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
       assert(
@@ -381,7 +383,8 @@ public:
           "SARIF RelatedLocations require character granular source ranges!");
     }
 #endif
-    RelatedLocations.append(DiagLocs.begin(), DiagLocs.end());
+    for (const CharSourceRange &Loc : DiagLocs)
+      RelatedLocations.emplace_back(Loc, Message.str());
     return *this;
   }
 
@@ -392,6 +395,11 @@ public:
 
   SarifResult setDiagnosticLevel(const SarifResultLevel &TheLevel) {
     LevelOverride = TheLevel;
+    return *this;
+  }
+
+  SarifResult addProperty(llvm::StringRef Key, llvm::StringRef Value) {
+    Properties[Key] = Value.str();
     return *this;
   }
 
@@ -447,8 +455,10 @@ private:
   createThreadFlows(const llvm::ArrayRef<ThreadFlow> ThreadFlows);
 
   /// Add the given \ref CharSourceRange to the SARIF document as a physical
-  /// location, with its corresponding artifact.
-  llvm::json::Object createPhysicalLocation(const CharSourceRange &R);
+  /// location, with its corresponding artifact. Returns std::nullopt if \p R
+  /// is invalid or does not map to a file.
+  std::optional<llvm::json::Object>
+  createPhysicalLocation(const CharSourceRange &R);
 
 public:
   SarifDocumentWriter() = delete;
@@ -463,7 +473,9 @@ public:
   /// Each run requires specifying the tool that is generating reporting items.
   void createRun(const llvm::StringRef ShortToolName,
                  const llvm::StringRef LongToolName,
-                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING);
+                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING,
+                 const llvm::StringRef InformationUri =
+                     "https://clang.llvm.org/docs/UsersManual.html");
 
   /// If there is a current run, end it.
   ///
