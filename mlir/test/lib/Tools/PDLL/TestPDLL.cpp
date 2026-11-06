@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsPatterns.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Interfaces/CastInterfaces.h"

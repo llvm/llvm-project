@@ -10,8 +10,8 @@
 // canHandleMultipleBlocks and doClone.
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsConversion.h"
+#include "TestOpsCore.h"
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"

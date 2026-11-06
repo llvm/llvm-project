@@ -94,6 +94,10 @@ public:
 
   const llvm::DagInit *getDiscardableAttributes() const;
 
+  /// Returns the names of the op partitions of this dialect, see
+  /// `Op::partition`. A dialect with op partitions is "naturally sharded".
+  ArrayRef<StringRef> getOpPartitions() const;
+
   const llvm::Record *getDef() const { return def; }
 
   // Returns whether two dialects are equal by checking the equality of the
@@ -112,6 +116,7 @@ public:
 private:
   const llvm::Record *def;
   std::vector<StringRef> dependentDialects;
+  std::vector<StringRef> opPartitions;
 };
 } // namespace tblgen
 } // namespace mlir
