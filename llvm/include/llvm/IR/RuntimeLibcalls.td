@@ -957,7 +957,6 @@ def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
 def DUNDER_STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
 def DUNDER_STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
-def ENUM_VARIANT : RuntimeLibcall;
 def EXECL : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def EXECLE : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
