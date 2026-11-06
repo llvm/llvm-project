@@ -22,8 +22,6 @@
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
 
-#include "OffloadError.h"
-
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
@@ -32,12 +30,12 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+struct DeviceTy;
+
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
-
-struct GenericDeviceTy;
+namespace rr {
 
 /// The subset of kernel information needed to record and replay a launch.
 class KernelInfoTy {
@@ -132,7 +130,7 @@ protected:
   std::string ReportFilename;
 
   /// Reference to the corresponding device.
-  GenericDeviceTy &Device;
+  DeviceTy &Device;
 
   /// The information for a global.
   struct GlobalEntryTy {
@@ -210,8 +208,7 @@ protected:
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, StringRef ReportFilename,
-                 GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename, DeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
         ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
@@ -261,6 +258,9 @@ public:
     return getFilenameImpl(Instance, FileType, IncludeDirectory);
   }
 
+  /// Synchronously copy \p Size bytes from the device to the host.
+  Error retrieveFromDevice(void *HstPtr, void *TgtPtr, uint64_t Size);
+
   /// Allocates device memory from the record replay space.
   Expected<void *> allocate(uint64_t Size);
   Error deallocate(void *Ptr);
@@ -305,7 +305,7 @@ private:
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
                        bool SaveOutput, bool EmitReport,
-                       StringRef ReportFilename, GenericDeviceTy &Device)
+                       StringRef ReportFilename, DeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
                        ReportFilename, Device) {}
 
@@ -335,9 +335,9 @@ private:
                     StringRef IRImageFilename);
 };
 
-} // namespace plugin
+} // namespace rr
 } // namespace target
 } // namespace omp
 } // namespace llvm
 
-#endif // OPENMP_LIBOMPTARGET_PLUGINS_COMMON_RECORDREPLAY_H
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H

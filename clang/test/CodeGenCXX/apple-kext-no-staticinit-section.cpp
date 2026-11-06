@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s %}
 /**
 1) Normally, global object construction code ends up in __StaticInit segment of text section
    .section __TEXT,__StaticInit,regular,pure_instructions
