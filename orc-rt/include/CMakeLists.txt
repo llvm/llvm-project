@@ -4,6 +4,7 @@
 # installed. Don't add them here to "complete" the list. An installed header
 # must not include an internal one, or the installed tree won't compile.
 set(ORC_RT_HEADERS
+    orc-rt-c/bedrock/ControllerHandlerTag.h
     orc-rt-c/bedrock/Session.h
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
