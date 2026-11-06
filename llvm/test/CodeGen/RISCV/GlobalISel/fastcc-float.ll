@@ -16,37 +16,27 @@ define fastcc float @callee([32 x float] %A) nounwind {
 define float @caller([32 x float] %A) nounwind {
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 68(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s2, 64(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s3, 60(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s4, 56(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    flw ft0, 80(sp)
-; CHECK-NEXT:    flw ft1, 84(sp)
-; CHECK-NEXT:    flw ft2, 88(sp)
-; CHECK-NEXT:    flw ft3, 92(sp)
-; CHECK-NEXT:    flw ft4, 96(sp)
-; CHECK-NEXT:    flw ft5, 100(sp)
-; CHECK-NEXT:    flw ft6, 104(sp)
-; CHECK-NEXT:    flw ft7, 108(sp)
-; CHECK-NEXT:    flw ft8, 112(sp)
-; CHECK-NEXT:    flw ft9, 116(sp)
-; CHECK-NEXT:    flw ft10, 120(sp)
-; CHECK-NEXT:    flw ft11, 124(sp)
-; CHECK-NEXT:    lw t0, 128(sp)
-; CHECK-NEXT:    lw t1, 132(sp)
-; CHECK-NEXT:    lw t2, 136(sp)
-; CHECK-NEXT:    lw t3, 140(sp)
-; CHECK-NEXT:    lw t4, 144(sp)
-; CHECK-NEXT:    lw t5, 148(sp)
-; CHECK-NEXT:    lw t6, 152(sp)
-; CHECK-NEXT:    lw s0, 156(sp)
-; CHECK-NEXT:    lw s1, 160(sp)
-; CHECK-NEXT:    lw s2, 164(sp)
-; CHECK-NEXT:    lw s3, 168(sp)
-; CHECK-NEXT:    lw s4, 172(sp)
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    flw ft0, 64(sp)
+; CHECK-NEXT:    flw ft1, 68(sp)
+; CHECK-NEXT:    flw ft2, 72(sp)
+; CHECK-NEXT:    flw ft3, 76(sp)
+; CHECK-NEXT:    flw ft4, 80(sp)
+; CHECK-NEXT:    flw ft5, 84(sp)
+; CHECK-NEXT:    flw ft6, 88(sp)
+; CHECK-NEXT:    flw ft7, 92(sp)
+; CHECK-NEXT:    flw ft8, 96(sp)
+; CHECK-NEXT:    flw ft9, 100(sp)
+; CHECK-NEXT:    flw ft10, 104(sp)
+; CHECK-NEXT:    flw ft11, 108(sp)
+; CHECK-NEXT:    lw t0, 112(sp)
+; CHECK-NEXT:    lw t1, 116(sp)
+; CHECK-NEXT:    lw t2, 120(sp)
+; CHECK-NEXT:    lw t3, 124(sp)
+; CHECK-NEXT:    lw t4, 128(sp)
+; CHECK-NEXT:    lw t5, 132(sp)
+; CHECK-NEXT:    lw t6, 136(sp)
 ; CHECK-NEXT:    sw t0, 0(sp)
 ; CHECK-NEXT:    sw t1, 4(sp)
 ; CHECK-NEXT:    sw t2, 8(sp)
@@ -54,9 +44,12 @@ define float @caller([32 x float] %A) nounwind {
 ; CHECK-NEXT:    sw t4, 16(sp)
 ; CHECK-NEXT:    sw t5, 20(sp)
 ; CHECK-NEXT:    sw t6, 24(sp)
-; CHECK-NEXT:    sw s0, 28(sp)
-; CHECK-NEXT:    sw s1, 32(sp)
-; CHECK-NEXT:    sw s2, 36(sp)
+; CHECK-NEXT:    lw t0, 140(sp)
+; CHECK-NEXT:    sw t0, 28(sp)
+; CHECK-NEXT:    lw t0, 144(sp)
+; CHECK-NEXT:    sw t0, 32(sp)
+; CHECK-NEXT:    lw t0, 148(sp)
+; CHECK-NEXT:    sw t0, 36(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    fmv.w.x fa1, a1
 ; CHECK-NEXT:    fmv.w.x fa2, a2
@@ -65,16 +58,13 @@ define float @caller([32 x float] %A) nounwind {
 ; CHECK-NEXT:    fmv.w.x fa5, a5
 ; CHECK-NEXT:    fmv.w.x fa6, a6
 ; CHECK-NEXT:    fmv.w.x fa7, a7
-; CHECK-NEXT:    sw s3, 40(sp)
-; CHECK-NEXT:    sw s4, 44(sp)
+; CHECK-NEXT:    lw a0, 152(sp)
+; CHECK-NEXT:    sw a0, 40(sp)
+; CHECK-NEXT:    lw a0, 156(sp)
+; CHECK-NEXT:    sw a0, 44(sp)
 ; CHECK-NEXT:    call callee
-; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s2, 64(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s3, 60(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s4, 56(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %C = call fastcc float @callee([32 x float] %A)
   ret float %C

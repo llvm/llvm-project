@@ -544,29 +544,29 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-F-NEXT:    li a3, 0
 ; QCI-F-NEXT:    li a5, 0
 ; QCI-F-NEXT:    li a7, 0
-; QCI-F-NEXT:    lui t0, 266496
-; QCI-F-NEXT:    li t1, 5
-; QCI-F-NEXT:    lui a0, 260096
-; QCI-F-NEXT:    lui a2, 262144
-; QCI-F-NEXT:    fmv.w.x fa0, a0
-; QCI-F-NEXT:    fmv.w.x fa1, a2
+; QCI-F-NEXT:    lui t0, 260096
+; QCI-F-NEXT:    fmv.w.x fa0, t0
+; QCI-F-NEXT:    lui a0, 262144
+; QCI-F-NEXT:    fmv.w.x fa1, a0
 ; QCI-F-NEXT:    lui a0, 263168
-; QCI-F-NEXT:    lui a2, 264192
+; QCI-F-NEXT:    lui t0, 264192
 ; QCI-F-NEXT:    fmv.w.x fa2, a0
-; QCI-F-NEXT:    fmv.w.x fa3, a2
+; QCI-F-NEXT:    fmv.w.x fa3, t0
 ; QCI-F-NEXT:    lui a0, 264704
-; QCI-F-NEXT:    lui a2, 265216
+; QCI-F-NEXT:    lui t0, 265216
 ; QCI-F-NEXT:    fmv.w.x fa4, a0
-; QCI-F-NEXT:    fmv.w.x fa5, a2
+; QCI-F-NEXT:    fmv.w.x fa5, t0
 ; QCI-F-NEXT:    lui a0, 265728
-; QCI-F-NEXT:    lui a2, 266240
+; QCI-F-NEXT:    lui t0, 266240
 ; QCI-F-NEXT:    fmv.w.x fa6, a0
-; QCI-F-NEXT:    fmv.w.x fa7, a2
+; QCI-F-NEXT:    fmv.w.x fa7, t0
 ; QCI-F-NEXT:    li a0, 1
 ; QCI-F-NEXT:    li a2, 2
 ; QCI-F-NEXT:    li a4, 3
 ; QCI-F-NEXT:    li a6, 4
-; QCI-F-NEXT:    sw t1, 0(sp)
+; QCI-F-NEXT:    li t0, 5
+; QCI-F-NEXT:    sw t0, 0(sp)
+; QCI-F-NEXT:    lui t0, 266496
 ; QCI-F-NEXT:    sw t0, 4(sp)
 ; QCI-F-NEXT:    call function_with_one_stack_arg
 ; QCI-F-NEXT:    call use_float
@@ -681,29 +681,29 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-D-NEXT:    li a3, 0
 ; QCI-D-NEXT:    li a5, 0
 ; QCI-D-NEXT:    li a7, 0
-; QCI-D-NEXT:    lui t0, 266496
-; QCI-D-NEXT:    li t1, 5
-; QCI-D-NEXT:    lui a0, 260096
-; QCI-D-NEXT:    lui a2, 262144
-; QCI-D-NEXT:    fmv.w.x fa0, a0
-; QCI-D-NEXT:    fmv.w.x fa1, a2
+; QCI-D-NEXT:    lui t0, 260096
+; QCI-D-NEXT:    fmv.w.x fa0, t0
+; QCI-D-NEXT:    lui a0, 262144
+; QCI-D-NEXT:    fmv.w.x fa1, a0
 ; QCI-D-NEXT:    lui a0, 263168
-; QCI-D-NEXT:    lui a2, 264192
+; QCI-D-NEXT:    lui t0, 264192
 ; QCI-D-NEXT:    fmv.w.x fa2, a0
-; QCI-D-NEXT:    fmv.w.x fa3, a2
+; QCI-D-NEXT:    fmv.w.x fa3, t0
 ; QCI-D-NEXT:    lui a0, 264704
-; QCI-D-NEXT:    lui a2, 265216
+; QCI-D-NEXT:    lui t0, 265216
 ; QCI-D-NEXT:    fmv.w.x fa4, a0
-; QCI-D-NEXT:    fmv.w.x fa5, a2
+; QCI-D-NEXT:    fmv.w.x fa5, t0
 ; QCI-D-NEXT:    lui a0, 265728
-; QCI-D-NEXT:    lui a2, 266240
+; QCI-D-NEXT:    lui t0, 266240
 ; QCI-D-NEXT:    fmv.w.x fa6, a0
-; QCI-D-NEXT:    fmv.w.x fa7, a2
+; QCI-D-NEXT:    fmv.w.x fa7, t0
 ; QCI-D-NEXT:    li a0, 1
 ; QCI-D-NEXT:    li a2, 2
 ; QCI-D-NEXT:    li a4, 3
 ; QCI-D-NEXT:    li a6, 4
-; QCI-D-NEXT:    sw t1, 0(sp)
+; QCI-D-NEXT:    li t0, 5
+; QCI-D-NEXT:    sw t0, 0(sp)
+; QCI-D-NEXT:    lui t0, 266496
 ; QCI-D-NEXT:    sw t0, 4(sp)
 ; QCI-D-NEXT:    call function_with_one_stack_arg
 ; QCI-D-NEXT:    call use_float
@@ -823,29 +823,29 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-F-NEXT:    li a3, 0
 ; QCI-F-NEXT:    li a5, 0
 ; QCI-F-NEXT:    li a7, 0
-; QCI-F-NEXT:    lui t0, 266496
-; QCI-F-NEXT:    li t1, 5
-; QCI-F-NEXT:    lui a0, 260096
-; QCI-F-NEXT:    lui a2, 262144
-; QCI-F-NEXT:    fmv.w.x fa0, a0
-; QCI-F-NEXT:    fmv.w.x fa1, a2
+; QCI-F-NEXT:    lui t0, 260096
+; QCI-F-NEXT:    fmv.w.x fa0, t0
+; QCI-F-NEXT:    lui a0, 262144
+; QCI-F-NEXT:    fmv.w.x fa1, a0
 ; QCI-F-NEXT:    lui a0, 263168
-; QCI-F-NEXT:    lui a2, 264192
+; QCI-F-NEXT:    lui t0, 264192
 ; QCI-F-NEXT:    fmv.w.x fa2, a0
-; QCI-F-NEXT:    fmv.w.x fa3, a2
+; QCI-F-NEXT:    fmv.w.x fa3, t0
 ; QCI-F-NEXT:    lui a0, 264704
-; QCI-F-NEXT:    lui a2, 265216
+; QCI-F-NEXT:    lui t0, 265216
 ; QCI-F-NEXT:    fmv.w.x fa4, a0
-; QCI-F-NEXT:    fmv.w.x fa5, a2
+; QCI-F-NEXT:    fmv.w.x fa5, t0
 ; QCI-F-NEXT:    lui a0, 265728
-; QCI-F-NEXT:    lui a2, 266240
+; QCI-F-NEXT:    lui t0, 266240
 ; QCI-F-NEXT:    fmv.w.x fa6, a0
-; QCI-F-NEXT:    fmv.w.x fa7, a2
+; QCI-F-NEXT:    fmv.w.x fa7, t0
 ; QCI-F-NEXT:    li a0, 1
 ; QCI-F-NEXT:    li a2, 2
 ; QCI-F-NEXT:    li a4, 3
 ; QCI-F-NEXT:    li a6, 4
-; QCI-F-NEXT:    sw t1, 0(sp)
+; QCI-F-NEXT:    li t0, 5
+; QCI-F-NEXT:    sw t0, 0(sp)
+; QCI-F-NEXT:    lui t0, 266496
 ; QCI-F-NEXT:    sw t0, 4(sp)
 ; QCI-F-NEXT:    call function_with_one_stack_arg
 ; QCI-F-NEXT:    call use_float
@@ -960,29 +960,29 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-D-NEXT:    li a3, 0
 ; QCI-D-NEXT:    li a5, 0
 ; QCI-D-NEXT:    li a7, 0
-; QCI-D-NEXT:    lui t0, 266496
-; QCI-D-NEXT:    li t1, 5
-; QCI-D-NEXT:    lui a0, 260096
-; QCI-D-NEXT:    lui a2, 262144
-; QCI-D-NEXT:    fmv.w.x fa0, a0
-; QCI-D-NEXT:    fmv.w.x fa1, a2
+; QCI-D-NEXT:    lui t0, 260096
+; QCI-D-NEXT:    fmv.w.x fa0, t0
+; QCI-D-NEXT:    lui a0, 262144
+; QCI-D-NEXT:    fmv.w.x fa1, a0
 ; QCI-D-NEXT:    lui a0, 263168
-; QCI-D-NEXT:    lui a2, 264192
+; QCI-D-NEXT:    lui t0, 264192
 ; QCI-D-NEXT:    fmv.w.x fa2, a0
-; QCI-D-NEXT:    fmv.w.x fa3, a2
+; QCI-D-NEXT:    fmv.w.x fa3, t0
 ; QCI-D-NEXT:    lui a0, 264704
-; QCI-D-NEXT:    lui a2, 265216
+; QCI-D-NEXT:    lui t0, 265216
 ; QCI-D-NEXT:    fmv.w.x fa4, a0
-; QCI-D-NEXT:    fmv.w.x fa5, a2
+; QCI-D-NEXT:    fmv.w.x fa5, t0
 ; QCI-D-NEXT:    lui a0, 265728
-; QCI-D-NEXT:    lui a2, 266240
+; QCI-D-NEXT:    lui t0, 266240
 ; QCI-D-NEXT:    fmv.w.x fa6, a0
-; QCI-D-NEXT:    fmv.w.x fa7, a2
+; QCI-D-NEXT:    fmv.w.x fa7, t0
 ; QCI-D-NEXT:    li a0, 1
 ; QCI-D-NEXT:    li a2, 2
 ; QCI-D-NEXT:    li a4, 3
 ; QCI-D-NEXT:    li a6, 4
-; QCI-D-NEXT:    sw t1, 0(sp)
+; QCI-D-NEXT:    li t0, 5
+; QCI-D-NEXT:    sw t0, 0(sp)
+; QCI-D-NEXT:    lui t0, 266496
 ; QCI-D-NEXT:    sw t0, 4(sp)
 ; QCI-D-NEXT:    call function_with_one_stack_arg
 ; QCI-D-NEXT:    call use_float
@@ -1764,7 +1764,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-F-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
 ; QCI-F-NEXT:    lw a0, 80(s0)
 ; QCI-F-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
-; QCI-F-NEXT:    lw s11, 84(s0)
+; QCI-F-NEXT:    lw a0, 84(s0)
+; QCI-F-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; QCI-F-NEXT:    lw s1, 88(s0)
 ; QCI-F-NEXT:    lw s2, 92(s0)
 ; QCI-F-NEXT:    lw s3, 96(s0)
@@ -1779,29 +1780,29 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-F-NEXT:    li a3, 0
 ; QCI-F-NEXT:    li a5, 0
 ; QCI-F-NEXT:    li a7, 0
-; QCI-F-NEXT:    lui t0, 266496
-; QCI-F-NEXT:    li t1, 5
-; QCI-F-NEXT:    lui a0, 260096
-; QCI-F-NEXT:    lui a2, 262144
-; QCI-F-NEXT:    fmv.w.x fa0, a0
-; QCI-F-NEXT:    fmv.w.x fa1, a2
-; QCI-F-NEXT:    lui a0, 263168
-; QCI-F-NEXT:    lui a2, 264192
-; QCI-F-NEXT:    fmv.w.x fa2, a0
-; QCI-F-NEXT:    fmv.w.x fa3, a2
-; QCI-F-NEXT:    lui a0, 264704
-; QCI-F-NEXT:    lui a2, 265216
-; QCI-F-NEXT:    fmv.w.x fa4, a0
-; QCI-F-NEXT:    fmv.w.x fa5, a2
-; QCI-F-NEXT:    lui a0, 265728
-; QCI-F-NEXT:    lui a2, 266240
-; QCI-F-NEXT:    fmv.w.x fa6, a0
-; QCI-F-NEXT:    fmv.w.x fa7, a2
+; QCI-F-NEXT:    lui t0, 260096
+; QCI-F-NEXT:    lui s11, 262144
+; QCI-F-NEXT:    fmv.w.x fa0, t0
+; QCI-F-NEXT:    fmv.w.x fa1, s11
+; QCI-F-NEXT:    lui s11, 263168
+; QCI-F-NEXT:    lui t0, 264192
+; QCI-F-NEXT:    fmv.w.x fa2, s11
+; QCI-F-NEXT:    fmv.w.x fa3, t0
+; QCI-F-NEXT:    lui s11, 264704
+; QCI-F-NEXT:    lui t0, 265216
+; QCI-F-NEXT:    fmv.w.x fa4, s11
+; QCI-F-NEXT:    fmv.w.x fa5, t0
+; QCI-F-NEXT:    lui s11, 265728
+; QCI-F-NEXT:    lui t0, 266240
+; QCI-F-NEXT:    fmv.w.x fa6, s11
+; QCI-F-NEXT:    fmv.w.x fa7, t0
 ; QCI-F-NEXT:    li a0, 1
 ; QCI-F-NEXT:    li a2, 2
 ; QCI-F-NEXT:    li a4, 3
 ; QCI-F-NEXT:    li a6, 4
-; QCI-F-NEXT:    sw t1, 0(sp)
+; QCI-F-NEXT:    li t0, 5
+; QCI-F-NEXT:    sw t0, 0(sp)
+; QCI-F-NEXT:    lui t0, 266496
 ; QCI-F-NEXT:    sw t0, 4(sp)
 ; QCI-F-NEXT:    call function_with_one_stack_arg
 ; QCI-F-NEXT:    call use_float
@@ -1815,7 +1816,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-F-NEXT:    sw s3, 96(s0)
 ; QCI-F-NEXT:    sw s2, 92(s0)
 ; QCI-F-NEXT:    sw s1, 88(s0)
-; QCI-F-NEXT:    sw s11, 84(s0)
+; QCI-F-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; QCI-F-NEXT:    sw a0, 84(s0)
 ; QCI-F-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
 ; QCI-F-NEXT:    sw a0, 80(s0)
 ; QCI-F-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
@@ -2053,7 +2055,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-D-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
 ; QCI-D-NEXT:    lw a0, 80(s0)
 ; QCI-D-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
-; QCI-D-NEXT:    lw s11, 84(s0)
+; QCI-D-NEXT:    lw a0, 84(s0)
+; QCI-D-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; QCI-D-NEXT:    lw s1, 88(s0)
 ; QCI-D-NEXT:    lw s2, 92(s0)
 ; QCI-D-NEXT:    lw s3, 96(s0)
@@ -2068,29 +2071,29 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-D-NEXT:    li a3, 0
 ; QCI-D-NEXT:    li a5, 0
 ; QCI-D-NEXT:    li a7, 0
-; QCI-D-NEXT:    lui t0, 266496
-; QCI-D-NEXT:    li t1, 5
-; QCI-D-NEXT:    lui a0, 260096
-; QCI-D-NEXT:    lui a2, 262144
-; QCI-D-NEXT:    fmv.w.x fa0, a0
-; QCI-D-NEXT:    fmv.w.x fa1, a2
-; QCI-D-NEXT:    lui a0, 263168
-; QCI-D-NEXT:    lui a2, 264192
-; QCI-D-NEXT:    fmv.w.x fa2, a0
-; QCI-D-NEXT:    fmv.w.x fa3, a2
-; QCI-D-NEXT:    lui a0, 264704
-; QCI-D-NEXT:    lui a2, 265216
-; QCI-D-NEXT:    fmv.w.x fa4, a0
-; QCI-D-NEXT:    fmv.w.x fa5, a2
-; QCI-D-NEXT:    lui a0, 265728
-; QCI-D-NEXT:    lui a2, 266240
-; QCI-D-NEXT:    fmv.w.x fa6, a0
-; QCI-D-NEXT:    fmv.w.x fa7, a2
+; QCI-D-NEXT:    lui t0, 260096
+; QCI-D-NEXT:    lui s11, 262144
+; QCI-D-NEXT:    fmv.w.x fa0, t0
+; QCI-D-NEXT:    fmv.w.x fa1, s11
+; QCI-D-NEXT:    lui s11, 263168
+; QCI-D-NEXT:    lui t0, 264192
+; QCI-D-NEXT:    fmv.w.x fa2, s11
+; QCI-D-NEXT:    fmv.w.x fa3, t0
+; QCI-D-NEXT:    lui s11, 264704
+; QCI-D-NEXT:    lui t0, 265216
+; QCI-D-NEXT:    fmv.w.x fa4, s11
+; QCI-D-NEXT:    fmv.w.x fa5, t0
+; QCI-D-NEXT:    lui s11, 265728
+; QCI-D-NEXT:    lui t0, 266240
+; QCI-D-NEXT:    fmv.w.x fa6, s11
+; QCI-D-NEXT:    fmv.w.x fa7, t0
 ; QCI-D-NEXT:    li a0, 1
 ; QCI-D-NEXT:    li a2, 2
 ; QCI-D-NEXT:    li a4, 3
 ; QCI-D-NEXT:    li a6, 4
-; QCI-D-NEXT:    sw t1, 0(sp)
+; QCI-D-NEXT:    li t0, 5
+; QCI-D-NEXT:    sw t0, 0(sp)
+; QCI-D-NEXT:    lui t0, 266496
 ; QCI-D-NEXT:    sw t0, 4(sp)
 ; QCI-D-NEXT:    call function_with_one_stack_arg
 ; QCI-D-NEXT:    call use_float
@@ -2104,7 +2107,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-D-NEXT:    sw s3, 96(s0)
 ; QCI-D-NEXT:    sw s2, 92(s0)
 ; QCI-D-NEXT:    sw s1, 88(s0)
-; QCI-D-NEXT:    sw s11, 84(s0)
+; QCI-D-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; QCI-D-NEXT:    sw a0, 84(s0)
 ; QCI-D-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; QCI-D-NEXT:    sw a0, 80(s0)
 ; QCI-D-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
@@ -2349,7 +2353,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-F-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
 ; QCI-F-NEXT:    lw a0, 80(s0)
 ; QCI-F-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
-; QCI-F-NEXT:    lw s11, 84(s0)
+; QCI-F-NEXT:    lw a0, 84(s0)
+; QCI-F-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; QCI-F-NEXT:    lw s1, 88(s0)
 ; QCI-F-NEXT:    lw s2, 92(s0)
 ; QCI-F-NEXT:    lw s3, 96(s0)
@@ -2364,29 +2369,29 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-F-NEXT:    li a3, 0
 ; QCI-F-NEXT:    li a5, 0
 ; QCI-F-NEXT:    li a7, 0
-; QCI-F-NEXT:    lui t0, 266496
-; QCI-F-NEXT:    li t1, 5
-; QCI-F-NEXT:    lui a0, 260096
-; QCI-F-NEXT:    lui a2, 262144
-; QCI-F-NEXT:    fmv.w.x fa0, a0
-; QCI-F-NEXT:    fmv.w.x fa1, a2
-; QCI-F-NEXT:    lui a0, 263168
-; QCI-F-NEXT:    lui a2, 264192
-; QCI-F-NEXT:    fmv.w.x fa2, a0
-; QCI-F-NEXT:    fmv.w.x fa3, a2
-; QCI-F-NEXT:    lui a0, 264704
-; QCI-F-NEXT:    lui a2, 265216
-; QCI-F-NEXT:    fmv.w.x fa4, a0
-; QCI-F-NEXT:    fmv.w.x fa5, a2
-; QCI-F-NEXT:    lui a0, 265728
-; QCI-F-NEXT:    lui a2, 266240
-; QCI-F-NEXT:    fmv.w.x fa6, a0
-; QCI-F-NEXT:    fmv.w.x fa7, a2
+; QCI-F-NEXT:    lui t0, 260096
+; QCI-F-NEXT:    lui s11, 262144
+; QCI-F-NEXT:    fmv.w.x fa0, t0
+; QCI-F-NEXT:    fmv.w.x fa1, s11
+; QCI-F-NEXT:    lui s11, 263168
+; QCI-F-NEXT:    lui t0, 264192
+; QCI-F-NEXT:    fmv.w.x fa2, s11
+; QCI-F-NEXT:    fmv.w.x fa3, t0
+; QCI-F-NEXT:    lui s11, 264704
+; QCI-F-NEXT:    lui t0, 265216
+; QCI-F-NEXT:    fmv.w.x fa4, s11
+; QCI-F-NEXT:    fmv.w.x fa5, t0
+; QCI-F-NEXT:    lui s11, 265728
+; QCI-F-NEXT:    lui t0, 266240
+; QCI-F-NEXT:    fmv.w.x fa6, s11
+; QCI-F-NEXT:    fmv.w.x fa7, t0
 ; QCI-F-NEXT:    li a0, 1
 ; QCI-F-NEXT:    li a2, 2
 ; QCI-F-NEXT:    li a4, 3
 ; QCI-F-NEXT:    li a6, 4
-; QCI-F-NEXT:    sw t1, 0(sp)
+; QCI-F-NEXT:    li t0, 5
+; QCI-F-NEXT:    sw t0, 0(sp)
+; QCI-F-NEXT:    lui t0, 266496
 ; QCI-F-NEXT:    sw t0, 4(sp)
 ; QCI-F-NEXT:    call function_with_one_stack_arg
 ; QCI-F-NEXT:    call use_float
@@ -2400,7 +2405,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-F-NEXT:    sw s3, 96(s0)
 ; QCI-F-NEXT:    sw s2, 92(s0)
 ; QCI-F-NEXT:    sw s1, 88(s0)
-; QCI-F-NEXT:    sw s11, 84(s0)
+; QCI-F-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; QCI-F-NEXT:    sw a0, 84(s0)
 ; QCI-F-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
 ; QCI-F-NEXT:    sw a0, 80(s0)
 ; QCI-F-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
@@ -2638,7 +2644,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-D-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
 ; QCI-D-NEXT:    lw a0, 80(s0)
 ; QCI-D-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
-; QCI-D-NEXT:    lw s11, 84(s0)
+; QCI-D-NEXT:    lw a0, 84(s0)
+; QCI-D-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; QCI-D-NEXT:    lw s1, 88(s0)
 ; QCI-D-NEXT:    lw s2, 92(s0)
 ; QCI-D-NEXT:    lw s3, 96(s0)
@@ -2653,29 +2660,29 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-D-NEXT:    li a3, 0
 ; QCI-D-NEXT:    li a5, 0
 ; QCI-D-NEXT:    li a7, 0
-; QCI-D-NEXT:    lui t0, 266496
-; QCI-D-NEXT:    li t1, 5
-; QCI-D-NEXT:    lui a0, 260096
-; QCI-D-NEXT:    lui a2, 262144
-; QCI-D-NEXT:    fmv.w.x fa0, a0
-; QCI-D-NEXT:    fmv.w.x fa1, a2
-; QCI-D-NEXT:    lui a0, 263168
-; QCI-D-NEXT:    lui a2, 264192
-; QCI-D-NEXT:    fmv.w.x fa2, a0
-; QCI-D-NEXT:    fmv.w.x fa3, a2
-; QCI-D-NEXT:    lui a0, 264704
-; QCI-D-NEXT:    lui a2, 265216
-; QCI-D-NEXT:    fmv.w.x fa4, a0
-; QCI-D-NEXT:    fmv.w.x fa5, a2
-; QCI-D-NEXT:    lui a0, 265728
-; QCI-D-NEXT:    lui a2, 266240
-; QCI-D-NEXT:    fmv.w.x fa6, a0
-; QCI-D-NEXT:    fmv.w.x fa7, a2
+; QCI-D-NEXT:    lui t0, 260096
+; QCI-D-NEXT:    lui s11, 262144
+; QCI-D-NEXT:    fmv.w.x fa0, t0
+; QCI-D-NEXT:    fmv.w.x fa1, s11
+; QCI-D-NEXT:    lui s11, 263168
+; QCI-D-NEXT:    lui t0, 264192
+; QCI-D-NEXT:    fmv.w.x fa2, s11
+; QCI-D-NEXT:    fmv.w.x fa3, t0
+; QCI-D-NEXT:    lui s11, 264704
+; QCI-D-NEXT:    lui t0, 265216
+; QCI-D-NEXT:    fmv.w.x fa4, s11
+; QCI-D-NEXT:    fmv.w.x fa5, t0
+; QCI-D-NEXT:    lui s11, 265728
+; QCI-D-NEXT:    lui t0, 266240
+; QCI-D-NEXT:    fmv.w.x fa6, s11
+; QCI-D-NEXT:    fmv.w.x fa7, t0
 ; QCI-D-NEXT:    li a0, 1
 ; QCI-D-NEXT:    li a2, 2
 ; QCI-D-NEXT:    li a4, 3
 ; QCI-D-NEXT:    li a6, 4
-; QCI-D-NEXT:    sw t1, 0(sp)
+; QCI-D-NEXT:    li t0, 5
+; QCI-D-NEXT:    sw t0, 0(sp)
+; QCI-D-NEXT:    lui t0, 266496
 ; QCI-D-NEXT:    sw t0, 4(sp)
 ; QCI-D-NEXT:    call function_with_one_stack_arg
 ; QCI-D-NEXT:    call use_float
@@ -2689,7 +2696,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-D-NEXT:    sw s3, 96(s0)
 ; QCI-D-NEXT:    sw s2, 92(s0)
 ; QCI-D-NEXT:    sw s1, 88(s0)
-; QCI-D-NEXT:    sw s11, 84(s0)
+; QCI-D-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; QCI-D-NEXT:    sw a0, 84(s0)
 ; QCI-D-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; QCI-D-NEXT:    sw a0, 80(s0)
 ; QCI-D-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
