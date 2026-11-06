@@ -3449,6 +3449,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
   }
+
+  if (isa<CXXConstructorDecl>(funcDecl) || isa<CXXDestructorDecl>(funcDecl))
+    func.setUnnamedAddr(true);
+  else if (const auto *md = dyn_cast<CXXMethodDecl>(funcDecl))
+    if (md->isVirtual())
+      func.setUnnamedAddr(true);
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
@@ -4323,7 +4329,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
       alias, mlir::SymbolTable::Visibility::Private);
 
   // Alias constructors and destructors are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  alias.setUnnamedAddr(true);
 
   if (op) {
     // Any existing users of the existing function declaration will be
