@@ -793,6 +793,12 @@ public:
   void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
 
+  /// Emit the offset of \p Sym + \p Offset from the start of its DWARF section
+  /// as a section-relative relocation.
+  /// \returns the number of bytes emitted.
+  unsigned emitDwarfSectionOffset(const MCSymbol *Sym, uint64_t Offset,
+                                  unsigned Size);
+
   /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
   void emitFill(uint64_t NumBytes, uint8_t FillValue);

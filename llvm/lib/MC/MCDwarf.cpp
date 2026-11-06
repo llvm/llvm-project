@@ -410,7 +410,7 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
     if (Ctx.getAsmInfo().needsDwarfSectionOffsetDirective()) {
-      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
+      MCOS->emitDwarfSectionOffset(LineStrLabel, Offset, RefSize);
     } else {
       MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
                       RefSize);
