@@ -2012,10 +2012,6 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
 
   MRI->replaceRegWith(Dst, Src);
 
-  // Clear kill flags if the register operand is not marked as kill.
-  if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
-    MRI->clearKillFlags(Src);
-
   ChildMI.eraseFromParent();
   return true;
 }
@@ -2066,8 +2062,6 @@ bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
         .addReg(SrcReg);
   }
 
-  if (!Src.isKill())
-    MRI->clearKillFlags(SrcReg);
   MI.eraseFromParent();
   return true;
 }

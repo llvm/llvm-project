@@ -221,6 +221,8 @@ HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   Reserved.set(Hexagon::FRAMEKEY);    // C17
   Reserved.set(Hexagon::PKTCOUNTLO);  // C18
   Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::VFRAMELIMIT); // C28
+  Reserved.set(Hexagon::VSP);         // C29
   Reserved.set(Hexagon::UTIMERLO);    // C30
   Reserved.set(Hexagon::UTIMERHI);    // C31
   // Out of the control registers, only C8 is explicitly defined in

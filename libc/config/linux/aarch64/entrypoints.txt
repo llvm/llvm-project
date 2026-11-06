@@ -344,6 +344,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sendfile.h entrypoints
     libc.src.sys.sendfile.sendfile
 
+    # sys/shm.h entrypoints
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmget
+
     # sys/socket.h entrypoints
     libc.src.sys.socket.accept
     libc.src.sys.socket.accept4
@@ -461,7 +465,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chroot
     libc.src.unistd.close
     libc.src.unistd.close_range
-    libc.src.unistd.copy_file_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
@@ -1073,6 +1076,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
   libc.src.math.acosbf16
+  libc.src.math.acoshbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1140,6 +1144,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16
