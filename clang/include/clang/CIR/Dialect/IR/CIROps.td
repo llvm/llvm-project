@@ -688,8 +688,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3599,7 +3600,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    mlir::LogicalResult setupRegionInitializedLLVMGlobalOp(
+    mlir::LLVM::GlobalOp setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
@@ -3611,8 +3612,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                                       mlir::OpBuilder &builder) const;
   }];
 
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3699,6 +3701,9 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
     `)`
     `:` qualified(type($addr)) attr-dict
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3884,6 +3889,9 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
   }];
 
   let hasVerifier = 1;
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
