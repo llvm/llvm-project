@@ -13,7 +13,8 @@ define <16 x i16> @repl_h() noinline nounwind "frame-pointer"="all" {
 ; CHECK-NEXT:    addi.d $a0, $fp, -89
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(use)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    xvldrepl.h $xr0, $fp, -73
+; CHECK-NEXT:    addi.d $a0, $fp, -73
+; CHECK-NEXT:    xvldrepl.h $xr0, $a0, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
@@ -37,7 +38,8 @@ define <8 x i32> @repl_w() noinline nounwind "frame-pointer"="all" {
 ; CHECK-NEXT:    addi.d $a0, $fp, -90
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(use)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    xvldrepl.w $xr0, $fp, -74
+; CHECK-NEXT:    addi.d $a0, $fp, -74
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
@@ -61,7 +63,8 @@ define <4 x i64> @repl_d() noinline nounwind "frame-pointer"="all" {
 ; CHECK-NEXT:    addi.d $a0, $fp, -91
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(use)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    xvldrepl.d $xr0, $fp, -75
+; CHECK-NEXT:    addi.d $a0, $fp, -75
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
