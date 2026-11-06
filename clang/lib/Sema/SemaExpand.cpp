@@ -203,11 +203,21 @@ static IterableExpansionStmtData TryBuildIterableExpansionStmtInitializer(
   if (BeginStmt.isInvalid())
     return Data;
 
-  // TODO: Build 'constexpr auto iter = begin + decltype(begin - begin){i};'.
-  S.Diag(ColonLoc, diag::err_iterating_expansion_stmt_unsupported);
-  return Data;
+  // Build 'begin + decltype(begin - begin){i}'.
+  auto TokBegin =
+      Token::createAnnotation(tok::annot_value_decl, ColonLoc, Info.BeginVar);
+  auto TokI = Token::createAnnotation(tok::annot_expr, ColonLoc,
+                                      ExprResult(Index).getAsOpaquePointer());
+  ExprResult BeginPlusI = S.TokenInjectionHandler->ParseAsExpression(
+      "__begin + decltype(__begin - __begin){__i}",
+      {
+          {"__begin", TokBegin},
+          {"__i", TokI},
+      },
+      ColonLoc);
+  if (BeginPlusI.isInvalid())
+    return Data;
 
-#if 0 // This will be used once we support iterating expansion statements.
   // Store it in a variable.
   // See also Sema::BuildCXXForRangeBeginEndVars().
   const auto DepthStr = std::to_string(Scope->getDepth() / 2);
@@ -233,7 +243,6 @@ static IterableExpansionStmtData TryBuildIterableExpansionStmtInitializer(
   Data.IterDecl = IterVarStmt.getAs<DeclStmt>();
   Data.TheState = IterableExpansionStmtData::IsIterableResult::Iterable;
   return Data;
-#endif
 }
 
 static StmtResult BuildDestructuringDecompositionDecl(
@@ -622,11 +631,32 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     EnterExpressionEvaluationContext ExprEvalCtx(
         *this, ExpressionEvaluationContext::ConstantEvaluated);
 
-    // TODO: Build the lambda and evaluate it.
-    Diag(Loc, diag::err_iterating_expansion_stmt_unsupported);
-    return std::nullopt;
+    // Annotation token that instructs the parser to declare begin/end, i.e.
+    //
+    //   auto __begin = begin-expr;
+    //   auto __end = end-expr;
+    //
+    auto DeclareBeginEnd =
+        Token::createAnnotation(tok::annot_expansion_stmt_declare_begin_end,
+                                Loc, Expansion->getRangeVar());
 
-#if 0 // This will be used once we support iterating expansion statements.
+    // Build the lambda.
+    ExprResult Call = TokenInjectionHandler->ParseAsExpression(
+        R"c++(
+        [&] consteval {
+           __PTRDIFF_TYPE__ __result = 0;
+           __expansion_stmt_declare_begin_end __begin __end
+           for (; __begin != __end; ++__begin) ++__result;
+           return __result;
+        }()
+      )c++",
+        {
+            {"__expansion_stmt_declare_begin_end", DeclareBeginEnd},
+        },
+        Loc);
+    if (Call.isInvalid() || Call.get()->isTypeDependent())
+      return std::nullopt;
+
     Expr::EvalResult ER;
     SmallVector<PartialDiagnosticAt, 4> Notes;
     ER.Diag = &Notes;
@@ -641,7 +671,6 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     // via the built-in '++' on a ptrdiff_t.
     assert(ER.Val.getInt().isNonNegative());
     return ER.Val.getInt().getZExtValue();
-#endif
   }
 
   assert(Expansion->isDestructuring());

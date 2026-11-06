@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
-// Iterating expansion statements are currently not supported.
-// XFAIL: *
-
 template <typename T, __SIZE_TYPE__ size>
 struct Array {
   T data[size]{};
