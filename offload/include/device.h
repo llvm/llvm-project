@@ -49,8 +49,8 @@ struct __tgt_target_table;
 /// Kernel launch-geometry properties.
 struct KernelLaunchInfoTy {
   const char *Name = nullptr;
-  llvm::MemoryBufferRef Image;
-  llvm::MemoryBufferRef IRImage;
+  /// The program this kernel belongs to.
+  ProgramTy Program;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;

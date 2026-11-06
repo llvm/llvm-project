@@ -50,8 +50,6 @@ namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
 llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
                                          ol_device_handle_t Device,
                                          TargetAllocTy Kind, int64_t Size,
@@ -366,11 +364,14 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   ProgramTy Program = std::move(*ProgramOrErr);
 
   OMPT_IF_BUILT_AND_INITIALIZED({
-    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-        Program.getHandle());
+    auto ImageOrErr = Program.getImage();
+    if (!ImageOrErr)
+      return ImageOrErr.takeError();
+    llvm::MemoryBufferRef Image = *ImageOrErr;
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        Image.getBufferSize(),
+                        const_cast<char *>(Image.getBufferStart()),
                         /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
   });
 
@@ -1339,8 +1340,14 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {
-    Kernel = KernelInfoTy(KernelLaunchInfo.Name, KernelLaunchInfo.Image,
-                          KernelLaunchInfo.IRImage);
+    auto ImageOrErr = KernelLaunchInfo.Program.getImage();
+    if (!ImageOrErr) {
+      REPORT() << "Failure to get the image of kernel " << KernelLaunchInfo.Name
+               << ": " << toString(ImageOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    Kernel = KernelInfoTy(KernelLaunchInfo.Name, *ImageOrErr,
+                          KernelLaunchInfo.Program.getIRImage());
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
