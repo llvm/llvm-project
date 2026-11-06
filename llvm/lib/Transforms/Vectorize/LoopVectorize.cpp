@@ -5221,6 +5221,18 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
          Plan.hasTailFolded() &&
          "Expected to build a valid tail-folded VPlan with epilogue VF");
 
+  // Validate that VPlan has a mask to make sure that the epilogue loop
+  // terminates correctly:
+  if (none_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+              IsaPred<VPActiveLaneMaskPHIRecipe>)) {
+    reportVectorizationInfo(
+        "Tail-folded epilogue has no active-lane-mask exit, so it may not "
+        "terminate, can't apply tail-folded epilogue",
+        "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    VPlans.pop_back();
+    return false;
+  }
+
   if (!cost(Plan, EpilogueVectorizationForceVF, /*RU=*/nullptr, EpilogueTfCM)
            .isValid()) {
     VPlans.pop_back();
