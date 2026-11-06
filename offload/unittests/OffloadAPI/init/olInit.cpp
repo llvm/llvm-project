@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <OffloadAPI.h>
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <thread>
@@ -368,3 +369,213 @@ TEST_F(olInitTest, ShutDownAtProcessExit) {
       ::testing::ExitedWithCode(0), "");
 }
 #endif
+
+namespace {
+struct ShutdownLog {
+  std::vector<int> Order;
+  bool PlatformsUsableInCallback = true;
+};
+} // namespace
+
+TEST_F(olInitTest, ShutdownCallbacksRunInReverseOrder) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  ShutdownLog Log;
+  struct Entry {
+    ShutdownLog *Log;
+    int Id;
+  } First{&Log, 1}, Second{&Log, 2};
+  auto Cb = [](void *Data) {
+    auto *E = static_cast<Entry *>(Data);
+    E->Log->Order.push_back(E->Id);
+    // The library must still be usable from a callback.
+    if (olIterateDevices([](ol_device_handle_t, void *) { return true; },
+                         nullptr) != OL_SUCCESS)
+      E->Log->PlatformsUsableInCallback = false;
+  };
+  ASSERT_SUCCESS(olRegisterShutdownCallback(Cb, &First));
+  ASSERT_SUCCESS(olRegisterShutdownCallback(Cb, &Second));
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Log.Order, (std::vector<int>{2, 1}));
+  EXPECT_TRUE(Log.PlatformsUsableInCallback);
+
+  // Callbacks do not survive the initialization they were registered in.
+  ASSERT_SUCCESS(olInit(nullptr));
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Log.Order.size(), 2u);
+}
+
+TEST_F(olInitTest, ShutdownCallbackNotRunBeforeLastShutDown) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  ASSERT_SUCCESS(olInit(nullptr));
+  int Calls = 0;
+  ASSERT_SUCCESS(olRegisterShutdownCallback(
+      [](void *Data) { ++*static_cast<int *>(Data); }, &Calls));
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Calls, 0);
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Calls, 1);
+}
+
+// Platforms are initialized lazily, the first time their devices are accessed.
+// A callback must run regardless of whether it was registered before or after
+// that happens.
+static void touchPlatforms() {
+  ASSERT_SUCCESS(olIterateDevices(
+      [](ol_device_handle_t, void *) { return true; }, nullptr));
+}
+
+static void countCall(void *Data) { ++*static_cast<int *>(Data); }
+
+TEST_F(olInitTest, ShutdownCallbackRegisteredBeforePlatformInit) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  int Calls = 0;
+  ASSERT_SUCCESS(olRegisterShutdownCallback(countCall, &Calls));
+  touchPlatforms();
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Calls, 1);
+}
+
+TEST_F(olInitTest, ShutdownCallbackRegisteredAfterPlatformInit) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  touchPlatforms();
+  int Calls = 0;
+  ASSERT_SUCCESS(olRegisterShutdownCallback(countCall, &Calls));
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Calls, 1);
+}
+
+TEST_F(olInitTest, ShutdownCallbacksAroundPlatformInitKeepOrder) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  std::vector<int> Order;
+  struct Entry {
+    std::vector<int> *Order;
+    int Id;
+  } Before{&Order, 1}, After{&Order, 2};
+  auto Record = [](void *Data) {
+    auto *E = static_cast<Entry *>(Data);
+    E->Order->push_back(E->Id);
+  };
+  ASSERT_SUCCESS(olRegisterShutdownCallback(Record, &Before));
+  touchPlatforms();
+  ASSERT_SUCCESS(olRegisterShutdownCallback(Record, &After));
+  ASSERT_SUCCESS(olShutDown());
+  EXPECT_EQ(Order, (std::vector<int>{2, 1}));
+}
+
+#ifndef _WIN32
+static void printCallback(void *Data) {
+  fprintf(stderr, "shutdown-callback-%s\n", static_cast<const char *>(Data));
+}
+
+// At process exit the callback must run when the library shuts itself down.
+TEST_F(olInitTest, ShutdownCallbackAtExitRegisteredBeforePlatformInit) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_EXIT(
+      {
+        if (olInit(nullptr) != OL_SUCCESS)
+          _exit(3);
+        if (olRegisterShutdownCallback(printCallback, (void *)"before") !=
+            OL_SUCCESS)
+          _exit(4);
+        if (olIterateDevices([](ol_device_handle_t, void *) { return false; },
+                             nullptr) != OL_SUCCESS)
+          _exit(5);
+        exit(0);
+      },
+      ::testing::ExitedWithCode(0), "shutdown-callback-before");
+}
+
+TEST_F(olInitTest, ShutdownCallbackAtExitRegisteredAfterPlatformInit) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_EXIT(
+      {
+        if (olInit(nullptr) != OL_SUCCESS)
+          _exit(3);
+        if (olIterateDevices([](ol_device_handle_t, void *) { return false; },
+                             nullptr) != OL_SUCCESS)
+          _exit(4);
+        if (olRegisterShutdownCallback(printCallback, (void *)"after") !=
+            OL_SUCCESS)
+          _exit(5);
+        exit(0);
+      },
+      ::testing::ExitedWithCode(0), "shutdown-callback-after");
+}
+#endif
+
+namespace {
+// State for a callback that must find its platform still alive: it frees a
+// device allocation, queries the device and destroys the context.
+struct LiveUse {
+  ol_device_handle_t Device = nullptr;
+  ol_context_handle_t Context = nullptr;
+  void *Mem = nullptr;
+  bool FreeOk = false, InfoOk = false, DestroyOk = false;
+};
+} // namespace
+
+static void useLiveDevice(void *Data) {
+  auto *U = static_cast<LiveUse *>(Data);
+  U->FreeOk = olMemFree(U->Context, U->Mem) == OL_SUCCESS;
+  char Name[256];
+  U->InfoOk = olGetDeviceInfo(U->Device, OL_DEVICE_INFO_NAME, sizeof(Name),
+                              Name) == OL_SUCCESS;
+  U->DestroyOk = olDestroyContext(U->Context) == OL_SUCCESS;
+}
+
+// Picks a device, creating the context and allocation the callback will clean
+// up. Returns false if no device is available.
+static bool setUpLiveUse(LiveUse &U) {
+  olIterateDevices(
+      [](ol_device_handle_t D, void *Data) {
+        auto *U = static_cast<LiveUse *>(Data);
+        ol_device_type_t Type;
+        if (olGetDeviceInfo(D, OL_DEVICE_INFO_TYPE, sizeof(Type), &Type) !=
+            OL_SUCCESS)
+          return true;
+        // Prefer a real device, but accept the host.
+        if (!U->Device || Type != OL_DEVICE_TYPE_HOST)
+          U->Device = D;
+        return true;
+      },
+      &U);
+  if (!U.Device)
+    return false;
+  if (olCreateContext(1, &U.Device, &U.Context) != OL_SUCCESS)
+    return false;
+  return olMemAlloc(U.Context, U.Device, OL_ALLOC_TYPE_DEVICE, 64, &U.Mem) ==
+         OL_SUCCESS;
+}
+
+static void expectLiveUse(const LiveUse &U) {
+  EXPECT_TRUE(U.FreeOk);
+  EXPECT_TRUE(U.InfoOk);
+  EXPECT_TRUE(U.DestroyOk);
+}
+
+TEST_F(olInitTest, ShutdownCallbackUsesPlatformRegisteredBeforeInit) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  LiveUse U;
+  // Registered before anything has touched the platforms, but the callback's
+  // data only becomes valid once the platform is used below.
+  ASSERT_SUCCESS(olRegisterShutdownCallback(useLiveDevice, &U));
+  if (!setUpLiveUse(U)) {
+    // Nothing to clean up if there is no usable device.
+    ASSERT_SUCCESS(olShutDown());
+    GTEST_SKIP() << "no usable device";
+  }
+  ASSERT_SUCCESS(olShutDown());
+  expectLiveUse(U);
+}
+
+TEST_F(olInitTest, ShutdownCallbackUsesPlatformRegisteredAfterInit) {
+  ASSERT_SUCCESS(olInit(nullptr));
+  LiveUse U;
+  if (!setUpLiveUse(U)) {
+    ASSERT_SUCCESS(olShutDown());
+    GTEST_SKIP() << "no usable device";
+  }
+  ASSERT_SUCCESS(olRegisterShutdownCallback(useLiveDevice, &U));
+  ASSERT_SUCCESS(olShutDown());
+  expectLiveUse(U);
+}
