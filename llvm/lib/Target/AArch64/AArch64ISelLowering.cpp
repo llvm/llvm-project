@@ -8083,8 +8083,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   assert(StoreNode->getMemoryVT() == MVT::i128);
   assert(StoreNode->isVolatile() || StoreNode->isAtomic());
 
-  bool IsStoreRelease =
-      isReleaseOrStronger(StoreNode->getMergedOrdering());
+  bool IsStoreRelease = isReleaseOrStronger(StoreNode->getMergedOrdering());
   if (StoreNode->isAtomic())
     assert((Subtarget->hasFeature(AArch64::FeatureLSE2) &&
             Subtarget->hasFeature(AArch64::FeatureRCPC3) && IsStoreRelease) ||
