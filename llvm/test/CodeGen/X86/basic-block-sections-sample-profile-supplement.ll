@@ -5,6 +5,9 @@
 ; RUN: echo ' 5: 5' >> %t.prof
 ; RUN: echo 'foo:2000:1000' > %t.round_zero.prof
 ; RUN: echo ' 5: 4' >> %t.round_zero.prof
+; RUN: echo 'foo:2000:1000' > %t.probe.prof
+; RUN: echo ' 5: 5' >> %t.probe.prof
+; RUN: echo ' !CFGChecksum: 123' >> %t.probe.prof
 
 ; Case 1: Without a sample profile supplement, block 2 has 0 Propeller samples and is split into cold section.
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid | \
@@ -28,13 +31,15 @@
 ; RUN: FileCheck %s --check-prefix=UNUSED
 ; UNUSED-NOT: Could not open supplemental sample profile
 
-; Case 5: Supplemental sample profiles are ignored with a warning when used with SampleFDO.
+; Case 5: Supplemental sample profiles are ignored with a warning and not read when used with SampleFDO.
+; The IR profile loader reads the primary profile in opt. Missing supplemental profiling passed to llc is not read.
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof | \
-; RUN: llc -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.prof 2>&1 | \
+; RUN: llc -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.missing 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=SAMPLEFDO,CHECK,WITHOUT-SUPPLEMENT
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -fs-profile-file=%t.prof -sample-profile-supplement=%t.prof 2>&1 | \
+; The MIR profile loader reads the FS primary profile in llc. Psuedo-probe-based supplemental profile is not read.
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -enable-fs-discriminator -profile-isfs -fs-profile-file=%t.prof -sample-profile-supplement=%t.probe.prof 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=SAMPLEFDO,CHECK,WITHOUT-SUPPLEMENT
-; SAMPLEFDO: warning: {{.*}}.prof: Supplemental sample profiles are not supported with SampleFDO
+; SAMPLEFDO: warning: {{.*}}: Supplemental sample profiles are not supported with SampleFDO
 
 ; Case 6: Flow-sensitive supplemental sample profiles require -enable-fs-discriminator.
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -profile-isfs -sample-profile-supplement=%t.prof 2>&1 | \
@@ -49,9 +54,6 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.cs.prof 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=CS-PROF,CHECK,WITHOUT-SUPPLEMENT
 ; CS-PROF: warning: {{.*}}.cs.prof: Context-sensitive supplemental sample profiles are not supported
-; RUN: echo 'foo:2000:1000' > %t.probe.prof
-; RUN: echo ' 5: 5' >> %t.probe.prof
-; RUN: echo ' !CFGChecksum: 123' >> %t.probe.prof
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.probe.prof 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=PROBE-PROF,CHECK,WITHOUT-SUPPLEMENT
 ; PROBE-PROF: warning: {{.*}}.probe.prof: Pseudo probe based supplemental sample profiles are not supported
