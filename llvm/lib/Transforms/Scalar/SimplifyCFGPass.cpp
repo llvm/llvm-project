@@ -221,11 +221,10 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
       // Removing an empty block can make both successors of its predecessor
       // identical. Revisit that predecessor without rescanning the function,
       // so that this simplification can propagate up a long branch chain.
-      if (auto *PredBB = dyn_cast_or_null<BasicBlock>(Pred))
-        if (!DTU || !DTU->isBBPendingDeletion(PredBB))
-          if (auto *BI = dyn_cast<CondBrInst>(PredBB->getTerminator()))
-            if (BI->getSuccessor(0) == BI->getSuccessor(1))
-              Worklist.emplace_back(PredBB);
+      if (auto *PredBB = cast_or_null<BasicBlock>(Pred))
+        if (auto *BI = dyn_cast<CondBrInst>(PredBB->getTerminator()))
+          if (BI->getSuccessor(0) == BI->getSuccessor(1))
+            Worklist.emplace_back(PredBB);
       return true;
     };
 
@@ -251,8 +250,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
     // check still catches transformations that do not reach a fixpoint.
     while (ResimplifyBudget && !Worklist.empty()) {
       --ResimplifyBudget;
-      auto *BB = dyn_cast_or_null<BasicBlock>(Worklist.pop_back_val());
-      if (BB && (!DTU || !DTU->isBBPendingDeletion(BB)))
+      if (auto *BB = cast_or_null<BasicBlock>(Worklist.pop_back_val()))
         LocalChange |= SimplifyBlock(BB);
     }
     Changed |= LocalChange;

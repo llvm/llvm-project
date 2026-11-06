@@ -5,7 +5,7 @@
 
 ; Removing the last block makes both successors of its predecessor identical.
 ; Revisit that predecessor without rescanning the function for each link in the
-; chain. Longer chains used to exceed the iteration limit (see PR236666).
+; chain. Longer chains used to exceed the iteration limit (see GH236666).
 ; The dependent loads prevent foldBranchToCommonDest() from speculating the
 ; conditions into their predecessors with the default options.
 
