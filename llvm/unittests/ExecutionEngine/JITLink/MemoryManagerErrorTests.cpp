@@ -46,3 +46,26 @@ TEST(MemoryManagerErrorTest, ErrorOnFirstAllocate) {
 
   EXPECT_THAT_ERROR(std::move(Err), Failed());
 }
+
+TEST(MemoryManagerErrorTest, ErrorAfterSkippedAllocation) {
+  // A graph with only an absolute symbol needs no memory.
+  auto G = std::make_unique<LinkGraph>(
+      "foo", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
+      getGenericEdgeKindName);
+  G->addAbsoluteSymbol("S", orc::ExecutorAddr(0x1000), 0, Linkage::Strong,
+                       Scope::Default, true);
+
+  Error Err = Error::success();
+  auto Ctx = makeMockContext(
+      JoinErrorsInto(Err), defaultMemMgrSetup, [](MockJITLinkContext &Ctx) {
+        Ctx.NotifyResolved = [](LinkGraph &G) {
+          return make_error<StringError>("Failed to resolve",
+                                         inconvertibleErrorCode());
+        };
+      });
+
+  link_MachO_x86_64(std::move(G), std::move(Ctx));
+
+  EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage("Failed to resolve"));
+}
