@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2p1 < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2p1 -force-streaming < %s | FileCheck %s
+; RUN: llc -mattr=+sve2p1 < %s | FileCheck %s
+; RUN: llc -mattr=+sme2p1 -force-streaming < %s | FileCheck %s
+
+target triple = "aarch64"
 
 define <vscale x 16 x i1> @pmov_b(<vscale x 16 x i8> %src) {
 ; CHECK-LABEL: pmov_b:
