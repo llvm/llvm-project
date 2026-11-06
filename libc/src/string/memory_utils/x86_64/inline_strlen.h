@@ -50,7 +50,7 @@ LIBC_INLINE static void *
 calculate_find_first_character_return(const unsigned char *src, Mask c_mask,
                                       size_t n_left) {
   size_t c_offset = cpp::countr_zero(c_mask);
-  if (n_left < c_offset)
+  if (n_left <= c_offset)
     return nullptr;
   return const_cast<unsigned char *>(src) + c_offset;
 }
