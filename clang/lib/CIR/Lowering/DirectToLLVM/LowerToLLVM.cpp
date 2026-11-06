@@ -1767,8 +1767,7 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getVal().getType())) {
     isInt = true;
     isSignedInt = intTy.isSigned();
-  } else if (mlir::isa<cir::SingleType, cir::DoubleType>(
-                 op.getVal().getType())) {
+  } else if (cir::isFPOrVectorOfFPType(op.getVal().getType())) {
     isInt = false;
   } else {
     return op.emitError() << "Unsupported type: " << op.getVal().getType();
