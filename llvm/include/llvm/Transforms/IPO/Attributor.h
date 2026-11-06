@@ -2567,7 +2567,7 @@ private:
   unsigned InitializationChainLength = 0;
 
   /// Whether time trace scopes are recorded for every initialization and
-  /// update. Checking it is not cheap.
+  /// update.
   const bool TimeTraceEnabled = timeTraceProfilerEnabled();
 
   /// Functions, blocks, and instructions we delete after manifest is done.
