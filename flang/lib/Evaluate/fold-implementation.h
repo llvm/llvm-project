@@ -140,6 +140,8 @@ common::IfNoLvalue<Expr<ResultType<A>>, A> FoldOperation(
 // Forward declarations needed to ensure overload lookup considers all possible
 // implementations.
 ComplexPart FoldOperation(FoldingContext &, ComplexPart &&);
+Expr<Type<TypeCategory::Real>> FoldOperation(
+    FoldingContext &, ComplexComponent &&);
 Expr<Type<TypeCategory::Complex>> FoldOperation(
     FoldingContext &, ComplexConstructor &&);
 Component FoldOperation(FoldingContext &, Component &&);
@@ -1310,92 +1312,8 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(
 // when the argument is a constant enumeration value.  Returns the folded
 // constant, or the original reference left unfolded (e.g. at a boundary,
 // where error termination is deferred to run time).
-static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
-    FoldingContext &context, FunctionRef<SomeDerived> &&funcRef, bool isNext) {
-  ActualArguments &args{funcRef.arguments()};
-  // Don't fold if STAT is present — STAT assignment is a side effect
-  if (args.size() >= 2 && args[1]) {
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }
-  auto *expr{args.size() >= 1 && args[0]
-          ? UnwrapExpr<Expr<SomeDerived>>(args[0])
-          : nullptr};
-  if (!expr) {
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }
-  const auto *derived{GetEnumerationTypeSpec(expr->GetType())};
-  const semantics::Scope *scope{derived ? derived->GetScope() : nullptr};
-  if (!scope) {
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }
-  auto ordIter{scope->find(
-      semantics::SourceName{semantics::DerivedTypeDetails::ordinalComponentName,
-          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
-  if (ordIter == scope->end()) {
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }
-  const semantics::Symbol &ordSym{*ordIter->second};
-  int count{derived->typeSymbol()
-          .GetUltimate()
-          .get<semantics::DerivedTypeDetails>()
-          .enumeratorCount()};
-  auto *constant{UnwrapConstantValue<SomeDerived>(*expr)};
-  if (!constant) {
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }
-  // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
-  // without STAT= is a runtime error termination.  In a required-constant
-  // context that value cannot be deferred, so it is diagnosed as out of range.
-  // Outside a constant context the reference is left unfolded and deferred to
-  // run time, where lowering emits the STAT assignment or error termination.
-  auto handleBoundary{[&]() -> Expr<SomeDerived> {
-    if (context.inConstantContext()) {
-      context.messages().Say(isNext
-              ? "NEXT() of the last enumerator is out of range"_err_en_US
-              : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
-      return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
-    }
-    return Expr<SomeDerived>{std::move(funcRef)};
-  }};
-  if (auto sc{constant->GetScalarValue()}) {
-    if (auto ordExpr{sc->Find(ordSym)}) {
-      if (auto ordVal{ToInt64(*ordExpr)}) {
-        if (isNext ? *ordVal >= count : *ordVal <= 1) {
-          return handleBoundary();
-        }
-        int newOrd{isNext ? static_cast<int>(*ordVal + 1)
-                          : static_cast<int>(*ordVal - 1)};
-        StructureConstructor ctor{*derived};
-        ctor.Add(ordSym,
-            Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
-        return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
-      }
-    }
-  } else if (constant->Rank() > 0) {
-    // Array constant: NEXT/PREVIOUS are elemental, so fold elementwise into
-    // a constant array of enumerators.  STAT= is absent here (the
-    // STAT-present case bails out above), so there is no side effect to
-    // preserve.  This elementwise fold mirrors the runtime elemental lowering
-    // in genEnumerationArray (flang/lib/Lower/ConvertExprToHLFIR.cpp).
-    std::vector<StructureConstructor> elements;
-    elements.reserve(constant->values().size());
-    for (const StructureConstructorValues &scv : constant->values()) {
-      auto ordVal{ToInt64(scv.find(ordSym)->second.value())};
-      if (isNext ? *ordVal >= count : *ordVal <= 1) {
-        return handleBoundary();
-      }
-      int newOrd{isNext ? static_cast<int>(*ordVal + 1)
-                        : static_cast<int>(*ordVal - 1)};
-      StructureConstructor ctor{*derived};
-      ctor.Add(
-          ordSym, Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
-      elements.emplace_back(std::move(ctor));
-    }
-    return Expr<SomeDerived>{Constant<SomeDerived>{
-        *derived, std::move(elements), ConstantSubscripts{constant->shape()}}};
-  }
-  return Expr<SomeDerived>{std::move(funcRef)};
-}
+Expr<SomeDerived> FoldEnumerationNextOrPrevious(
+    FoldingContext &context, FunctionRef<SomeDerived> &&funcRef, bool isNext);
 
 // Returns true when the j-th dummy argument of an intrinsic contributes only
 // its declared type, kind type parameters, and rank to the result, such as X
@@ -1403,18 +1321,7 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
 // ArgFlag::onlyConstantInquiry, and IsConstantExpr() uses the same attribute.
 // STORAGE_SIZE and LEN aren't marked, because their results also depend on
 // the dynamic type or on length type parameters.
-static inline bool IsTypeOnlyInquiryArg(
-    const SpecificIntrinsic &intrinsic, std::size_t j) {
-  const auto &dummies{intrinsic.characteristics.value().dummyArguments};
-  if (j < dummies.size()) {
-    if (const auto *object{
-            std::get_if<characteristics::DummyDataObject>(&dummies[j].u)}) {
-      return object->attrs.test(
-          characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
-    }
-  }
-  return false;
-}
+bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j);
 
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
@@ -2628,60 +2535,8 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
   return Expr<T>{std::move(x)};
 }
 
-inline Expr<Type<TypeCategory::Real>> ToReal(
-    int kind, FoldingContext &context, Expr<SomeType> &&expr) {
-  using Result = Type<TypeCategory::Real>;
-  std::optional<Expr<Result>> result;
-  common::visit(
-      [&](auto &&x) {
-        using From = std::decay_t<decltype(x)>;
-        if constexpr (std::is_same_v<From, BOZLiteralConstant>) {
-          constexpr int fromKind{BOZLiteralConstantKind};
-          // Move the bits without any integer->real conversion
-          From original{x};
-          result = ConvertToType<Result>(kind, std::move(x));
-          const auto *constant{UnwrapExpr<Constant<Result>>(kind, *result)};
-          CHECK(constant);
-          Scalar<Result> real{constant->GetScalarValue().value()};
-          From converted{From::ConvertUnsigned(fromKind, real.RawBits()).value};
-          if (original != converted) { // C1601
-            context.Warn(common::UsageWarning::FoldingValueChecks,
-                "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
-          }
-        } else if constexpr (IsNumericCategoryExpr<From>()) {
-          result = Fold(context, ConvertToType<Result>(kind, std::move(x)));
-        } else {
-          common::die("ToReal: bad argument expression");
-        }
-      },
-      std::move(expr.u));
-  return result.value();
-}
-
-// REAL(z) and AIMAG(z)
-inline Expr<Type<TypeCategory::Real>> FoldOperation(
-    FoldingContext &context, ComplexComponent &&x) {
-  const int kind{x.kind()};
-  using Operand = Type<TypeCategory::Complex>;
-  using Result = Type<TypeCategory::Real>;
-  if (auto array{ApplyElementwise(context, x,
-          std::function<Expr<Result>(Expr<Operand> &&)>{
-              [=](Expr<Operand> &&operand) {
-                return Expr<Result>{
-                    ComplexComponent{x.isImaginaryPart, std::move(operand)}};
-              }})}) {
-    return *array;
-  }
-  auto &operand{x.left()};
-  if (auto value{GetScalarConstantValue<Operand>(kind, operand)}) {
-    if (x.isImaginaryPart) {
-      return Expr<Result>{Constant<Result>{kind, value->AIMAG()}};
-    } else {
-      return Expr<Result>{Constant<Result>{kind, value->REAL()}};
-    }
-  }
-  return Expr<Result>{std::move(x)};
-}
+Expr<Type<TypeCategory::Real>> ToReal(
+    int kind, FoldingContext &context, Expr<SomeType> &&expr);
 
 template <typename T>
 Expr<T> ExpressionBase<T>::Rewrite(FoldingContext &context, Expr<T> &&expr) {

@@ -548,10 +548,54 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
   }
 
   OS << "};\n";
+
+  OS << "\nstatic ArrayRef<RTLIB::FuncArgTypeID>\n"
+        "getStructElementTypes(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (!R->isSubClassOf("StructFuncArgType"))
+      continue;
+
+    OS << "  case RTLIB::" << R->getName() << ": {\n"
+       << "    static constexpr RTLIB::FuncArgTypeID Elts[] = {";
+
+    ListSeparator LS;
+    for (const Record *Elt : R->getValueAsListOfDefs("ElementTypes"))
+      OS << LS << "RTLIB::" << Elt->getName();
+
+    OS << "};\n"
+          "    return Elts;\n"
+          "  }\n";
+  }
+
+  OS << "  default:\n"
+        "    return {};\n"
+        "  }\n"
+        "}\n";
+
+  OS << "\nstatic bool isInRegStruct(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  bool HasInRegStruct = false;
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (R->isSubClassOf("StructFuncArgType") && R->getValueAsBit("InReg")) {
+      OS << "  case RTLIB::" << R->getName() << ":\n";
+      HasInRegStruct = true;
+    }
+  }
+
+  if (HasInRegStruct)
+    OS << "    return true;\n";
+
+  OS << "  default:\n"
+        "    return false;\n"
+        "  }\n"
+        "}\n";
 }
 
 using AttrNames = std::vector<StringRef>;
-using ArgAttrEntry = std::tuple<unsigned, unsigned, StringRef>;
+using ArgAttrEntry = std::tuple<unsigned, unsigned, StringRef, bool>;
 
 static AttrNames getAttrNames(const Record *R, const ListInit *L,
                               StringRef Kind) {
@@ -649,6 +693,7 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
     const ListInit *ParamAttrs = R->getValueAsListInit("ParamAttrs");
     std::vector<const Record *> ParamPointeeTypes =
         R->getValueAsListOfDefs("ParamPointeeTypes");
+    bool AlignToElement = R->getValueAsBit("AlignPointeesToElementType");
 
     if (ParamAttrs->size() > ArgTypes.size()) {
       PrintFatalError(R, "ParamAttrs has " + Twine(ParamAttrs->size()) +
@@ -691,7 +736,8 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
         continue;
 
       ArgAttrSeq.emplace_back(ArgNo, ArgAttrSets.add(std::move(Attrs)),
-                              PointeeType);
+                              PointeeType,
+                              !PointeeType.empty() && AlignToElement);
     }
 
     ImplAttrIDs.emplace_back(FnAttrSetID,
@@ -725,13 +771,15 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
         "  uint8_t ArgNo;\n"
      << "  " << getMinimalUIntType(ArgAttrSets.size()) << " AttrSetID;\n"
      << "  RTLIB::FuncArgTypeID PointeeType;\n"
+        "  bool AlignToElement;\n"
         "};\n"
         "} // namespace\n\n"
         "static constexpr LibcallArgAttrs LibcallArgAttrTable[] = {\n";
   ArgAttrSeqs.emitEntries(OS, [](raw_ostream &OS, ArgAttrEntry Entry) {
-    auto [ArgNo, SetID, PointeeType] = Entry;
-    OS << formatv("{{{}, {}, RTLIB::{}}", ArgNo, SetID,
-                  PointeeType.empty() ? "NoFuncArgType" : PointeeType);
+    auto [ArgNo, SetID, PointeeType, AlignToElement] = Entry;
+    OS << formatv("{{{}, {}, RTLIB::{}, {}}", ArgNo, SetID,
+                  PointeeType.empty() ? "NoFuncArgType" : PointeeType,
+                  AlignToElement);
   });
   OS << "};\n\n";
 

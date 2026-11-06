@@ -171,11 +171,14 @@ def CIR_ArgPassingKind : CIR_I32Enum<
 ]>;
 
 def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
-    // record_align is consumed as an llvm::Align, whose constructor asserts a
-    // non-zero power of two.
+    // Both alignments are consumed as llvm::Align, whose constructor asserts
+    // a non-zero power of two.
     PredAttrTrait<"record_align must be a non-zero power of two",
                   CPred<"$record_align != 0 && "
-                        "::llvm::isPowerOf2_64($record_align)">>
+                        "::llvm::isPowerOf2_64($record_align)">>,
+    PredAttrTrait<"unadjusted_align must be a non-zero power of two",
+                  CPred<"$unadjusted_align != 0 && "
+                        "::llvm::isPowerOf2_64($unadjusted_align)">>
   ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
@@ -190,6 +193,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
       Needed because CIR's DataLayout cannot account for
       `__attribute__((aligned(N)))`.
+    - `unadjusted_align`: the alignment the members give the record before an
+      alignment attribute on the record raises it.  AAPCS64 sizes argument slots
+      using this alignment.  This field is not printed when it is equal to
+      `record_align`.
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
@@ -215,6 +222,7 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
+    "uint64_t":$unadjusted_align,
     DefaultValuedParameter<"bool", "false">:$transparent_union
   );
 
@@ -223,18 +231,13 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "bool":$has_trivial_dtor,
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
+                   /*unadjusted_align=*/record_align,
                    /*transparent_union=*/false);
     }]>
   ];
 
-  let assemblyFormat = [{
-    `<`
-      `arg_passing_kind` `=` $arg_passing_kind `,`
-      `has_trivial_dtor` `=` $has_trivial_dtor `,`
-      `record_align` `=` $record_align
-      (`,` `transparent_union` `=` $transparent_union^)?
-    `>`
-  }];
+  // Printing and parsing available in CIRAttrs.cpp.
+  let hasCustomAssemblyFormat = 1;
 
   let canHaveIllegalCXXABIType = 0;
 }

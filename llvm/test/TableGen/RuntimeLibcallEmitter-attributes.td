@@ -7,7 +7,7 @@ def SINCOS_V4F32 : RuntimeLibcall<Void, [V4F32, Ptr, Ptr]> {
   let FnAttrs = [WillReturn, NoUnwind];
   let Memory = ArgMemWriteOnly;
   let ParamAttrs = [[], [NoAlias, NonNull], [NoAlias, NonNull]];
-  let ParamPointeeTypes = [NoneType, Flt, Flt];
+  let ParamPointeeTypes = [NoneType, V4F32, V4F32];
 }
 
 def MODF_V4F32 : RuntimeLibcall<V4F32, [V4F32, Ptr]> {
@@ -18,6 +18,9 @@ def MODF_V4F32 : RuntimeLibcall<V4F32, [V4F32, Ptr]> {
 def sinf : RuntimeLibcallImpl<SIN_F32>;
 def vsincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
 def vsincosf_alt : RuntimeLibcallImpl<SINCOS_V4F32>;
+def vsincosf_vecalign : RuntimeLibcallImpl<SINCOS_V4F32> {
+  let AlignPointeesToElementType = false;
+}
 def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 
 // CHECK-LABEL: #ifdef GET_RUNTIME_LIBCALL_ATTRIBUTES
@@ -60,12 +63,14 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-NEXT:   uint8_t ArgNo;
 // CHECK-NEXT:   uint8_t AttrSetID;
 // CHECK-NEXT:   RTLIB::FuncArgTypeID PointeeType;
+// CHECK-NEXT:   bool AlignToElement;
 // CHECK-NEXT: };
 // CHECK-NEXT: } // namespace
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr LibcallArgAttrs LibcallArgAttrTable[] = {
-// CHECK-NEXT:   /* 0 */ {1, 0, RTLIB::NoFuncArgType},
-// CHECK-NEXT:   /* 1 */ {1, 0, RTLIB::Flt}, {2, 0, RTLIB::Flt},
+// CHECK-NEXT:   /* 0 */ {1, 0, RTLIB::NoFuncArgType, false},
+// CHECK-NEXT:   /* 1 */ {1, 0, RTLIB::V4F32, false}, {2, 0, RTLIB::V4F32, false},
+// CHECK-NEXT:   /* 3 */ {1, 0, RTLIB::V4F32, true}, {2, 0, RTLIB::V4F32, true},
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr struct {
@@ -74,6 +79,7 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-NEXT: } LibcallArgAttrSeqs[] = {
 // CHECK-NEXT:   {0, 0},
 // CHECK-NEXT:   {0, 1},
+// CHECK-NEXT:   {3, 2},
 // CHECK-NEXT:   {1, 2},
 // CHECK-NEXT: };
 // CHECK-EMPTY:
@@ -86,6 +92,7 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-NEXT:   {1, 1}, // RTLIB::impl_vmodff
 // CHECK-NEXT:   {2, 2}, // RTLIB::impl_vsincosf
 // CHECK-NEXT:   {2, 2}, // RTLIB::impl_vsincosf_alt
+// CHECK-NEXT:   {2, 3}, // RTLIB::impl_vsincosf_vecalign
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static AttributeSet getLibcallImplFnAttributes(LLVMContext &C,

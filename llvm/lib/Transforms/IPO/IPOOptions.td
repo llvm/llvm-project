@@ -41,6 +41,31 @@ defm : BoolField<"avail-extern-to-local", "false",
 defm : ValueField<"forceattrs-csv-path", "StringRef", "",
   "Path to CSV file containing lines of function names and attributes to add to them in the form of `f1,attr1` or `f2,attr2=str`">;
 
+// FunctionAttrs.cpp
+defm : BoolField<"enable-poison-arg-attr-prop", "true",
+  "Try to propagate nonnull and nofpclass argument attributes from callsites to caller functions">;
+defm : BoolField<"nofree-inference", "true",
+  "Infer nofree attribute during function-attrs pass">;
+defm : BoolField<"nounwind-inference", "true",
+  "Infer nounwind attribute during function-attrs pass">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-nofree-inference", "nofree-inference=false">;
+def : AliasOf<"disable-nounwind-inference", "nounwind-inference=false">;
+
+// FunctionImport.cpp
+defm : BoolField<"enable-import-metadata", "false",
+  "Enable import metadata like 'thinlto_src_module' and 'thinlto_src_file'">;
+// Used when testing importing from distributed indexes via opt
+// -function-import.
+defm : BoolField<"import-all-index", "false",
+  "Import all external functions in index">;
+defm : BoolField<"print-imports", "false",
+  "Print imported functions">;
+// Summary file to use for function importing when using -function-import from
+// the command line.
+defm : ValueField<"summary-file", "StringRef", "",
+  "The summary file to use for function importing">;
+
 // GlobalDCE.cpp
 defm : BoolField<"enable-vfe", "true",
   "Enable virtual function elimination">;
@@ -54,6 +79,24 @@ defm : ValueField<"max-ifunc-versions", "unsigned", "5",
   "Maximum number of caller/callee versions that is allowed for using the expensive (cubic) static resolution algorithm">;
 defm : BoolField<"optimize-non-fmv-callers", "true",
   "Statically resolve calls to versioned functions from non-versioned callers">;
+
+// LowerTypeTests.cpp
+defm : BoolField<"lowertypetests-avoid-reuse", "true",
+  "Try to avoid reuse of byte array addresses using aliases">;
+// FIXME: Remove in clang 24.
+defm : BoolField<"lowertypetests-jump-table-debug-info", "true",
+  "Enable debug info generation for jump tables">;
+defm : ValueField<"lowertypetests-read-summary", "StringRef", "",
+  "Read summary from given textual assembly or YAML file before running pass">;
+defm : EnumField<"lowertypetests-summary-action", "PassSummaryAction", "",
+  "none,import,export",
+  ["PassSummaryAction::None", "PassSummaryAction::Import", "PassSummaryAction::Export"],
+  "What to do with the summary when running this pass">;
+defm : ValueField<"lowertypetests-write-summary", "StringRef", "",
+  "Write summary to given YAML file after running pass">;
+// FIXME: Remove in clang 26.
+defm : BoolField<"reorder-cfi-jump-tables-profiles", "true",
+  "Reorder CFI jump tables using profile information">;
 
 // MergeFunctions.cpp
 // Under option -mergefunc-preserve-debug-info we:
@@ -85,3 +128,23 @@ defm : BoolField<"ctx-prof-promote-alwaysinline", "false",
 // StripSymbols.cpp
 defm : BoolField<"strip-global-constants", "false",
   "Removes debug compile units which reference to non-existing global constants">;
+
+// WholeProgramDevirt.cpp
+// TODO: This option eventually should support any public visibility vtables
+// with/out LTO.
+defm : BoolField<"devirtualize-speculatively", "false",
+  "Enable speculative devirtualization optimization">;
+defm : ValueField<"wholeprogramdevirt-branch-funnel-threshold", "unsigned", "10",
+  "Maximum number of call targets per call site to enable branch funnels">;
+defm : EnumField<"wholeprogramdevirt-check", "WPDCheckMode", "",
+  "none,trap,fallback",
+  ["WPDCheckMode::None", "WPDCheckMode::Trap", "WPDCheckMode::Fallback"],
+  "Type of checking for incorrect devirtualizations">;
+defm : ValueField<"wholeprogramdevirt-read-summary", "StringRef", "",
+  "Read summary from given bitcode or YAML file before running pass">;
+defm : EnumField<"wholeprogramdevirt-summary-action", "PassSummaryAction", "",
+  "none,import,export",
+  ["PassSummaryAction::None", "PassSummaryAction::Import", "PassSummaryAction::Export"],
+  "What to do with the summary when running this pass">;
+defm : ValueField<"wholeprogramdevirt-write-summary", "StringRef", "",
+  "Write summary to given bitcode or YAML file after running pass. Output file format is deduced from extension: *.bc means writing bitcode, otherwise YAML">;

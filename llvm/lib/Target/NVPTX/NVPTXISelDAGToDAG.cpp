@@ -92,6 +92,7 @@ class NVPTXDAGToDAGISel : public SelectionDAGISel {
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
+  bool useF16FTZ() const;
   bool allowFMA() const;
   bool doRsqrtOpt() const;
   bool doMADWideOpt() const;
@@ -215,6 +216,10 @@ NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
 
 bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
   return Subtarget->getTargetLowering()->usePrecSqrtF32(N);
+}
+
+bool NVPTXDAGToDAGISel::useF16FTZ() const {
+  return Subtarget->getTargetLowering()->useF16FTZ(*MF);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
@@ -549,7 +554,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDNode *SetP = CurDAG->getMachineNode(
       NVPTX::SETP_f16x2, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
-       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
+       CurDAG->getTargetConstant(useF16FTZ(), DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }

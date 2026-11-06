@@ -123,7 +123,7 @@ private:
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+  RISCVABI::ABI TargetABI = RISCVABI::ABI::Unknown;
   // Set by the reserve-xN subtarget features, indexed by N. RISCVRegisterInfo
   // expands this to include aliases.
   std::bitset<32> UserReservedXRegs;

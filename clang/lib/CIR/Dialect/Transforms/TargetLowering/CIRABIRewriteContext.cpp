@@ -1406,6 +1406,19 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
   return mlir::success();
 }
 
+/// Replace each address_space cast of \p slot to the type of \p ptr with
+/// \p ptr.
+void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
+  for (mlir::Operation *user : llvm::make_early_inc_range(slot->getUsers())) {
+    auto view = mlir::dyn_cast<cir::CastOp>(user);
+    if (view && view.getKind() == cir::CastKind::address_space &&
+        view.getType() == ptr.getType()) {
+      view.getResult().replaceAllUsesWith(ptr);
+      view->erase();
+    }
+  }
+}
+
 /// Rewrite each cir.return so the return value flows through the sret
 /// pointer (the prepended first block argument) and the function returns
 /// void.
@@ -1434,6 +1447,9 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
 /// `cir.return (cir.load <alloca>)` shape is an invariant guaranteed by
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
+///
+/// A `__retval` outside the sret pointer's address space is not replaced
+/// itself. Its address_space casts to the sret pointer's type are.
 void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
   mlir::Value sretPtr = funcOp.getArguments()[0];
@@ -1454,12 +1470,13 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
     // Rewire the shared `__retval` alloca to the sret pointer once.
     // replaceAllUsesWith updates every load of the alloca (including those
     // feeding the other cir.return ops) to read from sretPtr instead, so
-    // all returns are covered by this single rewiring.  Only then is the
-    // now-unused alloca safe to erase.
+    // all returns are covered by this single rewiring.
     if (!retAlloca) {
       retAlloca = mlir::cast<cir::AllocaOp>(retLoad.getAddr().getDefiningOp());
-      retAlloca.getResult().replaceAllUsesWith(sretPtr);
-      retAlloca->erase();
+      if (retAlloca.getType() == sretPtr.getType())
+        retAlloca.getResult().replaceAllUsesWith(sretPtr);
+      else
+        replaceAddrSpaceViews(retAlloca, sretPtr);
     }
 
     // The sret slot now holds the return value directly; replace the
@@ -1469,6 +1486,12 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
     retOp->erase();
     if (retLoad.use_empty())
       retLoad->erase();
+  }
+
+  if (retAlloca) {
+    assert(retAlloca->use_empty() &&
+           "__retval used other than by its returns and address_space views");
+    retAlloca->erase();
   }
 }
 
