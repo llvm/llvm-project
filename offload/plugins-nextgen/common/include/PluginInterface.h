@@ -35,7 +35,6 @@
 #include "MemoryManager.h"
 #include "OffloadError.h"
 #include "RPC.h"
-#include "RecordReplay.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/DenseMapInfo.h"
@@ -1251,30 +1250,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return ATI;
   }
 
-  Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
-                         bool IsNative, bool SaveOutput, bool EmitReport,
-                         const char *ReportFilename,
-                         const char *OutputDirPath) {
-    if (RecordReplay)
-      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
-                           "RR already initialized");
-    // Other formats could be supported in the future.
-    if (!IsNative)
-      return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                           "non-native RR not available");
-
-    RecordReplayTy::StatusTy Status = IsRecord
-                                          ? RecordReplayTy::StatusTy::Recording
-                                          : RecordReplayTy::StatusTy::Replaying;
-
-    RecordReplay =
-        new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, ReportFilename, *this);
-    return RecordReplay->init(Size, VAddr);
-  }
-
-  RecordReplayTy *getRecordReplay() { return RecordReplay; }
-
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -1319,9 +1294,6 @@ private:
   /// Environment variables defined by the LLVM OpenMP implementation.
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
-
-  /// Record and replay manager.
-  RecordReplayTy *RecordReplay = nullptr;
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1534,12 +1506,6 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Initializes the record and replay mechanism inside the plugin.
-  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
-                                   void *VAddr, bool IsRecord, bool IsNative,
-                                   bool SaveOutput, bool EmitReport,
-                                   const char *ReportFilename,
-                                   const char *OutputDirPath);
 
 
 private:
