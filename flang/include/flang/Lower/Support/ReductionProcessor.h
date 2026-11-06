@@ -54,21 +54,23 @@ public:
       mlir::Value op1, mlir::Value op2, bool isByRef)>;
 
   // TODO: Move this enumeration to the OpenMP dialect
+  /// Reduction operations, identified by operation rather than by the Fortran
+  /// spelling that produced them: the bitwise intrinsics IAND, IOR and IEOR are
+  /// the integer forms of AND, OR and NEQV (exclusive or) respectively, so they
+  /// share an identifier and are distinguished by the operand type where it
+  /// matters (the combiner and the initial value).
   enum ReductionIdentifier {
     ID,
     USER_DEF_OP,
     ADD,
     SUBTRACT,
     MULTIPLY,
-    AND,
-    OR,
-    EQV,
-    NEQV,
+    AND,  // .AND. on logicals, IAND on integers
+    OR,   // .OR. on logicals, IOR on integers
+    EQV,  // .EQV. on logicals
+    NEQV, // .NEQV. on logicals, IEOR on integers
     MAX,
-    MIN,
-    IAND,
-    IOR,
-    IEOR
+    MIN
   };
 
   static bool doReductionByRef(mlir::Type reductionType);
