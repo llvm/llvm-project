@@ -146,6 +146,7 @@ private:
     Address destCast = destPtr.withElementType(builder, cgf.voidTy);
     Address srcCast = srcPtr.withElementType(builder, cgf.voidTy);
     builder.createMemCpy(loc, destCast, srcCast, sizeOp);
+    assert(!cir::MissingFeatures::generateDebugInfo());
   }
 
   void addInitialField(FieldDecl *f) {
@@ -284,6 +285,7 @@ public:
       reset();
     }
 
+    assert(!cir::MissingFeatures::generateDebugInfo());
     emitMemcpy();
     aggregatedStmts.clear();
   }
