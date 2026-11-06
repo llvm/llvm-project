@@ -33,7 +33,7 @@ void bar() {
 // CHECK-DXIL: %cbufferidx = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype([4 x <{ i32, target("dx.Padding", 12) }>]) @_ZL1a, i32 2, i32 0)
 // CHECK-DXIL: %[[#]] = load i32, ptr addrspace(2) %cbufferidx, align 16
 
-// CHECK-SPIR: %cbufferidx = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype([4 x <{ i32, target("spirv.Padding", 12) }>]) @_ZL1a, i64 2, i32 0)
+// CHECK-SPIR: %cbufferidx = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype([4 x <{ i32, target("spirv.Padding", 12) }>]) @_ZL1a, i32 2, i32 0)
 // CHECK-SPIR: %[[#]] = load i32, ptr addrspace(12) %cbufferidx, align 16
   uint tmp = a[2];
 }

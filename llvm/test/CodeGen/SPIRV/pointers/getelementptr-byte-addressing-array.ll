@@ -2,7 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG: %[[#int32:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#int64:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#int_1:]] = OpConstant %[[#int32]] 1{{$}}
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#vec2:]] = OpTypeVector %[[#float]] 2
 ; CHECK-DAG: %[[#arr3:]] = OpTypeArray %[[#vec2]] %[[#]]
@@ -36,7 +36,7 @@ entry:
   store <2 x float> %val_dyn, ptr addrspace(10) @out_dyn
 
   ; Constant index (index 1 -> offset 8 bytes)
-  ; CHECK: %[[#access_const:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#]]
+  ; CHECK: %[[#access_const:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#int_1]]
   ; CHECK: %[[#val_const:]] = OpLoad %[[#vec2]] %[[#access_const]]
   %gep_const = getelementptr inbounds nuw [8 x i8], ptr addrspace(10) @global_arr, i32 1
   %val_const = load <2 x float>, ptr addrspace(10) %gep_const

@@ -7,7 +7,7 @@
 ; arrays share descriptor set 0, binding 0 (the first available bindings).
 
 ; ModuleID = 'dyn-res-cvb-srv-uav.hlsl'
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 
 %S = type <{ <4 x i32> }>
 @.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1

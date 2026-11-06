@@ -18,7 +18,6 @@
 
 ; CHECK-DAG: %[[STRUCT_CBUFFER:[0-9]+]] = OpTypeStruct %[[STRUCT_INNER]]
 ; CHECK-DAG: %[[PTR_CBUFFER:[0-9]+]] = OpTypePointer Uniform %[[STRUCT_CBUFFER]]
-; CHECK-DAG: %[[INT64:[0-9]+]] = OpTypeInt 64 0
 
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_CBUFFER]] 0 Offset 0
 ; CHECK-DAG: OpDecorate %[[STRUCT_CBUFFER]] Block
@@ -33,10 +32,8 @@
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_MATRIX]] 3 Offset 48
 
 ; CHECK-DAG: %[[ONE:[0-9]+]] = OpConstant %[[INT]] 1{{$}}
-; CHECK-DAG: %[[ZERO_64:[0-9]+]] = OpConstant %[[INT64]] 0{{$}}
-; CHECK-DAG: %[[ONE_64:[0-9]+]] = OpConstant %[[INT64]] 1{{$}}
-; CHECK-DAG: %[[TWO_64:[0-9]+]] = OpConstant %[[INT64]] 2{{$}}
-; CHECK-DAG: %[[THREE_64:[0-9]+]] = OpConstant %[[INT64]] 3{{$}}
+; CHECK-DAG: %[[TWO:[0-9]+]] = OpConstant %[[INT]] 2{{$}}
+; CHECK-DAG: %[[THREE:[0-9]+]] = OpConstant %[[INT]] 3{{$}}
 
 ; CHECK: %[[CBUFFER:[0-9]+]] = OpVariable %[[PTR_CBUFFER]] Uniform
 
@@ -73,11 +70,11 @@ entry:
 ; CHECK: %[[VAL_M0_V0:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M0_V0]]
   %4 = load <4 x float>, ptr addrspace(12) @transforms, align 16
 
-; CHECK: %[[PTR_M0_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ZERO_64]] %[[ONE_64]]
+; CHECK: %[[PTR_M0_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ZERO]] %[[ONE]]
 ; CHECK: %[[VAL_M0_V1:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M0_V1]]
   %5 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 16), align 16
 
-; CHECK: %[[PTR_M0_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ZERO_64]] %[[THREE_64]]
+; CHECK: %[[PTR_M0_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ZERO]] %[[THREE]]
 ; CHECK: %[[VAL_M0_V3:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M0_V3]]
   %6 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 48), align 16
 
@@ -87,17 +84,17 @@ entry:
   %mul3.i20.i = fmul reassoc nnan ninf nsz arcp afn <4 x float> %splat.splat2.i19.i, %5
   %8 = tail call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat.i18.i, <4 x float> nofpclass(nan inf) %4, <4 x float> %mul3.i20.i)
   %9 = fadd reassoc nnan ninf nsz arcp afn <4 x float> %8, %6
-; CHECK: %[[PTR_M1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[ONE_64]]
+; CHECK: %[[PTR_M1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[ONE]]
 ; CHECK: %[[PTR_M1_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_M1]] %[[ZERO]]
 ; CHECK: %[[VAL_M1_V0:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M1_V0]]
   %10 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 64), align 16
-; CHECK: %[[PTR_M1_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE_64]] %[[ONE_64]]
+; CHECK: %[[PTR_M1_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE]] %[[ONE]]
 ; CHECK: %[[VAL_M1_V1:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M1_V1]]
   %11 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 80), align 16
-; CHECK: %[[PTR_M1_V2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE_64]] %[[TWO_64]]
+; CHECK: %[[PTR_M1_V2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE]] %[[TWO]]
 ; CHECK: %[[VAL_M1_V2:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M1_V2]]
   %12 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 96), align 16
-; CHECK: %[[PTR_M1_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE_64]] %[[THREE_64]]
+; CHECK: %[[PTR_M1_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE]] %[[THREE]]
 ; CHECK: %[[VAL_M1_V3:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M1_V3]]
   %13 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 112), align 16
   %splat.splat.i13.i = shufflevector <4 x float> %9, <4 x float> poison, <4 x i32> zeroinitializer
@@ -108,17 +105,17 @@ entry:
   %15 = tail call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat5.i16.i, <4 x float> nofpclass(nan inf) %12, <4 x float> %14)
   %splat.splat7.i17.i = shufflevector <4 x float> %9, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %16 = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat7.i17.i, <4 x float> nofpclass(nan inf) %13, <4 x float> %15)
-; CHECK: %[[PTR_M2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[TWO_64]]
+; CHECK: %[[PTR_M2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[TWO]]
 ; CHECK: %[[PTR_M2_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_M2]] %[[ZERO]]
 ; CHECK: %[[VAL_M2_V0:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M2_V0]]
   %17 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 128), align 16
-; CHECK: %[[PTR_M2_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO_64]] %[[ONE_64]]
+; CHECK: %[[PTR_M2_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO]] %[[ONE]]
 ; CHECK: %[[VAL_M2_V1:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M2_V1]]
   %18 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 144), align 16
-; CHECK: %[[PTR_M2_V2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO_64]] %[[TWO_64]]
+; CHECK: %[[PTR_M2_V2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO]] %[[TWO]]
 ; CHECK: %[[VAL_M2_V2:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M2_V2]]
   %19 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 160), align 16
-; CHECK: %[[PTR_M2_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO_64]] %[[THREE_64]]
+; CHECK: %[[PTR_M2_V3:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO]] %[[THREE]]
 ; CHECK: %[[VAL_M2_V3:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M2_V3]]
   %20 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 176), align 16
   %splat.splat.i.i = shufflevector <4 x float> %16, <4 x float> poison, <4 x i32> zeroinitializer

@@ -11,12 +11,10 @@ entry:
   %0 = tail call target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str)
   %3 = tail call noundef align 1 dereferenceable(192) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) %0, i32 0)
 
-; CHECK-DAG:  %[[#ulong:]] = OpTypeInt 64 0
-; CHECK-DAG:  %[[#ulong_1:]] = OpConstant %[[#ulong]] 1
-; CHECK-DAG:  %[[#ulong_3:]] = OpConstant %[[#ulong]] 3
-
 ; CHECK-DAG:  %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:  %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:  %[[#uint_1:]] = OpConstant %[[#uint]] 1{{$}}
+; CHECK-DAG:  %[[#uint_3:]] = OpConstant %[[#uint]] 3{{$}}
 ; CHECK-DAG:  %[[#uint_10:]] = OpConstant %[[#uint]] 10
 
 ; CHECK-DAG:  %[[#float:]] = OpTypeFloat 32
@@ -27,7 +25,7 @@ entry:
 ; CHECK-DAG:  %[[#sb_v4f:]] = OpTypePointer StorageBuffer %[[#v4f]]
 
 ; CHECK:      %[[#tmp:]] = OpAccessChain %[[#sb_S1]] %[[#]] %[[#uint_0]] %[[#uint_0]]
-; CHECK:      %[[#ptr:]] = OpInBoundsAccessChain %[[#sb_v4f]] %[[#tmp]] %[[#ulong_1]] %[[#ulong_3]]
+; CHECK:      %[[#ptr:]] = OpInBoundsAccessChain %[[#sb_v4f]] %[[#tmp]] %[[#uint_1]] %[[#uint_3]]
 ; This rewritten GEP combined all constant indices into a single value.
 ; We should make sure the correct indices are retrieved.
   %arrayidx.i = getelementptr inbounds nuw i8, ptr addrspace(11) %3, i64 64
