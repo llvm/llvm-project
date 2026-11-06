@@ -6524,14 +6524,13 @@ bool VPlanTransforms::widenCompressingPatterns(VPlan &Plan,
       UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
 
     DebugLoc DL = CondIndPhi.getDebugLoc();
-    auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
+    const SCEV *StepSCEV = CondIndPhi.getStepSCEV();
 
     Builder.setInsertPoint(BlendR);
     VPValue *HandledLanes =
         Builder.createNaryOp(VPInstruction::NumActiveLanes, Mask, UpdateType,
                              {}, DL, "handled.lanes");
-    VPValue *Step =
-        VPSCEVExpander(Builder, SE, DL).expand(CondID.getStepSCEV());
+    VPValue *Step = VPSCEVExpander(Builder, SE, DL).expand(StepSCEV);
     if (!isa<VPConstantInt>(Step))
       Step = Builder.createFreeze(Step);
 

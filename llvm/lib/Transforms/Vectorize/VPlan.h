@@ -2981,19 +2981,18 @@ protected:
 #endif
 };
 
-/// A recipe for handling conditional induction PHIs. The start value is the
-/// first operand of the recipe and the incoming value from the backedge is the
-/// second operand.
+/// A recipe for handling scalar conditional induction PHIs. The start value is
+/// the first operand of the recipe and the incoming value from the backedge is
+/// the second operand.
 class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
-  ConditionalInductionDescriptor CondID;
+  const SCEV *StepSCEV = nullptr;
 
 public:
   VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
-                                  VPValue &BackedgeValue,
-                                  const ConditionalInductionDescriptor &CondID)
+                                  VPValue &BackedgeValue, const SCEV *StepSCEV)
       : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
                           &Start, Start.getScalarType()),
-        CondID(CondID) {
+        StepSCEV(StepSCEV) {
     addOperand(&BackedgeValue);
   }
 
@@ -3002,16 +3001,12 @@ public:
   /// Returns the underlying PHINode.
   PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
-  /// Returns the conditional induction descriptor for the recipe.
-  const ConditionalInductionDescriptor &
-  getConditionalInductionDescriptor() const {
-    return CondID;
-  }
+  /// Returns the conditional induction step SCEV expression.
+  const SCEV *getStepSCEV() const { return StepSCEV; }
 
   VPConditionalInductionPHIRecipe *clone() override {
     return new VPConditionalInductionPHIRecipe(
-        *getPHINode(), *getStartValue(), *getBackedgeValue(),
-        getConditionalInductionDescriptor());
+        *getPHINode(), *getStartValue(), *getBackedgeValue(), getStepSCEV());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)
@@ -3020,7 +3015,12 @@ public:
     return R->getVPRecipeID() == VPRecipeBase::VPConditionalInductionPHISC;
   }
 
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &) override {
+    llvm_unreachable("must be expanded before final execute");
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

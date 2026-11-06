@@ -5325,8 +5325,10 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   return vputils::onlyFirstLaneUsed(this);
 }
 
-void VPConditionalInductionPHIRecipe::execute(VPTransformState &State) {
-  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "conditional.iv");
+InstructionCost
+VPConditionalInductionPHIRecipe::computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const {
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
