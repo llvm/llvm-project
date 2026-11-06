@@ -74,7 +74,7 @@ public:
     if (HasContradiction)
       return;
 
-    if (std::optional<bool> Val = getLiteralValue(F); Val.has_value()) {
+    if (std::optional<bool> Val = getLiteralValue(F)) {
       if (!*Val) {
         HasContradiction = true;
         return;
@@ -259,7 +259,7 @@ private:
     case Formula::Not: {
       ArrayRef<const Formula *> Operands = F.operands();
       assert(Operands.size() == 1);
-      if (std::optional<bool> V = getLiteralValue(*Operands[0]); V.has_value())
+      if (std::optional<bool> V = getLiteralValue(*Operands[0]))
         return !*V;
       return std::nullopt;
     }
@@ -268,7 +268,7 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
+      if (std::optional<bool> Left = getLiteralValue(LHS))
         return !*Left ? Left : getLiteralValue(RHS);
       if (std::optional<bool> Right = getLiteralValue(RHS);
           Right.has_value() && *Right == false)
@@ -280,7 +280,7 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
+      if (std::optional<bool> Left = getLiteralValue(LHS))
         return *Left ? Left : getLiteralValue(RHS);
       if (std::optional<bool> Right = getLiteralValue(RHS);
           Right.has_value() && *Right == true)
@@ -292,7 +292,7 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
+      if (std::optional<bool> Left = getLiteralValue(LHS))
         return !*Left ? true : getLiteralValue(RHS);
       if (std::optional<bool> Right = getLiteralValue(RHS);
           Right.has_value() && *Right == true)
@@ -435,9 +435,9 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (auto V = getLiteralValue(LHS); V.has_value()) {
+      if (auto V = getLiteralValue(LHS)) {
         assumeFormula(AssumedVal == *V, RHS);
-      } else if (auto V = getLiteralValue(RHS); V.has_value()) {
+      } else if (auto V = getLiteralValue(RHS)) {
         assumeFormula(AssumedVal == *V, LHS);
       }
       break;
