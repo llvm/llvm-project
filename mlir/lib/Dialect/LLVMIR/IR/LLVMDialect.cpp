@@ -459,8 +459,7 @@ static LogicalResult verifyTBAAStructFieldOffsets(Operation *op,
     return success();
   std::optional<uint64_t> prevOffset;
   for (Attribute field : fields) {
-    uint64_t offset =
-        static_cast<uint64_t>(cast<TBAAStructFieldAttr>(field).getOffset());
+    uint64_t offset = cast<TBAAStructFieldAttr>(field).getOffset();
     if (prevOffset && offset < *prevOffset)
       return op->emitOpError(
           "tbaa.struct field offsets must be non-decreasing");

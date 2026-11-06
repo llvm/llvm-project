@@ -2429,8 +2429,7 @@ void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
   structFields.reserve(fields.size());
   for (Attribute field : fields) {
     auto fieldAttr = cast<TBAAStructFieldAttr>(field);
-    structFields.emplace_back(static_cast<uint64_t>(fieldAttr.getOffset()),
-                              static_cast<uint64_t>(fieldAttr.getSize()),
+    structFields.emplace_back(fieldAttr.getOffset(), fieldAttr.getSize(),
                               getTBAANode(fieldAttr.getTag()));
   }
   inst->setMetadata(

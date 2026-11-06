@@ -1392,8 +1392,8 @@ def LLVM_TBAATagArrayAttr
 def LLVM_TBAAStructFieldAttr
     : LLVM_Attr<"TBAAStructField", "tbaa_struct_field"> {
   let parameters = (ins
-    "int64_t":$offset,
-    "int64_t":$size,
+    "uint64_t":$offset,
+    "uint64_t":$size,
     "TBAATagAttr":$tag
   );
 

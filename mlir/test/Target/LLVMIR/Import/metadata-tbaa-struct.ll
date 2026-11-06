@@ -19,7 +19,7 @@ declare void @llvm.memcpy.inline.p0.p0.i64(ptr, ptr, i64, i1)
 ; CHECK-DAG: #[[F0:.*]] = #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #[[TI]]>
 ; CHECK-DAG: #[[F1:.*]] = #llvm.tbaa_struct_field<offset = 8, size = 4, tag = #[[TF]]>
 ; CHECK-DAG: #[[F2:.*]] = #llvm.tbaa_struct_field<offset = 2147483648, size = 4, tag = #[[TI]]>
-; CHECK-DAG: #[[F3:.*]] = #llvm.tbaa_struct_field<offset = -1, size = 4, tag = #[[TI]]>
+; CHECK-DAG: #[[F3:.*]] = #llvm.tbaa_struct_field<offset = 18446744073709551615, size = 4, tag = #[[TI]]>
 ; CHECK-DAG: #[[F4:.*]] = #llvm.tbaa_struct_field<offset = 0, size = 2147483648, tag = #[[TI]]>
 ; CHECK: llvm.intr.memcpy
 ; CHECK-SAME: tbaa_struct = [#[[F0]], #[[F1]]]
@@ -54,8 +54,8 @@ define void @narrow_offset(ptr %d, ptr %s) {
 
 !8 = !{ i32 2147483648, i64 4, !6 }
 
-; A high-bit i64 offset keeps its bits through the signed attribute; it is
-; not dropped as unrepresentable.
+; A high-bit i64 offset keeps its full unsigned value; it is not dropped
+; as unrepresentable.
 ; CHECK: llvm.intr.memcpy
 ; CHECK-SAME: tbaa_struct = [#[[F3]]]
 define void @high_bit_offset(ptr %d, ptr %s) {
