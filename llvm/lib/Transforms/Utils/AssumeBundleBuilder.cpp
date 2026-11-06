@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -45,6 +46,10 @@ DEBUG_COUNTER(BuildAssumeCounter, "assume-builder-counter",
               "Controls which assumes gets created");
 
 namespace {
+
+static bool bundleHasOffset(const CallBase::BundleOpInfo &BOI) {
+  return BOI.End - BOI.Begin > ABA_Argument + 1;
+}
 
 bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   switch (Kind) {
@@ -123,6 +128,8 @@ struct AssumeBuilderState {
             HasBeenPreserved = true;
             return true;
           } else if (isValidAssumeForContext(InstBeingModified, Assume, DT)) {
+            if (bundleHasOffset(*Bundle))
+              return false;
             HasBeenPreserved = true;
             IntrinsicInst *Intr = cast<IntrinsicInst>(Assume);
             ToUpdate = &Intr->op_begin()[Bundle->Begin + ABA_Argument];
@@ -393,6 +400,8 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             continue;
           }
+          if (bundleHasOffset(BOI))
+            continue;
           RetainedKnowledge RK =
             getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
           if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
@@ -490,6 +499,9 @@ struct AssumeSimplify {
     SmallVector<MergeIterator, 4> SplitPoints;
     for (auto &Elem : BBToAssume) {
       SmallVectorImpl<IntrinsicInst *> &AssumesInBB = Elem.second;
+      llvm::erase_if(AssumesInBB, [](IntrinsicInst *I) {
+        return any_of(I->bundle_op_infos(), bundleHasOffset);
+      });
       if (AssumesInBB.size() < 2)
         continue;
       /// AssumesInBB is already sorted by order in the block.
