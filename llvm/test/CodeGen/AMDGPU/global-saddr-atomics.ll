@@ -165,11 +165,9 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_rtn_2048:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, s[0:1], s2, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, s[0:1], s3, 0, s[0:1]
-; GFX10-NEXT:    v_add_co_u32 v2, vcc, 0x800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc, 0, v3, vcc
-; GFX10-NEXT:    global_atomic_swap v0, v[2:3], v1, off glc
+; GFX10-NEXT:    s_add_u32 s0, s2, 0x800
+; GFX10-NEXT:    s_addc_u32 s1, s3, 0
+; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
