@@ -6,8 +6,6 @@
 ;; loaded from the stack, and the callee's view of the stack arguments has to
 ;; start above it.
 
-target triple = "arm64ec-pc-windows-msvc"
-
 define i128 @ret_i128_vararg(i32 %a, ...) {
   ret i128 0
 }

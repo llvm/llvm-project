@@ -10,8 +10,6 @@
 ;; The helpers are the ARM64EC ones, which are named apart from the exact x87
 ;; soft-float helpers of libgcc, and are `#`-prefixed at the object level.
 
-target triple = "arm64ec-pc-windows-msvc"
-
 define x86_fp80 @bitcast_select(i128 %bits, i1 %c) {
 entry:
   %trunc = trunc i128 %bits to i80

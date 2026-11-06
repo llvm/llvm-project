@@ -9,8 +9,6 @@
 ;;   entry thunk: x64 memory slot -> ARM64EC register pair
 ;;   exit thunk:  ARM64EC register pair -> x64 memory slot
 
-target triple = "arm64ec-pc-windows-msvc"
-
 declare x86_fp80 @ext_ret()
 declare void @ext_take(x86_fp80)
 

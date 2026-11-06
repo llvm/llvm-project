@@ -6,8 +6,6 @@
 ; actually reachable from IR, so that a missing or misnamed libcall cannot slip
 ; through unnoticed.
 
-target triple = "arm64ec-pc-windows-msvc"
-
 declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80)
 declare x86_fp80 @llvm.maxnum.f80(x86_fp80, x86_fp80)
 declare x86_fp80 @llvm.minnum.f80(x86_fp80, x86_fp80)
