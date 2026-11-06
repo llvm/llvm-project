@@ -1809,6 +1809,32 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
   }
 }
 
+static bool isStructOrArrayConstant(const Value *V) {
+  return isa<ConstantStruct, ConstantArray>(V);
+}
+
+static bool hasPointerMember(const Constant *C) {
+  return any_of(C->operands(), [](const Use &E) {
+    return E->getType()->isPointerTy() ||
+           (isStructOrArrayConstant(E.get()) &&
+            hasPointerMember(cast<Constant>(E.get())));
+  });
+}
+
+// A nested aggregate member with pointers gets its own chain.
+static Value *buildInsertValueChain(Constant *C,
+                                    BasicBlock::iterator InsertPt) {
+  Value *Composite = PoisonValue::get(C->getType());
+  for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx) {
+    Value *Member = C->getOperand(Idx);
+    if (isStructOrArrayConstant(Member) &&
+        hasPointerMember(cast<Constant>(Member)))
+      Member = buildInsertValueChain(cast<Constant>(Member), InsertPt);
+    Composite = InsertValueInst::Create(Composite, Member, Idx, "", InsertPt);
+  }
+  return Composite;
+}
+
 // Rebuild each constant arm of an aggregate PHI/select/freeze that holds
 // pointers as an insertvalue chain. A constant's pointer members carry the
 // pointee types deduced for them anywhere in the module, so the constant can be
@@ -1824,9 +1850,7 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
     SmallDenseMap<BasicBlock *, Value *> PhiArms;
     for (Use &U : I.operands()) {
       auto *C = dyn_cast<ConstantAggregate>(U.get());
-      if (!C || none_of(C->operands(), [](const Use &E) {
-            return E->getType()->isPointerTy();
-          }))
+      if (!C || !hasPointerMember(C))
         continue;
       if (Value *Arm =
               Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
@@ -1835,10 +1859,7 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
       }
       Instruction *InsertPt =
           Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I;
-      Value *Composite = PoisonValue::get(C->getType());
-      for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx)
-        Composite = InsertValueInst::Create(Composite, C->getOperand(Idx), Idx,
-                                            "", InsertPt->getIterator());
+      Value *Composite = buildInsertValueChain(C, InsertPt->getIterator());
       U.set(Composite);
       if (Phi)
         PhiArms[Phi->getIncomingBlock(U)] = Composite;
