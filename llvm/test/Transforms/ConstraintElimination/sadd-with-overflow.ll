@@ -577,6 +577,85 @@ entry:
   ret void
 }
 
+define void @sadd_opposite_signs(i64 %v, i64 %s) {
+; CHECK-LABEL: define void @sadd_opposite_signs(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[S]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[N:%.*]] = xor i64 [[S]], -1
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i64 %v, 1
+  %c = icmp sge i64 %s, 0
+  call void @llvm.assume(i1 %c)
+  %n = xor i64 %s, -1
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %n)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_same_signs(i64 %v, i64 %s) {
+; CHECK-LABEL: define void @sadd_same_signs(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[S]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[R:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 [[S]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i64 %v, 1
+  %c = icmp sge i64 %s, 0
+  call void @llvm.assume(i1 %c)
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %s)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smax_clamp_samesign(i64 %v, i64 %start) {
+; CHECK-LABEL: define void @sadd_smax_clamp_samesign(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[END:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i64 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[NOTSTART:%.*]] = xor i64 [[START]], -1
+; CHECK-NEXT:    [[X:%.*]] = add i64 [[END]], [[NOTSTART]]
+; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START]], [[M]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[GT:%.*]] = icmp slt i64 [[END]], [[TMP0]]
+; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %end = lshr i64 %v, 1
+  %c = icmp samesign uge i64 %end, %start
+  call void @llvm.assume(i1 %c)
+  %notstart = xor i64 %start, -1
+  %x = add i64 %end, %notstart
+  %m = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %start, i64 %m)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  %new = extractvalue { i64, i1 } %r, 0
+  %lt = icmp slt i64 %new, %start
+  call void @use(i1 %lt)
+  %gt = icmp slt i64 %end, %new
+  call void @use(i1 %gt)
+  ret void
+}
+
 define void @sadd_sum_of_difference_i128(i128 %start, i128 %end) {
 ; CHECK-LABEL: define void @sadd_sum_of_difference_i128(
 ; CHECK-SAME: i128 [[START:%.*]], i128 [[END:%.*]]) {
@@ -701,6 +780,24 @@ entry:
   ret void
 }
 
+define void @sadd_opposite_signs_known_negative(i8 %v, i8 %w) {
+; CHECK-LABEL: define void @sadd_opposite_signs_known_negative(
+; CHECK-SAME: i8 [[V:%.*]], i8 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[V]], 1
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[W]], -128
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i8 %v, 1
+  %b = or i8 %w, -128
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
 define void @sadd_vector_not_folded(<2 x i8> %start, <2 x i8> %end) {
 ; CHECK-LABEL: define void @sadd_vector_not_folded(
 ; CHECK-SAME: <2 x i8> [[START:%.*]], <2 x i8> [[END:%.*]]) {
@@ -719,8 +816,6 @@ entry:
   ret void
 }
 
-; Negative: the coefficients of %x add up to 4 * 2^61 = 2^63, which does not fit
-; the 64-bit coefficients, so the decomposition is given up on.
 define void @sadd_coefficient_overflow(i64 %x, i64 %y) {
 ; CHECK-LABEL: define void @sadd_coefficient_overflow(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
