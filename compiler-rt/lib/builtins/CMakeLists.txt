@@ -878,6 +878,13 @@ if (MINGW)
     ${aarch64_SOURCES}
     aarch64/chkstk.S
   )
+
+  if (CAN_TARGET_arm64ec)
+    # Compile this as x86-64 and link it into an ARM64X binary.
+    set(aarch64_SOURCES ${aarch64_SOURCES} aarch64/arm64ec_x86_fp80.c)
+    set_source_files_properties(aarch64/arm64ec_x86_fp80.c
+      PROPERTIES COMPILE_OPTIONS "--target=x86_64-w64-windows-gnu")
+  endif()
 endif()
 
 # Don't build enable_execute_stack on arm64 darwin.

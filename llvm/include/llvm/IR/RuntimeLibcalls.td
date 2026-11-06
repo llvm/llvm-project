@@ -2408,16 +2408,16 @@ defset list<RuntimeLibcallImpl> Arm64ECF80Impls = {
   def arm64ec___divxf3 : RuntimeLibcallImpl<DIV_F80, "#__arm64ec_divxf3">;
   def arm64ec___powixf2 : RuntimeLibcallImpl<POWI_F80, "#__arm64ec_powixf2">;
 
+  def arm64ec___lexf2
+      : RuntimeLibcallImpl<FCMP3_PRED_OLE_F80, "#__arm64ec_lexf2">;
   def arm64ec___eqxf2
       : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F80, "#__arm64ec_eqxf2">;
+  def arm64ec___ltxf2
+      : RuntimeLibcallImpl<FCMP3_PRED_OLT_F80, "#__arm64ec_ltxf2">;
   def arm64ec___nexf2
       : RuntimeLibcallImpl<FCMP3_PRED_UNE_F80, "#__arm64ec_nexf2">;
   def arm64ec___gexf2
       : RuntimeLibcallImpl<FCMP3_PRED_OGE_F80, "#__arm64ec_gexf2">;
-  def arm64ec___ltxf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OLT_F80, "#__arm64ec_ltxf2">;
-  def arm64ec___lexf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OLE_F80, "#__arm64ec_lexf2">;
   def arm64ec___gtxf2
       : RuntimeLibcallImpl<FCMP3_PRED_OGT_F80, "#__arm64ec_gtxf2">;
   def arm64ec___unordxf2
