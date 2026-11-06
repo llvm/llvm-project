@@ -1912,24 +1912,35 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc,
                      "OpConstantComposite must have type <id> and result <id>");
   }
-  if (operands.size() < 3) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
-  }
-
   Type resultType = getType(operands[0]);
   if (!resultType) {
     return emitError(unknownLoc, "undefined result type from <id> ")
            << operands[0];
   }
 
+  // Unused constants are not materialized as ops, so their verifier cannot
+  // diagnose missing constituents. Only empty structs may have none.
+  auto structType = dyn_cast<spirv::StructType>(resultType);
+  if (operands.size() < 3 &&
+      (!structType || structType.getNumElements() != 0)) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
+  }
+
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getConstant(operands[i]);
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
-      return emitError(unknownLoc, "OpConstantComposite component <id> ")
-             << operands[i] << " must come from a normal constant";
+      // spirv.Constant cannot represent undefined constituents.
+      if (getUndefType(id)) {
+        return emitError(unknownLoc, "OpConstantComposite component #")
+               << index << " <id> " << id
+               << " is an OpUndef, which cannot be represented in "
+                  "spirv.Constant";
+      }
+      return emitError(unknownLoc, "OpConstantComposite component #")
+             << index << " <id> " << id << " must come from a normal constant";
     }
     elements.push_back(elementInfo->first);
   }
@@ -2166,6 +2177,42 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   return specConstOperationOp.getResult();
 }
 
+/// Returns the `spirv.Constant` attribute for the null value of `type`, or a
+/// null attribute if `type` (or one of its constituents) has no such
+/// representation. Null arrays and literal structs are array attributes of
+/// null constituents, like deserialized OpConstantComposite instructions.
+static Attribute getNullConstantAttr(Builder &builder, Type type) {
+  if (type.isIntOrFloat() || isa<VectorType>(type))
+    return builder.getZeroAttr(type);
+  if (auto tensorType = dyn_cast<spirv::TensorArmType>(type)) {
+    if (TypedAttr element = builder.getZeroAttr(tensorType.getElementType()))
+      return DenseElementsAttr::get(tensorType, element);
+    return {};
+  }
+  if (auto arrayType = dyn_cast<spirv::ArrayType>(type)) {
+    Attribute element =
+        getNullConstantAttr(builder, arrayType.getElementType());
+    if (!element)
+      return {};
+    SmallVector<Attribute> elements(arrayType.getNumElements(), element);
+    return builder.getArrayAttr(elements);
+  }
+  // `spirv.Constant` does not support identified structs.
+  if (auto structType = dyn_cast<spirv::StructType>(type);
+      structType && !structType.isIdentified()) {
+    SmallVector<Attribute> elements;
+    elements.reserve(structType.getNumElements());
+    for (Type memberType : structType.getElementTypes()) {
+      Attribute element = getNullConstantAttr(builder, memberType);
+      if (!element)
+        return {};
+      elements.push_back(element);
+    }
+    return builder.getArrayAttr(elements);
+  }
+  return {};
+}
+
 LogicalResult
 spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
@@ -2180,15 +2227,7 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  Attribute attr;
-  if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
-    attr = opBuilder.getZeroAttr(resultType);
-  } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
-    if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
-      attr = DenseElementsAttr::get(tensorType, element);
-  }
-
-  if (attr) {
+  if (Attribute attr = getNullConstantAttr(opBuilder, resultType)) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
