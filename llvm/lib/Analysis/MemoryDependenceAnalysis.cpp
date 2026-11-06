@@ -862,8 +862,9 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   // Defer the queries for PHI translated pointers to the loop below rather than
   // recursing into them to avoid stack overflow.
   SmallVector<DeferredNonLocalPointerDep, 8> Deferred;
-  bool Succeeded = getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad,
-                                               FromBB, Result, Deferred, /* SkipFirstBlock */ true);
+  bool Succeeded =
+      getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
+                                  Result, Deferred, /* SkipFirstBlock */ true);
   while (Succeeded && !Deferred.empty()) {
     DeferredNonLocalPointerDep D = Deferred.pop_back_val();
     // Fails here means the cached result conflicted with the Visited list.
