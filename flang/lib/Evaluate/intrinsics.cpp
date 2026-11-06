@@ -1094,9 +1094,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_int",
         {{"a", AnyFloating}, {"round", IeeeRoundType}, DefaultingKIND},
         KINDInt},
-    {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
-    {"__builtin_ieee_is_negative", {{"a", AnyFloating}}, DefaultLogical},
-    {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_nan", {{"x", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_negative", {{"x", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_normal", {{"x", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_next_after", {{"x", SameReal}, {"y", AnyReal}}, SameReal},
     {"__builtin_ieee_next_down", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
@@ -3764,8 +3764,8 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
   const semantics::Symbol &ordSym{*ordIter->second};
   StructureConstructor ctor{derived};
   ctor.Add(ordSym,
-      Expr<SomeType>{
-          Expr<SomeInteger>{Expr<Type<TypeCategory::Integer, 4>>{count}}});
+      Expr<SomeType>{Expr<SomeInteger>{
+          MakeConstantExpr<Type<TypeCategory::Integer>>(4, count)}});
   // Build FunctionResult and DummyArguments
   DynamicType enumType{derived};
   characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
@@ -4159,15 +4159,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
       }
     }
 
-    // NEXT/PREVIOUS are enumeration-type-only intrinsics.  They are only
-    // recognized as intrinsic names when the enumeration-type feature is
-    // enabled, so that pre-F2023 programs may still use those names for
-    // external procedures.  This gating is symmetric with the one in
-    // resolve-names.cpp and should be removed once the feature is fully
-    // implemented.
-    if ((call.name == "next" || call.name == "previous") &&
-        context.languageFeatures().IsEnabled(
-            common::LanguageFeature::EnumerationType)) {
+    if (call.name == "next" || call.name == "previous") {
       const semantics::DerivedTypeSpec *derived{nullptr};
       if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
         derived = GetEnumerationTypeSpec(arg->GetType());

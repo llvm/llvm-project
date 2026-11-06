@@ -1137,6 +1137,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
       return *Path;
   }
 
+  // Short SPIR-V spellings like "spirv64" are installed under the three-part
+  // name, "spirv64-unknown-unknown".
+  if (T.isSPIRV()) {
+    llvm::Triple SPIRVTriple(
+        T.normalize(llvm::Triple::CanonicalForm::THREE_IDENT));
+    if (auto Path = getPathForTriple(SPIRVTriple))
+      return *Path;
+  }
+
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {

@@ -221,10 +221,10 @@ void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
           someInt && evaluate::IsActuallyConstant(*someInt)) {
         auto converted{evaluate::Fold(context_.foldingContext(),
             evaluate::ConvertToType<evaluate::SubscriptInteger>(
-                common::Clone(*someInt)))};
+                evaluate::SubscriptIntegerKind, common::Clone(*someInt)))};
         if (const auto *cst{
                 evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
-                    converted)}) {
+                    evaluate::SubscriptIntegerKind, converted)}) {
           for (auto elt : cst->values()) {
             auto n{elt.ToInt64()};
             if (n < 1) {

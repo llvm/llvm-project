@@ -112,15 +112,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::init(true));
 
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
-// when they disagree. This option (enabled by default) allows using atom.add
-// anyway, trading correct denormal handling for the speed of the native
-// instruction.
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree (strict mode), unless declared insignificant via
+// !atomic.ignore.denormal.mode metadata or this option. This option allows
+// using atom.add anyway, trading correct denormal handling for the speed of the
+// native instruction.
 static cl::opt<bool> AllowFTZAtomics(
     "nvptx-allow-ftz-atomics", cl::Hidden,
     cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
              "FTZ behavior does not match the function's denormal mode."),
-    cl::init(true));
+    cl::init(false));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
@@ -157,8 +158,16 @@ bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   return true;
 }
 
+// Input denormals must be flushed when requested, whereas output flushing is
+// optional. Select FTZ instructions based on the input mode.
+// In practice, both input and output should match anyway.
+bool NVPTXTargetLowering::useF16FTZ(const MachineFunction &MF) const {
+  return MF.getDenormalMode(APFloat::IEEEhalf()).Input ==
+         DenormalMode::PreserveSign;
+}
+
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
-  return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
+  return MF.getDenormalMode(APFloat::IEEEsingle()).Input ==
          DenormalMode::PreserveSign;
 }
 
@@ -655,8 +664,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2f32, MVT::v2i32}, Expand);
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i16, Expand);
-  setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
-                     MVT::v2i32, Expand);
+  setOperationAction(
+      {ISD::ANY_EXTEND, ISD::BSWAP, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
+      MVT::v2i32, Expand);
 
   // Need custom lowering in case the index is dynamic.
   if (STI.hasF32x2Instructions())
@@ -779,6 +789,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                    {MVT::v2i8, MVT::v2i16}, Expand);
   setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i1, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
 
   // Register custom handling for illegal type loads/stores. We'll try to custom
@@ -1145,10 +1156,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
-  // atom.b128 is legal in PTX but since we don't represent i128 as a legal
-  // type, we need to custom lower it.
-  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
-                     Custom);
+  // 128-bit atomic instructions are legal in PTX, but since i128 is not a
+  // legal type, we need to custom lower them.
+  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD,
+                      ISD::ATOMIC_STORE},
+                     MVT::i128, Custom);
 
   // Now deduce the information based on the above mentioned
   // actions
@@ -1156,7 +1168,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
-  setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
+  // ld/st.b128 requires only sm_70, unlike the atom.*.b128 forms.
+  setMaxAtomicSizeInBitsSupported(STI.hasLdStB128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
   setMaxLargeFPConvertBitWidthSupported(64);
 
@@ -3472,14 +3485,17 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
 
 // In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
 // Lower these into a node returning the correct type which is zero-extended
-// back to the correct size.
+// back to the correct size. This has to be a target node: DAG combines assume
+// that the result of ISD::CTLZ and ISD::CTPOP is as wide as their operand.
 static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
   SDValue V = Op->getOperand(0);
   assert(V.getValueType() == MVT::i64 &&
          "Unexpected CTLZ/CTPOP type to legalize");
 
   SDLoc DL(Op);
-  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  unsigned Opcode =
+      Op->getOpcode() == ISD::CTLZ ? NVPTXISD::CLZ_B64 : NVPTXISD::POPC_B64;
+  SDValue CT = DAG.getNode(Opcode, DL, MVT::i32, V);
   return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
 }
 
@@ -3651,6 +3667,30 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
+static SDValue lowerAtomicStore128(SDNode *N, SelectionDAG &DAG,
+                                   const NVPTXSubtarget &STI) {
+  assert(STI.hasLdStB128() &&
+         "b128 atomic stores require PTX ISA version 8.3 and target sm_70");
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  SDValue Val = AN->getVal();
+  assert(Val.getValueType() == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  SDValue Ops[] = {AN->getOperand(0), // Chain
+                   AN->getBasePtr(),
+                   // Low part
+                   DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Val,
+                               DAG.getIntPtrConstant(0, dl)),
+                   // High part
+                   DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Val,
+                               DAG.getIntPtrConstant(1, dl))};
+  return DAG.getMemIntrinsicNode(NVPTXISD::ATOMIC_STORE_B128, dl,
+                                 DAG.getVTList(MVT::Other), Ops, MVT::i128,
+                                 AN->getMemOperand());
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -3689,6 +3729,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return lowerAtomicStore128(Op.getNode(), DAG, STI);
   case ISD::MSTORE: {
     assert(STI.has256BitVectorLoadStore(
                cast<MemSDNode>(Op.getNode())->getAddressSpace()) &&
@@ -7480,30 +7522,19 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
-// TODO: Remove the type-legality checks here once
-// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
-// explicit type constraints for overloaded intrinsics in tablegen.
 static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
-                               unsigned ISDOpcode, Intrinsic::ID IID,
-                               APFloat::roundingMode RoundingMode) {
+                               unsigned ISDOpcode, Intrinsic::ID IID) {
   const EVT VT = N->getValueType(0);
-  if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
-    return false;
-
-  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
-  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return IsRN;
+    return STI.hasFP16Math() &&
+           (!nvvm::FPArithIsRelu(IID) || STI.hasFeature(NVPTX::SM80));
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
+    return STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
-    return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
-  case MVT::f64:
-    return !VT.isVector() && !IsSat && !IsFTZ;
+    return !VT.isVector() || STI.hasF32x2Instructions();
   default:
-    return false;
+    return true;
   }
 }
 
@@ -7535,20 +7566,32 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   case Intrinsic::nvvm_spcompress:
   case Intrinsic::nvvm_spdecompress:
     return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(4).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMA, IID))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
   case Intrinsic::nvvm_fmul_sat:
   case Intrinsic::nvvm_fmul_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }
@@ -7921,6 +7964,28 @@ static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Result.getValue(2));
 }
 
+static void replaceAtomicLoad128(SDNode *N, SelectionDAG &DAG,
+                                 const NVPTXSubtarget &STI,
+                                 SmallVectorImpl<SDValue> &Results) {
+  assert(STI.hasLdStB128() &&
+         "b128 atomic loads require PTX ISA version 8.3 and target sm_70");
+  assert(N->getValueType(0) == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  SDValue Ops[] = {AN->getOperand(0), // Chain
+                   AN->getBasePtr()};
+  SDVTList Tys = DAG.getVTList(MVT::i64, MVT::i64, MVT::Other);
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXISD::ATOMIC_LOAD_B128, dl, Tys,
+                                           Ops, MVT::i128, AN->getMemOperand());
+
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128,
+                                {Result.getValue(0), Result.getValue(1)}));
+  Results.push_back(Result.getValue(2));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -7945,6 +8010,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_SWAP:
     replaceAtomicSwap128(N, DAG, STI, Results);
+    return;
+  case ISD::ATOMIC_LOAD:
+    replaceAtomicLoad128(N, DAG, STI, Results);
     return;
   }
 }
@@ -7979,7 +8047,7 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
-      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Input ==
                        DenormalMode::PreserveSign;
       bool UseNative = IgnoreFTZMismatch;
       switch (AddressSpace) {
@@ -7998,7 +8066,7 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
       // function that is not in FTZ mode for f16.
-      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Input ==
                        DenormalMode::PreserveSign;
       if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
@@ -8103,12 +8171,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+    // RMWs need SM 90 for 128-bit operations, unlike atomic loads/stores.
+    const unsigned MaxRMWBits = STI.hasAtomSwap128() ? 128 : 64;
 
     if (Op == AtomicRMWInst::BinOp::Xchg) {
       // Split exchanges that are too wide or insufficiently aligned until
       // each piece can be lowered atomically.
-      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
-          AI->getAlign().value() < VecBytes)
+      if (VecBits > MaxRMWBits || AI->getAlign().value() < VecBytes)
         return AtomicExpansionKind::Expand;
 
       // Expand subword exchanges to a masked cmpxchg loop.
@@ -8130,7 +8199,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
-    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+    if (VecBits <= MaxRMWBits)
       return AtomicExpansionKind::CmpXChg;
 
     // If the vector is too wide for a single native cmpxchg, halve further to

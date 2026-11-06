@@ -275,6 +275,10 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
+    // Targets without a separate store counter count stores in LOAD_CNT
+    // (see below), so STORE_CNT has no events of its own there.
+    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
+      return HWEvents::NONE;
     HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
     if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
       EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
@@ -899,7 +903,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
     Increment = 2;
   }
   unsigned CurrScore = UB + Increment;
-  if (CurrScore == 0)
+  if (CurrScore <= UB)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.
@@ -3523,6 +3527,9 @@ bool SIInsertWaitcnts::run() {
         if (!ST.hasImageInsts() &&
             (CT == AMDGPU::EXP_CNT || CT == AMDGPU::SAMPLE_CNT ||
              CT == AMDGPU::BVH_CNT))
+          continue;
+
+        if (!ST.hasAnyBVHInsts() && CT == AMDGPU::BVH_CNT)
           continue;
 
         BuildMI(EntryBB, I, DebugLoc(),
