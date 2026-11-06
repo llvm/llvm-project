@@ -775,7 +775,9 @@ private:
     CallTy Call;
     // The context nodes for the callsite's stack ids that have one, saved to
     // avoid repeatedly looking them up. The stack ids are available via the
-    // nodes' OrigStackOrAllocId.
+    // nodes' OrigStackOrAllocId. Since each stack id has its own node, and the
+    // stack id to node map is not modified while matching calls, two calls
+    // have the same stack ids iff they have the same nodes.
     std::vector<ContextNode *> StackNodes;
     // The function containing this callsite.
     const FuncTy *Func;
@@ -2428,7 +2430,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
       // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them.
+      // assigned to the same context node, and skip them. Comparing the stack
+      // nodes is equivalent to comparing the stack ids, as each stack id has
+      // its own node and the stack id to node map is not modified here.
       bool DuplicateContextIds = false;
       for (unsigned J = I + 1; J < Calls.size(); J++) {
         auto &CallCtxInfo = Calls[J];
