@@ -342,4 +342,16 @@ def OpWithBitEnumVerticalBarDirective
   let assemblyFormat = "enum($value) attr-dict";
 }
 
+def OpWithBitEnumSpace : TEST_Op<"op_with_bit_enum_space"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+def OpWithBitEnumSpaceDirective : TEST_Op<"op_with_bit_enum_space_directive"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "enum($value) (`tag` $tag^)? attr-dict";
+}
+
 #endif // TEST_OPS_ATTRIBUTES

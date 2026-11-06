@@ -49,6 +49,7 @@ def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 
+
 // Define a pattern that matches and creates a bit enum attribute.
 def : Pat<(OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "write|execute">,
                          ConstantAttr<I32Attr, "0">),

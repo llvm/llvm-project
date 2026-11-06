@@ -2012,6 +2012,32 @@ public:
   }
 };
 
+/// Converts `spirv.CL.sincos` to `llvm.intr.sincos`, storing the cosine to
+/// `cosval` and returning the sine.
+class CLSincosPattern : public SPIRVToLLVMConversion<spirv::CLSincosOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLSincosOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLSincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    auto structType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                       {dstType, dstType});
+    Value sincos =
+        LLVM::SincosOp::create(rewriter, loc, structType, adaptor.getX());
+    Value sin = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 0);
+    Value cos = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 1);
+    LLVM::StoreOp::create(rewriter, loc, cos, adaptor.getCosval());
+    rewriter.replaceOp(op, sin);
+    return success();
+  }
+};
+
 // Converts spirv.GL.Radians (scale = pi/180) and spirv.GL.Degrees
 // (scale = 180/pi) by multiplying the operand by a compile-time constant.
 template <typename SPIRVOp>
@@ -2448,6 +2474,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLNMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLNMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::GLPowOp, LLVM::PowOp>,
@@ -2483,6 +2510,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLFmaOp, LLVM::FMAOp>,
       DirectConversionPattern<spirv::CLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::CLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::CLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::CLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::CLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::CLLog10Op, LLVM::Log10Op>,
@@ -2506,7 +2534,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
-      InverseSqrtPattern<spirv::CLRsqrtOp>, SAbsPattern<spirv::CLSAbsOp>,
+      CLSincosPattern, InverseSqrtPattern<spirv::CLRsqrtOp>,
+      SAbsPattern<spirv::CLSAbsOp>,
       ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
       ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
       ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,

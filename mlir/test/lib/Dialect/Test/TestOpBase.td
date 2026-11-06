@@ -75,4 +75,7 @@ def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
 def TestBitEnumVerticalBarAttr
     : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
+def TestBitEnumSpaceAttr
+    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
+
 #endif // TEST_OP_BASE

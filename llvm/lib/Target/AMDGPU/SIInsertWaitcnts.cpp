@@ -275,6 +275,10 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
+    // Targets without a separate store counter count stores in LOAD_CNT
+    // (see below), so STORE_CNT has no events of its own there.
+    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
+      return HWEvents::NONE;
     HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
     if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
       EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
