@@ -69,20 +69,26 @@
 @ CHECK-ERRORS: note: operand must be an immediate in the range [0,255]
 @ CHECK-ERRORS: note: too many operands for instruction
 
-@ Out of range immediates for v8 HLT instruction.
+@ Out of range immediates for HLT instruction.
         hlt #64
         hlt #-1
-@CHECK-ERRORS: error: invalid instruction
+@CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @CHECK-ERRORS:        hlt #64
 @CHECK-ERRORS:        ^
+@CHECK-ERRORS: note: instruction requires: arm-mode
+@CHECK-ERRORS: operand must be an immediate in the range [0,63]
+@CHECK-ERRORS-V5: note: operand must be an immediate in the range [0,63]
+@CHECK-ERRORS-V5-NEXT:        hlt #64
 @CHECK-ERRORS-V8: error: invalid instruction, any one of the following would fix this:
 @CHECK-ERRORS-V8:         hlt #64
 @CHECK-ERRORS-V8:              ^
 @CHECK-ERRORS-V8: note: instruction requires: arm-mode
 @CHECK-ERRORS-V8: operand must be an immediate in the range [0,63]
-@CHECK-ERRORS: error: invalid instruction
+@CHECK-ERRORS: error: operand must be an immediate in the range [0,63]
 @CHECK-ERRORS:        hlt #-1
-@CHECK-ERRORS:        ^
+@CHECK-ERRORS:            ^
+@CHECK-ERRORS-V5: error: operand must be an immediate in the range [0,63]
+@CHECK-ERRORS-V5-NEXT:        hlt #-1
 @CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,63]
 @CHECK-ERRORS-V8:         hlt #-1
 @CHECK-ERRORS-V8:              ^
