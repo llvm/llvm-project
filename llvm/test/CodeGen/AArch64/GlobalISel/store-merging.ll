@@ -333,9 +333,10 @@ define i32 @test_alias_middle_3xs32(ptr %ptr) {
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    str w9, [x0, #4]
 ; CHECK-NEXT:    mov w0, w9
-; CHECK-NEXT:    mov x9, #10 ; =0xa
-; CHECK-NEXT:    movk x9, #12, lsl #32
-; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    mov w9, #12 ; =0xc
+; CHECK-NEXT:    str w9, [x8, #8]
 ; CHECK-NEXT:    ret
   store i32 10, ptr %ptr
   %addr2 = getelementptr i32, ptr %ptr, i64 1
@@ -354,11 +355,11 @@ define i32 @test_alias_middle_4xs32(ptr %ptr) {
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    str w9, [x0, #4]
 ; CHECK-NEXT:    mov w0, w9
-; CHECK-NEXT:    mov x9, #10 ; =0xa
-; CHECK-NEXT:    movk x9, #12, lsl #32
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    mov w9, #13 ; =0xd
-; CHECK-NEXT:    str w9, [x8, #12]
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    mov x9, #12 ; =0xc
+; CHECK-NEXT:    movk x9, #13, lsl #32
+; CHECK-NEXT:    str x9, [x8, #8]
 ; CHECK-NEXT:    ret
   store i32 10, ptr %ptr
   %addr2 = getelementptr i32, ptr %ptr, i64 1

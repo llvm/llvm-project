@@ -910,13 +910,17 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](i64)
-    ; CHECK-NEXT: G_STORE [[C]](i32), [[PTR_ADD]](p0) :: (store (i32) into %ir.addr2)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: G_STORE [[C]](i32), [[COPY]](p0) :: (store (i32) into %ir.ptr)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](i64)
+    ; CHECK-NEXT: G_STORE [[C1]](i32), [[PTR_ADD]](p0) :: (store (i32) into %ir.addr2)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.addr2)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 51539607562
-    ; CHECK-NEXT: G_STORE [[C2]](i64), [[COPY]](p0) :: (store (i64) into %ir.ptr, align 4)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](i64)
+    ; CHECK-NEXT: G_STORE [[C2]](i32), [[PTR_ADD1]](p0) :: (store (i32) into %ir.addr3)
     ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
@@ -954,17 +958,17 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 13
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: G_STORE [[C]](i32), [[COPY]](p0) :: (store (i32) into %ir.ptr)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](i64)
-    ; CHECK-NEXT: G_STORE [[C]](i32), [[PTR_ADD]](p0) :: (store (i32) into %ir.addr2)
+    ; CHECK-NEXT: G_STORE [[C1]](i32), [[PTR_ADD]](p0) :: (store (i32) into %ir.addr2)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.addr2)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 51539607562
-    ; CHECK-NEXT: G_STORE [[C3]](i64), [[COPY]](p0) :: (store (i64) into %ir.ptr, align 4)
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](i64)
-    ; CHECK-NEXT: G_STORE [[C1]](i32), [[PTR_ADD1]](p0) :: (store (i32) into %ir.addr4)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](i64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 55834574860
+    ; CHECK-NEXT: G_STORE [[C4]](i64), [[PTR_ADD1]](p0) :: (store (i64) into %ir.addr3, align 4)
     ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
