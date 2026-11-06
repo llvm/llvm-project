@@ -13,8 +13,8 @@ int main() {
   int NumThreads = 0;
   int IsInitialDevice = 1;
 
-#pragma omp target teams num_teams(1) thread_limit(NumElements)               \
-    dyn_groupprivate(fallback(abort) : sizeof(Result))                       \
+#pragma omp target teams num_teams(1) thread_limit(NumElements)                \
+    dyn_groupprivate(fallback(abort) : sizeof(Result))                         \
     map(tofrom : Result, NumThreads, IsInitialDevice)
   {
 #pragma omp parallel
