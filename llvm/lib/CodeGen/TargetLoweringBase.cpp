@@ -1057,19 +1057,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   return ShiftVT;
 }
 
-bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
-  switch (Op) {
-  default:
-    return false;
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SREM:
-  case ISD::UREM:
-    return true;
-  }
-}
-
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
                                              unsigned SrcAS,
                                              unsigned DestAS) const {
