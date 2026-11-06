@@ -5560,16 +5560,32 @@ add_header_library(
 )
 
 add_header_library(
-  log10f
+  log10f_double_eval
   HDRS
-    log10f.h
+    log10f_double_eval.h
   DEPENDS
     .common_constants
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  log10f
+  HDRS
+    log10f.h
+  DEPENDS
+    .log10f_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -5589,16 +5605,29 @@ add_header_library(
 )
 
 add_header_library(
-  log1pf
+  log1pf_double_eval
   HDRS
-    log1pf.h
+    log1pf_double_eval.h
   DEPENDS
     .acoshf_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  log1pf
+  HDRS
+    log1pf.h
+  DEPENDS
+    .log1pf_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
@@ -5638,16 +5667,29 @@ add_header_library(
 )
 
 add_header_library(
+  log2f_double_eval
+  HDRS
+    log2f_double_eval.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   log2f
   HDRS
     log2f.h
   DEPENDS
-    .common_constants
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
+    .log2f_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
@@ -5691,20 +5733,31 @@ add_header_library(
 )
 
 add_header_library(
-  logf
+  logf_double_eval
   HDRS
-    logf.h
+    logf_double_eval.h
   DEPENDS
     .common_constants
+    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  logf
+  HDRS
+    logf.h
+  DEPENDS
+    .logf_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

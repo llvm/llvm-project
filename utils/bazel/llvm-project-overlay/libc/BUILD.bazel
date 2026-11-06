@@ -11118,22 +11118,29 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_log1pf",
-    hdrs = ["src/__support/math/log1pf.h"],
+    name = "__support_math_log1pf_double_eval",
+    hdrs = ["src/__support/math/log1pf_double_eval.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_fma",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":__support_math_acosh_float_constants",
         ":__support_math_acoshf_utils",
-        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log1pf",
+    hdrs = ["src/__support/math/log1pf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_log1pf_double_eval",
     ],
 )
 
@@ -11212,13 +11219,12 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_log10f",
-    hdrs = ["src/__support/math/log10f.h"],
+    name = "__support_math_log10f_double_eval",
+    hdrs = ["src/__support/math/log10f_double_eval.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_fma",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
@@ -11227,6 +11233,17 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log10f",
+    hdrs = ["src/__support/math/log10f.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_log10f_double_eval",
     ],
 )
 
@@ -11273,19 +11290,29 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_log2f",
-    hdrs = ["src/__support/math/log2f.h"],
+    name = "__support_math_log2f_double_eval",
+    hdrs = ["src/__support/math/log2f_double_eval.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_fma",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log2f",
+    hdrs = ["src/__support/math/log2f.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_log2f_double_eval",
     ],
 )
 
@@ -11333,8 +11360,8 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_logf",
-    hdrs = ["src/__support/math/logf.h"],
+    name = "__support_math_logf_double_eval",
+    hdrs = ["src/__support/math/logf_double_eval.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_except_value_utils",
@@ -11346,6 +11373,17 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_logf",
+    hdrs = ["src/__support/math/logf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_logf_double_eval",
     ],
 )
 
