@@ -337,7 +337,6 @@ class SPIRVEmitIntrinsicsImpl
   bool convertMaskedMemIntrinsics(Module &M);
   bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
-  void preprocessBoolSwitches(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -3909,7 +3908,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   }
 
   preprocessBoolVectorBitcasts(Func);
-  preprocessBoolSwitches(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
 
@@ -4193,23 +4191,6 @@ bool SPIRVEmitIntrinsicsImpl::processMaskedMemIntrinsic(IntrinsicInst &I) {
   }
 
   return false;
-}
-
-// OpSwitch takes an integer selector, while i1 is a boolean in SPIR-V. Switch
-// on the zero-extended condition instead, before building the instructions
-// worklist, so that the extension is visited like any other instruction.
-void SPIRVEmitIntrinsicsImpl::preprocessBoolSwitches(Function &F) {
-  for (BasicBlock &BB : F) {
-    auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
-    if (!SI || !SI->getCondition()->getType()->isIntegerTy(1))
-      continue;
-    IRBuilder<> B(SI);
-    IntegerType *I32Ty = B.getInt32Ty();
-    SI->setCondition(B.CreateZExt(SI->getCondition(), I32Ty));
-    for (auto Case : SI->cases())
-      Case.setValue(
-          ConstantInt::get(I32Ty, Case.getCaseValue()->getZExtValue()));
-  }
 }
 
 // SPIR-V doesn't support bitcasts involving vector boolean type. Decompose such
