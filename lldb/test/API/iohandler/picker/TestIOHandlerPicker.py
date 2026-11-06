@@ -105,3 +105,54 @@ class IOHandlerPickerTest(PExpectTest):
         self.child.expect_exact("[more above]")
         self.child.send("\r")
         self.finish("selected: 14")
+
+    def test_search_filters_rows(self):
+        """/ filters rows to those with a column containing the query."""
+        self.start_picker("test-picker single 26", "Select an item:")
+        # Matches quebec (17) and echo (5). Enter applies the filter.
+        self.child.send("/ec\r")
+        self.child.expect_exact("filter: ec  (24 hidden)")
+        self.child.send("j\r")
+        self.finish("selected: 5")
+
+    def test_search_typing_is_not_navigation(self):
+        """While searching, j/k/s/Space are part of the query and case is
+        ignored."""
+        self.start_picker("test-picker single 26", "Select an item:")
+        self.child.send("/jULIET\r\r")
+        self.finish("selected: 10")
+
+    def test_search_backspace(self):
+        """Backspace edits the query and brings back matches."""
+        self.start_picker("test-picker single 26", "Select an item:")
+        self.child.send("/ecx")
+        self.child.expect_exact("no matches  (26 hidden)")
+        self.child.send("\x7f\r\r")
+        self.finish("selected: 17")
+
+    def test_search_ignores_unhandled_sequences(self):
+        """Ignored escape sequences don't edit the query."""
+        self.start_picker("test-picker single 26", "Select an item:")
+        # Delete is "ESC [ 3 ~".
+        self.child.send("/ec\x1b[3~\r")
+        self.child.expect_exact("filter: ec  (24 hidden)")
+        self.child.send("j\r")
+        self.finish("selected: 5")
+
+    def test_search_escape_clears(self):
+        """ESC while searching clears the filter instead of canceling."""
+        self.start_picker("test-picker single 26", "Select an item:")
+        self.child.send("/zz")
+        self.child.expect_exact("/zz_")
+        self.child.send(self.escape_key)
+        self.child.expect_exact("/: search")
+        self.child.send("\r")
+        self.finish("selected: 26")
+
+    def test_search_multi_keeps_hidden_selection(self):
+        """Items hidden by the filter stay checked in multi-select mode."""
+        self.start_picker("test-picker multi 5", "Toggle items:")
+        # Matches echo (5) and charlie (3); check 5. 4 and 1 are hidden but
+        # stay pre-selected.
+        self.child.send("/ch\r \r")
+        self.finish("selected: 5", "selected: 4", "selected: 1")
