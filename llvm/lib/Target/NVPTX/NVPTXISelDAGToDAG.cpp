@@ -34,7 +34,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -46,17 +45,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-isel"
 #define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
-
-static cl::opt<bool>
-    EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
-                   cl::desc("Enable reciprocal sqrt optimization"));
-
-// FIXME: This is a WAR to recover lost performance from #155024.
-// We still need to investigate the regression and find a more permanent
-// solution.
-static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
-                                   cl::Hidden,
-                                   cl::desc("Enable MAD wide optimization"));
 
 namespace {
 
@@ -231,9 +219,13 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
   return TL->allowFMA(*MF, OptLevel);
 }
 
-bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+bool NVPTXDAGToDAGISel::doRsqrtOpt() const {
+  return Subtarget->getCLOpts().rsqrt_approx_opt;
+}
 
-bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
+bool NVPTXDAGToDAGISel::doMADWideOpt() const {
+  return Subtarget->getCLOpts().mad_wide_opt;
+}
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
