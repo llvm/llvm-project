@@ -26,7 +26,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
 #include <cstddef>
@@ -146,15 +145,17 @@ public:
     nodeVisitNumbers.erase(Old);
   }
 
-  /// Returns a filter iterator range containing only nodes from the input
-  /// that haven't been visited (yet) by this scc_iterator.
-  /// This function is only meant to be used after the full iterator has been
-  /// run from beginning to end.
-  // Otherwise the set will contain intermediate results.
-  template <typename RangeT> auto getUnvisitedNodes(RangeT &&Nodes) const {
-    return make_filter_range(std::forward<RangeT>(Nodes), [this](NodeRef N) {
-      return !nodeVisitNumbers.contains(N);
-    });
+  /// Returns true if \p N has been reached by this traversal so far.
+  bool isVisited(NodeRef N) const { return nodeVisitNumbers.contains(N); }
+
+  /// Continues a traversal that reached its end from a new root \p N, as in
+  /// the outer loop of Tarjan's algorithm. Nodes reached earlier are treated
+  /// as finished SCCs and are neither entered nor yielded again.
+  void resumeFrom(NodeRef N) {
+    assert(isAtEnd() && "Resuming a traversal that has not finished");
+    assert(!isVisited(N) && "Resuming from an already visited node");
+    DFSVisitOne(N);
+    GetNextSCC();
   }
 };
 

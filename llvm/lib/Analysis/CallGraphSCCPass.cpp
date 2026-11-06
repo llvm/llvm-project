@@ -18,8 +18,6 @@
 #include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -37,7 +35,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -499,60 +496,32 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
 
 namespace {
 
-/// Iterator that lazily chains main SCCs with orphan SCCs.
+/// Walks all SCCs of the call graph bottom-up with a single scc_iterator.
+/// The walk starts at the external calling node; whenever it reaches its end,
+/// it resumes from the next function in module order that it has not reached
+/// yet (an internal function unreachable from the external calling node).
+/// Already visited nodes are never yielded again, so every SCC is visited
+/// exactly once.
 class AllSCCIterator {
   CallGraph &CG;
   scc_iterator<CallGraph *> CGSCCs;
   Module::iterator OrphanScanPos;
-  std::optional<scc_iterator<CallGraphNode *>> OrphanSCCs;
-  SmallPtrSet<CallGraphNode *, 16> VisitedOrphans;
-
-  bool isUnvisited(CallGraphNode *N) const {
-    return !VisitedOrphans.contains(N) &&
-           !CGSCCs.getUnvisitedNodes(ArrayRef(N)).empty();
-  }
-
-  void findNextOrphanSCC() {
-    while (OrphanScanPos != CG.getModule().end()) {
-      Function &F = *OrphanScanPos++;
-      if (F.isDeclaration())
-        continue;
-      CallGraphNode *Node = CG[&F];
-      if (!isUnvisited(Node))
-        continue;
-      OrphanSCCs.emplace(scc_begin(Node));
-      return;
-    }
-    OrphanSCCs.reset();
-  }
 
 public:
   AllSCCIterator(CallGraph &CG)
       : CG(CG), CGSCCs(scc_begin(&CG)), OrphanScanPos(CG.getModule().begin()) {}
 
-  bool isAtEnd() const {
-    if (!CGSCCs.isAtEnd())
-      return false;
-    return !OrphanSCCs || OrphanSCCs->isAtEnd();
-  }
+  bool isAtEnd() const { return CGSCCs.isAtEnd(); }
 
-  const std::vector<CallGraphNode *> &operator*() const {
-    if (!CGSCCs.isAtEnd())
-      return *CGSCCs;
-    return **OrphanSCCs;
-  }
+  const std::vector<CallGraphNode *> &operator*() const { return *CGSCCs; }
 
   AllSCCIterator &operator++() {
-    if (!CGSCCs.isAtEnd()) {
-      ++CGSCCs;
-      if (CGSCCs.isAtEnd())
-        findNextOrphanSCC();
-    } else {
-      for (CallGraphNode *N : **OrphanSCCs)
-        VisitedOrphans.insert(N);
-      ++(*OrphanSCCs);
-      if (OrphanSCCs->isAtEnd())
-        findNextOrphanSCC();
+    ++CGSCCs;
+    while (CGSCCs.isAtEnd() && OrphanScanPos != CG.getModule().end()) {
+      if (!OrphanScanPos->isDeclaration() &&
+          !CGSCCs.isVisited(CG[&*OrphanScanPos]))
+        CGSCCs.resumeFrom(CG[&*OrphanScanPos]);
+      ++OrphanScanPos;
     }
     return *this;
   }
@@ -582,10 +551,10 @@ bool CGPassManager::runOnModule(Module &M) {
   // information, we would like the call to be an inline candidate, infer
   // mod-ref information etc.
   //
-  // we walk the callgraph with a custom iterator that first retruns all
-  // non-orphaned nodes and later finds the orphaned nodes and returns those. We
-  // do this because If those orphaned nodes do not get a function generated for
-  // them, we get a miscompilation and a crash later on.
+  // We walk the callgraph with AllSCCIterator, which also visits orphaned
+  // functions (internal functions unreachable from the external calling node),
+  // each exactly once. If those orphaned functions do not get code generated
+  // for them, we get a miscompilation and a crash later on.
   //
   // Because of this, we allow iteration up to a specified iteration count.
   // This only happens in the case of a devirtualized call, so we only burn
