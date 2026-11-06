@@ -136,6 +136,8 @@ using TargetRegisterClass = MCRegisterClass;
     void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                        SDNode *Node) const override;
 
+    void finalizeLowering(MachineFunction &MF) const override;
+
     void HandleByVal(CCState *, unsigned &, Align) const override;
 
     Register getRegisterByName(const char* RegName, LLT VT,

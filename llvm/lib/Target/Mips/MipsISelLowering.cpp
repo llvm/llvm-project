@@ -3408,6 +3408,12 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   }
 }
 
+void MipsTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // Compute the max call frame size early so we can reserve FP if needed.
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
+}
+
 /// LowerCall - functions arguments are copied from virtual regs to
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 SDValue

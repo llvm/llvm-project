@@ -58,24 +58,33 @@ define dso_local void @g() #0 {
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    subu $sp, $sp, $1
 ; O32-NEXT:    .cfi_def_cfa_offset 65536
-; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
 ; O32-NEXT:    sw $ra, -4($1) # 4-byte Folded Spill
+; O32-NEXT:    lui $1, 1
+; O32-NEXT:    addu $1, $sp, $1
+; O32-NEXT:    sw $fp, -8($1) # 4-byte Folded Spill
 ; O32-NEXT:    .cfi_offset 31, -4
+; O32-NEXT:    .cfi_offset 30, -8
+; O32-NEXT:    move $fp, $sp
+; O32-NEXT:    .cfi_def_cfa_register 30
 ; O32-NEXT:    ori $1, $zero, 65520
 ; O32-NEXT:    subu $sp, $sp, $1
-; O32-NEXT:    addiu $1, $sp, 8
+; O32-NEXT:    addiu $1, $fp, 8
 ; O32-NEXT:    addiu $5, $1, 16
 ; O32-NEXT:    addiu $4, $sp, 16
 ; O32-NEXT:    jal memcpy
 ; O32-NEXT:    ori $6, $zero, 65504
-; O32-NEXT:    lw $7, 20($sp)
-; O32-NEXT:    lw $6, 16($sp)
-; O32-NEXT:    lw $5, 12($sp)
+; O32-NEXT:    lw $7, 20($fp)
+; O32-NEXT:    lw $6, 16($fp)
+; O32-NEXT:    lw $5, 12($fp)
 ; O32-NEXT:    jal f2
-; O32-NEXT:    lw $4, 8($sp)
+; O32-NEXT:    lw $4, 8($fp)
 ; O32-NEXT:    ori $1, $zero, 65520
 ; O32-NEXT:    addu $sp, $sp, $1
+; O32-NEXT:    move $sp, $fp
+; O32-NEXT:    lui $1, 1
+; O32-NEXT:    addu $1, $sp, $1
+; O32-NEXT:    lw $fp, -8($1) # 4-byte Folded Reload
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
 ; O32-NEXT:    lw $ra, -4($1) # 4-byte Folded Reload
@@ -86,68 +95,92 @@ define dso_local void @g() #0 {
 ; N32-LABEL: g:
 ; N32:       # %bb.0: # %entry
 ; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addiu $1, $1, 16
 ; N32-NEXT:    subu $sp, $sp, $1
-; N32-NEXT:    .cfi_def_cfa_offset 65536
+; N32-NEXT:    .cfi_def_cfa_offset 65552
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    sd $ra, -8($1) # 8-byte Folded Spill
+; N32-NEXT:    sd $ra, 8($1) # 8-byte Folded Spill
+; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addu $1, $sp, $1
+; N32-NEXT:    sd $fp, 0($1) # 8-byte Folded Spill
 ; N32-NEXT:    .cfi_offset 31, -8
+; N32-NEXT:    .cfi_offset 30, -16
+; N32-NEXT:    move $fp, $sp
+; N32-NEXT:    .cfi_def_cfa_register 30
 ; N32-NEXT:    ori $1, $zero, 65456
 ; N32-NEXT:    subu $sp, $sp, $1
-; N32-NEXT:    addiu $1, $sp, 8
+; N32-NEXT:    addiu $1, $fp, 16
 ; N32-NEXT:    addiu $5, $1, 64
 ; N32-NEXT:    ori $6, $zero, 65456
 ; N32-NEXT:    jal memcpy
 ; N32-NEXT:    move $4, $sp
-; N32-NEXT:    ld $11, 64($sp)
-; N32-NEXT:    ld $10, 56($sp)
-; N32-NEXT:    ld $9, 48($sp)
-; N32-NEXT:    ld $8, 40($sp)
-; N32-NEXT:    ld $7, 32($sp)
-; N32-NEXT:    ld $6, 24($sp)
-; N32-NEXT:    ld $5, 16($sp)
+; N32-NEXT:    ld $11, 72($fp)
+; N32-NEXT:    ld $10, 64($fp)
+; N32-NEXT:    ld $9, 56($fp)
+; N32-NEXT:    ld $8, 48($fp)
+; N32-NEXT:    ld $7, 40($fp)
+; N32-NEXT:    ld $6, 32($fp)
+; N32-NEXT:    ld $5, 24($fp)
 ; N32-NEXT:    jal f2
-; N32-NEXT:    ld $4, 8($sp)
+; N32-NEXT:    ld $4, 16($fp)
 ; N32-NEXT:    ori $1, $zero, 65456
 ; N32-NEXT:    addu $sp, $sp, $1
+; N32-NEXT:    move $sp, $fp
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    ld $ra, -8($1) # 8-byte Folded Reload
+; N32-NEXT:    ld $fp, 0($1) # 8-byte Folded Reload
 ; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addu $1, $sp, $1
+; N32-NEXT:    ld $ra, 8($1) # 8-byte Folded Reload
+; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addiu $1, $1, 16
 ; N32-NEXT:    jr $ra
 ; N32-NEXT:    addu $sp, $sp, $1
 ;
 ; N64-LABEL: g:
 ; N64:       # %bb.0: # %entry
 ; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddiu $1, $1, 16
 ; N64-NEXT:    dsubu $sp, $sp, $1
-; N64-NEXT:    .cfi_def_cfa_offset 65536
+; N64-NEXT:    .cfi_def_cfa_offset 65552
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    sd $ra, -8($1) # 8-byte Folded Spill
+; N64-NEXT:    sd $ra, 8($1) # 8-byte Folded Spill
+; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddu $1, $sp, $1
+; N64-NEXT:    sd $fp, 0($1) # 8-byte Folded Spill
 ; N64-NEXT:    .cfi_offset 31, -8
+; N64-NEXT:    .cfi_offset 30, -16
+; N64-NEXT:    move $fp, $sp
+; N64-NEXT:    .cfi_def_cfa_register 30
 ; N64-NEXT:    ori $1, $zero, 65456
 ; N64-NEXT:    dsubu $sp, $sp, $1
-; N64-NEXT:    daddiu $1, $sp, 8
+; N64-NEXT:    daddiu $1, $fp, 16
 ; N64-NEXT:    daddiu $5, $1, 64
 ; N64-NEXT:    ori $6, $zero, 65456
 ; N64-NEXT:    jal memcpy
 ; N64-NEXT:    move $4, $sp
-; N64-NEXT:    ld $11, 64($sp)
-; N64-NEXT:    ld $10, 56($sp)
-; N64-NEXT:    ld $9, 48($sp)
-; N64-NEXT:    ld $8, 40($sp)
-; N64-NEXT:    ld $7, 32($sp)
-; N64-NEXT:    ld $6, 24($sp)
-; N64-NEXT:    ld $5, 16($sp)
+; N64-NEXT:    ld $11, 72($fp)
+; N64-NEXT:    ld $10, 64($fp)
+; N64-NEXT:    ld $9, 56($fp)
+; N64-NEXT:    ld $8, 48($fp)
+; N64-NEXT:    ld $7, 40($fp)
+; N64-NEXT:    ld $6, 32($fp)
+; N64-NEXT:    ld $5, 24($fp)
 ; N64-NEXT:    jal f2
-; N64-NEXT:    ld $4, 8($sp)
+; N64-NEXT:    ld $4, 16($fp)
 ; N64-NEXT:    ori $1, $zero, 65456
 ; N64-NEXT:    daddu $sp, $sp, $1
+; N64-NEXT:    move $sp, $fp
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    ld $ra, -8($1) # 8-byte Folded Reload
+; N64-NEXT:    ld $fp, 0($1) # 8-byte Folded Reload
 ; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddu $1, $sp, $1
+; N64-NEXT:    ld $ra, 8($1) # 8-byte Folded Reload
+; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddiu $1, $1, 16
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
@@ -203,15 +236,21 @@ define dso_local void @g2(ptr %a) {
 ; O32-NEXT:    sw $ra, 4($1) # 4-byte Folded Spill
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
-; O32-NEXT:    sw $16, 0($1) # 4-byte Folded Spill
-; O32-NEXT:    .cfi_offset 31, -4
-; O32-NEXT:    .cfi_offset 16, -8
-; O32-NEXT:    move $5, $4
+; O32-NEXT:    sw $fp, 0($1) # 4-byte Folded Spill
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
-; O32-NEXT:    sw $4, -4($1)
+; O32-NEXT:    sw $16, -4($1) # 4-byte Folded Spill
+; O32-NEXT:    .cfi_offset 31, -4
+; O32-NEXT:    .cfi_offset 30, -8
+; O32-NEXT:    .cfi_offset 16, -12
+; O32-NEXT:    move $fp, $sp
+; O32-NEXT:    .cfi_def_cfa_register 30
+; O32-NEXT:    move $5, $4
+; O32-NEXT:    lui $1, 1
+; O32-NEXT:    addu $1, $fp, $1
+; O32-NEXT:    sw $4, -8($1)
 ; O32-NEXT:    addiu $sp, $sp, -16
-; O32-NEXT:    addiu $16, $sp, 8
+; O32-NEXT:    addiu $16, $fp, 8
 ; O32-NEXT:    ori $6, $zero, 65520
 ; O32-NEXT:    jal memcpy
 ; O32-NEXT:    move $4, $16
@@ -222,16 +261,20 @@ define dso_local void @g2(ptr %a) {
 ; O32-NEXT:    addiu $4, $sp, 16
 ; O32-NEXT:    jal memcpy
 ; O32-NEXT:    ori $6, $zero, 65504
-; O32-NEXT:    lw $7, 20($sp)
-; O32-NEXT:    lw $6, 16($sp)
-; O32-NEXT:    lw $5, 12($sp)
+; O32-NEXT:    lw $7, 20($fp)
+; O32-NEXT:    lw $6, 16($fp)
+; O32-NEXT:    lw $5, 12($fp)
 ; O32-NEXT:    jal f2
-; O32-NEXT:    lw $4, 8($sp)
+; O32-NEXT:    lw $4, 8($fp)
 ; O32-NEXT:    ori $1, $zero, 65520
 ; O32-NEXT:    addu $sp, $sp, $1
+; O32-NEXT:    move $sp, $fp
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
-; O32-NEXT:    lw $16, 0($1) # 4-byte Folded Reload
+; O32-NEXT:    lw $16, -4($1) # 4-byte Folded Reload
+; O32-NEXT:    lui $1, 1
+; O32-NEXT:    addu $1, $sp, $1
+; O32-NEXT:    lw $fp, 0($1) # 4-byte Folded Reload
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
 ; O32-NEXT:    lw $ra, 4($1) # 4-byte Folded Reload
@@ -243,22 +286,28 @@ define dso_local void @g2(ptr %a) {
 ; N32-LABEL: g2:
 ; N32:       # %bb.0: # %entry
 ; N32-NEXT:    lui $1, 1
-; N32-NEXT:    addiu $1, $1, 16
+; N32-NEXT:    addiu $1, $1, 32
 ; N32-NEXT:    subu $sp, $sp, $1
-; N32-NEXT:    .cfi_def_cfa_offset 65552
+; N32-NEXT:    .cfi_def_cfa_offset 65568
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    sd $ra, 8($1) # 8-byte Folded Spill
+; N32-NEXT:    sd $ra, 24($1) # 8-byte Folded Spill
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    sd $16, 0($1) # 8-byte Folded Spill
+; N32-NEXT:    sd $fp, 16($1) # 8-byte Folded Spill
+; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addu $1, $sp, $1
+; N32-NEXT:    sd $16, 8($1) # 8-byte Folded Spill
 ; N32-NEXT:    .cfi_offset 31, -8
-; N32-NEXT:    .cfi_offset 16, -16
+; N32-NEXT:    .cfi_offset 30, -16
+; N32-NEXT:    .cfi_offset 16, -24
+; N32-NEXT:    move $fp, $sp
+; N32-NEXT:    .cfi_def_cfa_register 30
 ; N32-NEXT:    move $5, $4
 ; N32-NEXT:    lui $1, 1
-; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    sw $4, -4($1)
-; N32-NEXT:    addiu $16, $sp, 8
+; N32-NEXT:    addu $1, $fp, $1
+; N32-NEXT:    sw $4, 4($1)
+; N32-NEXT:    addiu $16, $fp, 16
 ; N32-NEXT:    ori $6, $zero, 65520
 ; N32-NEXT:    jal memcpy
 ; N32-NEXT:    move $4, $16
@@ -268,47 +317,57 @@ define dso_local void @g2(ptr %a) {
 ; N32-NEXT:    ori $6, $zero, 65456
 ; N32-NEXT:    jal memcpy
 ; N32-NEXT:    move $4, $sp
-; N32-NEXT:    ld $11, 64($sp)
-; N32-NEXT:    ld $10, 56($sp)
-; N32-NEXT:    ld $9, 48($sp)
-; N32-NEXT:    ld $8, 40($sp)
-; N32-NEXT:    ld $7, 32($sp)
-; N32-NEXT:    ld $6, 24($sp)
-; N32-NEXT:    ld $5, 16($sp)
+; N32-NEXT:    ld $11, 72($fp)
+; N32-NEXT:    ld $10, 64($fp)
+; N32-NEXT:    ld $9, 56($fp)
+; N32-NEXT:    ld $8, 48($fp)
+; N32-NEXT:    ld $7, 40($fp)
+; N32-NEXT:    ld $6, 32($fp)
+; N32-NEXT:    ld $5, 24($fp)
 ; N32-NEXT:    jal f2
-; N32-NEXT:    ld $4, 8($sp)
+; N32-NEXT:    ld $4, 16($fp)
 ; N32-NEXT:    ori $1, $zero, 65456
 ; N32-NEXT:    addu $sp, $sp, $1
+; N32-NEXT:    move $sp, $fp
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    ld $16, 0($1) # 8-byte Folded Reload
+; N32-NEXT:    ld $16, 8($1) # 8-byte Folded Reload
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
-; N32-NEXT:    ld $ra, 8($1) # 8-byte Folded Reload
+; N32-NEXT:    ld $fp, 16($1) # 8-byte Folded Reload
 ; N32-NEXT:    lui $1, 1
-; N32-NEXT:    addiu $1, $1, 16
+; N32-NEXT:    addu $1, $sp, $1
+; N32-NEXT:    ld $ra, 24($1) # 8-byte Folded Reload
+; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addiu $1, $1, 32
 ; N32-NEXT:    jr $ra
 ; N32-NEXT:    addu $sp, $sp, $1
 ;
 ; N64-LABEL: g2:
 ; N64:       # %bb.0: # %entry
 ; N64-NEXT:    lui $1, 1
-; N64-NEXT:    daddiu $1, $1, 16
+; N64-NEXT:    daddiu $1, $1, 32
 ; N64-NEXT:    dsubu $sp, $sp, $1
-; N64-NEXT:    .cfi_def_cfa_offset 65552
+; N64-NEXT:    .cfi_def_cfa_offset 65568
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    sd $ra, 8($1) # 8-byte Folded Spill
+; N64-NEXT:    sd $ra, 24($1) # 8-byte Folded Spill
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    sd $16, 0($1) # 8-byte Folded Spill
+; N64-NEXT:    sd $fp, 16($1) # 8-byte Folded Spill
+; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddu $1, $sp, $1
+; N64-NEXT:    sd $16, 8($1) # 8-byte Folded Spill
 ; N64-NEXT:    .cfi_offset 31, -8
-; N64-NEXT:    .cfi_offset 16, -16
+; N64-NEXT:    .cfi_offset 30, -16
+; N64-NEXT:    .cfi_offset 16, -24
+; N64-NEXT:    move $fp, $sp
+; N64-NEXT:    .cfi_def_cfa_register 30
 ; N64-NEXT:    move $5, $4
 ; N64-NEXT:    lui $1, 1
-; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    sd $4, -8($1)
-; N64-NEXT:    daddiu $16, $sp, 8
+; N64-NEXT:    daddu $1, $fp, $1
+; N64-NEXT:    sd $4, 0($1)
+; N64-NEXT:    daddiu $16, $fp, 16
 ; N64-NEXT:    ori $6, $zero, 65520
 ; N64-NEXT:    jal memcpy
 ; N64-NEXT:    move $4, $16
@@ -318,25 +377,29 @@ define dso_local void @g2(ptr %a) {
 ; N64-NEXT:    ori $6, $zero, 65456
 ; N64-NEXT:    jal memcpy
 ; N64-NEXT:    move $4, $sp
-; N64-NEXT:    ld $11, 64($sp)
-; N64-NEXT:    ld $10, 56($sp)
-; N64-NEXT:    ld $9, 48($sp)
-; N64-NEXT:    ld $8, 40($sp)
-; N64-NEXT:    ld $7, 32($sp)
-; N64-NEXT:    ld $6, 24($sp)
-; N64-NEXT:    ld $5, 16($sp)
+; N64-NEXT:    ld $11, 72($fp)
+; N64-NEXT:    ld $10, 64($fp)
+; N64-NEXT:    ld $9, 56($fp)
+; N64-NEXT:    ld $8, 48($fp)
+; N64-NEXT:    ld $7, 40($fp)
+; N64-NEXT:    ld $6, 32($fp)
+; N64-NEXT:    ld $5, 24($fp)
 ; N64-NEXT:    jal f2
-; N64-NEXT:    ld $4, 8($sp)
+; N64-NEXT:    ld $4, 16($fp)
 ; N64-NEXT:    ori $1, $zero, 65456
 ; N64-NEXT:    daddu $sp, $sp, $1
+; N64-NEXT:    move $sp, $fp
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    ld $16, 0($1) # 8-byte Folded Reload
+; N64-NEXT:    ld $16, 8($1) # 8-byte Folded Reload
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
-; N64-NEXT:    ld $ra, 8($1) # 8-byte Folded Reload
+; N64-NEXT:    ld $fp, 16($1) # 8-byte Folded Reload
 ; N64-NEXT:    lui $1, 1
-; N64-NEXT:    daddiu $1, $1, 16
+; N64-NEXT:    daddu $1, $sp, $1
+; N64-NEXT:    ld $ra, 24($1) # 8-byte Folded Reload
+; N64-NEXT:    lui $1, 1
+; N64-NEXT:    daddiu $1, $1, 32
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
