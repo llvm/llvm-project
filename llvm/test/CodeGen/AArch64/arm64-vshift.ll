@@ -2481,9 +2481,8 @@ define <2 x i64> @neon_ushll2d_constant_shift(ptr %A) nounwind {
 define <1 x i64> @neon_ushl_vscalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_ushl_vscalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldr s1, [x0]
-; CHECK-SD-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -2773,9 +2772,8 @@ define <2 x i64> @neon_sshll2d_constant_shift(ptr %A) nounwind {
 define <1 x i64> @neon_sshll_vscalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_sshll_vscalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldr s1, [x0]
-; CHECK-SD-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    ret
 ;
