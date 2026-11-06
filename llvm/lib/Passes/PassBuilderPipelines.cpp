@@ -2026,8 +2026,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (Opts.attributor_enable & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
-  else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
-    MPM.addPass(AttributorLightPass());
 
   MPM.addPass(NoRecurseLTOInferencePass());
   // Stop here at -O1.

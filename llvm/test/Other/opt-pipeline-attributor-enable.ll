@@ -29,7 +29,7 @@
 
 ; LIGHT-LTO: ,pgo-icall-prom,cgscc(attributor-light-cgscc,argpromotion,
 ; LIGHT-LTO-SAME: ,called-value-propagation,attributor-light,globalsplit,
-; LIGHT-LTO-SAME: wholeprogramdevirt,attributor-light,norecurse-lto-inference
+; LIGHT-LTO-SAME: wholeprogramdevirt,norecurse-lto-inference
 ; LIGHT-LTO-SAME: ,tailcallelim),cgscc(attributor-light-cgscc),
 
 ; MODULE: ,openmp-opt,attributor,ipsccp
@@ -40,7 +40,7 @@
 ; FULL-SAME: attributor-cgscc,function-attrs
 
 ; LTO-MODULE: wholeprogramdevirt,attributor,norecurse-lto-inference
-; LTO-MODULE-LIGHT: wholeprogramdevirt,attributor-light,norecurse-lto-inference
+; LTO-MODULE-LIGHT: called-value-propagation,attributor-light,globalsplit,wholeprogramdevirt,norecurse-lto-inference
 ; LTO-FULL: wholeprogramdevirt,attributor,norecurse-lto-inference
 define ptr @return_arg(ptr %arg) {
   ret ptr %arg
