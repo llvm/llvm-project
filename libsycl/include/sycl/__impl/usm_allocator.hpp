@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the SYCL queue class, which
-/// schedules kernels on a device.
+/// This file contains the declaration of the SYCL USM allocator
 ///
 //===----------------------------------------------------------------------===//
 
@@ -16,18 +15,25 @@
 #define _LIBSYCL___IMPL_USM_ALLOCATOR_HPP
 
 #include <sycl/__impl/context.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/property_list.hpp>
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
+#include <sycl/__impl/usm_functions.hpp>
 
 #include <cstddef>
 #include <type_traits>
 
-namespace sycl {
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// TODO: check allocKind and reject device
+/// USM Allocator
+/// \sa 4.8.3.1. C++ allocator interface
 template <typename T, usm::alloc AllocKind, std::size_t Alignment = 0>
 class usm_allocator {
+  static_assert(
+      AllocKind != usm::alloc::device,
+      "usm_allocator does not support AllocKind == usm::alloc::device");
+
 public:
   using value_type = T;
   using propagate_on_container_copy_assignment = std::true_type;
@@ -35,28 +41,61 @@ public:
   using propagate_on_container_swap = std::true_type;
 
 public:
+  template <typename U> struct rebind {
+    typedef usm_allocator<U, AllocKind, Alignment> other;
+  };
+
   usm_allocator() = delete;
   usm_allocator(const context &syclContext, const device &syclDevice,
-                const property_list &propList = {});
-  usm_allocator(const queue &syclQueue, const property_list &propList = {});
+                const property_list &propList = {})
+      : MContext(syclContext), MDevice(syclDevice), MPropList(propList) {}
+  usm_allocator(const queue &syclQueue, const property_list &propList = {})
+      : usm_allocator(syclQueue.get_context(), syclQueue.get_device(),
+                      propList) {}
 
-  usm_allocator(const usm_allocator &other);
-  usm_allocator(usm_allocator &&other) noexcept;
+  template <typename U>
+  usm_allocator(const usm_allocator<U, AllocKind, Alignment> &other) noexcept
+      : MContext(other.MContext), MDevice(other.MDevice),
+        MPropList(other.MPropList) {}
+
+  usm_allocator(const usm_allocator &other) = default;
+  usm_allocator(usm_allocator &&other) noexcept = default;
   ~usm_allocator() = default;
 
-  usm_allocator &operator=(const usm_allocator &other);
-  usm_allocator &
-  operator=(usm_allocator &&other); // spec doesnt mark this as noexcept
+  usm_allocator &operator=(const usm_allocator &other) = default;
+  usm_allocator &operator=(usm_allocator &&other) = default;
 
-  value_type *allocate(std::size_t count);
+  /// Allocate \p count elements
+  /// \p count number of elements to allocate memory for
+  /// \return pointer to the allocated memory, or nullptr for \p count == 0
+  /// \throw a sycl memory_allocation exception on failure
+  value_type *allocate(std::size_t count) {
+    if (count == 0)
+      return nullptr;
 
-  void deallocate(value_type *Ptr, std::size_t count);
+    auto Result = aligned_alloc<value_type>(Alignment, count, MDevice, MContext,
+                                            AllocKind, MPropList);
+
+    if (!Result)
+      throw exception(make_error_code(errc::memory_allocation),
+                      "USM allocation failed");
+
+    return Result;
+  }
+
+  /// Deallocate a USM pointer
+  /// \p Ptr Address to be deallocated
+  /// \p count of elements the address was allocated for
+  void deallocate(value_type *Ptr, std::size_t count) {
+    if (Ptr)
+      free(Ptr, MContext);
+  }
 
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>
   friend bool operator==(const usm_allocator<T, AllocKind, Alignment> &lhs,
                          const usm_allocator<U, AllocKindU, AlignmentU> &rhs) {
-    // TODO: implement this
-    return true;
+    return AllocKind == AllocKindU && Alignment == AlignmentU &&
+           lhs.MContext == rhs.MContext && lhs.MDevice == rhs.MDevice;
   }
 
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>
@@ -64,8 +103,15 @@ public:
                          const usm_allocator<U, AllocKindU, AlignmentU> &rhs) {
     return !(lhs == rhs);
   }
+
+private:
+  template <typename, usm::alloc, std::size_t> friend class usm_allocator;
+
+  context MContext;
+  device MDevice;
+  property_list MPropList;
 }; // usm_allocator
 
-} // namespace sycl
+_LIBSYCL_END_NAMESPACE_SYCL
 
 #endif
