@@ -511,8 +511,14 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   // - FunctionGUID
   // - FunctionHash.
   // - FunctionName
+  // - Attributes
   auto Hash = getFunctionHash();
-  auto *MD = MDB.createPseudoProbeDesc(Guid, Hash, FName);
+  uint8_t Attributes = 0;
+  if (F.hasFnAttribute(Attribute::AlwaysInline))
+    Attributes |= (uint8_t)PseudoProbeDescAttributes::AlwaysInline;
+  if (F.hasFnAttribute(Attribute::NoInline))
+    Attributes |= (uint8_t)PseudoProbeDescAttributes::NoInline;
+  auto *MD = MDB.createPseudoProbeDesc(Guid, Hash, FName, Attributes);
   auto *NMD = M->getNamedMetadata(PseudoProbeDescMetadataName);
   assert(NMD && "llvm.pseudo_probe_desc should be pre-created");
   NMD->addOperand(MD);
