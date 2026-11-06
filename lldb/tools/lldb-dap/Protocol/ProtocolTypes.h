@@ -1131,7 +1131,7 @@ struct StackFrame {
   /// defaults to `true` if the property is absent.
   bool canRestart = false;
 
-  /// True if the frame is optimized. 
+  /// True if the frame is optimized.
   bool isOptimized = false;
 
   /// A memory reference for the current instruction pointer in this frame.

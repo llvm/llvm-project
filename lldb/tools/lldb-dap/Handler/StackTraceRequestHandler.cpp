@@ -76,9 +76,7 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   stack_frame.source = std::move(source);
   stack_frame.instructionPointerReference = frame.GetPC();
 
-  if (frame.IsArtificial())
-    stack_frame.presentationHint = StackFrame::ePresentationHintLabel;
-  else if (frame.IsHidden() || is_optimized)
+  if (is_optimized || frame.IsArtificial() || frame.IsHidden())
     stack_frame.presentationHint = StackFrame::ePresentationHintSubtle;
 
   if (const lldb::SBModule module = frame.GetModule()) {
