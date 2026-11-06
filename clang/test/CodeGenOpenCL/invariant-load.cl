@@ -14,4 +14,17 @@ kernel void global_const_load(global int *out, global const int *in) {
 // CHECK-LABEL: define{{.*}}@global_const_load(
 // CHECK: load i32, ptr addrspace(1) %{{.*}}, align 4{{$}}
 
+struct S {
+  int x;
+  int a[4];
+};
+
+kernel void constant_member_array_load(global int *out, constant struct S *in,
+                                       int i) {
+  out[0] = in->a[i];
+}
+
+// CHECK-LABEL: define{{.*}}@constant_member_array_load(
+// CHECK: load i32, ptr addrspace(4) %arrayidx, align 4, !invariant.load [[INVARIANT]]
+
 // CHECK: [[INVARIANT]] = !{}

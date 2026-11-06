@@ -2244,13 +2244,11 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
-  // TODO: Preserve invariance in Address::withElementType.
-  const KnownInvariant_t IsInvariant = Addr.isInvariant();
   Addr =
       Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
-  if (IsInvariant)
+  if (Addr.isInvariant())
     Load->setMetadata(llvm::LLVMContext::MD_invariant_load,
                       llvm::MDNode::get(Load->getContext(), {}));
   if (isNontemporal) {
@@ -3498,6 +3496,8 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
   Address Addr(V, RealVarTy, Alignment);
+  if (CGF.CGM.isGlobalVarInvariant(VD))
+    Addr.setInvariant(KnownInvariant);
   // Emit reference to the private copy of the variable if it is an OpenMP
   // threadprivate variable.
   if (CGF.getLangOpts().OpenMP && !CGF.getLangOpts().OpenMPSimd &&
@@ -3505,12 +3505,10 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
     return EmitThreadPrivateVarDeclLValue(CGF, VD, T, Addr, RealVarTy,
                                           E->getExprLoc());
   }
-  const bool IsReference = VD->getType()->isReferenceType();
-  LValue LV = IsReference ? CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
-                                                          AlignmentSource::Decl)
-                          : CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
-  if (!IsReference && CGF.CGM.isGlobalVarInvariant(VD))
-    LV.setInvariant(KnownInvariant);
+  LValue LV = VD->getType()->isReferenceType() ?
+      CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
+                                    AlignmentSource::Decl) :
+      CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
   setObjCGCLValueClass(CGF.getContext(), E, LV);
   return LV;
 }
@@ -5164,7 +5162,6 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
         E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
-    Addr.setInvariant(ArrayLV.isInvariant());
     EltBaseInfo = ArrayLV.getBaseInfo();
     if (!CGM.getCodeGenOpts().NewStructPathTBAA) {
       // Since CodeGenTBAA::getTypeInfoHelper only handles array types for
@@ -5964,9 +5961,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
 
-  // Do not propagate invariance to a reference's pointee.
-  if (!field->getType()->isReferenceType())
-    addr.setInvariant(base.isInvariant());
   LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(RecordCVR);
 

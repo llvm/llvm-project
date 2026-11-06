@@ -137,7 +137,8 @@ class Address {
   /// The expected IR type of the pointer. Carrying accurate element type
   /// information in Address makes it more convenient to work with Address
   /// values and allows frontend assertions to catch simple mistakes.
-  llvm::Type *ElementType = nullptr;
+  /// The flag indicates whether loads from the address are invariant.
+  llvm::PointerIntPair<llvm::Type *, 1, KnownInvariant_t> ElementType;
 
   CharUnits Alignment;
 
@@ -148,19 +149,16 @@ class Address {
   /// pointer is signed.
   llvm::Value *Offset = nullptr;
 
-  KnownInvariant_t IsInvariant : 1;
-
   llvm::Value *emitRawPointerSlow(CodeGenFunction &CGF) const;
 
 protected:
-  Address(std::nullptr_t)
-      : ElementType(nullptr), IsInvariant(NotKnownInvariant) {}
+  Address(std::nullptr_t) : ElementType(nullptr) {}
 
 public:
   Address(llvm::Value *pointer, llvm::Type *elementType, CharUnits alignment,
           KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : Pointer(pointer, IsKnownNonNull), ElementType(elementType),
-        Alignment(alignment), IsInvariant(NotKnownInvariant) {
+        Alignment(alignment) {
     assert(pointer != nullptr && "Pointer cannot be null");
     assert(elementType != nullptr && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
@@ -170,16 +168,14 @@ public:
           CGPointerAuthInfo PtrAuthInfo, llvm::Value *Offset,
           KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : Pointer(BasePtr, IsKnownNonNull), ElementType(ElementType),
-        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset),
-        IsInvariant(NotKnownInvariant) {}
+        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset) {}
 
   Address(RawAddress RawAddr)
       : Pointer(RawAddr.isValid() ? RawAddr.getPointer() : nullptr,
                 RawAddr.isValid() ? RawAddr.isKnownNonNull() : NotKnownNonNull),
         ElementType(RawAddr.isValid() ? RawAddr.getElementType() : nullptr),
         Alignment(RawAddr.isValid() ? RawAddr.getAlignment()
-                                    : CharUnits::Zero()),
-        IsInvariant(NotKnownInvariant) {}
+                                    : CharUnits::Zero()) {}
 
   static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer.getPointer() != nullptr; }
@@ -216,7 +212,7 @@ public:
   /// Return the type of the values stored in this address.
   llvm::Type *getElementType() const {
     assert(isValid());
-    return ElementType;
+    return ElementType.getPointer();
   }
 
   /// Return the address space that this address resides in.
@@ -232,7 +228,7 @@ public:
   void setElementType(llvm::Type *Ty) {
     assert(hasOffset() &&
            "this funcion shouldn't be called when there is no offset");
-    ElementType = Ty;
+    ElementType.setPointer(Ty);
   }
 
   bool isSigned() const { return PtrAuthInfo.isSigned(); }
@@ -251,12 +247,12 @@ public:
 
   KnownInvariant_t isInvariant() const {
     assert(isValid());
-    return IsInvariant;
+    return ElementType.getInt();
   }
 
   Address setInvariant(KnownInvariant_t Value) {
     assert(isValid());
-    IsInvariant = Value;
+    ElementType.setInt(Value);
     return *this;
   }
 
@@ -287,18 +283,15 @@ public:
   /// type.
   Address withAlignment(CharUnits NewAlignment) const {
     return Address(Pointer.getPointer(), getElementType(), NewAlignment,
-                   isKnownNonNull());
+                   isKnownNonNull())
+        .setInvariant(isInvariant());
   }
 
   /// Return address with different element type, but same pointer and
   /// alignment.
   Address withElementType(llvm::Type *ElemTy) const {
-    if (!hasOffset())
-      return Address(getBasePointer(), ElemTy, getAlignment(),
-                     getPointerAuthInfo(), /*Offset=*/nullptr,
-                     isKnownNonNull());
     Address A(*this);
-    A.ElementType = ElemTy;
+    A.ElementType.setPointer(ElemTy);
     return A;
   }
 };

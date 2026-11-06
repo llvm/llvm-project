@@ -2741,6 +2741,9 @@ public:
     PtrPhi->addIncoming(RHS.getBasePointer(), RHSBlock);
     LHS.replaceBasePointer(PtrPhi);
     LHS.setAlignment(std::min(LHS.getAlignment(), RHS.getAlignment()));
+    LHS.setInvariant(LHS.isInvariant() && RHS.isInvariant()
+                         ? KnownInvariant
+                         : NotKnownInvariant);
     return LHS;
   }
 
