@@ -57,7 +57,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModuleLegacyPass(*PR);
   initializeEmbedDXILPassPass(*PR);
-  initializeWriteDXILPassPass(*PR);
+  initializeDXILWriterLegacyPass(*PR);
   initializeDXILContainerGlobalsLegacyPass(*PR);
   initializeDXILContainerPDBLegacyPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
@@ -189,7 +189,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
                         MMIWP->getMMI().getContext()))
         return true;
     } else
-      PM.add(createDXILWriterPass(Out));
+      PM.add(createDXILWriterLegacyPass(Out));
     break;
   case CodeGenFileType::Null:
     break;

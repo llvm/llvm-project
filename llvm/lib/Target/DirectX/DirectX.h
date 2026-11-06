@@ -29,7 +29,7 @@ class PassRegistry;
 class raw_ostream;
 
 /// Initializer for dxil writer pass
-void initializeWriteDXILPassPass(PassRegistry &);
+void initializeDXILWriterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil embedder pass
 void initializeEmbedDXILPassPass(PassRegistry &);
