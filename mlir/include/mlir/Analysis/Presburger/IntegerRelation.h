@@ -938,6 +938,35 @@ protected:
   void removeRedundantConstraintsFromSimplex(const Simplex &simplex,
                                              unsigned offset);
 
+  /// Eliminates the variable at column `col` from every equality and
+  /// inequality of `this` using the equality `eq` (see
+  /// IntMatrix::eliminateColumnUsingRow). This does not change the
+  /// intersection of `this` with the set defined by `eq`. Constraints are not
+  /// normalized afterwards. `eq` must have a non-zero coefficient at `col` and
+  /// must not be a view of a constraint of `this`.
+  void eliminateVarUsingEquality(ArrayRef<DynamicAPInt> eq, unsigned col);
+
+  /// Same as above, but uses the equality at index `eqIdx` of `this` as `eq`
+  /// and leaves that equality itself unchanged.
+  void eliminateVarUsingEquality(unsigned eqIdx, unsigned col);
+
+  /// Rewrites every constraint of `this` using the equalities of `eqs`, which
+  /// must have the same space as `this` (including local variables). This does
+  /// not change the intersection of `this` with `eqs`, but may change `this`
+  /// outside of `eqs`. Inequalities of `eqs` are ignored.
+  ///
+  /// Only those equalities of `eqs` are used that can be expressed in terms of
+  /// the variables that already occur in some constraint of `this`; i.e., the
+  /// equalities of `eqs` are first projected onto the variables involved in
+  /// `this`, so that no new variables are introduced into `this`. Each
+  /// remaining equality is used to eliminate its last variable with a non-zero
+  /// coefficient from every constraint of `this`, so later variables (in
+  /// particular, locals) are eliminated in favor of earlier ones.
+  ///
+  /// Constraints that become trivially true are removed; if `eqs` is found to
+  /// be inconsistent, `this` becomes empty.
+  void reduceUsingEqualities(const IntegerRelation &eqs);
+
   /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
   /// is meant to be used within an assert internally.
