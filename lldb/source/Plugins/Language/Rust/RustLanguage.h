@@ -43,7 +43,7 @@ public:
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
-  uint32_t RustLanguage::GetPluginVersion() { return 1; }
+  uint32_t GetPluginVersion() { return 1; }
 
   // Static Functions
   static void Initialize();
