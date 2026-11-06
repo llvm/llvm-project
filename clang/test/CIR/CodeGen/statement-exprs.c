@@ -118,8 +118,6 @@ int nested(void) {
 // LLVM:     br label %[[LBL10:.+]]
 // LLVM: [[LBL10]]:
 // LLVM:     store i32 987, ptr %[[VAR1]]
-// LLVM:     br label %[[LBL11:.+]]
-// LLVM: [[LBL11]]:
 // LLVM:     br label %[[LBL12:.+]]
 // LLVM: [[LBL12]]:
 // LLVM:     store i32 123, ptr %[[VAR5]]
