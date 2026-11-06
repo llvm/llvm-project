@@ -793,10 +793,9 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ; GFX10-SDAG-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_lshr_b32 s0, s3, 16
+; GFX10-SDAG-NEXT:    s_lshr_b32 s1, s2, 16
 ; GFX10-SDAG-NEXT:    v_sub_f16_e64 v1, s2, s3
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-SDAG-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX10-SDAG-NEXT:    v_sub_f16_sdwa v0, s0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-SDAG-NEXT:    v_sub_f16_sdwa v0, s1, s0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
