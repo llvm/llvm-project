@@ -49,10 +49,9 @@ private:
 
 class FieldMemcpyizer {
 public:
-  FieldMemcpyizer(CIRGenFunction &cgf, const CXXMethodDecl *methodDecl,
-                  const VarDecl *srcRec)
-      : cgf(cgf), methodDecl(methodDecl), classDecl(methodDecl->getParent()),
-        srcRec(srcRec),
+  FieldMemcpyizer(CIRGenFunction &cgf, const CXXRecordDecl *classDecl,
+                  SourceLocation methodLoc, const VarDecl *srcRec)
+      : cgf(cgf), classDecl(classDecl), methodLoc(methodLoc), srcRec(srcRec),
         recLayout(cgf.getContext().getASTRecordLayout(classDecl)),
         firstField(nullptr), lastField(nullptr), firstFieldOffset(0),
         lastFieldOffset(0), lastAddedFieldIndex(0) {}
@@ -118,7 +117,7 @@ public:
     LValue dest = cgf.emitLValueForFieldInitialization(destLv, firstField,
                                                        firstField->getName());
     cir::LoadOp srcPtr = cgf.getBuilder().createLoad(
-        cgf.getLoc(methodDecl->getLocation()), cgf.getAddrOfLocalVar(srcRec));
+        cgf.getLoc(methodLoc), cgf.getAddrOfLocalVar(srcRec));
     LValue srcLv = cgf.makeNaturalAlignAddrLValue(srcPtr, recordTy);
     LValue src = cgf.emitLValueForFieldInitialization(srcLv, firstField,
                                                       firstField->getName());
@@ -134,12 +133,12 @@ public:
 
 protected:
   CIRGenFunction &cgf;
-  const CXXMethodDecl *methodDecl;
   const CXXRecordDecl *classDecl;
+  SourceLocation methodLoc;
 
 private:
   void emitMemcpyIR(Address destPtr, Address srcPtr, CharUnits size) {
-    mlir::Location loc = cgf.getLoc(methodDecl->getLocation());
+    mlir::Location loc = cgf.getLoc(methodLoc);
     CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Value sizeOp =
         builder.getConstInt(loc, cgf.sizeTy, size.getQuantity());
@@ -255,7 +254,8 @@ class AssignmentMemcpyizer : public FieldMemcpyizer {
 public:
   AssignmentMemcpyizer(CIRGenFunction &cgf, const CXXMethodDecl *ad,
                        FunctionArgList &args)
-      : FieldMemcpyizer(cgf, ad, args[args.size() - 1]),
+      : FieldMemcpyizer(cgf, ad->getParent(), ad->getLocation(),
+                        args[args.size() - 1]),
         assignmentsMemcpyable(cgf.getLangOpts().getGC() == LangOptions::NonGC) {
     assert(args.size() == 2);
   }
