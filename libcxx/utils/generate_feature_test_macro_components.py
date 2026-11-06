@@ -2273,10 +2273,7 @@ def produce_tests():
         test_list = [tc for tc in feature_test_macros if h in tc["headers"]]
         if not has_header(h):
             for tc in test_list:
-                assert "unimplemented" in tc, (
-                    "Header <{}> is unavailable, but feature-test macro {} "
-                    "is not marked unimplemented. Entry: {}".format(h, tc["name"], tc)
-                )
+                assert "unimplemented" in tc.keys()
             continue
         markup = "\n".join("// " + tag for tag in lit_markup.get(h, []))
         test_body = """//===----------------------------------------------------------------------===//
