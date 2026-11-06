@@ -574,6 +574,10 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
       return op.emitOpError(
           "block argument pointee type must match the innermost array "
           "element type");
+
+    if (expectedEltPtrTy.getAddrSpace() != ptrTy.getAddrSpace())
+      return op.emitOpError(
+          "block argument address space must match the 'addr' address space");
   }
 
   return success();
@@ -5129,7 +5133,7 @@ LogicalResult cir::AtomicFetchOp::verify() {
        getBinop() == cir::AtomicFetchKind::Minimum ||
        getBinop() == cir::AtomicFetchKind::MaximumNum ||
        getBinop() == cir::AtomicFetchKind::MinimumNum) &&
-      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+      !cir::isFPOrVectorOfFPType(getVal().getType()))
     return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
                      "operation could only operate on floating-point values");
 

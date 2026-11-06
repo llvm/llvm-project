@@ -7741,12 +7741,17 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
       LoadNode->getMemoryVT(), LoadNode->getMemOperand(),
       LoadNode->getAddressingMode(), LoadNode->getExtensionType());
 
+  EVT ExpandVT = getSVEContainerType(VT);
+  SDValue ExpandSource = getSVESafeBitCast(ExpandVT, Load, DAG);
+
   // Expand instruction copies the low-numbered elements to active elements
   // in the original predicate and zeros all other lanes.
   SDValue Result = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      ISD::INTRINSIC_WO_CHAIN, DL, ExpandVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
-      Load);
+      ExpandSource);
+
+  Result = getSVESafeBitCast(VT, Result, DAG);
 
   // Copy the passthrough value unless zero/undef.
   if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode()))
@@ -23075,11 +23080,11 @@ static SDValue performConcatVectorsCombine(SDNode *N,
       SmallVector<int, 8> Mask(MidVT.getVectorNumElements());
       for (size_t i = 0; i < Mask.size(); ++i)
         Mask[i] = i * 2;
-      return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                         DAG.getVectorShuffle(
-                             MidVT, DL,
-                             DAG.getNode(ISD::BITCAST, DL, MidVT, N00),
-                             DAG.getNode(ISD::BITCAST, DL, MidVT, N10), Mask));
+      return DAG.getNode(
+          ISD::TRUNCATE, DL, VT,
+          DAG.getVectorShuffle(
+              MidVT, DL, DAG.getNode(AArch64ISD::NVCAST, DL, MidVT, N00),
+              DAG.getNode(AArch64ISD::NVCAST, DL, MidVT, N10), Mask));
     }
 
     // Optimize two large shifts and a combine into a single combine and shift
@@ -26572,11 +26577,15 @@ static MVT getSVEContainerType(EVT ContentTy) {
   case MVT::nxv2i64:
   case MVT::nxv2f32:
   case MVT::nxv2f64:
+  case MVT::nxv2f16:
+  case MVT::nxv2bf16:
     return MVT::nxv2i64;
   case MVT::nxv4i8:
   case MVT::nxv4i16:
   case MVT::nxv4i32:
   case MVT::nxv4f32:
+  case MVT::nxv4f16:
+  case MVT::nxv4bf16:
     return MVT::nxv4i32;
   case MVT::nxv8i8:
   case MVT::nxv8i16:

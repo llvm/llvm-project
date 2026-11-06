@@ -1159,6 +1159,11 @@ public:
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
 
+  /// Calculates a VectorInstrContext from the values in \p VL at indices in
+  /// \p DemandedElts.
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts);
+
   /// Calculates a VectorInstrContext for buildvector-like gather sequences.
   ///
   /// \p GatherUserOps must collect all users of \p Scalars relevant for

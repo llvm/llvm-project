@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionImport.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -127,32 +128,12 @@ static cl::opt<float> ImportColdMultiplier(
     "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
     cl::desc("Multiply the `import-instr-limit` threshold for cold callsites"));
 
-static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
-                                  cl::desc("Print imported functions"));
-
 static cl::opt<bool> PrintImportFailures(
     "print-import-failures", cl::init(false), cl::Hidden,
     cl::desc("Print information for functions rejected for importing"));
 
 static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
-
-static cl::opt<bool> EnableImportMetadata(
-    "enable-import-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Enable import metadata like 'thinlto_src_module' and "
-             "'thinlto_src_file'"));
-
-/// Summary file to use for function importing when using -function-import from
-/// the command line.
-static cl::opt<std::string>
-    SummaryFile("summary-file",
-                cl::desc("The summary file to use for function importing."));
-
-/// Used when testing importing from distributed indexes via opt
-// -function-import.
-static cl::opt<bool>
-    ImportAllIndex("import-all-index",
-                   cl::desc("Import all external functions in index."));
 
 /// This is a test-only option.
 /// If this option is enabled, the ThinLTO indexing step will import each
@@ -2088,6 +2069,7 @@ static void protectImplicitRefGlobals(Module &M) {
 // index.
 Expected<bool> FunctionImporter::importFunctions(
     Module &DestModule, const FunctionImporter::ImportMapTy &ImportList) {
+  const IPOOptions &Opts = getIPOOptions(DestModule);
   LLVM_DEBUG(dbgs() << "Starting import for Module "
                     << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0, ImportedGVCount = 0;
@@ -2146,7 +2128,8 @@ Expected<bool> FunctionImporter::importFunctions(
             return std::move(Err);
           // MemProf should match function's definition and summary,
           // 'thinlto_src_module' is needed.
-          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          if (Opts.enable_import_metadata ||
+              EnableMemProfContextDisambiguation) {
             // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
             // statistics and debugging.
             F.setMetadata(
@@ -2222,7 +2205,8 @@ Expected<bool> FunctionImporter::importFunctions(
                      << "Is importing aliasee fn " << GO->getGUIDOrFallback()
                      << " " << GO->getName() << " from "
                      << SrcModule->getSourceFileName() << "\n");
-          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          if (Opts.enable_import_metadata ||
+              EnableMemProfContextDisambiguation) {
             // Add 'thinlto_src_module', 'thinlto_src_file', and
             // 'thinlto_alias_guid' metadata for statistics, debugging, and
             // summary lookup (since Fn retains the aliasee's !guid metadata).
@@ -2292,7 +2276,7 @@ Expected<bool> FunctionImporter::importFunctions(
                            GV->isDSOLocal(), GUID});
     }
 
-    if (PrintImports) {
+    if (Opts.print_imports) {
       for (const auto *GV : GlobalsToImport)
         dbgs() << DestModule.getSourceFileName() << ": Import " << GV->getName()
                << " from " << SrcModule->getSourceFileName() << "\n";
@@ -2366,13 +2350,14 @@ Expected<bool> FunctionImporter::importFunctions(
 static bool doImportingForModuleForTest(
     Module &M, function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
                    isPrevailing) {
-  if (SummaryFile.empty())
+  const IPOOptions &Opts = getIPOOptions(M);
+  if (Opts.summary_file.empty())
     report_fatal_error("error: -function-import requires -summary-file\n");
   Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
-      getModuleSummaryIndexForFile(SummaryFile);
+      getModuleSummaryIndexForFile(Opts.summary_file);
   if (!IndexPtrOrErr) {
     logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
-                          "Error loading file '" + SummaryFile + "': ");
+                          "Error loading file '" + Opts.summary_file + "': ");
     return false;
   }
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(*IndexPtrOrErr);
@@ -2383,7 +2368,7 @@ static bool doImportingForModuleForTest(
   // If requested, simply import all functions in the index. This is used
   // when testing distributed backend handling via the opt tool, when
   // we have distributed indexes containing exactly the summaries to import.
-  if (ImportAllIndex)
+  if (Opts.import_all_index)
     ComputeCrossModuleImportForModuleFromIndexForTest(M.getModuleIdentifier(),
                                                       *Index, ImportList);
   else
