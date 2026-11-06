@@ -481,6 +481,10 @@ Makes programs 10x faster by doing Special New Thing.
   module) must be set using a `LLVMPositionBuilder*()` API before building any
   instructions, otherwise an error will be generated.
 
+* The new `LLVMParseCommandLineOptionsWithError()` function provides an
+  alternative to `LLVMParseCommandLineOptions()` that also captures any error
+  during parsing.
+
 ### Changes to the CodeGen infrastructure
 
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR

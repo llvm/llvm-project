@@ -163,6 +163,11 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- On Windows targets using Microsoft C++ ABI, fixed returning a class with
+  a deleted template constructor which should be returned in a register.
+  This affects the ABI of `std::strong_ordering` in some versions of the
+  Microsoft STL. (#GH237188)
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -328,6 +333,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
+
+- A relative `directory` in a JSON compilation database is now resolved against the directory containing the compilation database file.
 
 - On musl targets, the driver now links ``libssp_nonshared.a`` when stack
   protection is enabled and the library is present in the toolchain library
@@ -840,6 +847,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
+- Fixed a crash when a C++ bit-field is declared 32768 or more bits wide. (#GH119207)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
@@ -850,6 +858,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
+- Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1401,6 +1410,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
   `__nvvm_idp2a_*` builtins. (#GH233434)
 
+- CUDA compilations now add the `include/cccl` directory of the selected CUDA
+  installation to the header search path when it exists. From CUDA 13.0 on,
+  libcu++, CUB and Thrust are in that directory, and toolkit headers such as
+  `cooperative_groups.h` include them. The `-nogpuinc` option disables this
+  path together with the other CUDA include paths.
+
 #### AIX Support
 
 #### NetBSD Support
@@ -1428,6 +1443,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### clang-format
 
+- Add `RegroupByDirectory` value to `IncludeBlocks` to group includes by
+  category priority and top-level directory.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
@@ -1543,6 +1560,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   have arguments of different integer types. (#GH108367)
 - Fixed a crash when the init or increment of an OpenMP loop uses a braced
   list, such as `int i = {0}`. (#GH202562)
+- Fixed a crash when a `map`, `to` or `from` clause item uses a binary operator
+  other than pointer arithmetic, such as `s->*mp`. (#GH151542)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
@@ -1563,6 +1582,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
   inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
   `order(concurrent)`) were incorrectly accepted.
+- Fixed a crash when a `tile` or `stripe` `sizes` argument has type `bool` or
+  `_BitInt`. (#GH229039)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings

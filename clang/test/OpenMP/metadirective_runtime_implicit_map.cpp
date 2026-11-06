@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 \
 // RUN:   -fopenmp-metadirective-runtime-selection \
-// RUN:   -fopenmp-targets=x86_64-pc-linux-gnu -ast-dump %s | FileCheck %s
+// RUN:   -triple x86_64-unknown-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu \
+// RUN:   -ast-dump %s | FileCheck %s
 // expected-no-diagnostics
 
 // A member used only inside a nested runtime metadirective is implicitly

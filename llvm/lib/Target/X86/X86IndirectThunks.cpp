@@ -244,7 +244,9 @@ FunctionPass *llvm::createX86IndirectThunksLegacyPass() {
 
 char X86IndirectThunksLegacy::ID = 0;
 
-X86IndirectThunksPass::X86IndirectThunksPass() = default;
+X86IndirectThunksPass::X86IndirectThunksPass()
+    : RetpolineInserter(std::make_unique<RetpolineThunkInserter>()),
+      LVIInserter(std::make_unique<LVIThunkInserter>()) {}
 X86IndirectThunksPass::X86IndirectThunksPass(X86IndirectThunksPass &&) =
     default;
 X86IndirectThunksPass::~X86IndirectThunksPass() = default;
@@ -257,14 +259,6 @@ X86IndirectThunksPass::run(MachineFunction &MF,
           .getCachedResult<MachineModuleAnalysis>(
               *MF.getFunction().getParent());
   assert(MMI && "MachineModuleAnalysis must be available");
-
-  if (!RetpolineInserter || !LVIInserter) {
-    Module &M = *MF.getFunction().getParent();
-    RetpolineInserter = std::make_unique<RetpolineThunkInserter>();
-    RetpolineInserter->init(M);
-    LVIInserter = std::make_unique<LVIThunkInserter>();
-    LVIInserter->init(M);
-  }
 
   bool Changed = RetpolineInserter->run(MMI->getMMI(), MF);
   Changed |= LVIInserter->run(MMI->getMMI(), MF);
