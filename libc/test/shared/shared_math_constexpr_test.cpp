@@ -619,6 +619,8 @@ static_assert(0 == [] {
   bfloat16 x = bfloat16(0.0);
   return LIBC_NAMESPACE::shared::canonicalizebf16(&cx, &x);
 }());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::acoshbf16(bfloat16(1.0)));
 static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
 static_assert(bfloat16(1.0) ==

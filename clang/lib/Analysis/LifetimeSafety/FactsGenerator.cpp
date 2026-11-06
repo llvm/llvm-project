@@ -642,12 +642,16 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   OriginList *RValMTEList = MTEList->peelOuterOrigin();
   flow(RValMTEList, SubExprList, /*Kill=*/true);
   OriginID OuterMTEID = MTEList->getOuterOriginID();
-  if (MTE->getStorageDuration() == SD_FullExpression) {
-    // Issue a loan to MTE for the storage location represented by MTE.
-    const Loan *L = createLoan(FactMgr, MTE);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
-  }
+  const Loan *L = createLoan(FactMgr, MTE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
+  // A temporary extended to static or thread storage duration does not expire
+  // within the function.
+  // Thread termination is not modeled; a thread-local value used after its
+  // thread exits is not diagnosed.
+  if (MTE->getStorageDuration() == SD_Automatic)
+    if (const ValueDecl *ExtendingDecl = MTE->getExtendingDecl())
+      ExtendedTemporaries[ExtendingDecl].push_back(MTE);
 }
 
 void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
@@ -829,6 +833,7 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  SourceLocation EndLoc = LifetimeEnds.getTriggerStmt()->getEndLoc();
   // A cleanup callback or a non-trivial destructor (other than an owner's) run
   // at scope exit may read the borrows the variable holds.
   QualType Ty = LifetimeEndsVD->getType();
@@ -840,9 +845,9 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   if (HasCleanup || IsDestructorUse)
     if (OriginList *List = getOriginsList(*LifetimeEndsVD))
       CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
-          UseSite::scopeExit(
-              LifetimeEnds.getTriggerStmt()->getEndLoc(), *LifetimeEndsVD,
-              HasCleanup ? UseKind::Cleanup : UseKind::Destructor),
+          UseSite::scopeExit(EndLoc, *LifetimeEndsVD,
+                             HasCleanup ? UseKind::Cleanup
+                                        : UseKind::Destructor),
           List));
   // Expire the origin when its variable's lifetime ends to ensure liveness
   // doesn't persist through loop back-edges.
@@ -855,8 +860,12 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       ExpiredOID = OID;
   }
   CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-      AccessPath(LifetimeEndsVD), LifetimeEnds.getTriggerStmt()->getEndLoc(),
-      ExpiredOID));
+      AccessPath(LifetimeEndsVD), EndLoc, ExpiredOID));
+  if (auto It = ExtendedTemporaries.find(LifetimeEndsVD);
+      It != ExtendedTemporaries.end())
+    for (const MaterializeTemporaryExpr *MTE : It->second)
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<ExpireFact>(AccessPath(MTE), EndLoc));
 }
 
 void FactsGenerator::handleFullExprCleanup(

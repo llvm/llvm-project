@@ -14,12 +14,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
@@ -274,6 +271,23 @@ LogicalResult DIDerivedTypeAttr::verify(
 
 bool TBAANodeAttr::classof(Attribute attr) {
   return llvm::isa<TBAATypeDescriptorAttr, TBAARootAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// MemProfMIBAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MemProfMIBAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       DenseI64ArrayAttr callStack, StringAttr,
+                       ArrayRef<MemProfContextSizeAttr>) {
+  // The call stack feeds `Verifier::visitCallStackMetadata`, which needs at
+  // least one frame hash. The other parameters are typed, so an empty stack
+  // is the only bad shape that can get here.
+  if (callStack.empty())
+    return emitError() << "call stack of a memprof MemInfoBlock must not be "
+                          "empty";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

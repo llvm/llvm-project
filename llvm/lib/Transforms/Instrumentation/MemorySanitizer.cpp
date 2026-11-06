@@ -1803,17 +1803,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ParamTLS+ArgOffset.
   Value *getShadowPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
-    return IRB.CreatePtrAdd(MS.ParamTLS,
-                            ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg");
+    return IRB.CreatePtrAddWithSignedOffset(MS.ParamTLS, ArgOffset, "_msarg");
   }
 
   /// Compute the origin address for a given function argument.
   Value *getOriginPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
     if (!MS.TrackOrigins)
       return nullptr;
-    return IRB.CreatePtrAdd(MS.ParamOriginTLS,
-                            ConstantInt::get(MS.IntptrTy, ArgOffset),
-                            "_msarg_o");
+    return IRB.CreatePtrAddWithSignedOffset(MS.ParamOriginTLS, ArgOffset,
+                                            "_msarg_o");
   }
 
   /// Compute the shadow address for a retval.
@@ -8360,8 +8358,8 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
-    return IRB.CreatePtrAdd(
-        MS.VAArgTLS, ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg_va_s");
+    return IRB.CreatePtrAddWithUnsignedOffset(MS.VAArgTLS, ArgOffset,
+                                              "_msarg_va_s");
   }
 
   /// Compute the shadow address for a given va_arg.
@@ -8378,9 +8376,8 @@ struct VarArgHelperBase : public VarArgHelper {
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
     // overflow.
-    return IRB.CreatePtrAdd(MS.VAArgOriginTLS,
-                            ConstantInt::get(MS.IntptrTy, ArgOffset),
-                            "_msarg_va_o");
+    return IRB.CreatePtrAddWithSignedOffset(MS.VAArgOriginTLS, ArgOffset,
+                                            "_msarg_va_o");
   }
 
   void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
@@ -8608,7 +8605,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
       Value *VAListTag = OrigInst->getArgOperand(0);
 
       Value *RegSaveAreaPtrPtr =
-          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 16));
+          IRB.CreatePtrAddWithUnsignedOffset(VAListTag, 16);
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       const Align Alignment = Align(16);
@@ -8621,7 +8618,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
         IRB.CreateMemCpy(RegSaveAreaOriginPtr, Alignment, VAArgTLSOriginCopy,
                          Alignment, AMD64FpEndOffset);
       Value *OverflowArgAreaPtrPtr =
-          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 8));
+          IRB.CreatePtrAddWithUnsignedOffset(VAListTag, 8);
       Value *OverflowArgAreaPtr =
           IRB.CreateLoad(MS.PtrTy, OverflowArgAreaPtrPtr);
       Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
@@ -8751,15 +8748,13 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
 
   // Retrieve a va_list field of 'void*' size.
   Value *getVAField64(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtrPtr =
-        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
+    Value *SaveAreaPtrPtr = IRB.CreatePtrAddWithSignedOffset(VAListTag, offset);
     return IRB.CreateLoad(Type::getInt64Ty(*MS.C), SaveAreaPtrPtr);
   }
 
   // Retrieve a va_list field of 'int' size.
   Value *getVAField32(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtr =
-        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
+    Value *SaveAreaPtr = IRB.CreatePtrAddWithSignedOffset(VAListTag, offset);
     Value *SaveArea32 = IRB.CreateLoad(IRB.getInt32Ty(), SaveAreaPtr);
     return IRB.CreateSExt(SaveArea32, MS.IntptrTy);
   }
