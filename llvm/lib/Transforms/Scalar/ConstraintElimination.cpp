@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "ScalarOptions.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -413,23 +414,16 @@ public:
 
   /// Returns true if \p V is known to be non-negative, either because the
   /// signed system implies it or because ValueTracking can prove it.
-  bool isKnownNonNegative(WithCache<const Value *> &V);
-  bool isKnownNonNegative(Value *V) {
-    WithCache<const Value *> KnownV{V};
-    return isKnownNonNegative(KnownV);
-  }
-
-  /// Returns true if \p V is known to be negative, either because the signed
-  /// system implies it, or because ValueTracking can prove it.
-  bool isKnownNegative(WithCache<const Value *> &V);
-  bool isKnownNegative(Value *V) {
-    WithCache<const Value *> KnownV{V};
-    return isKnownNegative(KnownV);
-  }
+  bool isKnownNonNegative(Value *V);
 
   /// Returns true if \p V is known to be positive, either because the signed
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
+
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if either the signed system or value tracking
+  /// cannot prove it.
+  std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -1158,20 +1152,11 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
       .value_or(false);
 }
 
-bool ConstraintInfo::isKnownNonNegative(WithCache<const Value *> &V) {
-  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
+bool ConstraintInfo::isKnownNonNegative(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
     return !CI->isNegative();
   return ::isKnownNonNegative(V, DL) ||
-         doesHold(CmpInst::ICMP_SGE, const_cast<Value *>(V.getValue()),
-                  ConstantInt::get(V->getType(), 0));
-}
-
-bool ConstraintInfo::isKnownNegative(WithCache<const Value *> &V) {
-  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
-    return CI->isNegative();
-  return ::isKnownNegative(V, DL) ||
-         doesHold(CmpInst::ICMP_SLT, const_cast<Value *>(V.getValue()),
-                  ConstantInt::get(V->getType(), 0));
+         doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
 }
 
 bool ConstraintInfo::isKnownPositive(Value *V) {
@@ -1179,6 +1164,20 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
     return CI->getValue().isStrictlyPositive();
   return ::isKnownPositive(V, DL) ||
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+  KnownBits Known = computeKnownBits(V, DL);
+  if (Known.isNonNegative())
+    return false;
+  if (Known.isNegative())
+    return true;
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  if (doesHold(CmpInst::ICMP_SGE, V, Zero))
+    return false;
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+    return true;
+  return std::nullopt;
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -2662,19 +2661,14 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
           if (A->getType()->isIntegerTy()) {
-            WithCache<const Value *> KnownA{A}, KnownB{B};
-            Constant *Zero = Constant::getNullValue(A->getType());
-            bool ANonNeg = Info.isKnownNonNegative(KnownA);
-            bool BNonNeg = Info.isKnownNonNegative(KnownB);
-            if (ANonNeg != BNonNeg) {
-              Info.addFact(CmpInst::ICMP_SGE, ANonNeg ? B : A, Zero, CB.NumIn,
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
+            if (ASign.has_value() != BSign.has_value()) {
+              auto [Negative, Other] =
+                  ASign ? std::pair(*ASign, B) : std::pair(*BSign, A);
+              Info.addFact(Negative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE, Other,
+                           Constant::getNullValue(A->getType()), CB.NumIn,
                            CB.NumOut, DFSInStack);
-            } else if (!ANonNeg) {
-              bool ANeg = Info.isKnownNegative(KnownA);
-              bool BNeg = Info.isKnownNegative(KnownB);
-              if (ANeg != BNeg)
-                Info.addFact(CmpInst::ICMP_SLT, ANeg ? B : A, Zero, CB.NumIn,
-                             CB.NumOut, DFSInStack);
             }
           }
         } else {
