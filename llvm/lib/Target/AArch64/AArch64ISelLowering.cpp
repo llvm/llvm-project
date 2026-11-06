@@ -8084,7 +8084,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   assert(StoreNode->isVolatile() || StoreNode->isAtomic());
 
   bool IsStoreRelease =
-      StoreNode->getMergedOrdering() == AtomicOrdering::Release;
+      isReleaseOrStronger(StoreNode->getMergedOrdering());
   if (StoreNode->isAtomic())
     assert((Subtarget->hasFeature(AArch64::FeatureLSE2) &&
             Subtarget->hasFeature(AArch64::FeatureRCPC3) && IsStoreRelease) ||
@@ -33643,7 +33643,7 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
            SI->getAlign() >= Align(16) &&
-           SI->getOrdering() == AtomicOrdering::Release;
+           isReleaseOrStronger(SI->getOrdering());
 
   return false;
 }
