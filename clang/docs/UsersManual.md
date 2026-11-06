@@ -3700,9 +3700,9 @@ when supported by the target, or `single` otherwise.
 
 When `-fsanitize=thread` is used with `-fprofile-instr-generate`,
 `-fprofile-generate` or `-fcs-profile-generate`, counter updates in
-functions instrumented by ThreadSanitizer are always atomic. An explicit
-`-fprofile-update=single` is ignored for those functions, and Clang emits a
-warning.
+functions instrumented by ThreadSanitizer default to `atomic`. Explicitly
+specifying `-fprofile-update=single` overrides this, and Clang emits a
+warning as non-atomic counter updates may be reported as data races.
 :::
 
 :::{option} -fprofile-continuous

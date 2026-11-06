@@ -5,6 +5,7 @@
 ; RUN: opt < %s -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,NOCOND
 ; RUN: opt < %s -passes=instrprof -conditional-counter-update -S | FileCheck %s --check-prefixes=CHECK,COND
 ; RUN: opt < %s -passes=instrprof -do-counter-promotion -S | FileCheck %s --check-prefix=PROMO
+; RUN: opt < %s -passes=instrprof -instrprof-atomic-counter-update-all=false -S | FileCheck %s --check-prefix=SINGLE
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -19,6 +20,12 @@ define void @straight_line_tsan() sanitize_thread {
 ; CHECK-LABEL: define void @straight_line_tsan(
 ; CHECK-NEXT:    atomicrmw add ptr @__profc_straight_line_tsan, i64 1 monotonic, align 8, !nosanitize
 ; CHECK-NEXT:    ret void
+;
+; SINGLE-LABEL: define void @straight_line_tsan(
+; SINGLE-NEXT:    %[[LOAD:.+]] = load i64, ptr @__profc_straight_line_tsan, align 8, !nosanitize
+; SINGLE-NEXT:    %[[ADD:.+]] = add i64 %[[LOAD]], 1
+; SINGLE-NEXT:    store i64 %[[ADD]], ptr @__profc_straight_line_tsan, align 8, !nosanitize
+; SINGLE-NEXT:    ret void
 ;
   call void @llvm.instrprof.increment(ptr @__profn_straight_line_tsan, i64 0, i32 1, i32 0)
   ret void
@@ -124,6 +131,13 @@ define dso_local void @mcdc_tsan(i32 noundef %A) sanitize_thread {
 ; CHECK-NEXT:    br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof
 ; CHECK:       [[WRITE]]:
 ; CHECK-NEXT:    atomicrmw or ptr %[[ADDR]], i8 %[[SHIFTED]] monotonic, align 1, !nosanitize
+;
+; SINGLE-LABEL: define dso_local void @mcdc_tsan(
+; SINGLE:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i32 %{{.+}}
+; SINGLE:         %[[SHIFTED:.+]] = shl i8 1, %{{.+}}
+; SINGLE-NEXT:    %[[BITS:.+]] = load i8, ptr %[[ADDR]], align 1, !nosanitize
+; SINGLE-NEXT:    %[[OR:.+]] = or i8 %[[BITS]], %[[SHIFTED]]
+; SINGLE-NEXT:    store i8 %[[OR]], ptr %[[ADDR]], align 1, !nosanitize
 ;
 entry:
   %A.addr = alloca i32, align 4

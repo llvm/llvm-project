@@ -838,8 +838,8 @@ bool InstrLowerer::isCounterPromotionEnabled() const {
 bool InstrLowerer::isAtomic(const Function &F) const {
   // Non-atomic counter updates are data races, which ThreadSanitizer would
   // report. Use atomic updates in functions that TSan instruments.
-  return Options.Atomic || Opts.instrprof_atomic_counter_update_all ||
-         F.hasFnAttribute(Attribute::SanitizeThread);
+  return valueOr(Opts.instrprof_atomic_counter_update_all,
+                 Options.Atomic || F.hasFnAttribute(Attribute::SanitizeThread));
 }
 
 static void doAtomicCheck(Function *F) {

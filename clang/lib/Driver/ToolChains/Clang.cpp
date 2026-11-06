@@ -604,17 +604,20 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     StringRef Val = A->getValue();
     if (Val == "atomic" || Val == "prefer-atomic")
       CmdArgs.push_back("-fprofile-update=atomic");
-    else if (Val != "single")
+    else if (Val == "single") {
+      if (SanArgs.needsTsanRt() &&
+          (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
+        // Under TSan, instrprof defaults to atomic counter updates to avoid
+        // data race reports on profile counters; override that default and
+        // warn.
+        D.Diag(diag::warn_drv_tsan_profile_update_single)
+            << A->getAsString(Args);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-instrprof-atomic-counter-update-all=false");
+      }
+    } else
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
-    else if (SanArgs.needsTsanRt() &&
-             (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
-      // Non-atomic counter updates would be reported as data races, so the
-      // instrprof lowering forces atomic updates in TSan-instrumented
-      // functions.
-      D.Diag(diag::warn_drv_fprofile_update_single_ignored_tsan)
-          << A->getAsString(Args);
-    }
   }
   if (const auto *A = Args.getLastArg(options::OPT_fprofile_continuous)) {
     if (!PGOGenerateArg && !CSPGOGenerateArg && !ProfileGenerateArg)
