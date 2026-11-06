@@ -549,7 +549,7 @@
 # CHECK-NEXT:  1      4     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      4     0.50                        fneg	h2, h9
 # CHECK-NEXT:  1      4     0.50                        fneg	s4, s5
-# CHECK-NEXT:  1      33    29.00                       fsqrt	s6, s7
+# CHECK-NEXT:  1      12    9.00                        fsqrt	s6, s7
 # CHECK-NEXT:  1      4     0.50                        fcvt	d8, s9
 # CHECK-NEXT:  1      4     0.50                        fcvt	h10, s11
 # CHECK-NEXT:  1      4     0.50                        frintn	h12, h3
@@ -570,7 +570,7 @@
 # CHECK-NEXT:  1      4     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      4     0.50                        fneg	d4, d5
 # CHECK-NEXT:  1      33    29.00                       fsqrt	h13, h24
-# CHECK-NEXT:  1      33    29.00                       fsqrt	d6, d7
+# CHECK-NEXT:  1      22    19.00                       fsqrt	d6, d7
 # CHECK-NEXT:  1      4     0.50                        fcvt	s8, d9
 # CHECK-NEXT:  1      4     0.50                        fcvt	h10, d11
 # CHECK-NEXT:  1      4     0.50                        frintn	d12, d13
@@ -584,7 +584,7 @@
 # CHECK-NEXT:  1      4     0.50                        fcvt	d28, h29
 # CHECK-NEXT:  1      4     0.50                        fmul	s20, s19, s17
 # CHECK-NEXT:  1      33    29.00                       fdiv	h1, h26, h23
-# CHECK-NEXT:  1      18    14.00                       fdiv	s1, s2, s3
+# CHECK-NEXT:  1      13    10.00                       fdiv	s1, s2, s3
 # CHECK-NEXT:  1      4     0.50                        fadd	h23, h27, h22
 # CHECK-NEXT:  1      4     0.50                        fadd	s4, s5, s6
 # CHECK-NEXT:  1      4     0.50                        fsub	h20, h11, h18
@@ -598,7 +598,7 @@
 # CHECK-NEXT:  1      4     0.50                        fnmul	h3, h15, h7
 # CHECK-NEXT:  1      4     0.50                        fnmul	s22, s23, s2
 # CHECK-NEXT:  1      4     0.50                        fmul	d20, d19, d17
-# CHECK-NEXT:  1      33    29.00                       fdiv	d1, d2, d3
+# CHECK-NEXT:  1      22    19.00                       fdiv	d1, d2, d3
 # CHECK-NEXT:  1      4     0.50                        fadd	d4, d5, d6
 # CHECK-NEXT:  1      4     0.50                        fsub	d7, d8, d9
 # CHECK-NEXT:  1      4     0.50                        fmax	d10, d11, d12
@@ -1278,7 +1278,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 249.50 249.50 27.00  4.00   130.50 130.50 159.00 159.00 471.00 50.00
+# CHECK-NEXT: 249.50 249.50 27.00  4.00   130.50 130.50 115.00 115.00 471.00 50.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1821,7 +1821,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fabs	s2, s3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	h2, h9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	s4, s5
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -      -      -     9.00   9.00    -      -     fsqrt	s6, s7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	d8, s9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	h10, s11
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frintn	h12, h3
@@ -1842,7 +1842,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	d4, d5
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	h13, h24
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	d6, d7
+# CHECK-NEXT:  -      -      -      -      -      -     19.00  19.00   -      -     fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	s8, d9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	h10, d11
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frintn	d12, d13
@@ -1856,7 +1856,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	d28, h29
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	s20, s19, s17
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	h1, h26, h23
-# CHECK-NEXT:  -      -      -      -      -      -     14.00  14.00   -      -     fdiv	s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -     10.00  10.00   -      -     fdiv	s1, s2, s3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	h23, h27, h22
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	s4, s5, s6
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsub	h20, h11, h18
@@ -1870,7 +1870,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	h3, h15, h7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	s22, s23, s2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	d20, d19, d17
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	d1, d2, d3
+# CHECK-NEXT:  -      -      -      -      -      -     19.00  19.00   -      -     fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsub	d7, d8, d9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmax	d10, d11, d12
