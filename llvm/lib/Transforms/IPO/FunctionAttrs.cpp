@@ -1108,6 +1108,31 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   return true;
 }
 
+/// Return true if a block without successors is reachable from \p EntryBB
+/// without passing through a block that writes the argument. Nothing is
+/// initialized on such a path.
+static bool canExitWithoutWrites(const BasicBlock &EntryBB,
+                                 const ArgumentUsesSummary &ArgumentUses) {
+  const auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  SmallVector<const BasicBlock *, 16> Worklist;
+  Visited.insert(&EntryBB);
+  Worklist.push_back(&EntryBB);
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    auto UPB = UsesPerBlock.find(BB);
+    if (UPB != UsesPerBlock.end() && UPB->second.HasWrites)
+      continue;
+    if (succ_empty(BB))
+      return true;
+    for (const BasicBlock *Succ : successors(BB)) {
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+    }
+  }
+  return false;
+}
+
 static bool inferInitializes(Argument &A, Function &F) {
   auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
@@ -1192,6 +1217,11 @@ static bool inferInitializes(Argument &A, Function &F) {
     if (EntryCRL.empty())
       return false;
   } else {
+    // Computing the initialized ranges of every block is expensive, and they
+    // are empty for the entry block if a path from it avoids all writes.
+    if (canExitWithoutWrites(EntryBB, ArgumentUses))
+      return false;
+
     // Now we have to go through CFG to get the initialized argument ranges
     // across blocks. With dominance and post-dominance, the initialized ranges
     // by a block include both accesses inside this block and accesses in its
