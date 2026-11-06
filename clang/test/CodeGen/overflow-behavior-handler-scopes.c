@@ -48,4 +48,27 @@ int defer_body(int __ob_trap a) {
 __overflow:
   return -1;
 }
+
+void fd(int);
+
+// Pending defer statements run, innermost first, before the handler.
+// DEFER-LABEL: define {{.*}} @defer_pending(
+// DEFER: @llvm.smul.with.overflow.i32
+// DEFER: br i1 %{{.*}}, label %[[H:[a-z.0-9]+]], label %{{.*}}
+// DEFER: [[H]]:
+// DEFER-NEXT: store i32 [[DEST:[0-9]+]], ptr %cleanup.dest.slot
+// DEFER: call void @fd(i32 noundef 2)
+// DEFER: call void @fd(i32 noundef 1)
+// DEFER: switch i32 %cleanup.dest
+// DEFER: i32 [[DEST]], label %__overflow
+int defer_pending(int __ob_trap n) {
+  {
+    _Defer fd(1);
+    _Defer fd(2);
+    n *= 2;
+  }
+  return n;
+__overflow:
+  return -1;
+}
 #endif
