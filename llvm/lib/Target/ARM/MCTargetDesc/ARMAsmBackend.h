@@ -39,6 +39,9 @@ public:
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
+  bool mayResolvePcRelFixup(const MCFragment &F, const MCFixup &Fixup,
+                            const MCSymbol &Sym) const override;
+
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
