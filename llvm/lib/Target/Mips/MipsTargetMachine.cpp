@@ -61,7 +61,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsDelaySlotFillerLegacyPass(*PR);
   initializeMipsBranchExpansionLegacyPass(*PR);
   initializeMicroMipsSizeReduceLegacyPass(*PR);
-  initializeMipsPreLegalizerCombinerPass(*PR);
+  initializeMipsPreLegalizerCombinerLegacyPass(*PR);
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
@@ -280,7 +280,7 @@ bool MipsPassConfig::addIRTranslator() {
 }
 
 void MipsPassConfig::addPreLegalizeMachineIR() {
-  addPass(createMipsPreLegalizeCombiner());
+  addPass(createMipsPreLegalizeCombinerLegacyPass());
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
