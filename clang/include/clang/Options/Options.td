@@ -3915,6 +3915,11 @@ def fmodules_validate_input_files_content:
 def fno_modules_validate_input_files_content:
   Flag <["-"], "fno_modules-validate-input-files-content">,
   Group<f_Group>;
+def fpch_base_dir_is_cwd : Flag<["-"], "fpch-base-dir-is-cwd">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Serialize precompiled header input paths relative to the current "
+           "working directory">,
+  MarshallingInfoFlag<HeaderSearchOpts<"PCHBaseDirIsCwd">>;
 def fpch_validate_input_files_content:
   Flag <["-"], "fpch-validate-input-files-content">,
   Group<f_Group>,
