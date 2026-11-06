@@ -268,8 +268,7 @@ public:
     } else {
       emitAggregatedStmts();
       if (cgf.emitStmt(s, /*useCurrentScope=*/true).failed())
-        cgf.cgm.errorNYI(s->getSourceRange(), std::string("emitAssignment: ") +
-                                                  s->getStmtClassName());
+        assert(cgf.cgm.getDiags().hasErrorOccurred());
     }
   }
 
@@ -278,9 +277,7 @@ public:
       if (!aggregatedStmts.empty()) {
         CopyingValueRepresentation cvr(cgf);
         if (cgf.emitStmt(aggregatedStmts[0], /*useCurrentScope=*/true).failed())
-          cgf.cgm.errorNYI(aggregatedStmts[0]->getSourceRange(),
-                           std::string("emitAggregatedStmts: ") +
-                               aggregatedStmts[0]->getStmtClassName());
+          assert(cgf.cgm.getDiags().hasErrorOccurred());
       }
       reset();
     }
