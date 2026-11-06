@@ -2096,7 +2096,7 @@ static bool checkForAllInstructionsImpl(
     bool CheckPotentiallyDead = false) {
   for (unsigned Opcode : Opcodes) {
     // Check if we have instructions with this opcode at all first.
-    auto *Insts = OpcodeInstMap.lookup(Opcode);
+    auto *Insts = OpcodeInstMap[Opcode];
     if (!Insts)
       continue;
 
@@ -3366,8 +3366,10 @@ void InformationCache::initializeInformationCache(const Function &CF,
 InformationCache::FunctionInfo::~FunctionInfo() {
   // The instruction vectors are allocated using a BumpPtrAllocator, we need to
   // manually destroy them.
-  for (auto &It : OpcodeInstMap)
-    It.getSecond()->~InstructionVectorTy();
+  for (InstructionVectorTy *Insts : OpcodeInstMap) {
+    if (Insts)
+      Insts->~InstructionVectorTy();
+  }
 }
 
 ArrayRef<Function *>
