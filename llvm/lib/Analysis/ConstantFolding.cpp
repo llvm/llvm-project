@@ -1718,9 +1718,39 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
     return Base;
 
-  // TODO: Fold vectors element by element.
-  if (Base->getType()->isVectorTy())
-    return nullptr;
+  if (auto *VTy = dyn_cast<VectorType>(Base->getType())) {
+    // Fast path for splatted constants.
+    Constant *BaseSplat = Base->getSplatValue();
+    Constant *ValSplat = Val->getSplatValue();
+    Constant *OffsetSplat = Offset->getSplatValue();
+    if (BaseSplat && ValSplat && OffsetSplat) {
+      Constant *Res =
+          ConstantFoldBitInsertOperands(BaseSplat, ValSplat, OffsetSplat, DL);
+      if (!Res)
+        return nullptr;
+      return ConstantVector::getSplat(VTy->getElementCount(), Res);
+    }
+
+    auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+    if (!FVTy)
+      return nullptr;
+
+    // Fold each element and create a vector constant from those constants.
+    SmallVector<Constant *, 16> Result;
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+      Constant *BaseElt = Base->getAggregateElement(I);
+      Constant *ValElt = Val->getAggregateElement(I);
+      Constant *OffsetElt = Offset->getAggregateElement(I);
+      if (!BaseElt || !ValElt || !OffsetElt)
+        return nullptr;
+      Constant *Res =
+          ConstantFoldBitInsertOperands(BaseElt, ValElt, OffsetElt, DL);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
+    }
+    return ConstantVector::get(Result);
+  }
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
@@ -1768,9 +1798,38 @@ Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
   if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
     return PoisonValue::get(Ty);
 
-  // TODO: Fold vectors element by element.
-  if (Ty->isVectorTy())
-    return nullptr;
+  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+    Type *EltTy = VTy->getElementType();
+    // Fast path for splatted constants.
+    Constant *SrcSplat = Src->getSplatValue();
+    Constant *OffsetSplat = Offset->getSplatValue();
+    if (SrcSplat && OffsetSplat) {
+      Constant *Res =
+          ConstantFoldBitExtractOperands(EltTy, SrcSplat, OffsetSplat, DL);
+      if (!Res)
+        return nullptr;
+      return ConstantVector::getSplat(VTy->getElementCount(), Res);
+    }
+
+    auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+    if (!FVTy)
+      return nullptr;
+
+    // Fold each element and create a vector constant from those constants.
+    SmallVector<Constant *, 16> Result;
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+      Constant *SrcElt = Src->getAggregateElement(I);
+      Constant *OffsetElt = Offset->getAggregateElement(I);
+      if (!SrcElt || !OffsetElt)
+        return nullptr;
+      Constant *Res =
+          ConstantFoldBitExtractOperands(EltTy, SrcElt, OffsetElt, DL);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
+    }
+    return ConstantVector::get(Result);
+  }
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)

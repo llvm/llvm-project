@@ -411,8 +411,7 @@ define <2 x b32> @bitinsert_vec_undef_offset() {
 
 define <2 x i8> @bitextract_vec() {
 ; CHECK-LABEL: define <2 x i8> @bitextract_vec() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> splat (b32 305419896), <2 x i32> <i32 0, i32 8>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 120, i8 86>
 ;
   %r = bitextract <2 x i8>, <2 x b32> <b32 305419896, b32 305419896>, <2 x i32> <i32 0, i32 8>
   ret <2 x i8> %r
@@ -420,8 +419,7 @@ define <2 x i8> @bitextract_vec() {
 
 define <2 x b32> @bitinsert_vec() {
 ; CHECK-LABEL: define <2 x b32> @bitinsert_vec() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert <2 x b32> zeroinitializer, <2 x i8> <i8 1, i8 2>, <2 x i32> <i32 0, i32 8>
-; CHECK-NEXT:    ret <2 x b32> [[R]]
+; CHECK-NEXT:    ret <2 x b32> <b32 1, b32 512>
 ;
   %r = bitinsert <2 x b32> <b32 0, b32 0>, <2 x i8> <i8 1, i8 2>, <2 x i32> <i32 0, i32 8>
   ret <2 x b32> %r
@@ -429,8 +427,7 @@ define <2 x b32> @bitinsert_vec() {
 
 define <4 x i8> @bitextract_vec_splat() {
 ; CHECK-LABEL: define <4 x i8> @bitextract_vec_splat() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract <4 x i8>, <4 x b32> splat (b32 305419896), <4 x i32> splat (i32 16)
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; CHECK-NEXT:    ret <4 x i8> splat (i8 52)
 ;
   %r = bitextract <4 x i8>, <4 x b32> splat (b32 305419896), <4 x i32> splat (i32 16)
   ret <4 x i8> %r
@@ -438,8 +435,7 @@ define <4 x i8> @bitextract_vec_splat() {
 
 define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
 ; CHECK-LABEL: define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> splat (b32 305419896), <vscale x 4 x i32> splat (i32 16)
-; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i8> splat (i8 52)
 ;
   %r = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> splat (b32 305419896), <vscale x 4 x i32> splat (i32 16)
   ret <vscale x 4 x i8> %r
@@ -447,8 +443,7 @@ define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
 
 define <vscale x 4 x b32> @bitinsert_scalable_vec_splat() {
 ; CHECK-LABEL: define <vscale x 4 x b32> @bitinsert_scalable_vec_splat() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert <vscale x 4 x b32> splat (b32 0), <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i32> splat (i32 8)
-; CHECK-NEXT:    ret <vscale x 4 x b32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x b32> splat (b32 256)
 ;
   %r = bitinsert <vscale x 4 x b32> splat (b32 0), <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i32> splat (i32 8)
   ret <vscale x 4 x b32> %r
@@ -457,8 +452,7 @@ define <vscale x 4 x b32> @bitinsert_scalable_vec_splat() {
 ; Only the lanes with an out-of-range or poison offset are poison.
 define <3 x i8> @bitextract_vec_poison_lanes() {
 ; CHECK-LABEL: define <3 x i8> @bitextract_vec_poison_lanes() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract <3 x i8>, <3 x b32> splat (b32 305419896), <3 x i32> <i32 8, i32 32, i32 poison>
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    ret <3 x i8> <i8 86, i8 poison, i8 poison>
 ;
   %r = bitextract <3 x i8>, <3 x b32> splat (b32 305419896), <3 x i32> <i32 8, i32 32, i32 poison>
   ret <3 x i8> %r
@@ -466,8 +460,7 @@ define <3 x i8> @bitextract_vec_poison_lanes() {
 
 define <3 x b32> @bitinsert_vec_poison_lanes() {
 ; CHECK-LABEL: define <3 x b32> @bitinsert_vec_poison_lanes() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert <3 x b32> splat (b32 305419896), <3 x i8> zeroinitializer, <3 x i32> <i32 8, i32 32, i32 poison>
-; CHECK-NEXT:    ret <3 x b32> [[R]]
+; CHECK-NEXT:    ret <3 x b32> <b32 305397880, b32 poison, b32 poison>
 ;
   %r = bitinsert <3 x b32> splat (b32 305419896), <3 x i8> zeroinitializer, <3 x i32> <i32 8, i32 32, i32 poison>
   ret <3 x b32> %r
@@ -475,8 +468,7 @@ define <3 x b32> @bitinsert_vec_poison_lanes() {
 
 define <2 x float> @bitextract_vec_fp() {
 ; CHECK-LABEL: define <2 x float> @bitextract_vec_fp() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x float>, <2 x b64> <b64 4575657221408423936, b64 1065353216>, <2 x i32> <i32 32, i32 0>
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %r = bitextract <2 x float>, <2 x b64> <b64 4575657221408423936, b64 1065353216>, <2 x i32> <i32 32, i32 0>
   ret <2 x float> %r
@@ -484,8 +476,7 @@ define <2 x float> @bitextract_vec_fp() {
 
 define <2 x b64> @bitinsert_vec_full_width() {
 ; CHECK-LABEL: define <2 x b64> @bitinsert_vec_full_width() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert <2 x b64> zeroinitializer, <2 x double> <double 1.000000e+00, double 2.000000e+00>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x b64> [[R]]
+; CHECK-NEXT:    ret <2 x b64> <b64 4607182418800017408, b64 4611686018427387904>
 ;
   %r = bitinsert <2 x b64> zeroinitializer, <2 x double> <double 1.0, double 2.0>, <2 x i32> zeroinitializer
   ret <2 x b64> %r
