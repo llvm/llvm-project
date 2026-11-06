@@ -34,14 +34,20 @@ set(LLVM_TARGET_DEFINITIONS TestOps.td)
 mlir_tablegen(TestOpsDialect.h.inc -gen-dialect-decls -dialect=test)
 mlir_tablegen(TestOpsDialect.cpp.inc -gen-dialect-defs -dialect=test)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)
+# The ops of the test dialect, split by category into TestOps<Category>.td
+# files, each with its own header and source file.
+foreach(category
+    Core Attributes Traits Patterns Conversion Interfaces Properties)
+  set(LLVM_TARGET_DEFINITIONS TestOps${category}.td)
+  mlir_tablegen(TestOps${category}.h.inc -gen-op-decls)
+  mlir_tablegen(TestOps${category}.cpp.inc -gen-op-defs)
+endforeach()
 add_public_tablegen_target(MLIRTestOpsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestOpsSyntax.td)
 mlir_tablegen(TestOpsSyntax.h.inc -gen-op-decls)
 mlir_tablegen(TestOpsSyntax.cpp.inc -gen-op-defs)
 add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
-
-add_sharded_ops(TestOps 20)
 
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestDialect
@@ -50,13 +56,18 @@ add_mlir_library(MLIRTestDialect
   TestFormatUtils.cpp
   TestInterfaces.cpp
   TestOpDefs.cpp
-  TestOps.cpp
+  TestOpsAttributes.cpp
+  TestOpsConversion.cpp
+  TestOpsCore.cpp
+  TestOpsInterfaces.cpp
+  TestOpsPatterns.cpp
+  TestOpsProperties.cpp
+  TestOpsTraits.cpp
   TestPatterns.cpp
   TestTraits.cpp
   TestTypes.cpp
   TestOpsSyntax.cpp
   TestDialectInterfaces.cpp
-  ${SHARDED_SRCS}
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -67,7 +78,6 @@ add_mlir_library(MLIRTestDialect
   MLIRTestTypeDefIncGen
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
-  MLIRTestOpsShardGen
   MLIRConvertToEmitCPatternInterfaceIncGen
   )
 mlir_target_link_libraries(MLIRTestDialect PUBLIC

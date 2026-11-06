@@ -37,6 +37,15 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerInterfaces();
     void registerTypes();
+    // Registers the ops of a TestOps<Category>.td file, defined in the
+    // corresponding TestOps<Category>.cpp.
+    void registerOpsCore();
+    void registerOpsAttributes();
+    void registerOpsTraits();
+    void registerOpsPatterns();
+    void registerOpsConversion();
+    void registerOpsInterfaces();
+    void registerOpsProperties();
     void registerOpsSyntax();
 
     // Provides a custom printing/parsing for some operations.
