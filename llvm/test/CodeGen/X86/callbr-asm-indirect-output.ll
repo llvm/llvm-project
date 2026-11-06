@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: not llc -mtriple=x86_64-linux-gnu < %t/error.ll 2>&1 | FileCheck %s --check-prefix=ERROR
+; RUN: not llc -mtriple=x86_64-linux-gnu -filetype=null < %t/error.ll 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: llc -mtriple=x86_64-linux-gnu < %t/ok.ll | FileCheck %s --check-prefix=OK
 
 ; An indirect output with a register constraint is stored after the asm, but a
