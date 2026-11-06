@@ -266,6 +266,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
   `condition : value` pairs, along with their corresponding side effects,
   are left unresolved.
+* HwMode type expansion has been removed from CodeGenDAGPatterns. SelectionDAG
+  and GlobalISel handle HwModes during instruction selection. FastISel does not
+  support HwModes and will skip any patterns that use HwMode based types.
 
 ### Changes to Interprocedural Optimizations
 
