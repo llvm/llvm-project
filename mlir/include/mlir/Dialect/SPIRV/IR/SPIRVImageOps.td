@@ -604,7 +604,7 @@ def SPIRV_ImageFetchOp : SPIRV_Op<"ImageFetch",
     Image must be an object whose type is OpTypeImage. Its Dim operand must not be
     Cube, and its Sampled operand must be 1.
 
-    Coordinate must be a scalar or vector of integer type. It contains (u[, v] … [,
+    Coordinate must be a scalar or vector of integer type. It contains (u[, v] ... [,
     array layer]) as needed by the definition of Sampled Image.
 
     Image Operands encodes what operands follow, as per Image Operands.

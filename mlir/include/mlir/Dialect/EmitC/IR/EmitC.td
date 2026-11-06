@@ -871,7 +871,7 @@ def EmitC_FuncOp : EmitC_Op<"func", [
     a symbolic connection (e.g. symbols referenced by name via a string
     attribute like SymbolRefAttr). While the MLIR textual form provides a nice
     inline syntax for function arguments, they are internally represented as
-    “block arguments” to the first block in the region.
+    "block arguments" to the first block in the region.
 
     Only dialect attribute names may be specified in the attribute dictionaries
     for function arguments, results, or the function itself.
