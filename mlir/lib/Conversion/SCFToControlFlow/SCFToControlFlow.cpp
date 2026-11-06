@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/IR/RegionExitInterfaces.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -311,6 +312,18 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Lowers `scf.loop` to a CFG loop. The loop body is inlined; `scf.break` ops
+/// that target this loop become branches to the continuation block and
+/// `scf.continue` ops that target this loop become back-edges to the loop
+/// header.
+struct LoopOpLowering : public OpConversionPattern<LoopOp> {
+  using OpConversionPattern<LoopOp>::OpConversionPattern;
+  void initialize() { setHasBoundedRewriteRecursion(); }
+
+  LogicalResult
+  matchAndRewrite(LoopOp loopOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
@@ -320,6 +333,66 @@ static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
                   return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
                 });
   to->setDiscardableAttrs(llvmAttrs);
+}
+
+static LogicalResult lowerIfOpToCFG(IfOp ifOp, PatternRewriter &rewriter) {
+  auto loc = ifOp.getLoc();
+  // Start by splitting the block containing the 'scf.if' into two parts.
+  // The part before will contain the condition, the part after will be the
+  // continuation point.
+  auto *condBlock = rewriter.getInsertionBlock();
+  auto opPosition = rewriter.getInsertionPoint();
+  auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+  Block *continueBlock;
+  if (ifOp.getNumResults() == 0) {
+    continueBlock = remainingOpsBlock;
+  } else {
+    continueBlock =
+        rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes(),
+                             SmallVector<Location>(ifOp.getNumResults(), loc));
+    cf::BranchOp::create(rewriter, loc, remainingOpsBlock);
+  }
+
+  // Move blocks from the "then" region to the region containing 'scf.if',
+  // place it before the continuation block, and branch to it.
+  auto &thenRegion = ifOp.getThenRegion();
+  if (thenRegion.empty() || thenRegion.back().empty())
+    return failure();
+  auto *thenBlock = &thenRegion.front();
+  Operation *thenTerminator = thenRegion.back().getTerminator();
+  ValueRange thenTerminatorOperands = thenTerminator->getOperands();
+  rewriter.setInsertionPointToEnd(&thenRegion.back());
+  if (isa<scf::YieldOp>(thenTerminator)) {
+    cf::BranchOp::create(rewriter, loc, continueBlock, thenTerminatorOperands);
+    rewriter.eraseOp(thenTerminator);
+  }
+  rewriter.inlineRegionBefore(thenRegion, continueBlock);
+
+  // Move blocks from the "else" region (if present) to the region containing
+  // 'scf.if', place it before the continuation block and branch to it.  It
+  // will be placed after the "then" regions.
+  auto *elseBlock = continueBlock;
+  auto &elseRegion = ifOp.getElseRegion();
+  if (!elseRegion.empty() && !elseRegion.back().empty()) {
+    elseBlock = &elseRegion.front();
+    Operation *elseTerminator = elseRegion.back().getTerminator();
+    ValueRange elseTerminatorOperands = elseTerminator->getOperands();
+    rewriter.setInsertionPointToEnd(&elseRegion.back());
+    if (isa<scf::YieldOp>(elseTerminator)) {
+      cf::BranchOp::create(rewriter, loc, continueBlock,
+                           elseTerminatorOperands);
+      rewriter.eraseOp(elseTerminator);
+    }
+    rewriter.inlineRegionBefore(elseRegion, continueBlock);
+  }
+
+  rewriter.setInsertionPointToEnd(condBlock);
+  cf::CondBranchOp::create(rewriter, loc, ifOp.getCondition(), thenBlock,
+                           /*trueArgs=*/ArrayRef<Value>(), elseBlock,
+                           /*falseArgs=*/ArrayRef<Value>());
+
+  rewriter.replaceOp(ifOp, continueBlock->getArguments());
+  return success();
 }
 
 static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
@@ -411,58 +484,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
 LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
-  auto loc = ifOp.getLoc();
-
-  // Start by splitting the block containing the 'scf.if' into two parts.
-  // The part before will contain the condition, the part after will be the
-  // continuation point.
-  auto *condBlock = rewriter.getInsertionBlock();
-  auto opPosition = rewriter.getInsertionPoint();
-  auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
-  Block *continueBlock;
-  if (ifOp.getNumResults() == 0) {
-    continueBlock = remainingOpsBlock;
-  } else {
-    continueBlock =
-        rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes(),
-                             SmallVector<Location>(ifOp.getNumResults(), loc));
-    cf::BranchOp::create(rewriter, loc, remainingOpsBlock);
-  }
-
-  // Move blocks from the "then" region to the region containing 'scf.if',
-  // place it before the continuation block, and branch to it.
-  auto &thenRegion = ifOp.getThenRegion();
-  auto *thenBlock = &thenRegion.front();
-  Operation *thenTerminator = thenRegion.back().getTerminator();
-  ValueRange thenTerminatorOperands = thenTerminator->getOperands();
-  rewriter.setInsertionPointToEnd(&thenRegion.back());
-  cf::BranchOp::create(rewriter, loc, continueBlock, thenTerminatorOperands);
-  rewriter.eraseOp(thenTerminator);
-  rewriter.inlineRegionBefore(thenRegion, continueBlock);
-
-  // Move blocks from the "else" region (if present) to the region containing
-  // 'scf.if', place it before the continuation block and branch to it.  It
-  // will be placed after the "then" regions.
-  auto *elseBlock = continueBlock;
-  auto &elseRegion = ifOp.getElseRegion();
-  if (!elseRegion.empty()) {
-    elseBlock = &elseRegion.front();
-    Operation *elseTerminator = elseRegion.back().getTerminator();
-    ValueRange elseTerminatorOperands = elseTerminator->getOperands();
-    rewriter.setInsertionPointToEnd(&elseRegion.back());
-    cf::BranchOp::create(rewriter, loc, continueBlock, elseTerminatorOperands);
-    rewriter.eraseOp(elseTerminator);
-    rewriter.inlineRegionBefore(elseRegion, continueBlock);
-  }
-
-  rewriter.setInsertionPointToEnd(condBlock);
-  cf::CondBranchOp::create(rewriter, loc, ifOp.getCondition(), thenBlock,
-                           /*trueArgs=*/ArrayRef<Value>(), elseBlock,
-                           /*falseArgs=*/ArrayRef<Value>());
-
-  // Ok, we're done!
-  rewriter.replaceOp(ifOp, continueBlock->getArguments());
-  return success();
+  return lowerIfOpToCFG(ifOp, rewriter);
 }
 
 LogicalResult
@@ -740,10 +762,87 @@ LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
   return scf::forallToParallelLoop(rewriter, forallOp);
 }
 
+LogicalResult
+LoopOpLowering::matchAndRewrite(LoopOp loopOp, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter) const {
+  {
+    OpBuilder::InsertionGuard guard(rewriter);
+    if (failed(rewriter.legalize(&loopOp.getRegion())))
+      return rewriter.notifyMatchFailure(loopOp,
+                                         "failed to convert nested region");
+  }
+
+  // Handle degenerate case before modifying any IR.
+  Region &bodyRegion = loopOp.getRegion();
+  if (bodyRegion.empty() || bodyRegion.front().empty()) {
+    rewriter.eraseOp(loopOp);
+    return success();
+  }
+
+  NestedBreakingControlFlowInfo nestedBreakingControlFlow =
+      getNestedBreakingControlFlowInfo(loopOp);
+  if (nestedBreakingControlFlow.hasNestedPredecessors)
+    return rewriter.notifyMatchFailure(loopOp,
+                                       "loop op with nested predecessors");
+
+  // Check token users before changing the block signature. Erasures may be
+  // deferred by dialect conversion, so use_empty() is not sufficient here.
+  BlockArgument controlToken = loopOp.getControlToken();
+  if (llvm::any_of(controlToken.getUses(), [&](OpOperand &use) {
+        return use.getOperandNumber() != 0 ||
+               !llvm::is_contained(nestedBreakingControlFlow.predecessors,
+                                   use.getOwner());
+      }))
+    return rewriter.notifyMatchFailure(loopOp,
+                                       "unsupported control token user");
+
+  Location loc = loopOp.getLoc();
+  Block *initBlock = loopOp->getBlock();
+  Block *remainingBlock = rewriter.splitBlock(initBlock, loopOp->getIterator());
+  Block *continueBlock =
+      rewriter.createBlock(remainingBlock, loopOp.getResultTypes(),
+                           SmallVector<Location>(loopOp.getNumResults(), loc));
+  rewriter.mergeBlocks(remainingBlock, continueBlock);
+
+  // Drop the token using a signature conversion so rollback restores both the
+  // block and its arguments. Preserve the loop-carried block arguments.
+  Block *loopBody = &bodyRegion.front();
+  TypeConverter::SignatureConversion signature(loopBody->getNumArguments());
+  for (BlockArgument arg : loopBody->getArguments().drop_front())
+    signature.addInputs(arg.getArgNumber(), arg.getType());
+  loopBody = rewriter.applySignatureConversion(loopBody, signature);
+  if (!loopBody)
+    return failure();
+  rewriter.inlineRegionBefore(bodyRegion, continueBlock);
+
+  for (Operation *predecessor : nestedBreakingControlFlow.predecessors) {
+    // Erasure may be deferred. Keep the new CFG branch last in the block so
+    // enclosing loop conversions do not revisit an erased SCF terminator.
+    rewriter.setInsertionPointAfter(predecessor);
+    if (auto breakOp = dyn_cast<scf::BreakOp>(predecessor))
+      cf::BranchOp::create(rewriter, breakOp.getLoc(), continueBlock,
+                           breakOp.getArgs());
+    else {
+      auto contOp = cast<scf::ContinueOp>(predecessor);
+      cf::BranchOp::create(rewriter, contOp.getLoc(), loopBody,
+                           contOp.getArgs());
+    }
+    rewriter.modifyOpInPlace(predecessor,
+                             [&] { predecessor->setOperands({}); });
+    rewriter.eraseOp(predecessor);
+  }
+
+  rewriter.setInsertionPointToEnd(initBlock);
+  cf::BranchOp::create(rewriter, loc, loopBody, adaptor.getOperands());
+  rewriter.replaceOp(loopOp, continueBlock->getArguments());
+  return success();
+}
+
 void mlir::populateSCFToControlFlowConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ForallLowering, ForLowering, IfLowering, ParallelLowering,
-               WhileLowering, ExecuteRegionLowering, IndexSwitchLowering>(
+  patterns.add<IfLowering>(patterns.getContext(), /*benefit=*/2);
+  patterns.add<ForallLowering, ForLowering, ParallelLowering, WhileLowering,
+               ExecuteRegionLowering, IndexSwitchLowering, LoopOpLowering>(
       patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
@@ -755,7 +854,8 @@ void SCFToControlFlowPass::runOnOperation() {
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
   target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
-                      scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
+                      scf::LoopOp, scf::ParallelOp, scf::WhileOp,
+                      scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   ConversionConfig config;
   config.allowPatternRollback = allowPatternRollback;

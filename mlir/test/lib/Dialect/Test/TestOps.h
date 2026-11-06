@@ -27,6 +27,7 @@
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/RegionExitInterfaces.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
