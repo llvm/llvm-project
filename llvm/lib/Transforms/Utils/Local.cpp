@@ -3199,7 +3199,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
-void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
+void llvm::patchReplacementInstruction(Instruction *I, Value *Repl,
+                                       bool DoesKMove) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)
     return;
@@ -3239,7 +3240,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  combineMetadataForCSE(ReplInst, I, false);
+  combineMetadataForCSE(ReplInst, I, DoesKMove);
 }
 
 template <typename ShouldReplaceFn>
