@@ -61,7 +61,8 @@ noperspective centroid Inner vertex() : RESULT {
 // SPIRV-DAG: @C0 = {{.*}} !spirv.Decorations ![[C0:[0-9]+]]
 // SPIRV-DAG: @SV_Position = {{.*}} !spirv.Decorations ![[POS:[0-9]+]]
 // SPIRV-DAG: @RESULT0 = {{.*}} !spirv.Decorations ![[RESULT0:[0-9]+]]
-// SPIRV-DAG: @RESULT1 = {{.*}} !spirv.Decorations ![[RESULT1:[0-9]+]]
+// RESULT1 only has a location, which is the same as for A1.
+// SPIRV-DAG: @RESULT1 = {{.*}} !spirv.Decorations ![[A1]]
 // SPIRV-DAG: ![[A0]] = !{!{{[0-9]+}}, ![[FLAT:[0-9]+]]}
 // SPIRV-DAG: ![[A1]] = !{!{{[0-9]+}}}
 // SPIRV-DAG: ![[A2]] = !{!{{[0-9]+}}, ![[NP:[0-9]+]], ![[SAMPLE:[0-9]+]]}
@@ -70,7 +71,6 @@ noperspective centroid Inner vertex() : RESULT {
 // SPIRV-DAG: ![[C0]] = !{!{{[0-9]+}}}
 // SPIRV-DAG: ![[POS]] = !{![[BUILTIN:[0-9]+]], ![[SAMPLE]]}
 // SPIRV-DAG: ![[RESULT0]] = !{!{{[0-9]+}}, ![[NP]], ![[CENTROID]]}
-// SPIRV-DAG: ![[RESULT1]] = !{!{{[0-9]+}}}
 // SPIRV-DAG: ![[FLAT]] = !{i32 14}
 // SPIRV-DAG: ![[NP]] = !{i32 13}
 // SPIRV-DAG: ![[SAMPLE]] = !{i32 17}
