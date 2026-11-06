@@ -131,7 +131,7 @@ jobs:
                 // The largest PR number is the one we care about.  The only way
                 // to have more than one associated pull requests is if all the
                 // old pull requests are in the closed state.
-                if (pr.baseRepository.owner.login = context.repo.owner && pr.number > pr_number) {
+                if (pr.baseRepository.owner.login === context.repo.owner && pr.number > pr_number) {
                   pr_number = pr.number;
                 }
               });
@@ -154,6 +154,15 @@ jobs:
                   console.log(old_comment);
                   if (old_comment.data.user.login != "github-actions[bot]") {
                     console.log("Invalid comment id: " + comment.id);
+                    return;
+                  }
+                  // Security check: Ensure that this comment belongs to the
+                  // pull request we are commenting on.  updateComment() is
+                  // keyed only by comment_id, so without this a malicious
+                  // input could overwrite a github-actions[bot] comment on an
+                  // unrelated pull request.
+                  if (!old_comment.data.issue_url.endsWith("/issues/" + pr_number)) {
+                    console.log("Comment " + comment.id + " does not belong to PR " + pr_number);
                     return;
                   }
                   github.rest.issues.updateComment({
