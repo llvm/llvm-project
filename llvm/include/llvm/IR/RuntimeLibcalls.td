@@ -253,9 +253,32 @@ foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
       : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
 }
 
-foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
-  def SDIVREM_#IntTy : RuntimeLibcall;
-  def UDIVREM_#IntTy : RuntimeLibcall;
+foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
+                 TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
+                 TypeSuffix<"I128", Int128>] in {
+  def SDIVREM_#IntTy.Suffix
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+}
+
+foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
+                 TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
+                 TypeSuffix<"I128", UInt128>] in {
+  def UDIVREM_#IntTy.Suffix
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+}
+
+foreach IntTy = [Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64] in {
+  def IntTy#Pair : StructFuncArgType<[IntTy, IntTy]> {
+    let InReg = true;
+  }
+}
+
+// Returns { quotient, remainder } instead of storing the remainder.
+class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
+    : RuntimeLibcallImpl<P, Name> {
+  defvar IntTy = P.ReturnType;
+  let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
+  let ArgumentTypes = [IntTy, IntTy];
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
@@ -426,9 +449,13 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
   defvar IntVT = VT.IntType;
+  def S#Pair : StructFuncArgType<[VT, VT]>;
+  defvar VTPair = !cast<FuncArgType>(S#"Pair");
   defm ACOS : VectorMathLibcall<S, VT, [VT]>;
   defm ACOSH : VectorMathLibcall<S, VT, [VT]>;
   defm ASIN : VectorMathLibcall<S, VT, [VT]>;
@@ -468,16 +495,21 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOG1P : VectorMathLibcall<S, VT, [VT]>;
   defm LOG2 : VectorMathLibcall<S, VT, [VT]>;
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
-  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr]>;
-  defm MODF_STRET : VectorMathLibcall<S>;
+  defm MODF : VectorMathLibcall<S, VT, [VT, Ptr], ArgMemWriteOnly,
+                                 [[], OutPtrAttrs], [NoneType, VT]>;
+  defm MODF_STRET : VectorMathLibcall<S, VTPair, [VT]>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW_FINITE : VectorMathLibcall<S, VT, [VT, VT]>;
   defm REMAINDER : VectorMathLibcall<S, VT, [VT, VT]>;
-  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
-  defm SINCOS_STRET : VectorMathLibcall<S>;
-  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
-  defm SINCOSPI_STRET : VectorMathLibcall<S>;
+  defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                   [[], OutPtrAttrs, OutPtrAttrs],
+                                   [NoneType, VT, VT]>;
+  defm SINCOS_STRET : VectorMathLibcall<S, VTPair, [VT]>;
+  defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
+                                     [[], OutPtrAttrs, OutPtrAttrs],
+                                     [NoneType, VT, VT]>;
+  defm SINCOSPI_STRET : VectorMathLibcall<S, VTPair, [VT]>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
   defm SINPI : VectorMathLibcall<S, VT, [VT]>;
@@ -659,7 +691,9 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
-def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []>;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
+  let FnAttrs = [NoUnwind];
+}
 def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
 
 // Note: there are two sets of atomics libcalls; see
@@ -795,8 +829,8 @@ def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
 
 // GPU profiling
-def PROFILE_INSTRUMENT_GPU : RuntimeLibcall;
-def PROFILE_SAMPLING_GPU : RuntimeLibcall;
+def PROFILE_INSTRUMENT_GPU : RuntimeLibcall<Void, [Ptr, Ptr, UInt64]>;
+def PROFILE_SAMPLING_GPU : RuntimeLibcall<Int, [UInt32]>;
 
 // Clear cache
 def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
@@ -831,14 +865,15 @@ def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 
 // AArch64 SME ABI calls
-def SMEABI_SME_STATE : RuntimeLibcall;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall;
-def SMEABI_ZA_DISABLE : RuntimeLibcall;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall;
-def SMEABI_SME_SAVE : RuntimeLibcall;
-def SMEABI_SME_RESTORE : RuntimeLibcall;
+def SMEState : StructFuncArgType<[UInt64, UInt64]>;
+def SMEABI_SME_STATE : RuntimeLibcall<SMEState, []>;
+def SMEABI_TPIDR2_SAVE : RuntimeLibcall<Void, []>;
+def SMEABI_ZA_DISABLE : RuntimeLibcall<Void, []>;
+def SMEABI_TPIDR2_RESTORE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_GET_CURRENT_VG : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_STATE_SIZE : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
@@ -1057,10 +1092,12 @@ def SETBUF : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def SETITIMER : RuntimeLibcall<Int, [Int, Ptr, Ptr]>;
 def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]>;
 def SIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def SIZE_RETURNING_NEW : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<NoneType, []>;
+def SizedPtr : StructFuncArgType<[Ptr, SizeT]>;
+def SIZE_RETURNING_NEW : RuntimeLibcall<SizedPtr, [SizeT]>;
+def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<SizedPtr, [SizeT, AlignValT]>;
+def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD
+    : RuntimeLibcall<SizedPtr, [SizeT, AlignValT, UInt8]>;
+def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<SizedPtr, [SizeT, UInt8]>;
 def SMALL_FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def SMALL_PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def SMALL_SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
@@ -2700,12 +2737,12 @@ def __aeabi_lasr : RuntimeLibcallImpl<SRA_I64>; // CallingConv::ARM_AAPCS
 // Integer division functions
 // RTABI chapter 4.3.1
 def __aeabi_idiv : RuntimeLibcallImpl<SDIV_I32>; // CallingConv::ARM_AAPCS
-def __aeabi_ldivmod : RuntimeLibcallImpl<SDIVREM_I64>; //  CallingConv::ARM_AAPCS
+def __aeabi_ldivmod : DivRemPairImpl<SDIVREM_I64>; //  CallingConv::ARM_AAPCS
 def __aeabi_uidiv : RuntimeLibcallImpl<UDIV_I32>; // CallingConv::ARM_AAPCS
-def __aeabi_uldivmod : RuntimeLibcallImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
+def __aeabi_uldivmod : DivRemPairImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
 
-def __aeabi_idivmod : RuntimeLibcallImpl<SDIVREM_I32>; //  CallingConv::ARM_AAPCS
-def __aeabi_uidivmod : RuntimeLibcallImpl<UDIVREM_I32>; //  CallingConv::ARM_AAPCS
+def __aeabi_idivmod : DivRemPairImpl<SDIVREM_I32>; //  CallingConv::ARM_AAPCS
+def __aeabi_uidivmod : DivRemPairImpl<UDIVREM_I32>; //  CallingConv::ARM_AAPCS
 
 // EABI dependent RTLIB
 
@@ -2739,10 +2776,10 @@ def __u64tos : RuntimeLibcallImpl<UINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_V
 def __u64tod : RuntimeLibcallImpl<UINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
 }
 
-def __rt_sdiv : RuntimeLibcallImpl<SDIVREM_I32>; // CallingConv::ARM_AAPCS
-def __rt_sdiv64 : RuntimeLibcallImpl<SDIVREM_I64>; // CallingConv::ARM_AAPCS
-def __rt_udiv : RuntimeLibcallImpl<UDIVREM_I32>; // CallingConv::ARM_AAPCS
-def __rt_udiv64 : RuntimeLibcallImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
+def __rt_sdiv : DivRemPairImpl<SDIVREM_I32>; // CallingConv::ARM_AAPCS
+def __rt_sdiv64 : DivRemPairImpl<SDIVREM_I64>; // CallingConv::ARM_AAPCS
+def __rt_udiv : DivRemPairImpl<UDIVREM_I32>; // CallingConv::ARM_AAPCS
+def __rt_udiv64 : DivRemPairImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
 
 // Use divmod compiler-rt calls for iOS 5.0 and later.
 //  isTargetMachO() &&
@@ -2997,13 +3034,13 @@ def : LibraryExclusion<"libc", isARMOrThumb,
 //===----------------------------------------------------------------------===//
 
 // Several of the runtime library functions use a special calling conv
-def __divmodqi4 : RuntimeLibcallImpl<SDIVREM_I8>;
-def __divmodhi4 : RuntimeLibcallImpl<SDIVREM_I16>;
-def __udivmodqi4 : RuntimeLibcallImpl<UDIVREM_I8>;
-def __udivmodhi4 : RuntimeLibcallImpl<UDIVREM_I16>;
+def __divmodqi4 : DivRemPairImpl<SDIVREM_I8>;
+def __divmodhi4 : DivRemPairImpl<SDIVREM_I16>;
+def __udivmodqi4 : DivRemPairImpl<UDIVREM_I8>;
+def __udivmodhi4 : DivRemPairImpl<UDIVREM_I16>;
 
-//def __divmodsi4 : RuntimeLibcallImpl<SDIVREM_I32>;
-//def __udivmodsi4 : RuntimeLibcallImpl<UDIVREM_I32>;
+def avr___divmodsi4 : DivRemPairImpl<SDIVREM_I32, "__divmodsi4">;
+def avr___udivmodsi4 : DivRemPairImpl<UDIVREM_I32, "__udivmodsi4">;
 
 // Standard sinf/cosf name replaced with "sin" and "cos". Define a
 // separate Impl so we can set a different type signature.
@@ -3016,7 +3053,7 @@ def AVRCompilerRt : LibcallLibrary<"compiler-rt", (add
   LibcallsWithCC<(add __divmodqi4, __divmodhi4, __udivmodqi4,
                      __udivmodhi4),
                  AVR_BUILTIN>,
-  __divmodsi4, __udivmodsi4,
+  avr___divmodsi4, avr___udivmodsi4,
   avr_sin, avr_cos), isAVR>;
 
 // AVR uses the divmod functions instead of these.
@@ -4810,6 +4847,11 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 // AMD vector math library (AMDLIBM) functions
 //===----------------------------------------------------------------------===//
 
+class VectorAlignedOutPtrsImpl<RuntimeLibcall P, string Name = NAME>
+    : RuntimeLibcallImpl<P, Name> {
+  let AlignPointeesToElementType = false;
+}
+
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_asin : RuntimeLibcallImpl<ASIN_V2F64>;
@@ -4828,7 +4870,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
-  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def amd_vrd2_sincos : VectorAlignedOutPtrsImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
   def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
@@ -4845,7 +4887,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
   def amd_vrd4_pow : RuntimeLibcallImpl<POW_V4F64>;
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
-  def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
+  def amd_vrd4_sincos : VectorAlignedOutPtrsImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
   def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
   def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
@@ -4862,7 +4904,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
   def amd_vrd8_pow : RuntimeLibcallImpl<POW_V8F64>;
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
-  def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
+  def amd_vrd8_sincos : VectorAlignedOutPtrsImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
   def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
   def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
@@ -4890,7 +4932,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs16_log2f : RuntimeLibcallImpl<LOG2_V16F32>;
   def amd_vrs16_logf : RuntimeLibcallImpl<LOG_V16F32>;
   def amd_vrs16_powf : RuntimeLibcallImpl<POW_V16F32>;
-  def amd_vrs16_sincosf : RuntimeLibcallImpl<SINCOS_V16F32>;
+  def amd_vrs16_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V16F32>;
   def amd_vrs16_sinf : RuntimeLibcallImpl<SIN_V16F32>;
   def amd_vrs16_tanf : RuntimeLibcallImpl<TAN_V16F32>;
   def amd_vrs16_tanhf : RuntimeLibcallImpl<TANH_V16F32>;
@@ -4910,7 +4952,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs4_log2f : RuntimeLibcallImpl<LOG2_V4F32>;
   def amd_vrs4_logf : RuntimeLibcallImpl<LOG_V4F32>;
   def amd_vrs4_powf : RuntimeLibcallImpl<POW_V4F32>;
-  def amd_vrs4_sincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
+  def amd_vrs4_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V4F32>;
   def amd_vrs4_sinf : RuntimeLibcallImpl<SIN_V4F32>;
   def amd_vrs4_tanf : RuntimeLibcallImpl<TAN_V4F32>;
   def amd_vrs4_tanhf : RuntimeLibcallImpl<TANH_V4F32>;
@@ -4928,7 +4970,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_log2f : RuntimeLibcallImpl<LOG2_V8F32>;
   def amd_vrs8_logf : RuntimeLibcallImpl<LOG_V8F32>;
   def amd_vrs8_powf : RuntimeLibcallImpl<POW_V8F32>;
-  def amd_vrs8_sincosf : RuntimeLibcallImpl<SINCOS_V8F32>;
+  def amd_vrs8_sincosf : VectorAlignedOutPtrsImpl<SINCOS_V8F32>;
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;

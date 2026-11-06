@@ -98,6 +98,23 @@ add_header_library(
 )
 
 add_header_library(
+  acoshbf16
+  HDRS
+    acoshbf16.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acoshf16
   HDRS
     acoshf16.h
@@ -4418,11 +4435,13 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.frac128
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.sign
     libc.src.__support.uint128
 )
 
@@ -4654,24 +4673,32 @@ add_header_library(
 )
 
 add_header_library(
+  exp10_double_eval
+  HDRS
+    exp10_double_eval.h
+  DEPENDS
+    .exp_double_utils
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   exp10
   HDRS
     exp10.h
   DEPENDS
-    .exp_constants
-    .exp_utils
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.optional
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
-    libc.src.__support.macros.optimization
+    .exp10_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_header_library(
