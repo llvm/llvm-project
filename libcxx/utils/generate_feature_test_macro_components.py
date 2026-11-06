@@ -462,7 +462,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constexpr_memory",
             "values": {
-                "c++20": 201811, 
+                "c++20": 201811,
                 "c++23": 202202,
                 # "c++26": 202506,  # P3037R6 constexpr std::shared_ptr and friends
             },
@@ -706,7 +706,7 @@ feature_test_macros = [
             "values": {
                 "c++26": 202403,  # P2845R8 Formatting of std::filesystem::path
                 # "c++26": 202506,  # P2319R5 Prevent path presentation problems
-            },  
+            },
             "headers": ["filesystem"],
             "unimplemented": True,
         },
@@ -1529,7 +1529,7 @@ feature_test_macros = [
                 # "c++26": 202603,  # P3795R2 Miscellaneous Reflection Cleanup
             },
             "headers": ["meta"],
-            "unimplemented": True
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",
@@ -1575,7 +1575,7 @@ feature_test_macros = [
             "values": {
                 "c++26": 202406,  # P2300R10 std::execution
                 # "c++26": 202506,  # P3570R2 optional variants in sender/receiver
-            }, 
+            },
             "headers": ["execution"],
             "unimplemented": True,
         },
@@ -1615,7 +1615,7 @@ feature_test_macros = [
                 # "c++26": 202506,  # P2876R3: Proposal to extend std::simd with more constructors and accessors
                 #                   # P3480R6: std::simd is a range
                 # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
-            },  
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1639,7 +1639,7 @@ feature_test_macros = [
             "values": {
                 "c++26": 202506,  # P3480R6 std::simd is a range
                 # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
-            },  
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
