@@ -1277,7 +1277,7 @@
 ; OPENBSD-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
 ; OPENBSD-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; OPENBSD-NEXT: declare void @__stack_smash_handler(...)
+; OPENBSD-NEXT: declare void @__stack_smash_handler(ptr, i32)
 ; OPENBSD-NEXT: declare double @__subdf3(double, double)
 ; OPENBSD-NEXT: declare float @__subsf3(float, float)
 ; OPENBSD-NEXT: declare fp128 @__subtf3(fp128, fp128)

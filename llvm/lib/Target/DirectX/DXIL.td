@@ -1629,15 +1629,6 @@ def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
   let attributes = [Attributes<DXIL1_5, []>];
 }
 
-def WaveMultiPrefixBitCount : DXILOp<167, waveMultiPrefixBitCount> {
-  let Doc = "returns the prefix count for lanes selected by a mask";
-  let intrinsics = [IntrinSelect<int_dx_wave_multi_prefix_bit_count>];
-  let arguments = [Int1Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_5, [all_stages]>];
-  let attributes = [Attributes<DXIL1_5, []>];
-}
-
 def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
