@@ -128,9 +128,7 @@ public:
   }
 
   /// Return the libcall provided by \p Impl
-  static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
-    return ImplToLibcall[Impl];
-  }
+  LLVM_ABI RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) const;
 
   /// Return the runtime libcall that the floating-point math intrinsic \p ID
   /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
@@ -187,9 +185,22 @@ public:
 
   /// Get size of a C-level int or unsigned int, in bits.
   // FIXME Could move into Triple class.
-  unsigned getIntSize(const Triple &TT) const {
+  static unsigned getIntSize(const Triple &TT) {
     return TT.isArch16Bit() ? 16 : 32;
   }
+
+  /// Determine the extension attributes needed for i32 parameters and returns
+  /// corresponding to C-level int or unsigned int on \p T.
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
+
+  /// Determine whether bool parameters and returns need zeroext on \p T.
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.
@@ -216,7 +227,7 @@ public:
   /// Returns true if the function has a vector mask argument, which is assumed
   /// to be the last argument.
   static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
-    return getUnmaskedVectorLibcall(getLibcallFromImpl(Impl)) !=
+    return getUnmaskedVectorLibcall(ImplToLibcall[Impl]) !=
            RTLIB::UNKNOWN_LIBCALL;
   }
 
@@ -249,6 +260,10 @@ private:
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+
+  RTLIB::Libcall selectLongDoubleLibcall(RTLIB::Libcall F80,
+                                         RTLIB::Libcall F128,
+                                         RTLIB::Libcall PPCF128) const;
 
   /// Utility function for tablegenerated lookup function. Return a range of
   /// enum values that apply for the function name at \p NameOffsetEntry with

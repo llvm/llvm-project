@@ -12,9 +12,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -80,7 +78,8 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
   // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
@@ -90,12 +89,12 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
-  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  auto *Expanded = new VPExpandSCEVRecipe(Expr, ExpandInIR);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
     ++Iter;
-  EntryVPBB->insert(Expanded, Iter);
+  Expanded->insertBefore(Iter);
   return Expanded;
 }
 
@@ -433,13 +432,13 @@ unsigned vputils::getOpcode(const VPValue *V) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
             VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
-          [](auto *I) {
-            // For recipes that do not directly map to LLVM IR instructions,
-            // assign opcodes after the last VPInstruction opcode (which is also
-            // after the last IR Instruction opcode), based on the VPRecipeID.
-            return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
-          })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe,
+            VPDerivedIVRecipe, VPExpandSCEVRecipe>([](auto *I) {
+        // For recipes that do not directly map to LLVM IR instructions,
+        // assign opcodes after the last VPInstruction opcode (which is also
+        // after the last IR Instruction opcode), based on the VPRecipeID.
+        return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
+      })
       .Default([](auto *) { return 0; });
 }
 
@@ -520,7 +519,9 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+static bool isUniformAcrossVFsAndUFsImpl(
+    const VPValue *V,
+    function_ref<void(VPUser::const_operand_range)> AddToWorklist) {
   // Live-ins, symbolic and canonical-IV region values are uniform.
   if (auto *RV = dyn_cast<VPRegionValue>(V))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -536,42 +537,66 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
         match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
       return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    AddToWorklist(R->operands());
+    return true;
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case([](const VPDerivedIVRecipe *R) { return true; })
-      .Case([](const VPReplicateRecipe *R) {
+      .Case([](const VPDerivedIVRecipe *) { return true; })
+      .Case([&](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform. Each alloca creates a distinct allocation, so allocas are
         // never uniform.
-        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
-               (!R->mayHaveSideEffects() ||
-                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+        if (!R->isSingleScalar() || R->getOpcode() == Instruction::Alloca ||
+            (R->mayHaveSideEffects() &&
+             !isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())))
+          return false;
+        AddToWorklist(R->operands());
+        return true;
       })
-      .Case([](const VPWidenRecipe *R) {
-        return preservesUniformity(R->getOpcode()) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+      .Case([&](const VPWidenRecipe *R) {
+        if (!preservesUniformity(R->getOpcode()))
+          return false;
+        AddToWorklist(R->operands());
+        return true;
       })
       .Case([](const VPPhi *) {
         // Bail out on VPPhi, as we can end up in infinite cycles.
         return false;
       })
-      .Case([](const VPInstruction *VPI) {
-        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-                preservesUniformity(VPI->getOpcode())) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
+      .Case([&](const VPInstruction *VPI) {
+        if (!VPI->isSingleScalar() && !VPI->isVectorToScalar() &&
+            !preservesUniformity(VPI->getOpcode()))
+          return false;
+        AddToWorklist(VPI->operands());
+        return true;
       })
-      .Case([](const VPWidenCastRecipe *R) {
+      .Case([&](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
+        AddToWorklist(R->operands());
+        return true;
       })
-      .Default([](const VPRecipeBase *) { // A value is considered non-uniform
-                                          // unless proven otherwise.
+      .Default([](const VPRecipeBase *) {
+        // A value is considered non-uniform unless proven otherwise.
         return false;
       });
+}
+
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(V);
+
+  auto AddToWorklist = [&Worklist](VPUser::const_operand_range Operands) {
+    Worklist.insert_range(Operands);
+  };
+
+  // All dependency checks are conjunctive, so each value needs checking once.
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isUniformAcrossVFsAndUFsImpl(Worklist[I], AddToWorklist))
+      return false;
+  }
+  return true;
 }
 
 bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
@@ -696,9 +721,8 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 VPValue *
 vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                           VPlan &Plan, VPBuilder &Builder) {
-  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
-  VPValue *StepV = PtrIV->getOperand(1);
+  VPValue *StepV = PtrIV->getStepValue();
+  VPIRValue *StartV = Plan.getZero(StepV->getScalarType());
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
       StartV->getScalarType(), StartV, StepV, PtrIV->getDebugLoc(), Builder);
@@ -849,16 +873,15 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
   if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
+          findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  auto *SelR = findSingleUser<VPSingleDefRecipe>(
+      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
+  return findSingleUser<VPInstruction::ComputeReductionResult>(SelR);
 }
 
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
@@ -987,6 +1010,11 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
 VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
+
+  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+      SE.isGuaranteedNotToCauseUB(S))
+    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
+                                                  /*ExpandInIR=*/true);
 
   switch (S->getSCEVType()) {
   case scConstant:
@@ -1539,7 +1567,7 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
 
   // Multiple predecessors, create a join.
   Type *Ty = Defs.begin()->second->getScalarType();
-  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+  VPPhi *Phi = VPBuilder(VPBB->getFirstNonPhi())
                    .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
   Defs[VPBB] = Phi;
   for (auto *Pred : VPBB->predecessors())

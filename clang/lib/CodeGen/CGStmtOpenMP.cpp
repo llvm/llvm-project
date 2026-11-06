@@ -2398,7 +2398,8 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
+  // TODO: Select the variant at runtime.
+  EmitStmt(S.variants().front());
 }
 
 namespace {
@@ -3443,35 +3444,36 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   emitOMPSimdDirective(S, *this, CGM);
 }
 
+/// Emit a loop-nest transformation followed by its loop variable finalization,
+/// which restores the loop-exit values as required by OpenMP 6.0.
+static void emitLoopNestTransformation(
+    CodeGenFunction &CGF,
+    const OMPCanonicalLoopNestTransformationDirective &S) {
+  OMPTransformDirectiveScopeRAII Scope(CGF, &S);
+  CGF.EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    CGF.EmitStmt(Finals);
+}
+
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII TileScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
-  // Emit the de-sugared statement (the split loops).
-  OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
@@ -3484,7 +3486,10 @@ void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
+
   EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
@@ -9103,6 +9108,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     EmitOMPScanDirective(*SD);
     return;
   }
+  // A metadirective has no associated statement; emit its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(&D)) {
+    EmitOMPMetaDirective(*MD);
+    return;
+  }
   if (!D.hasAssociatedStmt() || !D.getAssociatedStmt())
     return;
   auto &&CodeGen = [&D](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -9166,8 +9176,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       D.getDirectiveKind() == OMPD_section ||
       D.getDirectiveKind() == OMPD_master ||
       D.getDirectiveKind() == OMPD_masked ||
-      D.getDirectiveKind() == OMPD_unroll ||
-      D.getDirectiveKind() == OMPD_assume) {
+      D.getDirectiveKind() == OMPD_assume ||
+      isOpenMPLoopTransformationDirective(D.getDirectiveKind())) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =
