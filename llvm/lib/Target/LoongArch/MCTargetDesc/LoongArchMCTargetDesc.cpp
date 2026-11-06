@@ -292,9 +292,11 @@ public:
     for (uint64_t EntryStart = FirstEntryAt,
                   EntryStartEnd = PltContents.size() - EntrySize;
          EntryStart <= EntryStartEnd; EntryStart += EntrySize) {
-      const uint32_t Pcaddu12iInsn =
+      // mold uses pcalau12i, while ld and lld both use pcaddu12i.
+      const uint32_t PcaddInsn =
           support::endian::read32le(PltContents.data() + EntryStart);
-      if ((Pcaddu12iInsn & 0xfe000000) != 0x1c000000)
+      if (((PcaddInsn & 0xfe000000) != 0x1a000000) &&
+          ((PcaddInsn & 0xfe000000) != 0x1c000000))
         continue;
 
       const uint32_t LoadInsn =
@@ -302,11 +304,14 @@ public:
       if ((LoadInsn & 0xffc00000) != LoadInsnOpCode)
         continue;
 
-      if (((LoadInsn >> 5) & 0x1f) != (Pcaddu12iInsn & 0x1f))
+      if (((LoadInsn >> 5) & 0x1f) != (PcaddInsn & 0x1f))
         continue;
-      uint64_t GotPltSlotVA = PltSectionVA + EntryStart +
-                              SignExtend64<32>(Pcaddu12iInsn >> 5 << 12) +
-                              SignExtend64<12>(LoadInsn >> 10);
+      uint64_t tmp =
+          PltSectionVA + EntryStart + SignExtend64<32>(PcaddInsn >> 5 << 12);
+      uint64_t GotPltSlotVA =
+          ((PcaddInsn & 0xfe000000) == 0x1c000000)
+              ? tmp + SignExtend64<12>(LoadInsn >> 10)
+              : (tmp >> 12 << 12) + SignExtend64<12>(LoadInsn >> 10);
       if (STI.getTargetTriple().isLoongArch32())
         GotPltSlotVA = uint32_t(GotPltSlotVA);
       Results.emplace_back(PltSectionVA + EntryStart, GotPltSlotVA);
