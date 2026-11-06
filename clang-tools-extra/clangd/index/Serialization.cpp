@@ -518,15 +518,20 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
   }
   if (Chunks.count("refs")) {
     Reader RefsReader(Chunks.lookup("refs"));
-    RefSlab::Builder Refs;
+    RefSlab::BundleBuilder Refs;
     while (!RefsReader.eof()) {
       auto RefsBundle = readRefs(RefsReader, Strings->Strings);
-      for (const auto &Ref : RefsBundle.second) // FIXME: bulk insert?
-        Refs.insert(RefsBundle.first, Ref);
+      // Check before using the refs: a bad string index leaves a null URI.
+      if (RefsReader.err())
+        return error("malformed or truncated refs");
+      Refs.insert(RefsBundle.first, RefsBundle.second);
     }
-    if (RefsReader.err())
-      return error("malformed or truncated refs");
     Result.Refs = std::move(Refs).build();
+    // Refs are written from a RefSlab, which has one bundle per symbol.
+    if (llvm::adjacent_find(*Result.Refs, [](const auto &L, const auto &R) {
+          return L.first == R.first;
+        }) != Result.Refs->end())
+      return error("malformed refs: repeated symbol");
   }
   if (Chunks.count("rela")) {
     Reader RelationsReader(Chunks.lookup("rela"));

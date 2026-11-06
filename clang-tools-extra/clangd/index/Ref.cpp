@@ -39,6 +39,29 @@ void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
   Entries.insert(std::move(E));
 }
 
+void RefSlab::BundleBuilder::insert(const SymbolID &ID,
+                                    llvm::ArrayRef<Ref> SymbolRefs) {
+  if (SymbolRefs.empty())
+    return;
+  Ref *Copy = Arena.Allocate<Ref>(SymbolRefs.size());
+  for (size_t I = 0; I < SymbolRefs.size(); ++I) {
+    Ref R = SymbolRefs[I];
+    R.Location.FileURI = UniqueStrings.save(R.Location.FileURI).data();
+    new (&Copy[I]) Ref(R);
+  }
+  llvm::MutableArrayRef<Ref> Stored(Copy, SymbolRefs.size());
+  if (!llvm::is_sorted(Stored))
+    llvm::sort(Stored); // By file, affects xrefs display order.
+  Refs.emplace_back(ID, Stored);
+  NumRefs += SymbolRefs.size();
+}
+
+RefSlab RefSlab::BundleBuilder::build() && {
+  if (!llvm::is_sorted(Refs, llvm::less_first()))
+    llvm::sort(Refs, llvm::less_first());
+  return RefSlab(std::move(Refs), std::move(Arena), NumRefs);
+}
+
 RefSlab RefSlab::Builder::build() && {
   std::vector<std::pair<SymbolID, llvm::ArrayRef<Ref>>> Result;
   // We'll reuse the arena, as it only has unique strings and we need them all.

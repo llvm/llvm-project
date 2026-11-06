@@ -514,6 +514,71 @@ TEST(MergeIndexTest, Refs) {
                                       fileURI("unittest:///test2.cc"))))));
 }
 
+TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
+  std::string FileX = "file:///x.cc", FileY = "file:///y.cc";
+  auto MakeRef = [](const std::string &File, uint32_t Line) {
+    Ref R;
+    R.Location.FileURI = File.c_str();
+    R.Location.Start.setLine(Line);
+    R.Location.End.setLine(Line);
+    R.Kind = RefKind::Reference;
+    return R;
+  };
+  std::vector<std::pair<SymbolID, std::vector<Ref>>> Bundles = {
+      {SymbolID("a"), {MakeRef(FileX, 3)}},
+      {SymbolID("b"), {MakeRef(FileY, 2), MakeRef(FileX, 1)}},
+      {SymbolID("c"), {MakeRef(FileY, 4), MakeRef(FileX, 5)}},
+  };
+  // The order of a file written on another host may differ from ours: give
+  // BundleBuilder bundles in decreasing order and refs out of order.
+  llvm::sort(Bundles,
+             [](const auto &L, const auto &R) { return R.first < L.first; });
+  for (auto &[ID, Refs] : Bundles)
+    llvm::sort(Refs, [](const Ref &L, const Ref &R) { return R < L; });
+
+  RefSlab::Builder ExpectedBuilder;
+  RefSlab::BundleBuilder ActualBuilder;
+  for (const auto &[ID, Refs] : Bundles) {
+    for (const Ref &R : Refs)
+      ExpectedBuilder.insert(ID, R);
+    ActualBuilder.insert(ID, Refs);
+  }
+  RefSlab Expected = std::move(ExpectedBuilder).build();
+  RefSlab Actual = std::move(ActualBuilder).build();
+  // Strings must be owned by the slabs.
+  std::fill(FileX.begin(), FileX.end(), '?');
+  std::fill(FileY.begin(), FileY.end(), '?');
+
+  EXPECT_EQ(Expected.numRefs(), Actual.numRefs());
+  ASSERT_EQ(Expected.size(), Actual.size());
+  for (size_t I = 0; I < Expected.size(); ++I) {
+    auto ExpectedIt = Expected.begin() + I, ActualIt = Actual.begin() + I;
+    EXPECT_EQ(ExpectedIt->first, ActualIt->first);
+    EXPECT_EQ(ExpectedIt->second, ActualIt->second);
+  }
+}
+
+TEST(RefSlabTest, BundleBuilderCopiesReusedBuffers) {
+  SymbolID First("a"), Second("b");
+  // The same buffer holds a different file URI for each insert.
+  char Buffer[] = "file:///x.cc";
+  Ref R;
+  R.Location.FileURI = Buffer;
+  RefSlab::BundleBuilder Builder;
+  Builder.insert(First, {R});
+  Buffer[8] = 'y';
+  Builder.insert(Second, {R});
+  Buffer[8] = '?';
+  RefSlab Slab = std::move(Builder).build();
+  llvm::StringMap<SymbolID> FileToSymbol;
+  for (const auto &[ID, Refs] : Slab)
+    for (const Ref &Ref : Refs)
+      FileToSymbol.try_emplace(Ref.Location.FileURI, ID);
+  EXPECT_EQ(FileToSymbol.size(), 2u);
+  EXPECT_EQ(FileToSymbol.lookup("file:///x.cc"), First);
+  EXPECT_EQ(FileToSymbol.lookup("file:///y.cc"), Second);
+}
+
 TEST(MergeIndexTest, IndexedFiles) {
   SymbolSlab DynSymbols;
   RefSlab DynRefs;
