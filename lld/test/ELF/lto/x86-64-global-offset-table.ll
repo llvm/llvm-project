@@ -4,7 +4,8 @@
 ;; Test that there is no spurious "undefined symbol" error.
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: opt -module-summary b.ll -o b.bc
+; RUN: cat b.ll medium.ll | opt -module-summary - -o b.bc
+; RUN: cat b.ll large.ll | llvm-as - -o b.large.bc
 
 ;; Test Thin LTO.
 ; RUN: cat a.ll medium.ll | opt -module-summary - -o medium.bc
@@ -13,7 +14,7 @@
 
 ;; Test regular LTO.
 ; RUN: cat a.ll large.ll | llvm-as - -o large.bc
-; RUN: ld.lld -pie large.bc b.bc -o large
+; RUN: ld.lld -pie large.bc b.large.bc -o large
 ; RUN: llvm-objdump -dt large | FileCheck %s
 
 ;; Explicit reference of _GLOBAL_OFFSET_TABLE_ is fine.
@@ -23,6 +24,7 @@
 
 ; TRACE:      ref.bc: reference to _GLOBAL_OFFSET_TABLE_
 ; TRACE-NEXT: ref.bc: reference to _GLOBAL_OFFSET_TABLE_
+; TRACE-NEXT: b.bc: reference to _GLOBAL_OFFSET_TABLE_
 ; TRACE-NEXT: <internal>: definition of _GLOBAL_OFFSET_TABLE_
 ; TRACE-NEXT: ref.lto.ref.o: reference to _GLOBAL_OFFSET_TABLE_
 
@@ -69,3 +71,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 @i = global i32 0
+
+!llvm.module.flags = !{!0, !1, !3}
+
+!0 = !{i32 8, !"PIC Level", i32 2}
+!1 = !{i32 7, !"PIE Level", i32 2}

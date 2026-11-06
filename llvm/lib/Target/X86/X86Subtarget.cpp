@@ -87,7 +87,7 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
         return X86II::MO_GOTOFF;
       // Large GlobalValues use GOTOFF, otherwise use RIP-rel access.
       if (GV)
-        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
+        return GV->isLargeGlobalValue() ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
       // GV == nullptr is for all other non-GlobalValue global data like the
       // constant pool, jump tables, labels, etc. The small and medium code
       // models treat these as accessible with a RIP-rel access.

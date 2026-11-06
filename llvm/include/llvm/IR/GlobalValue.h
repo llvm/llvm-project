@@ -747,6 +747,10 @@ public:
   /// this analysis makes sense when the information can be passed down to the
   /// linker or we are in LTO.
   LLVM_ABI bool canBeOmittedFromSymbolTable() const;
+
+  /// Returns true if this global should be treated as large (e.g. placed in a
+  /// large data or text section under the large/medium code model).
+  LLVM_ABI bool isLargeGlobalValue() const;
 };
 
 } // end namespace llvm
