@@ -167,7 +167,10 @@ public:
 };
 
 class NVPTXIRPeepholePass : public OptionalPassInfoMixin<NVPTXIRPeepholePass> {
+  TargetMachine &TM;
+
 public:
+  NVPTXIRPeepholePass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
