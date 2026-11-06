@@ -1805,7 +1805,7 @@ let Command = "target modules list" in {
             "Display whether the module is still in the "
             "the shared module cache (Y/N), and its shared pointer use_count.">;
   def target_modules_list_symtab_flags
-      : Option<"symtab-flags", "F">,
+      : Option<"symtab-state-flags", "F">,
         Group<1>,
         OptionalArg<"Width">,
         Desc<"Display state about the symbol table with optional width: "
