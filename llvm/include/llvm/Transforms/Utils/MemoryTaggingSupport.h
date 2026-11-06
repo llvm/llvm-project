@@ -62,6 +62,7 @@ LLVM_ABI Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
   SmallVector<Instruction *, 8> RetVec;
+  SmallVector<IntrinsicInst *, 4> StackRestores;
   bool CallsReturnTwice = false;
 };
 
@@ -76,8 +77,10 @@ enum class AllocaInterestingness {
 
 class StackInfoBuilder {
 public:
-  StackInfoBuilder(const StackSafetyGlobalInfo *SSI, const char *DebugType)
-      : SSI(SSI), DebugType(DebugType) {}
+  StackInfoBuilder(const StackSafetyGlobalInfo *SSI, const char *DebugType,
+                   bool InstrumentDynamicAllocas = false)
+      : SSI(SSI), DebugType(DebugType),
+        InstrumentDynamicAllocas(InstrumentDynamicAllocas) {}
 
   LLVM_ABI void visit(OptimizationRemarkEmitter &ORE, Instruction &Inst);
   LLVM_ABI AllocaInterestingness getAllocaInterestingness(const AllocaInst &AI);
@@ -87,6 +90,7 @@ private:
   StackInfo Info;
   const StackSafetyGlobalInfo *SSI;
   const char *DebugType;
+  bool InstrumentDynamicAllocas;
 };
 
 LLVM_ABI uint64_t getAllocaSizeInBytes(const AllocaInst &AI);

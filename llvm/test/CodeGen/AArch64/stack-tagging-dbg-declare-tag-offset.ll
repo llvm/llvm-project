@@ -25,6 +25,19 @@ entry:
   ret void, !dbg !15
 }
 
+; Dynamic allocas are annotated with their tag offsets too.
+define void @vla(i32 %n) sanitize_memtag !dbg !16 {
+entry:
+  %c = alloca i8, i32 %n
+  ; CHECK: #dbg_declare(ptr %c, {{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 0)
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !17, metadata !DIExpression()), !dbg !19
+  %d = alloca i8, i32 %n
+  ; CHECK: #dbg_declare(ptr %d, {{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 1)
+  call void @llvm.dbg.declare(metadata ptr %d, metadata !18, metadata !DIExpression()), !dbg !19
+  call void @g(ptr %c, ptr %d, ptr null, ptr null, ptr null, ptr null)
+  ret void, !dbg !19
+}
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
@@ -48,3 +61,8 @@ DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !13 = !DILocalVariable(name: "b", scope: !6, file: !1, line: 1, type: !9)
 !14 = !DILocation(line: 1, column: 29, scope: !6)
 !15 = !DILocation(line: 1, column: 37, scope: !6)
+!16 = distinct !DISubprogram(name: "vla", scope: !1, file: !1, line: 2, type: !20, spFlags: DISPFlagDefinition, unit: !0)
+!17 = !DILocalVariable(name: "c", scope: !16, file: !1, line: 2, type: !11)
+!18 = !DILocalVariable(name: "d", scope: !16, file: !1, line: 2, type: !11)
+!19 = !DILocation(line: 2, column: 1, scope: !16)
+!20 = !DISubroutineType(types: !2)
