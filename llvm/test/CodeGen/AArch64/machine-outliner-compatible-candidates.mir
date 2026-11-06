@@ -101,8 +101,13 @@ body:             |
     ; CHECK-SYNC-NEXT: BL [[FN]]
     ; CHECK-SYNC-NEXT: $sp, $lr = LDRXpost $sp, 16
     ;
-    ; CHECK-ASYNC-LABEL: name:            stack-save
-    ; CHECK-ASYNC-NOT: BL
+    ; CHECK-ASYNC: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION adjust_cfa_offset 16
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION rel_offset $w30, 0
+    ; CHECK-ASYNC-NEXT: BL [[FN]]
+    ; CHECK-ASYNC-NEXT: $sp, $lr = LDRXpost $sp, 16
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION adjust_cfa_offset -16
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION restore $w30
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
