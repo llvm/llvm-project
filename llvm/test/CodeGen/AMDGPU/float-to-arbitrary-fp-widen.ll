@@ -1796,10 +1796,8 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_dual_lshlrev_b32 v6, 16, v2 :: v_dual_bitop2_b32 v1, s0, v0 bitop3:0x40
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s0, 0xffff
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v1 :: v_dual_bitop2_b32 v5, s0, v4 bitop3:0x40
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v7, v3, 16, v5
@@ -1821,10 +1819,8 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1310-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_lshlrev_b32 v4, 16, v2 :: v_dual_bitop2_b32 v1, s0, v0 bitop3:0x40
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1310-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; GFX1310-NEXT:    s_mov_b32 s0, 0xffff
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_lshrrev_b32 v1, 8, v1 :: v_dual_bitop2_b32 v5, s0, v6 bitop3:0x40
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1310-NEXT:    v_lshl_or_b32 v5, v3, 16, v5
@@ -2814,10 +2810,8 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_dual_lshlrev_b32 v8, 16, v2 :: v_dual_bitop2_b32 v1, s0, v4 bitop3:0x40
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v9, v6, 16, v1
-; GFX1250-FAKE16-NEXT:    s_mov_b32 s0, 0xffff
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_dual_lshrrev_b32 v5, 8, v9 :: v_dual_bitop2_b32 v3, s0, v0 bitop3:0x40
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[8:9], 24, v[8:9]

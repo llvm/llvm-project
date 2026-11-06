@@ -32,8 +32,6 @@ define amdgpu_kernel void @mask_shared_by_two_pairs(ptr addrspace(1) %out, ptr a
 ; GFX1250-NEXT:    s_mov_b32 s2, 0xffff0000
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v2 :: v_dual_bitop2_b32 v1, s2, v2 bitop3:0x40
-; GFX1250-NEXT:    s_mov_b32 s2, 0xffff0000
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v3 :: v_dual_bitop2_b32 v3, s2, v3 bitop3:0x40
 ; GFX1250-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm

@@ -15,7 +15,9 @@
 /// immediates in a pair have the same 32-bit value, the pass can materialize
 /// that value in an SGPR which is free over the pair. The move and its register
 /// stay pair-local, so fusion adds at most one move and does not extend
-/// register pressure across pairs.
+/// register pressure across pairs. If an SGPR written earlier in the block by
+/// an S_MOV_B32 of the same value has not been overwritten since, the pair
+/// reads that register instead and no move is needed.
 ///
 /// The pass considers every adjacent candidate. It first maximizes the number
 /// of pairs, then minimizes scalar moves among equal-size matchings. The
@@ -45,6 +47,9 @@ STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
 STATISTIC(NumLiteralsMaterialized,
           "Number of immediates moved into a scalar register to allow VOPD3 "
           "pairing.");
+STATISTIC(NumLiteralsReused,
+          "Number of VOPD3 immediates read from a scalar register which "
+          "already held the value.");
 STATISTIC(NumCandidateEdgesWithoutFreeSGPR,
           "Number of VOPD3 candidate edges skipped because no scalar register "
           "was free for their immediate.");
@@ -63,6 +68,14 @@ struct VOPDCandidate {
   bool isFeasible() const {
     return !needsMaterialization() || MaterializationReg;
   }
+};
+
+/// A scalar register which is known to hold an immediate, because \p Def
+/// wrote it with an S_MOV_B32 and nothing has written it since.
+struct KnownSGPRValue {
+  Register Reg;
+  int32_t Imm;
+  MachineInstr *Def;
 };
 
 } // namespace
@@ -205,29 +218,72 @@ public:
     }
   }
 
-  void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate) {
+  /// Update \p Known for the instructions in [\p Begin, \p End).
+  void trackKnownValues(MachineBasicBlock::iterator Begin,
+                        MachineBasicBlock::iterator End,
+                        SmallVectorImpl<KnownSGPRValue> &Known) const {
+    const SIRegisterInfo *TRI = ST->getRegisterInfo();
+    for (MachineInstr &MI : make_range(Begin, End)) {
+      if (MI.isDebugInstr())
+        continue;
+      erase_if(Known, [&](const KnownSGPRValue &K) {
+        return MI.modifiesRegister(K.Reg, TRI);
+      });
+      if (MI.getOpcode() == AMDGPU::S_MOV_B32 && MI.getOperand(1).isImm() &&
+          AMDGPU::SGPR_32RegClass.contains(MI.getOperand(0).getReg())) {
+        Known.push_back({MI.getOperand(0).getReg(),
+                         static_cast<int32_t>(MI.getOperand(1).getImm()), &MI});
+      }
+    }
+  }
+
+  void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate,
+                          SmallVectorImpl<KnownSGPRValue> &Known) {
     if (!Candidate.needsMaterialization())
       return;
 
     ArrayRef<VOPDLiteralFixup> Fixups = Candidate.Match.LiteralFixups;
+    const int32_t Imm = Fixups.front().Imm;
     assert(Candidate.MaterializationReg);
-    assert(all_of(Fixups,
-                  [Imm = Fixups.front().Imm](const VOPDLiteralFixup &Fixup) {
-                    return Fixup.Imm == Imm;
-                  }));
+    assert(all_of(Fixups, [Imm](const VOPDLiteralFixup &Fixup) {
+      return Fixup.Imm == Imm;
+    }));
 
+    const SIRegisterInfo *TRI = ST->getRegisterInfo();
     MachineInstr *InsertPt = Candidate.Match.InOrder[0];
-    BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
-            TII.get(AMDGPU::S_MOV_B32), Candidate.MaterializationReg)
-        .addImm(Fixups.front().Imm);
-    ++NumLiteralsMaterialized;
+    Register Reg;
+    auto Reusable = find_if(Known, [&](const KnownSGPRValue &K) {
+      return K.Imm == Imm && all_of(Fixups, [&](const VOPDLiteralFixup &F) {
+               return F.SlotRC->contains(K.Reg);
+             });
+    });
+    if (Reusable != Known.end()) {
+      // Extend the live range of the register to this pair.
+      Reg = Reusable->Reg;
+      Reusable->Def->getOperand(0).setIsDead(false);
+      for (MachineInstr &MI :
+           make_range(std::next(Reusable->Def->getIterator()),
+                      InsertPt->getIterator()))
+        MI.clearRegisterKills(Reg, TRI);
+      ++NumLiteralsReused;
+    } else {
+      // The move overwrites whatever value the register held.
+      Reg = Candidate.MaterializationReg;
+      erase_if(Known, [&](const KnownSGPRValue &K) {
+        return TRI->regsOverlap(K.Reg, Reg);
+      });
+      MachineInstr *Mov = BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
+                                  TII.get(AMDGPU::S_MOV_B32), Reg)
+                              .addImm(Imm);
+      Known.push_back({Reg, Imm, Mov});
+      ++NumLiteralsMaterialized;
+    }
 
     for (const VOPDLiteralFixup &Fixup : Fixups) {
       MachineInstr *MI = Fixup.CompIdx == AMDGPU::VOPD::X
                              ? Candidate.Match.getMIX()
                              : Candidate.Match.getMIY();
-      MI->getOperand(Fixup.OpIdx)
-          .ChangeToRegister(Candidate.MaterializationReg, /*isDef=*/false);
+      MI->getOperand(Fixup.OpIdx).ChangeToRegister(Reg, /*isDef=*/false);
     }
   }
 
@@ -333,10 +389,17 @@ public:
 
       assignMaterializationRegisters(MBB, Candidates);
       SmallVector<VOPDCandidate *, 8> Selected = selectCandidates(Candidates);
+      SmallVector<KnownSGPRValue, 8> Known;
+      MachineBasicBlock::iterator ScanPos = MBB.begin();
       for (VOPDCandidate *Candidate : Selected) {
+        MachineBasicBlock::iterator PairBegin(Candidate->Match.InOrder[0]);
+        MachineBasicBlock::iterator PairEnd =
+            std::next(MachineBasicBlock::iterator(Candidate->Match.InOrder[1]));
+        trackKnownValues(ScanPos, PairBegin, Known);
         applyCommutes(*SII, Candidate->Match);
-        materializeLiteral(*SII, *Candidate);
+        materializeLiteral(*SII, *Candidate, Known);
         Changed |= doReplace(SII, Candidate->Match);
+        ScanPos = PairEnd;
       }
     }
 
