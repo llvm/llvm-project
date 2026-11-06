@@ -190,8 +190,67 @@ subroutine block_local_not_variable(n)
 !BECAUSE: 'f' is not a variable
     do concurrent (j=1:n) local(f)
     end do
+!ERROR: 'f' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'f' is not a variable
+    do concurrent (j=1:n) local_init(f)
+    end do
+!ERROR: 'f' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'f' is not a variable
+    do concurrent (j=1:n) reduce(+:f)
+    end do
 !ERROR: The name 'f' must be a variable to appear in a locality-spec
     do concurrent (j=1:n) shared(f)
+    end do
+  end block
+end subroutine
+
+! Other kinds of BLOCK entity in a locality-spec: a POINTER, an entity with
+! no attributes that could otherwise later be a function, and an implicitly
+! typed name that the locality-spec declares.
+subroutine block_local_entity_kinds(n)
+  integer :: n, j
+  block
+    integer, pointer :: p
+    integer :: f
+    do concurrent (j=1:n) local(p, f)
+    end do
+    do concurrent (j=1:n) local(q)
+      q = j
+    end do
+  end block
+end subroutine
+
+! The usual locality-spec checks still apply to BLOCK entities, and a name
+! in a locality-spec is a variable for the rest of the BLOCK.
+subroutine block_local_entity_errors(n)
+  integer :: n, j
+  block
+    integer, allocatable :: a
+    integer, parameter :: k = 1
+    integer :: f
+!ERROR: ALLOCATABLE variable 'a' not allowed in a LOCAL locality-spec
+    do concurrent (j=1:n) local(a)
+    end do
+!ERROR: 'k' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'k' is not a variable
+    do concurrent (j=1:n) local(k)
+    end do
+!ERROR: The name 'k' must be a variable to appear in a locality-spec
+    do concurrent (j=1:n) shared(k)
+    end do
+    do concurrent (j=1:n) local(f)
+    end do
+!ERROR: 'f' is not a callable procedure
+    j = f(1)
+  end block
+end subroutine
+
+subroutine block_local_implicit_none(n)
+  implicit none
+  integer :: n, j
+  block
+!ERROR: No explicit type declared for 'q'
+    do concurrent (j=1:n) local(q)
     end do
   end block
 end subroutine
