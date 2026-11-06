@@ -42,6 +42,14 @@ public:
 
 FunctionPass *createSPIRVStructurizerPass();
 
+class SPIRVRemoveUnusedResourcesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveUnusedResourcesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveUnusedResourcesLegacyPass();
+
 class SPIRVCBufferAccessPass
     : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
 public:
@@ -146,6 +154,16 @@ public:
 
 FunctionPass *createSPIRVPostLegalizerLegacyPass();
 
+/// Rewrites MIR into the form SPIRVModuleAnalysis expects.
+class SPIRVPrepareModuleAnalysisPass
+    : public RequiredPassInfoMixin<SPIRVPrepareModuleAnalysisPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPrepareModuleAnalysisLegacyPass();
+
 class SPIRVEmitIntrinsicsPass
     : public RequiredPassInfoMixin<SPIRVEmitIntrinsicsPass> {
   const SPIRVTargetMachine &TM;
@@ -178,14 +196,16 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
                                const RegisterBankInfo &RBI);
 
-void initializeSPIRVModuleAnalysisPass(PassRegistry &);
+void initializeSPIRVModuleAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVAsmPrinterPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVPreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
+void initializeSPIRVPrepareModuleAnalysisLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveUnusedResourcesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);

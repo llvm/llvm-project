@@ -36,6 +36,7 @@
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -370,8 +371,11 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+    if (CGF.CurLoadedLValueCapture && CGF.CurLoadedLValueCapture->E == E)
+      CGF.CurLoadedLValueCapture->LV = LV;
+
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
@@ -2245,8 +2249,8 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
-  // Handle the vector case.  The base must be a vector, the index must be an
-  // integer value.
+  // HLSL matrix loads are normalized to column-major register values, but
+  // non-HLSL matrix values retain the selected memory layout.
   Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
@@ -2255,8 +2259,11 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
 
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                              /*IsRowMajor=*/false);
+  bool IsMatrixRowMajor =
+      !CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+  Value *Idx =
+      MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -4477,12 +4484,11 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   Builder.SetInsertPoint(overflowBB);
 
   // Get the overflow handler.
-  llvm::Type *Int8Ty = CGF.Int8Ty;
-  llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
-  llvm::FunctionType *handlerTy =
-      llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
+  ASTContext &Ctx = CGF.getContext();
+  QualType ArgTys[] = {Ctx.LongLongTy, Ctx.LongLongTy, Ctx.UnsignedCharTy,
+                       Ctx.UnsignedCharTy};
   llvm::FunctionCallee handler =
-      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+      CGF.CGM.CreateRuntimeFunction(Ctx.LongLongTy, ArgTys, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.
@@ -6403,6 +6409,23 @@ EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
   return {TotalOffset, OffsetOverflows};
 }
 
+// OpenMP section maps pass `section - host_offset`. A GEP of an array-of-arrays
+// from that pointer is not inbounds of the allocation.
+static llvm::GEPNoWrapFlags
+inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
+                 llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
+  llvm::GEPNoWrapFlags NW;
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice &&
+                    SrcTy->isArrayTy() &&
+                    SrcTy->getArrayElementType()->isArrayTy() &&
+                    !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
+  if (!SectionGEP)
+    NW = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NW |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 Value *
 CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         ArrayRef<Value *> IdxList,
@@ -6410,9 +6433,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
 
-  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-  if (!SignedIndices && !IsSubtraction)
-    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  llvm::GEPNoWrapFlags NWFlags =
+      inBoundsGEPFlags(*this, Ptr, ElemTy, SignedIndices, IsSubtraction);
 
   Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
@@ -6523,10 +6545,9 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
   if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-    if (!SignedIndices && !IsSubtraction)
-      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
-
+    llvm::GEPNoWrapFlags NWFlags =
+        inBoundsGEPFlags(*this, Addr.getBasePointer(), Addr.getElementType(),
+                         SignedIndices, IsSubtraction);
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 

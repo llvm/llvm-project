@@ -341,13 +341,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
-        Token Caret;
-        {
-          Caret.startToken();
-          Caret.setKind(tok::caret);
-          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
-          Caret.setLength(1);
-        }
+        Token Caret = Token::create(
+            tok::caret, OpToken.getLocation().getLocWithOffset(1), 1);
         UnconsumeToken(OpToken);
         PP.EnterToken(Caret, /*IsReinject=*/true);
         return ParseRHSOfBinaryExpression(LHS, MinPrec);
@@ -2529,35 +2524,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
                                   Expr2.get(), ConsumeParen());
     break;
   }
-  case tok::kw___builtin_astype: {
-    // The first argument is an expression to be converted, followed by a comma.
-    ExprResult Expr(ParseAssignmentExpression());
-    if (Expr.isInvalid()) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    if (ExpectAndConsume(tok::comma)) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    // Second argument is the type to bitcast to.
-    TypeResult DestTy = ParseTypeName();
-    if (DestTy.isInvalid())
-      return ExprError();
-
-    // Attempt to consume the r-paren.
-    if (Tok.isNot(tok::r_paren)) {
-      Diag(Tok, diag::err_expected) << tok::r_paren;
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
-                                  ConsumeParen());
-    break;
-  }
+  case tok::kw___builtin_astype:
   case tok::kw___builtin_convertvector: {
     // The first argument is an expression to be converted, followed by a comma.
     ExprResult Expr(ParseAssignmentExpression());
@@ -2583,8 +2550,12 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
-                                         ConsumeParen());
+    if (T == tok::kw___builtin_astype)
+      Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
+                                    ConsumeParen());
+    else
+      Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
+                                           ConsumeParen());
     break;
   }
   case tok::kw___builtin_COLUMN:
@@ -3202,15 +3173,10 @@ void Parser::injectEmbedTokens() {
                               Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
-    Toks[I].startToken();
-    Toks[I].setKind(tok::binary_data);
-    Toks[I].setLocation(Tok.getLocation());
-    Toks[I].setLength(1);
+    Toks[I] = Token::create(tok::binary_data, Tok.getLocation(), 1);
     Toks[I].setLiteralData(&Byte);
     if (I != ((Data->BinaryData.size() - 1) * 2)) {
-      Toks[I + 1].startToken();
-      Toks[I + 1].setKind(tok::comma);
-      Toks[I + 1].setLocation(Tok.getLocation());
+      Toks[I + 1] = Token::create(tok::comma, Tok.getLocation());
     }
     I += 2;
   }

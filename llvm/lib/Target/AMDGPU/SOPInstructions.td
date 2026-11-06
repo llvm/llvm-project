@@ -325,7 +325,7 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
-let SubtargetPredicate = HasAddPC64Inst in
+let SubtargetPredicate = HasSAddPCI64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
@@ -1710,6 +1710,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
 let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
 } // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
@@ -1728,13 +1729,13 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 }
 
 let SubtargetPredicate = HasAsyncMark in {
-def ASYNCMARK : SPseudoInstSI<(outs), (ins),
-  [(int_amdgcn_asyncmark)]> {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins i32imm:$stage),
+  [(int_amdgcn_asyncmark timm:$stage)]> {
    let maybeAtomic = 0;
    let isMeta = 1;
 }
-def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
-    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16, i32imm:$stage),
+    "$simm16", [(int_amdgcn_wait_asyncmark timm:$simm16, timm:$stage)]> {
     let maybeAtomic = 0;
     let Size = 0;
     let isMeta = 1;
@@ -1883,6 +1884,7 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT :
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
@@ -1925,7 +1927,7 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
-let SubtargetPredicate = Has1024AddressableVGPRs in {
+let SubtargetPredicate = HasVGPRMSBs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
     let Defs = [MODE];
@@ -2089,7 +2091,7 @@ let AddedComplexity = 20 in {
 let AddedComplexity = 20 in {
   def : GCNPat<
     (i32 (UniformBinFrag<uaddsat> i32:$src0, i32:$src1)),
-    (S_ADD_U32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
+    (S_ADD_I32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
   >;
   def : GCNPat<
     (i32 (UniformBinFrag<usubsat> i32:$src0, i32:$src1)),

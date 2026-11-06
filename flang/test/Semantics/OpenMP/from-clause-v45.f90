@@ -8,18 +8,25 @@ end
 
 subroutine f01(x)
   integer :: x(10)
-!WARNING: 'iterator' modifier is not supported on FROM clause in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'iterator' modifier is not allowed on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
   !$omp target update from(iterator(i = 1:5): x(i))
 end
 
 subroutine f02(x)
   integer :: x(10)
-!WARNING: 'motion-modifier' modifier is not supported on FROM clause in OpenMP v4.5, try -fopenmp-version=51
-!WARNING: 'iterator' modifier is not supported on FROM clause in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'motion-modifier' modifier is not allowed on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
+!WARNING: 'iterator' modifier is not allowed on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
   !$omp target update from(present, iterator(i = 1:5): x(i))
 end
 
 subroutine f04
 !ERROR: 'f04' must be a variable list item
   !$omp target update from(f04)
+end
+
+subroutine f05(x, y)
+  integer :: x(10), y(10)
+!WARNING: 'iterator' modifier is not allowed on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
+!ERROR: 'iterator' modifier cannot occur multiple times
+  !$omp target update from(iterator(i = 1:5), iterator(j = 1:5): x(i), y(i))
 end

@@ -1,0 +1,14 @@
+// RUN: cir-opt %s --cir-lib-opt | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @f() -> !s32i {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+}
+
+// CHECK: cir.func @f() -> !s32i {
+// CHECK:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:   cir.return %[[ZERO]] : !s32i

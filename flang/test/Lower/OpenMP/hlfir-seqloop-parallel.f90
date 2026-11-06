@@ -19,9 +19,9 @@ end subroutine
 
 !CHECK-LABEL:  @_QPsb1
 !CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsb1Ei"}>
-!CHECK:    %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ADDR]] {uniq_name = "_QFsb1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ADDR]] uniq_name("_QFsb1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    omp.parallel private({{.*}} %[[I_DECL]]#0 -> %[[I_PVT_ADDR:.*]] : {{.*}}) {
-!CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] {uniq_name = "_QFsb1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] uniq_name("_QFsb1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      fir.do_loop %[[I_VAL:.*]] = %[[I_LB:.*]] to %[[I_UB:.*]] step %[[I_ST:.*]] : i32 {
 !CHECK:        fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:      }
@@ -59,16 +59,16 @@ subroutine sb2
 end subroutine
 !CHECK-LABEL:  @_QPsb2
 !CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsb2Ei"}>
-!CHECK:    %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ADDR]] {uniq_name = "_QFsb2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ADDR]] uniq_name("_QFsb2Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[J_ADDR:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFsb2Ej"}>
-!CHECK:    %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ADDR]] {uniq_name = "_QFsb2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ADDR]] uniq_name("_QFsb2Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[K_ADDR:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFsb2Ek"}>
-!CHECK:    %[[K_DECL:.*]]:2 = hlfir.declare %[[K_ADDR]] {uniq_name = "_QFsb2Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[K_DECL:.*]]:2 = hlfir.declare %[[K_ADDR]] uniq_name("_QFsb2Ek") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    omp.parallel private({{.*}} %[[J_DECL]]#0 -> %[[J_PVT_ADDR:.*]], {{.*}} %[[I_DECL]]#0 -> %[[I_PVT_ADDR:.*]] : {{.*}}) {
 
-!CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_ADDR]] {uniq_name = "_QFsb2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_ADDR]] uniq_name("_QFsb2Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] {uniq_name = "_QFsb2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] uniq_name("_QFsb2Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      fir.do_loop %[[J_VAL:.*]] = %[[J_LB:.*]] to %[[J_UB:.*]] step %[[J_ST:.*]] : i32 {
 !CHECK:        fir.store %[[J_VAL]] to %[[J_PVT_DECL]]#0 : !fir.ref<i32>
