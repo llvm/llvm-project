@@ -424,7 +424,7 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
     if (!expected_instructions) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints),
                      expected_instructions.takeError(),
-                     "error: Unable to read instructions at address 0x{0:x}",
+                     "error: Unable to read instructions at address {1:x}: {0}",
                      loc_addr.GetLoadAddress(&target));
       return BreakpointLocationSP();
     }
@@ -433,7 +433,7 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
     if (!instructions ||
         instructions->GetInstructionList().GetSize() != m_offset) {
       LLDB_LOG(GetLog(LLDBLog::Breakpoints),
-               "error: Unable to read {0} instructions at address 0x{1:x}",
+               "error: Unable to read {0} instructions at address {1:x}",
                m_offset, loc_addr.GetLoadAddress(&target));
       return BreakpointLocationSP();
     }

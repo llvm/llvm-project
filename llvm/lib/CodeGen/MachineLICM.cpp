@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
@@ -35,12 +36,14 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegister.h"
@@ -49,6 +52,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -122,6 +126,7 @@ namespace {
     const TargetRegisterInfo *TRI = nullptr;
     const MachineFrameInfo *MFI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
+    const RegisterClassInfo *RegClassInfo = nullptr;
     TargetSchedModel SchedModel;
     bool PreRegAlloc = false;
     bool HasProfileData = false;
@@ -171,16 +176,10 @@ namespace {
              DenseMap<unsigned, std::vector<MachineInstr *>>>
         CSEMap;
 
-    enum {
-      SpeculateFalse   = 0,
-      SpeculateTrue    = 1,
-      SpeculateUnknown = 2
-    };
-
     // If a MBB does not dominate loop exiting blocks then it may not safe
-    // to hoist loads from this block.
-    // Tri-state: 0 - false, 1 - true, 2 - unknown
-    unsigned SpeculationState = SpeculateUnknown;
+    // to hoist loads from this block. Cached per loop for the current block,
+    // which is checked against both the outermost loop and its subloops.
+    SmallDenseMap<MachineLoop *, bool> GuaranteedToExecute;
 
   public:
     MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
@@ -299,10 +298,13 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineLoopInfoWrapperPass>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
-        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+        AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineRegisterClassInfoWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -330,8 +332,9 @@ char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyMachineBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
                     "Machine Loop Invariant Code Motion", false, false)
@@ -339,8 +342,9 @@ INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
 INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyMachineBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
@@ -364,13 +368,17 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
                   .getManager()
                   .getResult<AAManager>(MF.getFunction())
            : &LegacyPass->getAnalysis<AAResultsWrapperPass>().getAAResults();
+
+  RegClassInfo =
+      MFAM != nullptr
+          ? &MFAM->getResult<MachineRegisterClassAnalysis>(MF)
+          : &LegacyPass->getAnalysis<MachineRegisterClassInfoWrapperPass>()
+                 .getRCI();
+
   MachineDomTreeUpdater DTU(GET_RESULT(MachineDominatorTree, getDomTree, ),
                             MachineDomTreeUpdater::UpdateStrategy::Lazy);
   MDTU = &DTU;
   MLI = GET_RESULT(MachineLoop, getLI, Info);
-  MBFI = DisableHoistingToHotterBlocks != UseBFI::None
-             ? GET_RESULT(MachineBlockFrequency, getMBFI, Info)
-             : nullptr;
 
   Changed = FirstInLoop = false;
   const TargetSubtargetInfo &ST = MF.getSubtarget();
@@ -382,6 +390,13 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   SchedModel.init(&ST);
 
   HasProfileData = MF.getFunction().hasProfileData();
+
+  if (DisableHoistingToHotterBlocks == UseBFI::All ||
+      (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData))
+    MBFI = LegacyPass
+               ? &LegacyPass->getAnalysis<LazyMachineBlockFrequencyInfoPass>()
+                      .getBFI()
+               : &MFAM->getResult<MachineBlockFrequencyAnalysis>(MF);
 
   if (PreRegAlloc)
     LLVM_DEBUG(dbgs() << "******** Pre-regalloc Machine LICM: ");
@@ -396,7 +411,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
     llvm::fill(RegPressure, 0);
     RegLimit.resize(NumRPS);
     for (unsigned i = 0, e = NumRPS; i != e; ++i)
-      RegLimit[i] = TRI->getRegPressureSetLimit(MF, i);
+      RegLimit[i] = RegClassInfo->getRegPressureSetLimit(i);
   }
 
   if (HoistConstLoads)
@@ -621,15 +636,16 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
+      ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
 
-    SpeculationState = SpeculateUnknown;
+    GuaranteedToExecute.clear();
     for (MachineInstr &MI : *BB)
       ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
   }
@@ -750,8 +766,9 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
 /// may not be safe to hoist.
 bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
                                             MachineLoop *CurLoop) {
-  if (SpeculationState != SpeculateUnknown)
-    return SpeculationState == SpeculateFalse;
+  auto [It, Inserted] = GuaranteedToExecute.try_emplace(CurLoop, true);
+  if (!Inserted)
+    return It->second;
 
   if (BB != CurLoop->getHeader()) {
     // Check loop exiting blocks.
@@ -759,12 +776,11 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
       if (!MDTU->getDomTree().dominates(BB, CurrentLoopExitingBlock)) {
-        SpeculationState = SpeculateTrue;
+        It->second = false;
         return false;
       }
   }
 
-  SpeculationState = SpeculateFalse;
   return true;
 }
 
@@ -869,7 +885,7 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
     EnterScope(MBB);
 
     // Process the block
-    SpeculationState = SpeculateUnknown;
+    GuaranteedToExecute.clear();
     for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
       unsigned HoistRes = HoistResult::NotHoisted;
       HoistRes = Hoist(&MI, Preheader, CurLoop);
@@ -901,10 +917,6 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
     // If it's a leaf node, it's done. Traverse upwards to pop ancestors.
     ExitScopeIfDone(Node, OpenChildren, ParentMap);
   }
-}
-
-static bool isOperandKill(const MachineOperand &MO, MachineRegisterInfo *MRI) {
-  return MO.isKill() || MRI->hasOneNonDBGUse(MO.getReg());
 }
 
 /// Find all virtual register references that are liveout of the preheader to
@@ -969,7 +981,7 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (MO.isDef())
       RCCost = W.RegWeight;
     else {
-      bool isKill = isOperandKill(MO, MRI);
+      bool isKill = MRI->hasOneNonDBGUse(Reg);
       if (isNew && !isKill && ConsiderUnseenAsDef)
         // Haven't seen this, it must be a livein.
         RCCost = W.RegWeight;
@@ -1696,7 +1708,7 @@ MachineBasicBlock *MachineLICMImpl::getOrCreatePreheader(MachineLoop *CurLoop) {
   // predecessor and the loop header.
   if (MachineBasicBlock *Pred = CurLoop->getLoopPredecessor()) {
     MachineBasicBlock *NewPreheader = Pred->SplitCriticalEdge(
-        CurLoop->getHeader(), LegacyPass, MFAM, nullptr, MDTU);
+        CurLoop->getHeader(), {nullptr, nullptr, MLI}, MDTU);
     if (NewPreheader)
       Changed = true;
     return NewPreheader;
@@ -1731,6 +1743,7 @@ PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 

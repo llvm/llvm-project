@@ -3,6 +3,8 @@
 module m
 integer :: x
 !$omp declare_target link(x) device_type(nohost)
+integer :: y
+!$omp declare target to(y)
 real :: w(10), u(10)
 common /named_block/ w, u
 !$omp declare_target link(/named_block/)
@@ -23,11 +25,15 @@ subroutine h
   !$omp declare_target enter(h, a)
   continue
 end
+subroutine k
+  !$omp declare target
+end
 end module
 
 !Expect: m.mod
 !module m
 !integer(4)::x
+!integer(4)::y
 !real(4)::w(1_8:10_8)
 !real(4)::u(1_8:10_8)
 !interface
@@ -38,13 +44,17 @@ end module
 !end interface
 !common/named_block/w,u
 !!$omp declare_target device_type(nohost) link(x)
+!!$omp declare_target enter(y)
 !!$omp declare_target enter(g)
 !!$omp declare_target enter(f)
 !!$omp declare_target enter(h)
+!!$omp declare_target enter(k)
 !!$omp declare_target link(named_block)
 !contains
 !subroutine f()
 !end
 !subroutine h()
+!end
+!subroutine k()
 !end
 !end

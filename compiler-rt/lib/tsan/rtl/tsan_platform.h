@@ -624,7 +624,7 @@ struct MappingGoPPC64_47 {
   static const uptr kShadowAdd = 0x200000000000ull;
 };
 
-/* Go on linux/aarch64 (48-bit VMA) and darwin/aarch64 (47-bit VMA)
+/* Go on linux/aarch64 (47- and 48-bit VMA) and darwin/aarch64 (47-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
 0000 1000 0000 - 00c0 0000 0000: -
 00c0 0000 0000 - 00e0 0000 0000: heap

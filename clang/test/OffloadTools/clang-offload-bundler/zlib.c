@@ -21,12 +21,12 @@
 // Check compression/decompression of offload bundle.
 //
 // RUN: env OFFLOAD_BUNDLER_COMPRESS=1 OFFLOAD_BUNDLER_VERBOSE=1 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 | \
 // RUN:   FileCheck -check-prefix=COMPRESS %s
 // RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
 // RUN: env OFFLOAD_BUNDLER_VERBOSE=1 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle 2>&1 | \
 // RUN:   FileCheck -check-prefix=DECOMPRESS %s
 // RUN: diff %t.tgt1 %t.res.tgt1
@@ -38,19 +38,19 @@
 // DECOMPRESS: Decompression method: zlib
 // DECOMPRESS: Hashes match: Yes
 // NOHOST-NOT: host-
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-DAG: hip-amdgpu-amd-amdhsa--gfx900
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
 //
 
 // Check compression/decompression of offload bundle using version 3 format.
 //
 // RUN: env OFFLOAD_BUNDLER_COMPRESS=1 OFFLOAD_BUNDLER_VERBOSE=1 COMPRESSED_BUNDLE_FORMAT_VERSION=3 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 | \
 // RUN:   FileCheck -check-prefix=COMPRESS-V3 %s
 // RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST-V3 %s
 // RUN: env OFFLOAD_BUNDLER_VERBOSE=1 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle 2>&1 | \
 // RUN:   FileCheck -check-prefix=DECOMPRESS-V3 %s
 // RUN: diff %t.tgt1 %t.res.tgt1
@@ -63,18 +63,18 @@
 // DECOMPRESS-V3: Decompression method: zlib
 // DECOMPRESS-V3: Hashes match: Yes
 // NOHOST-V3-NOT: host-
-// NOHOST-V3-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-V3-DAG: hip-amdgpu-amd-amdhsa--gfx900
 // NOHOST-V3-DAG: hip-amdgcn-amd-amdhsa--gfx906
 
 // Check compression/decompression of offload bundle using version 2 format.
 //
 // RUN: env OFFLOAD_BUNDLER_COMPRESS=1 OFFLOAD_BUNDLER_VERBOSE=1 COMPRESSED_BUNDLE_FORMAT_VERSION=2 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 | \
 // RUN:   FileCheck -check-prefix=COMPRESS-V2 %s
 // RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST-V2 %s
 // RUN: env OFFLOAD_BUNDLER_VERBOSE=1 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle 2>&1 | \
 // RUN:   FileCheck -check-prefix=DECOMPRESS-V2 %s
 // RUN: diff %t.tgt1 %t.res.tgt1
@@ -87,15 +87,15 @@
 // DECOMPRESS-V2: Decompression method: zlib
 // DECOMPRESS-V2: Hashes match: Yes
 // NOHOST-V2-NOT: host-
-// NOHOST-V2-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-V2-DAG: hip-amdgpu-amd-amdhsa--gfx900
 // NOHOST-V2-DAG: hip-amdgcn-amd-amdhsa--gfx906
 
 // Check -compression-level= option
 
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose -compression-level=9 2>&1 | \
 // RUN:   FileCheck -check-prefix=LEVEL %s
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
@@ -116,18 +116,18 @@
 //
 // Check unbundling archive.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle1.bc -compress
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle2.bc -compress
 // RUN: rm -f %t.hip_archive.a
 // RUN: llvm-ar cr %t.hip_archive.a %t.hip_bundle1.bc %t.hip_bundle2.bc
-// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.hip_900.a -output=%t.hip_906.a -input=%t.hip_archive.a
 // RUN: llvm-ar t %t.hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
 // RUN: llvm-ar t %t.hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
-// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
-// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle1-hip-amdgpu-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle2-hip-amdgpu-amd-amdhsa--gfx900
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 // HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 

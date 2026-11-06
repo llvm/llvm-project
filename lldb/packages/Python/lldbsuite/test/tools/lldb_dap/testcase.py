@@ -1,12 +1,14 @@
 import logging
 import os
+import uuid
 from pathlib import Path
 from typing import Any, Final, Optional, TypeVar, Union, cast
 
 from lldbsuite.test.lldbtest import Base, LLDBTestCaseFactory, is_exe
+import lldbgdbserverutils
 
-from .types import AnyResponse, ErrorResponse, Response
 from .session_helpers import DAPTestSession
+from .types import AnyResponse, ErrorResponse, Response
 from .utils import DebugAdapter, DebugAdapterOptions
 
 
@@ -36,6 +38,15 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         super().setUpClass()
         cls.run_as_server: bool = strtobool(os.getenv("LLDBDAP_RUN_AS_SERVER", "false"))
 
+    @property
+    def lldb_dap_exe(self) -> str:
+        exe = self.lldbDAPExec
+        self.assertTrue(
+            is_exe(exe),
+            f"lldb-dap must exist and be executable. path: {exe}",
+        )
+        return str(exe)
+
     def setUp(self):
         super().setUp()
         self.setUpBaseLogging()
@@ -49,7 +60,8 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.logger.propagate = False
         self.logger.setLevel(logging.DEBUG)
 
-        log_path = f"{self.getLogBasenameForCurrentTest()}-test_dap.log"
+        log_path = f"{self.getLogBasenameForCurrentTest()}-testcase.log"
+        self.log_files.append(log_path)
         handler = logging.FileHandler(log_path, mode="w")
 
         # The Log name gets quite long and becomes noise. use the last log scope.
@@ -73,18 +85,8 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.addTearDownHook(close_log)
 
     def __create_default_debug_adapter(self):
-        self.assertFalse(hasattr(self, "adapter"), "A default adapter already exists.")
-
-        if self.run_as_server:
-            self.adapter = self.create_server_debug_adapter(
-                DebugAdapterOptions(cwd=self.getBuildDir()),
-                connection="listen://localhost:0",
-                connection_timeout=10,
-            )
-        else:
-            self.adapter = self.create_stdio_debug_adapter(
-                DebugAdapterOptions(cwd=self.getBuildDir())
-            )
+        self.assertFalse(hasattr(self, "_adapter"), "A default adapter already exists.")
+        self._adapter = self.create_debug_adapter()
 
     def create_session(
         self,
@@ -92,8 +94,8 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         disconnect_automatically: bool = True,
     ) -> DAPTestSession:
         if adapter is None:
-            self.assertIsNotNone(self.adapter, "expected we already have an adapter.")
-            adapter = self.adapter
+            self.assertIsNotNone(self._adapter, "expected we already have an adapter.")
+            adapter = self._adapter
         self.assertTrue(adapter.is_alive, "expected adapter process is alive.")
 
         build_dir = Path(self.getBuildDir())
@@ -116,6 +118,11 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.addTearDownHook(cleanup_session)
         return session
 
+    def build_for_attach(self) -> str:
+        unique_name = str(uuid.uuid4())
+        self.build(dictionary={"EXE": unique_name})
+        return self.getBuildArtifact(unique_name)
+
     def build_and_create_session(
         self,
         adapter: Optional[DebugAdapter] = None,
@@ -124,13 +131,10 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.build()
         return self.create_session(adapter, disconnect_automatically)
 
-    def create_debug_adapter(
+    def __do_create_debug_adapter(
         self, adapter_options: DebugAdapterOptions
     ) -> DebugAdapter:
-        self.assertTrue(
-            is_exe(self.lldbDAPExec),
-            f"lldb-dap must exist and be executable. path: {self.lldbDAPExec}",
-        )
+        lldb_dap_exe = self.lldb_dap_exe
 
         if adapter_options.log_file:
             log_file = adapter_options.log_file
@@ -138,6 +142,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
             count = self._debug_adapter_count
             suffix = f"-{count}" if count else ""
             log_file = f"{self.getLogBasenameForCurrentTest()}-dap{suffix}.log"
+            self.log_files.append(log_file)
 
         self._debug_adapter_count += 1
         cwd = adapter_options.cwd or self.getBuildDir()
@@ -146,12 +151,12 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         adapter_options = adapter_options.clone(
             log_file=log_file, cwd=cwd, pre_init_commands=pre_init_commands
         )
-        lldb_dap_exec = self.expect_not_none(self.lldbDAPExec)
-        adapter = DebugAdapter(executable=lldb_dap_exec, opts=adapter_options)
+        adapter = DebugAdapter(executable=lldb_dap_exe, opts=adapter_options)
         self.assertTrue(adapter.is_alive, "adapter should be running after creation.")
 
         def cleanup_adapter():
             if adapter.is_alive:
+                self.logger.info("Manually killing debug adapter.")
                 adapter.kill()
             # The debug adapter may have a reason the test failed.
             if stderr := adapter.process.stderr:
@@ -164,6 +169,16 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.addTearDownHook(cleanup_adapter)
         return adapter
 
+    def create_debug_adapter(
+        self, options: Optional[DebugAdapterOptions] = None
+    ) -> DebugAdapter:
+        """Create a debug adapter, picking either stdio or server depending
+        on the LLDBDAP_RUN_AS_SERVER env flag."""
+        if self.run_as_server:
+            return self.create_server_debug_adapter(options)
+
+        return self.create_stdio_debug_adapter(options)
+
     def create_stdio_debug_adapter(
         self, adapter_options: Optional[DebugAdapterOptions] = None
     ) -> DebugAdapter:
@@ -173,26 +188,40 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
             adapter_options.connection, "'connection' cannot be used with stdio mode."
         )
 
-        adapter = self.create_debug_adapter(adapter_options)
+        adapter = self.__do_create_debug_adapter(adapter_options)
         self.assertFalse(adapter.is_server, "adapter should be using stdio.")
         return adapter
 
     def create_server_debug_adapter(
-        self,
-        adapter_options: Optional[DebugAdapterOptions] = None,
-        *,
-        connection: str,
-        connection_timeout: int,
+        self, adapter_options: Optional[DebugAdapterOptions] = None
     ) -> DebugAdapter:
         """Forces the adapter to server mode. the DebugAdapter class handles the validation."""
         adapter_options = adapter_options or DebugAdapterOptions()
         adapter_options = adapter_options.clone(
-            connection=connection,
-            connection_timeout=connection_timeout,
+            connection=adapter_options.connection or "listen://localhost:0",
+            connection_timeout=adapter_options.connection_timeout or 10,
         )
-        adapter = self.create_debug_adapter(adapter_options)
+        adapter = self.__do_create_debug_adapter(adapter_options)
         self.assertTrue(adapter.is_server, "adapter should run as a server.")
         return adapter
+
+    def get_debug_server_path(self) -> Optional[Path]:
+        # Tries to find simulation/lldb-server/gdbserver tool path.
+        platform = self.getPlatform()
+        if platform == "windows":
+            # TODO: Update this for windows as it now supports lldb-server.
+            return None
+
+        if self.platformIsDarwin():
+            if platform != "macosx":
+                return None
+            server_exe = lldbgdbserverutils.get_debugserver_exe()
+        else:
+            server_exe = lldbgdbserverutils.get_lldb_server_exe()
+
+        server_path = Path(server_exe)
+        self.assertTrue(server_path.exists(), f"{server_path.stem!r} not found")
+        return server_path
 
     def expect_not_none(self, value: Optional[T], msg: Any = None) -> T:
         """Convenience function to narrow fields that are optional, as most DAP types are."""

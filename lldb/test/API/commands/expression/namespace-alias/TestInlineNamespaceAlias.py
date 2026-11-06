@@ -11,9 +11,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestInlineNamespace(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "16.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

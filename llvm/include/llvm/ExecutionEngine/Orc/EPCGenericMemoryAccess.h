@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements the MemoryAccess interface by making calls to
-// ExecutorProcessControl::callWrapperAsync.
+// Implements the MemoryAccess interface by calling executor-side wrapper
+// functions through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericMemoryAccessSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,191 +23,128 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace orc {
 
 class EPCGenericMemoryAccess : public MemoryAccess {
 public:
-  /// Function addresses for memory access.
-  struct FuncAddrs {
-    ExecutorAddr WriteUInt8s;
-    ExecutorAddr WriteUInt16s;
-    ExecutorAddr WriteUInt32s;
-    ExecutorAddr WriteUInt64s;
-    ExecutorAddr WritePointers;
-    ExecutorAddr WriteBuffers;
-    ExecutorAddr ReadUInt8s;
-    ExecutorAddr ReadUInt16s;
-    ExecutorAddr ReadUInt32s;
-    ExecutorAddr ReadUInt64s;
-    ExecutorAddr ReadPointers;
-    ExecutorAddr ReadBuffers;
-    ExecutorAddr ReadStrings;
+  using WriteUInt8sProxy = Proxy<void(ArrayRef<tpctypes::UInt8Write>)>;
+  using WriteUInt16sProxy = Proxy<void(ArrayRef<tpctypes::UInt16Write>)>;
+  using WriteUInt32sProxy = Proxy<void(ArrayRef<tpctypes::UInt32Write>)>;
+  using WriteUInt64sProxy = Proxy<void(ArrayRef<tpctypes::UInt64Write>)>;
+  using WritePointersProxy = Proxy<void(ArrayRef<tpctypes::PointerWrite>)>;
+  using WriteBuffersProxy = Proxy<void(ArrayRef<tpctypes::BufferWrite>)>;
+  using ReadUInt8sProxy = Proxy<std::vector<uint8_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt16sProxy = Proxy<std::vector<uint16_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt32sProxy = Proxy<std::vector<uint32_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt64sProxy = Proxy<std::vector<uint64_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadPointersProxy =
+      Proxy<std::vector<ExecutorAddr>(ArrayRef<ExecutorAddr>)>;
+  using ReadBuffersProxy =
+      Proxy<std::vector<std::vector<uint8_t>>(ArrayRef<ExecutorAddrRange>)>;
+  using ReadStringsProxy =
+      Proxy<std::vector<std::string>(ArrayRef<ExecutorAddr>)>;
+
+  /// Proxies for the executor-side memory-access functions. These are
+  /// protocol-agnostic: sps::createEPCGenericMemoryAccess populates them for
+  /// the runtime's SPS controller interface, but a client targeting a different
+  /// protocol can build its own Funcs and pass them to the constructor.
+  struct Funcs {
+    WriteUInt8sProxy WriteUInt8s;
+    WriteUInt16sProxy WriteUInt16s;
+    WriteUInt32sProxy WriteUInt32s;
+    WriteUInt64sProxy WriteUInt64s;
+    WritePointersProxy WritePointers;
+    WriteBuffersProxy WriteBuffers;
+    ReadUInt8sProxy ReadUInt8s;
+    ReadUInt16sProxy ReadUInt16s;
+    ReadUInt32sProxy ReadUInt32s;
+    ReadUInt64sProxy ReadUInt64s;
+    ReadPointersProxy ReadPointers;
+    ReadBuffersProxy ReadBuffers;
+    ReadStringsProxy ReadStrings;
   };
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
-  EPCGenericMemoryAccess(ExecutorProcessControl &EPC, FuncAddrs FAs)
-      : EPC(EPC), FAs(FAs) {}
+  /// Create an EPCGenericMemoryAccess instance from a given set of memory
+  /// access proxies.
+  EPCGenericMemoryAccess(ExecutionSession &ES, Funcs Fns)
+      : ES(ES), Fns(std::move(Fns)) {}
 
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
                         WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt8Write>)>(
-        FAs.WriteUInt8s, std::move(OnWriteComplete), Ws);
+    Fns.WriteUInt8s(std::move(OnWriteComplete), ES, Ws);
   }
 
   void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
                          WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt16Write>)>(
-        FAs.WriteUInt16s, std::move(OnWriteComplete), Ws);
+    Fns.WriteUInt16s(std::move(OnWriteComplete), ES, Ws);
   }
 
   void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
                          WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt32Write>)>(
-        FAs.WriteUInt32s, std::move(OnWriteComplete), Ws);
+    Fns.WriteUInt32s(std::move(OnWriteComplete), ES, Ws);
   }
 
   void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
                          WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt64Write>)>(
-        FAs.WriteUInt64s, std::move(OnWriteComplete), Ws);
+    Fns.WriteUInt64s(std::move(OnWriteComplete), ES, Ws);
   }
 
   void writePointersAsync(ArrayRef<tpctypes::PointerWrite> Ws,
                           WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessPointerWrite>)>(
-        FAs.WritePointers, std::move(OnWriteComplete), Ws);
+    Fns.WritePointers(std::move(OnWriteComplete), ES, Ws);
   }
 
   void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
                          WriteResultFn OnWriteComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessBufferWrite>)>(
-        FAs.WriteBuffers, std::move(OnWriteComplete), Ws);
+    Fns.WriteBuffers(std::move(OnWriteComplete), ES, Ws);
   }
 
   void readUInt8sAsync(ArrayRef<ExecutorAddr> Rs,
                        OnReadUIntsCompleteFn<uint8_t> OnComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint8_t>(SPSSequence<SPSExecutorAddr>)>(
-        FAs.ReadUInt8s,
-        [OnComplete = std::move(OnComplete)](
-            Error Err, ReadUIntsResult<uint8_t> Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadUInt8s(std::move(OnComplete), ES, Rs);
   }
 
   void readUInt16sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint16_t> OnComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint16_t>(
-        SPSSequence<SPSExecutorAddr>)>(
-        FAs.ReadUInt16s,
-        [OnComplete = std::move(OnComplete)](
-            Error Err, ReadUIntsResult<uint16_t> Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadUInt16s(std::move(OnComplete), ES, Rs);
   }
 
   void readUInt32sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint32_t> OnComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint32_t>(
-        SPSSequence<SPSExecutorAddr>)>(
-        FAs.ReadUInt32s,
-        [OnComplete = std::move(OnComplete)](
-            Error Err, ReadUIntsResult<uint32_t> Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadUInt32s(std::move(OnComplete), ES, Rs);
   }
 
   void readUInt64sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint64_t> OnComplete) override {
-    using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint64_t>(
-        SPSSequence<SPSExecutorAddr>)>(
-        FAs.ReadUInt64s,
-        [OnComplete = std::move(OnComplete)](
-            Error Err, ReadUIntsResult<uint64_t> Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadUInt64s(std::move(OnComplete), ES, Rs);
   }
 
   void readPointersAsync(ArrayRef<ExecutorAddr> Rs,
                          OnReadPointersCompleteFn OnComplete) override {
-    using namespace shared;
-    using SPSSig = SPSSequence<SPSExecutorAddr>(SPSSequence<SPSExecutorAddr>);
-    EPC.callSPSWrapperAsync<SPSSig>(
-        FAs.ReadPointers,
-        [OnComplete = std::move(OnComplete)](
-            Error Err, ReadPointersResult Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadPointers(std::move(OnComplete), ES, Rs);
   }
 
   void readBuffersAsync(ArrayRef<ExecutorAddrRange> Rs,
                         OnReadBuffersCompleteFn OnComplete) override {
-    using namespace shared;
-    using SPSSig =
-        SPSSequence<SPSSequence<uint8_t>>(SPSSequence<SPSExecutorAddrRange>);
-    EPC.callSPSWrapperAsync<SPSSig>(
-        FAs.ReadBuffers,
-        [OnComplete = std::move(OnComplete)](Error Err,
-                                             ReadBuffersResult Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadBuffers(std::move(OnComplete), ES, Rs);
   }
 
   void readStringsAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadStringsCompleteFn OnComplete) override {
-    using namespace shared;
-    using SPSSig = SPSSequence<SPSString>(SPSSequence<SPSExecutorAddr>);
-    EPC.callSPSWrapperAsync<SPSSig>(
-        FAs.ReadStrings,
-        [OnComplete = std::move(OnComplete)](Error Err,
-                                             ReadStringsResult Result) mutable {
-          if (Err)
-            OnComplete(std::move(Err));
-          else
-            OnComplete(std::move(Result));
-        },
-        Rs);
+    Fns.ReadStrings(std::move(OnComplete), ES, Rs);
   }
 
 private:
-  ExecutorProcessControl &EPC;
-  FuncAddrs FAs;
+  ExecutionSession &ES;
+  Funcs Fns;
 };
 
 } // end namespace orc

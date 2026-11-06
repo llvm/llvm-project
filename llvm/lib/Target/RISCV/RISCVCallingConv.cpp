@@ -14,7 +14,6 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
@@ -177,23 +176,14 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVSubtarget &STI) {
   static const MCPhysReg ArgEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
 }
 
 ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
-  static const RISCVABI::ABI SoftFPABIs[] = {
-      RISCVABI::ABI_ILP32,
-      RISCVABI::ABI_ILP32E,
-      RISCVABI::ABI_LP64,
-      RISCVABI::ABI_LP64E,
-  };
-
-  RISCVABI::ABI ABI = STI.getTargetABI();
-
-  if (llvm::is_contained(SoftFPABIs, ABI) || !STI.hasStdExtF())
+  if (STI.isSoftFPABI() || !STI.hasStdExtF())
     return {};
 
   if (STI.hasStdExtQ())
@@ -203,6 +193,13 @@ ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
     return ArrayRef(ArgFPR64s);
 
   return ArrayRef(ArgFPR32s);
+}
+
+ArrayRef<MCPhysReg> RISCV::getArgVRs(const RISCVSubtarget &STI) {
+  if (STI.hasVInstructions())
+    return ArrayRef(ArgVRs);
+
+  return {};
 }
 
 static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
@@ -216,7 +213,7 @@ static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
                                        RISCV::X12_H, RISCV::X13_H,
                                        RISCV::X14_H, RISCV::X15_H};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
@@ -233,7 +230,7 @@ static ArrayRef<MCPhysReg> getArgGPR32s(const RISCVABI::ABI ABI) {
                                        RISCV::X12_W, RISCV::X13_W,
                                        RISCV::X14_W, RISCV::X15_W};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
@@ -251,7 +248,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
   static const MCPhysReg FastCCEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                           RISCV::X13, RISCV::X14, RISCV::X15};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -271,7 +268,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF16s(const RISCVABI::ABI ABI) {
                                           RISCV::X12_H, RISCV::X13_H,
                                           RISCV::X14_H, RISCV::X15_H};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -291,7 +288,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF32s(const RISCVABI::ABI ABI) {
                                           RISCV::X12_W, RISCV::X13_W,
                                           RISCV::X14_W, RISCV::X15_W};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+  if (RISCVABI::isRVE(ABI))
     return ArrayRef(FastCCEGPRs);
 
   return ArrayRef(FastCCIGPRs);
@@ -307,7 +304,7 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  bool EABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
+  bool EABI = RISCVABI::isRVE(ABI);
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
@@ -416,8 +413,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
 
     RISCVABI::ABI ABI = Subtarget.getTargetABI();
-    if (HasCFBranch &&
-        (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
+    if (HasCFBranch && RISCVABI::isRVE(ABI))
       reportFatalUsageError(
           "Nested functions with control flow protection are not "
           "usable with ILP32E or LP64E ABI.");
@@ -444,23 +440,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  switch (ABI) {
-  default:
-    llvm_unreachable("Unexpected ABI");
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_LP64E:
-    break;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    AllowFPRForF64 = !ArgFlags.isVarArg();
-    [[fallthrough]];
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
+  assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
+         "Unexpected ABI");
+  bool IsDoubleFPABI = RISCVABI::isDoubleFP(ABI);
+  if (IsDoubleFPABI || RISCVABI::isSingleFP(ABI))
     AllowFPRForF16_F32 = !ArgFlags.isVarArg();
-    break;
-  }
+  if (IsDoubleFPABI)
+    AllowFPRForF64 = !ArgFlags.isVarArg();
 
   if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {
@@ -541,7 +527,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
   if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
-      ABI != RISCVABI::ABI_ILP32E) {
+      ABI != RISCVABI::ABI::ILP32E) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
     if (RegIdx != std::size(ArgGPRs) && RegIdx % 2 == 1)

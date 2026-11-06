@@ -34,9 +34,9 @@ func.func @vector_store_i2_const_index_two_partial_stores(%src: vector<3xi2>) {
 //      CHECK:  %[[MASK_1:.+]] = arith.constant dense<[false, false, true, true]>
 //      CHECK:  %[[INIT:.+]] = arith.constant dense<0> : vector<4xi2>
 //      CHECK:  %[[SRC_SLICE_1:.+]] = vector.extract_strided_slice %[[SRC]]
-// CHECK-SAME:    {offsets = [0], sizes = [2], strides = [1]} : vector<3xi2> to vector<2xi2>
+// CHECK-SAME:    offsets = [0], sizes = [2], strides = [1] : vector<3xi2> to vector<2xi2>
 //      CHECK:  %[[INIT_WITH_SLICE_1:.+]] = vector.insert_strided_slice %[[SRC_SLICE_1]], %[[INIT]]
-// CHECK-SAME:    {offsets = [2], strides = [1]} : vector<2xi2> into vector<4xi2>
+// CHECK-SAME:    offsets = [2], strides = [1] : vector<2xi2> into vector<4xi2>
 //      CHECK:  %[[DEST_BYTE_1:.+]] = vector.load %[[DEST]][%[[C1]]] : memref<3xi8>, vector<1xi8>
 //      CHECK:  %[[DEST_BYTE_1_AS_I2:.+]] = vector.bitcast %[[DEST_BYTE_1]]
 // CHECK-SAME:    vector<1xi8> to vector<4xi2>
@@ -48,9 +48,9 @@ func.func @vector_store_i2_const_index_two_partial_stores(%src: vector<3xi2>) {
 // RMW sequence for Byte 2
 //      CHECK:  %[[OFFSET:.+]] = arith.addi %[[C1]], %[[C1]] : index
 //      CHECK:  %[[SRC_SLICE_2:.+]] = vector.extract_strided_slice %[[SRC]]
-// CHECK-SAME:    {offsets = [2], sizes = [1], strides = [1]} : vector<3xi2> to vector<1xi2>
+// CHECK-SAME:    offsets = [2], sizes = [1], strides = [1] : vector<3xi2> to vector<1xi2>
 //      CHECK:  %[[INIT_WITH_SLICE_2:.+]] = vector.insert_strided_slice %[[SRC_SLICE_2]], %[[INIT]]
-// CHECK-SAME:    {offsets = [0], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK-SAME:    offsets = [0], strides = [1] : vector<1xi2> into vector<4xi2>
 //      CHECK:  %[[MASK_2:.+]] = arith.constant dense<[true, false, false, false]> : vector<4xi1>
 //      CHECK:  %[[DEST_BYTE_2:.+]] = vector.load %[[DEST]][%[[OFFSET]]] : memref<3xi8>, vector<1xi8>
 //      CHECK:  %[[DEST_BYTE_2_AS_I2:.+]] = vector.bitcast %[[DEST_BYTE_2]]
@@ -86,9 +86,9 @@ func.func @vector_store_i2_two_partial_one_full_stores(%src: vector<7xi2>) {
 //      CHECK:  %[[MASK_1:.+]] = arith.constant dense<[false, false, false, true]>
 //      CHECK:  %[[INIT:.+]] = arith.constant dense<0> : vector<4xi2>
 //      CHECK:  %[[SRC_SLICE_0:.+]] = vector.extract_strided_slice %[[SRC]]
-// CHECK-SAME:    {offsets = [0], sizes = [1], strides = [1]}
+// CHECK-SAME:    offsets = [0], sizes = [1], strides = [1]
 //      CHECK:  %[[INIT_WITH_SLICE_1:.+]] = vector.insert_strided_slice %[[SRC_SLICE_0]], %[[INIT]]
-// CHECK-SAME:    {offsets = [3], strides = [1]}
+// CHECK-SAME:    offsets = [3], strides = [1]
 //      CHECK:  %[[DEST_BYTE_1:.+]] = vector.load %[[DEST]][%[[C1]]]
 //      CHECK:  %[[DEST_BYTE_AS_I2:.+]] = vector.bitcast %[[DEST_BYTE_1]]
 // CHECK-SAME:    : vector<1xi8> to vector<4xi2>
@@ -100,7 +100,7 @@ func.func @vector_store_i2_two_partial_one_full_stores(%src: vector<7xi2>) {
 // Full-width store:
 //      CHECK:  %[[C2:.+]] = arith.addi %[[C1]], %[[C1]]
 //      CHECK:  %[[SRC_SLICE_1:.+]] = vector.extract_strided_slice %[[SRC]]
-// CHECK-SAME:    {offsets = [1], sizes = [4], strides = [1]}
+// CHECK-SAME:    offsets = [1], sizes = [4], strides = [1]
 //      CHECK:  %[[SRC_SLICE_1_AS_I8:.+]] = vector.bitcast %[[SRC_SLICE_1]]
 // CHECK-SAME:    : vector<4xi2> to vector<1xi8>
 //      CHECK:  vector.store %[[SRC_SLICE_1_AS_I8]], %[[DEST]][%[[C2]]]
@@ -108,9 +108,9 @@ func.func @vector_store_i2_two_partial_one_full_stores(%src: vector<7xi2>) {
 // Second partial/RMW store:
 //      CHECK:  %[[C3:.+]] = arith.addi %[[C2]], %[[C1]]
 //      CHECK:  %[[SRC_SLICE_2:.+]] = vector.extract_strided_slice %[[SRC]]
-// CHECK-SAME:    {offsets = [5], sizes = [2], strides = [1]}
+// CHECK-SAME:    offsets = [5], sizes = [2], strides = [1]
 //      CHECK:  %[[INIT_WITH_SLICE2:.+]] = vector.insert_strided_slice %[[SRC_SLICE_2]]
-// CHECK-SAME:    {offsets = [0], strides = [1]}
+// CHECK-SAME:    offsets = [0], strides = [1]
 //      CHECK:  %[[MASK_2:.+]] = arith.constant dense<[true, true, false, false]>
 //      CHECK:  %[[DEST_BYTE_2:.+]] = vector.load %[[DEST]][%[[C3]]]
 //      CHECK:  %[[DEST_BYTE_2_AS_I2:.+]] = vector.bitcast %[[DEST_BYTE_2]]
@@ -143,7 +143,7 @@ func.func @vector_store_i2_const_index_one_partial_store(%src: vector<1xi2>) {
 //      CHECK:  %[[MASK:.+]] = arith.constant dense<[false, true, false, false]>
 //      CHECK:  %[[INIT:.+]] = arith.constant dense<0> : vector<4xi2>
 //      CHECK:  %[[INIT_WITH_SLICE:.+]] = vector.insert_strided_slice %[[SRC]], %[[INIT]]
-// CHECK-SAME:    {offsets = [1], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK-SAME:    offsets = [1], strides = [1] : vector<1xi2> into vector<4xi2>
 //      CHECK:  %[[DEST_BYTE:.+]] = vector.load %[[DEST]][%[[C0]]] : memref<1xi8>, vector<1xi8>
 //      CHECK:  %[[DEST_BYTE_AS_I2:.+]] = vector.bitcast %[[DEST_BYTE]]
 // CHECK-SAME:    : vector<1xi8> to vector<4xi2>

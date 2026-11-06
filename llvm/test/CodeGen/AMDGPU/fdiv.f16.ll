@@ -123,8 +123,7 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX10-NEXT:    v_mad_f32 v3, -v3, v5, v6
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v4
 ; GFX10-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX10-NEXT:    v_add_f32_e32 v3, v3, v5
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX10-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX10-NEXT:    v_div_fixup_f16 v1, v3, v2, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -155,9 +154,7 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v0, v5, v0
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v4
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v0, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v3.l, v2.l
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -188,9 +185,7 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX11-FAKE16-NEXT:    v_mul_f32_e32 v3, v5, v3
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_add_f32_e32 v3, v3, v4
-; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX11-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v2, v1
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
@@ -1736,11 +1731,12 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_rcp_f32_e32 v1, 0x41200000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 0x3dcccccd, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1812,11 +1808,12 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_rcp_f32_e32 v1, 0xc1200000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 0xbdcccccd, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -2152,8 +2149,8 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX11-TRUE16-LABEL: v_rsq_v2f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_rsq_v2f16:
@@ -2363,11 +2360,11 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX11-TRUE16-LABEL: v_neg_rsq_v2f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_rsq_f16_e32 v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-TRUE16-NEXT:    v_xor_b16 v0.h, 0x8000, v0.h
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
+; GFX11-TRUE16-NEXT:    v_xor_b16 v0.h, 0x8000, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_neg_rsq_v2f16:

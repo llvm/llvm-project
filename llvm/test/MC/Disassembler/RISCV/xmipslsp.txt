@@ -1,0 +1,19 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+xmipslsp < %s 2> %t.err \
+# RUN:   | FileCheck %s --check-prefix=CHECK
+# RUN: FileCheck %s --check-prefix=RV32 < %t.err
+# RUN: llvm-mc -disassemble -triple=riscv64 -mattr=+xmipslsp < %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
+
+[0x8b,0x50,0x31,0x91]
+# CHECK: mips.swp s3, s2, 0(sp)
+
+[0x8b,0x44,0x81,0x90]
+# RV32: warning: invalid instruction encoding
+# RV64: mips.ldp s1, s2, 8(sp)
+
+[0x0b,0x45,0x56,0x59]
+# CHECK: mips.lwp a0, a1, 20(a2)
+
+[0x0b,0xd8,0x5b,0xb1]
+# RV32: warning: invalid instruction encoding
+# RV64: mips.sdp s5, s6, 16(s7)

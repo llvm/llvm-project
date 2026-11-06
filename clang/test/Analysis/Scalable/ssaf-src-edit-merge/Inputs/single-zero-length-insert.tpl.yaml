@@ -1,0 +1,8 @@
+---
+MainSourceFile:  '@FOO@'
+Replacements:
+  - FilePath:        '@FOO@'
+    Offset:          10
+    Length:          0
+    ReplacementText: '.data()'
+...

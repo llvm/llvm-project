@@ -13,19 +13,23 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
-cl::opt<bool> EmbedDebug("dx-embed-debug",
-                         cl::desc("Embed PDB in shader container"));
-cl::opt<bool>
-    StripDebug("dx-strip-debug",
-               cl::desc("Strip debug information from shader bytecode"));
+static bool isSignaturePart(StringRef Name) {
+  return Name == "ISG1" || Name == "OSG1" || Name == "PSG1";
+}
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
+
+bool MCDXContainerBaseWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Skip empty and auxiliary sections.
+  return SectionSize == 0 || SectionName == PdbFileNameSectionName ||
+         SectionName == ModuleHashSectionName;
+}
 
 void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   ArrayRef<MCDXContainerPart> Parts = collectParts();
@@ -37,14 +41,24 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   // 16 part offsets gives us a little room for growth.
   llvm::SmallVector<uint64_t, 16> PartOffsets;
   uint64_t PartOffset = 0;
+  bool HasPrivate = false;
   for (const MCDXContainerPart &Part : Parts) {
+    if (HasPrivate)
+      reportFatalInternalError(
+          "PRIV must be the last section in a DXContainer");
+    if (Part.Name == "PRIV")
+      HasPrivate = true;
+
     uint64_t SectionSize = Part.Data.size();
     assert(SectionSize < std::numeric_limits<uint32_t>::max() &&
            "Section size too large for DXContainer");
 
     PartOffsets.push_back(PartOffset);
+    // Signature writers supply their validator-dependent padding. Parts must
+    // remain contiguous even when a legacy signature is not dword-aligned.
+    if (!HasPrivate && !isSignaturePart(Part.Name))
+      SectionSize = alignTo(SectionSize, Align(4));
     PartOffset += sizeof(dxbc::PartHeader) + SectionSize;
-    PartOffset = alignTo(PartOffset, Align(4ul));
     // The DXIL part also writes a program header, so we need to include its
     // size when computing the offset for a part after the DXIL part.
     if (dxbc::isProgramPart(Part.Name))
@@ -84,8 +98,11 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
 
     if (dxbc::isProgramPart(Part.Name))
       PartSize += sizeof(dxbc::ProgramHeader);
-    // DXContainer parts should be 4-byte aligned.
-    PartSize = alignTo(PartSize, Align(4));
+    // Signature payloads include padding only for validator 1.7 and later.
+    bool IsPrivate = Part.Name == "PRIV";
+    bool IsSignature = isSignaturePart(Part.Name);
+    if (!IsPrivate && !IsSignature)
+      PartSize = alignTo(PartSize, Align(4));
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
     if (dxbc::isProgramPart(Part.Name)) {
       dxbc::ProgramHeader Header;
@@ -115,8 +132,10 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
                                    sizeof(dxbc::ProgramHeader)));
     }
     W.write<char>(Part.Data);
-    unsigned Size = W.OS.tell() - Start;
-    W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
+    if (!IsPrivate && !IsSignature) {
+      unsigned Size = W.OS.tell() - Start;
+      W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
+    }
   }
 }
 
@@ -141,8 +160,7 @@ ArrayRef<MCDXContainerPart> DXContainerObjectWriter::collectParts() {
 
 bool DXContainerObjectWriter::shouldSkipSection(StringRef SectionName,
                                                 size_t SectionSize) {
-  // Do not write ILDB part if we're not embedding it.
-  if (SectionName == "ILDB" && (!EmbedDebug || StripDebug))
+  if (TargetObjectWriter->shouldSkipSection(SectionName))
     return true;
   if (SectionName == "SRCI")
     return true;

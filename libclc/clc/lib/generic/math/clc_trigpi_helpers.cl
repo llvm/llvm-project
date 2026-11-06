@@ -11,6 +11,8 @@
 #include "clc/math/clc_mad.h"
 #include "clc/math/clc_rint.h"
 #include "clc/math/clc_trigpi_helpers.h"
+#include "clc/relational/clc_isnan.h"
+#include "clc/relational/clc_select.h"
 
 #define __CLC_BODY "clc_trigpi_helpers.inc"
 #include "clc/math/gentype.inc"

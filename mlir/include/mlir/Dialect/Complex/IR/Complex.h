@@ -9,8 +9,7 @@
 #ifndef MLIR_DIALECT_COMPLEX_IR_COMPLEX_H_
 #define MLIR_DIALECT_COMPLEX_IR_COMPLEX_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"

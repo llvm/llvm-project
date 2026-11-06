@@ -386,7 +386,7 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
   // And still finalize changes made by the caller.
   if (isAnyBaseRegionReported(State, Region)) {
     if (misuseCausesCrash(MK)) {
-      C.generateSink(State, C.getPredecessor());
+      C.addSink(State);
     } else {
       C.addTransition(State);
     }
@@ -407,8 +407,8 @@ ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
                                           const CXXRecordDecl *RD,
                                           CheckerContext &C,
                                           MisuseKind MK) const {
-  if (ExplodedNode *N = misuseCausesCrash(MK) ? C.generateErrorNode()
-                                              : C.generateNonFatalErrorNode()) {
+  if (ExplodedNode *N =
+          misuseCausesCrash(MK) ? C.addSink() : C.generateNonFatalErrorNode()) {
     // Uniqueing report to the same object.
     PathDiagnosticLocation LocUsedForUniqueing;
     const ExplodedNode *MoveNode = getMoveLocation(N, Region, C);

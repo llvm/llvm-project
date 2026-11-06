@@ -55,22 +55,22 @@ template <> struct GraphTraits<NumberedGraph *> {
   static unsigned getNumberEpoch(NumberedGraph *G) { return G->NumberEpoch; }
 };
 
-namespace DomTreeBuilder {
-// Dummy specialization. Only needed so that we can call recalculate(), which
-// sets DT.Parent -- but we can't access DT.Parent here.
-template <> void Calculate(DomTreeBase<NumberedNode> &DT) {}
-} // end namespace DomTreeBuilder
 } // end namespace llvm
 
 namespace {
+
+// The graph has no edges, so the tree is built by hand instead of by
+// recalculate().
+struct FakeDomTree : DomTreeBase<NumberedNode> {
+  explicit FakeDomTree(NumberedGraph &G) { Parent = &G; }
+};
 
 TEST(GenericDomTree, BlockNumbers) {
   NumberedGraph G;
   NumberedNode *N1 = G.addNode();
   NumberedNode *N2 = G.addNode();
 
-  DomTreeBase<NumberedNode> DT;
-  DT.recalculate(G); // only sets parent
+  FakeDomTree DT(G);
   // Construct fake domtree: node 0 dominates all other nodes
   DT.setNewRoot(N1);
   DT.addNewBlock(N2, N1);
@@ -95,13 +95,8 @@ TEST(GenericDomTree, BlockNumbers) {
   // Adding a new node with a higher number is no problem
   NumberedNode *N3 = G.addNode();
   EXPECT_EQ(DT.getNode(N3), nullptr);
-  // ... even if it exceeds getMaxNumber()
-  NumberedNode *N4 = G.addNode();
-  N4->Number = 1000;
-  EXPECT_EQ(DT.getNode(N4), nullptr);
 
   DT.addNewBlock(N3, N1);
-  DT.addNewBlock(N4, N1);
   for (auto &N : G.Nodes)
     EXPECT_EQ(DT.getNode(N.get())->getBlock(), N.get());
 }

@@ -21,11 +21,15 @@
 namespace llvm {
 
 class StringRef;
+namespace cl {
+class LibraryOptionsContext;
+}
 
 /// Parse cl::opts from a fuzz target commandline.
 ///
 /// This handles all arguments after -ignore_remaining_args=1 as cl::opts.
-LLVM_ABI void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
+LLVM_ABI void parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
+                                int ArgC, char *ArgV[]);
 
 /// Handle backend options that are encoded in the executable name.
 ///
@@ -36,11 +40,15 @@ LLVM_ABI void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
 ///
 /// This is meant to be used for environments like OSS-Fuzz that aren't capable
 /// of passing in command line arguments in the normal way.
-LLVM_ABI void handleExecNameEncodedBEOpts(StringRef ExecName);
+LLVM_ABI void
+handleExecNameEncodedBEOpts(cl::LibraryOptionsContext &LibraryOptions,
+                            StringRef ExecName);
 
 /// Handle optimizer options which are encoded in the executable name.
 /// Same semantics as in 'handleExecNameEncodedBEOpts'.
-LLVM_ABI void handleExecNameEncodedOptimizerOpts(StringRef ExecName);
+LLVM_ABI void
+handleExecNameEncodedOptimizerOpts(cl::LibraryOptionsContext &LibraryOptions,
+                                   StringRef ExecName);
 
 using FuzzerTestFun = int (*)(const uint8_t *Data, size_t Size);
 using FuzzerInitFun = int (*)(int *argc, char ***argv);

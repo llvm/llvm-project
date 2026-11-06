@@ -194,10 +194,9 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
   if (LEN_) {
     CHECK(type_.category() == TypeCategory::Character);
     return Fold(foldingContext,
-        Expr<SubscriptInteger>{
-            foldingContext.targetCharacteristics().GetByteSize(
-                type_.category(), type_.kind())} *
-            Expr<SubscriptInteger>{*LEN_});
+        MakeSubscriptIntExpr(foldingContext.targetCharacteristics().GetByteSize(
+            type_.category(), type_.kind())) *
+            common::Clone(*LEN_));
   }
   if (auto elementBytes{type_.MeasureSizeInBytes(foldingContext, align)}) {
     return Fold(foldingContext, std::move(*elementBytes));
@@ -668,6 +667,8 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
             }
             result.cudaSubprogramAttrs = subp.cudaSubprogramAttrs();
+            result.hasOpenACCRoutine = !subp.openACCRoutineInfos().empty();
+            result.isStmtFunction = subp.stmtFunction().has_value();
             return std::move(result);
           },
           [&](const semantics::ProcEntityDetails &proc)
@@ -695,6 +696,9 @@ static std::optional<Procedure> CharacterizeProcedure(
                 // functions as their interfaces.
                 result->attrs.reset(Procedure::Attr::Elemental);
               }
+              if (result && !proc.openACCRoutineInfos().empty()) {
+                result->hasOpenACCRoutine = true;
+              }
               return result;
             } else {
               Procedure result;
@@ -716,6 +720,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               } else if (symbol.test(semantics::Symbol::Flag::Function)) {
                 return std::nullopt;
               }
+              result.hasOpenACCRoutine = !proc.openACCRoutineInfos().empty();
               // The PASS name, if any, is not a characteristic.
               return std::move(result);
             }

@@ -50,6 +50,18 @@ namespace cwg1413 { // cwg1413: 12
   };
 } // namespace cwg1413
 
+namespace cwg1417 { // cwg1417: 3.5
+  template<typename T> struct S {
+    typedef T F;
+    typedef T *P;
+    // expected-error@-1 {{pointer to function type 'void () const' cannot have 'const' qualifier}}
+      // expected-note@#cwg1417-s {{in instantiation of template class 'cwg1417::S<void () const>' requested here}}
+    typedef T &R;
+    // expected-error@-1 {{reference to function type 'void () const' cannot have 'const' qualifier}}
+  };
+  S<void() const> s; // #cwg1417-s
+}
+
 namespace cwg1423 { // cwg1423: 11
 #if __cplusplus >= 201103L
   bool b1 = nullptr;
@@ -97,6 +109,48 @@ namespace cwg1432 { // cwg1432: 16 open 2022-11-11
   } // namespace function_template
 #endif
 } // namespace cwg1432
+
+namespace cwg1439 { // cwg1439: 2.7
+class A {
+  template <typename>
+  friend int f();
+
+  template <typename>
+  friend struct B;
+
+  static int private_i;
+};
+
+int (*p1)() = &f<int>;
+// expected-error@-1 {{use of undeclared identifier 'f'}}
+
+// FIXME: only the first error is relevant, others are noise
+int (*p2)() = &cwg1439::f<int>;
+// expected-error@-1 {{no member named 'f' in namespace 'cwg1439'}}
+// expected-error@-2 {{expected '(' for function-style cast or type construction}}
+// expected-error@-3 {{expected expression}}
+
+B<int>* p3;
+// expected-error@-1 {{no template named 'B'}}
+
+cwg1439::B<int>* p4;
+// expected-error@-1 {{no template named 'B' in namespace 'cwg1439'}}
+
+template <typename>
+int f() { return A::private_i; }
+
+template <typename>
+struct B {
+  int g() {
+    return A::private_i;
+  }
+};
+
+int (*p5)() = &f<int>;
+int (*p6)() = &cwg1439::f<int>;
+B<int>* p7;
+cwg1439::B<int>* p8;
+} // namespace cwg1439
 
 namespace cwg1443 { // cwg1443: 2.7
 struct A {

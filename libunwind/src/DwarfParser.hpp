@@ -57,6 +57,7 @@ public:
 #if defined(_LIBUNWIND_TARGET_AARCH64)
     bool      addressesSignedWithBKey;
     bool      mteTaggedFrame;
+    bool      nonHintPAuthFrame;
 #endif
   };
 
@@ -342,6 +343,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   cieInfo->addressesSignedWithBKey = false;
   cieInfo->mteTaggedFrame = false;
+  cieInfo->nonHintPAuthFrame = false;
 #endif
   cieInfo->cieStart = cie;
   pint_t p = cie;
@@ -442,6 +444,9 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
         break;
       case 'G':
         cieInfo->mteTaggedFrame = true;
+        break;
+      case 'N':
+        cieInfo->nonHintPAuthFrame = true;
         break;
 #endif
       default:
@@ -856,6 +861,26 @@ bool CFI_Parser<A>::parseFDEInstructions(
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_negate_ra_state_with_pc(pc=0x%" PRIx64 ")\n",
             static_cast<uint64_t>(results->ptrAuthDiversifier));
+      } break;
+#endif
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+      case DW_CFA_AARCH64_set_ra_state: {
+        int64_t value =
+            static_cast<int64_t>(addressSpace.getULEB128(p, instructionsEnd));
+        if (value < 0 || 2 < value) {
+          _LIBUNWIND_LOG0("malformed DW_CFA_AARCH64_set_ra_state DWARF "
+                          "unwind, RA_SIGN_STATE value not recognized");
+          return false;
+        }
+        offset = addressSpace.getSLEB128(p, instructionsEnd) *
+                 cieInfo.codeAlignFactor;
+        results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                             value, initialState);
+        results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset + offset;
+        _LIBUNWIND_TRACE_DWARF(
+            "DW_CFA_AARCH64_set_ra_state(state=%" PRId64 ",pc=0x%" PRIx64 ")\n",
+            value, static_cast<uint64_t>(results->ptrAuthDiversifier));
       } break;
 #endif
 

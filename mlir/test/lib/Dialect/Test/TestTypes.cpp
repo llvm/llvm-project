@@ -14,14 +14,12 @@
 #include "TestTypes.h"
 #include "TestDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
 #include <cstring>
 #include <optional>
@@ -330,19 +328,6 @@ uint64_t TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
       return llvm::cast<IntegerAttr>(pair.back()).getValue().getZExtValue();
   }
   return 1;
-}
-
-//===----------------------------------------------------------------------===//
-// TestSymbolUserType
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-TestSymbolUserType::verifySymbolUses(Operation *op,
-                                     SymbolTableCollection &symbolTable) const {
-  if (!symbolTable.lookupNearestSymbolFrom<SymbolOpInterface>(op, getSymbol()))
-    return op->emitOpError()
-           << "'" << getSymbol() << "' does not reference a valid symbol";
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

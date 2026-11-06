@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <map>
 #include <memory>
@@ -67,6 +68,9 @@ enum ActionKind {
 
   /// Emit a .cir file
   EmitCIR,
+
+  /// Emit a .cirbc file (ClangIR bytecode).
+  EmitCIRBC,
 
   /// Emit a .ll file.
   EmitLLVM,
@@ -423,6 +427,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
+  /// Run the Clang IR (CIR) calling-convention lowering pass.  A no-op on
+  /// targets whose calling convention is not yet implemented.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRCallConvLowering : 1;
+
   /// Enable ClangIR library optimization.
   /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
   LLVM_PREFERRED_TYPE(bool)
@@ -455,6 +464,9 @@ public:
 
   /// If given, filter dumped AST Decl nodes by this substring.
   std::string ASTDumpFilter;
+
+  /// If given, filter dumped AST Decl nodes by source file path (glob pattern).
+  std::string ASTDumpFilterPath;
 
   /// If given, enable code completion at the provided location.
   ParsedSourceLocation CodeCompletionAt;
@@ -538,6 +550,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned TimeTraceVerbose : 1;
 
+  /// Compression mode for -ftime-trace output.
+  llvm::TimeTraceCompression TimeTraceCompress =
+      llvm::TimeTraceCompression::Infer;
+
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
@@ -565,8 +581,8 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        ClangIRLibOptEnabled(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRCallConvLowering(true), ClangIRLibOptEnabled(false),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -71,7 +71,6 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
                                            StringRef ToolPath, Error &Err)
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
-  Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
       InputFile->getFileName(), nullptr,
@@ -82,6 +81,8 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
     return;
   }
   BC = std::move(BCOrErr.get());
+  BC->initializeRelocationHandler(
+      createRelocationHandler(BC->TheTriple->getArch()));
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
       createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
                           BC->MII.get(), BC->MRI.get(), BC->STI.get())));
@@ -482,7 +483,7 @@ void MachORewriteInstance::emitAndLink() {
 }
 
 void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
-                                                       raw_pwrite_stream &OS) {
+                                                       raw_fd_ostream &OS) {
   if (!opts::Instrument)
     return;
   ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
@@ -496,8 +497,8 @@ void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
          "Section input offset cannot be zero");
   assert(Section->getAllocAddress() && "Section alloc address cannot be zero");
   assert(Section->getOutputSize() && "Section output size cannot be zero");
-  OS.pwrite(reinterpret_cast<char *>(Section->getAllocAddress()),
-            Section->getOutputSize(), Section->getInputFileOffset());
+  safePWrite(OS, reinterpret_cast<char *>(Section->getAllocAddress()),
+             Section->getOutputSize(), Section->getInputFileOffset());
 }
 
 void MachORewriteInstance::rewriteFile() {
@@ -517,13 +518,13 @@ void MachORewriteInstance::rewriteFile() {
       continue;
     if (opts::Verbosity >= 2)
       outs() << "BOLT: rewriting function \"" << Function << "\"\n";
-    OS.pwrite(reinterpret_cast<char *>(Function.getImageAddress()),
-              Function.getImageSize(), Function.getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function.getImageAddress()),
+               Function.getImageSize(), Function.getFileOffset());
   }
 
   for (const BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
   }
 
   writeInstrumentationSection("__counters", OS);

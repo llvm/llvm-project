@@ -26,11 +26,47 @@
 #include "llvm/ADT/StringSwitch.h"
 
 #include <cassert>
+#include <limits>
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // Patterns and helpers.
 //===----------------------------------------------------------------------===//
+
+static spirv::CooperativeMatrixType
+convertMMAMatrixType(gpu::MMAMatrixType type) {
+  ArrayRef<int64_t> shape = type.getShape();
+  auto use =
+      llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
+          .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
+          .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
+          .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
+  return spirv::CooperativeMatrixType::get(
+      type.getElementType(), shape[0], shape[1], spirv::Scope::Subgroup, use);
+}
+
+// Convert a memref of `gpu.mma_matrix` into a SPIR-V pointer to an array
+// of spirv::CooperativeMatrix.
+static std::optional<Type> convertMemrefOfMMAMatrixType(MemRefType type) {
+  auto matrixType = dyn_cast<gpu::MMAMatrixType>(type.getElementType());
+  if (!matrixType)
+    return std::nullopt;
+  // SPV Cooperative matrix types, and composites containing them, may only be
+  // allocated in Function or Private storage classes. For now, support only
+  // function-local arrays.
+  auto storageClass =
+      dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
+  if (!storageClass ||
+      storageClass.getValue() != spirv::StorageClass::Function ||
+      !type.hasStaticShape() || !type.getLayout().isIdentity() ||
+      type.getNumElements() <= 0 ||
+      type.getNumElements() > std::numeric_limits<unsigned>::max())
+    return Type();
+  auto arrayType =
+      spirv::ArrayType::get(convertMMAMatrixType(matrixType),
+                            static_cast<unsigned>(type.getNumElements()));
+  return spirv::PointerType::get(arrayType, spirv::StorageClass::Function);
+}
 
 /// Creates a SPIR-V op to replace the given GPU subgroup mma elementwise op
 /// when the elementwise op directly supports with cooperative matrix type.
@@ -285,6 +321,36 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
 
 namespace khr {
 namespace {
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+
+/// Mirrors calculateMemoryRequirements in MemRefToSPIRV.cpp, simplified since
+/// coop matrix load/store have no alignment or nontemporal attrs of their own.
+static MemoryRequirements calculateMemoryRequirements(Value accessedPtr) {
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer)
+    return {};
+
+  // PhysicalStorageBuffer pointers require Aligned.
+  std::optional<int64_t> sizeInBytes;
+  Type pointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType)) {
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(pointeeType)) {
+    if (auto scalarElem = dyn_cast<spirv::ScalarType>(vecType.getElementType()))
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+  }
+
+  if (!sizeInBytes)
+    return {};
+
+  MLIRContext *ctx = accessedPtr.getContext();
+  return {spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned),
+          IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes)};
+}
 
 /// Converts the GPU MMA loadOp to KHRCooperativeMatrixLoad op in the SPIRV
 /// dialect.
@@ -318,8 +384,10 @@ struct WmmaLoadOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixLoadOp>(
-        op, coopType, bufferPtr, strideValue, layout);
+        op, coopType, bufferPtr, layout, strideValue, memReq.memoryAccess,
+        memReq.alignment);
     return success();
   }
 };
@@ -350,8 +418,10 @@ struct WmmaStoreOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixStoreOp>(
-        op, bufferPtr, adaptor.getSrc(), strideValue, layout);
+        op, bufferPtr, adaptor.getSrc(), layout, strideValue,
+        memReq.memoryAccess, memReq.alignment);
     return success();
   }
 };
@@ -413,17 +483,6 @@ void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
 
 void mlir::populateMMAToSPIRVCoopMatrixTypeConversion(
     mlir::SPIRVTypeConverter &typeConverter) {
-  typeConverter.addConversion([](gpu::MMAMatrixType type) {
-    ArrayRef<int64_t> retTypeShape = type.getShape();
-    Type elementType = type.getElementType();
-    auto use =
-        llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
-            .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
-            .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
-            .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
-
-    return spirv::CooperativeMatrixType::get(elementType, retTypeShape[0],
-                                             retTypeShape[1],
-                                             spirv::Scope::Subgroup, use);
-  });
+  typeConverter.addConversion(convertMMAMatrixType);
+  typeConverter.addConversion(convertMemrefOfMMAMatrixType);
 }

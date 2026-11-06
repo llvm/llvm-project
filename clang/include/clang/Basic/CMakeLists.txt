@@ -22,6 +22,7 @@ endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
 clang_diag_gen(AST)
+clang_diag_gen(CodeGen)
 clang_diag_gen(Comment)
 clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
@@ -98,9 +99,17 @@ clang_tablegen(BuiltinsAArch64.inc -gen-clang-builtins
   SOURCE BuiltinsAArch64.td
   TARGET ClangBuiltinsAArch64)
 
+clang_tablegen(BuiltinsARM.inc -gen-clang-builtins
+  SOURCE BuiltinsARM.td
+  TARGET ClangBuiltinsARM)
+
 clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
   SOURCE BuiltinsAMDGPU.td
   TARGET ClangBuiltinsAMDGPU)
+
+clang_tablegen(BuiltinsAVR.inc -gen-clang-builtins
+  SOURCE BuiltinsAVR.td
+  TARGET ClangBuiltinsAVR)
 
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
@@ -154,9 +163,9 @@ clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
   SOURCE BuiltinTemplates.td
   TARGET ClangBuiltinTemplates)
 
-clang_tablegen(Traits.inc -gen-clang-traits
-  SOURCE Traits.td
-  TARGET ClangTraits)
+clang_tablegen(BuiltinTraits.inc -gen-clang-builtin-traits
+  SOURCE BuiltinTraits.td
+  TARGET ClangBuiltinTraits)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

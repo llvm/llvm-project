@@ -44,6 +44,10 @@ void TargetThreadWindows::RefreshStateAfterStop() {
 
 void TargetThreadWindows::WillResume(lldb::StateType resume_state) {}
 
+StructuredData::ObjectSP TargetThreadWindows::FetchThreadExtendedInfo() {
+  return m_host_thread.GetNativeThread().GetExtendedInfo();
+}
+
 void TargetThreadWindows::DidStop() {}
 
 RegisterContextSP TargetThreadWindows::GetRegisterContext() {
