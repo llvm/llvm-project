@@ -5889,7 +5889,8 @@ static SDValue CollectOpsToWiden(SelectionDAG &DAG, const TargetLowering &TLI,
   }
 
   // add undefs of size MaxVT until ConcatOps grows to length of WidenVT
-  unsigned NumOps = WidenVT.getVectorNumElements()/MaxVT.getVectorNumElements();
+  unsigned NumOps = WidenVT.getVectorElementCount().getKnownScalarFactor(
+      MaxVT.getVectorElementCount());
   if (NumOps != ConcatEnd ) {
     SDValue UndefVal = DAG.getPOISON(MaxVT);
     for (unsigned j = ConcatEnd; j < NumOps; ++j)

@@ -8,16 +8,19 @@ define double @test(ptr %p, ptr %q, ptr %s) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SS2:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @external()
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[S]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[Q]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[S]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x double> [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[A2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP6]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[SS2]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[A1:%.*]] = fadd fast double [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = fadd fast double [[A1]], [[TMP8]]
 ; CHECK-NEXT:    call void @use(double [[TMP8]])
 ; CHECK-NEXT:    ret double [[A2]]
 ;
