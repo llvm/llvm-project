@@ -1493,6 +1493,9 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
   let requiredClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let association = AS_LoopNest;
   let category = CA_Executable;
   let allowedLoopModifiers = [

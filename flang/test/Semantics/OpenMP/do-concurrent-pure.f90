@@ -134,7 +134,7 @@ contains
     integer, intent(inout) :: a(n, n)
     integer :: i, j
     do concurrent (i = 1:n)
-      !ERROR: The OpenMP directive 'BARRIER' is not allowed in a DO CONCURRENT construct
+      !ERROR: Only Loop Transformation directives are allowed in the APPLY clause directive list
       !$omp tile sizes(2) apply(grid: barrier)
       do j = 1, n
         a(i, j) = a(i, j) + 1
