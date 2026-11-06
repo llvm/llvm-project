@@ -19,3 +19,5 @@ __Znam
 __ZnamRKSt9nothrow_t
 __ZnamSt11align_val_t
 __ZnamSt11align_val_tRKSt9nothrow_t
+__ZNSt3__114__new_at_leastEm
+__ZNSt3__114__new_at_leastEmSt11align_val_t
