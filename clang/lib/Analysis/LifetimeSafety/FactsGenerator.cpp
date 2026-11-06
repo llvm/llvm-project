@@ -1156,21 +1156,34 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 
 void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
                                        ArrayRef<const Expr *> Args) {
+  if (!isFreeingFunction(*FD))
+    return;
+  auto InvalidateArg = [&](unsigned ArgIndex) {
+    assert(ArgIndex < Args.size() && "Arg index should be in bounds");
+
+    OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
+    if (!ArgList)
+      return;
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ArgList->getOuterOriginID(), Call));
+  };
+
+  bool HasOwnershipTakesAttr = false;
   for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
     if (Attr->getOwnKind() != OwnershipAttr::Takes)
       continue;
+    HasOwnershipTakesAttr = true;
     for (const ParamIdx &Idx : Attr->args()) {
       // Attribute indices count implicit 'this', but constructor Args omits it:
       // the first explicit parameter (2) maps to Args[0], not Args[1].
-      unsigned ArgIndex = Idx.getLLVMIndex() - isa<CXXConstructorDecl>(FD);
-      if (ArgIndex >= Args.size())
-        continue;
-      OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
-      if (!ArgList)
-        continue;
-      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
-          ArgList->getOuterOriginID(), Call));
+      InvalidateArg(Idx.getLLVMIndex() - isa<CXXConstructorDecl>(FD));
     }
+  }
+  // Allocating/freeing builtins (e.g. `free`, `realloc`) free their first
+  // argument.
+  if (!HasOwnershipTakesAttr) {
+    assert(!Args.empty() && "freeing builtins take at least one argument");
+    InvalidateArg(0);
   }
 }
 
