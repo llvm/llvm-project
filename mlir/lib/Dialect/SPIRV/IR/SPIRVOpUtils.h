@@ -9,6 +9,10 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 namespace mlir::spirv {
+/// Returns whether a type contains a microscaling element, including through
+/// composite types and pointers. Set subByteOnly to restrict the check to
+/// FP4/FP6.
+bool containsMicroscalingType(Type type, bool subByteOnly = false);
 
 /// Returns the bit width of the `type`.
 inline unsigned getBitWidth(Type type) {

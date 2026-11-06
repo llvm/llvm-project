@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -41,6 +42,35 @@
 
 using namespace mlir;
 using namespace mlir::spirv::AttrNames;
+
+/// Find microscaling elements in composite types, including recursive structs.
+/// Storage restrictions only apply to the sub-byte formats.
+static bool
+containsMicroscalingTypeImpl(Type type, bool subByteOnly,
+                             llvm::SmallDenseSet<Type, 8> &visited) {
+  if (!visited.insert(type).second)
+    return false;
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType>(type) ||
+      (!subByteOnly && isa<Float8E8M0FNUType>(type)))
+    return true;
+  if (auto composite = dyn_cast<spirv::CompositeType>(type)) {
+    if (auto structType = dyn_cast<spirv::StructType>(composite))
+      return llvm::any_of(structType.getElementTypes(), [&](Type element) {
+        return containsMicroscalingTypeImpl(element, subByteOnly, visited);
+      });
+    return containsMicroscalingTypeImpl(composite.getElementType(0),
+                                        subByteOnly, visited);
+  }
+  if (auto pointer = dyn_cast<spirv::PointerType>(type))
+    return containsMicroscalingTypeImpl(pointer.getPointeeType(), subByteOnly,
+                                        visited);
+  return false;
+}
+
+bool spirv::containsMicroscalingType(Type type, bool subByteOnly) {
+  llvm::SmallDenseSet<Type, 8> visited;
+  return containsMicroscalingTypeImpl(type, subByteOnly, visited);
+}
 
 //===----------------------------------------------------------------------===//
 // Common utility functions
@@ -1501,6 +1531,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     return emitOpError("storage class cannot be '")
            << stringifyStorageClass(storageClass) << "'";
   }
+
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
 
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."

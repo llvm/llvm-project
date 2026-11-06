@@ -617,9 +617,10 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
-  if (type.isF8E4M3FN() || type.isF8E5M2())
+  if (llvm::is_contained({16u, 32u, 64u}, type.getWidth()))
     return true;
-  return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
+  return isa<Float8E4M3FNType, Float8E5M2Type, Float4E2M1FNType,
+             Float6E2M3FNType, Float6E3M2FNType, Float8E8M0FNUType>(type);
 }
 
 bool ScalarType::isValid(IntegerType type) {
@@ -632,6 +633,12 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
 
   if (type.isF8E4M3FN() || type.isF8E5M2())
     pushExts<Extension::SPV_EXT_float8>();
+
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
+          Float8E8M0FNUType>(type)) {
+    pushExts<Extension::SPV_EXT_ocp_microscaling_types>();
+    pushExts<Extension::SPV_EXT_float8>();
+  }
 
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -658,6 +665,11 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
 
 void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   unsigned bitwidth = type.getIntOrFloatBitWidth();
+
+  // Interface storage capabilities may return before the scalar capability
+  // dispatch below.
+  if (isa<Float8E8M0FNUType>(type))
+    pushCaps<Capability::Float8UnsignedE8M0EXT>();
 
   // 8- or 16-bit integer/floating-point numbers will require extra capabilities
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -722,10 +734,16 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   } else {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
+    case 4:
+      pushCaps<Capability::Float4EXT>();
+      break;
+    case 6:
+      pushCaps<Capability::Float6EXT>();
+      break;
     case 8: {
       if (type.isF8E4M3FN() || type.isF8E5M2())
         pushCaps<Capability::Float8EXT>();
-      else
+      else if (!isa<Float8E8M0FNUType>(type))
         llvm_unreachable("invalid 8-bit float type to getCapabilities");
       break;
     }
@@ -789,8 +807,13 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
         // physical, and only with non-externally visible shader Storage
         // Classes: Workgroup, CrossWorkgroup, Private, Function, Input, and
         // Output."
+        //
+        // FP4 and FP6 have sub-byte widths. This helper has no storage-layout
+        // rule for these formats, so their size in whole bytes cannot be
+        // inferred from their bit width. Return std::nullopt for them as well
+        // to avoid reporting zero bytes after integer division by eight.
         int64_t bitWidth = type.getIntOrFloatBitWidth();
-        if (bitWidth == 1)
+        if (bitWidth % 8 != 0)
           return std::nullopt;
         return bitWidth / 8;
       })
