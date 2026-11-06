@@ -1,6 +1,6 @@
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 < %s | FileCheck %s --check-prefixes=CHECK,SM100
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 < %s | FileCheck %s --check-prefix=SM90
-; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 < %s | FileCheck %s --check-prefix=SIZE
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s --check-prefixes=CHECK,SM100
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_90 < %s | FileCheck %s --check-prefix=SM90
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s --check-prefix=SIZE
 
 target triple = "nvptx64-nvidia-cuda"
 
