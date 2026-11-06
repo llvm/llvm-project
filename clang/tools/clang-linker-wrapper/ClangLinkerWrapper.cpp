@@ -744,7 +744,8 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if (Kind == OFK_OpenMP && Args.hasArg(OPT_relocatable))
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+      Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
     WrapperArgs.push_back(Buffer->getBufferIdentifier());
@@ -806,7 +807,7 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   switch (Kind) {
   case OFK_OpenMP:
   case OFK_OpenACC:
-    if (Error Err = offloading::wrapOmpAccBinaries(
+    if (Error Err = offloading::wrapLLVMBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
             /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable), Kind))
       return std::move(Err);
@@ -856,9 +857,10 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   return *FileOrErr;
 }
 
-/// Perform the OpenMP bundling with 'llvm-offload-binary' in verbose mode.
+/// Perform the OpenMP and OpenACC bundling with 'llvm-offload-binary' in
+/// verbose mode.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOmpAccVerbose(ArrayRef<OffloadingImage> Images) {
+bundleLLVMVerbose(ArrayRef<OffloadingImage> Images) {
   Expected<std::string> OffloadBinaryPath = findProgram(
       "llvm-offload-binary", {getExecutableDir("llvm-offload-binary")});
   if (!OffloadBinaryPath)
@@ -901,7 +903,7 @@ bundleOmpAccVerbose(ArrayRef<OffloadingImage> Images) {
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOmpAcc(ArrayRef<OffloadingImage> Images) {
+bundleLLVM(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
@@ -986,8 +988,8 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   switch (Kind) {
   case OFK_OpenMP:
   case OFK_OpenACC:
-    return (Verbose && SaveTemps) ? bundleOmpAccVerbose(Images)
-                                  : bundleOmpAcc(Images);
+    return (Verbose && SaveTemps) ? bundleLLVMVerbose(Images)
+                                  : bundleLLVM(Images);
   case OFK_SYCL:
     return bundleSYCL(Images);
   case OFK_Cuda:
