@@ -3745,6 +3745,12 @@ void builtin_malloc_prefixed_uaf() {
   *p = 1;                                        // expected-note {{later used here}}
 }
 
+void builtin_calloc_free_uaf() {
+  int *p = (int *)calloc(1, sizeof(int)); // expected-warning {{object allocated by 'calloc' does not live long enough}}
+  free(p);                                // expected-note {{object allocated by 'calloc' is freed here}}
+  *p = 1;                                 // expected-note {{later used here}}
+}
+
 void builtin_realloc() {
   int *p = (int *)malloc(sizeof(int));
   p = (int *)realloc(p, sizeof(int) * 2); // expected-warning {{object allocated by 'realloc' does not live long enough}}
