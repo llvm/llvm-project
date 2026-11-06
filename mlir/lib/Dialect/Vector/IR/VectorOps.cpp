@@ -7172,13 +7172,21 @@ public:
           BroadcastableToResult::Success) {
         return failure();
       }
-      // `shape_cast` preserves the flattened 1-D (row-major) element order, so
-      // folding `shape_cast(broadcast(src, broadcastShape), dstShape)` into
-      // `broadcast(src, dstShape)` is valid when every non-unit dimension of
-      // `src` has the same linear stride in both `broadcastShape` and
-      // `dstShape`. For scalable vectors, a dimension's linear stride is
-      // `staticStride * (vscale ^ scalableDims)`, so we check both the static
-      // stride product and the count of trailing scalable dimensions.
+      // For a fixed source shape, the result strides determine which source
+      // element supplies each linear position in the broadcast result (see the
+      // `BroadcastOp` documentation for the closed-form mapping). Since
+      // `shape_cast` preserves the flattened 1-D (row-major) element order,
+      // folding `shape_cast(broadcast(src, bcastShape), dstShape)` into
+      // `broadcast(src, dstShape)` is valid when every non-unit source
+      // dimension has the same corresponding result stride in both `bcastShape`
+      // and `dstShape`.
+      //
+      // For scalable vectors, a dimension's runtime stride is
+      // `staticStride * (vscale ^ numTrailingScalableDims)`. Note that scalable
+      // dimensions may still move across leading or unit source dimensions
+      // (e.g. `2x[4]x4 -> [8]x4` or `2x1x[4]x3 -> 2x[2]x2x3`), as long as both
+      // the static stride product and the number of trailing scalable
+      // dimensions match at every non-unit source dimension.
       VectorType broadcastVectorType = broadcastOp.getResultVectorType();
       int64_t srcRank = srcVectorType.getRank();
       int64_t bcastRank = broadcastVectorType.getRank();
@@ -7194,24 +7202,28 @@ public:
       // `src` dimension with the corresponding trailing dimension of
       // `broadcast` and `dst`.
       int64_t bcastStride = 1, dstStride = 1;
-      int64_t bcastScalableDims = 0, dstScalableDims = 0;
+      int64_t bcastTrailingScalableDims = 0, dstTrailingScalableDims = 0;
       for (int64_t i = 0; i < srcRank; ++i) {
         int64_t srcDim = srcRank - 1 - i;
         int64_t bcastDim = bcastRank - 1 - i;
         int64_t dstDim = dstRank - 1 - i;
 
         // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
-        // not unit) always have index 0, so their stride is irrelevant.
+        // not unit) always map to source coordinate 0, so their stride is
+        // irrelevant.
         bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
-        if (!isUnitDim && (bcastStride != dstStride ||
-                           bcastScalableDims != dstScalableDims)) {
+        if (!isUnitDim &&
+            (bcastStride != dstStride ||
+             bcastTrailingScalableDims != dstTrailingScalableDims)) {
           return failure();
         }
 
         bcastStride *= bcastShape[bcastDim];
         dstStride *= dstShape[dstDim];
-        bcastScalableDims += bcastScalable[bcastDim];
-        dstScalableDims += dstScalable[dstDim];
+        if (bcastScalable[bcastDim])
+          ++bcastTrailingScalableDims;
+        if (dstScalable[dstDim])
+          ++dstTrailingScalableDims;
       }
     }
 

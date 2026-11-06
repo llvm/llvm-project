@@ -128,7 +128,9 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
   return %1: vector<1xf32>
 }
 
-// -----
+// **--------------------------------------------------------** //
+//     ShapeCastBroadcastFolder
+// **--------------------------------------------------------** //
 
 // https://github.com/llvm/llvm-project/issues/190614 — ShapeCastBroadcastFolder
 // must not rewrite shape_cast(broadcast) into a lower-rank broadcast when that
@@ -203,17 +205,6 @@ func.func @no_fold_bcast_scalable_vs_fixed(%arg0: vector<1x2x1xf32>) -> vector<[
 
 // -----
 
-// CHECK-LABEL: @no_fold_bcast_scalable_axis_shift
-// CHECK:         vector.broadcast %{{.*}} : vector<1x[4]x1xf32> to vector<1x[4]x4xf32>
-// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<1x[4]x4xf32> to vector<4x[4]x1xf32>
-func.func @no_fold_bcast_scalable_axis_shift(%arg0: vector<1x[4]x1xf32>) -> vector<4x[4]x1xf32> {
-  %0 = vector.broadcast %arg0 : vector<1x[4]x1xf32> to vector<1x[4]x4xf32>
-  %1 = vector.shape_cast %0 : vector<1x[4]x4xf32> to vector<4x[4]x1xf32>
-  return %1 : vector<4x[4]x1xf32>
-}
-
-// -----
-
 // CHECK-LABEL: @fold_bcast_leading_scalable_dims
 // CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<[4]xf32> to vector<8x[4]xf32>
 // CHECK-NEXT:    return %[[RES]] : vector<8x[4]xf32>
@@ -247,13 +238,42 @@ func.func @fold_bcast_scalable_consecutive_unit_dims(%arg0: vector<[2]x1x1x3xf32
 
 // -----
 
+// Scalable dimension moves between consecutive unit source dimensions
+// (`1x[4]` -> `[2]x2`), preserving the runtime stride (`12 * vscale`) of
+// non-unit source dimension 0.
+// CHECK-LABEL: @fold_bcast_scalable_across_consecutive_unit_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<2x1x1x3xf32> to vector<2x[2]x2x3xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<2x[2]x2x3xf32>
+func.func @fold_bcast_scalable_across_consecutive_unit_dims(%arg0: vector<2x1x1x3xf32>) -> vector<2x[2]x2x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<2x1x1x3xf32> to vector<2x1x[4]x3xf32>
+  %1 = vector.shape_cast %0 : vector<2x1x[4]x3xf32> to vector<2x[2]x2x3xf32>
+  return %1 : vector<2x[2]x2x3xf32>
+}
+
+// -----
+
+// Fixed-width `1x1x1` has a single element (all dimensions are unit), so
+// folding succeeds even when the stretched axis shifts.
+// CHECK-LABEL: @fold_bcast_all_fixed_unit_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<1x1x1xf32> to vector<4x1x1xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<4x1x1xf32>
+func.func @fold_bcast_all_fixed_unit_dims(%arg0: vector<1x1x1xf32>) -> vector<4x1x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x1x1xf32> to vector<1x1x4xf32>
+  %1 = vector.shape_cast %0 : vector<1x1x4xf32> to vector<4x1x1xf32>
+  return %1 : vector<4x1x1xf32>
+}
+
+// -----
+
+// Unlike fixed `1`, scalable `[1]` has runtime size `vscale` and is not a unit
+// dimension: shifting the stretched axis changes `[1]`'s stride from 4 to 1.
 // CHECK-LABEL: @no_fold_bcast_scalable_unit_dim_axis_shift
-// CHECK:         vector.broadcast %{{.*}} : vector<[1]x1xf32> to vector<[1]x4xf32>
-// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<[1]x4xf32> to vector<4x[1]xf32>
-func.func @no_fold_bcast_scalable_unit_dim_axis_shift(%arg0: vector<[1]x1xf32>) -> vector<4x[1]xf32> {
-  %0 = vector.broadcast %arg0 : vector<[1]x1xf32> to vector<[1]x4xf32>
-  %1 = vector.shape_cast %0 : vector<[1]x4xf32> to vector<4x[1]xf32>
-  return %1 : vector<4x[1]xf32>
+// CHECK:         vector.broadcast %{{.*}} : vector<1x[1]x1xf32> to vector<1x[1]x4xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<1x[1]x4xf32> to vector<4x[1]x1xf32>
+func.func @no_fold_bcast_scalable_unit_dim_axis_shift(%arg0: vector<1x[1]x1xf32>) -> vector<4x[1]x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x[1]x1xf32> to vector<1x[1]x4xf32>
+  %1 = vector.shape_cast %0 : vector<1x[1]x4xf32> to vector<4x[1]x1xf32>
+  return %1 : vector<4x[1]x1xf32>
 }
 
 // -----
