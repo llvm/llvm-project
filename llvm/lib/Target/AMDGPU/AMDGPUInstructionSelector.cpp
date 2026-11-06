@@ -7469,7 +7469,7 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
 }
 
 /// Return the barrier ID for \p BarOp if it's statically known, mapping poison
-/// to 0 and making off the high bits.
+/// to 0 and masking off the high bits, since they're ignored as reserved.
 static std::optional<uint32_t>
 getConstantNamedBarrierNumber(const MachineOperand &BarOp,
                               const MachineRegisterInfo &MRI) {

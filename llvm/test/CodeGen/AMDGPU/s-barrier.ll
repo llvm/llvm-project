@@ -30,7 +30,6 @@ define void @func1() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_mov_b32 m0, 0x70003
 ; GFX13-NEXT:    s_barrier_join 3
@@ -62,7 +61,6 @@ define void @func2() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_mov_b32 m0, 0x70002
 ; GFX13-NEXT:    s_barrier_join 2
@@ -651,7 +649,6 @@ define void @signal_var_cnt0_null_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_barrier_signal 0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -675,7 +672,6 @@ define void @barrier_join_null_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_barrier_join 0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -700,7 +696,6 @@ define void @barrier_init_null_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_mov_b32 m0, 0x30000
 ; GFX13-NEXT:    s_barrier_init m0
@@ -727,7 +722,6 @@ define void @get_named_barrier_state_null_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_get_barrier_state s0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -766,7 +760,6 @@ define void @signal_var_cnt0_poison_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_barrier_signal 0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -790,7 +783,6 @@ define void @barrier_join_poison_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_barrier_join 0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -827,7 +819,6 @@ define void @barrier_init_poison_bar() {
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -837,7 +828,6 @@ define void @barrier_init_poison_bar() {
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -866,7 +856,6 @@ define void @get_named_barrier_state_poison_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_get_barrier_state s0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0

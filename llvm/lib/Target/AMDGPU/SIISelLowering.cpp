@@ -11956,7 +11956,7 @@ static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
 
 // Try to resolve a named barrier object to a constant barrier ID.
 // Named barrier IDs are encoded at bits [5:0] of a BARRIER address space
-// address.
+// address - other bits of that address are ignored as reserved.
 static std::optional<uint32_t>
 getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
   std::optional<uint64_t> BarVal;
@@ -11974,7 +11974,7 @@ getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
       auto *MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
       // Record the use of the manualy-specified barrier address to make sure
       // this function has the right number of resources. This function is named
-      // weird, and we're calling it here since we're skipping teh GlobalAddress
+      // weird, and we're calling it here since we're skipping the GlobalAddress
       // lowering with this pattern match.
       BarVal = MFI->allocateBarrierGlobal(DAG.getDataLayout(), *GV) +
                GA->getOffset();

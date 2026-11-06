@@ -85,7 +85,6 @@ define void @wakeup_barrier_null_bar() {
 ; GFX1310-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-SDAG-NEXT:    s_wakeup_barrier 0
 ; GFX1310-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -95,7 +94,6 @@ define void @wakeup_barrier_null_bar() {
 ; GFX1310-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-GISEL-NEXT:    s_wakeup_barrier 0
 ; GFX1310-GISEL-NEXT:    s_set_pc_i64 s[30:31]
