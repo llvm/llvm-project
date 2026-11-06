@@ -2666,9 +2666,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             if (ASign.has_value() != BSign.has_value()) {
               auto [Negative, Other] =
                   ASign ? std::pair(*ASign, B) : std::pair(*BSign, A);
-              Info.addFact(Negative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE, Other,
-                           Constant::getNullValue(A->getType()), CB.NumIn,
-                           CB.NumOut, DFSInStack);
+              Info.addFact(Negative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+                           Other, Constant::getNullValue(A->getType()),
+                           CB.NumIn, CB.NumOut, DFSInStack);
             }
           }
         } else {
