@@ -122,6 +122,8 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
 
 TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
   // All implementations, since the configured one is usually not vectorized.
+  // Other architectures should be added to this list when they get a
+  // target-specific find_first_character implementation.
   static constexpr void *(*kImpls[])(const unsigned char *, unsigned char,
                                      size_t) = {
       internal::element::find_first_character,
