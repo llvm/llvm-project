@@ -3351,6 +3351,21 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                   : InputFilesValidation::SkippedInBuildSession;
         }
 
+        // Unlike a changed input, different keys don't prove that the module is
+        // out of date, so they are ignored when it can't be rebuilt.
+        if (!WasValidated && !Complain && F.Kind == MK_ImplicitModule &&
+            F.ImplicitModulesValidationKeys !=
+                HSOpts.ImplicitModulesValidationKeys) {
+          auto Quote = [](ArrayRef<std::string> Keys) {
+            return Keys.empty() ? std::string("none")
+                                : "'" + llvm::join(Keys, "', '") + "'";
+          };
+          Diag(diag::remark_module_validation_keys_changed)
+              << F.ModuleName << Quote(F.ImplicitModulesValidationKeys)
+              << Quote(HSOpts.ImplicitModulesValidationKeys);
+          return OutOfDate;
+        }
+
         if (N != 0)
           Diag(diag::remark_module_validation)
               << N << F.ModuleName << F.FileName;
@@ -5680,6 +5695,13 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     case VFS_USAGE:
       if (F)
         F->VFSUsage = ReadBitVector(Record, Blob);
+      break;
+    case IMPLICIT_MODULES_VALIDATION_KEYS:
+      if (F) {
+        F->ImplicitModulesValidationKeys.clear();
+        for (unsigned Idx = 0; Idx < Record.size();)
+          F->ImplicitModulesValidationKeys.push_back(ReadString(Record, Idx));
+      }
       break;
     }
   }

@@ -3765,6 +3765,12 @@ def fimplicit_modules_lock_timeout_EQ : Joined<["-"], "fimplicit-modules-lock-ti
   MetaVarName<"<seconds>">,
   HelpText<"Time to wait on an implicit module lock before timing out">,
   MarshallingInfoInt<FrontendOpts<"ImplicitModulesLockTimeoutSeconds">, "90">;
+def fimplicit_modules_validation_key_EQ : Joined<["-"], "fimplicit-modules-validation-key=">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, CC1Option]>,
+  MetaVarName<"<key>">,
+  HelpText<"Treat an implicitly built module as out of date when it is validated "
+           "with different keys than it was built with">,
+  MarshallingInfoStringVector<HeaderSearchOpts<"ImplicitModulesValidationKeys">>;
 
 defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   LangOpts<"SkipODRCheckInGMF">, DefaultFalse,

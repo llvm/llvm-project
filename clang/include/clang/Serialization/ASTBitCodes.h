@@ -422,6 +422,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the indices of used VFSs.
   VFS_USAGE,
+
+  /// Record code for the keys an implicitly built module is validated against.
+  IMPLICIT_MODULES_VALIDATION_KEYS,
 };
 
 /// Record code for extension blocks.

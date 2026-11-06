@@ -5590,6 +5590,7 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
   getHeaderSearchOpts().ModulesValidateDirectoryDependencies = false;
   getHeaderSearchOpts().BuildSessionTimestamp = 0;
+  getHeaderSearchOpts().ImplicitModulesValidationKeys.clear();
   // The specific values we canonicalize to for pruning don't affect behaviour,
   /// so use the default values so they may be dropped from the command-line.
   getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;

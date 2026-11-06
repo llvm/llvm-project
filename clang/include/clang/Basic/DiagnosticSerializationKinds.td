@@ -127,6 +127,11 @@ def err_module_path_invalidated
     : Error<"module '%0' cannot be reused because the build system reported "
             "that '%1' changed">,
       ShowInSystemHeader, DefaultFatal;
+def remark_module_validation_keys_changed
+    : Remark<"module '%0' is out of date because it was built with validation "
+             "keys %1 but the current keys are %2">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
 def remark_module_check_relocation
     : Remark<"checking if module '%0' from '%1' has relocated">,
       ShowInSystemHeader,
