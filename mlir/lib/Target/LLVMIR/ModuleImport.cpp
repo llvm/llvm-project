@@ -589,14 +589,14 @@ Attribute ModuleImport::convertTBAAStructMetadata(const llvm::MDNode *node) {
         node->getOperand(i + 1));
     if (!offset || !size)
       return {};
-    // Offsets and sizes are uint64_t in the attribute; values that do not
-    // fit in 64 bits cannot be represented, and extracting them would
-    // assert. Read them unsigned: LLVM compares offsets zero-extended, so
-    // a narrow constant with its high bit set (e.g. i32 0x80000000) must
-    // keep its unsigned value rather than sign-extending.
-    std::optional<uint64_t> offsetValue = offset->getValue().tryZExtValue();
-    std::optional<uint64_t> sizeValue = size->getValue().tryZExtValue();
-    if (!offsetValue || !sizeValue)
+    // Offsets and sizes are uint64_t in the attribute. Read them as APInts:
+    // LLVM compares offsets zero-extended, so a narrow constant with its
+    // high bit set (e.g. i32 0x80000000) must keep its unsigned value
+    // rather than sign-extending. Values using more than 64 bits cannot
+    // be represented and are declined.
+    const APInt &offsetAP = offset->getValue();
+    const APInt &sizeAP = size->getValue();
+    if (offsetAP.getActiveBits() > 64 || sizeAP.getActiveBits() > 64)
       return {};
     auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
     if (!tagNode)
@@ -604,8 +604,8 @@ Attribute ModuleImport::convertTBAAStructMetadata(const llvm::MDNode *node) {
     auto tag = dyn_cast_if_present<TBAATagAttr>(lookupTBAAAttr(tagNode));
     if (!tag)
       return {};
-    fields.push_back(
-        builder.getAttr<TBAAStructFieldAttr>(*offsetValue, *sizeValue, tag));
+    fields.push_back(builder.getAttr<TBAAStructFieldAttr>(
+        offsetAP.getZExtValue(), sizeAP.getZExtValue(), tag));
   }
 
   return builder.getArrayAttr(fields);
