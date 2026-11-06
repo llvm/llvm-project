@@ -352,7 +352,7 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
   }
 
   for (auto &I : DeletionCandidates) {
-    if (auto *Inst = dyn_cast_or_null<Instruction>(I)) {
+    if (auto *Inst = dyn_cast_if_present<Instruction>(I)) {
       if (Inst->use_empty())
         Inst->eraseFromParent();
     }
