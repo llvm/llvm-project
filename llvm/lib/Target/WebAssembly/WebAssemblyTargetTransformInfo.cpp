@@ -180,6 +180,8 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 2},
       // narrow, 2x and
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 3},
+      // 2x narrow, 2x and
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i32, 4},
       // 3x narrow, 4x and
       {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 7},
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 7},
@@ -215,9 +217,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 4},
       {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 4},
       {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 4},
-      // 2x trunc_sat, const, 2x and, 3x narrow
-      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 8},
-      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 8},
+      // 2x trunc_sat, const, 2x and, 2x narrow
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 7},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 7},
       // 2x trunc_sat, const, 2x and, narrow
       {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f32, 6},
       {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f32, 6},
