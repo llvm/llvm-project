@@ -1634,7 +1634,8 @@ constexpr unsigned BreakpointResolverAllResolversMask =
 
 /// Describes the state of a module's symbol table.
 FLAGS_ENUM(SymtabState){
-    /// The symbol table hasn't been populated with symbols.
+    /// No state has been recorded, possibly because the symbol table hasn't
+    /// been created yet.
     eSymtabStateNone = 0u,
     /// Symbols were decoded from a DataFileCache serialization.
     eSymtabStateLoadedFromCache = (1u << 0),

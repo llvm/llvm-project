@@ -6,11 +6,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import os
-import shutil
 
 
 @requireNotWasm("modules carry no build ID to cache on")
 class SymtabStateTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_module_cache_files(self, basename):
         module_file_glob = os.path.join(
             self.cache_dir, "llvmcache-*%s*-symtab-*" % (basename)
@@ -27,9 +28,6 @@ class SymtabStateTestCase(TestBase):
         # The index cache path is latched on first use, so this must be the
         # only test in this file.
         self.cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
-        # The build directory outlives the test run, so drop cache entries from
-        # a previous run that would otherwise match the unchanged binary.
-        shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.runCmd(
             'settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir)
         )
