@@ -1,0 +1,8 @@
+## Test CHECK generation for instantiated function templates.
+
+# RUN: cp %S/Inputs/function-template-instantiation.cpp %t.cpp && %update_cc_test_checks %t.cpp
+# RUN: diff -u %S/Inputs/function-template-instantiation.cpp.expected %t.cpp
+# RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %t.cpp | FileCheck %t.cpp
+## Re-running the script must not change the generated checks.
+# RUN: %update_cc_test_checks %t.cpp
+# RUN: diff -u %S/Inputs/function-template-instantiation.cpp.expected %t.cpp
