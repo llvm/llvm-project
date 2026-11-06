@@ -9,6 +9,7 @@
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -17,30 +18,46 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 using namespace llvm;
 
 static uint64_t adjustFixupValue(MCContext &Ctx, const MCFixup &Fixup,
-                                 unsigned Kind, uint64_t Value) {
+                                 unsigned Kind, uint64_t Value,
+                                 const MCValue &Target, StringRef SecName,
+                                 uint64_t SrcOffset) {
+  // Name the target and the call position for the diagnostic. Build it only
+  // when an error is reported, since most fixups succeed.
+  auto describeBranch = [&]() -> std::string {
+    std::string Desc;
+    if (const MCSymbol *Sym = Target.getAddSym())
+      Desc += (Twine(" to '") + Sym->getName() + "'").str();
+    if (!SecName.empty())
+      Desc +=
+          (Twine(" at ") + SecName + "+0x" + Twine::utohexstr(SrcOffset)).str();
+    return Desc;
+  };
+
   auto checkBrFixup = [&](unsigned Bits) {
     int64_t SVal = int64_t(Value);
     if ((Value & 3) != 0) {
       Ctx.reportError(Fixup.getLoc(), "branch target not a multiple of four (" +
-                                          Twine(SVal) + ")");
+                                          Twine(SVal) + ")" + describeBranch());
       return;
     }
 
     // Low two bits are not encoded.
     if (!isIntN(Bits + 2, Value)) {
-      Ctx.reportError(Fixup.getLoc(), "branch target out of range (" +
-                                          Twine(SVal) + " not between " +
-                                          Twine(minIntN(Bits) * 4) + " and " +
-                                          Twine(maxIntN(Bits) * 4) + ")");
+      Ctx.reportError(Fixup.getLoc(),
+                      "branch target out of range (" + Twine(SVal) +
+                          " not between " + Twine(minIntN(Bits) * 4) + " and " +
+                          Twine(maxIntN(Bits) * 4) + ")" + describeBranch());
     }
   };
 
@@ -231,7 +248,10 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  Value = adjustFixupValue(getContext(), Fixup, Kind, Value);
+  const MCSection *Sec = F.getParent();
+  Value = adjustFixupValue(getContext(), Fixup, Kind, Value, Target,
+                           Sec ? Sec->getName() : StringRef(),
+                           Asm->getFragmentOffset(F) + Fixup.getOffset());
   if (!Value)
     return; // Doesn't change encoding.
 
