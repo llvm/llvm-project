@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#if defined(__x86_64__) && __LDBL_MANT_DIG__ == 64 &&                         \
+#if defined(__x86_64__) && __LDBL_MANT_DIG__ == 64 &&                          \
     __SIZEOF_LONG_DOUBLE__ == 16
 #define PADDED_LONG_DOUBLE 1
 #else
