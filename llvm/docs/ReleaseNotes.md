@@ -538,6 +538,12 @@ Makes programs 10x faster by doing Special New Thing.
   debug sections were compressed. They are now compressed using the input
   format by default.
 
+* llvm-cov now supports an opt-in `-respect-coverage-exclusion-markers` option
+  for excluding coverage associated with `LCOV_EXCL_LINE` and
+  `LCOV_EXCL_START`/`LCOV_EXCL_STOP` source markers. The markers apply to all
+  llvm-cov report formats, including text and HTML views, summaries, and JSON
+  and LCOV exports.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
