@@ -4742,6 +4742,21 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   if (!args)
     return SendErrorResponse(args.takeError());
 
+  // On the accelerator connection, ask the process directly.
+  if (m_connection_accelerator_plugin) {
+    if (!m_current_process)
+      return SendErrorResponse(Status::FromErrorString("no current process"));
+    std::optional<AcceleratorDynamicLoaderResponse> response =
+        m_current_process->GetAcceleratorDynamicLoaderLibraryInfos(*args);
+    if (!response)
+      return SendErrorResponse(
+          Status::FromErrorString("dynamic loader library info not supported"));
+    StreamGDBRemote stream;
+    stream.PutAsJSON(*response, /*hex_ascii=*/false);
+    return SendPacketNoLock(stream.GetString());
+  }
+
+  // On the native connection, forward to the named accelerator plugin.
   for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
        m_accelerator_plugins) {
     if (plugin_up->GetPluginName() == args->plugin_name) {
