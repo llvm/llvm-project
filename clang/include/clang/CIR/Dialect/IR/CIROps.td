@@ -688,8 +688,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3599,7 +3600,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    mlir::LogicalResult setupRegionInitializedLLVMGlobalOp(
+    mlir::LLVM::GlobalOp setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
@@ -3611,8 +3612,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                                       mlir::OpBuilder &builder) const;
   }];
 
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3699,6 +3701,9 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
     `)`
     `:` qualified(type($addr)) attr-dict
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3884,6 +3889,9 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
   }];
 
   let hasVerifier = 1;
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5780,6 +5788,33 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
 
   let results = (outs CIR_PointerType:$result);
   let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPUFeaturePredicateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AMDGPUFeaturePredicateOp : CIR_Op<"amdgpu_feature_predicate"> {
+  let summary = "AMDGPU feature predicate resolved at JIT time";
+
+  let description = [{
+    Represents `__builtin_amdgcn_processor_is` and
+    `__builtin_amdgcn_is_invocable` when targeting AMDGCN-flavored SPIR-V.
+    The result is a specialization constant resolved once the concrete
+    processor is known.
+
+    `predicate` is `is.<processor>` or `has.<features>`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.amdgpu_feature_predicate "is.gfx900"
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$predicate);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = "$predicate attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

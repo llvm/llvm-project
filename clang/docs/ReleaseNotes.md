@@ -163,6 +163,11 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- On Windows targets using Microsoft C++ ABI, fixed returning a class with
+  a deleted template constructor which should be returned in a register.
+  This affects the ABI of `std::strong_ordering` in some versions of the
+  Microsoft STL. (#GH237188)
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -328,6 +333,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
+
+- A relative `directory` in a JSON compilation database is now resolved against the directory containing the compilation database file.
 
 - On musl targets, the driver now links ``libssp_nonshared.a`` when stack
   protection is enabled and the library is present in the toolchain library
@@ -851,6 +858,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
+- Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1402,6 +1410,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
   `__nvvm_idp2a_*` builtins. (#GH233434)
 
+- CUDA compilations now add the `include/cccl` directory of the selected CUDA
+  installation to the header search path when it exists. From CUDA 13.0 on,
+  libcu++, CUB and Thrust are in that directory, and toolkit headers such as
+  `cooperative_groups.h` include them. The `-nogpuinc` option disables this
+  path together with the other CUDA include paths.
+
 #### AIX Support
 
 #### NetBSD Support
@@ -1568,6 +1582,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
   inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
   `order(concurrent)`) were incorrectly accepted.
+- Fixed a crash when a `tile` or `stripe` `sizes` argument has type `bool` or
+  `_BitInt`. (#GH229039)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings

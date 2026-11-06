@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -573,6 +574,10 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
       return op.emitOpError(
           "block argument pointee type must match the innermost array "
           "element type");
+
+    if (expectedEltPtrTy.getAddrSpace() != ptrTy.getAddrSpace())
+      return op.emitOpError(
+          "block argument address space must match the 'addr' address space");
   }
 
   return success();
@@ -2744,7 +2749,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
 
-  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+  // A function address may also be taken in the program address space.
+  auto targetAS =
+      dyn_cast_if_present<TargetAddressSpaceAttr>(resultType.getAddrSpace());
+  bool isProgramAS =
+      isa<FuncOp>(op) && targetAS &&
+      targetAS.getValue() ==
+          CIRDataLayout(getOperation()->getParentOfType<ModuleOp>())
+              .getProgramAddressSpace();
+  if (!isProgramAS && symAddrSpaceAttr != resultType.getAddrSpace()) {
     return emitOpError()
            << "result type address space does not match the address "
               "space of the global @"
