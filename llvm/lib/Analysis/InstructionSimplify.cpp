@@ -5629,16 +5629,34 @@ Value *llvm::simplifyExtractElementInst(Value *Vec, Value *Idx,
 /// type SrcTy is poison.
 static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
                              const SimplifyQuery &Q) {
+  Constant *C = dyn_cast<Constant>(Offset);
+  if (!C)
+    return false;
+
   // A poison offset makes the result poison. An undef offset can be chosen to
   // be out of range, which also makes the result poison.
-  if (isa<PoisonValue>(Offset) || Q.isUndefValue(Offset))
+  if (isa<PoisonValue>(C) || Q.isUndefValue(C))
     return true;
 
-  // Accessing bits past the end of the value is poison.
+  // Accessing bits past the end of the value is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
   uint64_t Off;
-  return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
+  if (match(C, m_ConstantInt(Off)) &&
+      Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+          Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue())
+    return true;
+
+  // A fixed vector is poison if every element accesses bits out of range.
+  if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
+    for (unsigned I = 0,
+                  E = cast<FixedVectorType>(C->getType())->getNumElements();
+         I != E; ++I)
+      if (!isPoisonBitRange(C->getAggregateElement(I), Ty, SrcTy, Q))
+        return false;
+    return true;
+  }
+
+  return false;
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
