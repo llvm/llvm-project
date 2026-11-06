@@ -65,7 +65,7 @@ void test() {
     std::jthread t(F{}, arg);
     // expected-error@*:* 2 {{static assertion failed}}
     // expected-error@*:* 0-1 {{call to deleted constructor}}
-    // expected-error@*:* {{no matching constructor for initialization}}
+    // expected-error@*:* 0-1 {{no matching constructor for initialization}}
   }
 
   { // Mandates: (is_constructible_v<decay_t<Args>, Args> && ...)
@@ -82,7 +82,7 @@ void test() {
     std::jthread t(F{}, Arg{});
     // expected-error@*:* 2 {{static assertion failed}}
     // expected-error@*:* 0-1 {{call to deleted constructor}}
-    // expected-error@*:* {{no matching constructor for initialization}}
+    // expected-error@*:* 0-1 {{no matching constructor for initialization}}
   }
 
   { // Mandates: is_invocable_v<decay_t<F>, decay_t<Args>...>

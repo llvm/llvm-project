@@ -64,6 +64,9 @@ void condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
 }
 
 void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk) {
+#ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+  __notify_all_at_thread_exit(&cond, lk.release());
+#else
   auto& tl_ptr = __thread_local_data();
   // If this thread was not created using std::thread then it will not have
   // previously allocated.
@@ -71,6 +74,7 @@ void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk) 
     tl_ptr.set_pointer(new __thread_struct);
   }
   __thread_local_data()->notify_all_at_thread_exit(&cond, lk.release());
+#endif
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

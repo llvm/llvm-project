@@ -50,6 +50,13 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_THREADS
 
+#  ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+class __assoc_sub_state;
+
+_LIBCPP_EXPORTED_FROM_ABI void __notify_all_at_thread_exit(condition_variable*, mutex*);
+_LIBCPP_EXPORTED_FROM_ABI void __make_ready_at_thread_exit(__assoc_sub_state*);
+_LIBCPP_EXPORTED_FROM_ABI void __initialize_thread_local_data();
+#  else
 template <class _Tp>
 class __thread_specific_ptr;
 class _LIBCPP_EXPORTED_FROM_ABI __thread_struct;
@@ -122,6 +129,7 @@ void __thread_specific_ptr<_Tp>::set_pointer(pointer __p) {
   _LIBCPP_ASSERT_INTERNAL(get() == nullptr, "Attempting to overwrite thread local data");
   std::__libcpp_tls_set(__key_, __p);
 }
+#  endif // _LIBCPP_ABI_THREAD_SPECIFIC_PTR
 
 template <>
 struct hash<__thread_id> : public __unary_function<__thread_id, size_t> {
@@ -165,17 +173,30 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
 
 #  ifndef _LIBCPP_CXX03_LANG
 
+#    ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+template <class _Fp, class... _Args, size_t... _Indices>
+inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_Fp, _Args...>& __t, __index_sequence<_Indices...>) {
+  std::__invoke(std::move(std::get<_Indices>(__t))...);
+}
+#    else
 template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
 inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __index_sequence<_Indices...>) {
   std::__invoke(std::move(std::get<_Indices + 1>(__t))...);
 }
+#    endif
 
 template <class _Fp>
 _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
   // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
+#    ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+  __initialize_thread_local_data();
+  unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
+  std::__thread_execute(*__p.get(), __make_index_sequence<tuple_size<_Fp>::value>());
+#    else
   unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
   __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
   std::__thread_execute(*__p.get(), __make_index_sequence<tuple_size<_Fp>::value - 1>());
+#    endif // _LIBCPP_ABI_THREAD_SPECIFIC_PTR
   return nullptr;
 }
 
@@ -220,10 +241,15 @@ public:
     static_assert(_And<is_constructible<__decay_t<_Args>, _Args>...>::value, "");
     static_assert(__is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>, "");
 
+#    ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+    typedef tuple<__decay_t<_Fp>, __decay_t<_Args>...> _Gp;
+    unique_ptr<_Gp> __p(new _Gp(std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
+#    else
     typedef unique_ptr<__thread_struct> _TSPtr;
     _TSPtr __tsp(new __thread_struct);
     typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
     unique_ptr<_Gp> __p(new _Gp(std::move(__tsp), std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
+#    endif
     int __ec = std::__libcpp_thread_create(&__t_, std::addressof(__thread_proxy<_Gp>), __p.get());
     if (__ec == 0)
       __p.release();

@@ -64,7 +64,7 @@ void test() {
     Arg arg;
     std::thread t(F{}, arg);
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{no matching constructor for initialization}}
+    // expected-error@*:* 0-1 {{no matching constructor for initialization}}
   }
 
   { // Mandates: (is_constructible_v<decay_t<Args>, Args> && ...)
@@ -80,7 +80,7 @@ void test() {
 
     std::thread t(F{}, Arg{});
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{no matching constructor for initialization}}
+    // expected-error@*:* 0-1 {{no matching constructor for initialization}}
   }
 
   { // Mandates: is_invocable_v<decay_t<F>, decay_t<Args>...>
