@@ -261,7 +261,11 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     for (unsigned Idx : UpdateImplicitDefIdx)
       CommutedMI->getOperand(Idx).setReg(Reg0);
   }
-  CommutedMI->swapOperands(Idx1, Idx2);
+  // A new or cloned instruction that has not been inserted into a function
+  // has no use-def lists to update.
+  MachineRegisterInfo *MRI =
+      CommutedMI->getParent() ? &CommutedMI->getMF()->getRegInfo() : nullptr;
+  CommutedMI->swapOperands(Idx1, Idx2, MRI);
   if (ClearKillIdx)
     CommutedMI->getOperand(*ClearKillIdx).setIsKill(false);
   return CommutedMI;
