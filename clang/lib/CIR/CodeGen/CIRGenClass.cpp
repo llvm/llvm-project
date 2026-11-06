@@ -20,6 +20,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -65,8 +66,8 @@ public:
   }
 
   void addMemcpyableField(FieldDecl *f) {
-    // TODO(cir): isEmptyFieldForLayout is not handled here yet.
-    // Incubator has assert(!cir::MissingFeatures::isEmptyFieldForLayout());
+    if (CodeGenUtils::isEmptyFieldForLayout(cgf.getContext(), f))
+      return;
     if (f->isZeroSize(cgf.getContext()))
       return;
     if (!firstField)
