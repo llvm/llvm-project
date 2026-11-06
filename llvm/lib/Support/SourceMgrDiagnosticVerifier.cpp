@@ -254,8 +254,8 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
     // with a location in an unknown file can never match anything.
     diags = computeExpectedDiags(os, mgr, buf);
   } else {
-    // '@unknown' directives may be in any buffer, including ones added after
-    // the verifier was created.
+    // A locationless diagnostic can match an '@unknown' directive written in
+    // any buffer, so scan all buffers to populate expectedUnknownLocDiags.
     for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
       (void)computeExpectedDiags(os, mgr, mgr.getMemoryBuffer(i + 1));
     diags = expectedUnknownLocDiags;
