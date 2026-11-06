@@ -187,10 +187,10 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // All block arguments are non-successor-inputs.
-    return visitNonControlFlowArguments(getProgramPointBefore(block),
-                                        block->getParentOp(),
-                                        RegionSuccessor(block->getParent()),
-                                        block->getArguments(), argLattices);
+    return visitNonControlFlowArgumentsImpl(getProgramPointBefore(block),
+                                            block->getParentOp(),
+                                            RegionSuccessor(block->getParent()),
+                                            block->getArguments(), argLattices);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -335,9 +335,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
             branch.getNonSuccessorInputs(successor);
         SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
             llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
-        visitNonControlFlowArguments(point, branch, successor,
-                                     nonSuccessorInputs,
-                                     nonSuccessorInputLattices);
+        visitNonControlFlowArgumentsImpl(point, branch, successor,
+                                         nonSuccessorInputs,
+                                         nonSuccessorInputLattices);
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
@@ -346,9 +346,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
             branch.getNonSuccessorInputs(RegionSuccessor(region));
         SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
             llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
-        visitNonControlFlowArguments(point, branch, RegionSuccessor(region),
-                                     nonSuccessorInputs,
-                                     nonSuccessorInputLattices);
+        visitNonControlFlowArgumentsImpl(point, branch, RegionSuccessor(region),
+                                         nonSuccessorInputs,
+                                         nonSuccessorInputLattices);
       }
     }
 
@@ -356,16 +356,6 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
          llvm::zip(lattices.drop_front(firstIndex), *operands))
       join(lattice, *getLatticeElementFor(point, operand));
   }
-}
-
-void AbstractSparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-    ProgramPoint *point, Operation *op, const RegionSuccessor &successor,
-    ValueRange nonSuccessorInputs,
-    ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) {
-  for (Value operand : op->getOperands())
-    getLatticeElementFor(point, operand);
-  visitNonControlFlowArgumentsImpl(op, successor, nonSuccessorInputs,
-                                   nonSuccessorInputLattices);
 }
 
 const AbstractSparseLattice *
