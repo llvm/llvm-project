@@ -1,4 +1,4 @@
-; RUN: not opt -passes=verify -disable-output %s 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @llvm.icall.branch.funnel(...)
 
