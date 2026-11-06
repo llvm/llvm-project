@@ -347,14 +347,44 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
       std::make_pair(LeftType, RightType));
 }
 
+/// Return true if \p V may be poison because of a poison lane in a constant or
+/// a nuw/nsw trunc. decomposeBitTestICmp() normalizes both away, while a
+/// logical and/or short-circuits them. \p Common is also used by the other
+/// operand, so poison originating there is not hidden.
+static bool hasHiddenPoison(const Value *V, const Value *Common) {
+  SmallSetVector<const Value *, 8> Worklist;
+  Worklist.insert(V);
+  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
+    const Value *Cur = Worklist[Idx];
+    if (Cur == Common)
+      continue;
+    const auto *I = dyn_cast<Instruction>(Cur);
+    if (!I)
+      continue;
+    if (const auto *TI = dyn_cast<TruncInst>(I))
+      if (TI->hasNoUnsignedWrap() || TI->hasNoSignedWrap())
+        return true;
+    for (const Use &U : I->operands()) {
+      const Value *Op = U.get();
+      if (const auto *C = dyn_cast<Constant>(Op)) {
+        if (C->containsUndefOrPoisonElement())
+          return true;
+      } else if (isa<Instruction>(Op)) {
+        Worklist.insert(Op);
+      }
+    }
+  }
+  return false;
+}
+
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
 /// (icmp(A & X) ==/!= Y), where the left-hand side is of type Mask_NotAllZeros
 /// and the right hand side is of type BMask_Mixed. For example,
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *D, Value *E,
-    ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
     InstCombiner::BuilderTy &Builder) {
   // We are given the canonical form:
   //   (icmp ne (A & B), 0) & (icmp eq (A & D), E).
@@ -476,6 +506,8 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   if (IsSuperSetOrEqual(BCst, DCst)) {
+    if (IsLogical && hasHiddenPoison(RHS, A))
+      return nullptr;
     // We can't guarantee that samesign hold after this fold.
     if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
       ICmp->setSameSign(false);
@@ -486,6 +518,8 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
   if ((*BCst & ECst) != 0) {
+    if (IsLogical && hasHiddenPoison(RHS, A))
+      return nullptr;
     // We can't guarantee that samesign hold after this fold.
     if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
       ICmp->setSameSign(false);
@@ -503,9 +537,10 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
 /// aren't of the common mask pattern type.
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmpsAsymmetric(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *C, Value *D,
-    Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
-    unsigned LHSMask, unsigned RHSMask, InstCombiner::BuilderTy &Builder) {
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *C, Value *D, Value *E, ICmpInst::Predicate PredL,
+    ICmpInst::Predicate PredR, unsigned LHSMask, unsigned RHSMask,
+    InstCombiner::BuilderTy &Builder) {
   assert(ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
          "Expected equality predicates for masked type of icmps.");
   // Handle Mask_NotAllZeros-BMask_Mixed cases.
@@ -519,12 +554,12 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
   }
   if ((LHSMask & Mask_NotAllZeros) && (RHSMask & BMask_Mixed)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            LHS, RHS, IsAnd, A, B, D, E, PredL, PredR, Builder)) {
+            LHS, RHS, IsAnd, IsLogical, A, B, D, E, PredL, PredR, Builder)) {
       return V;
     }
   } else if ((LHSMask & BMask_Mixed) && (RHSMask & Mask_NotAllZeros)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            RHS, LHS, IsAnd, A, D, B, C, PredR, PredL, Builder)) {
+            RHS, LHS, IsAnd, IsLogical, A, D, B, C, PredR, PredL, Builder)) {
       return V;
     }
   }
@@ -551,9 +586,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
   if (Mask == 0) {
     // Even if the two sides don't share a common pattern, check if folding can
     // still happen.
-    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(
-            LHS, RHS, IsAnd, A, B, C, D, E, PredL, PredR, LHSMask, RHSMask,
-            Builder))
+    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(LHS, RHS, IsAnd, IsLogical,
+                                                    A, B, C, D, E, PredL, PredR,
+                                                    LHSMask, RHSMask, Builder))
       return V;
     return nullptr;
   }
