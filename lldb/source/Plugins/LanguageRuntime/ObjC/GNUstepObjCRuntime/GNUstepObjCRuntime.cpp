@@ -8,8 +8,6 @@
 
 #include "GNUstepObjCRuntime.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Expression/UtilityFunction.h"
