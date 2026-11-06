@@ -417,6 +417,12 @@ feature_test_macros = [
             "headers": ["flat_set"],
         },
         {
+            "name": "__cpp_lib_constexpr_format",
+            "values": {"c++26": 202511},
+            "headers": ["format"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_forward_list",
             "values": {"c++26": 202502},
             "headers": ["forward_list"],
@@ -483,7 +489,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_string",
-            "values": {"c++20": 201907},
+            "values": {
+                "c++20": 201907,
+                # "c++26": 202511,  # P3391R2: constexpr std::format
+            },
             "headers": ["string"],
         },
         {
@@ -1112,6 +1121,7 @@ feature_test_macros = [
                 "c++26": 202311  # P1673 A free function linear algebra interface based on the BLAS
                 # "c++26": 202411  # P3222R0 Fix C++26 by adding transposed special cases for P2642 layouts
                 # "c++26": 202411  # P3050R2 Fix C++26 by optimizing linalg::conjugated for noncomplex value types
+                # "c++26": 202511  # P3371R5 Fix C++26 by making the rank-1, rank-2, rank-k, and rank-2k updates consistent with the BLAS
             },
             "headers": ["linalg"],
             "unimplemented": True,
@@ -1671,8 +1681,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_submdspan",
             "values": {
-                "c++26": 202306, # P2630R4: submdspan
-                # "c++26": 202403, # P2642R6: Padded mdspan layouts
+                "c++26": 202306,  # P2630R4: submdspan
+                # "c++26": 202403,  # P2642R6: Padded mdspan layouts
+                # "c++26": 202511,  # P3663R3: Future-proof submdspan_mapping
             },
             "headers": ["mdspan"],
             "unimplemented": True,
