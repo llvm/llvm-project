@@ -3514,13 +3514,18 @@ protected:
 
       case 'F': {
         std::string flags;
-        if (Symtab *symtab = module->GetSymtab(/*can_create=*/false)) {
-          const lldb::SymtabState state = symtab->GetState();
-          if (state & eSymtabStateLoadedFromCache)
-            flags += 'C';
-          if (state & eSymtabStateParsedFromObjectFile)
-            flags += 'F';
-        }
+        if (ObjectFile *objfile = module->GetObjectFile())
+          if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false)) {
+            const lldb::SymtabState state = symtab->GetState();
+            if (state & eSymtabStateLoadedFromCache)
+              flags += 'C';
+            if (state & eSymtabStateParsedFromObjectFile)
+              flags += 'F';
+            if (state & eSymtabStateSavedToCache)
+              flags += 'S';
+          }
+        if (flags.empty())
+          flags = "-";
         strm.Format("{0}",
                     llvm::fmt_align(flags, llvm::AlignStyle::Left, width));
       } break;

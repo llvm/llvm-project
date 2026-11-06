@@ -175,8 +175,11 @@ class DebugIndexCacheTestcase(TestBase):
         module = target.GetModuleAtIndex(0)
         self.assertTrue(module.IsValid())
         module.GetNumSymbols()
-        self.assertTrue(module.GetSymtabState() & lldb.eSymtabStateParsedFromObjectFile)
-        self.expect("image list -F -b", patterns=[r"\] \S*F\S* main\.o"])
+        self.assertEqual(
+            module.GetSymtabState(),
+            lldb.eSymtabStateParsedFromObjectFile | lldb.eSymtabStateSavedToCache,
+        )
+        self.expect("image list -F -b", patterns=[r"\] FS main\.o"])
 
         # Release the module so the next target creates a new one that loads
         # its symbol table from the cache.
@@ -190,8 +193,8 @@ class DebugIndexCacheTestcase(TestBase):
         module = target.GetModuleAtIndex(0)
         self.assertTrue(module.IsValid())
         module.GetNumSymbols()
-        self.assertTrue(module.GetSymtabState() & lldb.eSymtabStateLoadedFromCache)
-        self.expect("image list -F -b", patterns=[r"\] \S*C\S* main\.o"])
+        self.assertEqual(module.GetSymtabState(), lldb.eSymtabStateLoadedFromCache)
+        self.expect("image list -F -b", patterns=[r"\] C main\.o"])
 
         stats = self.get_stats()
         module_stats = stats["modules"][0]

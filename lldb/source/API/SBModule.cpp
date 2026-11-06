@@ -310,8 +310,9 @@ lldb::SymtabState SBModule::GetSymtabState() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (ModuleSP module_sp = GetSP())
-    if (Symtab *symtab = module_sp->GetSymtab(/*can_create=*/false))
-      return symtab->GetState();
+    if (ObjectFile *objfile = module_sp->GetObjectFile())
+      if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
+        return symtab->GetState();
   return eSymtabStateNone;
 }
 

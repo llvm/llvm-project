@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
@@ -349,7 +350,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     module_stat.symbol_locator_time = module->GetSymbolLocatorStatistics();
     symbol_locator_total_time.merge(module_stat.symbol_locator_time);
-    Symtab *symtab = module->GetSymtab(/*can_create=*/false);
+    ObjectFile *objfile = module->GetObjectFile();
+    Symtab *symtab =
+        objfile ? objfile->GetSymtab(/*can_create=*/false) : nullptr;
     if (symtab) {
       module_stat.symtab_symbol_count = symtab->GetNumSymbols();
       symtab_symbol_count += module_stat.symtab_symbol_count;

@@ -226,24 +226,25 @@ public:
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
   bool GetWasLoadedFromCache() const {
-    return m_state & lldb::eSymtabStateLoadedFromCache;
+    return GetState() & lldb::eSymtabStateLoadedFromCache;
   }
-  void SetWasLoadedFromCache() { m_state |= lldb::eSymtabStateLoadedFromCache; }
+  void SetWasLoadedFromCache() { SetState(lldb::eSymtabStateLoadedFromCache); }
   bool GetWasSavedToCache() const {
-    return m_saved_to_cache;
+    return GetState() & lldb::eSymtabStateSavedToCache;
   }
-  void SetWasSavedToCache() {
-    m_saved_to_cache = true;
-  }
+  void SetWasSavedToCache() { SetState(lldb::eSymtabStateSavedToCache); }
   /// \}
 
   /// Flags describing how this symbol table was populated.
-  lldb::SymtabState GetState() const { return m_state; }
+  lldb::SymtabState GetState() const {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    return m_state;
+  }
   bool GetWasParsedFromObjectFile() const {
-    return m_state & lldb::eSymtabStateParsedFromObjectFile;
+    return GetState() & lldb::eSymtabStateParsedFromObjectFile;
   }
   void SetWasParsedFromObjectFile() {
-    m_state |= lldb::eSymtabStateParsedFromObjectFile;
+    SetState(lldb::eSymtabStateParsedFromObjectFile);
   }
 
 protected:
@@ -290,9 +291,12 @@ protected:
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
   lldb::SymtabState m_state = lldb::eSymtabStateNone;
-  bool m_saved_to_cache = false;
 
 private:
+  void SetState(lldb::SymtabState state) {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    m_state |= state;
+  }
   UniqueCStringMap<uint32_t> &
   GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
     auto map = m_name_to_symbol_indices.find(type);

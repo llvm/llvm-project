@@ -1323,8 +1323,14 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
       uint8_t type = data.GetU8(offset_ptr);
       UniqueCStringMap<uint32_t> &cstr_map =
           GetNameToSymbolIndexMap((lldb::FunctionNameType)type);
-      if (!DecodeCStrMap(data, offset_ptr, strtab, cstr_map))
+      if (!DecodeCStrMap(data, offset_ptr, strtab, cstr_map)) {
+        // Don't leave decoded symbols or name indexes behind for the caller
+        // to parse the symbol table on top of.
+        m_symbols.clear();
+        for (auto &pair : m_name_to_symbol_indices)
+          pair.second.Clear();
         return false;
+      }
     }
     m_name_indexes_computed = true;
   }
