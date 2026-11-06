@@ -10,6 +10,7 @@
 #define SUPPORT_MIN_SEQUENCE_CONTAINER_H
 
 #include <initializer_list>
+#include <iterator>
 #include <vector>
 
 #include "test_iterators.h"
@@ -52,8 +53,12 @@ struct MinSequenceContainer {
   TEST_CONSTEXPR_CXX20 iterator begin() { return iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator begin() const { return const_iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator cbegin() const { return const_iterator(data_.data()); }
-  TEST_CONSTEXPR_CXX20 iterator end() { return begin() + size(); }
-  TEST_CONSTEXPR_CXX20 const_iterator end() const { return begin() + size(); }
+  TEST_CONSTEXPR_CXX20 iterator end() {
+    return begin() + static_cast<typename std::iterator_traits<iterator>::difference_type>(size());
+  }
+  TEST_CONSTEXPR_CXX20 const_iterator end() const {
+    return begin() + static_cast<typename std::iterator_traits<const_iterator>::difference_type>(size());
+  }
   TEST_CONSTEXPR_CXX20 const_iterator cend() const { return end(); }
   TEST_CONSTEXPR_CXX20 size_type size() const { return static_cast<size_type>(data_.size()); }
   TEST_CONSTEXPR_CXX20 bool empty() const { return data_.empty(); }
