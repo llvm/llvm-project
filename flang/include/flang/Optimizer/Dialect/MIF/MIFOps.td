@@ -644,4 +644,23 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments]> {
   }];
 }
 
+def mif_EventQueryOp : mif_Op<"event_query", []> {
+  let summary = "Query the count of an event on the calling image.";
+  let description = [{
+    Argument: `event` shall be a coarray of type EVENT_TYPE from the intrinsic
+      module ISO_FORTRAN_ENV.
+    Result: `count` shall be an integer scalar and indicate the current count
+      of event variables.
+  }];
+
+  let arguments = (ins Arg<AnyRefOrBoxType>:$event,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat);
+  let results = (outs AnyInteger:$count);
+  let assemblyFormat = [{
+    $event 
+    (`stat` $stat^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // FORTRAN_DIALECT_MIF_MIF_OPS
