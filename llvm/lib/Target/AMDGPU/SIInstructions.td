@@ -1100,10 +1100,10 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
 // implicit operands for the register tuple it indexes, but these index the
 // whole register file, so they have their own opcodes, which
 // AMDGPUMCInstLower encodes as the real movrel. The registers they touch are
-// not operands, so they keep the access's memory operand to stay in order
-// after the expansion. AMDGPULowerVGPREncoding needs their named operand table.
-let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
-    UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
+// not operands, so they are loads and stores, kept in order by their memory
+// operands. AMDGPULowerVGPREncoding needs their named operand table.
+let VOP1 = 1, SubtargetPredicate = HasMovrel, Uses = [M0, EXEC],
+    hasSideEffects = 0, UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
   let mayLoad = 1 in
   def V_MOVRELS_B32_as_mem
       : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
