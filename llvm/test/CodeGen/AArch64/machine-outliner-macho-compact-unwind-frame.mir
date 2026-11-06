@@ -121,7 +121,8 @@ body:             |
 # MACHO-ASYNC-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
 # MACHO-ASYNC-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
 # MACHO-ASYNC-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
-# MACHO-ASYNC: early-clobber $sp, $fp, $lr = LDPXpost $sp, 2
+# MACHO-ASYNC: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
+# MACHO-ASYNC-NEXT: early-clobber $sp, $fp, $lr = LDPXpost $sp, 2
 # MACHO-ASYNC-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
 # MACHO-ASYNC-NEXT: frame-destroy CFI_INSTRUCTION restore $w30
 # MACHO-ASYNC-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
