@@ -353,8 +353,8 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *D, Value *E,
-    ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
     InstCombiner::BuilderTy &Builder) {
   // We are given the canonical form:
   //   (icmp ne (A & B), 0) & (icmp eq (A & D), E).
@@ -469,28 +469,34 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
     return nullptr;
   }
 
+  auto GetRHS = [&]() {
+    if (!IsLogical)
+      return RHS;
+
+    // Make sure that the RHS is not more poisonous, e.g. as a result of
+    // poison flags on icmp or trunc, or via poison elements in vector
+    // constants. Using freeze is insufficient here, because we need the
+    // constants to match those the analysis was performed on.
+    Value *And = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *DCst));
+    return Builder.CreateICmp(NewCC, And, ConstantInt::get(A->getType(), ECst));
+  };
+
   // At this point, B, D, E aren't zero and (B & D) == B, (B & D) == D or B ==
   // D. If B is a superset of (or equal to) D, since E is not zero, LHS is
   // subsumed by RHS (RHS implies LHS.) So the whole expression becomes
   // RHS. For example,
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
-  if (IsSuperSetOrEqual(BCst, DCst)) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if (IsSuperSetOrEqual(BCst, DCst))
+    return GetRHS();
+
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
-  if ((*BCst & ECst) != 0) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if ((*BCst & ECst) != 0)
+    return GetRHS();
+
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
   // (icmp ne (A & 7), 0) & (icmp eq (A & 15), 8) -> false.
@@ -503,9 +509,10 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
 /// aren't of the common mask pattern type.
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmpsAsymmetric(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *C, Value *D,
-    Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
-    unsigned LHSMask, unsigned RHSMask, InstCombiner::BuilderTy &Builder) {
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *C, Value *D, Value *E, ICmpInst::Predicate PredL,
+    ICmpInst::Predicate PredR, unsigned LHSMask, unsigned RHSMask,
+    InstCombiner::BuilderTy &Builder) {
   assert(ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
          "Expected equality predicates for masked type of icmps.");
   // Handle Mask_NotAllZeros-BMask_Mixed cases.
@@ -519,12 +526,13 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
   }
   if ((LHSMask & Mask_NotAllZeros) && (RHSMask & BMask_Mixed)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            LHS, RHS, IsAnd, A, B, D, E, PredL, PredR, Builder)) {
+            LHS, RHS, IsAnd, IsLogical, A, B, D, E, PredL, PredR, Builder)) {
       return V;
     }
   } else if ((LHSMask & BMask_Mixed) && (RHSMask & Mask_NotAllZeros)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            RHS, LHS, IsAnd, A, D, B, C, PredR, PredL, Builder)) {
+            RHS, LHS, IsAnd, /*IsLogical=*/false, A, D, B, C, PredR, PredL,
+            Builder)) {
       return V;
     }
   }
@@ -551,9 +559,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
   if (Mask == 0) {
     // Even if the two sides don't share a common pattern, check if folding can
     // still happen.
-    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(
-            LHS, RHS, IsAnd, A, B, C, D, E, PredL, PredR, LHSMask, RHSMask,
-            Builder))
+    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(LHS, RHS, IsAnd, IsLogical,
+                                                    A, B, C, D, E, PredL, PredR,
+                                                    LHSMask, RHSMask, Builder))
       return V;
     return nullptr;
   }
