@@ -532,6 +532,15 @@ public:
   }
 
 private:
+  // Returns true if the expression frees memory: a `delete` expression or a
+  // call to a freeing function (e.g. annotated with `ownership_takes`).
+  static bool isFreeingExpr(const Expr *InvalidationExpr) {
+    if (isa<CXXDeleteExpr>(InvalidationExpr))
+      return true;
+    const FunctionDecl *FD = FunctionCallInfo(InvalidationExpr).FD;
+    return FD && isFreeingFunction(*FD);
+  }
+
   struct LifetimeBoundMacroCache {
     bool IsBuilt = false;
     SmallVector<const IdentifierInfo *> Candidates;
@@ -604,7 +613,7 @@ private:
 
   void reportInvalidationSite(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
-    auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
+    auto Diag = isFreeingExpr(InvalidationExpr)
                     ? diag::note_lifetime_safety_freed_here
                     : diag::note_lifetime_safety_invalidated_here;
     S.Diag(InvalidationExpr->getExprLoc(), Diag)
@@ -617,8 +626,8 @@ private:
                                       const Expr *InvalidationExpr,
                                       llvm::ArrayRef<const Expr *> ExprChain,
                                       const UseSite &Use) {
-    S.Diag(IssueLoc, getInvalidationWarnDiag(
-                         isa<CXXDeleteExpr>(InvalidationExpr), Use.getKind()))
+    S.Diag(IssueLoc, getInvalidationWarnDiag(isFreeingExpr(InvalidationExpr),
+                                             Use.getKind()))
         << InvalidatedSubject << IssueRange;
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     reportAliasingChain(ExprChain);
@@ -773,6 +782,8 @@ private:
       llvm::raw_string_ostream OS(Name);
       FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),
                                /*Qualified=*/false);
+      if (isAllocatingFunction(*FD))
+        return "object allocated by '" + Name + "'";
       return "result of call to '" + Name + "'";
     }
 
