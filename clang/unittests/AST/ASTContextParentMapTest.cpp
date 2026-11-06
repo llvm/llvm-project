@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "MatchVerifier.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "gtest/gtest.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using testing::ElementsAre;
 
@@ -145,6 +146,27 @@ TEST(GetParents, FriendTypeLoc) {
   EXPECT_FALSE(FrBOwnsTag);
   EXPECT_THAT(Ctx.getParents(*FrATagDecl),
               ElementsAre(DynTypedNode::create(FrA)));
+}
+
+TEST(GetParents, IgnoresRepeatedInitializerWrappers) {
+  auto AST = tooling::buildASTFromCodeWithArgs("int values[] = {((0))};",
+                                               {"-std=c11"}, "input.c");
+  ASSERT_TRUE(AST);
+  auto &Ctx = AST->getASTContext();
+  auto *VD = cast<VarDecl>(
+      Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get("values")).front());
+  auto *Init = cast<InitListExpr>(VD->getInit());
+  ASSERT_TRUE(Init->getSyntacticForm());
+  ASSERT_EQ(Init->getInit(0), Init->getSyntacticForm()->getInit(0));
+  auto *Outer = cast<ParenExpr>(Init->getInit(0));
+  auto *Inner = cast<ParenExpr>(Outer->getSubExpr());
+  auto *Literal = cast<IntegerLiteral>(Inner->getSubExpr());
+  EXPECT_THAT(Ctx.getParents(*Literal),
+              ElementsAre(DynTypedNode::create(*Inner)));
+
+  Ctx.getParentMapContext().setTraversalKind(TK_IgnoreUnlessSpelledInSource);
+  EXPECT_THAT(Ctx.getParents(*Literal),
+              ElementsAre(DynTypedNode::create(*Init)));
 }
 
 TEST(GetParents, UserDefinedTupleLikeTypes) {
