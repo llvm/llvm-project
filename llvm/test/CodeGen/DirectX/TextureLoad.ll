@@ -330,3 +330,46 @@ define void @load_texture2d_constant_base_offsets(i32 %x, i32 %y, i32 %oy) {
   call void @use_float4(<4 x float> %data)
   ret void
 }
+
+declare void @use_int2(<2 x i32>)
+declare void @use_int4(<4 x i32>)
+
+; DXIL intrinsic expansion turns 64-bit texture loads into loads of i32 pairs
+; on the 64-bit texture handle. Those lower to the i32 overload.
+; CHECK-LABEL: define void @load_texture2d_double_as_i32(
+define void @load_texture2d_double_as_i32(<2 x i32> %coords) {
+  %texture = call target("dx.Texture", double, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_f64_0_0_0_2t(
+          i32 0, i32 3, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.i32 @dx.op.textureLoad.i32(i32 66, %dx.types.Handle %{{.*}}, i32 0, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 undef, i32 undef, i32 undef)
+  %data = call <2 x i32> @llvm.dx.resource.load.level.v2i32.tdx.Texture_f64_0_0_0_2t.v2i32.i32.v2i32(
+      target("dx.Texture", double, 0, 0, 0, 2) %texture,
+      <2 x i32> %coords, i32 0, <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.i32 %[[LOAD]], 0
+  ; CHECK: extractvalue %dx.types.ResRet.i32 %[[LOAD]], 1
+  call void @use_int2(<2 x i32> %data)
+  ret void
+}
+
+; CHECK-LABEL: define void @load_rwtexture2d_v2i64_as_i32(
+define void @load_rwtexture2d_v2i64_as_i32(<2 x i32> %coords) {
+  %texture = call target("dx.Texture", <2 x i64>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v2i64_1_0_0_2t(
+          i32 0, i32 4, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.i32 @dx.op.textureLoad.i32(i32 66, %dx.types.Handle %{{.*}}, i32 undef, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 undef, i32 undef, i32 undef)
+  %data = call <4 x i32> @llvm.dx.resource.load.level.v4i32.tdx.Texture_v2i64_1_0_0_2t.v2i32.i32.v2i32(
+      target("dx.Texture", <2 x i64>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, i32 0, <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.i32 %[[LOAD]], 0
+  ; CHECK: extractvalue %dx.types.ResRet.i32 %[[LOAD]], 3
+  call void @use_int4(<4 x i32> %data)
+  ret void
+}

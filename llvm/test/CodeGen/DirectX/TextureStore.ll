@@ -261,3 +261,43 @@ define void @store_texture2d_constant_base(float %y, i32 %cy) {
   ; CHECK: ret void
   ret void
 }
+
+; DXIL intrinsic expansion turns 64-bit texture stores into stores of
+; interleaved i32 halves on the 64-bit texture handle. Those lower to the i32
+; overload. As for typed buffers, a <2 x i32> store repeats the first value in
+; the unused slots.
+; CHECK-LABEL: define void @store_rwtexture2d_i64_as_i32(
+define void @store_rwtexture2d_i64_as_i32(<2 x i32> %data, <2 x i32> %coords) {
+  %texture = call target("dx.Texture", i64, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 13, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[DATA0:.*]] = extractelement <2 x i32> %data, i32 0
+  ; CHECK: %[[DATA1:.*]] = extractelement <2 x i32> %data, i32 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
+  ; CHECK: call void @dx.op.textureStore.i32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 %[[DATA0]], i32 %[[DATA1]], i32 %[[DATA0]], i32 %[[DATA0]], i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", i64, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, <2 x i32> %data)
+
+  ret void
+}
+
+; CHECK-LABEL: define void @store_rwtexture2d_v2double_as_i32(
+define void @store_rwtexture2d_v2double_as_i32(<4 x i32> %data, <2 x i32> %coords) {
+  %texture = call target("dx.Texture", <2 x double>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 14, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[DATA0:.*]] = extractelement <4 x i32> %data, i32 0
+  ; CHECK: %[[DATA1:.*]] = extractelement <4 x i32> %data, i32 1
+  ; CHECK: %[[DATA2:.*]] = extractelement <4 x i32> %data, i32 2
+  ; CHECK: %[[DATA3:.*]] = extractelement <4 x i32> %data, i32 3
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
+  ; CHECK: call void @dx.op.textureStore.i32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 %[[DATA0]], i32 %[[DATA1]], i32 %[[DATA2]], i32 %[[DATA3]], i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", <2 x double>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, <4 x i32> %data)
+
+  ret void
+}

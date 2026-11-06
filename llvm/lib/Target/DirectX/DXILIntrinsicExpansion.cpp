@@ -261,6 +261,12 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_resource_store_typedbuffer:
     return resourceAccessNeeds64BitExpansion(
         F.getParent(), F.getFunctionType()->getParamType(2), /*IsRaw*/ false);
+  case Intrinsic::dx_resource_load_level:
+    return resourceAccessNeeds64BitExpansion(F.getParent(), F.getReturnType(),
+                                             /*IsRaw*/ false);
+  case Intrinsic::dx_resource_store_texture:
+    return resourceAccessNeeds64BitExpansion(
+        F.getParent(), F.getFunctionType()->getParamType(2), /*IsRaw*/ false);
   }
   return false;
 }
@@ -761,19 +767,104 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   return Exp2Call;
 }
 
+/// Recombine the lo/hi i32 pairs in `I32Vec` into double or i64 values.
+/// If `Result` is a vector, they are inserted into it from element `Base` on
+/// and the updated vector is returned; otherwise the single combined scalar
+/// is returned.
+static Value *combineI32Pairs(IRBuilder<> &Builder, Value *I32Vec,
+                              Value *Result, unsigned Base) {
+  unsigned NumI32 = cast<FixedVectorType>(I32Vec->getType())->getNumElements();
+  bool IsDouble = Result->getType()->getScalarType()->isDoubleTy();
+  bool IsVector = Result->getType()->isVectorTy();
+
+  SmallVector<Value *, 4> Elements;
+  for (unsigned I = 0; I < NumI32; ++I)
+    Elements.push_back(
+        Builder.CreateExtractElement(I32Vec, Builder.getInt32(I)));
+
+  for (unsigned I = 0; I < NumI32; I += 2) {
+    Value *Combined = nullptr;
+    if (IsDouble)
+      // For doubles, use dx_asdouble intrinsic
+      Combined =
+          Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
+                                  {Elements[I], Elements[I + 1]});
+    else {
+      // For int64, manually combine two int32s
+      // First, zero-extend both values to i64
+      Value *Lo = Builder.CreateZExt(Elements[I], Builder.getInt64Ty());
+      Value *Hi = Builder.CreateZExt(Elements[I + 1], Builder.getInt64Ty());
+      // Shift the high bits left by 32 bits
+      Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
+      // OR the high and low bits together
+      Combined = Builder.CreateOr(Lo, ShiftedHi);
+    }
+
+    if (IsVector)
+      Result = Builder.CreateInsertElement(Result, Combined,
+                                           Builder.getInt32((I / 2) + Base));
+    else
+      Result = Combined;
+  }
+  return Result;
+}
+
+/// Split the double or i64 scalar or vector `Val` into a vector of i32 that
+/// holds the low and high halves of each element in turn.
+static Value *splitIntoI32Pairs(IRBuilder<> &Builder, Value *Val) {
+  Type *ValTy = Val->getType();
+  Type *Int32Ty = Builder.getInt32Ty();
+  auto *VT = dyn_cast<FixedVectorType>(ValTy);
+  unsigned VecLen = VT ? VT->getNumElements() : 0;
+  Type *SplitElementTy =
+      VT ? static_cast<Type *>(FixedVectorType::get(Int32Ty, VecLen)) : Int32Ty;
+
+  Value *LowBits = nullptr;
+  Value *HighBits = nullptr;
+  // Split the 64-bit values into 32-bit components
+  if (ValTy->getScalarType()->isDoubleTy()) {
+    auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
+    Value *Split =
+        Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble, {Val});
+    LowBits = Builder.CreateExtractValue(Split, 0);
+    HighBits = Builder.CreateExtractValue(Split, 1);
+  } else {
+    // Handle int64 type(s)
+    Constant *ShiftAmt = Builder.getInt64(32);
+    if (VT)
+      ShiftAmt =
+          ConstantVector::getSplat(ElementCount::getFixed(VecLen), ShiftAmt);
+
+    // Split into low and high 32-bit parts
+    LowBits = Builder.CreateTrunc(Val, SplitElementTy);
+    Value *ShiftedVal = Builder.CreateLShr(Val, ShiftAmt);
+    HighBits = Builder.CreateTrunc(ShiftedVal, SplitElementTy);
+  }
+
+  if (VT) {
+    SmallVector<int, 8> Mask;
+    for (unsigned I = 0; I < VecLen; ++I) {
+      Mask.push_back(I);
+      Mask.push_back(I + VecLen);
+    }
+    return Builder.CreateShuffleVector(LowBits, HighBits, Mask);
+  }
+
+  Value *Result = PoisonValue::get(FixedVectorType::get(Int32Ty, 2));
+  Result = Builder.CreateInsertElement(Result, LowBits, Builder.getInt32(0));
+  return Builder.CreateInsertElement(Result, HighBits, Builder.getInt32(1));
+}
+
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
   Type *BufferTy = Orig->getType()->getStructElementType(0);
-  Type *ScalarTy = BufferTy->getScalarType();
-  bool IsDouble = ScalarTy->isDoubleTy();
-  assert(IsDouble || ScalarTy->isIntegerTy(64) &&
-                         "Only expand double or int64 scalars or vectors");
-  bool IsVector = false;
+  assert((BufferTy->getScalarType()->isDoubleTy() ||
+          BufferTy->getScalarType()->isIntegerTy(64)) &&
+         "Only expand double or int64 scalars or vectors");
   unsigned ExtractNum = 2;
   if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
     ExtractNum = 2 * VT->getNumElements();
-    IsVector = true;
     assert(IsRaw || ExtractNum == 4 && "TypedBufferLoad vector must be size 2");
   }
 
@@ -803,41 +894,10 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
     Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
     Loads.push_back(Load);
 
-    // extract the buffer load's result
+    // Extract the buffer load's result and combine it into double(s) or
+    // int64(s).
     Value *Extract = Builder.CreateExtractValue(Load, {0});
-
-    SmallVector<Value *> ExtractElements;
-    for (unsigned I = 0; I < LoadNum; ++I)
-      ExtractElements.push_back(
-          Builder.CreateExtractElement(Extract, Builder.getInt32(I)));
-
-    // combine into double(s) or int64(s)
-    for (unsigned I = 0; I < LoadNum; I += 2) {
-      Value *Combined = nullptr;
-      if (IsDouble)
-        // For doubles, use dx_asdouble intrinsic
-        Combined = Builder.CreateIntrinsic(
-            Builder.getDoubleTy(), Intrinsic::dx_asdouble,
-            {ExtractElements[I], ExtractElements[I + 1]});
-      else {
-        // For int64, manually combine two int32s
-        // First, zero-extend both values to i64
-        Value *Lo =
-            Builder.CreateZExt(ExtractElements[I], Builder.getInt64Ty());
-        Value *Hi =
-            Builder.CreateZExt(ExtractElements[I + 1], Builder.getInt64Ty());
-        // Shift the high bits left by 32 bits
-        Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
-        // OR the high and low bits together
-        Combined = Builder.CreateOr(Lo, ShiftedHi);
-      }
-
-      if (IsVector)
-        Result = Builder.CreateInsertElement(Result, Combined,
-                                             Builder.getInt32((I / 2) + Base));
-      else
-        Result = Combined;
-    }
+    Result = combineI32Pairs(Builder, Extract, Result, Base);
 
     ExtractNum -= LoadNum;
     Base += LoadNum / 2;
@@ -876,70 +936,62 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   return true;
 }
 
+/// Split a 64-bit `llvm.dx.resource.load.level` into a load of lo/hi i32 pairs
+/// on the same texture, forwarding the coordinates, mip level and offsets.
+static bool expandTextureLoadIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Type *ElementTy = Orig->getType();
+  auto *VT = dyn_cast<FixedVectorType>(ElementTy);
+  unsigned NumI32 = 2 * (VT ? VT->getNumElements() : 1);
+  assert(NumI32 <= 4 && "64-bit texture elements have at most 2 components");
+
+  SmallVector<Value *, 4> Args(Orig->args());
+  Value *Load = Builder.CreateIntrinsic(
+      FixedVectorType::get(Builder.getInt32Ty(), NumI32),
+      Intrinsic::dx_resource_load_level, Args);
+  Value *Result = combineI32Pairs(Builder, Load, PoisonValue::get(ElementTy),
+                                  /*Base=*/0);
+
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+
+/// Split a 64-bit `llvm.dx.resource.store.texture` into a store of lo/hi i32
+/// pairs to the same texture, forwarding the coordinates.
+static bool expandTextureStoreIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Value *Data = splitIntoI32Pairs(Builder, Orig->getArgOperand(2));
+  assert(cast<FixedVectorType>(Data->getType())->getNumElements() <= 4 &&
+         "64-bit texture elements have at most 2 components");
+  Builder.CreateIntrinsic(
+      Builder.getVoidTy(), Intrinsic::dx_resource_store_texture,
+      {Orig->getArgOperand(0), Orig->getArgOperand(1), Data});
+  Orig->eraseFromParent();
+  return true;
+}
+
 static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
   unsigned ValIndex = IsRaw ? 3 : 2;
   Type *BufferTy = Orig->getFunctionType()->getParamType(ValIndex);
-  Type *ScalarTy = BufferTy->getScalarType();
-  bool IsDouble = ScalarTy->isDoubleTy();
-  assert((IsDouble || ScalarTy->isIntegerTy(64)) &&
+  assert((BufferTy->getScalarType()->isDoubleTy() ||
+          BufferTy->getScalarType()->isIntegerTy(64)) &&
          "Only expand double or int64 scalars or vectors");
 
   // Determine if we're dealing with a vector or scalar
-  bool IsVector = false;
   unsigned ExtractNum = 2;
   unsigned VecLen = 0;
   if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
     VecLen = VT->getNumElements();
     assert(IsRaw || VecLen == 2 && "TypedBufferStore vector must be size 2");
     ExtractNum = VecLen * 2;
-    IsVector = true;
   }
 
-  // Create the appropriate vector type for the result
-  Type *Int32Ty = Builder.getInt32Ty();
-  Type *ResultTy = VectorType::get(Int32Ty, ExtractNum, false);
-  Value *Val = PoisonValue::get(ResultTy);
-
-  Type *SplitElementTy = Int32Ty;
-  if (IsVector)
-    SplitElementTy = VectorType::get(SplitElementTy, VecLen, false);
-
-  Value *LowBits = nullptr;
-  Value *HighBits = nullptr;
-  // Split the 64-bit values into 32-bit components
-  if (IsDouble) {
-    auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
-    Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
-                                           {Orig->getOperand(ValIndex)});
-    LowBits = Builder.CreateExtractValue(Split, 0);
-    HighBits = Builder.CreateExtractValue(Split, 1);
-  } else {
-    // Handle int64 type(s)
-    Value *InputVal = Orig->getOperand(ValIndex);
-    Constant *ShiftAmt = Builder.getInt64(32);
-    if (IsVector)
-      ShiftAmt =
-          ConstantVector::getSplat(ElementCount::getFixed(VecLen), ShiftAmt);
-
-    // Split into low and high 32-bit parts
-    LowBits = Builder.CreateTrunc(InputVal, SplitElementTy);
-    Value *ShiftedVal = Builder.CreateLShr(InputVal, ShiftAmt);
-    HighBits = Builder.CreateTrunc(ShiftedVal, SplitElementTy);
-  }
-
-  if (IsVector) {
-    SmallVector<int, 8> Mask;
-    for (unsigned I = 0; I < VecLen; ++I) {
-      Mask.push_back(I);
-      Mask.push_back(I + VecLen);
-    }
-    Val = Builder.CreateShuffleVector(LowBits, HighBits, Mask);
-  } else {
-    Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
-    Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
-  }
+  Value *Val = splitIntoI32Pairs(Builder, Orig->getOperand(ValIndex));
 
   // If we need to extract more than 4 i32; we need to break it up into
   // more than one store. StoreNum tells us how many i32s we are storing in
@@ -1372,6 +1424,14 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_resource_store_typedbuffer:
     if (expandBufferStoreIntrinsic(Orig, /*IsRaw*/ false))
+      return true;
+    break;
+  case Intrinsic::dx_resource_load_level:
+    if (expandTextureLoadIntrinsic(Orig))
+      return true;
+    break;
+  case Intrinsic::dx_resource_store_texture:
+    if (expandTextureStoreIntrinsic(Orig))
       return true;
     break;
   case Intrinsic::usub_sat:
