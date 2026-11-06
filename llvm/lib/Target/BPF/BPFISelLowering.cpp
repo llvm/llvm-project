@@ -13,6 +13,7 @@
 
 #include "BPFISelLowering.h"
 #include "BPF.h"
+#include "BPFArena.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -358,6 +359,19 @@ void BPFTargetLowering::ReplaceNodeResults(
   // We'll still produce a fatal error downstream, but this diagnostic is more
   // user-friendly.
   fail(DL, DAG, Msg);
+}
+
+/// Locals that BPFArenaStack.cpp picked are objects of the stack in arena.
+void BPFTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  for (int FI = 0, E = MFI.getObjectIndexEnd(); FI != E; ++FI) {
+    const AllocaInst *AI = MFI.getObjectAllocation(FI);
+
+    if (AI && AI->hasMetadata(BPFArenaStackMD))
+      MFI.setStackID(FI, TargetStackID::NoAlloc);
+  }
+  TargetLowering::finalizeLowering(MF);
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
