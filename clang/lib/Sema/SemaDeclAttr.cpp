@@ -172,7 +172,6 @@ static bool isIntOrBool(Expr *Exp) {
   return QT->isBooleanType() || QT->isIntegerType();
 }
 
-
 // Check to see if the type is a smart pointer of some kind.  We assume
 // it's a smart pointer if it defines both operator-> and operator*.
 static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordDecl *Record) {
@@ -490,30 +489,72 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
   return checkThreadSafetyValueDeclIsFunPtr(S, VD, AL);
 }
 
-bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
+/// Whether \p D is a constructor of a scoped_lockable class. An
+/// acquire_capability attribute without arguments on such a constructor makes
+/// the analysis track the scoped object without underlying capabilities. Like
+/// the analysis, ignore the attributes of base classes.
+static bool isScopedLockableConstructor(const Decl *D) {
+  const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(D);
+  return CD &&
+         CD->getParent()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>();
+}
+
+/// Return true if the instantiated attribute \p A has no capability arguments
+/// although the attribute \p TmplAttr it has been instantiated from has some,
+/// i.e. if all its capability arguments are parameter packs that expanded to
+/// zero arguments.
+template <typename AttrT>
+static bool hasEmptyExpandedCapPack(const Attr *A, const Attr *TmplAttr) {
+  const auto *InstA = dyn_cast<AttrT>(A);
+  const auto *TmplA = dyn_cast_or_null<AttrT>(TmplAttr);
+  return InstA && TmplA && TmplA->args_size() != 0 && InstA->args_size() == 0;
+}
+
+bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, Attr *A,
+                                              const Attr *TmplAttr) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
            RequiresCapabilityAttr, LocksExcludedAttr, LockReturnedAttr>(A))
     return true;
 
-  const auto *VD = dyn_cast<ValueDecl>(D);
-  if (!VD)
-    return true;
+  // The generated attribute instantiation code does not copy the Inherited
+  // flag.
+  if (TmplAttr && TmplAttr->isInherited())
+    if (auto *IA = dyn_cast<InheritableAttr>(A))
+      IA->setInherited(true);
 
-  // Parameters of template functions need to be re-checked during
-  // instantiation because their types might have been dependent.
-  // lock_returned does not apply to scoped_lockable references.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD);
-      PVD && !isa<LockReturnedAttr>(A)) {
-    if (isCallbackOrDependent(PVD->getType()))
-      return true;
-    return checkFunParamsAreScopedLockable(*this, PVD, *A);
+  // An explicit variadic capability pack (e.g. mus...) that expanded to zero
+  // arguments names no capabilities and must not be mistaken for an implicit
+  // 'this' capability argument, also on a member of a capability class. Only
+  // keep such an attribute on a scoped_lockable constructor, where any of
+  // these attributes makes the analysis track the scoped object, e.g. for the
+  // adopt_lock and defer_lock constructors of a variadic scoped lock.
+  if ((hasEmptyExpandedCapPack<AcquireCapabilityAttr>(A, TmplAttr) ||
+       hasEmptyExpandedCapPack<TryAcquireCapabilityAttr>(A, TmplAttr) ||
+       hasEmptyExpandedCapPack<ReleaseCapabilityAttr>(A, TmplAttr) ||
+       hasEmptyExpandedCapPack<AssertCapabilityAttr>(A, TmplAttr) ||
+       hasEmptyExpandedCapPack<RequiresCapabilityAttr>(A, TmplAttr) ||
+       hasEmptyExpandedCapPack<LocksExcludedAttr>(A, TmplAttr)) &&
+      !isScopedLockableConstructor(D))
+    return false;
+
+  if (const auto *VD = dyn_cast<ValueDecl>(D)) {
+    // Parameters of template functions need to be re-checked during
+    // instantiation because their types might have been dependent.
+    // Only acquire/release/requires/locks_excluded apply to scoped_lockable
+    // references; the others require function pointers or references.
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD);
+        PVD && isa<AcquireCapabilityAttr, ReleaseCapabilityAttr,
+                   RequiresCapabilityAttr, LocksExcludedAttr>(A)) {
+      if (!isCallbackOrDependent(PVD->getType()) &&
+          !checkFunParamsAreScopedLockable(*this, PVD, *A))
+        return false;
+    } else if (!isa<FunctionDecl>(VD) &&
+               !checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A)) {
+      return false;
+    }
   }
-
-  if (isa<FunctionDecl>(VD))
-    return true;
-
-  return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7660,6 +7701,18 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
         }
       }
     }
+  }
+
+  // The success value of a try_acquire_capability attribute must be a single
+  // constant expression. Reject a pack expansion in that position since it
+  // would delay the argument and bypass validation.
+  if (AL.getKind() == ParsedAttr::AT_TryAcquireCapability &&
+      AL.getNumArgs() > 0 && AL.isArgExpr(0) &&
+      isa<PackExpansionExpr>(AL.getArgAsExpr(0))) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIntOrBool
+        << AL.getArgAsExpr(0)->getSourceRange();
+    return;
   }
 
   // Check if argument population must delayed to after template instantiation.

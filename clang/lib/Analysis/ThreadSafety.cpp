@@ -2129,6 +2129,11 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
                                        const Expr *Exp, const NamedDecl *D,
                                        til::SExpr *Self) {
   if (Attr->args_size() == 0) {
+    // A constructor of a scoped_lockable class does not acquire the object
+    // that it constructs.
+    if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(D))
+      if (CD->getParent()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>())
+        return;
     // The mutex held is the "this" object.
     CapabilityExpr Cp = SxBuilder.translateAttrExpr(nullptr, D, Exp, Self);
     if (Cp.isInvalid()) {
@@ -2999,7 +3004,13 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                                              Exp->getExprLoc());
         continue;
       }
-      const auto *Scope = cast<ScopedLockableFactEntry>(Fact);
+      // The argument may be a capability that is not a scoped object, e.g. if
+      // its class is both scoped_lockable and a capability or if its class is
+      // derived from a scoped_lockable class. There are no underlying mutexes
+      // to compare with in that case.
+      const auto *Scope = dyn_cast<ScopedLockableFactEntry>(Fact);
+      if (!Scope)
+        continue;
       for (const auto &[a, b] :
            zip_longest(DeclaredLocks, Scope->getUnderlyingMutexes())) {
         if (!a.has_value()) {
