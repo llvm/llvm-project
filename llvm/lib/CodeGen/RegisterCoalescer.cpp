@@ -1874,6 +1874,14 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
 
 void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
                                      MachineOperand &MO, unsigned SubRegIdx) {
+  // A def tied to a non-undef use reads the value of that use, so it must not
+  // be marked read-undef.
+  if (MO.isDef() && MO.isTied()) {
+    const MachineInstr &MI = *MO.getParent();
+    unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
+    if (!MI.getOperand(TiedIdx).isUndef())
+      return;
+  }
   LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubRegIdx);
   if (MO.isDef())
     Mask = ~Mask;
