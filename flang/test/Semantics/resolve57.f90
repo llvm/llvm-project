@@ -138,7 +138,7 @@ end subroutine s8
 subroutine block_local_locality(n)
   integer :: n, j
   block
-    integer :: t1, t2, t3, t4
+    integer :: t1, t2, t3, t4, t5
     t2 = 1
     t3 = 0
     do concurrent (j=1:n) local(t1) local_init(t2) reduce(+:t3) shared(t4)
@@ -147,8 +147,35 @@ subroutine block_local_locality(n)
     end do
     t4 = t3
     block
-      do concurrent (j=1:n) local(t1)
-        t1 = j
+      do concurrent (j=1:n) local(t5)
+        t5 = j
+      end do
+    end block
+  end block
+end subroutine
+
+! A nested BLOCK that reaches a variable of the enclosing BLOCK through
+! host association (asynchronous I/O, or an ASYNCHRONOUS or VOLATILE
+! statement) may name it in a locality-spec.
+subroutine block_host_assoc_locality(n)
+  integer :: n, j
+  block
+    integer :: x1, x2, x3
+    block
+      do concurrent (j=1:n) local(x1)
+        x1 = j
+      end do
+      write(10, asynchronous='yes') x1
+    end block
+    block
+      asynchronous :: x2
+      do concurrent (j=1:n) shared(x2)
+      end do
+    end block
+    block
+      volatile :: x3
+      do concurrent (j=1:n) local(x3)
+        x3 = j
       end do
     end block
   end block
@@ -163,5 +190,33 @@ subroutine block_local_not_variable(n)
 !BECAUSE: 'f' is not a variable
     do concurrent (j=1:n) local(f)
     end do
+!ERROR: The name 'f' must be a variable to appear in a locality-spec
+    do concurrent (j=1:n) shared(f)
+    end do
+  end block
+end subroutine
+
+! REDUCE is still rejected for an ASYNCHRONOUS or VOLATILE host-associated
+! name in a nested BLOCK.
+subroutine block_host_assoc_reduce(n)
+  integer :: n, j
+  block
+    integer :: y1, y2
+    y1 = 0
+    y2 = 0
+    block
+      asynchronous :: y1
+!ERROR: ASYNCHRONOUS variable 'y1' not allowed in a REDUCE locality-spec
+      do concurrent (j=1:n) reduce(+:y1)
+        y1 = y1 + j
+      end do
+    end block
+    block
+      volatile :: y2
+!ERROR: VOLATILE variable 'y2' not allowed in a REDUCE locality-spec
+      do concurrent (j=1:n) reduce(+:y2)
+        y2 = y2 + j
+      end do
+    end block
   end block
 end subroutine
