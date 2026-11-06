@@ -11665,8 +11665,10 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
+        ":DataLayoutInterfaces",
         ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
