@@ -176,6 +176,20 @@ namespace llvm {
     ///
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+    /// x86 has no vector integer divide, so route i8/i16/i32 and narrow i64
+    /// through an f32 or f64 divide. Under strict FP the SAE forms are needed
+    /// and those encode only at 512 bits.
+    void getIntDivRemFPExpansion(SmallVectorImpl<MVT> &Candidates,
+                                 unsigned &RequiredBits, EVT VT, bool IsSigned,
+                                 bool IsStrict) const override;
+
+    /// Emit the divide, which is an SAE sequence under strict FP, a rounded
+    /// reciprocal chain when an i64 operand misses the f64 mantissa, and the
+    /// base implementation otherwise.
+    SDValue emitIntDivRemViaFP(SDNode *N, EVT FPVT, bool IsSigned, bool IsRem,
+                               bool IsStrict, bool OperandsExact,
+                               SelectionDAG &DAG) const override;
+
     /// Replace the results of node with an illegal result
     /// type with new values built out of custom code.
     ///
