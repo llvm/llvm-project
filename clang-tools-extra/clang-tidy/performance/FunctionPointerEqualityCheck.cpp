@@ -8,17 +8,19 @@
 
 #include "FunctionPointerEqualityCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <iostream>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
 void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
-  const auto FunctionPointerType = hasCanonicalType(pointsTo(functionType()));
-
   // Matching ptr == ptr, but not ptr == nullptr, or ptr == integer (function
   // pointers to 1 and -1 are frequently used for "invalid" function pointers).
-  //
+  // Also match equality comparisons of member pointers that point to
+  // functions.
+  const auto FunctionPointerType = hasCanonicalType(anyOf(
+      pointsTo(functionType()), memberPointerType(pointee(functionType()))));
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("==", "!="),
                      hasLHS(hasType(FunctionPointerType)),

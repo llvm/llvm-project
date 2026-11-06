@@ -15,7 +15,7 @@ runtime.
 This warns on:
 
 - Equality (`==`) and inequality (`!=`) comparisons between two function
-  pointers may evaluate to `true` unexpectedly.
+  pointers may evaluate unexpectedly.
 - Various associative and unordered standard library containers (e.g.
   `std::set`, `std::multiset`, or `std::map`) that are keyed by
   function pointers rely on address ordering or equality, which can cause

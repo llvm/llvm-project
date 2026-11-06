@@ -30,3 +30,31 @@ void test_equality(void (*fp1)(), void (*fp2)()) {
   bool n4 = (fp1 != 0);
   bool n5 = (fp1 == static_cast<void (*)()>(nullptr));
 }
+
+class Foo
+{
+public:
+  int MyMethod1() {
+    return 1;
+  }
+  int MyMethod2() {
+    return 2;
+  }
+  static void MyStaticMethod1() {
+    return;
+  }
+  static void MyStaticMethod2() {
+    return;
+  }
+};
+
+void test_member_function_equality() {
+  bool a1 = &Foo::MyMethod1 == &Foo::MyMethod2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
+  bool b1 = &Foo::MyMethod1 != &Foo::MyMethod2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
+  bool a2 = &Foo::MyStaticMethod1 == &Foo::MyStaticMethod2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
+  bool b2 = &Foo::MyStaticMethod1 != &Foo::MyStaticMethod2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
+}

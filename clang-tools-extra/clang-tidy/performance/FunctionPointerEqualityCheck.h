@@ -13,9 +13,10 @@
 
 namespace clang::tidy::performance {
 
-/// Detects equality comparisons between function pointers and associative or
-/// unordered containers keyed by function pointers, which can behave
-/// unpredictably when Identical Code Folding (``--icf=all``) is enabled.
+/// Detects equality comparisons between function pointers and detects
+/// associative or unordered containers with function pointer key types, which
+/// can be unsound when aggressive Identical Code Folding (``--icf=all``) is
+/// enabled.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/performance/function-pointer-equality.html
