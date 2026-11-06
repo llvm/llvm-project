@@ -316,32 +316,44 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
                              to_fetch);
 
   if (to_fetch > bufsize) {
-    FileIOResult result = platform_read(this, dataref.data(), to_fetch);
-    size_t fetched_size = result.value;
-    if (result.has_error() || fetched_size < to_fetch) {
-      if (!result.has_error())
-        eof = true;
-      else
-        err = true;
-      return {available_data + fetched_size, result.error};
+    while (to_fetch > 0) {
+      FileIOResult result = platform_read(this, dataref.data(), to_fetch);
+      size_t fetched_size = result.value;
+      available_data += fetched_size;
+      if (result.has_error() || fetched_size == 0) {
+        if (!result.has_error())
+          eof = true;
+        else
+          err = true;
+        return {available_data, result.error};
+      }
+      to_fetch -= fetched_size;
+      dataref = dataref.subspan(fetched_size);
     }
     return len;
   }
 
   // Fetch and buffer another buffer worth of data.
-  FileIOResult result = platform_read(this, buf, bufsize);
-  size_t fetched_size = result.value;
-  read_limit += fetched_size;
-  size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-  inline_memcpy(dataref.data(), buf, transfer_size);
-  pos += transfer_size;
-  if (result.has_error() || fetched_size < to_fetch) {
-    if (!result.has_error())
-      eof = true;
-    else
-      err = true;
+  while (to_fetch > 0) {
+    FileIOResult result = platform_read(this, buf, bufsize);
+    size_t fetched_size = result.value;
+    read_limit = fetched_size;
+    pos = 0;
+    size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
+    inline_memcpy(dataref.data(), buf, transfer_size);
+    pos += transfer_size;
+    available_data += transfer_size;
+    to_fetch -= transfer_size;
+    dataref = dataref.subspan(transfer_size);
+    if (result.has_error() || fetched_size == 0) {
+      if (!result.has_error())
+        eof = true;
+      else
+        err = true;
+      return {available_data, result.error};
+    }
   }
-  return {transfer_size + available_data, result.error};
+  return available_data;
 }
 
 FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
@@ -351,17 +363,24 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
     return available_data;
 
   // Directly copy the data into |data|.
+  size_t to_fetch = len - available_data;
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
-                             len - available_data);
-  FileIOResult result = platform_read(this, dataref.data(), dataref.size());
-
-  if (result.has_error() || result < dataref.size()) {
-    if (!result.has_error())
-      eof = true;
-    else
-      err = true;
+                             to_fetch);
+  while (to_fetch > 0) {
+    FileIOResult result = platform_read(this, dataref.data(), to_fetch);
+    size_t fetched_size = result.value;
+    available_data += fetched_size;
+    if (result.has_error() || fetched_size == 0) {
+      if (!result.has_error())
+        eof = true;
+      else
+        err = true;
+      return {available_data, result.error};
+    }
+    to_fetch -= fetched_size;
+    dataref = dataref.subspan(fetched_size);
   }
-  return {result + available_data, result.error};
+  return available_data;
 }
 
 int File::ungetc_unlocked(int c) {
@@ -532,8 +551,6 @@ int File::close() {
 }
 
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
-  // We do not need to lock the file as this method should be called before
-  // other operations are performed on the file.
   if (buffer != nullptr && size == 0)
     return EINVAL;
 
@@ -545,6 +562,16 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   default:
     return EINVAL;
   }
+
+  FileLock lock(this);
+  if (prev_op == FileOp::WRITE && pos > 0)
+    flush_unlocked();
+  pos = 0;
+  read_limit = 0;
+  prev_op = FileOp::NONE;
+
+  if (buffer == nullptr && size == 0 && buffer_mode != _IONBF)
+    size = DEFAULT_BUFFER_SIZE;
 
   if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
     // We exclude the case of buffer_mode == _IONBF in this branch
