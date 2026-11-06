@@ -20,6 +20,7 @@
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -115,7 +116,6 @@ struct PredInfo {
 using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
-using Val2BBMap = DenseMap<Value *, BasicBlock *>;
 
 // A traits type that is intended to be used in graph algorithms. The graph
 // traits starts at an entry node, and traverses the RegionNodes that are in
@@ -288,7 +288,13 @@ class StructurizeCFG {
   PredMap LoopPreds;
   BranchVector LoopConds;
 
-  Val2BBMap HoistedValues;
+  struct HoistedPhiInfo {
+    BasicBlock *ElseBB;
+    BasicBlock *HoistBB;
+    Value *ElseValue;
+  };
+  DenseMap<PHINode *, HoistedPhiInfo> HoistedPhis;
+  SmallPtrSet<Instruction *, 8> HoistedInstructions;
 
   RegionNode *PrevNode;
 
@@ -325,8 +331,6 @@ class StructurizeCFG {
   void setPhiValues();
 
   void simplifyAffectedPhis();
-
-  void simplifyHoistedPhis();
 
   DebugLoc killTerminator(BasicBlock *BB);
 
@@ -402,7 +406,8 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
 /// if its hoisted to predecessor block. So, this returns true.
 bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
                                             BasicBlock *HoistTo) {
-  if (I->getParent() != BB || isa<PHINode>(I))
+  if (I->getParent() != BB || isa<PHINode>(I) ||
+      !isSafeToSpeculativelyExecute(I, HoistTo->getTerminator(), nullptr, DT))
     return false;
 
   // If the instruction is not a zero cost instruction, return false.
@@ -426,43 +431,38 @@ bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
   return true;
 }
 
-/// Structurization can introduce unnecessary VGPR copies due to register
-/// coalescing interference. For example, if the Else block has a zero-cost
-/// instruction and the Then block modifies the VGPR value, only one value is
-/// live at a time in merge block before structurization. After structurization,
-/// the coalescer may incorrectly treat the Then value as live in the Else block
-/// (via the path Then → Flow → Else), leading to unnecessary VGPR copies.
-///
-/// This function examines phi nodes whose incoming values are zero-cost
-/// instructions in the Else block. It identifies such values that can be safely
-/// hoisted and moves them to the nearest common dominator of Then and Else
-/// blocks. A follow-up function after setting PhiNodes assigns the hoisted
-/// value to poison phi nodes along the if→flow edge, aiding register coalescing
-/// and minimizing unnecessary live ranges.
+/// Hoist zero-cost Else values so SSA reconstruction can carry them through
+/// the bypasses of Then. Using that reconstructed value on the Else merge edge
+/// can avoid copies introduced by structurization.
 void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
                                                      BasicBlock *ThenBB) {
-
   BasicBlock *ElseSucc = ElseBB->getSingleSuccessor();
-  BasicBlock *CommonDominator = DT->findNearestCommonDominator(ElseBB, ThenBB);
-
-  if (!ElseSucc || !CommonDominator)
-    return;
-  // Only hoist in a simple if-else: ThenBB must branch directly to ElseSucc
-  // and ElseSucc must have exactly 2 predecessors (ThenBB and ElseBB).
-  // simplifyHoistedPhis assumes this exact shape; with additional predecessors
-  // the hoisted value leaks into unrelated control-flow paths.
-  if (ThenBB->getSingleSuccessor() != ElseSucc ||
+  if (!ElseSucc || ThenBB->getSingleSuccessor() != ElseSucc ||
       !ElseSucc->hasNPredecessors(2))
     return;
+
+  // Both arms go directly to the merge. A path through Then cannot also
+  // execute Else before reaching this merge, even if Else has several inputs.
+  BasicBlock *CommonDominator = DT->findNearestCommonDominator(ElseBB, ThenBB);
+  if (!CommonDominator)
+    return;
+
   Instruction *Term = CommonDominator->getTerminator();
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
     auto *Inst = dyn_cast<Instruction>(ElseVal);
-    if (!Inst || !isHoistableInstruction(Inst, ElseBB, CommonDominator))
+    if (!Inst)
       continue;
-    Inst->removeFromParent();
-    Inst->insertInto(CommonDominator, Term->getIterator());
-    HoistedValues[Inst] = CommonDominator;
+    if (!HoistedInstructions.contains(Inst)) {
+      if (!isHoistableInstruction(Inst, ElseBB, CommonDominator))
+        continue;
+      Inst->removeFromParent();
+      Inst->insertInto(CommonDominator, Term->getIterator());
+      HoistedInstructions.insert(Inst);
+    } else if (!DT->dominates(Inst, Term)) {
+      continue;
+    }
+    HoistedPhis[&Phi] = {ElseBB, CommonDominator, ElseVal};
   }
 }
 
@@ -790,6 +790,11 @@ void StructurizeCFG::findUndefBlocks(
 // DeletedPhis.
 void StructurizeCFG::mergeIfCompatible(
     EquivalenceClasses<PHINode *> &PhiClasses, PHINode *A, PHINode *B) {
+  // Hoisted results use the Else value on otherwise unused paths. Sharing
+  // another PHI's real inputs could overwrite that value on a path into Else.
+  if (HoistedPhis.contains(A) || HoistedPhis.contains(B))
+    return;
+
   auto ItA = PhiClasses.findLeader(PhiClasses.insert(A));
   auto ItB = PhiClasses.findLeader(PhiClasses.insert(B));
   // They are already in the same class, no work needed.
@@ -889,9 +894,24 @@ void StructurizeCFG::setPhiValues() {
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
     for (const auto &[Phi, Incoming] : Map) {
       Value *Poison = PoisonValue::get(Phi->getType());
+      auto HoistedIt = HoistedPhis.find(Phi);
+      const HoistedPhiInfo *Hoisted =
+          HoistedIt == HoistedPhis.end() ? nullptr : &HoistedIt->second;
+      if (Hoisted &&
+          !DT->dominates(Hoisted->ElseValue, Hoisted->ElseBB->getTerminator()))
+        Hoisted = nullptr;
+      auto DefaultValue = [&](BasicBlock *BB) -> Value * {
+        if (Hoisted && DT->dominates(Hoisted->ElseValue, BB->getTerminator()))
+          return Hoisted->ElseValue;
+        return Poison;
+      };
+
       Updater.Initialize(Phi->getType(), "");
-      Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
-      Updater.AddAvailableValue(To, Poison);
+      Updater.AddAvailableValue(&Func->getEntryBlock(),
+                                DefaultValue(&Func->getEntryBlock()));
+      Updater.AddAvailableValue(To, DefaultValue(To));
+      if (Hoisted)
+        Updater.AddAvailableValue(Hoisted->HoistBB, Hoisted->ElseValue);
 
       // Use leader phi's incoming if there is.
       auto LeaderIt = PhiClasses.findLeader(Phi);
@@ -920,55 +940,28 @@ void StructurizeCFG::setPhiValues() {
         if (Updater.HasValueForBlock(UB))
           continue;
 
-        Updater.AddAvailableValue(UB, Poison);
+        Updater.AddAvailableValue(UB, DefaultValue(UB));
       }
 
+      if (Hoisted)
+        Updater.AddAvailableValue(Hoisted->ElseBB, Hoisted->ElseValue);
       for (BasicBlock *FI : From)
         Phi->setIncomingValueForBlock(FI, Updater.GetValueAtEndOfBlock(FI));
+      // Else may now reach the merge through a Flow block. Its outgoing
+      // definition already supplies that path; only rewrite an arm that
+      // still comes directly from Else.
+      if (Hoisted && Phi->getBasicBlockIndex(Hoisted->ElseBB) != -1) {
+        // Query before Else's end-of-block definition. This value carries the
+        // original Then input on Then paths and the hoisted value on bypasses.
+        // Only bypass paths execute Else, so it equals ElseValue on this edge.
+        Value *EnteringElse = Updater.GetValueInMiddleOfBlock(Hoisted->ElseBB);
+        Phi->setIncomingValueForBlock(Hoisted->ElseBB, EnteringElse);
+      }
       AffectedPhis.push_back(Phi);
     }
   }
 
   AffectedPhis.append(InsertedPhis.begin(), InsertedPhis.end());
-}
-
-/// Updates PHI nodes after hoisted zero cost instructions by replacing poison
-/// entries on Flow nodes with the appropriate hoisted values
-void StructurizeCFG::simplifyHoistedPhis() {
-  for (WeakVH VH : AffectedPhis) {
-    PHINode *Phi = dyn_cast_or_null<PHINode>(VH);
-    if (!Phi || Phi->getNumIncomingValues() != 2)
-      continue;
-
-    for (int i = 0; i < 2; i++) {
-      Value *V = Phi->getIncomingValue(i);
-      auto BBIt = HoistedValues.find(V);
-
-      if (BBIt == HoistedValues.end())
-        continue;
-
-      Value *OtherV = Phi->getIncomingValue(!i);
-      PHINode *OtherPhi = dyn_cast<PHINode>(OtherV);
-      if (!OtherPhi)
-        continue;
-
-      int PoisonValBBIdx = -1;
-      for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
-        if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
-          continue;
-        PoisonValBBIdx = i;
-        break;
-      }
-      if (PoisonValBBIdx == -1 ||
-          !DT->dominates(BBIt->second,
-                         OtherPhi->getIncomingBlock(PoisonValBBIdx)))
-        continue;
-
-      OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-      if (DT->dominates(OtherV, Phi))
-        Phi->setIncomingValue(i, OtherV);
-    }
-  }
 }
 
 void StructurizeCFG::simplifyAffectedPhis() {
@@ -1350,7 +1343,6 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   PhiInserter.RewriteAndOptimizeAllUses(*DT);
 
   setPhiValues();
-  simplifyHoistedPhis();
   simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
@@ -1366,6 +1358,8 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   LoopPreds.clear();
   LoopConds.clear();
   FlowSet.clear();
+  HoistedPhis.clear();
+  HoistedInstructions.clear();
 
   return true;
 }

@@ -3,12 +3,13 @@
 ; RUN: opt -passes='structurizecfg,instcombine,simplifycfg' -mtriple=amdgpu9.42 -S %s | FileCheck %s --check-prefix=FOLD
 ;
 ; Multiple independent rejection paths share one else block. Even though the
-; merge has exactly two predecessors, this is not a simple diamond. Repair
-; every bypass input before replacing the original sink PHI input.
+; merge has exactly two predecessors, this is not a simple diamond. Build
+; the result's Flow PHIs with the hoisted Else value on every Then bypass.
 ;
-; Two predecessors enter Else: Entry and Check1. This already works before
-; the fix: both generated Flow PHIs have their poison inputs repaired with
-; %unchanged. Either rejection returns zext(a), and Then returns b + 1.
+; Two predecessors enter Else: Entry and Check1. This already produced correct
+; results before this change. Keep both bypasses carrying %unchanged while
+; constructing the result's Flow PHIs. Either rejection returns zext(a), and
+; Then returns b + 1.
 define i64 @two_else_predecessors(i1 %r0, i1 %r1, i32 %a, i64 %b) {
 ; CFG-LABEL: define i64 @two_else_predecessors(
 ; CFG-SAME: i1 [[R0:%.*]], i1 [[R1:%.*]], i32 [[A:%.*]], i64 [[B:%.*]]) {
@@ -64,10 +65,11 @@ merge:
   ret i64 %result
 }
 
-; Add one more predecessor entering Else: Check2. Before the fix, only the
-; outer two Flow PHIs have their poison inputs repaired. The innermost Flow
-; PHI retains poison from Check2, which leaks into the returned result when
-; r0 = false, r1 = false, and r2 = true. This must also return zext(a).
+; Three predecessors enter Else: Entry, Check1, and Check2. The result's
+; Flow PHIs must carry %unchanged on all three Then bypasses. Otherwise the
+; Check2 rejection can return poison when r0 = false, r1 = false, and r2 = true
+; instead of zext(a). Supply %unchanged during SSA reconstruction, including
+; on the innermost bypass.
 define i64 @three_else_predecessors(i1 %r0, i1 %r1, i1 %r2, i32 %a, i64 %b) {
 ; CFG-LABEL: define i64 @three_else_predecessors(
 ; CFG-SAME: i1 [[R0:%.*]], i1 [[R1:%.*]], i1 [[R2:%.*]], i32 [[A:%.*]], i64 [[B:%.*]]) {
@@ -93,7 +95,7 @@ define i64 @three_else_predecessors(i1 %r0, i1 %r1, i1 %r2, i32 %a, i64 %b) {
 ; CFG-NEXT:    [[MODIFIED:%.*]] = add i64 [[B]], 1
 ; CFG-NEXT:    br label %[[FLOW2]]
 ; CFG:       [[FLOW2]]:
-; CFG-NEXT:    [[TMP4]] = phi i64 [ [[MODIFIED]], %[[THEN]] ], [ poison, %[[CHECK2]] ]
+; CFG-NEXT:    [[TMP4]] = phi i64 [ [[MODIFIED]], %[[THEN]] ], [ [[UNCHANGED]], %[[CHECK2]] ]
 ; CFG-NEXT:    [[TMP5]] = phi i1 [ false, %[[THEN]] ], [ true, %[[CHECK2]] ]
 ; CFG-NEXT:    br label %[[FLOW1]]
 ; CFG:       [[ELSE]]:
@@ -107,7 +109,7 @@ define i64 @three_else_predecessors(i1 %r0, i1 %r1, i1 %r2, i32 %a, i64 %b) {
 ; FOLD-NEXT:    [[UNCHANGED:%.*]] = zext i32 [[A]] to i64
 ; FOLD-NEXT:    [[BRMERGE:%.*]] = select i1 [[R0]], i1 true, i1 [[R1]]
 ; FOLD-NEXT:    [[MODIFIED:%.*]] = add i64 [[B]], 1
-; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[R2]], i64 poison, i64 [[MODIFIED]]
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[R2]], i64 [[UNCHANGED]], i64 [[MODIFIED]]
 ; FOLD-NEXT:    [[TMP0:%.*]] = select i1 [[BRMERGE]], i64 [[UNCHANGED]], i64 [[SPEC_SELECT]]
 ; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[BRMERGE]], i1 true, i1 [[R2]]
 ; FOLD-NEXT:    ret i64 [[TMP0]]
@@ -164,13 +166,13 @@ define i64 @store_index(i1 %active, i1 %zero_xy, i1 %range_xy, i1 %above_hi, i1 
 ; CFG:       [[CHECK_LO]]:
 ; CFG-NEXT:    br i1 [[BELOW_LO_INV]], label %[[COMPUTE:.*]], label %[[FLOW3:.*]]
 ; CFG:       [[FLOW3]]:
-; CFG-NEXT:    [[TMP4:%.*]] = phi i64 [ [[COMPUTED_INDEX:%.*]], %[[COMPUTE]] ], [ poison, %[[CHECK_LO]] ]
+; CFG-NEXT:    [[TMP4:%.*]] = phi i64 [ [[COMPUTED_INDEX:%.*]], %[[COMPUTE]] ], [ [[ZERO_INDEX]], %[[CHECK_LO]] ]
 ; CFG-NEXT:    [[TMP5:%.*]] = phi i1 [ false, %[[COMPUTE]] ], [ true, %[[CHECK_LO]] ]
 ; CFG-NEXT:    br label %[[FLOW2]]
 ; CFG:       [[CRITEDGE]]:
 ; CFG-NEXT:    br label %[[SINK]]
 ; CFG:       [[FLOW2]]:
-; CFG-NEXT:    [[TMP6]] = phi i64 [ [[TMP4]], %[[FLOW3]] ], [ poison, %[[CHECK_HI]] ]
+; CFG-NEXT:    [[TMP6]] = phi i64 [ [[TMP4]], %[[FLOW3]] ], [ [[ZERO_INDEX]], %[[CHECK_HI]] ]
 ; CFG-NEXT:    [[TMP7]] = phi i1 [ [[TMP5]], %[[FLOW3]] ], [ [[ABOVE_HI]], %[[CHECK_HI]] ]
 ; CFG-NEXT:    br label %[[FLOW1]]
 ; CFG:       [[COMPUTE]]:
@@ -195,14 +197,13 @@ define i64 @store_index(i1 %active, i1 %zero_xy, i1 %range_xy, i1 %above_hi, i1 
 ; FOLD-NEXT:    [[BRMERGE:%.*]] = select i1 [[ZERO_XY]], i1 true, i1 [[RANGE_XY_NOT]]
 ; FOLD-NEXT:    [[DOTMUX:%.*]] = select i1 [[ZERO_XY]], i1 true, i1 [[RANGE_XY_INV]]
 ; FOLD-NEXT:    [[BRMERGE5:%.*]] = select i1 [[BRMERGE]], i1 true, i1 [[ABOVE_HI]]
-; FOLD-NEXT:    [[ZERO_INDEX_MUX:%.*]] = select i1 [[BRMERGE]], i64 [[ZERO_INDEX]], i64 poison
 ; FOLD-NEXT:    br i1 [[BRMERGE5]], label %[[EXIT]], label %[[CHECK_LO:.*]]
 ; FOLD:       [[CHECK_LO]]:
 ; FOLD-NEXT:    [[COMPUTED_INDEX:%.*]] = zext i32 [[LINEAR]] to i64
-; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BELOW_LO]], i64 poison, i64 [[COMPUTED_INDEX]]
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BELOW_LO]], i64 [[ZERO_INDEX]], i64 [[COMPUTED_INDEX]]
 ; FOLD-NEXT:    br label %[[EXIT]]
 ; FOLD:       [[EXIT]]:
-; FOLD-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ZERO_INDEX_MUX]], %[[START]] ], [ [[SPEC_SELECT]], %[[CHECK_LO]] ]
+; FOLD-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ZERO_INDEX]], %[[START]] ], [ [[SPEC_SELECT]], %[[CHECK_LO]] ]
 ; FOLD-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -255,32 +256,35 @@ define { i64, i64 } @shared_computed_value(i1 %r1, i1 %r2, i1 %r3, i1 %r4, i32 %
 ; CFG:       [[CHECK2]]:
 ; CFG-NEXT:    br i1 [[R2_INV]], label %[[CHECK3:.*]], label %[[FLOW1:.*]]
 ; CFG:       [[FLOW]]:
-; CFG-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FLOW1]] ], [ [[UNCHANGED_A]], %[[ENTRY]] ]
-; CFG-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP3:%.*]], %[[FLOW1]] ], [ [[R1]], %[[ENTRY]] ]
+; CFG-NEXT:    [[SECOND:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FLOW1]] ], [ [[UNCHANGED_B]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP4:%.*]], %[[FLOW1]] ], [ [[UNCHANGED_A]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP5:%.*]], %[[FLOW1]] ], [ [[R1]], %[[ENTRY]] ]
 ; CFG-NEXT:    br i1 [[TMP1]], label %[[ELSE:.*]], label %[[MERGE:.*]]
 ; CFG:       [[CHECK3]]:
 ; CFG-NEXT:    br i1 [[R3_INV]], label %[[CHECK4:.*]], label %[[FLOW2:.*]]
 ; CFG:       [[FLOW1]]:
-; CFG-NEXT:    [[TMP2]] = phi i64 [ [[TMP4:%.*]], %[[FLOW2]] ], [ [[UNCHANGED_A]], %[[CHECK2]] ]
-; CFG-NEXT:    [[TMP3]] = phi i1 [ [[TMP5:%.*]], %[[FLOW2]] ], [ [[R2]], %[[CHECK2]] ]
+; CFG-NEXT:    [[TMP3]] = phi i64 [ [[TMP6:%.*]], %[[FLOW2]] ], [ [[UNCHANGED_B]], %[[CHECK2]] ]
+; CFG-NEXT:    [[TMP4]] = phi i64 [ [[TMP7:%.*]], %[[FLOW2]] ], [ [[UNCHANGED_A]], %[[CHECK2]] ]
+; CFG-NEXT:    [[TMP5]] = phi i1 [ [[TMP8:%.*]], %[[FLOW2]] ], [ [[R2]], %[[CHECK2]] ]
 ; CFG-NEXT:    br label %[[FLOW]]
 ; CFG:       [[CHECK4]]:
 ; CFG-NEXT:    br i1 [[R4_INV]], label %[[THEN:.*]], label %[[FLOW3:.*]]
 ; CFG:       [[FLOW2]]:
-; CFG-NEXT:    [[TMP4]] = phi i64 [ [[TMP6:%.*]], %[[FLOW3]] ], [ poison, %[[CHECK3]] ]
-; CFG-NEXT:    [[TMP5]] = phi i1 [ [[TMP7:%.*]], %[[FLOW3]] ], [ [[R3]], %[[CHECK3]] ]
+; CFG-NEXT:    [[TMP6]] = phi i64 [ [[TMP9:%.*]], %[[FLOW3]] ], [ [[UNCHANGED_B]], %[[CHECK3]] ]
+; CFG-NEXT:    [[TMP7]] = phi i64 [ [[TMP10:%.*]], %[[FLOW3]] ], [ [[UNCHANGED_A]], %[[CHECK3]] ]
+; CFG-NEXT:    [[TMP8]] = phi i1 [ [[TMP11:%.*]], %[[FLOW3]] ], [ [[R3]], %[[CHECK3]] ]
 ; CFG-NEXT:    br label %[[FLOW1]]
 ; CFG:       [[THEN]]:
 ; CFG-NEXT:    [[MODIFIED:%.*]] = zext i32 [[C]] to i64
 ; CFG-NEXT:    br label %[[FLOW3]]
 ; CFG:       [[FLOW3]]:
-; CFG-NEXT:    [[TMP6]] = phi i64 [ [[MODIFIED]], %[[THEN]] ], [ poison, %[[CHECK4]] ]
-; CFG-NEXT:    [[TMP7]] = phi i1 [ false, %[[THEN]] ], [ true, %[[CHECK4]] ]
+; CFG-NEXT:    [[TMP9]] = phi i64 [ [[MODIFIED]], %[[THEN]] ], [ [[UNCHANGED_B]], %[[CHECK4]] ]
+; CFG-NEXT:    [[TMP10]] = phi i64 [ [[MODIFIED]], %[[THEN]] ], [ [[UNCHANGED_A]], %[[CHECK4]] ]
+; CFG-NEXT:    [[TMP11]] = phi i1 [ false, %[[THEN]] ], [ true, %[[CHECK4]] ]
 ; CFG-NEXT:    br label %[[FLOW2]]
 ; CFG:       [[ELSE]]:
 ; CFG-NEXT:    br label %[[MERGE]]
 ; CFG:       [[MERGE]]:
-; CFG-NEXT:    [[SECOND:%.*]] = phi i64 [ [[TMP0]], %[[FLOW]] ], [ [[UNCHANGED_B]], %[[ELSE]] ]
 ; CFG-NEXT:    [[V0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP0]], 0
 ; CFG-NEXT:    [[V1:%.*]] = insertvalue { i64, i64 } [[V0]], i64 [[SECOND]], 1
 ; CFG-NEXT:    ret { i64, i64 } [[V1]]
@@ -292,12 +296,12 @@ define { i64, i64 } @shared_computed_value(i1 %r1, i1 %r2, i1 %r3, i1 %r4, i32 %
 ; FOLD-NEXT:    [[UNCHANGED_B:%.*]] = zext i32 [[B]] to i64
 ; FOLD-NEXT:    [[BRMERGE:%.*]] = select i1 [[R1]], i1 true, i1 [[R2]]
 ; FOLD-NEXT:    [[BRMERGE5:%.*]] = select i1 [[BRMERGE]], i1 true, i1 [[R3]]
-; FOLD-NEXT:    [[UNCHANGED_A_MUX:%.*]] = select i1 [[BRMERGE]], i64 [[UNCHANGED_A]], i64 poison
 ; FOLD-NEXT:    [[MODIFIED:%.*]] = zext i32 [[C]] to i64
-; FOLD-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[R4]], i64 poison, i64 [[MODIFIED]]
-; FOLD-NEXT:    [[TMP0:%.*]] = select i1 [[BRMERGE5]], i64 [[UNCHANGED_A_MUX]], i64 [[SPEC_SELECT4]]
+; FOLD-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[R4]], i64 [[UNCHANGED_B]], i64 [[MODIFIED]]
+; FOLD-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[R4]], i64 [[UNCHANGED_A]], i64 [[MODIFIED]]
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BRMERGE5]], i64 [[UNCHANGED_B]], i64 [[SPEC_SELECT1]]
+; FOLD-NEXT:    [[TMP0:%.*]] = select i1 [[BRMERGE5]], i64 [[UNCHANGED_A]], i64 [[SPEC_SELECT4]]
 ; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[BRMERGE5]], i1 true, i1 [[R4]]
-; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP1]], i64 [[UNCHANGED_B]], i64 [[TMP0]]
 ; FOLD-NEXT:    [[V0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP0]], 0
 ; FOLD-NEXT:    [[V1:%.*]] = insertvalue { i64, i64 } [[V0]], i64 [[SPEC_SELECT]], 1
 ; FOLD-NEXT:    ret { i64, i64 } [[V1]]
@@ -329,4 +333,213 @@ merge:
   %v0 = insertvalue { i64, i64 } poison, i64 %first, 0
   %v1 = insertvalue { i64, i64 } %v0, i64 %second, 1
   ret { i64, i64 } %v1
+}
+
+; A Then PHI can give a generated Flow PHI a real value on a path to Else.
+; For c0=false, c1=false, c2=true, the result must be zext(a), not w.
+; Filling only poison inputs cannot make that shared Flow value equal to e.
+; Reconstruct the result separately: its Flow2 PHI must select t from Then
+; and e from the bypass, while the Then PHI keeps its x/w inputs.
+define i64 @then_phi_reaches_else(i1 %c0, i1 %c1, i1 %c2, i64 %x, i64 %w, i32 %a) {
+; CFG-LABEL: define i64 @then_phi_reaches_else(
+; CFG-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i64 [[X:%.*]], i64 [[W:%.*]], i32 [[A:%.*]]) {
+; CFG-NEXT:  [[ENTRY:.*]]:
+; CFG-NEXT:    [[C2_INV:%.*]] = xor i1 [[C2]], true
+; CFG-NEXT:    [[C1_INV:%.*]] = xor i1 [[C1]], true
+; CFG-NEXT:    [[C0_INV:%.*]] = xor i1 [[C0]], true
+; CFG-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; CFG-NEXT:    br i1 [[C0_INV]], label %[[BB1:.*]], label %[[FLOW:.*]]
+; CFG:       [[BB1]]:
+; CFG-NEXT:    br i1 [[C1_INV]], label %[[BB2:.*]], label %[[FLOW1:.*]]
+; CFG:       [[FLOW]]:
+; CFG-NEXT:    [[R:%.*]] = phi i64 [ [[TMP5:%.*]], %[[FLOW2:.*]] ], [ [[E]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP6:%.*]], %[[FLOW2]] ], [ true, %[[ENTRY]] ]
+; CFG-NEXT:    br i1 [[TMP1]], label %[[ELSE:.*]], label %[[MERGE:.*]]
+; CFG:       [[BB2]]:
+; CFG-NEXT:    br label %[[FLOW1]]
+; CFG:       [[FLOW1]]:
+; CFG-NEXT:    [[TMP2:%.*]] = phi i64 [ [[W]], %[[BB2]] ], [ [[X]], %[[BB1]] ]
+; CFG-NEXT:    [[TMP3:%.*]] = phi i1 [ true, %[[BB2]] ], [ false, %[[BB1]] ]
+; CFG-NEXT:    [[TMP4:%.*]] = phi i1 [ [[C2_INV]], %[[BB2]] ], [ [[C1]], %[[BB1]] ]
+; CFG-NEXT:    br i1 [[TMP4]], label %[[THEN:.*]], label %[[FLOW2]]
+; CFG:       [[THEN]]:
+; CFG-NEXT:    br label %[[FLOW2]]
+; CFG:       [[FLOW2]]:
+; CFG-NEXT:    [[TMP5]] = phi i64 [ [[TMP2]], %[[THEN]] ], [ [[E]], %[[FLOW1]] ]
+; CFG-NEXT:    [[TMP6]] = phi i1 [ false, %[[THEN]] ], [ [[TMP3]], %[[FLOW1]] ]
+; CFG-NEXT:    br label %[[FLOW]]
+; CFG:       [[ELSE]]:
+; CFG-NEXT:    br label %[[MERGE]]
+; CFG:       [[MERGE]]:
+; CFG-NEXT:    ret i64 [[R]]
+;
+; FOLD-LABEL: define i64 @then_phi_reaches_else(
+; FOLD-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i64 [[X:%.*]], i64 [[W:%.*]], i32 [[A:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*]]:
+; FOLD-NEXT:    [[C2_INV:%.*]] = xor i1 [[C2]], true
+; FOLD-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; FOLD-NEXT:    br i1 [[C0]], label %[[FLOW:.*]], label %[[CHECK_THEN:.*]]
+; FOLD:       [[CHECK_THEN]]:
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1]], i64 [[X]], i64 [[W]]
+; FOLD-NEXT:    [[SPEC_SELECT3:%.*]] = select i1 [[C1]], i1 true, i1 [[C2_INV]]
+; FOLD-NEXT:    [[TMP0:%.*]] = xor i1 [[C1]], true
+; FOLD-NEXT:    [[TMP2:%.*]] = select i1 [[SPEC_SELECT3]], i64 [[SPEC_SELECT]], i64 [[E]]
+; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[SPEC_SELECT3]], i1 false, i1 [[TMP0]]
+; FOLD-NEXT:    br label %[[FLOW]]
+; FOLD:       [[FLOW]]:
+; FOLD-NEXT:    [[SPEC_SELECT4:%.*]] = phi i64 [ [[TMP2]], %[[CHECK_THEN]] ], [ [[E]], %[[ENTRY]] ]
+; FOLD-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP1]], %[[CHECK_THEN]] ], [ true, %[[ENTRY]] ]
+; FOLD-NEXT:    ret i64 [[SPEC_SELECT4]]
+;
+entry:
+  br i1 %c0, label %else, label %check_then
+
+check_then:
+  br i1 %c1, label %then, label %check_else
+
+check_else:
+  br i1 %c2, label %else, label %then
+
+then:
+  %t = phi i64 [ %x, %check_then ], [ %w, %check_else ]
+  br label %merge
+
+else:
+  %e = zext i32 %a to i64
+  br label %merge
+
+merge:
+  %r = phi i64 [ %t, %then ], [ %e, %else ]
+  ret i64 %r
+}
+
+; One Else instruction feeds two results with different Then values. Record
+; both result PHIs even though the first result has already hoisted %e. Each
+; result needs its own reconstructed value on the bypass of Then.
+define { i64, i64 } @shared_else_instruction(i1 %choose_else, i32 %a, i64 %x, i64 %w) {
+; CFG-LABEL: define { i64, i64 } @shared_else_instruction(
+; CFG-SAME: i1 [[CHOOSE_ELSE:%.*]], i32 [[A:%.*]], i64 [[X:%.*]], i64 [[W:%.*]]) {
+; CFG-NEXT:  [[ENTRY:.*]]:
+; CFG-NEXT:    [[CHOOSE_ELSE_INV:%.*]] = xor i1 [[CHOOSE_ELSE]], true
+; CFG-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; CFG-NEXT:    br i1 [[CHOOSE_ELSE_INV]], label %[[THEN:.*]], label %[[FLOW:.*]]
+; CFG:       [[THEN]]:
+; CFG-NEXT:    br label %[[FLOW]]
+; CFG:       [[FLOW]]:
+; CFG-NEXT:    [[TMP0:%.*]] = phi i64 [ [[W]], %[[THEN]] ], [ [[E]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP1:%.*]] = phi i64 [ [[X]], %[[THEN]] ], [ [[E]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[THEN]] ], [ true, %[[ENTRY]] ]
+; CFG-NEXT:    br i1 [[TMP2]], label %[[ELSE:.*]], label %[[MERGE:.*]]
+; CFG:       [[ELSE]]:
+; CFG-NEXT:    br label %[[MERGE]]
+; CFG:       [[MERGE]]:
+; CFG-NEXT:    [[V0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP1]], 0
+; CFG-NEXT:    [[V1:%.*]] = insertvalue { i64, i64 } [[V0]], i64 [[TMP0]], 1
+; CFG-NEXT:    ret { i64, i64 } [[V1]]
+;
+; FOLD-LABEL: define { i64, i64 } @shared_else_instruction(
+; FOLD-SAME: i1 [[CHOOSE_ELSE:%.*]], i32 [[A:%.*]], i64 [[X:%.*]], i64 [[W:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CHOOSE_ELSE]], i64 [[E]], i64 [[W]]
+; FOLD-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[CHOOSE_ELSE]], i64 [[E]], i64 [[X]]
+; FOLD-NEXT:    [[V0:%.*]] = insertvalue { i64, i64 } poison, i64 [[SPEC_SELECT1]], 0
+; FOLD-NEXT:    [[V1:%.*]] = insertvalue { i64, i64 } [[V0]], i64 [[SPEC_SELECT]], 1
+; FOLD-NEXT:    ret { i64, i64 } [[V1]]
+;
+entry:
+  br i1 %choose_else, label %else, label %then
+then:
+  br label %merge
+else:
+  %e = zext i32 %a to i64
+  br label %merge
+merge:
+  %r0 = phi i64 [ %x, %then ], [ %e, %else ]
+  %r1 = phi i64 [ %w, %then ], [ %e, %else ]
+  %v0 = insertvalue { i64, i64 } poison, i64 %r0, 0
+  %v1 = insertvalue { i64, i64 } %v0, i64 %r1, 1
+  ret { i64, i64 } %v1
+}
+
+; Else also has an input from Outside, and Merge is not the region exit.
+; Structurization redirects Else through a Flow block before Merge. Rebuild
+; the result using Else's outgoing %e definition without trying to replace
+; a direct Else arm that no longer exists. Outside -> Exit must still return 7.
+define i64 @side_entry(i1 %c0, i1 %c1, i1 %c2, i32 %a, i64 %x) {
+; CFG-LABEL: define i64 @side_entry(
+; CFG-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i32 [[A:%.*]], i64 [[X:%.*]]) {
+; CFG-NEXT:  [[ENTRY:.*]]:
+; CFG-NEXT:    [[C0_INV:%.*]] = xor i1 [[C0]], true
+; CFG-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; CFG-NEXT:    br i1 [[C0_INV]], label %[[CHOOSE_THEN:.*]], label %[[FLOW:.*]]
+; CFG:       [[CHOOSE_THEN]]:
+; CFG-NEXT:    br i1 [[C1]], label %[[THEN:.*]], label %[[FLOW1:.*]]
+; CFG:       [[FLOW1]]:
+; CFG-NEXT:    [[TMP0:%.*]] = phi i64 [ [[T:%.*]], %[[THEN]] ], [ [[E]], %[[CHOOSE_THEN]] ]
+; CFG-NEXT:    [[TMP1:%.*]] = phi i1 [ true, %[[THEN]] ], [ false, %[[CHOOSE_THEN]] ]
+; CFG-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[THEN]] ], [ true, %[[CHOOSE_THEN]] ]
+; CFG-NEXT:    br label %[[FLOW]]
+; CFG:       [[OUTSIDE:.*]]:
+; CFG-NEXT:    br label %[[FLOW2:.*]]
+; CFG:       [[FLOW]]:
+; CFG-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP0]], %[[FLOW1]] ], [ [[E]], %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP1]], %[[FLOW1]] ], [ false, %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP2]], %[[FLOW1]] ], [ false, %[[ENTRY]] ]
+; CFG-NEXT:    [[TMP6:%.*]] = phi i1 [ false, %[[FLOW1]] ], [ true, %[[ENTRY]] ]
+; CFG-NEXT:    br i1 [[TMP6]], label %[[OUTSIDE]], label %[[FLOW2]]
+; CFG:       [[THEN]]:
+; CFG-NEXT:    [[T]] = add i64 [[X]], 1
+; CFG-NEXT:    br label %[[FLOW1]]
+; CFG:       [[FLOW2]]:
+; CFG-NEXT:    [[TMP7:%.*]] = phi i64 [ [[E]], %[[OUTSIDE]] ], [ [[TMP3]], %[[FLOW]] ]
+; CFG-NEXT:    [[TMP8:%.*]] = phi i1 [ [[C2]], %[[OUTSIDE]] ], [ [[TMP5]], %[[FLOW]] ]
+; CFG-NEXT:    br i1 [[TMP8]], label %[[ELSE:.*]], label %[[FLOW3:.*]]
+; CFG:       [[ELSE]]:
+; CFG-NEXT:    br label %[[FLOW3]]
+; CFG:       [[FLOW3]]:
+; CFG-NEXT:    [[TMP9:%.*]] = phi i64 [ [[E]], %[[ELSE]] ], [ [[TMP7]], %[[FLOW2]] ]
+; CFG-NEXT:    [[TMP10:%.*]] = phi i1 [ true, %[[ELSE]] ], [ [[TMP4]], %[[FLOW2]] ]
+; CFG-NEXT:    br i1 [[TMP10]], label %[[MERGE:.*]], label %[[EXIT:.*]]
+; CFG:       [[MERGE]]:
+; CFG-NEXT:    br label %[[EXIT]]
+; CFG:       [[EXIT]]:
+; CFG-NEXT:    [[Z:%.*]] = phi i64 [ 7, %[[FLOW3]] ], [ [[TMP9]], %[[MERGE]] ]
+; CFG-NEXT:    ret i64 [[Z]]
+;
+; FOLD-LABEL: define i64 @side_entry(
+; FOLD-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i32 [[A:%.*]], i64 [[X:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[E:%.*]] = zext i32 [[A]] to i64
+; FOLD-NEXT:    [[T:%.*]] = add i64 [[X]], 1
+; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1]], i64 [[T]], i64 [[E]]
+; FOLD-NEXT:    [[TMP0:%.*]] = xor i1 [[C1]], true
+; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[C0]], i64 [[E]], i64 [[SPEC_SELECT]]
+; FOLD-NEXT:    [[TMP2:%.*]] = select i1 [[C0]], i1 false, i1 [[C1]]
+; FOLD-NEXT:    [[TMP3:%.*]] = select i1 [[C0]], i1 false, i1 [[TMP0]]
+; FOLD-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[C0]], i64 [[E]], i64 [[TMP1]]
+; FOLD-NEXT:    [[SPEC_SELECT5:%.*]] = select i1 [[C0]], i1 [[C2]], i1 [[TMP3]]
+; FOLD-NEXT:    [[TMP4:%.*]] = select i1 [[SPEC_SELECT5]], i64 [[E]], i64 [[SPEC_SELECT4]]
+; FOLD-NEXT:    [[TMP5:%.*]] = select i1 [[SPEC_SELECT5]], i1 true, i1 [[TMP2]]
+; FOLD-NEXT:    [[Z:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 7
+; FOLD-NEXT:    ret i64 [[Z]]
+;
+entry:
+  br i1 %c0, label %outside, label %choose_then
+choose_then:
+  br i1 %c1, label %then, label %else
+outside:
+  br i1 %c2, label %else, label %exit
+then:
+  %t = add i64 %x, 1
+  br label %merge
+else:
+  %e = zext i32 %a to i64
+  br label %merge
+merge:
+  %r = phi i64 [ %t, %then ], [ %e, %else ]
+  br label %exit
+exit:
+  %z = phi i64 [ %r, %merge ], [ 7, %outside ]
+  ret i64 %z
 }
