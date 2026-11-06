@@ -894,8 +894,8 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __atomic_load_2
 ; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    lui s2, 16
-; RV32I-NEXT:    addi s2, s2, -1
+; RV32I-NEXT:    lui a0, 16
+; RV32I-NEXT:    addi s2, a0, -1
 ; RV32I-NEXT:    and s1, s1, s2
 ; RV32I-NEXT:  .LBB5_1: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -981,8 +981,8 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __atomic_load_2
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    lui s2, 16
-; RV64I-NEXT:    addi s2, s2, -1
+; RV64I-NEXT:    lui a0, 16
+; RV64I-NEXT:    addi s2, a0, -1
 ; RV64I-NEXT:    and s1, s1, s2
 ; RV64I-NEXT:  .LBB5_1: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1

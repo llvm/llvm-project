@@ -2787,14 +2787,19 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32I-NEXT:    bnez t1, .LBB23_10
 ; RV32I-NEXT:    j .LBB23_11
 ; RV32I-NEXT:  .LBB23_9:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    srl t6, a0, t5
-; RV32I-NEXT:    sll s0, a1, t2
+; RV32I-NEXT:    mv a6, t5
+; RV32I-NEXT:    mv t5, t4
+; RV32I-NEXT:    mv t4, a5
+; RV32I-NEXT:    mv a5, a7
+; RV32I-NEXT:    sll a7, a1, t2
 ; RV32I-NEXT:    sll t3, a0, t2
-; RV32I-NEXT:    or a0, t6, s0
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    or a0, t6, a7
+; RV32I-NEXT:    mv a7, a5
+; RV32I-NEXT:    mv a5, t4
+; RV32I-NEXT:    mv t4, t5
+; RV32I-NEXT:    mv t5, a6
+; RV32I-NEXT:    li a6, 32
 ; RV32I-NEXT:    beqz t1, .LBB23_11
 ; RV32I-NEXT:  .LBB23_10:
 ; RV32I-NEXT:    mv a1, a0
@@ -2895,14 +2900,19 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32ZBB-NEXT:    bnez t1, .LBB23_10
 ; RV32ZBB-NEXT:    j .LBB23_11
 ; RV32ZBB-NEXT:  .LBB23_9:
-; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32ZBB-NEXT:    srl t6, a0, t5
-; RV32ZBB-NEXT:    sll s0, a1, t2
+; RV32ZBB-NEXT:    mv a6, t5
+; RV32ZBB-NEXT:    mv t5, t4
+; RV32ZBB-NEXT:    mv t4, a5
+; RV32ZBB-NEXT:    mv a5, a7
+; RV32ZBB-NEXT:    sll a7, a1, t2
 ; RV32ZBB-NEXT:    sll t3, a0, t2
-; RV32ZBB-NEXT:    or a0, t6, s0
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32ZBB-NEXT:    addi sp, sp, 16
+; RV32ZBB-NEXT:    or a0, t6, a7
+; RV32ZBB-NEXT:    mv a7, a5
+; RV32ZBB-NEXT:    mv a5, t4
+; RV32ZBB-NEXT:    mv t4, t5
+; RV32ZBB-NEXT:    mv t5, a6
+; RV32ZBB-NEXT:    li a6, 32
 ; RV32ZBB-NEXT:    beqz t1, .LBB23_11
 ; RV32ZBB-NEXT:  .LBB23_10:
 ; RV32ZBB-NEXT:    mv a1, a0
@@ -2997,14 +3007,19 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32XTHEADBB-NEXT:    bnez t1, .LBB23_10
 ; RV32XTHEADBB-NEXT:    j .LBB23_11
 ; RV32XTHEADBB-NEXT:  .LBB23_9:
-; RV32XTHEADBB-NEXT:    addi sp, sp, -16
-; RV32XTHEADBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    srl t6, a0, t5
-; RV32XTHEADBB-NEXT:    sll s0, a1, t2
+; RV32XTHEADBB-NEXT:    mv a6, t5
+; RV32XTHEADBB-NEXT:    mv t5, t4
+; RV32XTHEADBB-NEXT:    mv t4, a5
+; RV32XTHEADBB-NEXT:    mv a5, a7
+; RV32XTHEADBB-NEXT:    sll a7, a1, t2
 ; RV32XTHEADBB-NEXT:    sll t3, a0, t2
-; RV32XTHEADBB-NEXT:    or a0, t6, s0
-; RV32XTHEADBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32XTHEADBB-NEXT:    addi sp, sp, 16
+; RV32XTHEADBB-NEXT:    or a0, t6, a7
+; RV32XTHEADBB-NEXT:    mv a7, a5
+; RV32XTHEADBB-NEXT:    mv a5, t4
+; RV32XTHEADBB-NEXT:    mv t4, t5
+; RV32XTHEADBB-NEXT:    mv t5, a6
+; RV32XTHEADBB-NEXT:    li a6, 32
 ; RV32XTHEADBB-NEXT:    beqz t1, .LBB23_11
 ; RV32XTHEADBB-NEXT:  .LBB23_10:
 ; RV32XTHEADBB-NEXT:    mv a1, a0

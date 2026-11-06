@@ -169,48 +169,44 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
 define i128 @fptoui_sat_f64_to_i128(double %a) nounwind {
 ; RV64I-LABEL: fptoui_sat_f64_to_i128:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    call __fixunsdfti
-; RV64I-NEXT:    mv s3, a0
-; RV64I-NEXT:    mv s4, a1
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __gedf2
-; RV64I-NEXT:    li s0, 0
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    li s2, 0
-; RV64I-NEXT:    bltz a0, .LBB5_2
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    bltz a2, .LBB5_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv s0, s3
-; RV64I-NEXT:    mv s2, s4
+; RV64I-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:  .LBB5_2:
+; RV64I-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a0, 1151
 ; RV64I-NEXT:    slli a0, a0, 52
 ; RV64I-NEXT:    addi a1, a0, -1
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __gtdf2
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    blez a0, .LBB5_4
+; RV64I-NEXT:    bgtz a0, .LBB5_4
 ; RV64I-NEXT:  # %bb.3:
-; RV64I-NEXT:    li s0, -1
-; RV64I-NEXT:    li s2, -1
+; RV64I-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    j .LBB5_5
 ; RV64I-NEXT:  .LBB5_4:
-; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    mv a1, s2
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    li a0, -1
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:  .LBB5_5:
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64ID-LABEL: fptoui_sat_f64_to_i128:

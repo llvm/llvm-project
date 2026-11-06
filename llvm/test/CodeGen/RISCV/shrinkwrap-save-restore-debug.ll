@@ -12,17 +12,19 @@ define void @without_debug(i32 %n) nounwind {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    bltu a1, a0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    call t0, __riscv_save_2
-; CHECK-NEXT:    addi s0, sp, 16
-; CHECK-NEXT:    mv s1, sp
+; CHECK-NEXT:    call t0, __riscv_save_1
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    addi s0, sp, 32
+; CHECK-NEXT:    sw sp, -20(s0) # 4-byte Folded Spill
 ; CHECK-NEXT:    addi a0, a0, 15
 ; CHECK-NEXT:    andi a0, a0, -16
 ; CHECK-NEXT:    sub a0, sp, a0
 ; CHECK-NEXT:    mv sp, a0
 ; CHECK-NEXT:    call notdead
-; CHECK-NEXT:    mv sp, s1
-; CHECK-NEXT:    addi sp, s0, -16
-; CHECK-NEXT:    tail __riscv_restore_2
+; CHECK-NEXT:    lw sp, -20(s0) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, s0, -32
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    tail __riscv_restore_1
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    ret
 entry:
@@ -47,17 +49,19 @@ define void @with_debug(i32 %n) nounwind !dbg !4 {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    bltu a1, a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    call t0, __riscv_save_2
-; CHECK-NEXT:    addi s0, sp, 16
-; CHECK-NEXT:    mv s1, sp
+; CHECK-NEXT:    call t0, __riscv_save_1
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    addi s0, sp, 32
+; CHECK-NEXT:    sw sp, -20(s0) # 4-byte Folded Spill
 ; CHECK-NEXT:    addi a0, a0, 15
 ; CHECK-NEXT:    andi a0, a0, -16
 ; CHECK-NEXT:    sub a0, sp, a0
 ; CHECK-NEXT:    mv sp, a0
 ; CHECK-NEXT:    call notdead
-; CHECK-NEXT:    mv sp, s1
-; CHECK-NEXT:    addi sp, s0, -16
-; CHECK-NEXT:    tail __riscv_restore_2
+; CHECK-NEXT:    lw sp, -20(s0) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, s0, -32
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    tail __riscv_restore_1
 ; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    #DEBUG_VALUE: with_debug:ghost <- 0
 ; CHECK-NEXT:    ret
