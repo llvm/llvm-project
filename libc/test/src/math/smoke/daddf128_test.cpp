@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AddTest.h"
+#include "test/src/math/smoke/AddTest.h"
 #include "src/__support/FPUtil/float128.h"
 #include "src/math/daddf128.h"
 
