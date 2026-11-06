@@ -262,8 +262,8 @@ class LLVM_MemcpyIntrOpBase<string name> :
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
-    /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"],
-    /*requiresTBAAStruct=*/1> {
+    /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
+  let requiresTBAAStruct = 1;
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
                   AnySignlessInteger:$len, I1Attr:$isVolatile);
@@ -307,8 +307,8 @@ def LLVM_MemcpyInlineOp :
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
-    /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"],
-    /*requiresTBAAStruct=*/1> {
+    /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
+  let requiresTBAAStruct = 1;
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
                   APIntAttr:$len, I1Attr:$isVolatile);

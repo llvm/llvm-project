@@ -312,9 +312,10 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // Derived intrinsics must append "baseArgs" to their argument list if they
 // enable any of these flags. "requiresTBAAStruct" is not tied to an
 // interface: it adds the tbaa_struct argument after tbaa (when present),
-// for the aggregate-copy intrinsics only. It only wires the argument;
-// the export, import, and verifier sites name those three ops directly,
-// so a future op setting the flag also needs handling there.
+// for the aggregate-copy intrinsics only. It is set with `let` by those
+// intrinsics. It only wires the argument; the export, import, and
+// verifier sites name those three ops directly, so a future op setting
+// the flag also needs handling there.
 //
 // LLVM `immargs` can be represented as MLIR attributes by providing both
 // the `immArgPositions` and `immArgAttrNames` lists. These two lists should
@@ -328,8 +329,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       bit requiresFastmath = 0, bit requiresArgAndResultAttrs = 0,
                       bit requiresOpBundles = 0,
                       list<int> immArgPositions = [],
-                      list<string> immArgAttrNames = [],
-                      bit requiresTBAAStruct = 0>
+                      list<string> immArgAttrNames = []>
     : LLVM_OpBase<dialect, opName, !listconcat(
         !if(!gt(requiresAccessGroup, 0),
             [DeclareOpInterfaceMethods<AccessGroupOpInterface>], []),
@@ -342,6 +342,11 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
         traits)>,
       LLVM_MemOpPatterns,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
+  // Set with `let` by intrinsics carrying tbaa.struct metadata, like the
+  // aggregate-copy intrinsics. It is a plain field rather than a
+  // constructor argument so that enabling it does not shift the
+  // positional flag arguments of every intrinsic definition.
+  bit requiresTBAAStruct = 0;
   dag baseArgs = !con(
         !if(!gt(requiresAccessGroup, 0),
             (ins OptionalAttr<LLVM_AccessGroupArrayAttr>:$access_groups),
@@ -464,14 +469,12 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   bit requiresAliasAnalysis = 0, bit requiresFastmath = 0,
                   bit requiresArgAndResultAttrs = 0, bit requiresOpBundles = 0,
                   list<int> immArgPositions = [],
-                  list<string> immArgAttrNames = [],
-                  bit requiresTBAAStruct = 0>
+                  list<string> immArgAttrNames = []>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
                       requiresFastmath, requiresArgAndResultAttrs,
-                      requiresOpBundles, immArgPositions, immArgAttrNames,
-                      requiresTBAAStruct>;
+                      requiresOpBundles, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -494,13 +497,11 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             bit requiresArgAndResultAttrs = 0,
                             bit requiresOpBundles = 0,
                             list<int> immArgPositions = [],
-                            list<string> immArgAttrNames = [],
-                            bit requiresTBAAStruct = 0>
+                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
                   requiresAccessGroup, requiresAliasAnalysis,
                   /*requiresFastMath=*/0, requiresArgAndResultAttrs,
-                  requiresOpBundles, immArgPositions, immArgAttrNames,
-                  requiresTBAAStruct>;
+                  requiresOpBundles, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
