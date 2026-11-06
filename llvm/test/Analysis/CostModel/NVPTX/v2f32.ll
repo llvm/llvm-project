@@ -1,4 +1,4 @@
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 < %s | FileCheck %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s
 
 target triple = "nvptx64-nvidia-cuda"
 
