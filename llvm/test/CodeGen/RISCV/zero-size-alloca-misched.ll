@@ -6,8 +6,6 @@
 ;; and replaces the uses of one of the allocas with the other. The stores to
 ;; both slots must stay before the load through %p, and the reloads after the
 ;; store through %p.
-;; FIXME: The store to %slot0 is scheduled after the read-modify-write through
-;; %p, which can point to %slot0.
 
 define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; SDAG-LABEL: flip_selected_slot:
@@ -18,8 +16,8 @@ define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; SDAG-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; SDAG-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; SDAG-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; SDAG-NEXT:    mv s1, a2
-; SDAG-NEXT:    mv s0, a1
+; SDAG-NEXT:    mv s0, a2
+; SDAG-NEXT:    mv s1, a1
 ; SDAG-NEXT:    andi s3, a0, 1
 ; SDAG-NEXT:    addi a0, sp, 23
 ; SDAG-NEXT:    addi s2, sp, 23
@@ -28,11 +26,11 @@ define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; SDAG-NEXT:  # %bb.1: # %pick1
 ; SDAG-NEXT:    addi s2, sp, 22
 ; SDAG-NEXT:  .LBB0_2: # %join
-; SDAG-NEXT:    sb s1, 22(sp)
+; SDAG-NEXT:    sb s1, 23(sp)
+; SDAG-NEXT:    sb s0, 22(sp)
 ; SDAG-NEXT:    lbu a0, 0(s2)
 ; SDAG-NEXT:    xori a0, a0, 1
 ; SDAG-NEXT:    sb a0, 0(s2)
-; SDAG-NEXT:    sb s0, 23(sp)
 ; SDAG-NEXT:    lbu a0, 22(sp)
 ; SDAG-NEXT:    lbu a1, 23(sp)
 ; SDAG-NEXT:    slli a0, a0, 8
@@ -64,11 +62,11 @@ define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; GISEL-NEXT:  # %bb.1: # %pick1
 ; GISEL-NEXT:    addi s3, sp, 22
 ; GISEL-NEXT:  .LBB0_2: # %join
+; GISEL-NEXT:    sb s0, 23(sp)
 ; GISEL-NEXT:    sb s1, 22(sp)
 ; GISEL-NEXT:    lbu a0, 0(s3)
 ; GISEL-NEXT:    xori a0, a0, 1
 ; GISEL-NEXT:    sb a0, 0(s3)
-; GISEL-NEXT:    sb s0, 23(sp)
 ; GISEL-NEXT:    lbu a0, 22(sp)
 ; GISEL-NEXT:    lbu a1, 23(sp)
 ; GISEL-NEXT:    slli a0, a0, 8

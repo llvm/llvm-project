@@ -5,8 +5,6 @@
 ;; is disjoint from %slot's, so stack coloring merges their slots and replaces
 ;; the uses of one alloca with the other. The memory operands show which alloca
 ;; alias analysis sees for the merged slot.
-;; FIXME: %slot is merged into %empty, so accesses to %slot are described by an
-;; alloca that allocates nothing.
 
 define i8 @merge_with_zero_size_alloca(i8 %v) nounwind {
   ; CHECK-LABEL: name: merge_with_zero_size_alloca
@@ -15,17 +13,17 @@ define i8 @merge_with_zero_size_alloca(i8 %v) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
-  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI %stack.0.empty, 0
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI %stack.1.slot, 0
   ; CHECK-NEXT:   $x10 = COPY [[ADDI]]
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @use, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
-  ; CHECK-NEXT:   SB [[COPY]], %stack.0.empty, 0 :: (store (s8) into %ir.empty)
+  ; CHECK-NEXT:   SB [[COPY]], %stack.1.slot, 0 :: (store (s8) into %ir.slot)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
-  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI %stack.0.empty, 0
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI %stack.1.slot, 0
   ; CHECK-NEXT:   $x10 = COPY [[ADDI1]]
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @use, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
-  ; CHECK-NEXT:   [[LBU:%[0-9]+]]:gpr = LBU %stack.0.empty, 0 :: (dereferenceable load (s8) from %ir.empty)
+  ; CHECK-NEXT:   [[LBU:%[0-9]+]]:gpr = LBU %stack.1.slot, 0 :: (dereferenceable load (s8) from %ir.slot)
   ; CHECK-NEXT:   $x10 = COPY [[LBU]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %empty = alloca [0 x i8], align 1
