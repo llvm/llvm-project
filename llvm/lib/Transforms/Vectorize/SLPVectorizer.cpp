@@ -2649,9 +2649,8 @@ private:
 
   /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
   /// better codegen in case like zext (icmp ne), select (icmp eq), ....
-  bool matchesInversedZExtSelect(
-      const TreeEntry &SelectTE,
-      SmallVectorImpl<unsigned> &InversedCmpsIndices) const;
+  bool matchesInversedZExtSelect(const TreeEntry &SelectTE,
+                                 SmallBitVector &InversedCmpsIndices) const;
 
   /// Checks if the tree is reduction or of bit selects, like select %cmp, <1,
   /// 2, 4, 8, ..>, zeroinitializer, which can be reduced just to a bitcast %cmp
@@ -2807,6 +2806,7 @@ private:
       ReducedBitcastBSwapLoads,
       ReducedBitPack,
       ReducedCmpBitcast,
+      InversedBitTest,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -14255,8 +14255,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
 }
 
 bool BoUpSLP::matchesInversedZExtSelect(
-    const TreeEntry &SelectTE,
-    SmallVectorImpl<unsigned> &InversedCmpsIndices) const {
+    const TreeEntry &SelectTE, SmallBitVector &InversedCmpsIndices) const {
   assert(SelectTE.hasState() && SelectTE.getOpcode() == Instruction::Select &&
          "Expected select node.");
   SmallVector<std::pair<Instruction *, unsigned>> ZExts;
@@ -14304,10 +14303,10 @@ bool BoUpSLP::matchesInversedZExtSelect(
       return false;
     if (!V->hasOneUse())
       return false;
-    InversedCmpsIndices.push_back(Idx);
+    InversedCmpsIndices.set(Idx);
   }
 
-  if (InversedCmpsIndices.empty())
+  if (InversedCmpsIndices.none())
     return false;
   Type *VecTy =
       getWidenedType(Cmp->getOperand(0)->getType(), CmpTE->getVectorFactor());
@@ -14872,15 +14871,30 @@ void BoUpSLP::transformNodes() {
         }
         break;
       }
-      // Check for zext + selects, which can be reordered.
-      SmallVector<unsigned> InversedCmpsIndices;
-      if (matchesInversedZExtSelect(E, InversedCmpsIndices)) {
-        auto *CmpTE = getOperandEntry(&E, 0);
-        auto *Op1TE = getOperandEntry(&E, 1);
-        auto *Op2TE = getOperandEntry(&E, 2);
-        // State now is uniform, not alternate opcode.
-        CmpTE->setOperations(
-            InstructionsState(CmpTE->getMainOp(), CmpTE->getMainOp()));
+      // Check for zext + selects and selects of the bit tests, which can be
+      // reordered.
+      auto *CmpTE = getOperandEntry(&E, 0);
+      auto *Op1TE = getOperandEntry(&E, 1);
+      auto *Op2TE = getOperandEntry(&E, 2);
+      SmallBitVector InversedCmpsIndices(CmpTE->Scalars.size());
+      auto IsInOrder = [](const TreeEntry *TE) {
+        return TE->ReorderIndices.empty() && TE->ReuseShuffleIndices.empty();
+      };
+      if ((CmpTE->State == TreeEntry::Vectorize && IsInOrder(CmpTE) &&
+           Op1TE->isGather() && IsInOrder(Op1TE) && Op2TE->isGather() &&
+           IsInOrder(Op2TE) &&
+           matchesInversedBitTestSelect(
+               CmpTE->getOperations(), CmpTE->Scalars,
+               [&](Value *V) { return getTreeEntries(V).size() == 1; },
+               InversedCmpsIndices)) ||
+          matchesInversedZExtSelect(E, InversedCmpsIndices)) {
+        // State now is uniform, not alternate opcode, or the trunc lanes of
+        // the bit tests are inversed.
+        if (CmpTE->isAltShuffle())
+          CmpTE->setOperations(
+              InstructionsState(CmpTE->getMainOp(), CmpTE->getMainOp()));
+        else
+          CmpTE->CombinedOp = TreeEntry::InversedBitTest;
         // Update mapping between the swapped values and their internal matching
         // nodes.
         auto UpdateGatherEntry = [&](TreeEntry *OldTE, TreeEntry *NewTE,
@@ -14897,7 +14911,7 @@ void BoUpSLP::transformNodes() {
         };
         ValueList &Op1 = E.getOperand(1);
         ValueList &Op2 = E.getOperand(2);
-        for (const unsigned Idx : InversedCmpsIndices) {
+        for (const unsigned Idx : InversedCmpsIndices.set_bits()) {
           Value *V1 = Op1TE->Scalars[Idx];
           Value *V2 = Op2TE->Scalars[Idx];
           std::swap(Op1TE->Scalars[Idx], Op2TE->Scalars[Idx]);
@@ -14913,8 +14927,6 @@ void BoUpSLP::transformNodes() {
         // This node is a (reduced or) cmp bitcast node.
         const TreeEntry::CombinedOpcode Code = TreeEntry::ReducedCmpBitcast;
         E.CombinedOp = Code;
-        auto *Op1TE = getOperandEntry(&E, 1);
-        auto *Op2TE = getOperandEntry(&E, 2);
         Op1TE->State = TreeEntry::CombinedVectorize;
         Op1TE->CombinedOp = Code;
         Op2TE->State = TreeEntry::CombinedVectorize;
@@ -17186,6 +17198,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case TreeEntry::InversedBitTest:
   case Instruction::FCmp:
   case Instruction::ICmp:
     // Override ScalarTy/VecTy with the compared operand type (not i1). The
@@ -17229,7 +17242,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       if (!isa<SelectInst>(UniqueValues[Idx])) {
         auto *I = cast<Instruction>(UniqueValues[Idx]);
-        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        // The trunc X to i1 lanes are priced as the compares of the bit tests.
+        InstructionCost Cost = TTI->getInstructionCost(
+            IsBitTest && isa<TruncInst>(I) ? VL0 : I, CostKind);
         // The and of the bit test is erased with the compare.
         if (IsBitTest && isa<ICmpInst>(I))
           Cost += TTI->getInstructionCost(cast<Instruction>(I->getOperand(0)),
@@ -19800,13 +19815,14 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       continue;
     }
     // Skip inversed compare nodes, they cannot be transformed to buildvectors.
-    if (TE->State == TreeEntry::Vectorize && !TE->isAltShuffle() &&
-        (TE->getOpcode() == Instruction::ICmp ||
-         TE->getOpcode() == Instruction::FCmp) &&
-        any_of(make_isa_range<CmpInst>(TE->Scalars), [&](CmpInst *I) {
-          return I->getPredicate() !=
-                 cast<CmpInst>(TE->getMainOp())->getPredicate();
-        })) {
+    if (TE->CombinedOp == TreeEntry::InversedBitTest ||
+        (TE->State == TreeEntry::Vectorize && !TE->isAltShuffle() &&
+         (TE->getOpcode() == Instruction::ICmp ||
+          TE->getOpcode() == Instruction::FCmp) &&
+         any_of(make_isa_range<CmpInst>(TE->Scalars), [&](CmpInst *I) {
+           return I->getPredicate() !=
+                  cast<CmpInst>(TE->getMainOp())->getPredicate();
+         }))) {
       Worklist.pop();
       continue;
     }
@@ -24582,18 +24598,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
       // The bit tests compare and L, R with 0, the eq bit tests compare the
-      // trunc X to i1 lanes with 1, exactly in the narrowed type.
+      // not inversed trunc X to i1 lanes with 1, exactly in the narrowed type.
       const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
       if (IsBitTest) {
         L = Builder.CreateAnd(L, R);
         const bool IsEq =
             CmpSamePredicateHelper::canConvertTo(VL0, CmpInst::ICMP_EQ);
         P0 = IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+        const bool IsEqOne =
+            IsEq && E->CombinedOp != TreeEntry::InversedBitTest;
         Type *EltTy = L->getType()->getScalarType();
         SmallVector<Constant *> Consts;
         for (Value *V : E->Scalars)
           Consts.append(getNumElements(VL0->getType()),
-                        ConstantInt::get(EltTy, IsEq && isa<TruncInst>(V)));
+                        ConstantInt::get(EltTy, IsEqOne && isa<TruncInst>(V)));
         R = ConstantVector::get(Consts);
       }
       // A compare with both operands narrowed to the same type preserves the

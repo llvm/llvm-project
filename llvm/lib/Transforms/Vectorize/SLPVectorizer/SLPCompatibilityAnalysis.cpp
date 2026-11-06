@@ -1051,6 +1051,25 @@ convertTo(Instruction *I, const InstructionsState &S) {
   return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));
 }
 
+bool matchesInversedBitTestSelect(const InstructionsState &S,
+                                  ArrayRef<Value *> VL,
+                                  function_ref<bool(Value *)> IsInSingleNode,
+                                  SmallBitVector &InversedCmpsIndices) {
+  if (!S || S.isAltShuffle() || S.getOpcode() != Instruction::ICmp ||
+      !CmpSamePredicateHelper::canConvertTo(S.getMainOp(), CmpInst::ICMP_EQ))
+    return false;
+  // The inversed lanes must have the only select user, vectorized in a single
+  // node.
+  if (any_of(make_isa_range<TruncInst>(VL), [&](TruncInst *TI) {
+        return !TI->hasOneUse() || !IsInSingleNode(TI->user_back());
+      }))
+    return false;
+  for (auto [Idx, V] : enumerate(VL))
+    if (isa<TruncInst>(V))
+      InversedCmpsIndices.set(Idx);
+  return InversedCmpsIndices.any();
+}
+
 bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
                             Instruction *AltOp, const TargetLibraryInfo &TLI) {
   if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
