@@ -489,6 +489,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed a false-positive `-Wimplicit-fallthrough` warning when
+  consecutive switch labels share a body and are annotated with
+  attributes like `[[unlikely]]`. (#GH230802)
+ 
 - Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
   tentative definitions of structure types which contain a field marked with
   the `require_explicit_initialization` attribute. (#GH232483)
@@ -790,6 +794,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage-in-format-attr-call`, and
   `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
   Safe Buffers warning enabled.
+
+- Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
 ### Improvements to Clang's time-trace
 
@@ -1409,6 +1415,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed `__dp4a`, `__dp2a_lo` and `__dp2a_hi` producing unresolved extern
   functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
   `__nvvm_idp2a_*` builtins. (#GH233434)
+
+- CUDA compilations now add the `include/cccl` directory of the selected CUDA
+  installation to the header search path when it exists. From CUDA 13.0 on,
+  libcu++, CUB and Thrust are in that directory, and toolkit headers such as
+  `cooperative_groups.h` include them. The `-nogpuinc` option disables this
+  path together with the other CUDA include paths.
 
 #### AIX Support
 
