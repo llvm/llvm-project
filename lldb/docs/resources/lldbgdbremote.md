@@ -2918,17 +2918,27 @@ in lldb-server.
 
 An accelerator plugin drives the client by returning a list of
 `AcceleratorActions` (currently just breakpoints to set in the native
-process). The client can receive `AcceleratorActions` at two points:
+process). The client can receive `AcceleratorActions` at three points:
 
 1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
    the native process is launched or attached.
 2. In response to a `jAcceleratorPluginBreakpointHit` packet, when a
    breakpoint the plugin previously requested is hit. The hit response may
    carry a further set of `AcceleratorActions`.
+3. In an `accelerator-actions` field of a stop reply. Plugins installed on the
+   native connection can return actions when the native process stops, and an
+   accelerator process can return actions for the client to perform in its
+   associated native process. The field value is hex-encoded JSON, and the
+   field can occur more than once when several plugins return actions. These
+   fields are currently emitted only in all-stop mode; action providers are not
+   called while the connection is in non-stop mode.
 
 Each set of `AcceleratorActions` is tagged with a `plugin_name` and an
-`identifier` that is unique within that plugin, so the client can ignore a
-set it has already processed if the same actions are delivered again.
+`identifier` that is not reused by any source or connection for that plugin
+during the debugging session, so the client can ignore a set it has already
+processed if the same actions are delivered again. The client records the
+identifier before applying the actions, so delivery is at most once: replaying
+an action after a partial failure does not retry it.
 
 ### jAcceleratorPluginInitialize
 

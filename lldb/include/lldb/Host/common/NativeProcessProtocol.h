@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
@@ -100,6 +101,16 @@ public:
 
   /// Served over the "jAddressSpacesInfo" packet.
   virtual std::vector<AddressSpaceInfo> GetAddressSpaces() { return {}; }
+
+  /// Return accelerator actions to include in this process's next stop reply.
+  /// This lets an accelerator process request work in its associated native
+  /// process. Returning std::nullopt adds no actions. LLGS calls this only for
+  /// all-stop replies. The call can occur on a process state-notification
+  /// thread, so implementations must be thread-safe. If an action is returned
+  /// more than once for the same event, it must reuse its identifier.
+  virtual std::optional<AcceleratorActions> GetAcceleratorActions() {
+    return std::nullopt;
+  }
 
   /// Plugins without address spaces should error on a non-default one.
   virtual Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
