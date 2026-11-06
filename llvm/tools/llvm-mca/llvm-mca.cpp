@@ -457,7 +457,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
   MCOptions.LibraryOptions = &LibraryOptions;
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
