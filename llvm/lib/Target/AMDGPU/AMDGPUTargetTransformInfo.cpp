@@ -1017,15 +1017,17 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
              getFullRateInstrCost();
     // The generic code scalarizes a vector cast into element casts, which for
     // a bitcast may pair elements of different sizes.
-    if (Src->getPrimitiveSizeInBits() == Dst->getPrimitiveSizeInBits()) {
+    if (DL.getTypeSizeInBits(Src) == DL.getTypeSizeInBits(Dst)) {
       // Integer and FP values share registers. A legalized vector may need its
       // lanes repacked.
-      if (TLI->isTypeLegal(TLI->getValueType(DL, Src)) &&
-          TLI->isTypeLegal(TLI->getValueType(DL, Dst)))
+      EVT SrcVT = TLI->getValueType(DL, Src);
+      EVT DstVT = TLI->getValueType(DL, Dst);
+      if (TLI->isTypeLegal(SrcVT) && TLI->isTypeLegal(DstVT))
         return 0;
-      if (!Src->isVectorTy() && !Dst->isVectorTy() &&
-          getTypeLegalizationCost(Src).second.getSizeInBits() ==
-              getTypeLegalizationCost(Dst).second.getSizeInBits())
+      LLVMContext &Ctx = Src->getContext();
+      if (!SrcVT.isVector() && !DstVT.isVector() &&
+          TLI->getRegisterType(Ctx, SrcVT).getSizeInBits() ==
+              TLI->getRegisterType(Ctx, DstVT).getSizeInBits())
         return 0;
     }
   }
