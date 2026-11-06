@@ -1125,7 +1125,7 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
     //
     // We apply a boost for performing indirect call promotion by increasing
     // the default threshold by the threshold for indirect calls.
-    auto Params = getInlineParams();
+    auto Params = getInlineParams(CS->getContext());
     Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
     InlineCost IC =
         getInlineCost(*CS, CalledFunction, Params, CallerTTI, GetAC, GetTLI);
