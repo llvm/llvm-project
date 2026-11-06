@@ -1230,12 +1230,15 @@ bool Attributor::hasAttr(const IRPosition &IRP,
   }
   if (!HasAttr) {
     Implied = true;
-    SmallVector<Attribute> Attrs;
-    for (Attribute::AttrKind AK : AttrKinds)
-      if (getAttrsFromAssumes(IRP, AK, Attrs)) {
-        HasAttr = true;
-        break;
-      }
+    // Most modules have no assume knowledge.
+    if (!InfoCache.getKnowledgeMap().empty()) {
+      SmallVector<Attribute> Attrs;
+      for (Attribute::AttrKind AK : AttrKinds)
+        if (getAttrsFromAssumes(IRP, AK, Attrs)) {
+          HasAttr = true;
+          break;
+        }
+    }
   }
 
   // Check if we should manifest the implied attribute kind at the IRP.
@@ -1264,8 +1267,10 @@ void Attributor::getAttrs(const IRPosition &IRP,
     if (IgnoreSubsumingPositions)
       break;
   }
-  for (Attribute::AttrKind AK : AttrKinds)
-    getAttrsFromAssumes(IRP, AK, Attrs);
+  if (!InfoCache.getKnowledgeMap().empty()) {
+    for (Attribute::AttrKind AK : AttrKinds)
+      getAttrsFromAssumes(IRP, AK, Attrs);
+  }
 }
 
 ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
