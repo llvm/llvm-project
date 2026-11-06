@@ -152,6 +152,15 @@ struct DeviceTy {
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
 
+  /// Take ownership of \p Program, the program loaded for the library
+  /// identified by \p Key. It is destroyed by destroyProgram or deinit.
+  ProgramTy &addProgram(const void *Key, ProgramTy Program);
+
+  /// Destroy the program loaded for the library identified by \p Key, if any,
+  /// and forget the launch info of its kernels in \p Entries.
+  void destroyProgram(const void *Key,
+                      llvm::ArrayRef<llvm::offloading::EntryTy> Entries);
+
   /// Resolve the device address of the global variable \p Name in \p Program,
   /// recording it for kernel record/replay if recording is currently active.
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
@@ -388,6 +397,10 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Programs loaded on this device, by the library they were loaded for.
+  using ProgramMapTy = llvm::DenseMap<const void *, std::unique_ptr<ProgramTy>>;
+  ProtectedObj<ProgramMapTy> Programs;
 
   /// The backend of this device.
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
