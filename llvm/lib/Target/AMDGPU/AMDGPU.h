@@ -545,6 +545,9 @@ struct AMDGPUPrintfRuntimeBindingPass
 void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
+void initializeAMDGPUOptimizeExecMaskingSSALegacyPass(PassRegistry &);
+extern char &AMDGPUOptimizeExecMaskingSSAID;
+
 void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
 extern char &SIOptimizeVGPRLiveRangeLegacyID;
 

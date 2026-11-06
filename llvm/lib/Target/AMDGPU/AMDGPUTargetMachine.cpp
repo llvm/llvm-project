@@ -671,6 +671,11 @@ static cl::opt<bool>
                            cl::desc("Use the machine scheduler in SSA mode."),
                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUExecMaskingSSA(
+    "amdgpu-enable-exec-masking-ssa",
+    cl::desc("Enable exec masking pass in SSA mode (before PHI elimination)"),
+    cl::init(false), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -703,6 +708,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
+  initializeAMDGPUOptimizeExecMaskingSSALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
   initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
@@ -1874,6 +1880,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (OptExecMaskPreRA)
     insertPass(EndOfPreRA, &SIOptimizeExecMaskingPreRAID);
+  else if (EnableAMDGPUExecMaskingSSA)
+    insertPass(&UnreachableMachineBlockElimID, &AMDGPUOptimizeExecMaskingSSAID);
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
