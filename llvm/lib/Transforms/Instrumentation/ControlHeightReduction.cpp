@@ -1677,6 +1677,14 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 
   assert(Scope->RegInfos.size() >= 1 && "Should have at least one Region");
 
+  // An outer scope may have hoisted one of our selects out of this scope.
+  // It can no longer be specialized under this scope's merged branch, and
+  // may also be the cached branch insertion point.
+  for (const RegInfo &RI : Scope->CHRRegions)
+    for (SelectInst *SI : RI.Selects)
+      if (!Scope->contains(SI))
+        return;
+
   for (RegInfo &RI : Scope->RegInfos) {
     const Region *R = RI.R;
     unsigned Duplication = getRegionDuplicationCount(R);
