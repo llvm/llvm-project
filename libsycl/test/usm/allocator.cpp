@@ -25,7 +25,7 @@ int main() {
   sycl::queue Q;
   sycl::usm_allocator<uint32_t, usm::alloc::host> Alloc(Q);
 
-  std::vector<uint32_t, decltype(Alloc)> Vec;
+  std::vector<uint32_t, decltype(Alloc)> Vec(Alloc);
 
   return 0;
 }
