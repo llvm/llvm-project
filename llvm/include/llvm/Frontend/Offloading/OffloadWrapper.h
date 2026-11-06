@@ -20,8 +20,8 @@ namespace llvm {
 namespace offloading {
 using EntryArrayTy = std::pair<Constant *, Constant *>;
 /// Wraps the input device images into the module \p M as global symbols and
-/// registers the images with the OpenMP or OpenACC Offloading runtime
-/// libomptarget or libacctarget.
+/// registers the images with the OpenMP (libomptarget) or OpenACC (libacctarget) offloading runtime,
+/// depending on \p Kind.
 /// \param EntryArray Optional pair pointing to the begin and end of the
 /// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
