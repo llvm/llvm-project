@@ -211,9 +211,22 @@ class FrameContext:
             f"scope '{name}' not in frame scopes: {scope_names}"
         )
 
+    def local_scopes(self) -> list[ScopeContext]:
+        """Returns all block and function local scopes from innermost to outermost."""
+        return [
+            scope for scope in self.scopes() if scope.scope.presentationHint == "locals"
+        ]
+
     @property
     def locals(self) -> ScopeContext:
-        return self.scope("Locals")
+        scopes = self.scopes()
+        for scope in scopes:
+            if scope.scope.name == "Locals" or scope.scope.name.startswith("Locals: "):
+                return scope
+        scope_names = [scope.scope.name for scope in scopes]
+        self._session.test_case.fail(
+            f"no 'Locals' scope in frame scopes: {scope_names}"
+        )
 
     @property
     def globals(self) -> ScopeContext:
@@ -222,6 +235,21 @@ class FrameContext:
     @property
     def registers(self) -> ScopeContext:
         return self.scope("Registers")
+
+    def find_variable(self, name: str) -> VariableContext:
+        """Searches non-expensive scopes from innermost to outermost for `name`."""
+        for scope in self.scopes():
+            if scope.scope.expensive:
+                continue
+            by_name = scope._by_name()
+            if name in by_name:
+                return by_name[name]
+        scope_names = [
+            scope.scope.name for scope in self.scopes() if not scope.scope.expensive
+        ]
+        self._session.test_case.fail(
+            f"'{name}' not found in non-expensive scopes {scope_names}"
+        )
 
     def evaluate(
         self,
