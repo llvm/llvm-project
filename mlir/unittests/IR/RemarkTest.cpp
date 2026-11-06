@@ -25,6 +25,7 @@
 #include "llvm/Support/YAMLParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <vector>
@@ -819,10 +820,12 @@ protected:
       for (const auto &arg : remark.generateRemark().Args)
         if (arg.Key == "RelatedTo")
           record.serializedLinks.push_back(arg.Val.str());
+      std::scoped_lock<std::mutex> lock(mutex);
       records.push_back(std::move(record));
     }
 
   private:
+    std::mutex mutex;
     std::vector<Record> &records;
   };
 
@@ -1502,11 +1505,7 @@ TEST_P(RemarkHistoryTest, FailedAndPassedAtOneSiteAreDistinctIdentities) {
 
 #if LLVM_ENABLE_THREADS
 // Concurrent reports, query-based links, and queries with history enabled.
-// All delivers remarks on the reporting threads and the fixture records are
-// not synchronized, so only Final is exercised.
 TEST_P(RemarkHistoryTest, ConcurrentReportsAndQueries) {
-  if (!isFinal())
-    GTEST_SKIP() << "All delivers remarks on the reporting threads";
   engine().enableHistory();
   Location loc = UnknownLoc::get(&context);
   constexpr unsigned numThreads = 4, perThread = 50;
