@@ -28170,19 +28170,26 @@ static SDValue replaceStoreOfVectorInsertAt(StoreSDNode *ST, SDValue Val,
       return SDValue();
   }
 
-  if (!Elt.getValueType().isInteger() || Elt.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
+  if (!Elt.getValueType().isInteger() ||
+      Elt.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
 
   // Generate the new store of the element
   SDLoc DL(ST);
   EVT EltVT = ST->getValue().getValueType().getScalarType();
-  SDValue NewPtr = DAG.getMemBasePlusOffset(
-      ST->getBasePtr(), TypeSize::getFixed(Index * EltVT.getSizeInBits() / 8),
-      DL);
-  MachinePointerInfo PointerInfo =
-      ST->getPointerInfo().getWithOffset(Index * EltVT.getSizeInBits() / 8);
-  Align NewAlign =
-      commonAlignment(ST->getAlign(), Index * EltVT.getSizeInBits() / 8);
+  SDValue Base = ST->getBasePtr();
+  if (ST->getAddressingMode() == ISD::PRE_INC)
+    Base =
+        DAG.getNode(ISD::ADD, ST, Base.getValueType(), Base, ST->getOffset());
+  else if (ST->getAddressingMode() == ISD::PRE_DEC)
+    Base =
+        DAG.getNode(ISD::SUB, ST, Base.getValueType(), Base, ST->getOffset());
+
+  uint64_t Offset = Index * EltVT.getStoreSize().getFixedValue();
+  SDValue NewPtr =
+      DAG.getMemBasePlusOffset(Base, TypeSize::getFixed(Offset), DL);
+  MachinePointerInfo PointerInfo = ST->getPointerInfo().getWithOffset(Offset);
+  Align NewAlign = commonAlignment(ST->getAlign(), Offset);
   return DAG.getTruncStore(Chain, DL, Elt, NewPtr, PointerInfo, EltVT, NewAlign,
                            ST->getMemOperand()->getFlags(),
                            ST->getMMOMetadataForSubAccess());
@@ -28196,23 +28203,18 @@ static SDValue replaceStoreOfVectorInsert(StoreSDNode *ST, SelectionDAG &DAG) {
   if (ST->isTruncatingStore() || !ST->isSimple() || !VT.isFixedLengthVector())
     return SDValue();
 
-  if (ST->isIndexed() && ST->getAddressingMode() != ISD::POST_INC &&
-      ST->getAddressingMode() != ISD::POST_DEC)
-    return SDValue();
-
   SDValue NewChain =
       replaceStoreOfVectorInsertAt(ST, Val, VT.getVectorNumElements() - 1, DAG);
   if (!NewChain)
     return SDValue();
 
   SDLoc DL(ST);
-  if (ST->getAddressingMode() == ISD::POST_INC) {
-    SDValue Add = DAG.getNode(ISD::ADD, DL, ST->getBasePtr().getValueType(),
-                              ST->getBasePtr(), ST->getOffset());
-    return DAG.getMergeValues({Add, NewChain}, DL);
-  }
-  if (ST->getAddressingMode() == ISD::POST_DEC) {
-    SDValue Add = DAG.getNode(ISD::SUB, DL, ST->getBasePtr().getValueType(),
+  if (ST->isIndexed()) {
+    unsigned Opc = (ST->getAddressingMode() == ISD::PRE_INC ||
+                    ST->getAddressingMode() == ISD::POST_INC)
+                       ? ISD::ADD
+                       : ISD::SUB;
+    SDValue Add = DAG.getNode(Opc, DL, ST->getBasePtr().getValueType(),
                               ST->getBasePtr(), ST->getOffset());
     return DAG.getMergeValues({Add, NewChain}, DL);
   }

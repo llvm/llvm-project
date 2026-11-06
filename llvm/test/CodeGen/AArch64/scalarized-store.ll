@@ -696,20 +696,17 @@ define void @rem_v2f64(ptr %p, ptr %q) {
 define ptr @div_v4i32_preinc(ptr %p, ptr %q) {
 ; CHECK-SD-LABEL: div_v4i32_preinc:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldp w10, w9, [x1]
-; CHECK-SD-NEXT:    ldr w8, [x0, #4]
-; CHECK-SD-NEXT:    ldp w11, w12, [x1, #8]
+; CHECK-SD-NEXT:    ldp w8, w11, [x0, #8]
+; CHECK-SD-NEXT:    ldp w9, w10, [x1, #8]
 ; CHECK-SD-NEXT:    udiv w8, w8, w9
-; CHECK-SD-NEXT:    ldr w9, [x0]
-; CHECK-SD-NEXT:    udiv w9, w9, w10
-; CHECK-SD-NEXT:    ldp w10, w13, [x0, #8]
-; CHECK-SD-NEXT:    udiv w10, w10, w11
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w8
-; CHECK-SD-NEXT:    udiv w8, w13, w12
-; CHECK-SD-NEXT:    mov v0.s[2], w10
-; CHECK-SD-NEXT:    mov v0.s[3], w8
-; CHECK-SD-NEXT:    str q0, [x0, #16]!
+; CHECK-SD-NEXT:    udiv w9, w11, w10
+; CHECK-SD-NEXT:    ldp w10, w13, [x1]
+; CHECK-SD-NEXT:    ldp w11, w12, [x0]
+; CHECK-SD-NEXT:    udiv w10, w11, w10
+; CHECK-SD-NEXT:    udiv w11, w12, w13
+; CHECK-SD-NEXT:    str w10, [x0, #16]!
+; CHECK-SD-NEXT:    stp w8, w9, [x0, #8]
+; CHECK-SD-NEXT:    str w11, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: div_v4i32_preinc:
@@ -745,20 +742,17 @@ define ptr @div_v4i32_preinc(ptr %p, ptr %q) {
 define ptr @div_v4i32_predec(ptr %p, ptr %q) {
 ; CHECK-SD-LABEL: div_v4i32_predec:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldp w10, w9, [x1]
-; CHECK-SD-NEXT:    ldr w8, [x0, #4]
-; CHECK-SD-NEXT:    ldp w11, w12, [x1, #8]
+; CHECK-SD-NEXT:    ldp w8, w11, [x0, #8]
+; CHECK-SD-NEXT:    ldp w9, w10, [x1, #8]
 ; CHECK-SD-NEXT:    udiv w8, w8, w9
-; CHECK-SD-NEXT:    ldr w9, [x0]
-; CHECK-SD-NEXT:    udiv w9, w9, w10
-; CHECK-SD-NEXT:    ldp w10, w13, [x0, #8]
-; CHECK-SD-NEXT:    udiv w10, w10, w11
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w8
-; CHECK-SD-NEXT:    udiv w8, w13, w12
-; CHECK-SD-NEXT:    mov v0.s[2], w10
-; CHECK-SD-NEXT:    mov v0.s[3], w8
-; CHECK-SD-NEXT:    str q0, [x0, #-16]!
+; CHECK-SD-NEXT:    udiv w9, w11, w10
+; CHECK-SD-NEXT:    ldp w10, w13, [x1]
+; CHECK-SD-NEXT:    ldp w11, w12, [x0]
+; CHECK-SD-NEXT:    udiv w10, w11, w10
+; CHECK-SD-NEXT:    udiv w11, w12, w13
+; CHECK-SD-NEXT:    str w10, [x0, #-16]!
+; CHECK-SD-NEXT:    stp w8, w9, [x0, #8]
+; CHECK-SD-NEXT:    str w11, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: div_v4i32_predec:
