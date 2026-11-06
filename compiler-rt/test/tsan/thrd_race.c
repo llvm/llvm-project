@@ -1,6 +1,9 @@
 // RUN: %clang_tsan -O1 %s -o %t %if freebsd %{ -lstdthreads %} && %deflake %run %t 2>&1 | FileCheck %s
 // <threads.h> is missing on Darwin and before glibc 2.28.
 // UNSUPPORTED: darwin, glibc && !glibc-2.28
+// FIXME: Temporarily unsupported on Fuchsia toolchain builders due to a bot
+// misconfiguration (build sysroot and test host glibc version mismatch).
+// UNSUPPORTED: clang-vendor=fuchsia
 
 #include "test.h"
 #include <threads.h>

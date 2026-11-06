@@ -141,6 +141,14 @@ else:
     lit_config.fatal("Unsupported compiler id: %r" % compiler_id)
 # Add compiler ID to the list of available features.
 config.available_features.add(compiler_id)
+if compiler_id == "Clang":
+    version_out, _ = get_path_from_clang(["--version"], allow_failure=True)
+    if version_out:
+        m = re.match(r"(.+) clang version ", version_out)
+        if m:
+            config.available_features.add(
+                "clang-vendor=" + m.group(1).strip().lower()
+            )
 
 # When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
 # config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
