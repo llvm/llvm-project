@@ -11,9 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/RecordReplayDiff.h"
+#include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -23,7 +26,10 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <optional>
+#include <string>
 
 using namespace llvm;
 
@@ -44,7 +50,8 @@ static cl::opt<bool> VerifyOpt(
 
 static cl::opt<bool> SaveOutputOpt(
     "save-output",
-    cl::desc("Save the device memory output of the replayed kernel execution."),
+    cl::desc("Save the device memory output of the replayed kernel execution, "
+             "as a diff against the record input."),
     cl::init(false), cl::cat(ReplayOptions));
 
 static cl::opt<uint32_t> NumTeamsOpt("num-teams",
@@ -72,6 +79,14 @@ static cl::opt<bool>
     LoadBitcodeOpt("load-bitcode",
                    cl::desc("Load the recorded IR bitcode image file."),
                    cl::init(false), cl::cat(ReplayOptions));
+
+static cl::opt<bool> RelocateOpt(
+    "relocate",
+    cl::desc("Place the replay memory at any device address instead of the "
+             "recorded one, allocating only the memory the kernel uses. The "
+             "replay falls back to the recorded address if the recording has "
+             "pointers that cannot be relocated."),
+    cl::init(false), cl::cat(ReplayOptions));
 
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
@@ -121,9 +136,126 @@ Error processIntegerArray(const json::Object *Obj, StringRef Key,
   return Error::success();
 }
 
-/// Verify that the replay output is the same as the record output.
+/// Read the header of an output snapshot diff.
+static Error readDiffHeader(StringRef Buffer, StringRef Kind,
+                            RecordReplayDiffHeaderTy &Header) {
+  if (Buffer.size() < sizeof(Header))
+    return createErr("the kernel %s output file is truncated", Kind.data());
+  std::memcpy(&Header, Buffer.data(), sizeof(Header));
+  if (std::memcmp(Header.Magic, RecordReplayDiffMagic, sizeof(Header.Magic)))
+    return createErr("the kernel %s output file is not a memory diff",
+                     Kind.data());
+  return Error::success();
+}
+
+/// The relocation of the replay memory to another device address.
+struct RelocationTy {
+  /// The sorted offsets of the pointers into the replay memory.
+  SmallVector<uint64_t> PointerOffsets;
+  /// The replay memory address and size.
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  /// The replay memory address minus the recorded one.
+  uint64_t Delta = 0;
+  /// The relocated input snapshot.
+  StringRef Input;
+
+  /// Whether \p Value points into the replay memory, or just past its end.
+  bool pointsToMemory(uint64_t Value) const {
+    return Value >= Address && Value <= Address + Size;
+  }
+};
+
+/// The contents of a pointers file.
+struct PointersFileTy {
+  RecordReplayPointersHeaderTy Header;
+  SmallVector<uint64_t> PointerOffsets;
+};
+
+/// Read the pointers file that describes how to relocate the replay memory.
+static Expected<PointersFileTy> readPointersFile(StringRef Filename) {
+  auto BufferOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+  if (!BufferOrErr)
+    return createErr("failed to read the pointers file");
+
+  StringRef Buffer = (*BufferOrErr)->getBuffer();
+  PointersFileTy File;
+  if (Buffer.size() < sizeof(File.Header))
+    return createErr("the pointers file is truncated");
+  std::memcpy(&File.Header, Buffer.data(), sizeof(File.Header));
+  if (std::memcmp(File.Header.Magic, RecordReplayPointersMagic,
+                  sizeof(File.Header.Magic)))
+    return createErr("the pointers file has an invalid format");
+  if (Buffer.size() - sizeof(File.Header) !=
+      File.Header.NumPointers * sizeof(uint64_t))
+    return createErr("the pointers file is truncated");
+
+  File.PointerOffsets.resize(File.Header.NumPointers);
+  std::memcpy(File.PointerOffsets.data(), Buffer.data() + sizeof(File.Header),
+              File.Header.NumPointers * sizeof(uint64_t));
+  return File;
+}
+
+/// Undo the relocation of the pointers stored in the regions of the replay
+/// output diff \p Output, so it can be compared with the record output.
+static Error unrelocateReplayOutput(MutableArrayRef<char> Output,
+                                    const RelocationTy &Relocation) {
+  constexpr uint64_t PtrSize = sizeof(uint64_t);
+  uint64_t Pos = sizeof(RecordReplayDiffHeaderTy);
+  while (Pos < Output.size()) {
+    RecordReplayDiffRegionTy Region;
+    if (Output.size() - Pos < sizeof(Region))
+      return createErr("the kernel replay output file is truncated");
+    std::memcpy(&Region, Output.data() + Pos, sizeof(Region));
+    Pos += sizeof(Region);
+    if (Output.size() - Pos < Region.Size)
+      return createErr("the kernel replay output file is truncated");
+
+    // Adjust each pointer that overlaps the region. Its bytes outside the
+    // region are unchanged, so they are taken from the relocated input.
+    uint64_t RegionEnd = Region.Offset + Region.Size;
+    auto It =
+        llvm::lower_bound(Relocation.PointerOffsets,
+                          Region.Offset - std::min(Region.Offset, PtrSize - 1));
+    for (; It != Relocation.PointerOffsets.end() && *It < RegionEnd; ++It) {
+      uint64_t PtrOffset = *It;
+      if (PtrOffset + PtrSize > Relocation.Input.size())
+        continue;
+
+      char Bytes[PtrSize];
+      for (uint64_t I = 0; I < PtrSize; ++I) {
+        uint64_t Offset = PtrOffset + I;
+        Bytes[I] = (Offset >= Region.Offset && Offset < RegionEnd)
+                       ? Output[Pos + Offset - Region.Offset]
+                       : Relocation.Input[Offset];
+      }
+      uint64_t Value;
+      std::memcpy(&Value, Bytes, PtrSize);
+      if (!Relocation.pointsToMemory(Value))
+        continue;
+      Value -= Relocation.Delta;
+      std::memcpy(Bytes, &Value, PtrSize);
+
+      for (uint64_t I = 0; I < PtrSize; ++I) {
+        uint64_t Offset = PtrOffset + I;
+        if (Offset >= Region.Offset && Offset < RegionEnd)
+          Output[Pos + Offset - Region.Offset] = Bytes[I];
+      }
+    }
+    Pos += Region.Size;
+  }
+  return Error::success();
+}
+
+/// Verify that the replay output is the same as the record output. Both are
+/// diffs against the record input, so they match if and only if the device
+/// memory after the kernel execution matches. If the replay memory was
+/// relocated, the pointers in the replay output are first adjusted back to the
+/// recorded address.
 Error verifyReplayOutput(StringRef RecordOutputFilename,
-                         StringRef ReplayOutputFilename) {
+                         StringRef ReplayOutputFilename,
+                         const RelocationTy *Relocation) {
   // Load the record output file.
   auto RecordOutputBufferOrErr =
       MemoryBuffer::getFile(RecordOutputFilename,
@@ -132,18 +264,35 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
   if (!RecordOutputBufferOrErr)
     return createErr("failed to read the kernel record output file");
 
-  // Load the replay output file.
+  // Load the replay output file, as a writable copy to undo the relocation.
   auto ReplayOutputBufferOrErr =
-      MemoryBuffer::getFile(ReplayOutputFilename,
-                            /*isText=*/false,
-                            /*RequiresNullTerminator=*/false);
+      WritableMemoryBuffer::getFile(ReplayOutputFilename, /*IsVolatile=*/false);
   if (!ReplayOutputBufferOrErr)
     return createErr("failed to read the kernel replay output file");
 
-  // Compare record and replay outputs to verify they match. If they are both
-  // empty, the verification is successful.
   StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
-  StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
+  MutableArrayRef<char> ReplayOutputData =
+      ReplayOutputBufferOrErr.get()->getBuffer();
+  StringRef ReplayOutput(ReplayOutputData.data(), ReplayOutputData.size());
+  RecordReplayDiffHeaderTy RecordHeader, ReplayHeader;
+  if (auto Err = readDiffHeader(RecordOutput, "record", RecordHeader))
+    return Err;
+  if (auto Err = readDiffHeader(ReplayOutput, "replay", ReplayHeader))
+    return Err;
+  if (RecordHeader.InputSize != ReplayHeader.InputSize)
+    return createErr("record and replay outputs have different input sizes "
+                     "(%" PRIu64 " and %" PRIu64 ")",
+                     RecordHeader.InputSize, ReplayHeader.InputSize);
+  if (RecordHeader.OutputSize != ReplayHeader.OutputSize)
+    return createErr("record and replay outputs have different sizes (%" PRIu64
+                     " and %" PRIu64 ")",
+                     RecordHeader.OutputSize, ReplayHeader.OutputSize);
+
+  if (Relocation)
+    if (auto Err = unrelocateReplayOutput(ReplayOutputData, *Relocation))
+      return Err;
+
+  // Compare record and replay outputs to verify they match.
   if (RecordOutput != ReplayOutput)
     return createErr("replay device memory failed to verify");
 
@@ -329,23 +478,101 @@ Error replayKernel() {
   // Register the image and the offload entries.
   __tgt_register_lib(&Desc);
 
+  // Decide whether the replay memory can be placed at another address. That
+  // requires knowing every pointer into the recorded memory and, to verify the
+  // replay, into the output.
+  std::optional<PointersFileTy> Pointers;
+  if (RelocateOpt) {
+    Filepath.replace_extension("pointers");
+    std::string Reason;
+    if (!std::filesystem::exists(Filepath)) {
+      Reason = "the recording has no pointers file";
+    } else {
+      auto PointersOrErr = readPointersFile(Filepath.string());
+      if (!PointersOrErr)
+        return PointersOrErr.takeError();
+      const RecordReplayPointersHeaderTy &Header = PointersOrErr->Header;
+      if (Header.NumUnknownInputPointers)
+        Reason = std::to_string(Header.NumUnknownInputPointers) +
+                 " unknown pointers in the recorded memory";
+      else if (VerifyOpt && Header.NumUnknownOutputPointers &&
+               Header.NumUnknownOutputPointers != RecordReplayUnknownCount)
+        Reason = std::to_string(Header.NumUnknownOutputPointers) +
+                 " unknown pointers in the recorded output";
+      else
+        Pointers = std::move(*PointersOrErr);
+    }
+    if (!Pointers)
+      outs() << TOOL_PREFIX << " Replaying at the recorded address: " << Reason
+             << "\n";
+  }
+
+  // Load the record input file. A relocated input needs a writable copy.
+  Filepath.replace_extension("record_input");
+  std::unique_ptr<MemoryBuffer> RecordInputBuffer;
+  if (Pointers) {
+    auto BufferOrErr =
+        WritableMemoryBuffer::getFile(Filepath.c_str(), /*IsVolatile=*/false);
+    if (BufferOrErr)
+      RecordInputBuffer = std::move(*BufferOrErr);
+  } else {
+    auto BufferOrErr = MemoryBuffer::getFile(Filepath.c_str(), /*IsText=*/false,
+                                             /*RequiresNullTerminator=*/false);
+    if (BufferOrErr)
+      RecordInputBuffer = std::move(*BufferOrErr);
+  }
+  if (!RecordInputBuffer)
+    return createErr("failed to read the kernel record input file");
+  uint64_t InputSize = RecordInputBuffer->getBufferSize();
+
+  // A relocated replay memory only needs to hold the input snapshot.
   int Rc = __tgt_activate_record_replay(
-      DeviceId, VAllocSize, VAllocAddr, /*IsRecord=*/false,
+      DeviceId, Pointers ? std::max<uint64_t>(InputSize, 1) : VAllocSize,
+      Pointers ? nullptr : VAllocAddr, /*IsRecord=*/false,
       VerifyOpt || SaveOutputOpt,
       /*EmitReport=*/false, Directory.c_str());
   if (Rc != OMP_TGT_SUCCESS)
     return createErr("failed to activate record replay");
 
-  // Load the record input file.
-  Filepath.replace_extension("record_input");
-  auto RecordInputBufferOrErr =
-      MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
-                            /*RequiresNullTerminator=*/false);
-  if (!RecordInputBufferOrErr)
-    return createErr("failed to read the kernel record input file");
-  auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
-
   KernelReplayOutcomeTy Outcome;
+
+  // Relocate the pointers in the input snapshot and the kernel arguments to
+  // the replay memory. The first allocation is placed at its start, and it is
+  // reused by every replay.
+  std::optional<RelocationTy> Relocation;
+  if (Pointers && InputSize) {
+    void *Address = omp_target_alloc(InputSize, DeviceId);
+    if (!Address)
+      return createErr("failed to allocate the replay memory");
+    Outcome.ReplayDeviceAlloc = Address;
+
+    uint64_t RecordAddress = reinterpret_cast<uintptr_t>(VAllocAddr);
+    Relocation.emplace();
+    Relocation->PointerOffsets = std::move(Pointers->PointerOffsets);
+    Relocation->Address = reinterpret_cast<uintptr_t>(Address);
+    Relocation->Size = InputSize;
+    Relocation->Delta = Relocation->Address - RecordAddress;
+    Relocation->Input = RecordInputBuffer->getBuffer();
+
+    char *Input = const_cast<char *>(RecordInputBuffer->getBufferStart());
+    for (uint64_t Offset : Relocation->PointerOffsets) {
+      if (Offset + sizeof(uint64_t) > InputSize)
+        return createErr("the pointers file has an invalid offset");
+      uint64_t Value;
+      std::memcpy(&Value, Input + Offset, sizeof(Value));
+      Value += Relocation->Delta;
+      std::memcpy(Input + Offset, &Value, sizeof(Value));
+    }
+    for (void *&Arg : TgtArgs) {
+      uint64_t Value = reinterpret_cast<uintptr_t>(Arg);
+      if (Value >= RecordAddress && Value <= RecordAddress + InputSize)
+        Arg = reinterpret_cast<void *>(Value + Relocation->Delta);
+    }
+
+    outs() << TOOL_PREFIX << " Relocated the replay memory from " << VAllocAddr
+           << " to " << Address << " (" << Relocation->PointerOffsets.size()
+           << " pointers)\n";
+  }
 
   // Perform the kernel replay and verification (if needed) for each repetition.
   for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
@@ -370,8 +597,9 @@ Error replayKernel() {
       return createErr("replay output file was not generated");
 
     Filepath.replace_extension("record_output");
-    if (auto Err = verifyReplayOutput(Filepath.c_str(),
-                                      Outcome.OutputFilepath.c_str()))
+    if (auto Err =
+            verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str(),
+                               Relocation ? &*Relocation : nullptr))
       return Err;
 
     // The verification was successful.
