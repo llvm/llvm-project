@@ -3,29 +3,29 @@
 ! CHECK-LABEL: func @_QQmain
 program p
   ! CHECK-DAG: %[[I_ALLOC:.*]] = fir.alloca i32 <{{{.*}}uniq_name = "_QFEi"}>
-  ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOC]] {uniq_name = "_QFEi"}
+  ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOC]] uniq_name("_QFEi")
   ! CHECK-DAG: %[[N_ALLOC:.*]] = fir.alloca i32 <{{{.*}}uniq_name = "_QFEn"}>
-  ! CHECK-DAG: %[[N:.*]]:2 = hlfir.declare %[[N_ALLOC]] {uniq_name = "_QFEn"}
+  ! CHECK-DAG: %[[N:.*]]:2 = hlfir.declare %[[N_ALLOC]] uniq_name("_QFEn")
   ! CHECK: %[[T_ALLOC:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "t", uniq_name = "_QFEt"}>
-  ! CHECK: %[[T:.*]]:2 = hlfir.declare %[[T_ALLOC]](%{{.*}}) {uniq_name = "_QFEt"}
+  ! CHECK: %[[T:.*]]:2 = hlfir.declare %[[T_ALLOC]](%{{.*}}) uniq_name("_QFEt")
   integer :: n, foo, t(3)
   ! CHECK: hlfir.assign %c100{{.*}} to %[[N]]#0
   ! CHECK-COUNT-3: hlfir.designate %[[T]]#0
   n = 100; t(1) = 111; t(2) = 222; t(3) = 333
   ! 'a' is associated to 'n' directly via hlfir.declare wrapping %[[N]]
-  ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[N]]#0 {uniq_name = "_QFEa"}
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[N]]#0 uniq_name("_QFEa")
   ! 'b' = n+5: load n, addi 5, store to alloca, hlfir.declare it
   ! CHECK: %[[NLOAD_B:.*]] = fir.load %[[N]]#0
   ! CHECK: %[[NPLUS5:.*]] = arith.addi %[[NLOAD_B]], %c5{{.*}} : i32
   ! CHECK: fir.store %[[NPLUS5]] to %[[B_ALLOC:.*]] : !fir.ref<i32>
-  ! CHECK: %[[B:.*]]:2 = hlfir.declare %[[B_ALLOC]] {uniq_name = "_QFEb"}
+  ! CHECK: %[[B:.*]]:2 = hlfir.declare %[[B_ALLOC]] uniq_name("_QFEb")
   ! 'c' = t(2): designate, hlfir.declare it
   ! CHECK: %[[C_DESIG:.*]] = hlfir.designate %[[T]]#0 (%c2{{.*}})
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %[[C_DESIG]] {uniq_name = "_QFEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %[[C_DESIG]] uniq_name("_QFEc")
   ! 'd' = foo(7): call foo, store result, hlfir.declare it
   ! CHECK: %[[FOO_CALL:.*]] = fir.call @_QPfoo(%{{.*}})
   ! CHECK: fir.store %[[FOO_CALL]] to %[[D_ALLOC:.*]] : !fir.ref<i32>
-  ! CHECK: %[[D:.*]]:2 = hlfir.declare %[[D_ALLOC]] {uniq_name = "_QFEd"}
+  ! CHECK: %[[D:.*]]:2 = hlfir.declare %[[D_ALLOC]] uniq_name("_QFEd")
   associate (a => n, b => n+5, c => t(2), d => foo(7))
     ! CHECK: fir.load %[[A]]#0
     ! CHECK: arith.addi %{{.*}}, %c1
@@ -53,7 +53,7 @@ program p
   do i=1,4
     associate (x=>i)
       ! 'x' is associated to 'i' directly via hlfir.declare
-      ! CHECK: %[[X:.*]]:2 = hlfir.declare %[[I]]#0 {uniq_name = "_QFEx"}
+      ! CHECK: %[[X:.*]]:2 = hlfir.declare %[[I]]#0 uniq_name("_QFEx")
       ! CHECK: %[[XVAL:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
       ! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
       ! CHECK: arith.cmpi eq, %[[XVAL]], %[[TWO]] : i32

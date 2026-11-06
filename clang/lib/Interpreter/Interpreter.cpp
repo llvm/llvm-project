@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -38,6 +39,8 @@
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Lex/Pragma.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
@@ -46,6 +49,7 @@
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -77,6 +81,19 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed. "
                                    "Unable to create a driver job");
+
+  // The driver creates one device compile job per architecture (for example if
+  // --offload-arch=native finds several GPUs). Only one can be used.
+  unsigned NumDeviceJobs = llvm::count_if(Jobs, [](const driver::Command &C) {
+    return llvm::StringRef(C.getCreator().getName()) == "clang" &&
+           llvm::is_contained(C.getArguments(),
+                              llvm::StringRef("-fcuda-is-device"));
+  });
+  if (NumDeviceJobs > 1)
+    return llvm::createStringError(
+        llvm::errc::not_supported,
+        "Multiple device architectures are not supported. Pass a single "
+        "--offload-arch");
 
   // The one job we find should be to invoke clang again.
   const driver::Command *Cmd = &*Jobs.begin();
@@ -218,6 +235,70 @@ static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
   return llvm::Error::success();
 }
 
+// '#pragma clang repl optimize(<opt>)' sets the optimization level and size
+// used to emit modules for input parsed after the pragma. <opt> is an -O flag
+// spelled without the leading dash: O0, O1, O2, O3, Os or Oz.
+struct PragmaReplHandler : public PragmaHandler {
+  Interpreter &Interp;
+
+  PragmaReplHandler(Interpreter &Interp)
+      : PragmaHandler("repl"), Interp(Interp) {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override {
+    Token Tok;
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::identifier) ||
+        !Tok.getIdentifierInfo()->isStr("optimize")) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << "clang repl";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    std::string Opt = PP.getSpelling(Tok);
+    // The OptimizationLevel and OptimizeSize that each -O flag sets.
+    std::optional<std::pair<unsigned, unsigned>> Level =
+        llvm::StringSwitch<std::optional<std::pair<unsigned, unsigned>>>(Opt)
+            .Case("O0", std::pair(0U, 0U))
+            .Case("O1", std::pair(1U, 0U))
+            .Case("O2", std::pair(2U, 0U))
+            .Case("O3", std::pair(3U, 0U))
+            .Case("Os", std::pair(2U, 1U))
+            .Case("Oz", std::pair(2U, 2U))
+            .Default(std::nullopt);
+    if (!Level) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+          << Opt << "clang repl optimize" << /*Expected=*/true
+          << "'O0', 'O1', 'O2', 'O3', 'Os' or 'Oz'";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::eod)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << "clang repl optimize";
+      return;
+    }
+
+    Interp.setOptLevel(Level->first, Level->second);
+  }
+};
+
 } // anonymous namespace
 
 namespace clang {
@@ -306,17 +387,21 @@ IncrementalCompilerBuilder::CreateCpp() {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
+IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
   Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
   Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  llvm::StringRef SDKPath = HipEnabled ? RocmSDKPath : CudaSDKPath;
   std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
-  if (!SDKPath.empty()) {
-    SDKPathArg += SDKPath;
+  if (!DeviceSDKPath.empty()) {
+    SDKPathArg += DeviceSDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -340,12 +425,12 @@ IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateDevice(OffloadType Type) {
-  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/true);
+  return IncrementalCompilerBuilder::createOffload(/*device=*/true, Type);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateHost(OffloadType Type) {
-  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/false);
+  return IncrementalCompilerBuilder::createOffload(/*device=*/false, Type);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -357,6 +442,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
+
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -376,6 +464,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (ErrOut)
     return;
+
+  CI->getPreprocessor().AddPragmaHandler("clang", new PragmaReplHandler(*this));
 
   if (Act->getCodeGen()) {
     Act->CacheCodeGenModule();
@@ -480,9 +570,14 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithDevice(OffloadType Type,
-                              std::unique_ptr<CompilerInstance> CI,
-                              std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI,
+                              OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -519,20 +614,20 @@ Interpreter::createWithDevice(OffloadType Type,
 
   Interp->DeviceCI = std::move(DCI);
 
-  if (Type == OffloadType::HIP) {
-    // FIXME: HIP device parsing is not supported yet; it should use an
-    // IncrementalHIPDeviceParser once one exists.
-  } else {
-    auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  if (Type == OffloadType::HIP)
+    DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  else
+    DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
         *Interp->DeviceCI, *Interp->getCompilerInstance(),
         Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
-    if (Err)
-      return std::move(Err);
+  if (Err)
+    return std::move(Err);
 
-    Interp->DeviceParser = std::move(DeviceParser);
-  }
-
+  Interp->DeviceParser = std::move(DeviceParser);
   return std::move(Interp);
 }
 
@@ -548,6 +643,14 @@ llvm::Expected<IncrementalExecutor &> Interpreter::getExecutionEngine() {
   }
 
   return *IncrExecutor.get();
+}
+
+void Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
+  CodeGenOptions &CGO = getCompilerInstance()->getCodeGenOpts();
+  CGO.OptimizationLevel = OptLevel;
+  CGO.OptimizeSize = OptSize;
+  CGO.setInlining(OptLevel ? CodeGenOptions::NormalInlining
+                           : CodeGenOptions::OnlyAlwaysInlining);
 }
 
 ASTContext &Interpreter::getASTContext() {
@@ -577,13 +680,14 @@ Interpreter::Parse(llvm::StringRef Code) {
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    DeviceParser->RegisterPTU(*DeviceTU);
+    PartialTranslationUnit &DevicePTU = DeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
-    if (!PTX)
-      return PTX.takeError();
+    // Under -emit-llvm, print the device module IR before it is lowered.
+    if (DevicePTU.TheModule &&
+        DeviceCI->getFrontendOpts().ProgramAction == frontend::EmitLLVM)
+      DevicePTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)
       return std::move(Err);
   }
@@ -619,7 +723,11 @@ llvm::Error Interpreter::CreateExecutor() {
                                                std::error_code());
 
   if (!IncrExecutorBuilder)
-    IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+    IncrExecutorBuilder = IncrementalExecutorBuilder::createDefault();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

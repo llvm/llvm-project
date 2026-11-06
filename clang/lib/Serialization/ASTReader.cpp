@@ -113,6 +113,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DJB.h"
@@ -1897,6 +1898,23 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                                    SourceLocation::UIntTy InitialDelta) {
+  SourceLocation::UIntTy Offset = Record[Idx];
+  return {Offset, SourceLocationEncoding::Chain(Offset + InitialDelta)};
+}
+
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadEntryOffset(const RecordDataImpl &Record) {
+  // Anchor the chain at the entry's own local offset, deriving it exactly as
+  // the writer does -- see ASTWriter::EmitEntryOffset. The field has the dummy
+  // entry subtracted out, so add it back. The anchor stays in the writing
+  // module's local space, which is the space the deltas are differences in;
+  // deltaDecode therefore runs before the locations are translated into ours.
+  return ReadSourceLocationOffset(Record, 0, 2);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2056,12 +2074,15 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
+    auto [EntryOffset, Chain] = ReadEntryOffset(Record);
+    // The chain is stateful: decode in the same order the writer emitted, each
+    // in its own statement. See CreateSLocExpansionAbbrev for the field order.
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[1], Chain);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Chain);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[3], Chain);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 BaseOffset + EntryOffset);
     break;
   }
   }
@@ -2173,7 +2194,6 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -3340,6 +3360,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+
+        // A header added to a directory the module enumerated was never
+        // recorded as an input file, so the check above misses it.
+        if (!WasValidated && F.Kind == MK_ImplicitModule &&
+            HSOpts.ModulesValidateDirectoryDependencies &&
+            isDirectoryDependencyOutOfDate(F, Complain))
+          return OutOfDate;
       } else {
         F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
@@ -3511,6 +3538,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       StringRef ImportedName = ReadStringBlob(Record, Idx, Blob);
 
       bool IsImportingStdCXXModule = Record[Idx++];
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit = Record[Idx++];
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
@@ -3530,12 +3558,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
             ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
 
-      if (IsImportingStdCXXModule && ImportedFile.empty()) {
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit && ImportedFile.empty()) {
         Diag(diag::err_failed_to_find_module_file) << ImportedName;
         return Missing;
       }
 
-      if (!IsImportingStdCXXModule) {
+      if (!IsCXX20ModuleOrPrebuiltHeaderUnit) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
         FileNameKind = (unsigned)Record[Idx++];
@@ -3577,10 +3605,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 Loaded, StoredSize, StoredModTime,
                                 StoredSignature, Capabilities);
 
-      // Check the AST we just read from ImportedFile contains a different
-      // module than we expected (ImportedName). This can occur for C++20
-      // Modules when given a mismatch via -fmodule-file=<name>=<file>
-      if (IsImportingStdCXXModule) {
+      // Check whether the AST we just read from ImportedFile contains a
+      // different module than we expected (ImportedName).
+      //
+      // This can occur for C++20 Modules (including explicitly mapped header
+      // units) when given a mismatch in -fmodule-file=<name>=<file>.
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         if (const auto *Imported =
                 getModuleManager().lookupByFileName(ImportedFile);
             Imported != nullptr && Imported->ModuleName != ImportedName) {
@@ -3683,6 +3713,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (ASTReadResult Result =
               ReadModuleMapFileBlock(Record, F, ImportedBy, ClientLoadCapabilities))
         return Result;
+      break;
+
+    case MODULE_DIRECTORY_DEPENDENCIES:
+      ReadDirectoryDependencies(Record, F);
       break;
 
     case INPUT_FILE_OFFSETS:
@@ -4842,6 +4876,73 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   if (Listener)
     Listener->ReadModuleMapFile(F.ModuleMapPath);
   return Success;
+}
+
+void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
+                                          ModuleFile &F) {
+  unsigned Idx = 0;
+  unsigned N = Record[Idx++];
+  F.DirectoryDependencies.reserve(N);
+  for (unsigned I = 0; I != N; ++I) {
+    // The base directory is relative if the module was found through a
+    // relative search path, and empty with -fmodule-file-home-is-cwd.
+    SmallString<256> Dir(ReadPath(F, Record, Idx));
+    ModuleMap::canonicalizeDirectoryDependency(FileMgr, Dir);
+    F.DirectoryDependencies.push_back(std::string(Dir));
+  }
+}
+
+bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
+  llvm::vfs::FileSystem &FS = PP.getFileManager().getVirtualFileSystem();
+  // Adding or removing an entry updates the modification time of the directory
+  // holding it, so comparing every directory in the tree against the module
+  // file catches a header that was added, even one whose own modification time
+  // is older. A directory that doesn't exist has no listing to depend on.
+  auto IsNewer = [&](StringRef Dir) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Dir);
+    return Status && Status->isDirectory() &&
+           llvm::sys::toTimeT(Status->getLastModificationTime()) > F.ModTime;
+  };
+
+  ModuleCache &ModCache = getModuleManager().getModuleCache();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  for (StringRef Dir : F.DirectoryDependencies) {
+    if (std::optional<bool> Invalidated =
+            ModCache.isDirectoryInvalidated(Dir)) {
+      // The build system reports paths as changed before the build session
+      // started, so a module built during it is newer than them.
+      if (!*Invalidated ||
+          static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+        continue;
+      Diag(diag::remark_module_path_invalidated) << F.ModuleName << Dir;
+      if (Complain)
+        Diag(diag::err_module_path_invalidated) << F.ModuleName << Dir;
+      return true;
+    }
+
+    std::optional<std::string> Changed;
+    if (IsNewer(Dir)) {
+      Changed = Dir.str();
+    } else {
+      std::error_code EC;
+      for (llvm::vfs::recursive_directory_iterator I(FS, Dir, EC), E;
+           I != E && !EC; I.increment(EC)) {
+        if (I->type() == llvm::sys::fs::file_type::directory_file &&
+            IsNewer(I->path())) {
+          Changed = I->path().str();
+          break;
+        }
+      }
+    }
+    if (!Changed)
+      continue;
+    Diag(diag::remark_module_directory_dep_changed) << F.ModuleName << *Changed;
+    if (Complain)
+      Diag(diag::err_module_directory_dep_changed) << F.ModuleName << *Changed;
+    return true;
+  }
+  return false;
 }
 
 /// Move the given method to the back of the global list of methods.
@@ -6231,11 +6332,12 @@ bool ASTReader::readASTFileControlBlock(
 
       StringRef ModuleName = ReadStringBlob(Record, Idx, Blob);
 
-      bool IsStandardCXXModule = Record[Idx++];
+      ++Idx; // Standard C++ module
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit = Record[Idx++];
 
-      // In C++20 Modules, we don't record the path to imported
-      // modules in the BMI files.
-      if (IsStandardCXXModule) {
+      // For C++20 Modules (including explicitly mapped header units),
+      // we don't record the path to imported modules in the BMI files.
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         Listener.visitImport(ModuleName, /*Filename=*/"");
         continue;
       }
@@ -8074,6 +8176,9 @@ QualType ASTReader::GetType(TypeID ID) {
       break;
     case PREDEF_TYPE_NULLPTR_ID:
       T = Context.NullPtrTy;
+      break;
+    case PREDEF_TYPE_META_INFO_ID:
+      T = Context.MetaInfoTy;
       break;
     case PREDEF_TYPE_CHAR8_ID:
       T = Context.Char8Ty;
@@ -10951,6 +11056,70 @@ void ASTReader::finishPendingActions() {
 
   // Inform any classes that had members added that they now have more members.
   for (auto [RD, MD] : PendingAddedClassMembers) {
+    // The module we just imported added MD to RD so we should do the same, but
+    // only RD doesn't already contain the same member. This can happen when two
+    // modules independent add and serialize the same implicit member.
+
+    // Fast path: we can check for the presence of implicit special members
+    // (default/copy/move constructors + copy/move assignments + destructors)
+    // with RD's needsImplicit*() methods (which are constant time).
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
+      if (!Ctor->isInheritingConstructor()) {
+        if (Ctor->isDefaultConstructor()) {
+          if (RD->needsImplicitDefaultConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+        if (Ctor->isCopyConstructor()) {
+          if (RD->needsImplicitCopyConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+        if (Ctor->isMoveConstructor()) {
+          if (RD->needsImplicitMoveConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+      }
+    } else if (const auto *Mthd = dyn_cast<CXXMethodDecl>(MD)) {
+      if (isa<CXXDestructorDecl>(Mthd)) {
+        if (RD->needsImplicitDestructor())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+      if (Mthd->isCopyAssignmentOperator()) {
+        if (RD->needsImplicitCopyAssignment())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+      if (Mthd->isMoveAssignmentOperator()) {
+        if (RD->needsImplicitMoveAssignment())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+    }
+
+    if (auto *FD = dyn_cast<FunctionDecl>(MD)) {
+      // Slow path: this is some other implicit added member (e.g., inherited
+      // constructor). We need iterate through all of RD's members and compare
+      // their ODR hash against MD's.
+      auto needToAddMD = true;
+      for (auto *RDD : RD->noload_decls()) {
+        if (auto *RDFD = dyn_cast<FunctionDecl>(RDD)) {
+          if (FD->getODRHash() == RDFD->getODRHash()) {
+            needToAddMD = false;
+            break;
+          }
+        }
+      }
+      if (needToAddMD)
+        RD->addHiddenDecl(MD);
+      continue;
+    }
+
+    // This branch is only reachable if MD is not a function decl (which means
+    // it doesn't have an ODR hash to compare). Call addedMember() to preserve
+    // historical behavior.
     RD->addedMember(MD);
   }
   PendingAddedClassMembers.clear();

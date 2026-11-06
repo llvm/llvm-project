@@ -265,8 +265,7 @@
 #  define _LIBCPP_DIAGNOSE_WARNING(...)
 #endif
 
-#if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                           \
-    (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#if __has_attribute(__diagnose_if__)
 #  define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
 #else
 #  define _LIBCPP_DIAGNOSE_IF(...)
@@ -483,6 +482,12 @@
 #  define _LIBCPP_WARN_UNUSED [[__gnu__::__warn_unused__]]
 #else
 #  define _LIBCPP_WARN_UNUSED
+#endif
+
+#if defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__OPTIMIZE_SIZE__)
+#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION _Pragma("clang loop vectorize(enable) interleave(enable)")
+#else
+#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H

@@ -1,0 +1,13 @@
+# REQUIRES: python
+# Check that the diagnostics bundle lists the live scripted extensions, so a
+# triager can see which scripts were loaded and from where.
+
+# RUN: rm -rf %t
+# RUN: %lldb --no-lldbinit -b -o 'command script import %S/Inputs/scripted_command.py' \
+# RUN:   -o 'diagnostics dump -d %t'
+# RUN: FileCheck %s --input-file=%t/commands.txt
+
+# CHECK: === scripting extension list --instances ===
+# CHECK: Class: scripted_command.EchoCommand
+# CHECK: Extension: ScriptedCommand
+# CHECK: Path: {{.*}}Inputs{{[/\\]}}scripted_command.py

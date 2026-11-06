@@ -26,7 +26,7 @@ namespace {
 // Replaces a subview of a subview with a single subview(both static and dynamic
 // offsets are supported).
 struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::SubViewOp op,
                                 PatternRewriter &rewriter) const override {

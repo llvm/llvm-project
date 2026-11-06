@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -861,7 +861,7 @@ public:
   matchAndRewrite(vector::ReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = adaptor.getVector();
     Value acc = adaptor.getAcc();
@@ -1028,7 +1028,7 @@ public:
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = reductionOp.getVector();
     Value acc = reductionOp.getAcc();
@@ -2176,10 +2176,12 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 
   Type opResType = op.getType();
   VectorType vecType = dyn_cast<VectorType>(opResType);
-  if (vecType && vecType.isScalable()) {
-    // Note - this is sufficient to reject all cases with scalable vectors.
+  if (vecType && vecType.isScalable())
     return failure();
-  }
+  // The result type only reflects the M and N dims, so a scalable K
+  // (reduction) dim would slip through the check above.
+  if (op.getLhsType().isScalable() || op.getRhsType().isScalable())
+    return failure();
 
   Type elementType = op.getLhsType().getElementType();
   if (!elementType.isIntOrFloat())

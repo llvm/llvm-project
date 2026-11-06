@@ -17,9 +17,11 @@
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::lifetimes::internal {
@@ -28,8 +30,9 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
   using Base = ConstStmtVisitor<FactsGenerator>;
 
 public:
-  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC),
+  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC,
+                 const LifetimeSafetyOpts &LSOpts)
+      : FactMgr(FactMgr), AC(AC), LSOpts(LSOpts),
         IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
                 !AC.getASTContext().getLangOpts().ObjC) {}
 
@@ -38,6 +41,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
@@ -163,13 +167,20 @@ private:
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
+  void issueFieldPlaceholderLoans(const CXXRecordDecl *ClassDef,
+                                  llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
+  const LifetimeSafetyOpts &LSOpts;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
   // Collect origins that escape the function in this block (OriginEscapesFact),
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
+  // Lifetime-extended temporaries, keyed by the variable they expire with.
+  llvm::DenseMap<const ValueDecl *,
+                 llvm::SmallVector<const MaterializeTemporaryExpr *, 1>>
+      ExtendedTemporaries;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };
