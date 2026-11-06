@@ -19,7 +19,7 @@
 ; CHECK:      ext CSECT
 ; CHECK-NEXT: C_WSA64 CATTR {{.*}}PART(ext)
 ; CHECK:      loc XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
-; CHECK-NEXT: loc DS 0F
+; CHECK-NEXT: loc DS 0B
 ; CHECK:      tbl CSECT
 ; CHECK-NEXT: C_WSA64 CATTR {{.*}}PART(tbl)
 @ext = constant [2 x i32] [i32 3, i32 4], align 4

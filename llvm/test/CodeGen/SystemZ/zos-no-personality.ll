@@ -15,5 +15,5 @@ define { ptr, i32 } @foo() personality ptr null {
 
 ; CHECK: foo DS 0B
 ; CHECK-NOT: .gcc_exception_table.foo
-; CHECK: L#PPA1_foo_0 DS 0H
+; CHECK: L#PPA1_foo_0 DS 0B
 ; CHECK-NOT: *   Bit 3: 1 = C++ EH block

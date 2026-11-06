@@ -435,7 +435,7 @@ define void @large_stack3() {
   ret void
 }
 
-; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0Q
+; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0B
 ; CHECK: * DSA Size 0x0
 ; CHECK: * Entry Flags
 ; CHECK: *   Bit 1: 1 = Leaf function
@@ -478,23 +478,23 @@ declare i64 @fun4(ptr %ptr0, ptr %ptr1, i64 %n1, i64 %n2, i64 %n3)
 ;     Tests for PPA1 Fields
 ; =============================
 
-; CHECK64: L#PPA1_func0_0 DS 0H
+; CHECK64: L#PPA1_func0_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0000'
 
-; CHECK64: L#PPA1_func1_0 DS 0H
+; CHECK64: L#PPA1_func1_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0002'
 
-; CHECK64: L#PPA1_large_stack1_0 DS 0H
+; CHECK64: L#PPA1_large_stack1_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0006'
 
-; CHECK-LABEL: L#PPA1_named_func_0 DS 0H
+; CHECK-LABEL: L#PPA1_named_func_0 DS 0B
 ; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
 ; CHECK-NEXT:  DC XL1'81'
 
-; CHECK-LABEL: L#PPA1_0 DS 0H
+; CHECK-LABEL: L#PPA1_0 DS 0B
 ; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT:  DC XL1'80'

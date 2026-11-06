@@ -2,7 +2,7 @@
 
 ; This tests needs updating when the new external name is emitted into asm output.
 
-; CHECK: L#EPM_sourcename_0 DS 0Q
+; CHECK: L#EPM_sourcename_0 DS 0B
 ; CHECK-NEXT: DC XL7'00C300C500C500'
 ; CHECK-NEXT: DC XL1'F1'
 ; CHECK-NEXT: DC A(L#PPA1_sourcename_0-L#EPM_sourcename_0)
@@ -19,7 +19,7 @@ entry:
 }
 attributes #0 = { "zos-ppa1-name"="name" }
 
-; CHECK:L#PPA1_sourcename_0 DS 0H
+; CHECK:L#PPA1_sourcename_0 DS 0B
 ; CHECK-NEXT: DC XL1'02'
 ; CHECK-NEXT: DC XL1'CE'
 ; CHECK-NEXT: DC XL2'0000'

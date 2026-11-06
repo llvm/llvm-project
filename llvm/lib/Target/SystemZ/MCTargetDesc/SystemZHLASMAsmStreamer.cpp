@@ -192,7 +192,6 @@ static void emitALIAS(raw_ostream &OS, StringRef Name, StringRef ExternalName) {
 
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
-  flushPendingAlignment();
   auto &Sec = *static_cast<MCSectionGOFF *>(Section);
   auto EmitExternalName = [&Sec, this]() {
     if (Sec.hasExternalName())
@@ -292,14 +291,6 @@ void SystemZHLASMAsmStreamer::EmitComment() {
   CommentToEmit.clear();
 }
 
-void SystemZHLASMAsmStreamer::flushPendingAlignment() {
-  if (!PendingAlignSuffix)
-    return;
-  OS << " DS 0" << *PendingAlignSuffix;
-  EmitEOL();
-  PendingAlignSuffix.reset();
-}
-
 void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
                                                    int64_t Fill,
                                                    uint8_t FillLen,
@@ -310,11 +301,9 @@ void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
   if (FillLen > 1)
     return getContext().reportError(SMLoc(), "Fill length > 1 not supported");
   if (Fill == 0 && A < 5) {
-    // Simple form: defer so the next emitLabel() can absorb it (e.g. "foo DS
-    // 0H" instead of a standalone "DS 0H" followed by "foo DS 0B").
-    flushPendingAlignment();
     static const char SUFFIX[5] = {'B', 'H', 'F', 'D', 'Q'};
-    PendingAlignSuffix = SUFFIX[A];
+    OS << " DS 0" << SUFFIX[A];
+    EmitEOL();
   } else if (A) {
     // Non-simple form with a fill value. The HLASM DC duplication factor must
     // be an absolute expression, so we cannot use the location counter (*)
@@ -362,7 +351,6 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
          "Cannot emit contents before setting section!");
   if (Data.empty())
     return;
-  flushPendingAlignment();
   OS << " DC ";
   size_t Len = Data.size();
   SmallVector<uint8_t> Chars;
@@ -497,7 +485,6 @@ void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
 
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
-  flushPendingAlignment();
   // Show the encoding in a comment if we have a code emitter.
   addEncodingComment(Inst, STI);
   EmitEOL();
@@ -532,9 +519,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   }
 
   if (EmitLabelAndEntry) {
-    char Suffix = PendingAlignSuffix.value_or('B');
-    PendingAlignSuffix.reset();
-    OS << Sym->getName() << " DS 0" << Suffix;
+    OS << Sym->getName() << " DS 0B";
     EmitEOL();
   }
 }
@@ -568,7 +553,6 @@ void SystemZHLASMAsmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {
-  flushPendingAlignment();
   String.consume_back("\n");
   OS << String;
   EmitEOL();
@@ -648,7 +632,6 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   assert(Size <= 8 && "Invalid size");
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
-  flushPendingAlignment();
   MCStreamer::emitValueImpl(Value, Size, Loc);
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);
@@ -656,7 +639,6 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 }
 
 void SystemZHLASMAsmStreamer::finishImpl() {
-  flushPendingAlignment();
   for (auto &Symbol : getAssembler().symbols()) {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;

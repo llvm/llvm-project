@@ -3,7 +3,7 @@
 define i32 @leaf(i32 signext %arg) {
 ; CHECK:      * @leaf
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_leaf_0 DS 0Q
+; CHECK-NEXT: L#EPM_leaf_0 DS 0B
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -28,7 +28,7 @@ entry:
 define i32 @nonleaf(i32 signext %arg) {
 ; CHECK:      * @nonleaf
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_nonleaf_0 DS 0Q
+; CHECK-NEXT: L#EPM_nonleaf_0 DS 0B
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -55,7 +55,7 @@ entry:
 define i32 @withalloca(i32 signext %arg) {
 ; CHECK:      * @withalloca
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_withalloca_0 DS 0Q
+; CHECK-NEXT: L#EPM_withalloca_0 DS 0B
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -83,8 +83,9 @@ entry:
 
 declare i32 @other(ptr, i32)
 
-; CHECK:      * PPA1
-; CHECK-NEXT: L#PPA1_leaf_0 DS 0H
+; CHECK:      DS 0H
+; CHECK-NEXT: * PPA1
+; CHECK-NEXT: L#PPA1_leaf_0 DS 0B
 ; CHECK-NEXT: * Version
 ; CHECK-NEXT:  DC XL1'02'
 ; CHECK-NEXT: * LE Signature X'CE'
@@ -121,8 +122,9 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL4'93858186'
 ; CHECK-NEXT:  DC 2XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_leaf_0-L#PPA1_leaf_0)
+; CHECK-NEXT:  DS 0H
 ; CHECK-NEXT: * PPA1
-; CHECK-NEXT: L#PPA1_nonleaf_0 DS 0H
+; CHECK-NEXT: L#PPA1_nonleaf_0 DS 0B
 ; CHECK-NEXT: * Version
 ; CHECK-NEXT:  DC XL1'02'
 ; CHECK-NEXT: * LE Signature X'CE'
@@ -161,8 +163,9 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL7'95969593858186'
 ; CHECK-NEXT:  DC 3XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_nonleaf_0-L#PPA1_nonleaf_0)
+; CHECK-NEXT:  DS 0H
 ; CHECK-NEXT: * PPA1
-; CHECK-NEXT: L#PPA1_withalloca_0 DS 0H
+; CHECK-NEXT: L#PPA1_withalloca_0 DS 0B
 ; CHECK-NEXT: * Version
 ; CHECK-NEXT:  DC XL1'02'
 ; CHECK-NEXT: * LE Signature X'CE'
@@ -206,8 +209,9 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC A(L#EPM_withalloca_0-L#PPA1_withalloca_0)
 
 ; Attribute "zos-ppa1-name"="" removes the function name from PPA1.
-; CHECK: * PPA1
-; CHECK-NEXT: L#PPA1_no_name_0 DS 0H
+; CHECK:  DS 0H
+; CHECK-NEXT: * PPA1
+; CHECK-NEXT: L#PPA1_no_name_0 DS 0B
 ; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT:  DC XL1'80'
 ; CHECK-NEXT: * Length/4 of Parms

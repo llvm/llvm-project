@@ -31,7 +31,7 @@
 ; CHECK: * A(PPA2-CELQSTRT)
 ; CHECK:  DC AD(L#PPA2-CELQSTRT)
 
-; CHECK: L#EPM_void_test_0 DS 0Q
+; CHECK: L#EPM_void_test_0 DS 0B
 ; CHECK: * Offset to PPA1
 ; CHECK:  DC A(L#PPA1_void_test_0-L#EPM_void_test_0)
  
