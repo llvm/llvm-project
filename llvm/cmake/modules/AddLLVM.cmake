@@ -2725,6 +2725,8 @@ function(llvm_add_tool_symlink project link_name target)
     if ((TOOL_IS_TOOLCHAIN OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY) AND LLVM_BUILD_TOOLS)
       llvm_install_symlink("${project}" ${link_name} ${target})
     endif()
+    set_target_properties(${target_name}
+      PROPERTIES TARGET_FILE "${output_path}")
   endif()
 endfunction()
 
@@ -2969,7 +2971,10 @@ function(get_host_tool_path tool_name setting_name exe_var_name target_var_name)
     # Driver-built tools set this property in llvm_add_tool because their
     # targets are utilities, not executable targets.
     get_target_property(exe_name ${tool_name} LLVM_TOOL_EXECUTABLE)
-    if(NOT exe_name)
+    if (NOT exe_name)
+      get_target_property(exe_name ${tool_name} TARGET_FILE)
+    endif()
+    if (NOT exe_name)
       set(exe_name $<TARGET_FILE:${tool_name}>)
     endif()
     set(target_name ${tool_name})
