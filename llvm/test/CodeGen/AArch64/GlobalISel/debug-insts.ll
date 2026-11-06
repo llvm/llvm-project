@@ -53,6 +53,51 @@ define void @debug_value(i32 %in) #0 !dbg !16 {
   ret void
 }
 
+; CHECK-LABEL: name: debug_declare_addrspacecast
+; CHECK: stack:
+; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
+; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
+define void @debug_declare_addrspacecast(i32 %in) #0 !dbg !19 {
+entry:
+  %in.addr = alloca i32, align 4
+  %in.cast = addrspacecast ptr %in.addr to ptr addrspace(1)
+  store i32 %in, ptr addrspace(1) %in.cast, align 4
+  call void @llvm.dbg.declare(metadata ptr addrspace(1) %in.cast, metadata !20, metadata !DIExpression()), !dbg !21
+  ret void, !dbg !21
+}
+
+; CHECK-LABEL: name: debug_declare_zero_gep
+; CHECK: stack:
+; CHECK:    - { id: {{.*}}, name: s, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
+; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
+define void @debug_declare_zero_gep(i32 %in) #0 !dbg !22 {
+entry:
+  %s = alloca { i32, i32 }, align 4
+  %f = getelementptr inbounds { i32, i32 }, ptr %s, i32 0, i32 0
+  store i32 %in, ptr %f, align 4
+  call void @llvm.dbg.declare(metadata ptr %f, metadata !23, metadata !DIExpression()), !dbg !24
+  ret void, !dbg !24
+}
+
+; CHECK-LABEL: name: debug_declare_bitcast
+; CHECK: stack:
+; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
+; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
+define void @debug_declare_bitcast(i32 %in) #0 !dbg !25 {
+entry:
+  %in.addr = alloca i32, align 4
+  %in.cast = bitcast ptr %in.addr to ptr
+  store i32 %in, ptr %in.cast, align 4
+  call void @llvm.dbg.declare(metadata ptr %in.cast, metadata !26, metadata !DIExpression()), !dbg !27
+  ret void, !dbg !27
+}
+
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
@@ -80,3 +125,12 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !16 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !17 = !DILocalVariable(name: "in", arg: 1, scope: !16, file: !1, line: 1, type: !10)
 !18 = !DILocation(line: 1, column: 14, scope: !16)
+!19 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!20 = !DILocalVariable(name: "in", arg: 1, scope: !19, file: !1, line: 1, type: !10)
+!21 = !DILocation(line: 1, column: 14, scope: !19)
+!22 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!23 = !DILocalVariable(name: "in", arg: 1, scope: !22, file: !1, line: 1, type: !10)
+!24 = !DILocation(line: 1, column: 14, scope: !22)
+!25 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!26 = !DILocalVariable(name: "in", arg: 1, scope: !25, file: !1, line: 1, type: !10)
+!27 = !DILocation(line: 1, column: 14, scope: !25)

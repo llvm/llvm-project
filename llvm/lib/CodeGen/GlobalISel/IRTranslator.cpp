@@ -4714,7 +4714,8 @@ void IRTranslatorImpl::translateDbgDeclareRecord(
 
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  auto AI = dyn_cast<AllocaInst>(Address);
+  // Look through casts, e.g. an addrspacecast of the alloca.
+  auto *AI = dyn_cast<AllocaInst>(Address->stripPointerCasts());
   if (AI && AI->isStaticAlloca()) {
     // Static allocas are tracked at the MF level, no need for DBG_VALUE
     // instructions (in fact, they get ignored if they *do* exist).
