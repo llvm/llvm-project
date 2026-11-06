@@ -410,9 +410,9 @@ defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
-defm SPV_KHR_quad_control : ExtensionOperand<143, [EnvVulkan]>;
-defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<144, [EnvVulkan]>;
 defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
+defm SPV_KHR_quad_control : ExtensionOperand<144, [EnvVulkan]>;
+defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
