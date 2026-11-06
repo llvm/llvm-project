@@ -40,7 +40,6 @@ private:
 
   ValueObject *m_len = nullptr;
   enum class VectorLayout : bool { Pointer, Size };
-  VectorLayout m_layout;
   CompilerType m_element_type;
   uint32_t m_element_size = 0;
 };
@@ -61,13 +60,6 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::
   // their parent's life cycle
   // delete m_start;
   // delete m_len;
-}
-
-static llvm::Expected<uint32_t> GetNumChildren(ValueObject *size) {
-  if (!size->GetCompilerType().IsInteger())
-    return llvm::createStringError(
-        "size data member must be a built-in integer type");
-  return size->GetValueAsUnsigned(0);
 }
 
 llvm::Expected<uint32_t>
