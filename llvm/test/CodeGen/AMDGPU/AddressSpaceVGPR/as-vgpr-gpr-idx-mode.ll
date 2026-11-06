@@ -91,3 +91,104 @@ define i32 @load_i32_divergent(ptr addrspace(13) %p) {
   %v = load i32, ptr addrspace(13) %p, align 4
   ret i32 %v
 }
+
+; Consecutive accesses with the same index and mode share one mode switch.
+; GlobalISel does not fold the offset, so each of its accesses has its own index.
+define i32 @two_loads(ptr addrspace(13) inreg %p) {
+; GFX9-SDAG-LABEL: two_loads:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX9-SDAG-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: two_loads:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_lshr_b32 s1, s0, 2
+; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, 8
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s1, gpr_idx(SRC0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %q = getelementptr inbounds i32, ptr addrspace(13) %p, i32 2
+  %a = load i32, ptr addrspace(13) %p, align 4
+  %b = load i32, ptr addrspace(13) %q, align 4
+  %s = add i32 %a, %b
+  ret i32 %s
+}
+
+define void @two_stores(ptr addrspace(13) inreg %p, i32 %v, i32 %w) {
+; GFX9-SDAG-LABEL: two_stores:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: two_stores:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_add_u32 s1, s0, 8
+; GFX9-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    s_lshr_b32 s0, s1, 2
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %q = getelementptr inbounds i32, ptr addrspace(13) %p, i32 2
+  store i32 %v, ptr addrspace(13) %p, align 4
+  store i32 %w, ptr addrspace(13) %q, align 4
+  ret void
+}
+
+; A load and a store need different modes, so each keeps its own switch.
+define void @load_then_store(ptr addrspace(13) inreg %p, i32 %v) {
+; GFX9-SDAG-LABEL: load_then_store:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX9-SDAG-NEXT:    v_add_u32_e32 v0, v1, v0
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: load_then_store:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_lshr_b32 s1, s0, 2
+; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, 8
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s1, gpr_idx(SRC0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, v1, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %q = getelementptr inbounds i32, ptr addrspace(13) %p, i32 2
+  %a = load i32, ptr addrspace(13) %p, align 4
+  %s = add i32 %a, %v
+  store i32 %s, ptr addrspace(13) %q, align 4
+  ret void
+}
