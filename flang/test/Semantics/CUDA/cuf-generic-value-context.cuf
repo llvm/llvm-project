@@ -1,0 +1,175 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/body.cuf -o - | FileCheck %s --check-prefix=BODY
+! RUN: not bbc -fcuda -emit-hlfir %t/headers.cuf -o - 2>&1 | FileCheck %s --check-prefix=HEADER
+! RUN: not bbc -fcuda -emit-hlfir %t/direct.cuf -o - 2>&1 | FileCheck %s --check-prefix=DIRECT
+! RUN: bbc -fcuda -fopenacc -emit-hlfir %t/acc-body.cuf -o - | FileCheck %s --check-prefix=ACC-BODY
+! RUN: not bbc -fcuda -emit-hlfir %t/acc-body.cuf -o - 2>&1 | FileCheck %s --check-prefix=ACC-HOST
+! RUN: not bbc -fcuda -fopenacc -emit-hlfir %t/acc-headers.cuf -o - 2>&1 | FileCheck %s --check-prefix=ACC-HEADER
+
+!--- body.cuf
+subroutine kernel_values(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  ! BODY-LABEL: func.func @_QPkernel_values
+  ! BODY: fir.call @_QPdevice_value
+  !$cuf kernel do <<<*,*>>>
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine
+
+subroutine inner_bounds(x, n)
+  integer :: n, i, j
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  ! The unassociated inner loop's bounds execute on the GPU too.
+  ! BODY-LABEL: func.func @_QPinner_bounds
+  ! BODY: fir.call @_QPdevice_value
+  !$cuf kernel do(1) <<<*,*>>>
+  do i = 1, n
+    do j = 1, choose(x(i))
+      x(i) = x(i) + j
+    end do
+  end do
+end subroutine
+
+subroutine labeled_values(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  ! BODY-LABEL: func.func @_QPlabeled_values
+  ! BODY: fir.call @_QPdevice_value
+  !$cuf kernel do <<<*,*>>>
+  do 10 i = 1, n
+    x(i) = choose(x(i))
+10 continue
+end subroutine
+
+subroutine concurrent_mask(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) pure integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  ! The mask must resolve successfully. Its lowering is a separate concern.
+  ! BODY-LABEL: func.func @_QPconcurrent_mask
+  !$cuf kernel do <<<*,*>>>
+  do concurrent (i = 1:n, choose(x(i)) > 0)
+    x(i) = x(i) + 1
+  end do
+end subroutine
+
+!--- headers.cuf
+! Device storage cannot be loaded for VALUE arguments evaluated by the host.
+! HEADER-COUNT-5: No specific function of generic 'choose' matches the actual arguments
+subroutine kernel_bounds(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  !$cuf kernel do <<<choose(x(1)),*>>>
+  do i = 1, choose(x(2))
+    x(i) = 0
+  end do
+  n = choose(x(1))
+end subroutine
+
+subroutine associated_bounds(x, n)
+  integer :: n, i, j
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  !$cuf kernel do(2) <<<*,*>>>
+  do i = 1, n
+    do j = 1, choose(x(1))
+      x(i) = j
+    end do
+  end do
+end subroutine
+
+subroutine concurrent_bounds(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) pure integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  !$cuf kernel do <<<*,*>>>
+  do concurrent (i = 1:n:choose(x(1)))
+    x(i) = 0
+  end do
+end subroutine
+
+!--- direct.cuf
+subroutine direct_header(x, n, h)
+  integer :: n, i, h
+  integer, device :: x(n)
+  interface
+    integer function host_grid(a)
+      integer, device :: a
+    end function
+  end interface
+  ! Recording a CUF body must preserve direct-call checking in its directive.
+  ! DIRECT: dummy argument 'a=' has ATTRIBUTES(DEVICE) but its associated actual argument has no CUDA data attribute
+  !$cuf kernel do <<<host_grid(h),*>>>
+  do i = 1, n
+    x(i) = 0
+  end do
+end subroutine
+
+!--- acc-body.cuf
+subroutine acc_values(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  ! Preserve explicit DEVICE loads by VALUE in OpenACC compute bodies.
+  ! ACC-BODY-LABEL: func.func @_QPacc_values
+  ! ACC-BODY: fir.call @_QPdevice_value
+  ! ACC-HOST: No specific function of generic 'choose' matches the actual arguments
+  !$acc parallel loop deviceptr(x)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine
+
+!--- acc-headers.cuf
+! ACC-HEADER-COUNT-2: No specific function of generic 'choose' matches the actual arguments
+subroutine acc_bounds(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+  !$acc parallel loop deviceptr(x) num_gangs(choose(x(1)))
+  do i = 1, choose(x(2))
+    x(i) = 0
+  end do
+end subroutine

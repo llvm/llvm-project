@@ -1,0 +1,218 @@
+! RUN: split-file %s %t
+! RUN: not bbc -fcuda -emit-hlfir %t/single.cuf -o - 2>&1 | FileCheck %s --check-prefix=SINGLE
+! RUN: not bbc -fcuda -emit-hlfir %t/multiple.cuf -o - 2>&1 | FileCheck %s --check-prefix=MULTIPLE
+! RUN: not bbc -fcuda -emit-hlfir %t/later-argument.cuf -o - 2>&1 | FileCheck %s --check-prefix=LATER
+! RUN: not bbc -fcuda -emit-hlfir %t/ignored-memory.cuf -o - 2>&1 | FileCheck %s --check-prefix=IGNORED
+! RUN: not bbc -fcuda -emit-hlfir %t/value-ambiguity.cuf -o - 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+! RUN: bbc -fcuda -emit-hlfir %t/finite.cuf -o - | FileCheck %s --check-prefix=FINITE
+! RUN: bbc -fcuda -emit-hlfir %t/eligible.cuf -o - | FileCheck %s --check-prefix=ELIGIBLE
+
+! Interface compatibility checking skips CUDA data attributes for VALUE
+! dummies. CUDA matching distances must still reject an incompatible pair,
+! even when there is only one specific or all specifics are incompatible.
+
+!--- single.cuf
+subroutine single(x)
+  integer, device :: x
+  interface choose_single
+    subroutine host_value(y)
+      integer, value :: y
+    end subroutine
+  end interface
+  ! SINGLE: No specific subroutine of generic 'choose_single' matches the actual arguments
+  call choose_single(x)
+end subroutine
+
+!--- eligible.cuf
+! Valid CUDA associations must receive finite scores before INF is rejected.
+attributes(device) subroutine device_caller(value_arg, device_arg)
+  integer, value :: value_arg
+  integer, device :: device_arg
+  interface by_value
+    attributes(device) subroutine device_value(x)
+      integer, value :: x
+    end subroutine
+  end interface
+  interface by_reference
+    attributes(device) subroutine device_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  ! ELIGIBLE-LABEL: func.func @_QPdevice_caller
+  ! ELIGIBLE: fir.call @_QPdevice_value
+  ! ELIGIBLE: fir.call @_QPdevice_reference
+  ! ELIGIBLE: fir.call @_QPdevice_reference
+  call by_value(device_arg)
+  call by_reference(value_arg)
+  call by_reference(1)
+end subroutine
+
+attributes(device) integer function device_result() result(r)
+  interface by_reference
+    attributes(device) subroutine device_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  ! ELIGIBLE-LABEL: func.func @_QPdevice_result
+  ! ELIGIBLE: fir.call @_QPdevice_reference
+  call by_reference(r)
+  r = 1
+end function
+
+subroutine pinned_caller(x)
+  integer, allocatable, pinned :: x(:)
+  interface choose_pinned
+    subroutine pinned_host(a)
+      integer :: a(:)
+    end subroutine
+    subroutine pinned_device(a)
+      integer, device :: a(:)
+    end subroutine
+  end interface
+  ! ELIGIBLE-LABEL: func.func @_QPpinned_caller
+  ! ELIGIBLE: fir.call @_QPpinned_host
+  call choose_pinned(x)
+end subroutine
+
+subroutine host_caller(x)
+  integer :: x
+  interface choose_both
+    attributes(host,device) subroutine both_reference(a)
+      integer :: a
+    end subroutine
+  end interface
+  ! ELIGIBLE-LABEL: func.func @_QPhost_caller
+  ! ELIGIBLE: fir.call @_QPboth_reference
+  call choose_both(x)
+end subroutine
+
+subroutine ignored_host(x)
+  integer, device :: x
+  interface choose_host
+    subroutine host_reference(a)
+      integer :: a
+      !dir$ ignore_tkr(d) a
+    end subroutine
+  end interface
+  ! ELIGIBLE-LABEL: func.func @_QPignored_host
+  ! ELIGIBLE: fir.call @_QPhost_reference
+  call choose_host(x)
+end subroutine
+
+attributes(device) subroutine managed_caller(x)
+  integer, managed :: x
+  interface choose_memory
+    attributes(device) subroutine managed_specific(a)
+      integer, managed :: a
+    end subroutine
+    attributes(device) subroutine device_specific(a)
+      integer, device :: a
+    end subroutine
+  end interface
+  ! Finite memory-table preferences survive device-callee normalization.
+  ! ELIGIBLE-LABEL: func.func @_QPmanaged_caller
+  ! ELIGIBLE: fir.call @_QPmanaged_specific
+  call choose_memory(x)
+end subroutine
+
+!--- value-ambiguity.cuf
+attributes(device) subroutine value_ambiguity(x)
+  integer, device :: x
+  interface choose_value
+    attributes(device) subroutine value_specific(a)
+      integer, value :: a
+    end subroutine
+    attributes(device) subroutine reference_specific(a)
+      integer, device :: a
+    end subroutine
+  end interface
+  ! Both candidates have finite exact matches in CUDA device code.
+  ! AMBIGUOUS: The actual arguments to the generic procedure 'choose_value' matched multiple specific procedures
+  call choose_value(x)
+end subroutine
+
+!--- ignored-memory.cuf
+subroutine ignored_memory(x)
+  integer, device :: x
+  interface choose_managed
+    subroutine managed_reference(a)
+      integer, managed :: a
+      !dir$ ignore_tkr(d) a
+    end subroutine
+  end interface
+  ! IGNORE_TKR(D) does not make device storage managed storage.
+  ! IGNORED: No specific subroutine of generic 'choose_managed' matches the actual arguments
+  call choose_managed(x)
+end subroutine
+
+attributes(device) subroutine managed_device_caller(x)
+  integer, device :: x
+  interface choose_managed_device
+    attributes(device) subroutine managed_device(a)
+      integer, managed :: a
+    end subroutine
+  end interface
+  ! A CUDA device callee does not erase an explicit MANAGED requirement.
+  ! IGNORED: No specific subroutine of generic 'choose_managed_device' matches the actual arguments
+  call choose_managed_device(x)
+end subroutine
+
+!--- multiple.cuf
+subroutine multiple(x, y)
+  integer, device :: x, y
+  interface choose_multiple
+    subroutine host_first(a, b)
+      integer, value :: a
+      integer, device :: b
+    end subroutine
+    subroutine host_second(a, b)
+      integer, device :: a
+      integer, value :: b
+    end subroutine
+  end interface
+  ! An all-infinite set has no match, rather than an ambiguous match.
+  ! MULTIPLE: No specific subroutine of generic 'choose_multiple' matches the actual arguments
+  call choose_multiple(x, y)
+end subroutine
+
+!--- later-argument.cuf
+subroutine later_argument(x, d)
+  integer :: x
+  integer, device :: d
+  interface choose_later
+    subroutine host_pair(y, z)
+      integer, value :: y, z
+    end subroutine
+  end interface
+  ! A finite distance for the first argument does not make the specific valid.
+  ! LATER: No specific subroutine of generic 'choose_later' matches the actual arguments
+  call choose_later(x, d)
+end subroutine
+
+!--- finite.cuf
+subroutine finite(x, y)
+  integer, device :: x, y
+  interface choose_finite
+    subroutine host_first(a, b)
+      integer, value :: a
+      integer, device :: b
+    end subroutine
+    subroutine host_second(a, b)
+      integer, device :: a
+      integer, value :: b
+    end subroutine
+    subroutine device_pair(a, b)
+      integer, device :: a, b
+    end subroutine
+  end interface
+  interface choose_reversed
+    procedure :: device_pair, host_second, host_first
+  end interface
+  ! Rejecting infinite candidates must allow a later finite candidate to win.
+  ! FINITE-LABEL: func.func @_QPfinite
+  ! FINITE: fir.call @_QPdevice_pair
+  ! FINITE: fir.call @_QPdevice_pair
+  ! FINITE-NOT: fir.call
+  call choose_finite(x, y)
+  call choose_reversed(x, y)
+end subroutine
