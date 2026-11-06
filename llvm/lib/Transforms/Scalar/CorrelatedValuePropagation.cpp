@@ -25,6 +25,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -760,6 +761,27 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   return true;
 }
 
+/// Rewrite debug users of a context-only rewrite so they still describe the
+/// original computation. \c dropDbgRecords() is the wrong tool: it deletes
+/// records positionally attached to \p I, not records that use \p I.
+///
+/// \c salvageDebugInfo encodes sdiv/srem/ashr as DW_OP_div/DW_OP_mod/DW_OP_shra
+/// (and DW_OP_LLVM_convert for salvaged casts). If a user cannot be rewritten
+/// validly, kill it so the location is poison rather than the rewritten value.
+static void salvageOrKillDbgUsers(Instruction &I) {
+  SmallVector<DbgVariableRecord *, 4> DbgUsers;
+  findDbgUsers(&I, DbgUsers);
+  if (DbgUsers.empty())
+    return;
+
+  salvageDebugInfoForDbgValues(I, DbgUsers);
+
+  DbgUsers.clear();
+  findDbgUsers(&I, DbgUsers);
+  for (DbgVariableRecord *DVR : DbgUsers)
+    DVR->setKillLocation();
+}
+
 enum class Domain { NonNegative, NonPositive, Unknown };
 
 static Domain getDomain(const ConstantRange &CR) {
@@ -813,11 +835,11 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
     if (BinOp->getOpcode() == Instruction::SDiv)
       BinOp->setIsExact(Instr->isExact());
 
-  // This narrowing is only valid at the uses of the result. A debug record
-  // can describe the value outside that range, where the narrow computation
-  // does not have the source-level value. Do not transfer those records to the
-  // sign-extended replacement.
-  Instr->dropDbgRecords();
+  // Narrowing is only valid at program uses of the result. Salvage debug
+  // users against the original signed division/remainder (DW_OP_div /
+  // DW_OP_mod, plus DW_OP_LLVM_convert when a cast is salvaged) rather than
+  // transferring them onto the sign-extended narrow value.
+  salvageOrKillDbgUsers(*Instr);
   Instr->replaceAllUsesWith(Sext);
   Instr->eraseFromParent();
   return true;
@@ -1115,10 +1137,10 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
-  // The replacement is equivalent only where LVI proved the operand
-  // non-negative. Debug records may be observed outside that range, where an
-  // arithmetic and logical shift have different values.
-  SDI->dropDbgRecords();
+  // lshr is equivalent only where LVI proved the operand non-negative. Salvage
+  // debug users as an arithmetic shift (DW_OP_shra, plus DW_OP_LLVM_convert
+  // when a cast is salvaged) rather than describing the logical shift.
+  salvageOrKillDbgUsers(*SDI);
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
 
