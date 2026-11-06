@@ -126,7 +126,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   auto *LocalPtrTy = PointerType::get(M.getContext(), LocalAS);
   auto *Slot = new GlobalVariable(
       M, LocalPtrTy, /*isConstant=*/false, GlobalValue::InternalLinkage,
-      UndefValue::get(LocalPtrTy), "__spirv_dynamic_local_memory",
+      PoisonValue::get(LocalPtrTy), "__spirv_dynamic_local_memory",
       /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal, LocalAS);
   Slot->setAlignment(M.getDataLayout().getPointerABIAlignment(LocalAS));
   Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
