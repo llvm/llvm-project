@@ -3504,7 +3504,18 @@ void LoweringPreparePass::runOnOperation() {
   for (mlir::Operation *o : opsToTransform)
     runOnOp(o);
 
+  // Every TLS wrapper, init alias and wrapper call has been built from
+  // 'tls_refs' by now. Nothing after this pass reads it, so drop it to keep a
+  // second run of this pass from building the wrappers again.
+  for (auto globalOp : mlirModule.getOps<cir::GlobalOp>())
+    globalOp.removeTlsRefsAttr();
+
   buildCXXGlobalInitFunc();
+  // The C++20 module initializer has been built from these. Nothing after this
+  // pass reads them, so drop them to keep a second run of this pass from
+  // building it again.
+  mlirModule->removeAttr(CIRDialect::getCXXModuleInitFnNameAttrName());
+  mlirModule->removeAttr(CIRDialect::getCXXModuleImportedInitsAttrName());
   buildCXXGlobalTlsFunc();
   if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();

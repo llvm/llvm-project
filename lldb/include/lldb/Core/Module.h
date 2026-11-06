@@ -29,10 +29,10 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
@@ -1116,7 +1116,7 @@ protected:
 
   /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
   /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
-  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+  llvm::StringSet<> m_prefix_map_search_dirs;
 
   /// Search each registered directory upward for compilation-prefix-map.json
   /// and apply any found mappings to m_source_mappings. Called at most once.
