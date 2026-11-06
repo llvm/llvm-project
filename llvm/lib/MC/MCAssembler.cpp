@@ -904,9 +904,19 @@ void MCAssembler::relaxInstruction(MCFragment &F) {
   F.setInst(Relaxed);
   SmallVector<char, 16> Data;
   SmallVector<MCFixup, 1> Fixups;
-  getEmitter().encodeInstruction(Relaxed, Data, Fixups, *F.getSubtargetInfo());
+  MCSymbol *EndLabel = nullptr;
+  if (!getBackend().expandInstruction(Relaxed, Data, Fixups,
+                                      *F.getSubtargetInfo(), EndLabel))
+    getEmitter().encodeInstruction(Relaxed, Data, Fixups,
+                                   *F.getSubtargetInfo());
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
+  if (EndLabel) {
+    assert(F.getNext() && "Instruction must have a following fragment");
+    EndLabel->setFragment(F.getNext());
+    EndLabel->setOffset(0);
+    registerSymbol(*EndLabel);
+  }
 }
 
 void MCAssembler::relaxLEB(MCFragment &F) {
