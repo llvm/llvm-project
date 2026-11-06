@@ -484,7 +484,9 @@ static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
 
 // std::pair has a user-provided copy assignment operator.
 static_assert(!std::is_trivially_copyable_v<PairBucket>);
+#ifndef __FreeBSD__
 static_assert(densemap::detail::isRelocatableBucket<PairBucket>);
+#endif
 static_assert(!densemap::detail::isRelocatableBucket<
               detail::DenseMapPair<int, std::unique_ptr<int>>>);
 

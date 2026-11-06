@@ -92,19 +92,19 @@ define internal void @can_infer_cmpxchg(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_cmpxchg(
 ; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr addrspace(1) [[TMP1]], i32 0, i32 4 monotonic monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr addrspace(1) [[TMP1]], i32 0, i32 4 monotonic monotonic, align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_1:%.*]] = cmpxchg ptr addrspace(1) [[TMP2]], i32 0, i32 5 acq_rel monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_1:%.*]] = cmpxchg ptr addrspace(1) [[TMP2]], i32 0, i32 5 acq_rel monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_2:%.*]] = cmpxchg ptr addrspace(1) [[TMP3]], i32 0, i32 6 acquire monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_2:%.*]] = cmpxchg ptr addrspace(1) [[TMP3]], i32 0, i32 6 acquire monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_3:%.*]] = cmpxchg ptr addrspace(1) [[TMP4]], i32 0, i32 7 release monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_3:%.*]] = cmpxchg ptr addrspace(1) [[TMP4]], i32 0, i32 7 release monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_4:%.*]] = cmpxchg ptr addrspace(1) [[TMP5]], i32 0, i32 8 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_4:%.*]] = cmpxchg ptr addrspace(1) [[TMP5]], i32 0, i32 8 seq_cst monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[CMPXCHG_5:%.*]] = cmpxchg weak ptr addrspace(1) [[TMP6]], i32 0, i32 9 seq_cst monotonic, align 4
-; CHECK-NEXT:    [[CMPXCHG_6:%.*]] = cmpxchg volatile ptr [[WORD]], i32 0, i32 10 seq_cst monotonic, align 4
-; CHECK-NEXT:    [[CMPXCHG_7:%.*]] = cmpxchg weak volatile ptr [[WORD]], i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_5:%.*]] = cmpxchg weak ptr addrspace(1) [[TMP6]], i32 0, i32 9 seq_cst monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[CMPXCHG_6:%.*]] = cmpxchg volatile ptr [[WORD]], i32 0, i32 10 seq_cst monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[CMPXCHG_7:%.*]] = cmpxchg weak volatile ptr [[WORD]], i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %cmpxchg.0 = cmpxchg ptr %word, i32 0, i32 4 monotonic monotonic, align 4
@@ -146,25 +146,25 @@ define internal void @can_infer_atomicrmw(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_atomicrmw(
 ; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[TMP1]], i32 12 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[TMP1]], i32 12 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr addrspace(1) [[TMP2]], i32 13 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr addrspace(1) [[TMP2]], i32 13 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr addrspace(1) [[TMP3]], i32 14 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr addrspace(1) [[TMP3]], i32 14 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr addrspace(1) [[TMP4]], i32 15 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr addrspace(1) [[TMP4]], i32 15 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr addrspace(1) [[TMP5]], i32 16 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr addrspace(1) [[TMP5]], i32 16 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr addrspace(1) [[TMP6]], i32 17 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr addrspace(1) [[TMP6]], i32 17 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr addrspace(1) [[TMP7]], i32 18 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr addrspace(1) [[TMP7]], i32 18 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr addrspace(1) [[TMP8]], i32 19 monotonic, align 4
-; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[WORD]], i32 20 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr addrspace(1) [[TMP8]], i32 19 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[WORD]], i32 20 monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr addrspace(1) [[TMP10]], i32 21 syncscope("singlethread") monotonic, align 4
-; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[WORD]], i32 22 syncscope("singlethread") monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr addrspace(1) [[TMP10]], i32 21 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[WORD]], i32 22 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %atomicrmw.xchg = atomicrmw xchg ptr %word, i32 12 monotonic, align 4

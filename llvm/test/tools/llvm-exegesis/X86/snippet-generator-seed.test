@@ -1,5 +1,3 @@
-# REQUIRES: exegesis-can-measure-latency, x86_64-linux
-
 # Check that the snippet we generate is exactly the same between runs when we
 # use a fixed RNG seed.
 
@@ -9,8 +7,8 @@
 # CHECK: mode:            latency
 # CHECK: key:
 # CHECK:   instructions:
-# CHECK:     - 'ADD64rr RCX RCX RAX'
+# CHECK:     - 'ADD64rr R12 R12 R10'
 # CHECK:   config:          ''
 # CHECK:   register_initial_values:
-# CHECK:     - 'RCX=0x0'
-# CHECK:     - 'RAX=0x0'
+# CHECK:     - 'R12=0x0'
+# CHECK:     - 'R10=0x0'

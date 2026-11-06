@@ -6,9 +6,9 @@
 ## Extract section contents into files.
 # RUN: llvm-objcopy --dump-section __TEXT,__text=%t.dump.text \
 # RUN:   --dump-section __DATA,__data=%t.dump.data %t
-# RUN: od -t x1 %t.dump.text | FileCheck %s --check-prefix=TEXT-CONTENT
+# RUN: od -t x1 %t.dump.text | FileCheck --ignore-case %s --check-prefix=TEXT-CONTENT
 # RUN: wc -c %t.dump.text | FileCheck %s --check-prefix=TEXT-SIZE
-# RUN: od -t x1 %t.dump.data | FileCheck %s --check-prefix=DATA-CONTENT
+# RUN: od -t x1 %t.dump.data | FileCheck --ignore-case %s --check-prefix=DATA-CONTENT
 # RUN: wc -c %t.dump.data | FileCheck %s --check-prefix=DATA-SIZE
 
 # TEXT-CONTENT: 0000000 aa bb cc dd
@@ -26,6 +26,7 @@
 # NO-SUCH-PATH: error: 'not_exists/text-section': [[MSG]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

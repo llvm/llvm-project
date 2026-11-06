@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++98 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=60 -ferror-limit 100 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++98 -o - %s -Wuninitialized

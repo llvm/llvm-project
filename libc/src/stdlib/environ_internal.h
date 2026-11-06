@@ -140,6 +140,11 @@ public:
   // compacts the array. Returns 0 on success (including if the variable
   // was not found), -1 on allocation failure during array transition.
   int unset(cpp::string_view name);
+
+  // Clear all environment variables and set environ to NULL.
+  // Frees the pointer array, leaving string buffers intact so that
+  // existing getenv pointers remain valid.  Returns 0 on success.
+  int clear();
 };
 
 } // namespace internal

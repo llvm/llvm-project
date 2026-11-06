@@ -4275,7 +4275,7 @@ define double @v_fminimum3_f64_const0(double %b, double %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -4283,7 +4283,7 @@ define double @v_fminimum3_f64_const0(double %b, double %c) {
 ; GFX1170-LABEL: v_fminimum3_f64_const0:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
@@ -4320,7 +4320,7 @@ define double @v_fminimum3_f64__const2(double %a, double %b) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: v_fminimum3_f64__const2:
@@ -4328,7 +4328,7 @@ define double @v_fminimum3_f64__const2(double %a, double %b) {
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fminimum3_f64__const2:
@@ -4442,17 +4442,17 @@ define double @v_fminimum3_f64_const1_const2(double %a) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_minimum_f64 v[0:1], 0x40300000, v[0:1]
+; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40300000
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: v_fminimum3_f64_const1_const2:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_minimum_f64 v[0:1], 0x40200000, v[0:1]
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40200000
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-NEXT:    v_minimum_f64 v[0:1], 0x40300000, v[0:1]
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], 0x40300000
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fminimum3_f64_const1_const2:

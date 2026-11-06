@@ -36,14 +36,23 @@ namespace llvm {
 class AssumptionCache;
 class Constant;
 class DataLayout;
+class DebugLoc;
+class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
+class LoadInst;
+class Loop;
+class PHINode;
+class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+class SLPAnalysisCache;
 
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
@@ -58,6 +67,14 @@ bool isConstant(Value *V);
 /// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
+/// \returns True if \p V is an integer binary operator, which gives an undef
+/// result for the undef operands: neither a shift nor a division.
+bool isUndefTolerantBinOp(const Value *V);
+
+/// \returns the load operand of the undef tolerant binary operator \p V, if
+/// any.
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V);
 
 /// \returns the opcode of the combines emitted for a reassociated node:
 /// subtract chains regroup their positive and negative operand columns with
@@ -274,7 +291,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 /// equivalent shuffle mask.
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC);
+                     AssumptionCache *AC, SLPAnalysisCache &Cache);
 
 /// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
@@ -342,6 +359,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 /// the loads \p VL.
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
+
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.
@@ -497,10 +518,10 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
 SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
                                 unsigned NumElts, unsigned BytesPerLane);
 
-/// Builds the bitfield packing of X per the layout and the shift width.
-/// \p NumInsts returns the number of emitted instructions.
+/// Builds the bitfield packing of X into \p ResultTy per the layout and the
+/// shift width. \p NumInsts returns the number of emitted instructions.
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth, unsigned &NumInsts);
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts);
 
 /// The debug values of the erased \p From are kept on its replacement \p To.
 /// A record placed before \p To is cloned right after it, while the original
@@ -508,6 +529,28 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
 /// \p To. The clone is skipped if it would pass a record of the same variable,
 /// otherwise the variable would show a stale value.
 void redirectDbgValues(Instruction &From, Value &To);
+/// \returns true if \p IE1 is inserted before \p IE2 in their build-vector
+/// chain. Both must have constant insert indices and belong to one chain.
+bool isFirstInsertElement(const InsertElementInst *IE1,
+                          const InsertElementInst *IE2);
+
+/// \returns the debug location of \p PN, or an unknown location if it has
+/// none.
+DebugLoc getDebugLocFromPHI(const PHINode &PN);
+
+/// \returns the number of elements of the homogeneous aggregate built by
+/// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
+/// a homogeneous aggregate.
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
+/// \returns the innermost loop starting from \p L for which at least one value
+/// in \p VL is not loop-invariant.
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
+
+/// \returns an estimated trip count for \p L, bounded by the loop-aware budget
+/// \p LoopAwareTripCount. Returns 1 when the budget is 0.
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount);
 
 } // namespace llvm::slpvectorizer
 

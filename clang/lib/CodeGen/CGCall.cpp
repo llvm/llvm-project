@@ -1097,7 +1097,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
 
   // Lookup or create unique function info.
-  llvm::FoldingSetNodeID ID;
   bool isInstanceMethod =
       (opts & FnInfoOpts::IsInstanceMethod) == FnInfoOpts::IsInstanceMethod;
   bool isChainCall =
@@ -1148,7 +1147,19 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     //
     // For CPU targets, this currently only works for OpenCL.
     assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
-    computeSPIRKernelABIInfo(CGM, *FI);
+    // SPIR-V lowers OpenCL types to target extension types, which the ABI
+    // library cannot tell apart from the kernel pointers it coerces yet, so
+    // such kernels keep Clang's own lowering.
+    auto IsSPIRVOpenCLType = [&](const CGFunctionInfoArgInfo &Arg) {
+      return CGM.getTriple().isSPIRV() &&
+             Arg.type.getTypePtr()->isOpenCLSpecificType();
+    };
+    if (CC == llvm::CallingConv::SPIR_KERNEL &&
+        CGM.shouldUseLLVMABILowering(CC) &&
+        llvm::none_of(FI->arguments(), IsSPIRVOpenCLType))
+      CGM.computeABIInfoUsingLib(*FI);
+    else
+      computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering(CC)) {
@@ -4729,8 +4740,9 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
     assert(cleanup.isValid() &&
            "cleanup for callee-destructed param not recorded");
-    // This unreachable is a temporary marker which will be removed later.
-    llvm::Instruction *isActive = Builder.CreateUnreachable();
+    // This load is a temporary marker which will be removed later.
+    llvm::Instruction *isActive =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
     args.addArgCleanupDeactivation(cleanup, isActive);
   }
 }
@@ -5145,10 +5157,8 @@ void CodeGenFunction::EmitCallArgs(
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight =
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
-          ? Order == EvaluationOrder::ForceLeftToRight
-          : Order != EvaluationOrder::ForceRightToLeft;
+  bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      Order, CGM.getTarget().getCXXABI());
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
@@ -5444,16 +5454,26 @@ CodeGenFunction::getBundlesForFunclet(llvm::Value *Callee) {
   return BundleList;
 }
 
+static bool isConvergentIntrinsic(const llvm::Function *F) {
+  assert(F->isIntrinsic() && "expected an intrinsic declaration");
+  return F->isConvergent();
+}
+
 /// Emits a simple call (never an invoke) to the given runtime function.
 llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  ArrayRef<llvm::Value *> args,
-                                                 const llvm::Twine &name) {
-  llvm::CallInst *call = Builder.CreateCall(
-      callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+                                                 const llvm::Twine &name,
+                                                 bool IsConvergent) {
+  SmallVector<llvm::OperandBundleDef> BundleList =
+      getBundlesForFunclet(callee.getCallee());
+  if (IsConvergent)
+    addConvergenceControlBundle(BundleList);
 
-  if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(call));
+  llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList, name);
+  call->setCallingConv(getRuntimeCC());
+  assert((IsConvergent == call->isConvergent() ||
+          (!IsConvergent && !CGM.shouldEmitConvergenceTokens())) &&
+         "runtime call convergence doesn't match its declaration");
   return call;
 }
 
@@ -5474,11 +5494,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5491,11 +5510,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
     ArgTys.push_back(Arg->getType());
   llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
       &CGM.getModule(), ID, RetTy, ArgTys);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.
@@ -5803,7 +5821,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
+  SmallVector<llvm::Value *, 2> CallLifetimeEndAfterCall;
 
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -5958,7 +5976,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // Emit lifetime markers for the temporary alloca and add cleanup code to
       // emit the end lifetime marker after the call.
       if (EmitLifetimeStart(AI.getPointer()))
-        CallLifetimeEndAfterCall.emplace_back(AI);
+        CallLifetimeEndAfterCall.push_back(AI.getPointer());
 
       // Generate the copy.
       I->copyInto(*this, AI);
@@ -6311,11 +6329,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Remove call-site convergent attribute if requested.
-  if (InNoConvergentAttributedStmt)
-    Attrs =
-        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
-
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
@@ -6387,6 +6400,26 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+
+  if (Attrs.hasFnAttr(llvm::Attribute::Convergent)) {
+    addConvergenceControlBundle(BundleList);
+
+    // Remove call-site convergent attribute if requested, unless the call must
+    // stay convergent to match its convergence token and the callee doesn't
+    // already make it convergent.
+    //
+    // FIXME: This means [[clang::noconvergent]] can't make an indirect call
+    // non-convergent when using convergence tokens. A call without a token can
+    // later be made direct to a convergent function, which mixes controlled
+    // and uncontrolled convergence and fails the verifier.
+    auto *CalleeFn = dyn_cast<llvm::Function>(CalleePtr);
+    if (InNoConvergentAttributedStmt &&
+        (!CGM.shouldEmitConvergenceTokens() ||
+         (CalleeFn && CalleeFn->isConvergent()))) {
+      Attrs = Attrs.removeFnAttribute(getLLVMContext(),
+                                      llvm::Attribute::Convergent);
+    }
+  }
 
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
@@ -6496,9 +6529,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   if (!CI->getType()->isVoidTy())
     CI->setName("call");
-
-  if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-    CI = addConvergenceControlToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =
@@ -6828,10 +6858,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
-  // Explicitly call CallLifetimeEnd::Emit just to re-use the code even though
-  // we can't use the full cleanup mechanism.
-  for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
-    LifetimeEnd.Emit(*this, /*Flags=*/{});
+  // Emit the end lifetime markers for any temporary allocas created for the
+  // call arguments.
+  for (llvm::Value *LifetimeEndAddr : CallLifetimeEndAfterCall)
+    EmitLifetimeEnd(LifetimeEndAddr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)
