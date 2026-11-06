@@ -240,7 +240,8 @@ static bool isIntrinsicExpansion(Function &F) {
     return true;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
-    return F.getParent()->getTargetTriple().getDXILVersion() <VersionTuple(1, 9);
+    return F.getParent()->getTargetTriple().getDXILVersion() <
+           VersionTuple(1, 9);
   case Intrinsic::dx_fdot:
     return shouldExpandFloatDotIntrinsic(F);
   case Intrinsic::dx_resource_load_rawbuffer:
