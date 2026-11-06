@@ -745,9 +745,9 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
 ; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[40:47], v[56:63], v[16:23]
+; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; GCN-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
 ; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[48:55], v[24:31], v[32:39], v[48:55]
 ; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v72
@@ -1058,9 +1058,9 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
 ; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[40:47], v[56:63], v[16:23]
+; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; GCN-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
 ; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[8:15], v[48:55], v[0:7]
 ; GCN-NEXT:    ds_load_tr16_b128 v[8:11], v72

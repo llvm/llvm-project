@@ -3937,11 +3937,11 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[2:3], v0, v5, v[14:15]
 ; GFX1250-NEXT:    v_mad_u32 v0, v7, v0, v11
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v14, v3 :: v_dual_mov_b32 v9, v2
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[12:13], v[12:13], v[14:15]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_mad_u32 v11, v6, v1, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[12:13], v[12:13], v[14:15]
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[0:1], v1, v5, v[12:13]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[10:11], v[0:1], v[10:11]

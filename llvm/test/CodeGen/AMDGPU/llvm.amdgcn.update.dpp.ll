@@ -342,9 +342,9 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v1, v1
 ; GFX1250-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v2, v1
-; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm

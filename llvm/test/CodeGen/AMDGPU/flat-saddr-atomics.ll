@@ -13276,8 +13276,8 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
-; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[4:5], s0
+; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-SDAG-NEXT:  .LBB110_4: ; %atomicrmw.global
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
@@ -13317,8 +13317,8 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[4:5], s0
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-GISEL-NEXT:  .LBB110_4: ; %atomicrmw.global
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0

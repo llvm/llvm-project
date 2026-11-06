@@ -3425,10 +3425,11 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x4040000040800000
-; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[4:5], 0x400000003f800000
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[4:5], 0x400000003f800000
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -3445,10 +3446,11 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[4:5], 0x400000003f800000
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm

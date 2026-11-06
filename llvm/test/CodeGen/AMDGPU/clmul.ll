@@ -368,8 +368,9 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1250-NEXT:    v_and_b32_e32 v8, 0x88888888, v0
 ; GFX1250-NEXT:    v_mul_lo_u32 v9, v3, v2
 ; GFX1250-NEXT:    v_mul_lo_u32 v13, v3, v6
-; GFX1250-NEXT:    v_mul_lo_u32 v15, v7, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-NEXT:    v_mul_lo_u32 v14, v5, v1
+; GFX1250-NEXT:    v_mul_lo_u32 v15, v7, v2
 ; GFX1250-NEXT:    v_mul_lo_u32 v16, v5, v6
 ; GFX1250-NEXT:    v_mul_lo_u32 v17, v7, v1
 ; GFX1250-NEXT:    v_mul_lo_u32 v10, v5, v4

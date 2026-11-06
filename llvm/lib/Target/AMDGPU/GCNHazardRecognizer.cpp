@@ -288,7 +288,7 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
       SIInstrInfo::isMFMA(MI) || SIInstrInfo::isTRANS(MI))
     return;
 
-  unsigned RepeatRate = TII.getRepeatRate(MI);
+  unsigned RepeatRate = TII.getBlockingCycles(MI);
   if (RepeatRate > 1) {
     // bumpCycle's AdvanceCycle decrements once before the next pick's
     // hazard check (same convention as CyclesUntilTRANS), so to expose
@@ -315,7 +315,7 @@ unsigned GCNHazardRecognizer::checkTRANSHazard(const MachineInstr &MI) const {
 
   if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) &&
       !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI) &&
-      TII.getRepeatRate(MI) > 1)
+      TII.getBlockingCycles(MI) > 1)
     return CyclesUntilTRANS;
 
   return 0;
