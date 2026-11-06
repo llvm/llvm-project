@@ -166,6 +166,27 @@ define double @log_exp2_not_fast(double %x) {
   ret double %log
 }
 
+define double @log_exp10_intrinsic(double %x) {
+; CHECK-LABEL: @log_exp10_intrinsic(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], f0x40026BB1BBB55516
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %exp = call fast double @llvm.exp10(double %x)
+  %log = call fast double @llvm.log.f64(double %exp)
+  ret double %log
+}
+
+define double @log_exp10_intrinsic_not_fast(double %x) {
+; CHECK-LABEL: @log_exp10_intrinsic_not_fast(
+; CHECK-NEXT:    [[EXP:%.*]] = call double @llvm.exp10.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log.f64(double [[EXP]])
+; CHECK-NEXT:    ret double [[LOG]]
+;
+  %exp = call double @llvm.exp10(double %x)
+  %log = call fast double @llvm.log.f64(double %exp)
+  ret double %log
+}
+
 define double @pr43617(double %d, i32 %i, ptr %f) {
 ; CHECK-LABEL: @pr43617(
 ; CHECK-NEXT:  entry:
@@ -194,6 +215,7 @@ declare float @llvm.log10.f32(float)
 declare double @exp(double %x) #0
 declare double @exp2(double) #0
 declare float @exp10f(float) #0
+declare double @llvm.exp10(double) #0
 declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
