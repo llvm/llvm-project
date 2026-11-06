@@ -81,8 +81,8 @@ protected:
 
   void expectAllocation(usm::alloc Kind, size_t Size, size_t Alignment) {
     if (Kind == usm::alloc::host)
-      EXPECT_CALL(Helper.Mock.get(), olMemAllocAlignedHost(_, getOLDevice(),
-                                                           Size, Alignment, _))
+      EXPECT_CALL(Helper.Mock.get(),
+                  olMemAllocAlignedHost(_, getOLDevice(), Size, Alignment, _))
           .WillOnce(DoDefault());
     else
       EXPECT_CALL(Helper.Mock.get(),
@@ -171,11 +171,9 @@ TEST_F(USMAllocatorTest, OverAlignedElement) {
 TEST_F(USMAllocatorTest, ThrowException) {
   mock::MockLiboffload &Mock = Helper.Mock.get();
   EXPECT_CALL(Mock, olMemAllocAlignedHost(_, _, _, _, _))
-      .WillRepeatedly(
-          Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
+      .WillRepeatedly(Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
   EXPECT_CALL(Mock, olMemAllocAligned(_, _, _, _, _, _))
-      .WillRepeatedly(
-          Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
+      .WillRepeatedly(Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
   EXPECT_CALL(Mock, olMemFree(_, _)).Times(0);
 
   auto ExpectMemoryAllocationError = [](auto &&Allocate) {
