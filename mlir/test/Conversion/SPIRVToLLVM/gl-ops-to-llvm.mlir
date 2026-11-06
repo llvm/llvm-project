@@ -468,6 +468,26 @@ spirv.func @atan2(%arg0: f32, %arg1: f32, %arg2: vector<3xf16>, %arg3: vector<3x
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Asinh, spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @asinh_acosh
+spirv.func @asinh_acosh(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[SQ:.*]] = llvm.fmul %[[X:.*]], %[[X]] : f32
+  // CHECK: %[[RAD:.*]] = llvm.fadd %[[SQ]], %[[ONE]] : f32
+  // CHECK: %[[ROOT:.*]] = llvm.intr.sqrt(%[[RAD]]) : (f32) -> f32
+  // CHECK: %[[SUM:.*]] = llvm.fadd %[[X]], %[[ROOT]] : f32
+  // CHECK: llvm.intr.log(%[[SUM]]) : (f32) -> f32
+  %0 = spirv.GL.Asinh %arg0 : f32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(dense<-1.000000e+00> : vector<3xf16>) : vector<3xf16>
+  // CHECK: llvm.fadd %{{.*}}, %[[MONE]] : vector<3xf16>
+  // CHECK: llvm.intr.log(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Acosh %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Fract
 //===----------------------------------------------------------------------===//
 
