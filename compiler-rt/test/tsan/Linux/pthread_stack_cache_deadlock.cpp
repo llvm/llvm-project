@@ -22,20 +22,20 @@ extern "C" void touch_dynamic_tls() {
   dyn_tls[sizeof(dyn_tls) - 1] = 2;
 }
 
-#else  // BUILD_SO
+#else // BUILD_SO
 
-#include "../test.h"
-#include <dlfcn.h>
-#include <errno.h>
-#include <pthread.h>
-#include <sched.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/syscall.h>
-#include <sys/time.h>
-#include <unistd.h>
+#  include "../test.h"
+#  include <dlfcn.h>
+#  include <errno.h>
+#  include <pthread.h>
+#  include <sched.h>
+#  include <signal.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <sys/syscall.h>
+#  include <sys/time.h>
+#  include <unistd.h>
 
 static long counter;
 static int stop;
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-#endif  // BUILD_SO
+#endif // BUILD_SO
 
 // CHECK-NOT: WARNING: ThreadSanitizer:
 // CHECK-NOT: ThreadSanitizer CHECK

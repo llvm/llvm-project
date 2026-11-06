@@ -194,9 +194,9 @@ TEST(Mman, AlignedAlloc) {
 }
 
 TEST(Mman, UserFreeIgnoreInterceptors) {
-  ThreadState *thr = cur_thread();
+  ThreadState* thr = cur_thread();
   uptr pc = 0;
-  void *p = user_alloc(thr, pc, 32);
+  void* p = user_alloc(thr, pc, 32);
   ASSERT_NE(p, nullptr);
   EXPECT_NE(ctx->metamap.GetBlock((uptr)p), nullptr);
   {
