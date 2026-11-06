@@ -3404,6 +3404,16 @@ void CastOperation::CheckBuiltinBitCast() {
     return;
   }
 
+  // The accesses that read the object representation are unspecified, so a
+  // volatile source cannot be honored. LWG4636 proposes that std::bit_cast
+  // mandate !is_volatile_v<From>; an array of volatile is volatile too.
+  if (Self.Context.getBaseElementType(SrcType).isVolatileQualified()) {
+    Self.Diag(OpRange.getBegin(), diag::err_bit_cast_volatile_source)
+        << SrcType;
+    SrcExpr = ExprError();
+    return;
+  }
+
   CharUnits DestSize = Self.Context.getTypeSizeInChars(DestType);
   CharUnits SourceSize = Self.Context.getTypeSizeInChars(SrcType);
   if (DestSize != SourceSize) {

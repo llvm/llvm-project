@@ -2658,8 +2658,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Address Addr =
         SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
-    if (SourceLVal.isVolatileQualified())
-      DestLV.getQuals().addVolatile();
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, CE->getExprLoc());
   }

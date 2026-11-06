@@ -59,11 +59,30 @@ constexpr __int128_t foo = bit_cast<__int128_t>((long double)0);
 
 volatile int volatile_int;
 int from_volatile = __builtin_bit_cast(int, volatile_int);
+// expected-error@-1 {{'__builtin_bit_cast' source type 'volatile int' is volatile-qualified}}
+
+struct volatile_class {
+  int i;
+};
+using volatile_class_t = volatile volatile_class;
+int from_volatile_prvalue = __builtin_bit_cast(int, volatile_class_t{});
+// expected-error@-1 {{'__builtin_bit_cast' source type 'volatile_class_t' (aka 'volatile volatile_class') is volatile-qualified}}
+
+volatile int volatile_array[2];
+long long from_volatile_array = __builtin_bit_cast(long long, volatile_array);
+// expected-error@-1 {{'__builtin_bit_cast' source type 'volatile int[2]' is volatile-qualified}}
 
 struct volatile_bit_field {
-  volatile unsigned b : 8; // expected-note {{bit-field is declared here}}
+  volatile unsigned b : 8;
 };
 unsigned from_volatile_bit_field(volatile_bit_field &v) {
-  // expected-error@+1 {{non-const reference cannot bind to bit-field 'b'}}
+  // expected-error@+1 {{'__builtin_bit_cast' source type 'volatile unsigned int' is volatile-qualified}}
   return __builtin_bit_cast(unsigned, v.b);
+}
+
+struct volatile_member {
+  volatile int i;
+};
+int from_volatile_member(volatile_member &v) {
+  return __builtin_bit_cast(int, v);
 }

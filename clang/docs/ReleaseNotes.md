@@ -47,6 +47,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
+- `__builtin_bit_cast` now rejects an operand of volatile-qualified type, which
+  it previously read with a non-volatile load.
 
 ### C++ Specific Potentially Breaking Changes
 
@@ -760,8 +762,9 @@ features cannot lower the translation-unit ABI level;
   `const From &` parameter. A vector element, matrix element or bit-field is
   copied into a temporary, which is then read; previously the read started at
   the containing vector, matrix or bit-field storage unit, which gave the wrong
-  value. A volatile operand is now read with a volatile load.
-  (#GH95673), (#GH219531), (#GH226388)
+  value. An operand of volatile-qualified type is now rejected, as LWG4636
+  proposes for `std::bit_cast`; it was previously read with a non-volatile
+  load. (#GH95673), (#GH219531), (#GH226388)
 
 #### Bug Fixes to Attribute Support
 

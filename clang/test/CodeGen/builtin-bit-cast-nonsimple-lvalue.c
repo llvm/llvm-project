@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -verify=c -fsyntax-only -DSEMA %s
 // RUN: %clang_cc1 -O -emit-llvm -disable-llvm-passes -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 
 typedef float v4f __attribute__((ext_vector_type(4)));
@@ -46,12 +47,9 @@ unsigned prvalue(float f) {
   return __builtin_bit_cast(unsigned, f + 1.0f);
 }
 
+#ifdef SEMA
 volatile float vf;
-
-// CHECK-LABEL: define{{.*}} i32 @volatile_lvalue(
-// CHECK-NOT:     alloca
-// CHECK:         [[RES:%.*]] = load volatile i32, ptr @vf
-// CHECK-NEXT:    ret i32 [[RES]]
 unsigned volatile_lvalue(void) {
-  return __builtin_bit_cast(unsigned, vf);
+  return __builtin_bit_cast(unsigned, vf); // c-error {{'__builtin_bit_cast' source type 'volatile float' is volatile-qualified}}
 }
+#endif

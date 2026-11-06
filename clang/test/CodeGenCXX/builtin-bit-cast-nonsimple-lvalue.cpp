@@ -90,13 +90,3 @@ struct S {
 unsigned bit_field(S s) {
   return __builtin_bit_cast(unsigned, s.b);
 }
-
-volatile float vf;
-
-// CHECK-LABEL: define{{.*}} i32 @_Z15volatile_lvaluev(
-// CHECK-NOT:     alloca
-// CHECK:         [[RES:%.*]] = load volatile i32, ptr @vf
-// CHECK-NEXT:    ret i32 [[RES]]
-unsigned volatile_lvalue() {
-  return __builtin_bit_cast(unsigned, vf);
-}
