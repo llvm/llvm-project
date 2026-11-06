@@ -60,9 +60,15 @@ static_assert(std::is_invocable_r_v<const int&, decltype(Return<int&>)>);
 static_assert(std::is_invocable_r_v<const int&, decltype(Return<int&&>)>);
 static_assert(std::is_invocable_r_v<const char&, decltype(Return<int>)>);
 
-// But not a result type where the conversion doesn't work.
+// But not a result type where the conversion doesn't work. Since conversion
+// is specified as an implicit conversion (`R r = expr`), this also doesn't
+// allow cases where a decay-to-pointer would be required.
 static_assert(!std::is_invocable_r_v<int, decltype(Return<void>)>);
 static_assert(!std::is_invocable_r_v<int, decltype(Return<int*>)>);
+static_assert(!std::is_invocable_r_v<int[3], decltype(Return<int*>)>);
+static_assert(!std::is_invocable_r_v<int[], decltype(Return<int*>)>);
+static_assert(!std::is_invocable_r_v<void(), decltype(Return<void (*)()>)>);
+static_assert(!std::is_invocable_r_v<void(), decltype(Return<void (&)()>)>);
 
 // Non-moveable result type
 

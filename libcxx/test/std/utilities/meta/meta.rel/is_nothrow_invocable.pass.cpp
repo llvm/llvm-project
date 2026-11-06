@@ -160,6 +160,14 @@ int main(int, char**) {
     static_assert(!std::is_nothrow_invocable<Fn(), Explicit>(), "");
   }
   {
+    // Check that array and function return types are rejected.
+    using ArrFn = CallObject<true, int*>;
+    using FuncFn = CallObject<true, void (*)()>;
+    static_assert(!std::is_nothrow_invocable_r<int[3], ArrFn>::value, "");
+    static_assert(!std::is_nothrow_invocable_r<int[], ArrFn>::value, "");
+    static_assert(!std::is_nothrow_invocable_r<void(), FuncFn>::value, "");
+  }
+  {
     // Check that the conversion to the parameters is properly checked
     using Fn = CallObject<true, void, const Implicit&, const ThrowsImplicit&>;
     static_assert(
