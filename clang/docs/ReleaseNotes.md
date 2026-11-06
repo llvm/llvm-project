@@ -407,6 +407,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added the option `-ftype-print-limit=N`, which limits how many template
+  arguments and function parameters are printed when spelling a type. Once that
+  many have been printed, any further ones that would open another list of
+  arguments or parameters are replaced with `[arg omitted]` or
+  `[M args omitted]`, while the ones that don't (such as `int`) are still
+  printed. This defaults to `32768`, with `0` resulting in no limit.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -794,6 +801,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage-in-format-attr-call`, and
   `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
   Safe Buffers warning enabled.
+
+- Clang no longer takes exponential time and memory to print a type with an
+  enormous number of nested template arguments or function parameters, such as
+  when printing in a diagnostic, or in the record type name during code
+  generation.  This functionality is now limited by `-ftype-print-limit`.
 
 ### Improvements to Clang's time-trace
 

@@ -182,6 +182,18 @@ instantiation backtrace for a single warning or error. The default is 10, and
 the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 :::
 
+:::{option} -ftype-print-limit=123
+
+Print at most 123 template arguments and function parameters when spelling a
+type, counting from the left. After that, any further arguments or parameters
+that would open another list of arguments or parameters are replaced with
+`[arg omitted]` or `[N args omitted]`, while the ones that don't (such as `int`
+or typedef names) are still printed. This prevents types with particularly
+large spellings from taking inordinate amounts of time and memory to print.
+This defaults to `32768`, and the limit can be disabled with
+`-ftype-print-limit=0`.
+:::
+
 :::{option} --warning-suppression-mappings=foo.txt
 
 {doc}`Suppress certain diagnostics for certain files. <WarningSuppressionMappings>`

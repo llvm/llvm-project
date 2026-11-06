@@ -4756,6 +4756,13 @@ def ftemplate_backtrace_limit_EQ : Joined<["-"], "ftemplate-backtrace-limit=">, 
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of entries to print in a template instantiation backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"TemplateBacktraceLimit">, "DiagnosticOptions::DefaultTemplateBacktraceLimit">;
+def ftype_print_limit_EQ : Joined<["-"], "ftype-print-limit=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set the maximum number of template arguments and function "
+           "parameters printed when spelling a type in diagnostics. Types too "
+           "large to fit are printed only as deep as the limit allows "
+           "(0 = no limit)">,
+  MarshallingInfoInt<LangOpts<"TypePrintLimit">, "32768">;
 def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Maximum number of 'operator->'s to call for a member access">,
