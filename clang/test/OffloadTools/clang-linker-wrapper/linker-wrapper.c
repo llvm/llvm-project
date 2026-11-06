@@ -113,6 +113,13 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --wrapper-verbose --save-temps --linker-path=/usr/bin/ld \
 // RUN:   %t.sycl-30r.o %t.sycl-40r.o -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SYCL-MERGED-VERBOSE
+// RUN: llvm-offload-binary -o %t.sycl-mix.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-mix.o -fembed-offload-object=%t.sycl-mix.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --save-temps --wrapper-verbose --linker-path=/usr/bin/ld %t.sycl-mix.o \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-REPLAY
 
 // SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
@@ -141,6 +148,10 @@ __attribute__((visibility("protected"), used)) int x;
 
 // With --wrapper-verbose --save-temps, the merged offload binary is wrapped.
 // SYCL-MERGED-VERBOSE: llvm-offload-wrapper{{.*}} --kind=sycl {{.*}} a.out.sycl.merged.out{{$}}
+
+// The replayed extraction of an image without "code" does not also match one
+// with "code" for the same architecture.
+// SYCL-REPLAY: llvm-offload-binary{{.*}} --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=,file={{[^ ]*}}-igca_30r.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,file={{[^ ]*}}-igca_30r.xe-mtl-u.o
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \

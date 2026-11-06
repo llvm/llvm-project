@@ -968,19 +968,23 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
   if (!Merged.empty())
     Data = OffloadBinary::write(Merged);
 
-  // Write the merged offload binary to its own file, which is what
-  // --wrapper-verbose --save-temps passes to llvm-offload-wrapper.
-  auto FileOrErr = createOutputFile(ExecutableName + ".sycl.merged", "out");
-  if (!FileOrErr)
-    return FileOrErr.takeError();
-  if (!DryRun) {
-    int FD = -1;
-    if (std::error_code EC = sys::fs::openFileForWrite(*FileOrErr, FD))
-      return errorCodeToError(EC);
-    llvm::raw_fd_ostream OS(FD, true);
-    OS << Data;
+  // With --save-temps, also write the merged offload binary to its own file,
+  // which --wrapper-verbose passes to llvm-offload-wrapper.
+  StringRef Identifier = Images.front().Image->getBufferIdentifier();
+  if (SaveTemps) {
+    auto FileOrErr = createOutputFile(ExecutableName + ".sycl.merged", "out");
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    if (!DryRun) {
+      int FD = -1;
+      if (std::error_code EC = sys::fs::openFileForWrite(*FileOrErr, FD))
+        return errorCodeToError(EC);
+      llvm::raw_fd_ostream OS(FD, true);
+      OS << Data;
+    }
+    Identifier = *FileOrErr;
   }
-  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(Data, *FileOrErr));
+  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(Data, Identifier));
   return std::move(Buffers);
 }
 
@@ -1408,9 +1412,16 @@ Error emitExtractCommands(
               .str();
       if (!Binary.getArch().empty())
         ImageArg += (",arch=" + Binary.getArch()).str();
-      for (StringRef Device : llvm::split(Binary.getString("code"), ','))
-        if (!Device.empty())
-          ImageArg += (",code=" + Device).str();
+      // Filter SYCL images on "code", including an empty one, so that an
+      // image without "code" does not also match one with it.
+      if (Binary.getOffloadKind() == OFK_SYCL) {
+        StringRef Code = Binary.getString("code");
+        if (Code.empty())
+          ImageArg += ",code=";
+        for (StringRef Device : llvm::split(Code, ','))
+          if (!Device.empty())
+            ImageArg += (",code=" + Device).str();
+      }
       file_magic Magic;
       if (!identify_magic(Source, Magic) && Magic == file_magic::archive)
         ImageArg += (",member=" + sys::path::filename(Identifier)).str();
