@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -1874,13 +1875,22 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
-    bool IsStore = IntrID == Intrinsic::amdgcn_av_store_b128;
+    bool IsStore = CI.getType()->isVoidTy();
+    Type *DataTy = IsStore ? CI.getArgOperand(1)->getType() : CI.getType();
     Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::v4i32;
+    Info.memVT = MVT::getVT(DataTy);
     Info.ptrVal = CI.getArgOperand(0);
-    Info.align = Align(16);
+    Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
@@ -1996,7 +2006,15 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128:
     Ptr = II->getArgOperand(0);
     break;
@@ -12546,6 +12564,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
@@ -13257,6 +13279,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
@@ -20689,6 +20715,28 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // Result is the data operand's value from some lane.
       VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
                               Depth + 1);
+      break;
+    }
+    case Intrinsic::amdgcn_mul_u24:
+    case Intrinsic::amdgcn_mul_i24: {
+      Register LHS = MI->getOperand(2).getReg();
+      Register RHS = MI->getOperand(3).getReg();
+
+      KnownBits RHSKnown;
+      VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
+      if (RHSKnown.isUnknown())
+        break;
+
+      KnownBits LHSKnown;
+      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
+      if (LHSKnown.isUnknown())
+        break;
+
+      bool SelfMultiply =
+          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
+                                       IID == Intrinsic::amdgcn_mul_i24,
+                                       SelfMultiply);
       break;
     }
     }

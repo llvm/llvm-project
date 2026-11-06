@@ -28,6 +28,7 @@
 # CHECK:  Type: ThreadLocalInitFunctionPointers (0x15)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

@@ -534,6 +534,37 @@ TEST_F(GetModuleMapsForModulesTest, NotFound) {
   EXPECT_TRUE(ModuleMaps->empty());
 }
 
+// Verify a modulemap that can only be resolved with subdirectory search, fails
+// when disabled but passes otherwise.
+TEST_F(GetModuleMapsForModulesTest, SubdirectorySearch) {
+  addFile("/root/test.m", "\n");
+  addFile("/root/a/Sub/module.modulemap", "module A { header \"a.h\" }\n");
+  addFile("/root/a/Sub/a.h", "\n");
+
+  std::pair<StringRef, StringRef> Cases[] = {
+      {"-fmodulemap-allow-subdirectory-search", "/root/a/Sub/module.modulemap"},
+      {"-fno-modulemap-allow-subdirectory-search", ""}};
+  for (auto [Flag, Expected] : Cases) {
+    SCOPED_TRACE(Flag);
+    std::vector<std::string> CommandLine = {
+        "clang",     "-target", "x86_64-apple-macosx10.7",
+        "-c",        "test.m",  "-fmodules",
+        "-I/root/a", Flag.str()};
+
+    TextDiagnosticBuffer ScanDiags;
+    EXPECT_EQ(llvm::sys::path::convert_to_slash(
+                  scanModuleMapFile(CommandLine, "A", ScanDiags)),
+              Expected);
+
+    TextDiagnosticBuffer LookupDiags;
+    std::optional<llvm::StringMap<std::string>> ModuleMaps =
+        getModuleMaps(CommandLine, {"A"}, LookupDiags);
+    ASSERT_TRUE(ModuleMaps);
+    EXPECT_EQ(llvm::sys::path::convert_to_slash(ModuleMaps->lookup("A")),
+              Expected);
+  }
+}
+
 // Verify a command line that cannot be set up reports
 // an error.
 TEST_F(GetModuleMapsForModulesTest, IllFormedCommandLine) {
