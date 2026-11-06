@@ -333,6 +333,9 @@ def warn_avx_calling_convention
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
 def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
+def err_multiversion_resolver_abi : Error<
+  "multiversioned function %0 has %select{a return value|a parameter}1 of "
+  "type %2 whose target ABI is incompatible with the module ABI">;
 
 def err_target_unsupported_type_for_abi
     : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
