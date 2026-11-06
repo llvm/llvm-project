@@ -11781,38 +11781,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   return Builder.saveIP();
 }
 
-/// The integer type used to perform an atomic operation on a value of type
-/// \p FPTy: its allocation size, not its scalar width (x86_fp80 is 80 bits in
-/// 16 bytes, and an i80 atomic is not a legal power-of-two access).
-static IntegerType *getAtomicIntTypeForFP(Type *FPTy, const DataLayout &DL) {
-  return IntegerType::get(FPTy->getContext(), DL.getTypeAllocSizeInBits(FPTy));
-}
-
-/// Reinterpret \p V as \p IntTy, zero-filling any padding bits.
-static Value *castFPToAtomicInt(IRBuilderBase &Builder, const DataLayout &DL,
-                                Value *V, IntegerType *IntTy) {
-  unsigned ValueBits = V->getType()->getPrimitiveSizeInBits();
-  if (ValueBits == IntTy->getBitWidth())
-    return Builder.CreateBitCast(V, IntTy);
-  // zext/trunc match the memory layout only on little-endian targets, which
-  // are the only ones with padded FP types.
-  assert(DL.isLittleEndian() && "padded FP type on a big-endian target");
-  Value *Bits =
-      Builder.CreateBitCast(V, IntegerType::get(V->getContext(), ValueBits));
-  return Builder.CreateZExt(Bits, IntTy);
-}
-
-static Value *castAtomicIntToFP(IRBuilderBase &Builder, const DataLayout &DL,
-                                Value *V, Type *FPTy, const Twine &Name = "") {
-  unsigned ValueBits = FPTy->getPrimitiveSizeInBits();
-  if (ValueBits == V->getType()->getIntegerBitWidth())
-    return Builder.CreateBitCast(V, FPTy, Name);
-  assert(DL.isLittleEndian() && "padded FP type on a big-endian target");
-  Value *Bits =
-      Builder.CreateTrunc(V, IntegerType::get(V->getContext(), ValueBits));
-  return Builder.CreateBitCast(Bits, FPTy, Name);
-}
-
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
@@ -11842,6 +11810,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   }
 
   bool IsInteger = E->getType()->isIntegerTy();
+  // x86_fp80 holds 80 value bits in 16 bytes; the padding must not take part
+  // in the comparison.
+  const DataLayout &DL = M.getDataLayout();
+  bool HasPadding = X.ElemTy->isFloatingPointTy() &&
+                    X.ElemTy->getPrimitiveSizeInBits().getFixedValue() !=
+                        DL.getTypeAllocSizeInBits(X.ElemTy).getFixedValue();
 
   if (Op == OMPAtomicCompareOp::EQ) {
     // OldValue and SuccessOrFail are set below and used in the shared V.Var /
@@ -11849,7 +11823,86 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     Value *OldValue = nullptr;
     Value *SuccessOrFail = nullptr;
 
-    if (!IsInteger && HandleFPNegZero) {
+    if (HasPadding) {
+      // Load x, compare its value bits only, and use the loaded pattern as the
+      // expected value of the cmpxchg; retry if x changed in between.
+      assert(DL.isLittleEndian() && "padded FP type on a big-endian target");
+      LLVMContext &Ctx = M.getContext();
+      IntegerType *IntCastTy = IntegerType::get(
+          Ctx, DL.getTypeAllocSizeInBits(X.ElemTy).getFixedValue());
+      IntegerType *ValueIntTy = IntegerType::get(
+          Ctx, X.ElemTy->getPrimitiveSizeInBits().getFixedValue());
+      Value *EBits = Builder.CreateBitCast(E, ValueIntTy);
+      Value *DInt =
+          Builder.CreateZExt(Builder.CreateBitCast(D, ValueIntTy), IntCastTy);
+
+      LoadInst *XLoad = Builder.CreateAlignedLoad(
+          IntCastTy, X.Var, X.Alignment, X.Var->getName() + ".atomic.load");
+      XLoad->setAtomic(Failure);
+
+      BasicBlock *CurBB = Builder.GetInsertBlock();
+      Function *F = CurBB->getParent();
+      Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+      CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
+      BasicBlock *ExitBB =
+          CurBB->splitBasicBlock(CurBBTI, X.Var->getName() + ".atomic.exit");
+      BasicBlock *ContBB =
+          BasicBlock::Create(Ctx, X.Var->getName() + ".atomic.cont", F, ExitBB);
+      BasicBlock *CasBB =
+          BasicBlock::Create(Ctx, X.Var->getName() + ".atomic.cas", F, ExitBB);
+
+      CurBB->getTerminator()->eraseFromParent();
+      Builder.SetInsertPoint(CurBB);
+      Builder.CreateBr(ContBB);
+
+      Builder.SetInsertPoint(ContBB);
+      PHINode *XCurr =
+          Builder.CreatePHI(IntCastTy, 2, X.Var->getName() + ".atomic.curr");
+      XCurr->addIncoming(XLoad, CurBB);
+      Value *XBits = Builder.CreateTrunc(XCurr, ValueIntTy);
+      Value *Equal;
+      if (HandleFPNegZero) {
+        // Compare as values: -0.0 == +0.0 and NaN != NaN.
+        Value *XFP = Builder.CreateBitCast(XBits, X.ElemTy);
+        Equal = Builder.CreateFCmpOEQ(XFP, E, "atomic.eq");
+      } else {
+        // OpenMP: == compares the bits of the values, as with memcmp.
+        Equal = Builder.CreateICmpEQ(XBits, EBits, "atomic.eq");
+      }
+      Builder.CreateCondBr(Equal, CasBB, ExitBB);
+
+      Builder.SetInsertPoint(CasBB);
+      AtomicCmpXchgInst *Result = Builder.CreateAtomicCmpXchg(
+          X.Var, XCurr, DInt, X.Alignment, AO, Failure);
+      Result->setWeak(IsWeak);
+      Value *CasOld = Builder.CreateExtractValue(Result, /*Idxs=*/0);
+      Value *CasOk = Builder.CreateExtractValue(Result, /*Idxs=*/1);
+      Builder.CreateCondBr(CasOk, ExitBB, ContBB);
+      XCurr->addIncoming(CasOld, CasBB);
+
+      Builder.SetInsertPoint(ExitBB->begin());
+      PHINode *OldIntPHI =
+          Builder.CreatePHI(IntCastTy, 2, X.Var->getName() + ".atomic.old");
+      OldIntPHI->addIncoming(XCurr, ContBB);
+      OldIntPHI->addIncoming(CasOld, CasBB);
+      PHINode *SuccessPHI = Builder.CreatePHI(Builder.getInt1Ty(), 2,
+                                              X.Var->getName() + ".atomic.ok");
+      SuccessPHI->addIncoming(Builder.getFalse(), ContBB);
+      SuccessPHI->addIncoming(Builder.getTrue(), CasBB);
+
+      if (isa<UnreachableInst>(ExitBB->getTerminator())) {
+        CurBBTI->eraseFromParent();
+        Builder.SetInsertPoint(ExitBB);
+      } else {
+        Builder.SetInsertPoint(&*ExitBB->getFirstNonPHIIt());
+      }
+
+      if (V.Var)
+        OldValue = Builder.CreateBitCast(
+            Builder.CreateTrunc(OldIntPHI, ValueIntTy), X.ElemTy,
+            X.Var->getName() + ".atomic.old.fp");
+      SuccessOrFail = SuccessPHI;
+    } else if (!IsInteger && HandleFPNegZero) {
       // IEEE 754 special cases for cmpxchg (which is bitwise):
       //   1. -0.0 == +0.0 but they have different bit patterns.
       //   2. NaN != NaN but identical NaN bit patterns would match.
@@ -11878,16 +11931,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       //     br ExitBB
       //   ExitBB:
       //     phi merge
-      const DataLayout &DL = M.getDataLayout();
-      IntegerType *IntCastTy = getAtomicIntTypeForFP(X.ElemTy, DL);
-      Value *EBCast = castFPToAtomicInt(Builder, DL, E, IntCastTy);
-      Value *DBCast = castFPToAtomicInt(Builder, DL, D, IntCastTy);
+      IntegerType *IntCastTy =
+          IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
+      Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
+      Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
 
       // Load X atomically.
-      LoadInst *XCurr = Builder.CreateLoad(IntCastTy, X.Var,
-                                           X.Var->getName() + ".atomic.load");
+      LoadInst *XCurr = Builder.CreateAlignedLoad(
+          IntCastTy, X.Var, X.Alignment, X.Var->getName() + ".atomic.load");
       XCurr->setAtomic(AtomicOrdering::Monotonic);
-      Value *XFP = castAtomicIntToFP(Builder, DL, XCurr, X.ElemTy);
+      Value *XFP = Builder.CreateBitCast(XCurr, X.ElemTy);
 
       // IEEE 754: NaN != NaN, but cmpxchg would succeed if E and X have
       // the same NaN bit pattern.  Skip cmpxchg when either is NaN.
@@ -11932,7 +11985,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       // ZeroBB: cmpxchg with X's loaded bit-pattern.
       Builder.SetInsertPoint(ZeroBB);
       AtomicCmpXchgInst *ResZero = Builder.CreateAtomicCmpXchg(
-          X.Var, XCurr, DBCast, MaybeAlign(), AO, Failure);
+          X.Var, XCurr, DBCast, X.Alignment, AO, Failure);
       ResZero->setWeak(IsWeak);
       Value *OldZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/0);
       Value *OkZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/1);
@@ -11941,7 +11994,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       // NormalBB: original bitwise cmpxchg.
       Builder.SetInsertPoint(NormalBB);
       AtomicCmpXchgInst *ResNormal = Builder.CreateAtomicCmpXchg(
-          X.Var, EBCast, DBCast, MaybeAlign(), AO, Failure);
+          X.Var, EBCast, DBCast, X.Alignment, AO, Failure);
       ResNormal->setWeak(IsWeak);
       Value *OldNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/0);
       Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
@@ -11967,32 +12020,33 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Builder.SetInsertPoint(&*ExitBB->getFirstNonPHIIt());
       }
 
-      OldValue = castAtomicIntToFP(Builder, DL, OldIntPHI, X.ElemTy,
-                                   X.Var->getName() + ".atomic.old.fp");
+      OldValue = Builder.CreateBitCast(OldIntPHI, X.ElemTy,
+                                       X.Var->getName() + ".atomic.old.fp");
       SuccessOrFail = SuccessPHI;
     } else {
       AtomicCmpXchgInst *Result = nullptr;
-      const DataLayout &DL = M.getDataLayout();
       if (!IsInteger) {
-        IntegerType *IntCastTy = getAtomicIntTypeForFP(X.ElemTy, DL);
-        Value *EBCast = castFPToAtomicInt(Builder, DL, E, IntCastTy);
-        Value *DBCast = castFPToAtomicInt(Builder, DL, D, IntCastTy);
-        Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast,
-                                             MaybeAlign(), AO, Failure);
+        IntegerType *IntCastTy =
+            IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
+        Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
+        Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
+        Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast, X.Alignment,
+                                             AO, Failure);
       } else {
         Result =
-            Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
+            Builder.CreateAtomicCmpXchg(X.Var, E, D, X.Alignment, AO, Failure);
       }
       Result->setWeak(IsWeak);
 
       if (V.Var) {
         OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
         if (!IsInteger)
-          OldValue = castAtomicIntToFP(Builder, DL, OldValue, X.ElemTy);
+          OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");
         if (IsPostfixUpdate) {
-          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+          Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment,
+                                     V.IsVolatile);
         } else {
           SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
           if (IsFailOnly) {
@@ -12009,7 +12063,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
 
             Builder.SetInsertPoint(ContBB);
-            Builder.CreateStore(OldValue, V.Var);
+            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment);
             Builder.CreateBr(ExitBB);
 
             if (UnreachableInst *ExitTI =
@@ -12022,7 +12076,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
           } else {
             Value *CapturedValue =
                 Builder.CreateSelect(SuccessOrFail, E, OldValue);
-            Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+            Builder.CreateAlignedStore(CapturedValue, V.Var, V.Alignment,
+                                       V.IsVolatile);
           }
         }
       }
@@ -12037,18 +12092,20 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Value *ResultCast =
             R.IsSigned ? Builder.CreateSExt(SuccessFailureVal, R.ElemTy)
                        : Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
-        Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
+        Builder.CreateAlignedStore(ResultCast, R.Var, R.Alignment,
+                                   R.IsVolatile);
       }
     }
 
-    // For the HandleFPNegZero path, handle V.Var and R.Var using the
-    // pre-computed OldValue and SuccessOrFail.
-    if (HandleFPNegZero && !IsInteger) {
+    // For the HandleFPNegZero and padded paths, handle V.Var and R.Var using
+    // the pre-computed OldValue and SuccessOrFail.
+    if (!IsInteger && (HandleFPNegZero || HasPadding)) {
       if (V.Var) {
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");
         if (IsPostfixUpdate) {
-          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+          Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment,
+                                     V.IsVolatile);
         } else {
           if (IsFailOnly) {
             BasicBlock *CurBB = Builder.GetInsertBlock();
@@ -12064,7 +12121,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
 
             Builder.SetInsertPoint(ContBB);
-            Builder.CreateStore(OldValue, V.Var);
+            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment);
             Builder.CreateBr(ExitBB);
 
             if (UnreachableInst *ExitTI =
@@ -12077,7 +12134,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
           } else {
             Value *CapturedValue =
                 Builder.CreateSelect(SuccessOrFail, E, OldValue);
-            Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+            Builder.CreateAlignedStore(CapturedValue, V.Var, V.Alignment,
+                                       V.IsVolatile);
           }
         }
       }
@@ -12090,7 +12148,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Value *ResultCast = R.IsSigned
                                 ? Builder.CreateSExt(SuccessOrFail, R.ElemTy)
                                 : Builder.CreateZExt(SuccessOrFail, R.ElemTy);
-        Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
+        Builder.CreateAlignedStore(ResultCast, R.Var, R.Alignment,
+                                   R.IsVolatile);
       }
     }
   } else {
@@ -12134,7 +12193,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     }
 
     AtomicRMWInst *OldValue =
-        Builder.CreateAtomicRMW(NewOp, X.Var, E, MaybeAlign(), AO);
+        Builder.CreateAtomicRMW(NewOp, X.Var, E, X.Alignment, AO);
     if (V.Var) {
       Value *CapturedValue = nullptr;
       if (IsPostfixUpdate) {
@@ -12166,7 +12225,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Value *NonAtomicCmp = Builder.CreateCmp(Pred, OldValue, E);
         CapturedValue = Builder.CreateSelect(NonAtomicCmp, E, OldValue);
       }
-      Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+      Builder.CreateAlignedStore(CapturedValue, V.Var, V.Alignment,
+                                 V.IsVolatile);
     }
   }
 
