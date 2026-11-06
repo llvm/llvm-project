@@ -708,6 +708,30 @@ void GlobalReassignedBeforeInvalidation() {
 }
 } // namespace InvalidatedGlobal
 
+namespace ownership_functions {
+
+__attribute__((ownership_returns(malloc))) int *myalloc(void);
+__attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
+
+int *g_owned_ptr; // expected-note {{this global dangles}}
+
+void ownership_returns_escape_global() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the global variable 'g_owned_ptr' and is later invalidated}}
+  g_owned_ptr = p;
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+}
+
+struct OwnershipFieldHolder {
+  int *f; // expected-note {{this field dangles}}
+  void go() {
+    int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the field 'f' and is later invalidated}}
+    this->f = p;
+    myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  }
+};
+
+} // namespace ownership_functions
+
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
   std::set<int> s;
@@ -1031,6 +1055,21 @@ void via_destructor() {
   delete h;            // expected-note {{allocated object is freed here}}
 }                      // expected-note {{later used by the destructor of 'r' at scope exit}}
 
+void ownership_free(int *p) __attribute__((ownership_takes(malloc, 1)));
+
+void via_destructor_ownership_takes() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;
+  ownership_free(h);   // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_destructor_ownership_takes_param(int *p) { // expected-warning {{parameter 'p' does not live long enough}}
+  Ref r;
+  r = p;
+  ownership_free(p);   // expected-note {{parameter 'p' is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
 void via_cleanup() {
   Ref g __attribute__((cleanup(cleanup_ref)));
   int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
@@ -1050,3 +1089,30 @@ void via_destructor_invalidated() {
   s.push_back('x'); // expected-note {{local variable 's' is invalidated here}}
 }                   // expected-note {{later used by the destructor of 'r' at scope exit}}
 } // namespace implicit_use_after_free
+
+namespace static_member_container {
+struct S {
+  static std::vector<int> v;
+};
+
+void ViaObject(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowQualifiedInvalidateViaObject(S &s) {
+  auto it = S::v.begin(); // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowViaObjectInvalidateQualified(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  S::v.push_back(1);      // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+} // namespace static_member_container

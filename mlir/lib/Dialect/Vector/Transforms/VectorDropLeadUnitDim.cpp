@@ -500,7 +500,8 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   Operation *newOp = vector::ContractionOp::create(
       rewriter, loc, newOperands[0], newOperands[1], newOperands[2],
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
-      rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
+      rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind(),
+      contractOp.getFastmath());
 
   if (maskingOp) {
     auto newMask = rewriter.createOrFold<ShapeCastOp>(
