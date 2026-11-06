@@ -15,12 +15,15 @@
 #define LLVM_MC_MCINSTRANALYSIS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSemExpr.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -197,6 +200,15 @@ public:
   /// returns the offset within the instruction of that relocation.
   virtual std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst, uint64_t Size) const;
+
+  /// Returns the value \p Inst assigns to \p Reg, in terms of the state before
+  /// \p Inst executes, or std::nullopt if it is unknown.
+  virtual std::optional<MCSemExpr> evaluateDefinedValue(const MCInst &Inst,
+                                                        MCRegister Reg) const;
+
+  /// Returns the stores \p Inst performs, in terms of the state before \p Inst
+  /// executes. Stores that are unknown are left out.
+  virtual SmallVector<MCSemStore> evaluateStores(const MCInst &Inst) const;
 
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
