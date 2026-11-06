@@ -1,51 +1,107 @@
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-PROT,CHECK-X86-IBT,CHECK-DEF-NO-JT %s
 // RUN: %clang -### %s --target=arm-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A,CHECK-ARM-NOBTI,CHECK-JT %s
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64,CHECK-ARM-BTI,CHECK-JT %s
 // RUN: %clang -### %s --target=riscv64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-PROT,CHECK-ZICFILP,CHECK-JT %s
 // RUN: %clang -### %s --target=x86_64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-PROT,CHECK-X86-IBT,CHECK-DEF-NO-JT %s
+// RUN: %clang -### %s --target=x86_64-fuchsia -fjump-tables \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-PROT,CHECK-X86-IBT,CHECK-JT %s
+// RUN: %clang -### %s --target=x86_64-fuchsia -fcf-protection=none \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-NOPROT,CHECK-JT %s
+// RUN: %clang -### %s --target=x86_64-fuchsia -fcf-protection=none -fno-jump-tables \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-NOPROT,CHECK-EXPL-NO-JT %s
+// RUN: %clang -### %s --target=x86_64-fuchsia -fcf-protection=full \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-FULL,CHECK-X86-IBT,CHECK-X86-SHSTK,CHECK-DEF-NO-JT %s
 // RUN: %clang -### %s --target=arm-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A,CHECK-ARM-NOBTI,CHECK-JT %s
 // RUN: %clang -### %s --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64,CHECK-ARM-BTI,CHECK-JT %s
+// RUN: %clang -### %s --target=aarch64-fuchsia -mbranch-protection=none \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64,CHECK-ARM-NOBTI,CHECK-JT %s
+// RUN: %clang -### %s --target=aarch64-fuchsia -mbranch-protection=standard \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64,CHECK-ARM-BTI,CHECK-ARM-GCS,CHECK-JT %s
 // RUN: %clang -### %s --target=riscv64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-PROT,CHECK-ZICFILP,CHECK-JT %s
+// RUN: %clang -### %s --target=riscv64-fuchsia -fcf-protection=none \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-NOPROT,CHECK-JT %s
+// RUN: %clang -### %s --target=riscv64-fuchsia -fcf-protection=full \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-FULL,CHECK-ZICFILP,CHECK-ZICFISS,CHECK-JT %s
+// RUN: %clang -### %s --target=riscv64-fuchsia -mcf-branch-label-scheme=func-sig \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-PROT,CHECK-ZICFILP-FUNC-SIG,CHECK-JT %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
 // CHECK-ARMV8A: "-triple" "thumbv8a-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
+// CHECK-EXPL-NO-JT: "-fno-jump-tables"
+// CHECK-JT-NOT: "-fno-jump-tables"
 // CHECK: "-funwind-tables=2"
+// CHECK-ARM-BTI: "-mbranch-target-enforce"
+// CHECK-ARM-NOBTI-NOT: "-mbranch-target-enforce"
+// CHECK-ARM-GCS: "-mguarded-control-stack"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
 // CHECK: "-stack-protector" "2"
+// CHECK-CF-PROT: "-fcf-protection=branch"
+// CHECK-CF-FULL: "-fcf-protection=full"
+// CHECK-CF-NOPROT: "-fcf-protection=none"
+// CHECK-ZICFILP-FUNC-SIG: "-mcf-branch-label-scheme=func-sig"
+// CHECK-DEF-NO-JT: "-fno-jump-tables"
+// CHECK-JT-NOT: "-fno-jump-tables"
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-RISCV64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
+// CHECK-ARM-BTI-SAME: "-z" "bti-report=error"
+// CHECK-ARM-GCS-SAME: "-z" "gcs-report=error"
+// CHECK-ARM-NOBTI-NOT: "bti-report=error"
+// CHECK-ZICFILP-SAME: "-z" "zicfilp-unlabeled-report=error"
+// CHECK-ZICFILP-FUNC-SIG-SAME: "-z" "zicfilp-func-sig-report=error"
+// CHECK-ZICFISS-SAME: "-z" "zicfiss-report=error"
+// CHECK-X86-IBT-SAME: "-z" "ibt-report=error"
+// CHECK-X86-SHSTK-SAME: "-z" "shstk-report=error"
+// CHECK-CF-NOPROT-NOT: "-report=error"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

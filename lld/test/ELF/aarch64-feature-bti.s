@@ -233,6 +233,11 @@
 ## Ensure that warnings from force-bti can be silenced with bti-report=none.
 # RUN: ld.lld %t.o %t2.o -z force-bti -z bti-report=none %t.so -o %t.so 2>&1 | count 0
 
+# RUN: not ld.lld %t.o -z cet-report=error -z ibt-report=error -z shstk-report=error -o /dev/null 2>&1 | FileCheck --check-prefix=ERR-X86 %s
+# ERR-X86:      error: -z cet-report only supported on X86 and X86_64
+# ERR-X86-NEXT: error: -z ibt-report only supported on X86 and X86_64
+# ERR-X86-NEXT: error: -z shstk-report only supported on X86 and X86_64
+
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
 # RUN: llvm-readelf --dynamic-table %tforcebti.exe | FileCheck --check-prefix BTIDYN %s
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s
