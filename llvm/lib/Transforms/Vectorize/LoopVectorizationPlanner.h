@@ -907,6 +907,10 @@ class LoopVectorizationPlanner {
   /// Profitable vector factors.
   SmallVector<VectorizationFactor, 8> ProfitableVFs;
 
+  /// VFs that produce valid costs. This must also include the scalar VF as it
+  /// could be the only profitable one.
+  SmallVector<VectorizationFactor, 8> FeasibleVFs;
+
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
@@ -966,10 +970,9 @@ public:
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Compute and return the most profitable vectorization factor and the
-  /// corresponding best VPlan. Also collect all profitable VFs in
-  /// ProfitableVFs.
-  std::pair<VectorizationFactor, VPlan *> computeBestVF();
+  /// \return the most profitable vectorization factor and the corresponding
+  /// best VPlan. Also collect all profitable VFs in ProfitableVFs.
+  std::pair<VectorizationFactor, VPlan *> selectBestVF();
 
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
@@ -1061,6 +1064,10 @@ public:
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
+  /// Compute the costs for each vectorization factor and collect the ones with
+  /// valid costs in FeasibleVFs
+  void computeVPlanCosts(LoopVectorizationCostModel &PlanCM);
+
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built. \p PlanCM is the cost model to use for decisions made while
