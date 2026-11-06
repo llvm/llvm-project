@@ -1,4 +1,4 @@
-// XFAIL: target={{.*}}-zos{{.*}}
+// REQUIRES: object-wrapped-module
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json

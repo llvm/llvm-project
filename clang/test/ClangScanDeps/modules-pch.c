@@ -1,6 +1,4 @@
-// Unsupported on AIX and z/OS because we don't support the requisite
-// "__clangast" section in XCOFF (AIX) or GOFF (z/OS) yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch/* %t

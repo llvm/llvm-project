@@ -1,6 +1,4 @@
-// Unsupported on AIX and z/OS because we don't support the requisite
-// "__clangast" section in XCOFF (AIX) or GOFF (z/OS) yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
+// REQUIRES: object-wrapped-module
 
 // Check that when depending on a precompiled module, we depend on the
 // **top-level** module. Submodules don't have some information present (for

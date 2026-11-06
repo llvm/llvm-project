@@ -1,6 +1,6 @@
 // Path seperator differences
 // UNSUPPORTED: system-windows
-// XFAIL: system-zos
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/resource_directory/* %t
