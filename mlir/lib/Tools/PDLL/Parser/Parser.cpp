@@ -164,9 +164,16 @@ private:
   LogicalResult parseTdInclude(StringRef filename, SMRange fileLoc,
                                SmallVectorImpl<ast::Decl *> &decls);
 
-  /// Process the records of a parsed tablegen include file.
-  void processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
-                               SmallVectorImpl<ast::Decl *> &decls);
+  /// Process parsed TableGen records, stopping before appending an invalid
+  /// decl.
+  LogicalResult processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
+                                        SMRange includeLoc,
+                                        SmallVectorImpl<ast::Decl *> &decls);
+
+  /// Adapt a formatting failure to an import error and source-aware notes.
+  LogicalResult emitODSFormatError(llvm::Error error,
+                                   const tblgen::Constraint &constraint,
+                                   SMRange includeLoc);
 
   /// Create a user defined native constraint for a constraint imported from
   /// ODS.
@@ -176,10 +183,10 @@ private:
                                     SMRange loc, ast::Type type,
                                     StringRef nativeType, StringRef docString);
   template <typename ConstraintT>
-  ast::Decl *
+  FailureOr<ast::Decl *>
   createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
                                     SMRange loc, ast::Type type,
-                                    StringRef nativeType);
+                                    StringRef nativeType, SMRange includeLoc);
 
   //===--------------------------------------------------------------------===//
   // Decls
@@ -856,18 +863,16 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   if (llvm::TableGenParseFile(tdSrcMgr, tdRecords))
     return failure();
 
-  // Process the parsed records.
-  processTdIncludeRecords(tdRecords, decls);
-
-  // After we are done processing, move all of the tablegen source buffers to
-  // the main parser source mgr. This allows for directly using source locations
-  // from the .td files without needing to remap them.
+  // Record processing can diagnose immediately at a TableGen definition. Its
+  // buffers must already be registered in the parser's source manager.
   parserSrcMgr.takeSourceBuffersFrom(tdSrcMgr, fileLoc.End);
-  return success();
+  return processTdIncludeRecords(tdRecords, fileLoc, decls);
 }
 
-void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
-                                     SmallVectorImpl<ast::Decl *> &decls) {
+LogicalResult
+Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
+                                SMRange includeLoc,
+                                SmallVectorImpl<ast::Decl *> &decls) {
   // Return the length kind of the given value.
   auto getLengthKind = [](const auto &value) {
     if (value.isOptional())
@@ -934,9 +939,12 @@ void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
       continue;
 
     tblgen::Attribute constraint(def);
-    decls.push_back(createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
+    auto decl = createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
         constraint, convertLocToRange(def->getLoc().front()), attrTy,
-        constraint.getStorageType()));
+        constraint.getStorageType(), includeLoc);
+    if (failed(decl))
+      return failure();
+    decls.push_back(*decl);
   }
   /// Type constraints.
   for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
@@ -944,9 +952,12 @@ void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
       continue;
 
     tblgen::TypeConstraint constraint(def);
-    decls.push_back(createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
+    auto decl = createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
         constraint, convertLocToRange(def->getLoc().front()), typeTy,
-        constraint.getCppType()));
+        constraint.getCppType(), includeLoc);
+    if (failed(decl))
+      return failure();
+    decls.push_back(*decl);
   }
   /// OpInterfaces.
   ast::Type opTy = ast::OperationType::get(ctx);
@@ -971,6 +982,68 @@ void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
     decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
         def->getName(), codeBlock, loc, opTy, cppClassName, desc));
   }
+  return success();
+}
+
+LogicalResult Parser::emitODSFormatError(llvm::Error error,
+                                         const tblgen::Constraint &constraint,
+                                         SMRange includeLoc) {
+  llvm::SourceMgr &sourceMgr = lexer.getSourceMgr();
+  auto pointRange = [](SMLoc loc) { return SMRange(loc, loc); };
+
+  // LSP publishes diagnostics for the main document only. Preserve that anchor
+  // even when a TableGen import is nested inside one or more PDLL includes.
+  SMRange mainLoc = includeLoc;
+  SmallVector<SMLoc> includeChain;
+  unsigned buffer = sourceMgr.FindBufferContainingLoc(mainLoc.Start);
+  while (buffer && buffer != sourceMgr.getMainFileID()) {
+    includeChain.push_back(mainLoc.Start);
+    SMLoc parent = sourceMgr.getParentIncludeLoc(buffer);
+    if (!parent.isValid())
+      break;
+    mainLoc = pointRange(parent);
+    buffer = sourceMgr.FindBufferContainingLoc(parent);
+  }
+
+  auto origin = tblgen::FmtOrigin::at(constraint.getDef().getLoc(),
+                                      "PDLL constraint '" +
+                                          constraint.getUniqueDefName() + "'");
+  error = tblgen::addFmtOrigin(std::move(error), origin);
+  llvm::handleAllErrors(
+      std::move(error),
+      [&](const tblgen::FmtError &formatError) {
+        auto messages = tblgen::getFmtDiagnostics(formatError);
+        auto diag =
+            ctx.getDiagEngine().emitError(mainLoc, messages.front().message);
+        SMRange definitionLoc =
+            pointRange(constraint.getDef().getLoc().front());
+        diag->attachNote("constraint '" + constraint.getUniqueDefName() +
+                             "' is defined here",
+                         definitionLoc);
+        auto addInstantiations = [&](ArrayRef<SMLoc> locations) {
+          if (locations.empty())
+            return;
+          for (SMLoc loc : locations.drop_front())
+            diag->attachNote("instantiated from multiclass", pointRange(loc));
+        };
+        addInstantiations(messages.front().locations);
+        for (const auto &message : llvm::drop_begin(messages)) {
+          diag->attachNote(message.message,
+                           message.locations.empty()
+                               ? definitionLoc
+                               : pointRange(message.locations.front()));
+          if (!message.locations.empty())
+            addInstantiations(message.locations);
+        }
+        for (SMLoc loc : includeChain)
+          diag->attachNote("while importing TableGen constraints",
+                           pointRange(loc));
+      },
+      // Preserve a useful diagnostic if formatting gains other error types.
+      [&](const llvm::ErrorInfoBase &other) {
+        (void)emitError(mainLoc, other.message());
+      });
+  return failure();
 }
 
 template <typename ConstraintT>
@@ -995,16 +1068,16 @@ ast::Decl *Parser::createODSNativePDLLConstraintDecl(
 }
 
 template <typename ConstraintT>
-ast::Decl *
-Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
-                                          SMRange loc, ast::Type type,
-                                          StringRef nativeType) {
+FailureOr<ast::Decl *> Parser::createODSNativePDLLConstraintDecl(
+    const tblgen::Constraint &constraint, SMRange loc, ast::Type type,
+    StringRef nativeType, SMRange includeLoc) {
   // Format the condition template.
   tblgen::FmtContext fmtContext;
   fmtContext.withSelf("self");
-  std::string codeBlock = tblgen::tgfmt(
-      "return ::mlir::success(" + constraint.getConditionTemplate() + ");",
-      &fmtContext);
+  auto condition = tblgen::tgfmt(constraint.getConditionTemplate(), fmtContext);
+  if (!condition)
+    return emitODSFormatError(condition.takeError(), constraint, includeLoc);
+  std::string codeBlock = "return ::mlir::success(" + *condition + ");";
 
   // If documentation was enabled, build the doc string for the generated
   // constraint. It would be nice to do this lazily, but TableGen information is
