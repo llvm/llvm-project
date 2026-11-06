@@ -84,6 +84,18 @@
 #define ANSI_CSI_ERASE_VIEWPORT ANSI_CSI_ED(2)
 // Erase scrollback.
 #define ANSI_CSI_ERASE_SCROLLBACK ANSI_CSI_ED(3)
+// DEC Private Mode Set and Reset.
+#define ANSI_CSI_DECSET(mode) ANSI_ESC_START "?" #mode "h"
+#define ANSI_CSI_DECRST(mode) ANSI_ESC_START "?" #mode "l"
+// Show or hide the cursor.
+#define ANSI_CSI_SHOW_CURSOR ANSI_CSI_DECSET(25)
+#define ANSI_CSI_HIDE_CURSOR ANSI_CSI_DECRST(25)
+// Enable or disable auto-wrap.
+#define ANSI_CSI_ENABLE_AUTO_WRAP ANSI_CSI_DECSET(7)
+#define ANSI_CSI_DISABLE_AUTO_WRAP ANSI_CSI_DECRST(7)
+// Switch to or from the alternate screen buffer.
+#define ANSI_CSI_ENTER_ALT_SCREEN ANSI_CSI_DECSET(1049)
+#define ANSI_CSI_LEAVE_ALT_SCREEN ANSI_CSI_DECRST(1049)
 
 // OSC (Operating System Commands)
 // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
