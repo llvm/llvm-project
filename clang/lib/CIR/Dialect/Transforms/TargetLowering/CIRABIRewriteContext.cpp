@@ -1448,9 +1448,8 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
 ///
-/// A `__retval` outside the sret pointer's address space, such as an AMDGPU
-/// addrspace(5) alloca under a default address space sret, is not replaced
-/// itself.  Its address_space casts to the sret pointer's type are.
+/// A `__retval` outside the sret pointer's address space is not replaced
+/// itself. Its address_space casts to the sret pointer's type are.
 void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
   mlir::Value sretPtr = funcOp.getArguments()[0];
