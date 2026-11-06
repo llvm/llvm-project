@@ -2071,17 +2071,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     return false;
   }
 
-  if (hasConditionalInductions()) {
-    reportVectorizationFailure(
-        "We can vectorize this loop with a compressstore or expandload, but "
-        "vectorization support is not implemented yet.",
-        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
-  }
-
   if (Result) {
     LLVM_DEBUG(dbgs() << "LV: Loop passed LoopVectorizationLegality checks"
                       << (LAI->getRuntimePointerChecking()->Need
