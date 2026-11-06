@@ -9,6 +9,7 @@
 # clang -dynamiclib foo.c -Wl,-make_mergeable -Wl,-no_adhoc_codesign
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

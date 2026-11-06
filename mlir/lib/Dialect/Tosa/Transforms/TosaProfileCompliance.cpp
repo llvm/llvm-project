@@ -11,42 +11,98 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
+namespace mlir {
+namespace tosa {
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(std::initializer_list<TypeInfoRef> types,
+                                     SpecificationVersion version)
+    : second(version) {
+  first.reserve(types.size());
+  for (const TypeInfoRef &type : types)
+    first.push_back(*type.ptr);
+}
 
-// Building this ~5,000-line generated initializer map under AddressSanitizer,
-// HWAddressSanitizer, or MemorySanitizer leads to extreme compile times (>3.5
-// minutes) during InstCombine and greedy register allocation due to
-// instrumentation overhead. Disable optimization under ASan/HWAsan/MSan to keep
-// build times manageable.
-#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD ||          \
-    LLVM_MEMORY_SANITIZER_BUILD
-__attribute__((optnone))
-#else
-LLVM_ATTRIBUTE_MINSIZE
-#endif
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(SmallVector<TypeInfo> types,
+                                     SpecificationVersion version)
+    : first(std::move(types)), second(version) {}
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(const VersionedTypeInfo &other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(VersionedTypeInfo &&other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo &
+VersionedTypeInfo::operator=(const VersionedTypeInfo &other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo &
+VersionedTypeInfo::operator=(VersionedTypeInfo &&other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::~VersionedTypeInfo() = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::OpComplianceInfo(
+    std::initializer_list<T> mode,
+    std::initializer_list<VersionedTypeInfo> operandTypeInfoSet,
+    CheckCondition condition)
+    : mode(mode), operandTypeInfoSet(operandTypeInfoSet), condition(condition) {
+}
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::OpComplianceInfo(
+    SmallVector<T> mode, SmallVector<VersionedTypeInfo> operandTypeInfoSet,
+    CheckCondition condition)
+    : mode(std::move(mode)), operandTypeInfoSet(std::move(operandTypeInfoSet)),
+      condition(condition) {}
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE
+OpComplianceInfo<T>::OpComplianceInfo(const OpComplianceInfo &other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE
+OpComplianceInfo<T>::OpComplianceInfo(OpComplianceInfo &&other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
+OpComplianceInfo<T>::operator=(const OpComplianceInfo &other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
+OpComplianceInfo<T>::operator=(OpComplianceInfo &&other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::~OpComplianceInfo() = default;
+
+template struct OpComplianceInfo<Profile>;
+template struct OpComplianceInfo<Extension>;
+
 TosaProfileCompliance::TosaProfileCompliance() {
-  const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
-  const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
-  const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
-  const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
-  const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
-  const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
-  const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
-  const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
-  const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
-  const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
-  const TypeInfo fp8e4m3T = {mlir::Float8E4M3FNType::getTypeID(), 8};
-  const TypeInfo fp8e5m2T = {mlir::Float8E5M2Type::getTypeID(), 8};
+  static const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
+  static const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
+  static const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
+  static const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
+  static const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
+  static const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
+  static const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
+  static const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
+  static const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
+  static const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
+  static const TypeInfo fp8e4m3T = {mlir::Float8E4M3FNType::getTypeID(), 8};
+  static const TypeInfo fp8e5m2T = {mlir::Float8E5M2Type::getTypeID(), 8};
 
   // micro-scaling formats
   // Note: these types exist to suppport the deprecated block_scaled operations
   // and can be removed once those operations are removed.
-  const TypeInfo fp6e2m3T = {mlir::Float6E2M3FNType::getTypeID(), 6};
-  const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};
-  const TypeInfo fp4e2m1T = {mlir::Float4E2M1FNType::getTypeID(), 4};
-  const TypeInfo fp8ue8m0T = {mlir::Float8E8M0FNUType::getTypeID(), 8};
-  const TypeInfo mxint8T = {mlir::tosa::mxint8Type::getTypeID(), 8};
+  static const TypeInfo fp6e2m3T = {mlir::Float6E2M3FNType::getTypeID(), 6};
+  static const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};
+  static const TypeInfo fp4e2m1T = {mlir::Float4E2M1FNType::getTypeID(), 4};
+  static const TypeInfo fp8ue8m0T = {mlir::Float8E8M0FNUType::getTypeID(), 8};
+  static const TypeInfo mxint8T = {mlir::tosa::mxint8Type::getTypeID(), 8};
 
   // Block scaled formats
   const TypeID blockScaledID = mlir::tosa::BlockScaledType::getTypeID();
@@ -58,22 +114,22 @@ TosaProfileCompliance::TosaProfileCompliance() {
   const TypeID fp8ue8m0ID = mlir::Float8E8M0FNUType::getTypeID();
   const TypeID mxint8ID = mlir::tosa::mxint8Type::getTypeID();
 
-  const TypeInfo bs32_fp8ue8m0_fp4e2m1T = {blockScaledID, 4, fp4e2m1ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp6e2m3T = {blockScaledID, 6, fp6e2m3ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp6e3m2T = {blockScaledID, 6, fp6e3m2ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp8e4m3T = {blockScaledID, 8, fp8e4m3ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp8e5m2T = {blockScaledID, 8, fp8e5m2ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_mxint8T = {
+  static const TypeInfo bs32_fp8ue8m0_fp4e2m1T = {
+      blockScaledID, 4, fp4e2m1ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp6e2m3T = {
+      blockScaledID, 6, fp6e2m3ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp6e3m2T = {
+      blockScaledID, 6, fp6e3m2ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp8e4m3T = {
+      blockScaledID, 8, fp8e4m3ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp8e5m2T = {
+      blockScaledID, 8, fp8e5m2ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_mxint8T = {
       blockScaledID, 8, mxint8ID, fp8ue8m0ID, tosa::BlockShape::BLOCK_SHAPE_32};
 
 // The profile-based compliance content below is auto-generated by a script
@@ -83,13 +139,14 @@ TosaProfileCompliance::TosaProfileCompliance() {
 }
 
 template <>
-OperationProfileComplianceMap TosaProfileCompliance::getProfileComplianceMap() {
+const OperationProfileComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Profile>() const {
   return profileComplianceMap;
 }
 
 template <>
-OperationExtensionComplianceMap
-TosaProfileCompliance::getProfileComplianceMap() {
+const OperationExtensionComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Extension>() const {
   return extensionComplianceMap;
 }
 
@@ -465,7 +522,7 @@ template <typename T>
 FailureOr<SmallVector<OpComplianceInfo<T>>>
 TosaProfileCompliance::getOperatorMatchedEntries(Operation *op) {
   const std::string opName = op->getName().getStringRef().str();
-  const auto complianceMap = getProfileComplianceMap<T>();
+  const auto &complianceMap = getProfileComplianceMap<T>();
   const auto it = complianceMap.find(opName);
   if (it == complianceMap.end())
     return {};
@@ -480,7 +537,7 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   if (failed(maybeOpEntries))
     return success();
 
-  const auto opEntries = maybeOpEntries.value();
+  const auto &opEntries = maybeOpEntries.value();
   if (opEntries.size() == 0) {
     // No matched restriction found.
     return success();
@@ -577,7 +634,7 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
           "profile or extension, got (";
 
     ProfileInfoDepot depot(op);
-    SmallVector<TypeInfo> current = depot.getInfo();
+    const ArrayRef<TypeInfo> current = depot.getInfo();
     for (const auto &typeInfo : llvm::drop_end(current))
       os << stringifyTypeInfo(typeInfo) << ",";
     os << stringifyTypeInfo(current.back()) << ")";
@@ -586,12 +643,15 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
     // the best match
     const std::string opName = op->getName().getStringRef().str();
     int maxMatches = -1;
-    SmallVector<TypeInfo> bestTypeInfo;
-    const auto searchBestMatch = [&](auto map) {
-      for (const auto &complianceInfos : map[opName]) {
+    ArrayRef<TypeInfo> bestTypeInfo;
+    const auto searchBestMatch = [&](const auto &map) {
+      const auto it = map.find(opName);
+      if (it == map.end())
+        return;
+      for (const auto &complianceInfos : it->second) {
         for (const auto &versionedTypeInfos :
              complianceInfos.operandTypeInfoSet) {
-          const SmallVector<TypeInfo> typeInfos = versionedTypeInfos.first;
+          const ArrayRef<TypeInfo> typeInfos = versionedTypeInfos.first;
           if (current.size() != typeInfos.size())
             continue;
           const int matches = llvm::count_if(
@@ -626,7 +686,7 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
 // type of the operand list.
 template <typename T>
 SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
-    Operation *op, SmallVector<OpComplianceInfo<T>> compInfo) {
+    Operation *op, ArrayRef<OpComplianceInfo<T>> compInfo) {
   assert(compInfo.size() != 0 &&
          "profile-based compliance information is empty");
 
@@ -645,15 +705,14 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
 
   // Get the type information of the operator we're trying to match
   ProfileInfoDepot depot(op);
-  SmallVector<TypeInfo> present = depot.getInfo();
+  ArrayRef<TypeInfo> present = depot.getInfo();
   if (present.size() == 0)
     return {};
 
   // Compare 'present' against known type signatures in the compliance metadata
-  for (size_t i = 0; i < compInfo.size(); i++) {
-    SmallVector<VersionedTypeInfo> sets = compInfo[i].operandTypeInfoSet;
-    for (const auto &set : sets) {
-      SmallVector<TypeInfo> expected = set.first;
+  for (const auto &comp : compInfo) {
+    for (const auto &set : comp.operandTypeInfoSet) {
+      ArrayRef<TypeInfo> expected = set.first;
       // Tensor-list operators can legitimately have multiple valid signatures
       // with different operand/result counts, e.g. data-only and data+scale
       // forms. Treat those as non-matches instead of asserting.
@@ -673,9 +732,8 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
 
       if (isFound == true) {
         SmallVector<VersionedTypeInfo> typeInfoSet{set};
-        OpComplianceInfo<T> info{compInfo[i].mode, typeInfoSet,
-                                 compInfo[i].condition};
-        matchedInfos.push_back(info);
+        matchedInfos.emplace_back(comp.mode, std::move(typeInfoSet),
+                                  comp.condition);
       }
     }
   }
@@ -755,3 +813,5 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
 
   return stringifyScalarTypeInfo(typeInfo);
 }
+} // namespace tosa
+} // namespace mlir

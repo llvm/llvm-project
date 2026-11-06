@@ -251,6 +251,10 @@ public:
     return ST->getMaxInlineSizeThreshold();
   }
 
+  uint64_t getMaxBoundedMemSetInlineSize() const override {
+    return ST->is64Bit() ? 16 : 0;
+  }
+
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool preferAlternateOpcodeVectorization() const override { return false; }

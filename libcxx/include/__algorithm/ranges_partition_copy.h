@@ -41,9 +41,9 @@ using partition_copy_result = in_out_out_result<_InIter, _OutIter1, _OutIter2>;
 struct __partition_copy {
   // TODO(ranges): delegate to the classic algorithm.
   template <class _InIter, class _Sent, class _OutIter1, class _OutIter2, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr static partition_copy_result<__remove_cvref_t<_InIter>,
-                                                               __remove_cvref_t<_OutIter1>,
-                                                               __remove_cvref_t<_OutIter2> >
+  constexpr static partition_copy_result<__remove_cvref_t<_InIter>,
+                                         __remove_cvref_t<_OutIter1>,
+                                         __remove_cvref_t<_OutIter2> >
   __partition_copy_fn_impl(
       _InIter&& __first,
       _Sent&& __last,
@@ -72,7 +72,7 @@ struct __partition_copy {
             class _Proj = identity,
             indirect_unary_predicate<projected<_InIter, _Proj>> _Pred>
     requires indirectly_copyable<_InIter, _OutIter1> && indirectly_copyable<_InIter, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr partition_copy_result<_InIter, _OutIter1, _OutIter2> operator()(
+  constexpr partition_copy_result<_InIter, _OutIter1, _OutIter2> operator()(
       _InIter __first, _Sent __last, _OutIter1 __out_true, _OutIter2 __out_false, _Pred __pred, _Proj __proj = {})
       const {
     return __partition_copy_fn_impl(
@@ -85,7 +85,7 @@ struct __partition_copy {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter1> && indirectly_copyable<iterator_t<_Range>, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr partition_copy_result<borrowed_iterator_t<_Range>, _OutIter1, _OutIter2>
+  constexpr partition_copy_result<borrowed_iterator_t<_Range>, _OutIter1, _OutIter2>
   operator()(_Range&& __range, _OutIter1 __out_true, _OutIter2 __out_false, _Pred __pred, _Proj __proj = {}) const {
     return __partition_copy_fn_impl(
         ranges::begin(__range), ranges::end(__range), std::move(__out_true), std::move(__out_false), __pred, __proj);

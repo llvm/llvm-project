@@ -86,12 +86,20 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    dup v0.2d, x8
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    dup v0.2s, w8
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    cmhi v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   ret <2 x i1> %x
+}
+
+define <1 x i1> @v1i1(<1 x i1> %m) {
+; CHECK-LABEL: v1i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor w0, w0, #0x1
+; CHECK-NEXT:    ret
+  %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
+  ret <1 x i1> %x
 }

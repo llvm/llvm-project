@@ -24,8 +24,8 @@ All LLVM passes are subclasses of the [Pass](doxygen:classllvm_1_1Pass.html) cla
 functionality by overriding virtual methods inherited from `Pass`.  Depending
 on how your pass works, you should inherit from the
 {ref}`ModulePass <writing-an-llvm-pass-ModulePass>` , {ref}`CallGraphSCCPass <writing-an-llvm-pass-CallGraphSCCPass>`,
-{ref}`FunctionPass <writing-an-llvm-pass-FunctionPass>` , or {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`, or
-{ref}`RegionPass <writing-an-llvm-pass-RegionPass>` classes, which gives the system more
+{ref}`FunctionPass <writing-an-llvm-pass-FunctionPass>` , or {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`
+classes, which gives the system more
 information about what your pass does, and how it can be combined with other
 passes.  One of the main features of the LLVM Pass Framework is that it
 schedules passes to run in an efficient way based on the constraints that your
@@ -287,57 +287,6 @@ virtual bool doFinalization();
 The `doFinalization` method is an infrequently used method that is called
 when the pass framework has finished calling
 {ref}`runOnLoop <writing-an-llvm-pass-runOnLoop>` for every loop in the program being compiled.
-
-(writing-an-llvm-pass-RegionPass)=
-
-### The `RegionPass` class
-
-`RegionPass` is similar to {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`,
-but executes on each single entry single exit region in the function.
-`RegionPass` processes regions in nested order such that the outer most
-region is processed last.
-
-`RegionPass` subclasses are allowed to update the region tree by using the
-`RGPassManager` interface.  You may override three virtual methods of
-`RegionPass` to implement your own region pass.  All these methods should
-return `true` if they modified the program, or `false` if they did not.
-
-#### The `doInitialization(Region *, RGPassManager &)` method
-
-```cpp
-virtual bool doInitialization(Region *, RGPassManager &RGM);
-```
-
-The `doInitialization` method is designed to do simple initialization type of
-stuff that does not depend on the functions being processed.  The
-`doInitialization` method call is not scheduled to overlap with any other
-pass executions (thus it should be very fast).  `RPPassManager` interface
-should be used to access `Function` or `Module` level analysis information.
-
-(writing-an-llvm-pass-runOnRegion)=
-
-#### The `runOnRegion` method
-
-```cpp
-virtual bool runOnRegion(Region *, RGPassManager &RGM) = 0;
-```
-
-The `runOnRegion` method must be implemented by your subclass to do the
-transformation or analysis work of your pass.  As usual, a true value should be
-returned if the region is modified.  `RGPassManager` interface should be used to
-update region tree.
-
-#### The `doFinalization()` method
-
-```cpp
-virtual bool doFinalization();
-```
-
-The `doFinalization` method is an infrequently used method that is called
-when the pass framework has finished calling
-{ref}`runOnRegion <writing-an-llvm-pass-runOnRegion>` for every region in the program being
-compiled.
-
 
 ### The `MachineFunctionPass` class
 
