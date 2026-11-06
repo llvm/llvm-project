@@ -33,6 +33,33 @@ namespace tblgen {
 class Constraint;
 class DagLeaf;
 
+/// Consume every error payload, print all messages, then terminate through
+/// TableGen's fatal cleanup path. The caller origin is appended after any
+/// context already attached by inner helpers. Requires a non-success error.
+[[noreturn]] void reportFatalFmtError(llvm::Error error,
+                                      const FmtOrigin &callerOrigin);
+
+/// Eager formatting at a TableGen diagnostic boundary. User-authored templates
+/// should supply their definition origin and any known use-site context.
+template <typename... Ts>
+std::string tgfmtOrFatal(const FmtOrigin &origin, StringRef fmt,
+                         const FmtContext &ctx, Ts &&...values) {
+  auto result = tgfmtChecked(fmt, ctx, std::forward<Ts>(values)...);
+  if (!result)
+    reportFatalFmtError(result.takeError(), origin);
+  return std::move(*result);
+}
+
+/// Like tgfmtOrFatal, with positional replacements supplied as strings.
+inline std::string tgfmtvOrFatal(const FmtOrigin &origin, StringRef fmt,
+                                 const FmtContext &ctx,
+                                 ArrayRef<std::string> values) {
+  auto result = tgfmtvChecked(fmt, ctx, values);
+  if (!result)
+    reportFatalFmtError(result.takeError(), origin);
+  return std::move(*result);
+}
+
 // Format into a std::string
 template <typename... Parameters>
 std::string strfmt(const char *fmt, Parameters &&...parameters) {
@@ -264,7 +291,6 @@ std::string stringify(T &&t) {
 std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);
-
 } // namespace tblgen
 } // namespace mlir
 
