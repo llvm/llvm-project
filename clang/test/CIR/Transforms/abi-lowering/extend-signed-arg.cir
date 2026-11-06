@@ -21,14 +21,14 @@ module attributes {
 } {
 
   cir.func @takes_s8(%arg0: !s8i)
-      attributes { test_classify = #extend_signed_arg } {
+      requires_call_conv_lowering attributes { test_classify = #extend_signed_arg } {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @takes_s8(%arg0: !s8i {llvm.noundef, llvm.signext})
 
   cir.func @caller(%arg0: !s8i)
-      attributes { test_classify = #extend_signed_arg } {
+      requires_call_conv_lowering attributes { test_classify = #extend_signed_arg } {
     cir.call @takes_s8(%arg0) : (!s8i) -> ()
     cir.return
   }

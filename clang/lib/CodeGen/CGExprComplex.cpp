@@ -433,16 +433,21 @@ ComplexPairTy ComplexExprEmitter::EmitLoadOfLValue(LValue lvalue,
   Address SrcPtr = lvalue.getAddress();
   bool isVolatile = lvalue.isVolatileQualified();
 
-  llvm::Value *Real = nullptr, *Imag = nullptr;
+  QualType ElemTy = getComplexType(lvalue.getType())->getElementType();
+  TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAInfoForSubobject(lvalue, ElemTy);
+
+  llvm::LoadInst *Real = nullptr, *Imag = nullptr;
 
   if (!IgnoreReal || isVolatile) {
     Address RealP = CGF.emitAddrOfRealComponent(SrcPtr, lvalue.getType());
     Real = Builder.CreateLoad(RealP, isVolatile, SrcPtr.getName() + ".real");
+    CGF.CGM.DecorateInstructionWithTBAA(Real, TBAAInfo);
   }
 
   if (!IgnoreImag || isVolatile) {
     Address ImagP = CGF.emitAddrOfImagComponent(SrcPtr, lvalue.getType());
     Imag = Builder.CreateLoad(ImagP, isVolatile, SrcPtr.getName() + ".imag");
+    CGF.CGM.DecorateInstructionWithTBAA(Imag, TBAAInfo);
   }
 
   return ComplexPairTy(Real, Imag);
@@ -460,11 +465,16 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
+  QualType ElemTy = getComplexType(lvalue.getType())->getElementType();
+  TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAInfoForSubobject(lvalue, ElemTy);
+
   auto *R =
       Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
+  CGF.CGM.DecorateInstructionWithTBAA(R, TBAAInfo);
   CGF.addInstToCurrentSourceAtom(R, Val.first);
   auto *I =
       Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  CGF.CGM.DecorateInstructionWithTBAA(I, TBAAInfo);
   CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 

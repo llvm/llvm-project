@@ -1902,11 +1902,9 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
     Value *StoreBegin = Store->getPointerOperand();
-    Value *StoreEnd = Builder.CreatePtrAdd(
-        StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
-        "store.end",
+    Value *StoreEnd = Builder.CreatePtrAddWithUnsignedOffset(
+        StoreBegin, StoreLoc.Size.getValue(), "store.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     Value *LoadBegin = Load->getPointerOperand();
     CondBrInst *BR1 = Builder.CreateCondBr(
@@ -1920,9 +1918,8 @@ public:
     Builder.SetInsertPoint(Check1->begin());
     Builder.CreateLifetimeStart(Alloca);
 
-    Value *LoadEnd = Builder.CreatePtrAdd(
-        LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
-        "load.end",
+    Value *LoadEnd = Builder.CreatePtrAddWithUnsignedOffset(
+        LoadBegin, LoadLoc.Size.getValue(), "load.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     CondBrInst *BR2 = Builder.CreateCondBr(
         Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);

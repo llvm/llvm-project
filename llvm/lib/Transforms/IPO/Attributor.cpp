@@ -2530,8 +2530,11 @@ ChangeStatus Attributor::cleanupIR() {
 
     // The new value may reference a function, e.g., if an argument is replaced
     // by a function pointer, so the call graph of the user's function changes.
-    if (I)
+    if (I) {
       CGModifiedFunctions.insert(I->getFunction());
+      if (auto *C = dyn_cast<Constant>(NewV))
+        Configuration.CGUpdater.addReferences(*I->getFunction(), *C);
+    }
     if (Instruction *OldI = dyn_cast<Instruction>(OldV)) {
       if (!isa<PHINode>(OldI) && !ToBeDeletedInsts.count(OldI) &&
           isInstructionTriviallyDead(OldI))

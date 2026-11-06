@@ -711,7 +711,7 @@ LogicalResult PermuteOp::verify() {
 static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
                                                   FPRoundingMode rnd,
                                                   bool hasRandomBits,
-                                                  Operation *op) {
+                                                  bool hasPzo, Operation *op) {
   static constexpr FPRoundingMode validRndModes[] = {
       FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
 
@@ -723,9 +723,10 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
   }
 
   if (rnd == FPRoundingMode::RS) {
-    if (!hasRandomBits) {
+    if (!hasRandomBits)
       return op->emitOpError("random_bits is required for RS rounding mode.");
-    }
+    if (hasPzo)
+      return op->emitOpError("pzo not supported for RS rounding mode.");
   } else {
     if (hasRandomBits) {
       return op->emitOpError(
@@ -737,13 +738,13 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
 }
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "f16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "bf16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -3592,7 +3593,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
 }
 
 template <typename OpType>
-static LogicalResult verifyAddSubFOp(OpType op) {
+static LogicalResult verifyFloatBinaryOp(OpType op, StringRef opKind) {
   mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
   mlir::NVVM::SaturationMode satMode = op.getSat();
   bool isFTZ = op.getFtz();
@@ -3603,30 +3604,41 @@ static LogicalResult verifyAddSubFOp(OpType op) {
                               : opType;
 
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return op.emitOpError("FTZ and saturation are not supported for "
-                          "additions/subtractions involving f64 type");
+    return op.emitOpError("FTZ and saturation are not supported for ")
+           << opKind << " involving f64 type";
 
   if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
                               rndMode == NVVM::FPRoundingMode::NONE))
     return op.emitOpError("only RN rounding mode is supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
+                          "vector<2xf16> ")
+           << opKind;
 
   if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
         rndMode != NVVM::FPRoundingMode::NONE)
       return op.emitOpError("only RN rounding mode is supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
       return op.emitOpError("FTZ and saturation are not supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
   }
 
   return success();
 }
 
-LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+LogicalResult NVVM::AddFOp::verify() {
+  return verifyFloatBinaryOp(*this, "additions");
+}
 
-LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+LogicalResult NVVM::SubFOp::verify() {
+  return verifyFloatBinaryOp(*this, "subtractions");
+}
+
+LogicalResult NVVM::MulFOp::verify() {
+  return verifyFloatBinaryOp(*this, "multiplications");
+}
 
 LogicalResult NVVM::FmaOp::verify() {
   auto opType = getRes().getType();
@@ -5751,10 +5763,8 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // The PZO modifier is not supported with the RS rounding mode.
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5804,9 +5814,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:

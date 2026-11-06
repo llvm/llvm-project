@@ -2354,7 +2354,8 @@ bool TargetLowering::SimplifyDemandedBits(
           SDValue NewShiftAmt =
               TLO.DAG.getShiftAmountConstant(ShAmt, HalfVT, dl);
           SDValue NewShift =
-              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt);
+              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt,
+                              Op->getFlags() & SDNodeFlags::Exact);
           return TLO.CombineTo(
               Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, NewShift));
         }
