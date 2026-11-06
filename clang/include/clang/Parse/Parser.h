@@ -1548,8 +1548,8 @@ private:
   /// to each one's LateParsedTypeAttrInfo to \p To. \p To does not own the
   /// LateParsedTypeAttribute objects: the caller must keep them alive while
   /// \p To is in use (in a C record, CurRecordLateParsedTypeAttrs does).
-  static void TakeTypeAttrsAppendingFrom(LateParsedTypeAttrInfoList &To,
-                                         LateParsedAttrList &From);
+  static void TakeLateParsedTypeAttrInfosFrom(LateParsedTypeAttrInfoList &To,
+                                              LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
