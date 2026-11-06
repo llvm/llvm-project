@@ -99,6 +99,7 @@
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -574,7 +575,8 @@ PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
     : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
-      PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
+      PTO(PTO.value_or(PipelineTuningOptions())
+              .resolve(Context.getLibraryOptions())),
       PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);

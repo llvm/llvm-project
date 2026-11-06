@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
-#include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"

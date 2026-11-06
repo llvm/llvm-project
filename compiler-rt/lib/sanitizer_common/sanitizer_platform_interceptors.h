@@ -673,6 +673,8 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_GETSERVENT_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYNAME_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYPORT_R SI_GLIBC
+#define SANITIZER_INTERCEPT_FTW SI_LINUX_NOT_ANDROID
+#define SANITIZER_INTERCEPT_FTW64 SI_GLIBC
 
 // Until free_sized and free_aligned_sized are more generally available,
 // we can only unconditionally intercept on ELF-based platforms where it

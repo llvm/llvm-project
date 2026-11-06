@@ -744,15 +744,23 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     return false;
   if (m_type != eSymbolTypeReExported) {
     const bool is_addr = data.GetU8(offset_ptr) != 0;
-    const uint64_t value = data.GetU64(offset_ptr);
+    Address &base_addr =
+        m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
     if (is_addr) {
-      m_addr_or_reexport.GetAddressRange(*this)
-          .GetBaseAddress()
-          .ResolveAddressUsingFileSections(value, section_list);
+      if (!data.ValidOffsetForDataOfSize(*offset_ptr, 28))
+        return false;
+      const user_id_t sect_id = data.GetU64(offset_ptr);
+      const addr_t sect_offset = data.GetU64(offset_ptr);
+      SectionSP section_sp;
+      if (section_list)
+        section_sp = section_list->FindSectionByID(sect_id);
+      // The cache data doesn't match this binary's sections.
+      if (!section_sp)
+        return false;
+      base_addr = Address(section_sp, sect_offset);
     } else {
-      m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Clear();
-      m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().SetOffset(
-          value);
+      base_addr.Clear();
+      base_addr.SetOffset(data.GetU64(offset_ptr));
     }
     m_addr_or_reexport.GetAddressRange(*this).SetByteSize(
         data.GetU64(offset_ptr));
@@ -785,7 +793,12 @@ static_assert(sizeof(lldb_private::Symbol) == 72,
 /// uint16_t bitfield_data;
 /// Mangled mangled;
 /// uint8_t is_addr;
-/// uint64_t file_addr_or_value;
+/// if (is_addr) {
+///   uint64_t section_id;
+///   uint64_t section_offset;
+/// } else {
+///   uint64_t value;
+/// }
 /// uint64_t size;
 /// uint32_t flags;
 ///
@@ -823,16 +836,20 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
   if (m_type != eSymbolTypeReExported) {
     // A symbol's value might be an address, or it might be a constant. If the
     // symbol's base address doesn't have a section, then it is a constant
-    // value. If it does have a section, we will encode the file address and
-    // re-resolve the address when we decode it.
-    bool is_addr = m_addr_or_reexport.GetAddressRange(*this)
-                       .GetBaseAddress()
-                       .GetSection()
-                       .get() != nullptr;
-    file.AppendU8(is_addr);
-    file.AppendU64(m_addr_or_reexport.GetAddressRange(*this)
-                       .GetBaseAddress()
-                       .GetFileAddress());
+    // value. If it does have a section, we encode the section ID and the
+    // offset within it rather than the file address, because the same binary
+    // (same UUID) can have its segments placed at different file addresses,
+    // and not all by the same amount, as happens in the Darwin shared cache.
+    const Address &base_addr =
+        m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
+    SectionSP section_sp = base_addr.GetSection();
+    file.AppendU8(section_sp != nullptr);
+    if (section_sp) {
+      file.AppendU64(section_sp->GetID());
+      file.AppendU64(base_addr.GetOffset());
+    } else {
+      file.AppendU64(base_addr.GetFileAddress());
+    }
     file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
     file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
