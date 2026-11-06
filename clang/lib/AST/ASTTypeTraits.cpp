@@ -32,6 +32,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "TemplateName"},
     {NKI_None, "NestedNameSpecifier"},
     {NKI_None, "NestedNameSpecifierLoc"},
+    {NKI_None, "ObjCProtocolLoc"},
     {NKI_None, "QualType"},
 #define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
 #include "clang/AST/TypeLocNodes.def"
@@ -54,7 +55,6 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "Attr"},
 #define ATTR(A) {NKI_Attr, #A "Attr"},
 #include "clang/Basic/AttrList.inc"
-    {NKI_None, "ObjCProtocolLoc"},
     {NKI_None, "ConceptReference"},
     {NKI_None, "OffsetOfNode"},
 };
