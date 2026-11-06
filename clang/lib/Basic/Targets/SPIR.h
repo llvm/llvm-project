@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
+#include "OffloadTarget.h"
 #include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
@@ -70,7 +71,7 @@ static constexpr LangASMap SPIRDefIsGenMap = {
 };
 
 // Base class for SPIR and SPIR-V target info.
-class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public OffloadTargetInfo {
   std::unique_ptr<TargetInfo> HostTarget;
 
 protected:
@@ -78,7 +79,7 @@ protected:
   const TargetInfo *getHostTarget() const { return HostTarget.get(); }
 
   BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : TargetInfo(Triple) {
+      : OffloadTargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
            "Invalid architecture for SPIR or SPIR-V.");
     TLSSupported = false;
@@ -313,6 +314,12 @@ public:
     return Feature == "spirv";
   }
 
+  // The LLVM SPIR-V backend defines no processors and accepts only "generic";
+  // The -target-cpu value used in BaseSPIRTargetInfo is only used by the
+  // frontend, and the backend / createTargetMachine should not use this
+  // -target-cpu value to (attempt to) construct an LLVM TargetMachine.
+  StringRef getBackendCPU() const override { return StringRef(); }
+
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic space AS(4) is a superset of all the other address
     // spaces used by the backend target except constant address space.
@@ -326,6 +333,16 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+
+protected:
+  bool isSupportedOffloadArch(OffloadArch Arch) const override {
+    // Chipstar, vulkan, and amdhsa triples shouldn't accept a -target-cpu.
+    if (getTriple().getOS() != llvm::Triple::UnknownOS)
+      return false;
+
+    // Valid offload archs for SPIRV:
+    return Arch.isGeneric() || Arch.isIntel();
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRVTargetInfo {
@@ -432,6 +449,7 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
+
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);

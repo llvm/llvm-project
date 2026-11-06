@@ -603,8 +603,9 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   Options.MCOptions.LibraryOptions =
       &TheModule->getContext().getLibraryOptions();
-  TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
-                                          Options, RM, CM, OptLevel));
+  TM.reset(
+      TheTarget->createTargetMachine(Triple, CI.getTarget().getBackendCPU(),
+                                     FeaturesStr, Options, RM, CM, OptLevel));
   if (TM)
     TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
@@ -1374,7 +1375,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
       });
     }
   }
-  Conf.CPU = TOpts.CPU;
+  Conf.CPU = CI.getTarget().getBackendCPU().str();
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = CGOpts.RelocationModel;

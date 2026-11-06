@@ -54,6 +54,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
+class OffloadArch;
 
 /// Contains information gathered from parsing the contents of TargetAttr.
 struct ParsedTargetAttr {
@@ -1391,6 +1392,9 @@ public:
   /// Get the ABI currently in use.
   virtual StringRef getABI() const { return StringRef(); }
 
+  /// Get the CPU name to pass to the LLVM backend.
+  virtual StringRef getBackendCPU() const { return getTargetOpts().CPU; }
+
   /// Get the C++ ABI currently in use.
   TargetCXXABI getCXXABI() const {
     return TheCXXABI;
@@ -1424,6 +1428,10 @@ public:
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
+
+  /// Returns the OffloadArch if targeting an offload device, otherwise returns
+  /// OffloadArch::getUnused().
+  virtual OffloadArch getOffloadArch() const;
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
