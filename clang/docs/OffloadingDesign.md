@@ -346,19 +346,19 @@ related symbols.
   - `.omp_offloading_entries`
   - Dummy zero-sized object in the offload entries section to force linker to
     define begin/end symbols defined above.
-* - `.omp_offloading.device_image`
+* - `.llvm_offloading.device_image`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - ELF device code object of the first image.
-* - `.omp_offloading.device_image.N`
+* - `.llvm_offloading.device_image.N`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - ELF device code object of the (N+1)th image.
-* - `.omp_offloading.device_images`
+* - `.llvm_offloading.device_images`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - Array of images.
-* - `.omp_offloading.descriptor`
+* - `.llvm_offloading.descriptor`
   - `__tgt_bin_desc`
   - `.omp_offloading_entries`
   - Binary descriptor object (see {ref}`binary-descriptor`)
