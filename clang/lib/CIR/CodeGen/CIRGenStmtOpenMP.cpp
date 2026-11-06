@@ -211,8 +211,25 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPCriticalDirective");
-  return mlir::failure();
+  if (s.getDirectiveName().getName()) {
+    getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP named critical");
+    return mlir::failure();
+  }
+  assert(s.clauses().empty() && "Sema rejects hint without a name");
+
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  auto criticalOp =
+      mlir::omp::CriticalOp::create(builder, begin, mlir::FlatSymbolRefAttr());
+
+  mlir::Block &block = criticalOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+  mlir::LogicalResult res =
+      emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+  mlir::omp::TerminatorOp::create(builder, getLoc(s.getEndLoc()));
+  return res;
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelForDirective(const OMPParallelForDirective &s) {
