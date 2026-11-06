@@ -106,12 +106,11 @@ define amdgpu_kernel void @compute_fed_gather(ptr addrspace(1) %out, float %a, f
 ; GFX1250-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR0]] {
 ; GFX1250-NEXT:    [[L0:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[A]])
 ; GFX1250-NEXT:    [[L1:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[B]])
-; GFX1250-NEXT:    [[R0:%.*]] = fadd float [[L0]], 1.000000e+00
-; GFX1250-NEXT:    [[R1:%.*]] = fadd float [[L1]], 2.000000e+00
 ; GFX1250-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 0
-; GFX1250-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 1
-; GFX1250-NEXT:    store float [[R0]], ptr addrspace(1) [[P0]], align 8
-; GFX1250-NEXT:    store float [[R1]], ptr addrspace(1) [[P1]], align 4
+; GFX1250-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[L0]], i64 0
+; GFX1250-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[L1]], i64 1
+; GFX1250-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP2]], <float 1.000000e+00, float 2.000000e+00>
+; GFX1250-NEXT:    store <2 x float> [[TMP3]], ptr addrspace(1) [[P0]], align 8
 ; GFX1250-NEXT:    ret void
 ;
 ; PACKED-LABEL: define amdgpu_kernel void @compute_fed_gather(

@@ -1363,7 +1363,7 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
     const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
-        CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasPackedFP32Ops() &&
         InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
         !isa<LoadInst, InsertElementInst>(InsertedInst))
       return getFullRateInstrCost();
@@ -1684,7 +1684,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
   // half of a source pair is read in place, and a splat of the low half is an
   // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
   if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
-      ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
+      ST->hasPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
       !Mask.empty()) {
     const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
     // Source pairs of the second operand are numbered after the first.
