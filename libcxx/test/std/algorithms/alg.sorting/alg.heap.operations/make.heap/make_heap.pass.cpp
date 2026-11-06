@@ -15,11 +15,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 
 #include "../heap_helpers.h"
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "MoveOnly.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 template<class T, class Iter>
 TEST_CONSTEXPR_CXX20 bool test()
