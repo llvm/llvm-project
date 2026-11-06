@@ -77,10 +77,6 @@ public:
   void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
                                        const FMinFMaxLegacyInfo &Info) const;
 
-  bool matchCvtPkF8DemandedBits(MachineInstr &MI,
-                                const MachineOperand &PrevVDstIn) const;
-  void applyCvtPkF8DemandedBits(MachineOperand &PrevVDstIn) const;
-
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
 
@@ -280,44 +276,6 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
                      .getReg(0);
   B.buildFMul(Dst, RSQ, Y, Flags);
   MI.eraseFromParent();
-}
-
-// Packed FP8/BF8 conversions write one 16-bit half of their result and keep
-// the other half from their tied destination input (vdst_in, the intrinsic's
-// old operand).
-// Operands: result, intrinsic ID, src0, src1, vdst_in, word select.
-static constexpr unsigned CvtPkF8WordSelIdx = 5;
-
-/// Return the bits of the result that are kept from vdst_in.
-static APInt getCvtPkF8VDstInBits(const MachineInstr &MI) {
-  return MI.getOperand(CvtPkF8WordSelIdx).getImm()
-             ? APInt::getLowBitsSet(32, 16)
-             : APInt::getHighBitsSet(32, 16);
-}
-
-// \p MI only reads the half of the previous conversion that it keeps. If the
-// previous conversion wrote that half itself, its vdst_in \p PrevVDstIn is not
-// observed.
-bool AMDGPUPostLegalizerCombinerImpl::matchCvtPkF8DemandedBits(
-    MachineInstr &MI, const MachineOperand &PrevVDstIn) const {
-  const MachineInstr &Prev = *PrevVDstIn.getParent();
-  if (!MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg()))
-    return false;
-  if (mi_match(PrevVDstIn.getReg(), MRI, m_GImplicitDef()))
-    return false;
-  return !getCvtPkF8VDstInBits(MI).intersects(getCvtPkF8VDstInBits(Prev));
-}
-
-void AMDGPUPostLegalizerCombinerImpl::applyCvtPkF8DemandedBits(
-    MachineOperand &PrevVDstIn) const {
-  MachineInstr &Prev = *PrevVDstIn.getParent();
-  B.setInstrAndDebugLoc(Prev);
-  Register Undef = B.buildUndef(MRI.getType(PrevVDstIn.getReg())).getReg(0);
-  // Debug users could observe the half that is no longer defined.
-  MRI.markUsesInDebugValueAsUndef(Prev.getOperand(0).getReg());
-  Observer.changingInstr(Prev);
-  PrevVDstIn.setReg(Undef);
-  Observer.changedInstr(Prev);
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
