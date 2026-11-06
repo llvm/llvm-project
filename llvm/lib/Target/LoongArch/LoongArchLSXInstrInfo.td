@@ -2995,6 +2995,31 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 def : Pat<(v4i32 (fp_to_sint_sat v4f32:$vj, i32)), (VFTINTRZ_W_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_sint_sat v2f64:$vj, i64)), (VFTINTRZ_L_D v2f64:$vj)>;
 
+// fptosi(frint(x)) is equivalent to a conversion using the same rounding
+// mode: frint is exact in the floating-point domain, so the following
+// round-toward-zero conversion performs no additional rounding.  The same
+// holds for the saturating form, as both saturate and map NaN to zero.
+multiclass PatVrFToIntRoundLSX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                               string InstWS, string InstLD> {
+  def : Pat<(v4i32 (ToInt (Round v4f32:$vj))),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToInt (Round v2f64:$vj))),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+  def : Pat<(v4i32 (ToIntSat (Round v4f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToIntSat (Round v2f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+}
+
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ffloor,
+                           "VFTINTRM_W_S", "VFTINTRM_L_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, fceil,
+                           "VFTINTRP_W_S", "VFTINTRP_L_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, froundeven,
+                           "VFTINTRNE_W_S", "VFTINTRNE_L_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                           "VFTINTRZ_W_S", "VFTINTRZ_L_D">;
+
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;

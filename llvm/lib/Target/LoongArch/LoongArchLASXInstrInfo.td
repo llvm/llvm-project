@@ -2828,6 +2828,28 @@ def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
                (XVFTINTRZ_L_D v4f64:$vj)),
               sub_128)>;
 
+// See the LSX counterpart in LoongArchLSXInstrInfo.td.
+multiclass PatVrFToIntRoundLASX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                                string InstWS, string InstLD> {
+  def : Pat<(v8i32 (ToInt (Round v8f32:$vj))),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToInt (Round v4f64:$vj))),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+  def : Pat<(v8i32 (ToIntSat (Round v8f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToIntSat (Round v4f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+}
+
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ffloor,
+                            "XVFTINTRM_W_S", "XVFTINTRM_L_D">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, fceil,
+                            "XVFTINTRP_W_S", "XVFTINTRP_L_D">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, froundeven,
+                            "XVFTINTRNE_W_S", "XVFTINTRNE_L_D">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                            "XVFTINTRZ_W_S", "XVFTINTRZ_L_D">;
+
 // XVFTINTRZ_{W_SU/L_DU}
 def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
