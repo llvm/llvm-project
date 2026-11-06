@@ -285,6 +285,7 @@
 
 namespace llvm {
 
+class line_iterator;
 class raw_ostream;
 class Twine;
 
@@ -667,6 +668,16 @@ public:
   /// Return all the profiles.
   SampleProfileMap &getProfiles() { return Profiles; }
 
+  /// Return the data access profile data.
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
+    return DataAccessProfileData.get();
+  }
+
+  /// Take ownership of the data access profile data.
+  std::unique_ptr<memprof::DataAccessProfData> takeDataAccessProfileData() {
+    return std::move(DataAccessProfileData);
+  }
+
   /// Report a parse error message.
   void reportError(int64_t LineNumber, const Twine &Msg) const {
     Ctx.diagnose(DiagnosticInfoSampleProfile(Buffer->getBufferIdentifier(),
@@ -767,6 +778,9 @@ protected:
   /// in the structure FunctionSamples. This maps function objects
   /// to their corresponding profiles.
   SampleProfileMap Profiles;
+
+  /// Data access profile data.
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   /// LLVM context used to emit diagnostics.
   LLVMContext &Ctx;
@@ -887,6 +901,8 @@ public:
   void setProfileUseMD5() override {}
 
 private:
+  std::error_code readDataAccessProfiles(line_iterator &LI);
+
   /// CSNameTable is used to save full context vectors. This serves as an
   /// underlying immutable buffer for all clients.
   std::list<SampleContextFrameVector> CSNameTable;
@@ -1174,6 +1190,7 @@ protected:
   std::error_code readProfileSymbolList(bool IsMD5);
   std::error_code readStringBasedProfileSymbolList();
   std::error_code readMD5ProfileSymbolList();
+  std::error_code readDataAccessProfiles();
 
   std::error_code readHeader() override;
   std::error_code verifySPMagic(uint64_t Magic) override = 0;
