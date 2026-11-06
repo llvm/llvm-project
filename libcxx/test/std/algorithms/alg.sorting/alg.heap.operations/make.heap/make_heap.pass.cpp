@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "../heap_helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "MoveOnly.h"
@@ -29,6 +30,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         std::make_heap(Iter(work), Iter(work+n));
         assert(std::is_heap(work, work+n));
         assert(std::is_permutation(work, work+n, orig));
+        assert(satisfies_heap_property(work, work+n, std::less<T>()));
         std::copy(orig, orig+n, work);
     }
 
@@ -36,6 +38,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         T input[] = {3, 4, 1, 2, 5};
         std::make_heap(Iter(input), Iter(input + 5));
         assert(std::is_heap(input, input + 5));
+        assert(satisfies_heap_property(input, input + 5, std::less<T>()));
         std::pop_heap(input, input + 5); assert(input[4] == 5);
         std::pop_heap(input, input + 4); assert(input[3] == 4);
         std::pop_heap(input, input + 3); assert(input[2] == 3);
