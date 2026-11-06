@@ -1,8 +1,7 @@
 ; A PHI or select that is given a new element type after its operands were
 ; validated must cast its null operands to the new type. %b is first typed as
-; i8 and only later, through %a.be, as float. The predecessor order of %header
-; decides the order in which LoopSimplify creates the blocks, and thereby the
-; order in which the PHIs are visited.
+; i8 and only later, through %a.be, as float. The IR is already loop-simplified
+; so that LoopSimplify leaves the block order alone.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
@@ -34,26 +33,27 @@ entry:
   br label %header
 
 header:
-  %a = phi ptr [ null, %entry ], [ null, %body ], [ %b, %latch ]
-  br i1 %c, label %cond, label %latch
+  %a = phi ptr [ null, %entry ], [ %a.be, %backedge ]
+  br i1 %c, label %cond, label %join
 
 cond:
-  br i1 %c, label %latch, label %body
+  br i1 %c, label %join, label %body
 
 body:
   %v = load float, ptr %a, align 4
-  br i1 %c, label %exit, label %header
+  br i1 %c, label %exit, label %backedge
 
-latch:
+join:
   %b = phi ptr [ null, %cond ], [ %p, %header ]
-  %dead = icmp eq i64 0, 0
+  br label %backedge
+
+backedge:
+  %a.be = phi ptr [ null, %body ], [ %b, %join ]
   br label %header
 
 exit:
   store float %v, ptr addrspace(3) null
   ret void
-
-  uselistorder label %header, { 1, 0, 2 }
 }
 
 define spir_kernel void @select(i1 %c, ptr %p) {
@@ -61,23 +61,22 @@ entry:
   br label %header
 
 header:
-  %a = phi ptr [ null, %entry ], [ %a.be, %header.backedge ]
-  br i1 %c, label %cond, label %latch
+  %a = phi ptr [ null, %entry ], [ %a.be, %backedge ]
+  br i1 %c, label %cond, label %join
 
 cond:
-  br i1 %c, label %latch, label %body
+  br i1 %c, label %join, label %body
 
 body:
   %v = load float, ptr %a, align 4
-  br i1 %c, label %exit, label %header.backedge
+  br i1 %c, label %exit, label %backedge
 
-latch:
+join:
   %b = select i1 %c, ptr null, ptr %p
-  %dead = icmp eq i64 0, 0
-  br label %header.backedge
+  br label %backedge
 
-header.backedge:
-  %a.be = phi ptr [ null, %body ], [ %b, %latch ]
+backedge:
+  %a.be = phi ptr [ null, %body ], [ %b, %join ]
   br label %header
 
 exit:
