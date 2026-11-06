@@ -20,6 +20,7 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X86-NEXT:    movaps 16(%ecx), %xmm1
 ; X86-NEXT:    movntps %xmm0, (%eax)
 ; X86-NEXT:    movntps %xmm1, 16(%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: merge_2_v4f32_align32:
@@ -28,6 +29,7 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; X64-SSE2-NEXT:    movntps %xmm0, (%rsi)
 ; X64-SSE2-NEXT:    movntps %xmm1, 16(%rsi)
+; X64-SSE2-NEXT:    sfence
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4A-LABEL: merge_2_v4f32_align32:
@@ -36,6 +38,7 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; X64-SSE4A-NEXT:    movntps %xmm0, (%rsi)
 ; X64-SSE4A-NEXT:    movntps %xmm1, 16(%rsi)
+; X64-SSE4A-NEXT:    sfence
 ; X64-SSE4A-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: merge_2_v4f32_align32:
@@ -44,6 +47,7 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; X64-SSE41-NEXT:    movntdq %xmm0, (%rsi)
 ; X64-SSE41-NEXT:    movntdq %xmm1, 16(%rsi)
+; X64-SSE41-NEXT:    sfence
 ; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: merge_2_v4f32_align32:
@@ -52,12 +56,14 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
 ; X64-AVX1-NEXT:    vmovntdq %xmm0, (%rsi)
 ; X64-AVX1-NEXT:    vmovntdq %xmm1, 16(%rsi)
+; X64-AVX1-NEXT:    sfence
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: merge_2_v4f32_align32:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; X64-AVX2-NEXT:    vmovntdq %ymm0, (%rsi)
+; X64-AVX2-NEXT:    sfence
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
@@ -131,6 +137,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-NEXT:    movaps 16(%ecx), %xmm1
 ; X86-NEXT:    movntps %xmm0, (%eax)
 ; X86-NEXT:    movaps %xmm1, 16(%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: merge_2_v4f32_align32_mix_ntstore:
@@ -139,6 +146,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE-NEXT:    movaps 16(%rdi), %xmm1
 ; X64-SSE-NEXT:    movntps %xmm0, (%rsi)
 ; X64-SSE-NEXT:    movaps %xmm1, 16(%rsi)
+; X64-SSE-NEXT:    sfence
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align32_mix_ntstore:
@@ -147,6 +155,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm1
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovaps %xmm1, 16(%rsi)
+; X64-AVX-NEXT:    sfence
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
   %2 = load <4 x float>, ptr %a0, align 32
@@ -221,6 +230,7 @@ define void @merge_2_v4f32_align16_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-NEXT:    movaps 16(%ecx), %xmm1
 ; X86-NEXT:    movntps %xmm0, (%eax)
 ; X86-NEXT:    movntps %xmm1, 16(%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: merge_2_v4f32_align16_ntstore:
@@ -229,6 +239,7 @@ define void @merge_2_v4f32_align16_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE-NEXT:    movaps 16(%rdi), %xmm1
 ; X64-SSE-NEXT:    movntps %xmm0, (%rsi)
 ; X64-SSE-NEXT:    movntps %xmm1, 16(%rsi)
+; X64-SSE-NEXT:    sfence
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align16_ntstore:
@@ -237,6 +248,7 @@ define void @merge_2_v4f32_align16_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm1
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovntps %xmm1, 16(%rsi)
+; X64-AVX-NEXT:    sfence
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
   %2 = load <4 x float>, ptr %a0, align 16
@@ -314,6 +326,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
+; X86-SSE2-NEXT:    sfence
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4A-LABEL: merge_2_v4f32_align1_ntstore:
@@ -328,6 +341,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
+; X86-SSE4A-NEXT:    sfence
 ; X86-SSE4A-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: merge_2_v4f32_align1_ntstore:
@@ -344,6 +358,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE2-NEXT:    sfence
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4A-LABEL: merge_2_v4f32_align1_ntstore:
@@ -356,6 +371,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
+; X64-SSE4A-NEXT:    sfence
 ; X64-SSE4A-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: merge_2_v4f32_align1_ntstore:
@@ -370,6 +386,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm1, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE41-NEXT:    sfence
 ; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1_ntstore:
@@ -384,6 +401,7 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
+; X64-AVX-NEXT:    sfence
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
   %2 = load <4 x float>, ptr %a0, align 1
@@ -425,6 +443,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
+; X86-SSE2-NEXT:    sfence
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4A-LABEL: merge_2_v4f32_align1:
@@ -439,6 +458,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
+; X86-SSE4A-NEXT:    sfence
 ; X86-SSE4A-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: merge_2_v4f32_align1:
@@ -455,6 +475,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE2-NEXT:    sfence
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4A-LABEL: merge_2_v4f32_align1:
@@ -467,6 +488,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
+; X64-SSE4A-NEXT:    sfence
 ; X64-SSE4A-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: merge_2_v4f32_align1:
@@ -481,6 +503,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm1, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE41-NEXT:    sfence
 ; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1:
@@ -495,6 +518,7 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
+; X64-AVX-NEXT:    sfence
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
   %2 = load <4 x float>, ptr %a0, align 1, !nontemporal !0

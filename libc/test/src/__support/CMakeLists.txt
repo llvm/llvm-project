@@ -1,4 +1,4 @@
-add_custom_target(libc-support-tests)
+add_libc_testsuite(libc-support-tests)
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
@@ -120,6 +120,20 @@ add_libc_test(
     blockstore_test.cpp
   DEPENDS
     libc.src.__support.blockstore
+)
+
+add_libc_test(
+  checked_ptr_test
+  SUITE
+    libc-support-tests
+  SRCS
+    checked_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
 )
 
 add_libc_test(
@@ -309,7 +323,7 @@ if(LIBC_TARGET_OS_IS_BAREMETAL AND
   add_libc_test(
     external_startup_link_test
     FULL_BUILD_ONLY
-    NO_RUN_POSTBUILD
+    BUILD_ONLY
     STARTUP
       .minimal_external_crt1_for_test
     SUITE
@@ -321,7 +335,7 @@ endif()
 
 add_libc_test(
   str_to_float_comparison_test
-  NO_RUN_POSTBUILD
+  BUILD_ONLY
   SUITE
     libc-support-tests
   SRCS
@@ -371,6 +385,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(net)
 add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)

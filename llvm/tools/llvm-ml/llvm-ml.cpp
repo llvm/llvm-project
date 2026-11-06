@@ -32,7 +32,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Driver.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/MemoryBuffer.h"

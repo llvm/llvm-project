@@ -261,6 +261,17 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"dwarfDebugFlags", "dwarf-debug-flags",
            "std::string", /*default=*/"std::string{}",
            "Command-line flags to append to DWARF producer">,
+    Option<"nameTableKind", "name-table-kind",
+           "mlir::LLVM::DINameTableKind",
+           /*default=*/"mlir::LLVM::DINameTableKind::None",
+           "name table to emit",
+           [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::DINameTableKind::Default, "Default", "Emit the default name table"),
+            clEnumValN(mlir::LLVM::DINameTableKind::GNU, "GNU", "Emit GNU pubnames"),
+            clEnumValN(mlir::LLVM::DINameTableKind::None, "None", "Emit no name table"),
+            clEnumValN(mlir::LLVM::DINameTableKind::Apple, "Apple", "Emit Apple accelerator tables")
+          )}]
+           >,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
            "Emit fake use for debug variables to extend their lifetime">,
@@ -470,7 +481,10 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     Loop Versioning pass adds a check and two variants of a loop when the input
     array is an assumed shape array, to optimize for the (often common) case where
     an array has element sized stride. The element sizes stride allows some
-    loops to be vectorized as well as other loop optimizations.
+    loops to be vectorized as well as other loop optimizations. Accesses through
+    a local POINTER associated with such an array are handled the same way. A
+    loop that is versioned anyway also checks the local POINTER arrays that it
+    accesses if their pointer assignment is not visible.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
   let options = [

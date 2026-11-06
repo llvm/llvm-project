@@ -916,12 +916,14 @@ bool SemaHLSL::checkInterpolationModifiers(
 
   auto Modifiers = static_cast<InterpolationModifier>(A->getModifiers());
   if (Modifiers == InterpolationModifier::NoInterpolation) {
-    bool IsPosition =
-        Semantic && llvm::hlsl::getSemanticKind(Semantic->getSemanticName()) ==
-                        SemanticKind::Position;
-    if (!IsPosition)
+    if (!Semantic)
       return true;
-    Diag(A->getLocation(), diag::err_hlsl_interpolation_position);
+    SemanticKind Kind =
+        llvm::hlsl::getSemanticKind(Semantic->getSemanticName());
+    if (Kind != SemanticKind::Position && Kind != SemanticKind::Barycentrics)
+      return true;
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_semantic)
+        << Semantic->getSemanticName();
     Diag(Semantic->getLocation(), diag::note_conflicting_attribute);
     return false;
   }
@@ -1012,6 +1014,15 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     // TODO: extend to mesh
     return (ST == llvm::Triple::Pixel && IsInput) ||
            (ST == llvm::Triple::Vertex && !IsInput);
+  case SemanticKind::Barycentrics:
+  case SemanticKind::SampleIndex:
+  case SemanticKind::PrimitiveID:
+    return ST == llvm::Triple::Pixel && IsInput;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+    return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::ViewID:
+    return IsInput;
   default:
     return false;
   }
@@ -1252,17 +1263,6 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
 
-  // DXIL only: SV_ShadingRate requires shader model 6.4.
-  if (Kind == SemanticKind::ShadingRate) {
-    const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
-    if (TT.isDXIL() && TT.getOSVersion() < VersionTuple(6, 4)) {
-      Diag(SemanticAttr->getLoc(),
-           diag::err_hlsl_semantic_in_wrong_shader_model)
-          << SemanticAttr->getAttrName() << "6.4";
-      return;
-    }
-  }
-
   // A system-value name can have an arbitrary interpretation, for example
   // SV_Position on a vertex input. Only the general type restrictions apply.
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
@@ -1272,6 +1272,36 @@ void SemaHLSL::checkSemanticAnnotation(
 
   diagnoseSystemSemanticIndex(SemanticAttr, Kind, ElementCount);
   diagnoseSemanticType(Param, SemanticAttr, Kind);
+  diagnoseSemanticShaderModel(SemanticAttr, Kind);
+}
+
+void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                           SemanticKind Kind) {
+  const auto &Triple = getASTContext().getTargetInfo().getTriple();
+  if (!Triple.isDXIL())
+    return;
+
+  switch (Kind) {
+  case SemanticKind::Barycentrics:
+  case SemanticKind::ViewID:
+    if (Triple.getOSVersion() < VersionTuple(6, 1))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.1";
+    return;
+  case SemanticKind::ShadingRate:
+    if (Triple.getOSVersion() < VersionTuple(6, 4))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.4";
+    return;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+    if (Triple.getOSVersion() < VersionTuple(6, 8))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.8";
+    return;
+  default:
+    return;
+  }
 }
 
 void SemaHLSL::diagnoseSystemSemanticIndex(const HLSLAppliedSemanticAttr *A,
@@ -1370,6 +1400,12 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
 
   switch (Kind) {
+  case SemanticKind::Barycentrics:
+    if (DeclaredTy != T || !isFloatOrHalfElement(ElemTy) || Components != 3)
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* vector of */ 2 << 3
+          << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
+    return;
   case SemanticKind::DispatchThreadID:
   case SemanticKind::GroupID:
   case SemanticKind::GroupThreadID:
@@ -1377,6 +1413,15 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 3
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
+    return;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+  case SemanticKind::ViewID:
+    if (DeclaredTy != T || !T->isScalarType() ||
+        !isIntElementOfWidth(Ctx, T, 32))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1 << /* 32 bit integer */ 1
+          << DeclaredTy;
     return;
   case SemanticKind::GroupIndex:
     if (!isIntElementOfWidth(Ctx, ElemTy, 32) || Components != 1)
@@ -1396,6 +1441,15 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 4
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
+    return;
+  case SemanticKind::SampleIndex:
+  case SemanticKind::PrimitiveID:
+    // SPIR-V declares these built-ins as 32-bit integers and converts 16-bit
+    // declarations.
+    if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* 16 or 32 bit integer */ 0 << DeclaredTy;
     return;
   case SemanticKind::InstanceID:
   case SemanticKind::ShadingRate:
@@ -2212,9 +2266,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::CullDistance:
   case SemanticKind::OutputControlPointID:
   case SemanticKind::DomainLocation:
-  case SemanticKind::PrimitiveID:
   case SemanticKind::GSInstanceID:
-  case SemanticKind::SampleIndex:
   case SemanticKind::IsFrontFace:
   case SemanticKind::Coverage:
   case SemanticKind::InnerCoverage:
@@ -2224,8 +2276,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::StencilRef:
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
-  case SemanticKind::ViewID:
-  case SemanticKind::Barycentrics:
   case SemanticKind::CullPrimitive:
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
     return;
@@ -5325,6 +5375,46 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
     TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_or:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (CheckAnyScalarOrVectorOrMatrix(&SemaRef, TheCall, 0) ||
+        CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    QualType ValueTy = TheCall->getArg(0)->getType();
+    QualType ElementTy = getScalarComponentType(ValueTy);
+    bool IsArithmetic =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_product ||
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_sum;
+    if ((!ElementTy->isIntegerType() &&
+         !(IsArithmetic && ElementTy->hasFloatingRepresentation())) ||
+        ElementTy->isBooleanType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << (ValueTy->isMatrixType() ? 3 : 5) << 1 << IsArithmetic
+          << ValueTy;
+      return true;
+    }
+
+    QualType MaskTy = TheCall->getArg(1)->getType();
+    QualType UInt4Ty =
+        getASTContext().getExtVectorType(getASTContext().UnsignedIntTy, 4);
+    if (!getASTContext().hasSameUnqualifiedType(MaskTy, UInt4Ty)) {
+      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << MaskTy << UInt4Ty << 1 << 0 << 0;
+      return true;
+    }
+
+    TheCall->setType(ValueTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:

@@ -719,6 +719,64 @@ is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIt
 }
 
 template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardIterator
+partition(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _BidirectionalIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _BidirectionalIterator stable_partition(
+    _ExecutionPolicy&& __policy, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
+      _BidirectionalIterator, "stable_partition requires BidirectionalIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__stable_partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator1,
+          class _ForwardOutIterator2,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] pair<_ForwardOutIterator1, _ForwardOutIterator2> partition_copy(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _ForwardOutIterator1 __out_true,
+    _ForwardOutIterator2 __out_false,
+    _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator1, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator2, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator1, decltype(*__first), "partition_copy requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator2, decltype(*__first), "partition_copy requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__partition_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__out_true),
+      std::move(__out_false),
+      std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
           class _ForwardOutIterator,
@@ -1208,6 +1266,288 @@ is_sorted_until(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardI
   using _Implementation = __pstl::__dispatch<__pstl::__is_sorted_until, __pstl::__current_configuration, _RawPolicy>;
   return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] bool
+includes(_ExecutionPolicy&& __policy,
+         _ForwardIterator1 __first1,
+         _ForwardIterator1 __last1,
+         _ForwardIterator2 __first2,
+         _ForwardIterator2 __last2) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "includes requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "includes requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__includes, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] bool
+includes(_ExecutionPolicy&& __policy,
+         _ForwardIterator1 __first1,
+         _ForwardIterator1 __last1,
+         _ForwardIterator2 __first2,
+         _ForwardIterator2 __last2,
+         _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "includes requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "includes requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__includes, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator
+set_union(_ExecutionPolicy&& __policy,
+          _ForwardIterator1 __first1,
+          _ForwardIterator1 __last1,
+          _ForwardIterator2 __first2,
+          _ForwardIterator2 __last2,
+          _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_union requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_union requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_union requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_union, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator
+set_union(_ExecutionPolicy&& __policy,
+          _ForwardIterator1 __first1,
+          _ForwardIterator1 __last1,
+          _ForwardIterator2 __first2,
+          _ForwardIterator2 __last2,
+          _ForwardOutIterator __result,
+          _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_union requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_union requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_union requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_union, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_intersection(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_intersection requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_intersection requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_intersection requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_intersection, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_intersection(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result,
+    _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_intersection requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_intersection requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_intersection requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_intersection, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_difference(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_difference requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_difference, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_difference(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result,
+    _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_difference requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__set_difference, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_symmetric_difference(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_symmetric_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_symmetric_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_symmetric_difference requires result to be an OutputIterator");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__set_symmetric_difference, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _ForwardOutIterator,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator set_symmetric_difference(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first1,
+    _ForwardIterator1 __last1,
+    _ForwardIterator2 __first2,
+    _ForwardIterator2 __last2,
+    _ForwardOutIterator __result,
+    _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "set_symmetric_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "set_symmetric_difference requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first1), "set_symmetric_difference requires result to be an OutputIterator");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__set_symmetric_difference, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__result),
+      std::move(__comp));
 }
 
 _LIBCPP_END_NAMESPACE_STD
