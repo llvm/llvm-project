@@ -3558,8 +3558,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     }
   } else if (getTarget().getTriple().isX86() && getTarget().supportsIFunc() &&
              TC) {
-    auto Arch = TC->getX86Architecture(GD.getMultiVersionIndex());
-    // CPU-model checks cannot be represented by feature masks.
+    std::optional<StringRef> Arch =
+        TC->getX86Architecture(GD.getMultiVersionIndex());
+    // A CPU-model predicate such as arch=haswell tests CPU identity, not just
+    // supported ISA features. Leave it to runtime dispatch: fmv-features only
+    // represents feature predicates and x86-64 ISA levels.
     if (!Arch || Arch->starts_with("x86-64")) {
       StringRef Feature =
           Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
