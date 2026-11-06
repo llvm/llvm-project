@@ -5214,7 +5214,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
               EpilogueVectorizationForceVF, EpilogueTfCM);
 
   // Check that a Vplan is successfully built:
-  assert(VPlans.size() > NumPlansBefore + 1 &&
+  assert(VPlans.size() == NumPlansBefore + 1 &&
          "Expected to build a single tail-folded VPlan");
   VPlan &Plan = *VPlans.back();
   assert(Plan.getSingleVF() == EpilogueVectorizationForceVF &&

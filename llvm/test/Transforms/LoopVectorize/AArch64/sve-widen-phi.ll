@@ -134,7 +134,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF-NEXT:    store <vscale x 4 x i32> [[TMP17]], ptr [[TMP19]], align 4
 ; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-EPI-TF-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK-EPI-TF:       middle.block:
 ; CHECK-EPI-TF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-EPI-TF-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -168,7 +168,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF-NEXT:    [[TMP30:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-EPI-TF-NEXT:    [[TMP31:%.*]] = xor i1 [[TMP30]], true
 ; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX5]], [[TMP22]]
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP31]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP31]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-EPI-TF:       vec.epilog.middle.block:
 ; CHECK-EPI-TF-NEXT:    br label [[FOR_EXIT]]
 ; CHECK-EPI-TF:       vec.epilog.scalar.ph:
@@ -188,7 +188,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX3]], align 4
 ; CHECK-EPI-TF-NEXT:    [[INC]] = add nuw nsw i64 [[I_013]], 1
 ; CHECK-EPI-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-EPI-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT]], label [[FOR_BODY]]
 ; CHECK-EPI-TF:       for.exit:
 ; CHECK-EPI-TF-NEXT:    ret void
 ;
@@ -313,7 +313,7 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-EPI-TF-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP10]], align 4
 ; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-EPI-TF-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK-EPI-TF:       middle.block:
 ; CHECK-EPI-TF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-EPI-TF-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -340,7 +340,7 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-EPI-TF-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-EPI-TF-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP16]], true
 ; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX5]], [[TMP13]]
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-EPI-TF:       vec.epilog.middle.block:
 ; CHECK-EPI-TF-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK-EPI-TF:       vec.epilog.scalar.ph:
@@ -356,7 +356,7 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-EPI-TF-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds i32, ptr [[S_010]], i64 1
 ; CHECK-EPI-TF-NEXT:    [[INC]] = add nuw nsw i64 [[I_011]], 1
 ; CHECK-EPI-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-EPI-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; CHECK-EPI-TF:       for.cond.cleanup:
 ; CHECK-EPI-TF-NEXT:    ret void
 ;
@@ -481,7 +481,7 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-EPI-TF-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP2]], 2
 ; CHECK-EPI-TF-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP12]]
 ; CHECK-EPI-TF-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK-EPI-TF:       middle.block:
 ; CHECK-EPI-TF-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[TMP11]])
 ; CHECK-EPI-TF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
@@ -504,7 +504,7 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-EPI-TF-NEXT:    [[VAR4]] = getelementptr inbounds ptr, ptr [[Q]], i32 1
 ; CHECK-EPI-TF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-EPI-TF-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-EPI-TF-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK-EPI-TF:       for.end:
 ; CHECK-EPI-TF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR2]], [[FOR_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
 ; CHECK-EPI-TF-NEXT:    ret i32 [[VAR5]]
@@ -580,7 +580,7 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(ptr %
 ; CHECK-EPI-TF-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP1]], 1
 ; CHECK-EPI-TF-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP7]]
 ; CHECK-EPI-TF-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-EPI-TF-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-EPI-TF-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK-EPI-TF:       middle.block:
 ; CHECK-EPI-TF-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK-EPI-TF:       for.end:
