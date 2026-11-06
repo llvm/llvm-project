@@ -2250,6 +2250,9 @@ private:
   ///
   /// \p IsSigned specifies whether the less-than is signed.
   ///
+  /// \p IsSameSign specifies whether the comparison has the samesign flag,
+  /// i.e. it is poison if its operands have different signs.
+  ///
   /// If \p Invert is set, analyze "LHS > RHS" as "~LHS < ~RHS".
   ///
   /// \p ControlsOnlyExit is true when the LHS < RHS condition directly controls
@@ -2259,7 +2262,8 @@ private:
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit howManyLessThans(const SCEV *LHS, const SCEV *RHS, const Loop *L,
-                             bool IsSigned, bool Invert, bool ControlsOnlyExit,
+                             bool IsSigned, bool IsSameSign, bool Invert,
+                             bool ControlsOnlyExit,
                              bool AllowPredicates = false);
 
   /// Return a predecessor of BB (which may not be an immediate predecessor)
@@ -2551,11 +2555,29 @@ private:
       return ~getRangeMin(S, IsSigned);
     return IsSigned ? getSignedRangeMax(S) : getUnsignedRangeMax(S);
   }
+  /// Return the smallest signed (\p IsSigned) or unsigned value in \p R. If \p
+  /// Invert, return it for the complement ~R instead.
+  static APInt getRangeMin(const ConstantRange &R, bool IsSigned,
+                           bool Invert = false) {
+    if (Invert)
+      return ~getRangeMax(R, IsSigned);
+    return IsSigned ? R.getSignedMin() : R.getUnsignedMin();
+  }
+  /// Return the largest signed (\p IsSigned) or unsigned value in \p R. If \p
+  /// Invert, return it for the complement ~R instead.
+  static APInt getRangeMax(const ConstantRange &R, bool IsSigned,
+                           bool Invert = false) {
+    if (Invert)
+      return ~getRangeMin(R, IsSigned);
+    return IsSigned ? R.getSignedMax() : R.getUnsignedMax();
+  }
 
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
   /// {Start, +, Stride} LT End, or, if \p Invert is set, for the equivalent
-  /// "~Start < ~End" form of {Start, +, -Stride} GT End.
+  /// "~Start < ~End" form of {Start, +, -Stride} GT End. If \p IsSameSign is
+  /// set, the comparison has the samesign flag, so Start and End have the same
+  /// sign.
   ///
   /// Preconditions:
   /// * the induction variable is known to be positive.
@@ -2564,7 +2586,8 @@ private:
   /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
-                                     bool IsSigned, bool Invert);
+                                     bool IsSigned, bool IsSameSign,
+                                     bool Invert);
 
   /// Verify if a linear IV with positive \p Stride can overflow when compared
   /// against the invariant \p RHS with a less-than. If \p Invert is true, both
