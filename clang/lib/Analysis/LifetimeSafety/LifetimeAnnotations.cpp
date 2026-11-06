@@ -539,6 +539,40 @@ bool destructsFirstArg(const FunctionDecl &FD) {
   return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
+bool isAllocatingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc:
+  case Builtin::BIcalloc:
+  case Builtin::BI__builtin_calloc:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Returns;
+                      });
+}
+
+bool isFreeingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BIfree:
+  case Builtin::BI__builtin_free:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Takes;
+                      });
+}
+
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   if (!RD || !isInStlNamespace(RD))
     return false;

@@ -1943,6 +1943,28 @@ const Symbol *GetLastPointerSymbol(const DataRef &x) {
       [](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
 }
 
+template <> semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
+  if (IsVariable(x)) {
+    if (const auto *procRef{UnwrapProcedureRef(x)}) {
+      if (const Symbol *interface{procRef->proc().GetInterfaceSymbol()}) {
+        if (const auto *details{
+                interface->detailsIf<semantics::SubprogramDetails>()}) {
+          if (details->isFunction() &&
+              details->result().attrs().test(semantics::Attr::POINTER)) {
+            // N.B.: POINTER becomes TARGET in SetAttrsFromAssociation()
+            return details->result().attrs();
+          }
+        }
+      }
+    }
+  }
+  if (const Symbol *symbol{GetLastSymbol(x)}) {
+    return symbol->attrs();
+  } else {
+    return {};
+  }
+}
+
 template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,

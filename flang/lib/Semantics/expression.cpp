@@ -873,28 +873,6 @@ Constant<TYPE> ReadRealLiteral(int kind, parser::CharBlock source,
   return {kind, value, resultInfo};
 }
 
-struct RealTypeVisitor {
-  using Result = std::optional<Expr<SomeReal>>;
-  using Types = RealTypes;
-
-  RealTypeVisitor(
-      int k, parser::CharBlock lit, FoldingContext &ctx, bool isDeftKind)
-      : kind{k}, literal{lit}, context{ctx}, isDefaultKind{isDeftKind} {}
-
-  template <typename T> Result Test(int testKind) {
-    if (kind == testKind) {
-      return {AsCategoryExpr(
-          ReadRealLiteral<T>(testKind, literal, context, isDefaultKind))};
-    }
-    return std::nullopt;
-  }
-
-  int kind;
-  parser::CharBlock literal;
-  FoldingContext &context;
-  bool isDefaultKind;
-};
-
 // Reads a real literal constant and encodes it with the right kind.
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   const auto &[xreal, xkind](x.t);
@@ -946,12 +924,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
     }
   }
   bool isDefaultKind{!xkind && letterKind.value_or('e') == 'e'};
-  auto result{SearchTypes(
-      RealTypeVisitor{kind, xreal.source, GetFoldingContext(), isDefaultKind})};
-  if (!result) { // C717
+  if (!common::IsValidKindOfIntrinsicType(TypeCategory::Real, kind)) { // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
+    return std::nullopt;
   }
-  return AsMaybeExpr(std::move(result));
+  return AsGenericExpr(ReadRealLiteral<Type<TypeCategory::Real>>(
+      kind, xreal.source, GetFoldingContext(), isDefaultKind));
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
@@ -1034,12 +1012,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::LogicalLiteralConstant &x) {
   auto kind{AnalyzeKindParam(std::get<std::optional<parser::KindParam>>(x.t),
       GetDefaultKind(TypeCategory::Logical))};
   bool value{std::get<bool>(x.t)};
-  auto result{SearchTypes(
-      TypeKindVisitor<TypeCategory::Logical, Constant, bool>{kind, value})};
-  if (!result) {
+  if (!common::IsValidKindOfIntrinsicType(TypeCategory::Logical, kind)) {
     Say("unsupported LOGICAL(KIND=%d)"_err_en_US, kind); // C728
+    return std::nullopt;
   }
-  return result;
+  return AsGenericExpr(Constant<Type<TypeCategory::Logical>>{kind, value});
 }
 
 // BOZ typeless literals

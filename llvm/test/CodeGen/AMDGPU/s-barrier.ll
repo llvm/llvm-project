@@ -411,7 +411,6 @@ define void @signal_var_cnt0_const_bar() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_barrier_signal 1
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -436,7 +435,6 @@ define void @signal_var_cnt0_dynamic_bar(ptr addrspace(15) inreg %bar) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_and_b32 m0, s0, 63
 ; GFX13-NEXT:    s_barrier_signal m0
@@ -483,7 +481,6 @@ define void @barrier_init_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %c
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, s0, 63
@@ -498,7 +495,6 @@ define void @barrier_init_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %c
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, s0, 63
@@ -549,7 +545,6 @@ define void @signal_var_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, s0, 63
@@ -564,7 +559,6 @@ define void @signal_var_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, s0, 63
