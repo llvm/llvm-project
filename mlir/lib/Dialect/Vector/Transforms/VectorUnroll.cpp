@@ -158,8 +158,9 @@ getUnrollOrder(unsigned numLoops, Operation *op,
 /// Fail if `xferOp`, masked by an enclosing vector.mask, is masked in a way
 /// that the transfer unrolling patterns do not support yet.
 template <typename TransferOpTy>
-static LogicalResult checkSupportedMaskedTransfer(TransferOpTy xferOp,
-                                                  PatternRewriter &rewriter) {
+static LogicalResult
+checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
+                                      PatternRewriter &rewriter) {
   // With a minor identity map, the mask has the same shape as the vector, so
   // each tile of the vector has the tile of the mask at the same offsets.
   if (!xferOp.getPermutationMap().isMinorIdentity())
@@ -208,7 +209,8 @@ struct UnrollTransferReadPattern
       return failure();
     // A read masked by an enclosing vector.mask is unrolled into one
     // vector.mask per tile, each with its tile of the mask.
-    if (maskingOp && failed(checkSupportedMaskedTransfer(readOp, rewriter)))
+    if (maskingOp &&
+        failed(checkSupportedMaskedTransferUnrolling(readOp, rewriter)))
       return failure();
     auto targetShape = getTargetShape(options, readOp, /*allowMasked=*/true);
     if (!targetShape)
@@ -276,7 +278,8 @@ struct UnrollTransferWritePattern
       return failure();
     // A write masked by an enclosing vector.mask is unrolled into one
     // vector.mask per tile, each with its tile of the mask.
-    if (maskingOp && failed(checkSupportedMaskedTransfer(writeOp, rewriter)))
+    if (maskingOp &&
+        failed(checkSupportedMaskedTransferUnrolling(writeOp, rewriter)))
       return failure();
     auto targetShape = getTargetShape(options, writeOp, /*allowMasked=*/true);
     if (!targetShape)

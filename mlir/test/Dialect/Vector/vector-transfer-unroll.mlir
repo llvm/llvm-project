@@ -430,12 +430,9 @@ func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : ve
 //   ALL-DAG:   %[[M1:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 2], sizes = [2, 2]
 //   ALL-DAG:   %[[R1:.*]] = vector.mask %[[M1]] { vector.transfer_read %[[MEM]]
 //   ALL-DAG:   vector.insert_strided_slice %[[R1]], %{{.*}} offsets = [0, 2]
-//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2]
 //   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]] { vector.transfer_read %[[MEM]]
-//   ALL-DAG:   vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [2, 0]
-//   ALL-DAG:   %[[M3:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2]
-//   ALL-DAG:   %[[R3:.*]] = vector.mask %[[M3]] { vector.transfer_read %[[MEM]]
-//   ALL-DAG:   vector.insert_strided_slice %[[R3]], %{{.*}} offsets = [2, 2]
+//   ALL-DAG:   vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [2, 2]
 //   ALL-NOT:   vector.mask %[[MASK]]
 //       ALL:   return
 func.func @masked_transfer_read_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
@@ -470,12 +467,9 @@ func.func @masked_transfer_read_passthru_unroll(%mem : memref<4x4xf32>, %idx : i
 //   ALL-DAG:   %[[V1:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [0, 2], sizes = [2, 2]
 //   ALL-DAG:   %[[M1:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 2], sizes = [2, 2]
 //   ALL-DAG:   vector.mask %[[M1]] { vector.transfer_write %[[V1]], %[[MEM]]
-//   ALL-DAG:   %[[V2:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [2, 0], sizes = [2, 2]
-//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[V2:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [2, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2]
 //   ALL-DAG:   vector.mask %[[M2]] { vector.transfer_write %[[V2]], %[[MEM]]
-//   ALL-DAG:   %[[V3:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [2, 2], sizes = [2, 2]
-//   ALL-DAG:   %[[M3:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2]
-//   ALL-DAG:   vector.mask %[[M3]] { vector.transfer_write %[[V3]], %[[MEM]]
 //   ALL-NOT:   vector.mask %[[MASK]]
 //       ALL:   return
 func.func @masked_transfer_write_unroll(%mem : memref<4x4xf32>, %vec : vector<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) {
