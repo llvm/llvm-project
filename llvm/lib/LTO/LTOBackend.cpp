@@ -681,10 +681,27 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // the module, if applicable.
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
+  // Set sections for LTO with linker scripts.  Do this after importing, before
+  // optimization and codegen.
+  auto setSections = [&] {
+    if (!CombinedIndex.sectionInfos().empty()) {
+      for (auto &GV : Mod.global_values()) {
+        auto GUID = GV.getGUIDIfAssigned();
+        if (!GUID)
+          continue;
+        auto Info = CombinedIndex.sectionInfos().find(*GUID);
+        if (Info == CombinedIndex.sectionInfos().end())
+          continue;
+        setOutputSectionAttribute(Mod, &GV, Info->second.OutputSectionName);
+      }
+    }
+  };
+
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
+    setSections();
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
@@ -695,6 +712,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
+        setSections();
+
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,

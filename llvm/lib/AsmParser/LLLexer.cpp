@@ -903,6 +903,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(memProf);
   KEYWORD(notcold);
   KEYWORD(ambiguous);
+  KEYWORD(sectionInfo);
+  KEYWORD(outputSectionName);
 
 #undef KEYWORD
 
