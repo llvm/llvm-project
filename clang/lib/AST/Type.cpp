@@ -3838,6 +3838,15 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   return *this;
 }
 
+QualType FunctionType::getCallResultType(const ASTContext &Context) const {
+  QualType T = getReturnType().getNonLValueExprType(Context);
+  // A by-value call result is a prvalue. A prvalue should not
+  // have an address space.
+  if (!getReturnType()->isReferenceType() && T.hasAddressSpace())
+    return Context.removeAddrSpaceQualType(T);
+  return T;
+}
+
 bool FunctionType::getCFIUncheckedCalleeAttr() const {
   if (const auto *FPT = getAs<FunctionProtoType>())
     return FPT->hasCFIUncheckedCallee();
