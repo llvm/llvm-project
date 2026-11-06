@@ -837,10 +837,13 @@ def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
 
 // Mips16 calls
-def MIPS16_RET_DC : RuntimeLibcall;
-def MIPS16_RET_DF : RuntimeLibcall;
-def MIPS16_RET_SC : RuntimeLibcall;
-def MIPS16_RET_SF : RuntimeLibcall;
+def ComplexF32 : StructFuncArgType<[Flt, Flt]>;
+def ComplexF64 : StructFuncArgType<[Dbl, Dbl]>;
+
+def MIPS16_RET_DC : RuntimeLibcall<Void, [ComplexF64]>;
+def MIPS16_RET_DF : RuntimeLibcall<Void, [Dbl]>;
+def MIPS16_RET_SC : RuntimeLibcall<Void, [ComplexF32]>;
+def MIPS16_RET_SF : RuntimeLibcall<Void, [Flt]>;
 
 // Produce libcall impls for all float types. If provided, `rtbasename` should
 // contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
