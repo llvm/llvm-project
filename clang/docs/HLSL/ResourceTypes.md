@@ -48,8 +48,34 @@ IR. These types are target specific and differ between DXIL and SPIR-V
 generation, providing the necessary information for the targets to generate
 binding metadata for their respective target runtimes.
 
+## Vulkan Element Types
+
+Textures and typed buffers lower to SPIR-V images on Vulkan. The
+scalar element type, or vector component type, of an image must
+be a 32-bit floating-point type or a 32-bit or 64-bit integer type
+([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]).
+
+When targeting SPIR-V, Clang reports an error for each variable or parameter
+declaration of a typed resource whose element type breaks this rule, whether
+or not the shader uses it. This covers global, `static` and local variables,
+function parameters, arrays of resources, declarations in instantiated
+templates, and resources embedded in structs, which are diagnosed at their
+field. A parameter of a function template is checked while its template
+arguments are deduced, so the error makes that candidate non-viable. Native
+16-bit types and `double` are rejected. Without native 16-bit types, `half`
+is a 32-bit type and stays valid. A typed resource is any SRV or UAV resource
+whose handle has a contained type and is not a raw buffer, so structured and
+byte-address buffers are not affected.
+
+The rule concerns the image's Sampled Type, not the precision of the
+texel format: an `R16f` image uses a 32-bit floating-point Sampled
+Type, as specified by Vulkan's [image format and type matching
+rules][vulkan-image-format-type-matching].
+
 [constantbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl#constant-buffers
 [rasterizerorderedtexture2d]: https://learn.microsoft.com/en-us/windows/win32/direct3d11/rasterizer-order-views
 [rwbyteaddressbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-rwbyteaddressbuffer
 [texture3d]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-texture3d
+[vulkan-image-sampled-type]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#VUID-StandaloneSpirv-OpTypeImage-04656
+[vulkan-image-format-type-matching]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#spirvenv-format-type-matching
 

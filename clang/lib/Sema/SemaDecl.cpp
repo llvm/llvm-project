@@ -9370,6 +9370,9 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
+  if (getLangOpts().HLSL)
+    HLSL().DiagnoseVulkanResourceElementTypes(NewVD);
+
   if (T.hasAddressSpace() &&
       !CheckVarDeclSizeAddressSpace(NewVD, T.getAddressSpace())) {
     NewVD->setInvalidDecl();
@@ -16247,6 +16250,9 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       PPC().CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
     New->setInvalidDecl();
   }
+
+  if (getLangOpts().HLSL)
+    HLSL().DiagnoseVulkanResourceElementTypes(New);
 
   return New;
 }
