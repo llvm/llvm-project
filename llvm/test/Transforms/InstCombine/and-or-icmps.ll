@@ -2282,6 +2282,34 @@ define <2 x i1> @bitwise_and_icmp_and_partial_poison(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
+define <2 x i1> @notallzeros_notallone_poison_lane(<2 x i8> %x) {
+; CHECK-LABEL: @notallzeros_notallone_poison_lane(
+; CHECK-NEXT:    [[AND_1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ne <2 x i8> [[AND_1]], <i8 0, i8 poison>
+; CHECK-NEXT:    ret <2 x i1> [[CMP_1]]
+;
+  %and = and <2 x i8> %x, splat (i8 12)
+  %cmp = icmp ne <2 x i8> %and, zeroinitializer
+  %and.1 = and <2 x i8> %x, splat (i8 4)
+  %cmp.1 = icmp ne <2 x i8> %and.1, <i8 0, i8 poison>
+  %rv = select <2 x i1> %cmp, <2 x i1> %cmp.1, <2 x i1> zeroinitializer
+  ret <2 x i1> %rv
+}
+
+define i1 @notallzeros_notallone_trunc_flags(i8 %x) {
+; CHECK-LABEL: @notallzeros_notallone_trunc_flags(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i3
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ne i3 [[TRUNC]], 0
+; CHECK-NEXT:    ret i1 [[CMP_1]]
+;
+  %and = and i8 %x, 15
+  %cmp = icmp ne i8 %and, 0
+  %trunc = trunc nuw i8 %x to i3
+  %cmp.1 = icmp ne i3 %trunc, 0
+  %r = select i1 %cmp, i1 %cmp.1, i1 false
+  ret i1 %r
+}
+
 define i1 @samesign(i32 %x, i32 %y) {
 ; CHECK-LABEL: @samesign(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
