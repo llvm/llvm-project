@@ -872,9 +872,10 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
   }
 
-  // Copy SGPR inputs of vector PHIs now, not in PHI elimination: i1 PHIs need
-  // this for SILowerI1Copies, and UnreachableMachineBlockElim would otherwise
-  // copy a single-input PHI's input after a divergent loop exit.
+  // An SGPR input of a vector PHI may be temporally divergent, e.g. used after
+  // a divergent loop. Copy it at the end of its incoming block, so each lane
+  // keeps the value from its last iteration.
+  // FIXME: SelectionDAG should handle temporal divergence, as GlobalISel does.
   const TargetRegisterClass *RC = MRI->getRegClass(PHIRes);
   if (TRI->hasVectorRegisters(RC)) {
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
