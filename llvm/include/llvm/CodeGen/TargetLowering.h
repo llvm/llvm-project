@@ -3837,14 +3837,6 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
-
-  /// Get the CallingConv that should be used for the specified libcall
-  /// implementation.
-  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplCallingConv(Call);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall.
   // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
