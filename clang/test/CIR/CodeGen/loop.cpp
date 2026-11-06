@@ -34,12 +34,8 @@ void l0() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL5:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l0v()
@@ -79,12 +75,8 @@ void l1() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL5:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l1v()
@@ -133,8 +125,6 @@ void l2() {
 // LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l2v()
@@ -181,8 +171,6 @@ void l3() {
 // LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l3v()
@@ -267,8 +255,6 @@ void l4() {
 // LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
 // LLVM:   br label %[[COND]]
 // LLVM: [[END]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l4v()
@@ -379,8 +365,6 @@ void l5() {
 // LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
 // LLVM:   br label %[[COND]]
 // LLVM: [[END]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l5v()
@@ -434,14 +418,10 @@ void test_do_while_false() {
 // LLVM: define{{.*}} void @_Z19test_do_while_falsev(){{.*}}
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
-// LLVM:   br label %[[LABEL3:.*]]
-// LLVM: [[LABEL2:.*]]:
-// LLVM:   br i1 false, label %[[LABEL3]], label %[[LABEL4:.*]]
-// LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL2]]
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL2]]:
+// LLVM:   br i1 false, label %[[LABEL2]], label %[[LABEL4:.*]]
 // LLVM: [[LABEL4]]:
-// LLVM:   br label %[[LABEL5:.*]]
-// LLVM: [[LABEL5]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z19test_do_while_falsev()
@@ -476,15 +456,11 @@ void test_empty_while_true() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL6:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4]]
-// LLVM: [[LABEL4]]:
 // LLVM:   ret void
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
 // LLVM:   br label %[[LABEL2:.*]]
 // LLVM: [[LABEL6]]:
-// LLVM:   br label %[[LABEL7:.*]]
-// LLVM: [[LABEL7]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z21test_empty_while_truev()
@@ -530,8 +506,6 @@ void unreachable_after_continue() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL7:.*]]
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
@@ -542,8 +516,6 @@ void unreachable_after_continue() {
 // LLVM: [[LABEL7]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL8]]:
-// LLVM:   br label %[[LABEL9:]]
-// LLVM: [[LABEL9]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z26unreachable_after_continuev()
@@ -590,20 +562,14 @@ void unreachable_after_break() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL8]]
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
 // LLVM:   store i32 1, ptr %[[X]], align 4
 // LLVM:   br label %[[LABEL6:.*]]
 // LLVM: [[LABEL6]]:
-// LLVM:   br label %[[LABEL7:.*]]
-// LLVM: [[LABEL7]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL8]]:
-// LLVM:   br label %[[LABEL9:]]
-// LLVM: [[LABEL9]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z23unreachable_after_breakv()
