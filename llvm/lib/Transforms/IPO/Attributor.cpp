@@ -3670,11 +3670,17 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     }
     return true;
   };
-  Success = checkForAllInstructionsImpl(
-      nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
-      {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
-      UsedAssumedInformation);
-  assert(Success && "Expected the check call to be successful!");
+  // Skip the loads and stores if nothing can be seeded for them, e.g., for
+  // attributor-light.
+  if (SeedSimplification || !SimplificationCallbacks.empty() ||
+      isAllowed<AAAlign>() || isAllowed<AAInvariantLoadPointer>() ||
+      isAllowed<AAAddressSpace>() || isAllowed<AAIsDead>()) {
+    Success = checkForAllInstructionsImpl(
+        nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
+        {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
+        UsedAssumedInformation);
+    assert(Success && "Expected the check call to be successful!");
+  }
 
   // AllocaInstPredicate
   auto AAAllocationInfoPred = [&](Instruction &I) -> bool {
@@ -3682,10 +3688,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     return true;
   };
 
-  Success = checkForAllInstructionsImpl(
-      nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
-      {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
-  assert(Success && "Expected the check call to be successful!");
+  if (isAllowed<AAAllocationInfo>()) {
+    Success = checkForAllInstructionsImpl(
+        nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
+        {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
+    assert(Success && "Expected the check call to be successful!");
+  }
 }
 
 bool Attributor::isClosedWorldModule() const {
