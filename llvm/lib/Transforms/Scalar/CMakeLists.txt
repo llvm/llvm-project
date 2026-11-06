@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMScalarOpts
   GVN.cpp
   GVNHoist.cpp
   GVNSink.cpp
+  HoistZeroCostConditionalValues.cpp
   IVUsersPrinter.cpp
   InductiveRangeCheckElimination.cpp
   IndVarSimplify.cpp
