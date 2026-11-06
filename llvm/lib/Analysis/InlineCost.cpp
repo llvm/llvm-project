@@ -73,14 +73,11 @@ std::optional<int> getStringFnAttrAsInt(Function *F, StringRef AttrKind) {
   return getStringFnAttrAsInt(F->getFnAttribute(AttrKind));
 }
 
-namespace InlineConstants {
-int getInstrCost(const LLVMContext &C) {
+} // namespace llvm
+
+int llvm::InlineConstants::getInstrCost(const LLVMContext &C) {
   return getAnalysisOptions(C).inline_instr_cost;
 }
-
-} // namespace InlineConstants
-
-} // namespace llvm
 
 namespace {
 class InlineCostCallAnalyzer;
@@ -855,7 +852,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     BlockFrequencyInfo *CalleeBFI = &(GetBFI(F));
     assert(CalleeBFI);
 
-    // The cycle savings expressed as the sum of InstrCost
+    // The cycle savings expressed as the sum of -inline-instr-cost
     // multiplied by the estimated dynamic count of each instruction we can
     // avoid.  Savings come from the call site cost, such as argument setup and
     // the call instruction, as well as the instructions that are folded.
@@ -3305,8 +3302,8 @@ InlineParams llvm::getInlineParams(const LLVMContext &C, int Threshold) {
   // Params.LocallyHotCallSiteThreshold from -locally-hot-callsite-threshold if
   // we know that optimization level is O3 (in the getInlineParams variant that
   // takes the opt and size levels).
-  // FIXME: Remove this check (and make the assignment unconditional) after
-  // addressing size regression issues at O2.
+  // FIXME: Apply the O3 default at all levels after addressing size regression
+  // issues at O2.
   Params.LocallyHotCallSiteThreshold = Opts.locally_hot_callsite_threshold;
 
   // Set the ColdCallSiteThreshold knob from the
@@ -3337,16 +3334,14 @@ InlineParams llvm::getInlineParams(const LLVMContext &C) {
 
 InlineParams llvm::getInlineParamsFromOptLevel(const LLVMContext &C,
                                                unsigned OptLevel) {
-  const AnalysisOptions &Opts = getAnalysisOptions(C);
-  auto Params =
-      getInlineParams(C, OptLevel > 2 ? InlineConstants::OptAggressiveThreshold
-                                      : Opts.inlinedefault_threshold);
+  if (OptLevel <= 2)
+    return getInlineParams(C);
+  auto Params = getInlineParams(C, InlineConstants::OptAggressiveThreshold);
   // At O3, use the value of -locally-hot-callsite-threshold option to populate
   // Params.LocallyHotCallSiteThreshold. Below O3, this flag has effect only
   // when it is specified explicitly.
-  if (OptLevel > 2)
-    Params.LocallyHotCallSiteThreshold =
-        Opts.locally_hot_callsite_threshold.value_or(525);
+  Params.LocallyHotCallSiteThreshold =
+      getAnalysisOptions(C).locally_hot_callsite_threshold.value_or(525);
   return Params;
 }
 

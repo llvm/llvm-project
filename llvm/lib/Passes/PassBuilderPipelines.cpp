@@ -354,9 +354,9 @@ static InlineParams getInlineParamsFromOptLevel(const LLVMContext &Context,
 
 static void addModuleInlinerPass(ModulePassManager &MPM,
                                  const LLVMContext &Context,
-                                 const PassesOptions &Opts,
                                  OptimizationLevel Level,
                                  ThinOrFullLTOPhase Phase) {
+  const PassesOptions &Opts = getPassesOptions(Context);
   InlineParams IP = ::getInlineParamsFromOptLevel(Context, Level);
   if (Opts.enable_module_inliner)
     MPM.addPass(ModuleInlinerPass(IP, Opts.enable_ml_inliner, Phase));
@@ -1640,7 +1640,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // Also, we can't run devirtualization before inlining because the
     // devirtualization depends on the passes optimizing/eliminating vtable GVs
     // and those passes are only effective after inlining.
-    addModuleInlinerPass(MPM, Context, Opts, Level, ThinOrFullLTOPhase::None);
+    addModuleInlinerPass(MPM, Context, Level, ThinOrFullLTOPhase::None);
   }
 
   // Attach !implicit.ref metadata from all functions to copyright strings.
@@ -2100,7 +2100,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
   // Run the inliner now.
-  addModuleInlinerPass(MPM, Context, Opts, Level,
+  addModuleInlinerPass(MPM, Context, Level,
                        ThinOrFullLTOPhase::FullLTOPostLink);
 
   // Perform context disambiguation after inlining, since that would reduce the
