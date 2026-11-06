@@ -986,6 +986,8 @@ X86ExpandPseudoPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
   if (!Impl.CFGChanged)
     PA.preserveSet<CFGAnalyses>();
   return PA;
