@@ -18,14 +18,7 @@ using LIBC_NAMESPACE::Sign;
 
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
-
-  const T inf = FPBits::inf(Sign::POS).get_val();
-  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
-  const T zero = FPBits::zero(Sign::POS).get_val();
-  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  const T nan = FPBits::quiet_nan().get_val();
+  DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -36,27 +29,51 @@ public:
 
     y = T(1.0);
     x = inf;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
     x = neg_inf;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
 
     x = T(1.0);
     y = zero;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
     y = neg_zero;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
 
-    y = nan;
+    y = aNaN;
     x = T(1.0);
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ(aNaN, func(x, y, &quotient));
 
     y = T(1.0);
-    x = nan;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    x = aNaN;
+    EXPECT_FP_EQ(aNaN, func(x, y, &quotient));
 
-    x = nan;
-    y = nan;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    x = aNaN;
+    y = aNaN;
+    EXPECT_FP_EQ(aNaN, func(x, y, &quotient));
+
+    const T finite = T(1.0);
+    const T others[] = {finite, zero, inf, aNaN, sNaN};
+    T result = zero;
+    for (T other : others) {
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, result = func(sNaN, other, &quotient),
+                                  FE_INVALID);
+      EXPECT_MATH_ERRNO(0);
+      EXPECT_FALSE(FPBits(result).is_signaling_nan());
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, result = func(other, sNaN, &quotient),
+                                  FE_INVALID);
+      EXPECT_MATH_ERRNO(0);
+      EXPECT_FALSE(FPBits(result).is_signaling_nan());
+    }
+
+    // A quiet NaN takes precedence over an otherwise invalid domain.
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(aNaN, zero, &quotient), 0);
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(inf, aNaN, &quotient), 0);
+    EXPECT_MATH_ERRNO(0);
 
     x = zero;
     y = T(1.0);
