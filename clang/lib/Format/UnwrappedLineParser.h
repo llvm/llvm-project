@@ -162,6 +162,8 @@ private:
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
   bool isFollowedByConditionalElse() const;
+  bool canInsertBraces(const FormatToken &LBraceTok,
+                       const FormatToken &RBraceTok) const;
   void handleAttributes();
   bool handleCppAttributes();
   bool isBlockBegin(const FormatToken &Tok) const;
