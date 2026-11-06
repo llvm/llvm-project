@@ -109,6 +109,11 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --emit-fatbin-only --linker-path=/usr/bin/ld %t.sycl-30r.o %t.sycl-40r.o \
 // RUN:   -o %t.sycl.fatbin
 // RUN: llvm-objdump --offloading %t.sycl.fatbin | FileCheck %s --check-prefix=SYCL-MERGED
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --embed-bitcode --emit-fatbin-only --linker-path=/usr/bin/ld \
+// RUN:   %t.sycl-30r.o %t.sycl-40r.o -o %t.sycl-bc.fatbin
+// RUN: llvm-objdump --offloading %t.sycl-bc.fatbin \
+// RUN:   | FileCheck %s --check-prefix=SYCL-MERGED-BC
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --wrapper-verbose --save-temps --linker-path=/usr/bin/ld \
 // RUN:   %t.sycl-30r.o %t.sycl-40r.o -o a.out 2>&1 \
@@ -145,6 +150,10 @@ __attribute__((visibility("protected"), used)) int x;
 // single offload binary.
 // SYCL-MERGED-DAG: arch            igca_30r
 // SYCL-MERGED-DAG: arch            igca_40r
+
+// With --embed-bitcode, each linked bitcode file is one device image.
+// SYCL-MERGED-BC-COUNT-2: kind            llvm ir
+// SYCL-MERGED-BC-NOT:     kind
 
 // With --wrapper-verbose --save-temps, the merged offload binary is wrapped.
 // SYCL-MERGED-VERBOSE: llvm-offload-wrapper{{.*}} --kind=sycl {{.*}} a.out.sycl.merged.out{{$}}

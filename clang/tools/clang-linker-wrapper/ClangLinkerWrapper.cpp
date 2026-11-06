@@ -940,28 +940,43 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
   // Images with different "code" are linked separately, but the SYCL runtime
   // registers a single offload binary, so merge their device images into one.
   SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  SmallVector<OffloadingImage> Merged;
   for (const OffloadingImage &Image : Images) {
     // A dry run has no linked output to read.
     if (Image.Image->getBufferSize() == 0)
       continue;
+
+    // With --embed-bitcode, the image is the linked bitcode itself rather than
+    // an offload binary, so it is one device image.
+    if (identify_magic(Image.Image->getBuffer()) !=
+        file_magic::offload_binary) {
+      OffloadingImage Copy;
+      Copy.TheImageKind = Image.TheImageKind;
+      Copy.TheOffloadKind = Image.TheOffloadKind;
+      Copy.Flags = Image.Flags;
+      Copy.StringData = Image.StringData;
+      Copy.Image = MemoryBuffer::getMemBuffer(Image.Image->getMemBufferRef(),
+                                              /*RequiresNullTerminator=*/false);
+      Merged.push_back(std::move(Copy));
+      continue;
+    }
+
     auto BinariesOrErr = OffloadBinary::create(Image.Image->getMemBufferRef());
     if (!BinariesOrErr)
       return BinariesOrErr.takeError();
-    for (std::unique_ptr<OffloadBinary> &Binary : *BinariesOrErr)
+    for (std::unique_ptr<OffloadBinary> &Binary : *BinariesOrErr) {
+      OffloadingImage Entry;
+      Entry.TheImageKind = Binary->getImageKind();
+      Entry.TheOffloadKind = Binary->getOffloadKind();
+      Entry.Flags = Binary->getFlags();
+      for (const auto &[Key, Value] : Binary->strings())
+        Entry.StringData[Key] = Value;
+      Entry.Image =
+          MemoryBuffer::getMemBuffer(Binary->getImage(), "",
+                                     /*RequiresNullTerminator=*/false);
+      Merged.push_back(std::move(Entry));
       Binaries.push_back(std::move(Binary));
-  }
-
-  SmallVector<OffloadingImage> Merged;
-  for (const std::unique_ptr<OffloadBinary> &Binary : Binaries) {
-    OffloadingImage Image;
-    Image.TheImageKind = Binary->getImageKind();
-    Image.TheOffloadKind = Binary->getOffloadKind();
-    Image.Flags = Binary->getFlags();
-    for (const auto &[Key, Value] : Binary->strings())
-      Image.StringData[Key] = Value;
-    Image.Image = MemoryBuffer::getMemBuffer(Binary->getImage(), "",
-                                             /*RequiresNullTerminator=*/false);
-    Merged.push_back(std::move(Image));
+    }
   }
 
   SmallString<0> Data;
