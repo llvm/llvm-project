@@ -43,9 +43,9 @@ define void @wasm_phi() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[CS2:%.*]] = catchswitch within none [label %[[CATCH_START6:.*]]] unwind to caller
 ; CHECK:       [[CATCH_START6]]:
 ; CHECK-NEXT:    [[CP2:%.*]] = catchpad within [[CS2]] [ptr null]
+; CHECK-NEXT:    [[NUM_1_WINEH_RELOAD:%.*]] = load i32, ptr [[NUM_1_WINEH_SPILLSLOT]], align 4
 ; CHECK-NEXT:    [[EXN2:%.*]] = call ptr @llvm.wasm.get.exception(token [[CP2]])
 ; CHECK-NEXT:    [[SEL2:%.*]] = call i32 @llvm.wasm.get.ehselector(token [[CP2]])
-; CHECK-NEXT:    [[NUM_1_WINEH_RELOAD:%.*]] = load i32, ptr [[NUM_1_WINEH_SPILLSLOT]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[NUM_1_WINEH_RELOAD]]) [ "funclet"(token [[CP2]]) ]
 ; CHECK-NEXT:    catchret from [[CP2]] to label %[[TRY_CONT10]]
 ; CHECK:       [[TRY_CONT10]]:
