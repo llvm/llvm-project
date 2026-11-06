@@ -18,11 +18,16 @@
 // bool(comp(a[floor((i - 1) / 2)], a[i])) is false.
 template <class Comp, class Iter>
 TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b, Comp cmp) {
-  using difference_type = typename std::iterator_traits<Iter>::difference_type;
-
+  typedef typename std::iterator_traits<Iter>::difference_type difference_type;
   const difference_type n = b - a;
   for (difference_type i = 1; i < n; ++i)
     if (cmp(a[(i - 1) / 2], a[i]))
       return false;
   return true;
+}
+
+template <class Iter>
+TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b) {
+    typedef typename std::iterator_traits<Iter>::value_type value_type;
+    return satisfies_heap_property(a, b, std::less<value_type>());
 }
