@@ -51,7 +51,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasLZCNT = Subtarget.hasLZCNT();
   bool HasBMI = Subtarget.hasBMI();
 
-  const LLT p0 = LLT::pointer(0, Subtarget.isTarget64BitLP64() ? 64 : 32);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -80,6 +80,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
+  const LLT sVecIdx =
+      STI.getTargetLowering()->getVectorIdxLLT(TM.createDataLayout());
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
   const LLT s32MaxVector = HasAVX512 ? v16s32 : HasAVX ? v8s32 : v4s32;
@@ -562,6 +564,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampNumElements(0, v2s64, s64MaxVector)
       .moreElementsToNextPow2(0);
 
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .customFor(HasSSE41, {{v4s32, s32, sVecIdx}})
+      .customFor(HasSSE41 && Is64Bit, {{v2s64, s64, sVecIdx}});
+
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
         unsigned SubIdx = Query.Opcode == G_EXTRACT ? 0 : 1;
@@ -656,6 +662,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSETROUNDING(MI, MRI, Helper);
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeGLOBAL_VALUE(MI, MRI, Helper);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return legalizeINSERT_VECTOR_ELT(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -1048,6 +1056,23 @@ bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
         MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, DstTy,
         Align(DstTy.getSizeInBytes()));
     MIRBuilder.buildLoad(Dst, StubAddr, *MMO);
+    MI.eraseFromParent();
+  }
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeINSERT_VECTOR_ELT(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  auto IdxVal =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (!IdxVal)
+    return Helper.lowerExtractInsertVectorElt(MI) ==
+           LegalizerHelper::LegalizeResult::Legalized;
+
+  if (IdxVal->Value.uge(DstTy.getNumElements())) {
+    Helper.MIRBuilder.buildUndef(Dst);
     MI.eraseFromParent();
   }
   return true;
