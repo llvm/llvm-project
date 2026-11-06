@@ -9,8 +9,8 @@ int f19(void) {
   return ({ 3;;4; });
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
-// LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
+// LLVM-DAG: @[[TEST3_S:.*]] = private unnamed_addr constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
