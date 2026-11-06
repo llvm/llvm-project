@@ -119,6 +119,10 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
   }
 }
 
+bool RegisterClassInfo::hasCurrentReservedRegs() const {
+  return Reserved == MF->getRegInfo().getReservedRegs();
+}
+
 void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
   assert(MF && TRI && RegClass &&
          "RegisterClassInfo must be initialized before updating reserved regs");

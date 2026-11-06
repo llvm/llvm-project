@@ -13,7 +13,8 @@ add_mlir_dialect_library(MLIRAffineAnalysis
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
+  MLIRAnalysisPresburger
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDialectUtils

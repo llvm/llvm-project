@@ -14,7 +14,7 @@
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_NativeDylibManager_load,
@@ -23,9 +23,8 @@ ORC_RT_SPS_WRAPPER_IMPL(
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_NativeDylibManager_lookup,
-    SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSExecutorAddr,
-        SPSSequence<SPSTuple<SPSString, bool>>),
+    SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSExecutorAddr,
+                                       SPSSymbolLookupSet),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::lookup))
 
 static std::pair<SymbolNameSpec, const void *>
@@ -37,4 +36,4 @@ Error addNativeDylibManager(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_NativeDylibManager_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

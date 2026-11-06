@@ -84,7 +84,8 @@ def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
-def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs GPRS07:$rs1, GPRS07:$rs2),
+def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2,
+                              (outs GPRS07:$rs1, mvsa01_rs2:$rs2),
                               (ins), "qc.cm.mvsa01", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0

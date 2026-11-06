@@ -17,6 +17,7 @@
 ; RUN: echo 'c2' >> %t
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -function-splitting=all | FileCheck %s --check-prefixes=MFS-BBSECTIONS,MFS-BBSECTIONS-ALL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -function-splitting=bbsections | FileCheck %s --check-prefixes=MFS-BBSECTIONS,MFS-BBSECTIONS-ONLY
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -function-splitting=none | FileCheck %s --check-prefixes=MFS-BBSECTIONS-NONE
 
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
@@ -638,6 +639,11 @@ define void @foo21(i1 zeroext %0) {
 ; MFS-NOBBSECTIONS-NOT:      foo21.cold:
 ; MFS-BBSECTIONS:            .section	.text.split.foo21
 ; MFS-BBSECTIONS:            foo21.cold
+;; Check that with -function-splitting=none, the function is not split.
+; MFS-BBSECTIONS-NONE:       .section   .text.hot.foo21
+; MFS-BBSECTIONS-NONE-LABEL: foo21:
+; MFS-BBSECTIONS-NONE-NOT:   .section
+; MFS-BBSECTIONS-NONE:       .size   foo21,
   %2 = alloca i8, align 1
   %3 = zext i1 %0 to i8
   store i8 %3, ptr %2, align 1
@@ -669,6 +675,15 @@ define void @foo22(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; MFS-BBSECTIONS-NEXT:        foo22.__part.1:
 ; MFS-BBSECTIONS:             callq  baz
 ; MFS-BBSECTIONS-NOT:         .section        .text.split.foo22
+;; Check that with -function-splitting=none, both clusters are emitted in a
+;; single section.
+; MFS-BBSECTIONS-NONE:        .section        .text.hot.foo22
+; MFS-BBSECTIONS-NONE-LABEL:  foo22:
+; MFS-BBSECTIONS-NONE:        callq  bar
+; MFS-BBSECTIONS-NONE-NOT:    .section
+; MFS-BBSECTIONS-NONE:        callq  baz
+; MFS-BBSECTIONS-NONE-NOT:    .section
+; MFS-BBSECTIONS-NONE:        .size   foo22,
   br i1 %0, label %2, label %4, !prof !17
 
 2:                                                ; preds = %1

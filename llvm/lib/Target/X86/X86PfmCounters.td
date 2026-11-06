@@ -236,6 +236,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
 def : PfmCountersBinding<"emeraldrapids", SapphireRapidsPfmCounters>;
+def : PfmCountersBinding<"graniterapids", SapphireRapidsPfmCounters>;
 
 def LunarLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;

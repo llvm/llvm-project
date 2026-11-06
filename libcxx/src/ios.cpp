@@ -49,7 +49,8 @@ const error_category& iostream_category() noexcept {
     constexpr explicit AvoidDestroyingIostreamCategory() : iostream_error_category() {}
     ~AvoidDestroyingIostreamCategory() {}
   };
-  constinit static AvoidDestroyingIostreamCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingIostreamCategory helper;
   return helper.iostream_error_category;
 }
 

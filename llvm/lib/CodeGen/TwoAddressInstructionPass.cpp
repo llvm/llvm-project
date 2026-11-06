@@ -1897,26 +1897,46 @@ bool TwoAddressInstructionImpl::run() {
         LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
         LiveInterval *LI = LIS ? &LIS->getInterval(Reg) : nullptr;
 
-        // The fixup below keeps or discards a subrange's value as a whole, so
-        // split the ones straddling SubIdx. This must precede narrowing the
-        // def, or refineSubRanges drops the value for the untouched lanes.
+        bool UndefLanesAreLive = false;
         if (LI && LI->hasSubRanges()) {
+          // The fixup below keeps or discards a subrange's value as a whole,
+          // so split the ones straddling SubIdx. This must precede narrowing
+          // the def, or refineSubRanges drops the value for the untouched
+          // lanes.
           LI->refineSubRanges(
               LIS->getVNInfoAllocator(), LaneMask,
               [](LiveInterval::SubRange &) {}, *LIS->getSlotIndexes(), *TRI);
+
+          if (mi->getOperand(1).isUndef()) {
+            SlotIndex Idx = LIS->getInstructionIndex(*mi).getDeadSlot();
+            UndefLanesAreLive =
+                any_of(LI->subranges(), [&](const LiveInterval::SubRange &S) {
+                  return (S.LaneMask & LaneMask).none() && S.liveAt(Idx);
+                });
+          }
         }
 
         mi->removeOperand(3);
         assert(mi->getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
         mi->getOperand(0).setSubReg(SubIdx);
-        mi->getOperand(0).setIsUndef(mi->getOperand(1).isUndef());
+        mi->getOperand(0).setIsUndef(mi->getOperand(1).isUndef() &&
+                                     !UndefLanesAreLive);
         mi->removeOperand(1);
         mi->setDesc(TII->get(TargetOpcode::COPY));
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
 
+        if (UndefLanesAreLive) {
+          MachineInstr *ImpDef =
+              BuildMI(*mi->getParent(), mi, mi->getDebugLoc(),
+                      TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+          DistanceMap.insert(std::make_pair(ImpDef, Dist));
+          DistanceMap[&*mi] = ++Dist;
+          LIS->InsertMachineInstrInMaps(*ImpDef);
+        }
+
         // Update LiveIntervals.
         if (LI) {
-          if (LI->hasSubRanges()) {
+          if (LI->hasSubRanges() && !UndefLanesAreLive) {
             // The COPY no longer defines subregs of %reg except for
             // %reg.subidx.
             SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
@@ -1935,8 +1955,9 @@ bool TwoAddressInstructionImpl::run() {
             // The COPY no longer has a use of %reg.
             LIS->shrinkToUses(LI);
           } else {
-            // The live interval for Reg did not have subranges but now it needs
-            // them because we have introduced a subreg def. Recompute it.
+            // Either the live interval for Reg did not have subranges but now
+            // it needs them because we have introduced a subreg def, or an
+            // IMPLICIT_DEF was inserted. Recompute it.
             LIS->removeInterval(Reg);
             LIS->createAndComputeVirtRegInterval(Reg);
           }

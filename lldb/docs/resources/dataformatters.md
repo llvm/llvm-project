@@ -140,7 +140,7 @@ of synthetic children:
 ```
 virtual size_t CalculateNumChildren () = 0;
 virtual lldb::ValueObjectSP GetChildAtIndex (size_t idx) = 0;
-virtual size_t GetIndexOfChildWithName (const ConstString &name) = 0;
+virtual size_t GetIndexOfChildWithName (llvm::StringRef name) = 0;
 virtual bool Update () = 0;
 virtual bool MightHaveChildren () = 0;
 ```
