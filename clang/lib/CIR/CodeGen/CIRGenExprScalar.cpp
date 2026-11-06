@@ -2929,17 +2929,30 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                               cgf.convertType(destTy));
   }
 
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
-    // Create a vector object and fill all elements with the same scalar value.
+    // Splat the element across to all elements
     mlir::Type destCIRTy = cgf.convertType(destTy);
-    assert(mlir::isa<cir::VectorType>(destCIRTy) &&
-           "CK_VectorSplat to non-vector type");
     return cir::VecSplatOp::create(builder,
                                    cgf.getLoc(subExpr->getSourceRange()),
                                    destCIRTy, Visit(subExpr));
   }
   case CK_FunctionToPointerDecay:
     return cgf.emitLValue(subExpr).getPointer();
+
+  case CK_HLSLVectorTruncation: {
+    assert((destTy->isVectorType() || destTy->isBuiltinType()) &&
+           "Destination type must be a vector or builtin type.");
+    mlir::Value vec = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (auto *vecTy = destTy->getAs<VectorType>()) {
+      unsigned numElts = vecTy->getNumElements();
+      llvm::SmallVector<int64_t, 4> mask(numElts);
+      std::iota(mask.begin(), mask.end(), 0);
+      return builder.createVecShuffle(loc, vec, mask);
+    }
+    return builder.createExtractElement(loc, vec, /*idx=*/0);
+  }
 
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -3344,19 +3357,21 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     mlir::Value lhsValue = Visit(lhsExpr);
     mlir::Value rhsValue = Visit(rhsExpr);
 
-    mlir::Type vecTy = convertType(condType);
+    // Test the MSB with a signed compare, as classic codegen does.
+    mlir::Type vecTy =
+        convertType(cgf.getContext().getCorrespondingSignedType(condType));
+    condValue = builder.createBitcast(condValue, vecTy);
     mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
     auto testMSB = cir::VecCmpOp::create(
         builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
     mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
     mlir::Value tmp2 = builder.createNot(tmp);
 
-    // Cast float to int to perform ANDs if necessary.
+    // Bitcast float or differently signed operands to the condition type.
     mlir::Value rhsTmp = rhsValue;
     mlir::Value lhsTmp = lhsValue;
     bool wasCast = false;
-    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
-    if (cir::isAnyFloatingPointType(rhsVecTy.getElementType())) {
+    if (rhsValue.getType() != vecTy) {
       rhsTmp = builder.createBitcast(rhsValue, tmp2.getType());
       lhsTmp = builder.createBitcast(lhsValue, tmp.getType());
       wasCast = true;

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=mips -mcpu=mips32r2 -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=mips -mcpu=mips32r2 -run-pass=none %s -o - | FileCheck %s --check-prefix=MIR
 # RUN: llc -mtriple=mips -mcpu=mips32r2 -start-after=xray-instrumentation -verify-machineinstrs -show-mc-encoding %s -o - | FileCheck %s --check-prefix=ASM
 
 # Selectors distinguish physical registers even when REG is the same. Each

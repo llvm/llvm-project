@@ -1,11 +1,24 @@
 # Basic selection where -fmultilib-flag=debug selects the debug variant.
+# Linux keeps builtin headers in ResourceDir/include, while the selected YAML
+# directory selects the target-specific include directory.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=x86_64-linux-gnu -fmultilib-flag=debug --sysroot= \
 # RUN:     -ccc-install-dir %S/Inputs/multilib_linux_tree/usr/bin \
+# RUN:     -resource-dir=%S/Inputs/multilib_linux_tree/resource \
 # RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
 # CHECK-DEBUG:      "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+# CHECK-DEBUG:      "-internal-isystem" "{{.*}}{{[/\\]}}resource{{[/\\]+}}include"
 # CHECK-DEBUG:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/debug"
 # CHECK-DEBUG:      "-L{{[^"]*}}/debug"
+
+# The selected YAML directory is also appended to Clang's per-target runtime
+# directory when resolving compiler-rt libraries.
+# RUN: %clang --multi-lib-config=%s -print-libgcc-file-name \
+# RUN:     --target=x86_64-linux-gnu -fmultilib-flag=debug \
+# RUN:     -resource-dir=%S/Inputs/multilib_linux_tree/resource \
+# RUN:     --rtlib=compiler-rt \
+# RUN:   | FileCheck --check-prefix=CHECK-RESOURCE-LIB %s
+# CHECK-RESOURCE-LIB: {{.*}}{{[/\\]}}resource{{[/\\]+}}lib{{[/\\]+}}x86_64-unknown-linux-gnu/debug{{[/\\]+}}libclang_rt.builtins.a
 
 # Default behavior where no variant path is prepended.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \

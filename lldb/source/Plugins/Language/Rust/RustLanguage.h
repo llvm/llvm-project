@@ -8,11 +8,10 @@
 
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_RUST_RUSTLANGUAGE_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_RUST_RUSTLANGUAGE_H
-#include "lldb/Target/Language.h"
 
 #include "llvm/ADT/StringRef.h"
-
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Target/Language.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -33,21 +32,30 @@ public:
     return lldb::eLanguageTypeRust;
   }
 
+  bool IsSourceFile(llvm::StringRef file_path) const override;
+
+  /// Rust has no null literal, so null pointers print like in C.
+  llvm::StringRef GetNilReferenceSummaryString() override { return "NULL"; }
+
+  DemangledName DemangleSymbol(ConstString mangled,
+                               Mangled::ManglingScheme scheme,
+                               const DemangleOptions &options) const override;
+
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  uint32_t RustLanguage::GetPluginVersion() { return 1; }
+
+  // Static Functions
   static void Initialize();
 
   static void Terminate();
 
-  static lldb_private::Language *CreateInstance(lldb::LanguageType language);
+  static Language *CreateInstance(lldb::LanguageType language);
 
-  static llvm::StringRef GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "rust"; }
 
-  llvm::StringRef GetPluginName() override;
-
-  uint32_t GetPluginVersion();
-
-  bool IsSourceFile(llvm::StringRef file_path) const override;
+  /// PluginInterface protocol.
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 
 } // namespace lldb_private

@@ -6,13 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
 
 #include "RustLanguage.h"
 
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+
+#include "llvm/Demangle/Demangle.h"
+
+#include <cassert>
+#include <cstdlib>
 
 using namespace llvm;
 using namespace lldb;
@@ -21,38 +28,54 @@ using namespace lldb_private::formatters;
 
 LLDB_PLUGIN_DEFINE(RustLanguage)
 
+/// The mangling scheme that this plugin registered.
+static Mangled::ManglingScheme g_rust_v0_scheme = Mangled::eManglingSchemeNone;
+
 void RustLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Rust Language",
                                 CreateInstance);
+  g_rust_v0_scheme = Mangled::RegisterManglingScheme({"_R"}, eLanguageTypeRust);
 }
 
 void RustLanguage::Terminate() {
+  Mangled::UnregisterManglingScheme(g_rust_v0_scheme);
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-StringRef RustLanguage::GetPluginNameStatic() {
-  static llvm::StringRef g_name("rust");
-  return g_name;
-}
-
-StringRef RustLanguage::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t RustLanguage::GetPluginVersion() { return 1; }
-
+// Static Functions
 Language *RustLanguage::CreateInstance(LanguageType language) {
   if (Language::LanguageIsRust(language))
     return new RustLanguage();
-
   return nullptr;
 }
 
 bool RustLanguage::IsSourceFile(StringRef file_path) const {
-  const auto suffixes = {".rs"};
-  for (auto suffix : suffixes) {
-    if (file_path.ends_with_insensitive(suffix))
-      return true;
+  return file_path.ends_with_insensitive(".rs");
+}
+
+Language::DemangledName
+RustLanguage::DemangleSymbol(ConstString mangled,
+                             Mangled::ManglingScheme scheme,
+                             const DemangleOptions &options) const {
+  assert(scheme == g_rust_v0_scheme);
+  llvm::StringRef mangled_str = mangled.GetStringRef();
+  char *demangled_cstr = llvm::rustDemangle(mangled_str);
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr && demangled_cstr[0])
+      LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", mangled_str,
+               demangled_cstr);
+    else
+      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle",
+               mangled_str);
   }
-  return false;
+
+  DemangledName demangled;
+  if (demangled_cstr) {
+    demangled.name = demangled_cstr;
+    std::free(demangled_cstr);
+  }
+  return demangled;
 }
 
 static void LoadRustFormatters(lldb::TypeCategoryImplSP rust_category_sp) {
