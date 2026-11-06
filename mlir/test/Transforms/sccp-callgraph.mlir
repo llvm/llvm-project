@@ -306,3 +306,22 @@ func.func @bar(%arg0: index) -> index {
   // FUNC: cf.br ^bb1(%[[FOO]]
   cf.br ^bb1(%13 : index)
 }
+
+// -----
+
+/// Check that SCCP does not crash when callee returns fewer operands than the
+/// call's forwarded results (e.g., async.func implicitly produces a token).
+
+// CHECK-LABEL: async.func @async_func_implicit_token
+async.func @async_func_implicit_token() -> (!async.token, !async.value<i32>) {
+  %0 = arith.constant 42 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @call_async_func_implicit_token
+func.func @call_async_func_implicit_token() {
+  // CHECK: async.call @async_func_implicit_token
+  %token, %val = async.call @async_func_implicit_token() : () -> (!async.token, !async.value<i32>)
+  return
+}
+
