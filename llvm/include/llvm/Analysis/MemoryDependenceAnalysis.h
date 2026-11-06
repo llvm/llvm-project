@@ -513,13 +513,20 @@ private:
   void setNonLocalPointerDepVisited(BasicBlock *BB, Value *V);
   bool isNonLocalPointerDepVisited(BasicBlock *BB) const;
   Value *lookupNonLocalPointerDepVisited(BasicBlock *BB) const;
-  bool getNonLocalPointerDepFromBB(Instruction *QueryInst,
-                                   const PHITransAddr &Pointer,
-                                   const MemoryLocation &Loc, bool isLoad,
-                                   BasicBlock *BB,
-                                   SmallVectorImpl<NonLocalDepResult> &Result,
-                                   bool SkipFirstBlock = false,
-                                   bool IsIncomplete = false);
+
+  struct DeferredNonLocalPointerDep {
+    BasicBlock *BB;
+    PHITransAddr Pointer;
+    MemoryLocation Loc;
+    /// The cache key of the query that translated the pointer.
+    ValueIsLoadPair ParentKey;
+  };
+  bool getNonLocalPointerDepFromBB(
+      Instruction *QueryInst, const PHITransAddr &Pointer,
+      const MemoryLocation &Loc, bool isLoad, BasicBlock *BB,
+      SmallVectorImpl<NonLocalDepResult> &Result,
+      SmallVectorImpl<DeferredNonLocalPointerDep> &Deferred,
+      bool SkipFirstBlock = false, bool IsIncomplete = false);
   MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
