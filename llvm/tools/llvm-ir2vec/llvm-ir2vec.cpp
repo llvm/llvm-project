@@ -67,7 +67,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -155,7 +154,7 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    // and this value will be populated in the var VocabFile
+    StringRef VocabFile = ir2vec::getVocabFile(M.getContext());
     if (VocabFile.empty()) {
       return createStringError(
           errc::invalid_argument,
@@ -350,9 +349,9 @@ int main(int argc, char **argv) {
   using namespace llvm::mir2vec;
 
   InitLLVM X(argc, argv);
-  // Show Common, IR2Vec and MIR2Vec option categories
+  // Show Common and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
-      &CommonCategory, &ir2vec::IR2VecCategory, &mir2vec::MIR2VecCategory});
+      &CommonCategory, &mir2vec::MIR2VecCategory});
   cl::LibraryOptionsContext LibraryOptions;
   cl::parseCommandLineOptions(
       LibraryOptions, ArrayRef(argv, argc),
