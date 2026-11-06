@@ -27,6 +27,7 @@
 
 // CHECK-GLOBAL-IN-NAMESPACE: Dumping Namespace1::varInNamespace:
 // CHECK-GLOBAL-IN-NAMESPACE-NEXT: VarDecl {{.+}} imported in Namespaces varInNamespace 'int' static cinit
+// CHECK-GLOBAL-IN-NAMESPACE-NEXT: value: Int 1
 // CHECK-GLOBAL-IN-NAMESPACE-NEXT: IntegerLiteral {{.+}} 'int' 1
 // CHECK-GLOBAL-IN-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftVarInNamespace"
 
@@ -40,11 +41,13 @@
 
 // CHECK-GLOBAL-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested1::varInNestedNamespace:
 // CHECK-GLOBAL-IN-NESTED-NAMESPACE-NEXT: VarDecl {{.+}} imported in Namespaces varInNestedNamespace 'int' static cinit
+// CHECK-GLOBAL-IN-NESTED-NAMESPACE-NEXT: value: Int 1
 // CHECK-GLOBAL-IN-NESTED-NAMESPACE-NEXT: IntegerLiteral {{.+}} 'int' 1
 // CHECK-GLOBAL-IN-NESTED-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftVarInNestedNamespace"
 
 // CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested2::varInNestedNamespace:
 // CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE-NEXT: VarDecl {{.+}} imported in Namespaces varInNestedNamespace 'int' static cinit
+// CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE-NEXT: value: Int 2
 // CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE-NEXT: IntegerLiteral {{.+}} 'int' 2
 // CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftAnotherVarInNestedNamespace"
 
@@ -71,6 +74,7 @@
 
 // CHECK-GLOBAL-IN-INLINE-NAMESPACE: Dumping varInInlineNamespace:
 // CHECK-GLOBAL-IN-INLINE-NAMESPACE-NEXT: VarDecl {{.+}} imported in Namespaces varInInlineNamespace 'int' static cinit
+// CHECK-GLOBAL-IN-INLINE-NAMESPACE-NEXT: value: Int 3
 // CHECK-GLOBAL-IN-INLINE-NAMESPACE-NEXT: IntegerLiteral {{.+}} 'int' 3
 // CHECK-GLOBAL-IN-INLINE-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftVarInInlineNamespace"
 

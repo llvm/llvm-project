@@ -86,6 +86,7 @@ void testLambdaMethod() {
 
 int testCI1 = 1;
 // CHECK-LABEL: VarDecl{{.*}} testCI1
+// CHECK-NEXT: value: Int 1
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: ConstInitAttr
 
@@ -93,6 +94,7 @@ int testCI1 = 1;
 
 int testNoCI = 0;
 // CHECK-LABEL: VarDecl{{.*}} testNoCI
+// CHECK-NEXT: value: Int 0
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NOT: ConstInitAttr
 
