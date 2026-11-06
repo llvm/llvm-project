@@ -291,8 +291,7 @@ Sections:
 
   auto stale = std::make_shared<bool>(false);
   auto data_sp = std::make_shared<StaleableDataBuffer>(
-      *ExpectedFile->moduleSpec().GetExtractor()->GetSharedDataBuffer(),
-      stale);
+      *ExpectedFile->moduleSpec().GetExtractor()->GetSharedDataBuffer(), stale);
   // Name the build ID, so this finds the module created from this file
   // rather than any module already in the shared module list.
   UUID build_id;
@@ -302,8 +301,8 @@ Sections:
                   std::make_shared<DataExtractor>(data_sp));
 
   ModuleSP module_sp;
-  ASSERT_TRUE(ModuleList::GetSharedModule(spec, module_sp, nullptr, nullptr)
-                  .Success());
+  ASSERT_TRUE(
+      ModuleList::GetSharedModule(spec, module_sp, nullptr, nullptr).Success());
   ASSERT_TRUE(module_sp);
   UUID uuid = module_sp->GetUUID();
   ASSERT_TRUE(uuid.IsValid());

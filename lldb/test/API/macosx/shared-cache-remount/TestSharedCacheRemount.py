@@ -240,5 +240,6 @@ class TestSharedCacheRemount(GDBRemoteTestBase):
         remounted_cache = os.path.join(remounted, CACHE_NAME)
         shutil.copyfile(self.system_cache, remounted_cache)
 
-        self.assertIn(self.debug_session(remounted_cache, cache_uuid), (None, MH_MAGIC_64))
-
+        self.assertIn(
+            self.debug_session(remounted_cache, cache_uuid), (None, MH_MAGIC_64)
+        )
