@@ -8,7 +8,9 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=aarch64-w64-windows-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=MINGW %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=aarch64-unknown-linux-android < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=ANDROID %s
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr)
@@ -337,9 +339,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; LINUX-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; LINUX-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -596,7 +596,9 @@
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; DARWIN: declare void @_Unwind_Resume(ptr)
+; DARWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; DARWIN-NEXT: @__stack_chk_guard = external global ptr
+; DARWIN-NEXT: declare void @_Unwind_Resume(ptr)
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr)
@@ -919,9 +921,7 @@
 ; DARWIN-NEXT: declare double @__powidf2(double, i32)
 ; DARWIN-NEXT: declare float @__powisf2(float, i32)
 ; DARWIN-NEXT: declare fp128 @__powitf2(fp128, i32)
-; DARWIN-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; DARWIN-NEXT: declare void @__stack_chk_fail()
-; DARWIN-NEXT: declare void @__stack_chk_guard(...)
 ; DARWIN-NEXT: declare double @__subdf3(double, double)
 ; DARWIN-NEXT: declare float @__subsf3(float, float)
 ; DARWIN-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1127,7 +1127,9 @@
 ; DARWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; DARWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; WINMSVC: declare void @_Unwind_Resume(ptr)
+; WINMSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; WINMSVC-NEXT: @__security_cookie = external global ptr
+; WINMSVC-NEXT: declare void @_Unwind_Resume(ptr)
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr)
@@ -1449,9 +1451,7 @@
 ; WINMSVC-NEXT: declare double @__pow_finite(double, double)
 ; WINMSVC-NEXT: declare float @__powf_finite(float, float)
 ; WINMSVC-NEXT: declare fp128 @__powitf2(fp128, i32)
-; WINMSVC-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; WINMSVC-NEXT: declare void @__security_check_cookie(ptr)
-; WINMSVC-NEXT: declare void @__security_cookie(...)
 ; WINMSVC-NEXT: declare double @__subdf3(double, double)
 ; WINMSVC-NEXT: declare float @__subsf3(float, float)
 ; WINMSVC-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1652,7 +1652,9 @@
 ; WINMSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; WINMSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; MINGW: declare void @_Unwind_Resume(ptr)
+; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; MINGW-NEXT: @__stack_chk_guard = external global ptr
+; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr)
@@ -1974,9 +1976,7 @@
 ; MINGW-NEXT: declare double @__pow_finite(double, double)
 ; MINGW-NEXT: declare float @__powf_finite(float, float)
 ; MINGW-NEXT: declare fp128 @__powitf2(fp128, i32)
-; MINGW-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; MINGW-NEXT: declare void @__stack_chk_fail()
-; MINGW-NEXT: declare void @__stack_chk_guard(...)
 ; MINGW-NEXT: declare double @__subdf3(double, double)
 ; MINGW-NEXT: declare float @__subsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -2181,7 +2181,9 @@
 ; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; ANDROID: declare void @_Unwind_Resume(ptr)
+; ANDROID: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; ANDROID-NEXT: @__stack_chk_guard = external global ptr
+; ANDROID-NEXT: declare void @_Unwind_Resume(ptr)
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr)
@@ -2511,9 +2513,7 @@
 ; ANDROID-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; ANDROID-NEXT: declare fp128 @__powl_finite(fp128, fp128)
 ; ANDROID-NEXT: declare ptr @__safestack_pointer_address()
-; ANDROID-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; ANDROID-NEXT: declare void @__stack_chk_fail()
-; ANDROID-NEXT: declare void @__stack_chk_guard(...)
 ; ANDROID-NEXT: declare double @__subdf3(double, double)
 ; ANDROID-NEXT: declare float @__subsf3(float, float)
 ; ANDROID-NEXT: declare fp128 @__subtf3(fp128, fp128)

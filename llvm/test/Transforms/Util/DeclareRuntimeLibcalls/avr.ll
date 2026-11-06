@@ -4,7 +4,8 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=avr-none < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare double @__adddf3(double, double) addrspace(1)
+; CHECK: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare double @__adddf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__addsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128) addrspace(1)
 ; CHECK-NEXT: declare i64 @__ashldi3(i64, i16) addrspace(1)
@@ -207,7 +208,6 @@
 ; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
 ; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_guard(...) addrspace(1)
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128) addrspace(1)
