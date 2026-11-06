@@ -690,9 +690,8 @@ getScope(mlir::Operation *op, mlir::LLVM::DISubprogramAttr defaultScope) {
 
 static bool hasDebugScope(mlir::Location loc) {
   auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(loc);
-  return fusedLoc &&
-         llvm::isa_and_nonnull<mlir::LLVM::DILocalScopeAttr>(
-             fusedLoc.getMetadata());
+  return fusedLoc && llvm::isa_and_nonnull<mlir::LLVM::DILocalScopeAttr>(
+                         fusedLoc.getMetadata());
 }
 
 namespace {
@@ -720,8 +719,8 @@ private:
       return;
     }
     // Iterative, as the dominator tree of a long procedure can be deep.
-    llvm::SmallVector<std::pair<mlir::DominanceInfoNode *,
-                                mlir::LLVM::DIScopeAttr>>
+    llvm::SmallVector<
+        std::pair<mlir::DominanceInfoNode *, mlir::LLVM::DIScopeAttr>>
         worklist{{domInfo.getRootNode(&region), scope}};
     while (!worklist.empty()) {
       auto [node, nodeScope] = worklist.pop_back_val();
