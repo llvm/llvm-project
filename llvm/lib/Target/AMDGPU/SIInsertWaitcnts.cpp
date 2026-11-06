@@ -905,7 +905,8 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
   setScoreUB(T, CurrScore);
 
   // Count this write before recording its own destination, so the
-  // destination does not count itself.
+  // destination does not count itself. A VOP3PX2 WMMA counts once even though
+  // it increments VA_VDST twice: only its WMMA half is an ordered XDL write.
   if (E == HWEvents::VGPR_XDL_WRITE && Context->TII.isVAVDSTOrderedXDL(Inst))
     ++OrderedXDLCount;
 
