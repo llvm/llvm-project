@@ -1462,7 +1462,9 @@ Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
         if (!Offset && !IsSplat)
           continue;
 
-        Ptr = CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offset), Name, NW);
+        Constant *OffsetC = ConstantInt::get(IdxTy, Offset, /*IsSigned=*/false,
+                                             /*ImplicitTrunc=*/true);
+        Ptr = CreatePtrAdd(Ptr, OffsetC, Name, NW);
         continue;
       }
     }
@@ -1473,7 +1475,7 @@ Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
     TypeSize Stride = GTI.getSequentialElementStride(DL);
     auto *OpC = dyn_cast<ConstantInt>(Op);
     if (OpC && !Stride.isScalable()) {
-      APInt StrideInt(IdxSize, Stride.getFixedValue(), /*IsSigned=*/true,
+      APInt StrideInt(IdxSize, Stride.getFixedValue(), /*IsSigned=*/false,
                       /*ImplicitTrunc=*/true);
       Ptr = CreatePtrAdd(
           Ptr, ConstantInt::get(IdxTy, OpC->getValue() * StrideInt), Name, NW);
