@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #define DEBUG_TYPE "effectanalysis"
 
@@ -972,6 +973,7 @@ private:
     ViolationSite VSite;
     const Expr *TrailingRequiresClause = nullptr;
     const Expr *NoexceptExpr = nullptr;
+    const Expr *UninstantiatedDefaultArgToSkip = nullptr;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -1304,7 +1306,10 @@ private:
       // We skip the traversal of lambdas (beyond their captures, see
       // TraverseLambdaExpr below), so just caching this from our constructor
       // should suffice.
-      if (Statement != TrailingRequiresClause && Statement != NoexceptExpr)
+      // Also skip uninstantiated default arguments from function templates,
+      // which are not evaluated at runtime unless used by a call.
+      if (Statement != TrailingRequiresClause && Statement != NoexceptExpr &&
+          Statement != UninstantiatedDefaultArgToSkip)
         return DynamicRecursiveASTVisitor::TraverseStmt(Statement);
       return true;
     }
@@ -1342,11 +1347,12 @@ private:
       return Result;
     }
 
+    // Uninstantiated default args are unevaluated unless used; skip them in
+    // TraverseStmt while preserving ParmVarDecl traversal for destructors.
     bool TraverseParmVarDecl(ParmVarDecl *D) override {
-      // Uninstantiated default arguments are dependent expressions that cannot
-      // be analyzed for function effects without producing incorrect warnings.
+      llvm::SaveAndRestore SavedDefaultArg(UninstantiatedDefaultArgToSkip);
       if (D->hasUninstantiatedDefaultArg())
-        return true;
+        UninstantiatedDefaultArgToSkip = D->getUninstantiatedDefaultArg();
       return DynamicRecursiveASTVisitor::TraverseParmVarDecl(D);
     }
 
