@@ -5395,9 +5395,13 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
          IsHalfState(HiStat);
 }
 
+/// If \p NewElts is not null, and the source is a packed 32-bit or 64-bit
+/// build_vector with negated elements, the negations are folded into the
+/// returned modifiers and \p NewElts is set to the un-negated elements. The
+/// caller must then use a new vector built from \p NewElts as the source.
 std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
-    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT,
-    bool NoOpSel0) const {
+    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT, bool NoOpSel0,
+    SmallVectorImpl<Register> *NewElts) const {
   unsigned Mods = 0;
   // No modification if Root type is not form of <2 x Type>.
   if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
@@ -5416,8 +5420,31 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
 
+  // A packed 32-bit or 64-bit operand is just a pair of registers, so negated
+  // elements can be folded into the modifiers by rebuilding the pair from the
+  // un-negated elements.
+  GBuildVector *BV;
+  if (NewElts && MRI.getType(RootReg).getScalarSizeInBits() >= 32 &&
+      SO.checkOptions(SrcStatus::IS_BOTH_NEG) &&
+      mi_match(Stat.first, MRI, m_GBuildVector(BV)) &&
+      BV->getNumSources() == 2) {
+    Register Elts[2] = {BV->getSourceReg(0), BV->getSourceReg(1)};
+    unsigned EltMods = Mods;
+    if (MachineInstr *Neg = getOpcodeDef(AMDGPU::G_FNEG, Elts[0], MRI)) {
+      Elts[0] = Neg->getOperand(1).getReg();
+      EltMods ^= SISrcMods::NEG;
+    }
+    if (MachineInstr *Neg = getOpcodeDef(AMDGPU::G_FNEG, Elts[1], MRI)) {
+      Elts[1] = Neg->getOperand(1).getReg();
+      EltMods ^= SISrcMods::NEG_HI;
+    }
+    if (EltMods != Mods) {
+      NewElts->assign({Elts[0], Elts[1]});
+      return {Stat.first, EltMods | SISrcMods::OP_SEL_1};
+    }
+  }
+
   // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
-  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
   if (MRI.getType(RootReg).getSizeInBits() == 128) {
     Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
     return {Stat.first, Mods};
@@ -5513,8 +5540,35 @@ AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Reg;
   unsigned Mods;
+  SmallVector<Register, 2> NewElts;
   std::tie(Reg, Mods) =
-      selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT, NoOpSel0);
+      selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT, NoOpSel0, &NewElts);
+
+  if (!NewElts.empty()) {
+    return {{
+        [=, &Root, &MRI](MachineInstrBuilder &MIB) {
+          // Rebuild the vector from the un-negated elements, in the same
+          // register bank as the original operand.
+          Register RootReg = Root.getReg();
+          unsigned Size = MRI.getType(RootReg).getSizeInBits();
+          const TargetRegisterClass *RC =
+              checkRB(RootReg, AMDGPU::VGPRRegBankID, RBI, MRI, TRI)
+                  ? TRI.getVGPRClassForBitWidth(Size)
+                  : TRI.getSGPRClassForBitWidth(Size);
+          Register Vec = MRI.createVirtualRegister(RC);
+          unsigned NumRegs = Size / 64;
+          MachineInstr *InsertPt = MIB.getInstr();
+          BuildMI(*InsertPt->getParent(), InsertPt, InsertPt->getDebugLoc(),
+                  TII.get(AMDGPU::REG_SEQUENCE), Vec)
+              .addReg(NewElts[0])
+              .addImm(TRI.getSubRegFromChannel(0, NumRegs))
+              .addReg(NewElts[1])
+              .addImm(TRI.getSubRegFromChannel(NumRegs, NumRegs));
+          MIB.addReg(Vec);
+        },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+    }};
+  }
 
   return {{
       [=, &Root, &MRI](MachineInstrBuilder &MIB) {

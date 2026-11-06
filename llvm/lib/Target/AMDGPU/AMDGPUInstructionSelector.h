@@ -194,7 +194,8 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
-                      bool IsDOT = false, bool NoOpSel0 = false) const;
+                      bool IsDOT = false, bool NoOpSel0 = false,
+                      SmallVectorImpl<Register> *NewElts = nullptr) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false,
                        bool NoOpSel0 = false) const;
