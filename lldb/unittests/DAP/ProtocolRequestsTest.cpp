@@ -373,6 +373,18 @@ TEST(ProtocolRequestsTest, RestartArguments) {
   EXPECT_EQ(attach_args->pid, 123U);
 }
 
+TEST(ProtocolRequestsTest, LaunchRequestArgumentsDisableASLR) {
+  llvm::Expected<LaunchRequestArguments> expected =
+      parse<LaunchRequestArguments>(R"({"program": "main.exe"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, std::nullopt);
+
+  expected = parse<LaunchRequestArguments>(
+      R"({"program": "main.exe", "disableASLR": false})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, false);
+}
+
 TEST(ProtocolRequestsTest, StackTraceArguments) {
   llvm::Expected<StackTraceArguments> expected = parse<StackTraceArguments>(R"({
     "threadId": 42,

@@ -1120,7 +1120,8 @@ class LaunchArgs:
     args: Optional[List[str]] = None
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
-    disableASLR: bool = False
+    # None omits the argument, so lldb-dap uses target.disable-aslr.
+    disableASLR: Optional[bool] = False
     disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
     console: Optional[Console] = None
