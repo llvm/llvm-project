@@ -885,8 +885,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  TypeSize DstRegSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  TypeSize SrcRegSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  TypeSize DstRegSize = TRI.getRegSizeInBits(DstReg, MRI);
+  TypeSize SrcRegSize = TRI.getRegSizeInBits(SrcReg, MRI);
 
   // Special casing for cross-bank copies of s1s. We can technically represent
   // a 1-bit value with any size of register. The minimum size for a GPR is 32
@@ -908,12 +908,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "
-                      << RBI.getSizeInBits(DstReg, MRI, TRI) << '\n');
+                      << TRI.getRegSizeInBits(DstReg, MRI) << '\n');
     return false;
   }
 
   if (I.getOpcode() == TargetOpcode::G_BITCAST &&
-      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+      TRI.getRegSizeInBits(DstReg, MRI) == TypeSize::getFixed(16)) {
     if (DstRegBank.getID() == AArch64::FPRRegBankID &&
         SrcRegBank.getID() == AArch64::GPRRegBankID) {
       if (!SrcReg.isPhysical() &&

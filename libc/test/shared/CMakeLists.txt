@@ -32,6 +32,7 @@ else()
       libc.src.__support.math.acosf
       libc.src.__support.math.acosf16
       libc.src.__support.math.acoshf
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.acoshf16
       libc.src.__support.math.acospif
       libc.src.__support.math.acospif16
@@ -500,6 +501,7 @@ else()
       libc.src.__support.math.sinf16
       libc.src.__support.math.sinh
       libc.src.__support.math.sinhf
+      libc.src.__support.math.sinhbf16
       libc.src.__support.math.sinhf16
       libc.src.__support.math.sqrtf128
       libc.src.__support.math.sinpif
@@ -560,6 +562,7 @@ else()
     DEPENDS
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.float80
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.asinbf16
       libc.src.__support.math.bf16subl
       libc.src.__support.math.canonicalize
