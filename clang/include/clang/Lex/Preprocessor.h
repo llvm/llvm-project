@@ -3217,6 +3217,12 @@ private:
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
   }
+  static bool CLK_HeaderNameLexer(Preprocessor &P, Token &Result) {
+    // Header-name rules only apply to the first attempt. If it doesn't produce
+    // a token (e.g. an empty macro was expanded), retry with the normal lexer.
+    P.recomputeCurLexerKind();
+    return P.CurLexer->LexIncludeFilename(Result);
+  }
 };
 
 /// Abstract base class that describes a handler that will receive
