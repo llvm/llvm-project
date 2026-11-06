@@ -17,6 +17,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/StringSet.h"
@@ -105,14 +106,26 @@ static bool ChecksOnDevice(
   return expr && FindOnDevice{}(*expr);
 }
 
-// Traverses an evaluate::Expr<> in search of unsupported operations
-// on the device.
+static bool IsIntrinsicModuleProcedure(
+    const evaluate::ProcedureDesignator &proc) {
+  if (const Symbol *symbol{proc.GetSymbol()}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    const Scope &scope{ultimate.owner()};
+    const Symbol *module{scope.IsModule() ? scope.symbol() : nullptr};
+    return ultimate.has<SubprogramDetails>() && module &&
+        module->attrs().test(Attr::INTRINSIC);
+  }
+  return false;
+}
 
-struct DeviceExprChecker
-    : public evaluate::AnyTraverse<DeviceExprChecker, MaybeMsg> {
+// Traverses an evaluate::Expr<> in search of calls that are not supported
+// in the current execution context.
+
+struct CUDACallChecker
+    : public evaluate::AnyTraverse<CUDACallChecker, MaybeMsg> {
   using Result = MaybeMsg;
-  using Base = evaluate::AnyTraverse<DeviceExprChecker, Result>;
-  explicit DeviceExprChecker(SemanticsContext &c, CallContext callContext)
+  using Base = evaluate::AnyTraverse<CUDACallChecker, Result>;
+  explicit CUDACallChecker(SemanticsContext &c, CallContext callContext)
       : Base(*this), context_{c}, callContext_{callContext} {}
   using Base::operator();
   Result operator()(const evaluate::ProcedureRef &x) const {
@@ -120,8 +133,8 @@ struct DeviceExprChecker
       return msg;
     }
     // A procedure passed as an argument is not called. Calls evaluated in
-    // argument expressions still need checking.
-    return (*this)(x.arguments());
+    // argument expressions and procedure component bases still need checking.
+    return Base::operator()(x);
   }
 
 private:
@@ -139,9 +152,21 @@ private:
                    .detailsIf<semantics::SubprogramDetails>();
       }
       if (subp) {
-        if (const auto &stmtFunction{subp->stmtFunction()};
-            stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
+        if (const auto &stmtFunction{subp->stmtFunction()}; stmtFunction &&
+            (callContext_ == CallContext::Host ||
+                IsCUDADeviceContext(&ultimate.owner()))) {
           return (*this)(*stmtFunction);
+        }
+        if (callContext_ == CallContext::Host) {
+          // Processor intrinsics may have host implementations despite DEVICE
+          // interfaces, as generic resolution also allows. Test the called
+          // procedure, not an intrinsic interface of a user dummy or pointer.
+          if (subp->cudaSubprogramAttrs() ==
+                  common::CUDASubprogramAttrs::Device &&
+              !IsIntrinsicModuleProcedure(x)) {
+            return CallError(x, common::CUDASubprogramAttrs::Device);
+          }
+          return {};
         }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           calleeAttrs = *attrs;
@@ -186,7 +211,8 @@ private:
       return {};
     }
 
-    if (callContext_ == CallContext::GuardedHostDevice) {
+    if (callContext_ == CallContext::Host ||
+        callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
     return CallError(x, calleeAttrs);
@@ -397,7 +423,7 @@ template <typename A>
 static void CheckUnwrappedExpr(SemanticsContext &context, SourceName at,
     const A &x, CallContext callContext) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
-    if (auto msg{DeviceExprChecker{context, callContext}(expr->typedExpr)}) {
+    if (auto msg{CUDACallChecker{context, callContext}(expr->typedExpr)}) {
       context.Say(at, std::move(*msg));
     }
   }
@@ -475,11 +501,11 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
       const parser::AssignmentStmt &x, CallContext callContext) {
-    return DeviceExprChecker{context, callContext}(x.typedAssignment);
+    return CUDACallChecker{context, callContext}(x.typedAssignment);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::CallStmt &x,
       CallContext callContext) {
-    return DeviceExprChecker{context, callContext}(x.typedCall);
+    return CUDACallChecker{context, callContext}(x.typedCall);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
       const parser::ContinueStmt &, CallContext callContext) {
@@ -493,8 +519,7 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   static MaybeMsg WhyNotOk(SemanticsContext &context,
       const parser::NullifyStmt &x, CallContext callContext) {
     for (const auto &y : x.v) {
-      if (MaybeMsg result{
-              DeviceExprChecker{context, callContext}(y.typedExpr)}) {
+      if (MaybeMsg result{CUDACallChecker{context, callContext}(y.typedExpr)}) {
         return result;
       }
     }
@@ -502,7 +527,7 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
       const parser::PointerAssignmentStmt &x, CallContext callContext) {
-    return DeviceExprChecker{context, callContext}(x.typedAssignment);
+    return CUDACallChecker{context, callContext}(x.typedAssignment);
   }
 };
 
@@ -510,7 +535,7 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
 // not have a single typed expression for the entire construct. Do not descend
 // into an expression already checked, or into declarations of other entities
 // whose expressions are not evaluated on entry to this scope.
-struct DeviceExprVisitor {
+struct CUDAExprVisitor {
   SemanticsContext &context;
   CallContext callContext;
   template <typename A> bool Pre(const A &) { return true; }
@@ -523,10 +548,10 @@ struct DeviceExprVisitor {
   bool Pre(const parser::DerivedTypeDef &) { return false; }
   bool Pre(const parser::StmtFunctionStmt &) { return false; }
 
-private:
-  bool Check(const parser::TypedExpr &expr, parser::CharBlock source) {
+protected:
+  template <typename A> bool Check(const A &expr, parser::CharBlock source) {
     if (expr) {
-      if (auto msg{DeviceExprChecker{context, callContext}(expr)}) {
+      if (auto msg{CUDACallChecker{context, callContext}(expr)}) {
         context.Say(source, std::move(*msg));
       }
       return false;
@@ -535,9 +560,124 @@ private:
   }
 };
 
-template <bool IsCUFKernelDo> class DeviceContextChecker {
+static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
+  if (blockDirective.v == llvm::acc::ACCD_parallel ||
+      blockDirective.v == llvm::acc::ACCD_serial ||
+      blockDirective.v == llvm::acc::ACCD_kernels) {
+    return true;
+  }
+  return false;
+}
+
+// HOST procedures need call checks without the statement and data restrictions
+// imposed on DEVICE procedures. Offloaded bodies have their own execution
+// context; their launch controls and directive clauses are still host code.
+struct HostCallVisitor : CUDAExprVisitor {
+  explicit HostCallVisitor(SemanticsContext &c)
+      : CUDAExprVisitor{c, CallContext::Host} {}
+  using CUDAExprVisitor::Pre;
+  bool Pre(const parser::CallStmt &x) {
+    if (x.typedCall) {
+      Check(x.typedCall, x.source);
+      // ProcedureRef traversal does not include the launch configuration.
+      parser::Walk(
+          std::get<std::optional<parser::CallStmt::Chevrons>>(x.t), *this);
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::AssignmentStmt &x) {
+    return Check(
+        x.typedAssignment, std::get<parser::Variable>(x.t).GetSource());
+  }
+  bool Pre(const parser::PointerAssignmentStmt &x) {
+    return Check(x.typedAssignment, std::get<parser::Expr>(x.t).source);
+  }
+  bool Pre(const parser::CUFKernelDoConstruct &x) {
+    const auto &directive{
+        std::get<parser::CUFKernelDoConstruct::Directive>(x.t)};
+    parser::Walk(directive, *this);
+    auto depth{GetIntValue(
+        std::get<std::optional<parser::ScalarIntConstantExpr>>(directive.t))};
+    CheckLoopControls(
+        std::get<std::optional<parser::DoConstruct>>(x.t), depth.value_or(1));
+    return false;
+  }
+  bool Pre(const parser::OpenACCBlockConstruct &x) {
+    if (IsOpenACCComputeConstruct(x)) {
+      parser::Walk(std::get<parser::AccBeginBlockDirective>(x.t), *this);
+      parser::Walk(std::get<parser::AccEndBlockDirective>(x.t), *this);
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::OpenACCCombinedConstruct &x) {
+    parser::Walk(std::get<parser::AccBeginCombinedDirective>(x.t), *this);
+    return false;
+  }
+  bool Pre(const parser::OpenACCLoopConstruct &x) {
+    parser::Walk(std::get<parser::AccBeginLoopDirective>(x.t), *this);
+    return false;
+  }
+  bool Pre(const parser::OmpBlockConstruct &x) {
+    if (llvm::omp::allTargetSet.test(x.BeginDir().DirId())) {
+      parser::Walk(x.BeginDir(), *this);
+      parser::Walk(x.EndDir(), *this);
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    return Pre(static_cast<const parser::OmpBlockConstruct &>(x));
+  }
+  bool Pre(const parser::DoConstruct &x) {
+    if (x.IsDoConcurrent() &&
+        context.foldingContext().languageFeatures().IsEnabled(
+            common::LanguageFeature::DoConcurrentOffload)) {
+      CheckLoopControl(x);
+      return false;
+    }
+    return true;
+  }
+
+private:
+  void CheckLoopControl(const parser::DoConstruct &loop) {
+    const auto &control{loop.GetLoopControl()};
+    if (control && loop.IsDoConcurrent()) {
+      const auto &concurrent{
+          std::get<parser::LoopControl::Concurrent>(control->u)};
+      const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
+      // The mask is evaluated per iteration in the offloaded body.
+      parser::Walk(
+          std::get<std::list<parser::ConcurrentControl>>(header.t), *this);
+    } else {
+      parser::Walk(control, *this);
+    }
+  }
+  void CheckLoopControls(
+      const std::optional<parser::DoConstruct> &loop, std::int64_t depth) {
+    const auto *current{common::GetPtrFromOptional(loop)};
+    for (; current && depth > 0; --depth) {
+      CheckLoopControl(*current);
+      // A DO CONCURRENT header supplies all of its associated dimensions.
+      if (current->IsDoConcurrent()) {
+        break;
+      }
+      const auto &body{std::get<parser::Block>(current->t)};
+      current = body.size() == 1
+          ? parser::Unwrap<parser::DoConstruct>(body.front())
+          : nullptr;
+    }
+  }
+};
+
+template <bool IsCUFKernelDo> class CUDAContextChecker {
 public:
-  explicit DeviceContextChecker(SemanticsContext &c) : context_{c} {}
+  explicit CUDAContextChecker(SemanticsContext &c) : context_{c} {}
   template <typename A>
   void CheckSubprogram(const parser::Name &name, const A &header,
       const parser::SpecificationPart &spec, const parser::Block &body,
@@ -546,15 +686,27 @@ public:
       const auto *subp{
           name.symbol->GetUltimate().detailsIf<SubprogramDetails>()};
       const auto *implementation{subp};
+      const bool isOpenACCRoutine{subp && !subp->openACCRoutineInfos().empty()};
       if (subp && subp->moduleInterface()) {
         subp = subp->moduleInterface()
                    ->GetUltimate()
                    .detailsIf<SubprogramDetails>();
       }
-      if (subp &&
-          subp->cudaSubprogramAttrs().value_or(
-              common::CUDASubprogramAttrs::Host) !=
-              common::CUDASubprogramAttrs::Host) {
+      if (!subp) {
+        return;
+      }
+      if (subp->cudaSubprogramAttrs().value_or(
+              common::CUDASubprogramAttrs::Host) ==
+          common::CUDASubprogramAttrs::Host) {
+        // OpenACC routine bodies may also execute on the device. The directive
+        // can appear on either the implementation or its module interface.
+        if (!isOpenACCRoutine && subp->openACCRoutineInfos().empty()) {
+          HostCallVisitor visitor{context_};
+          parser::Walk(header, visitor);
+          parser::Walk(spec, visitor);
+          parser::Walk(body, visitor);
+        }
+      } else {
         isHostDevice = subp->cudaSubprogramAttrs() &&
             subp->cudaSubprogramAttrs() ==
                 common::CUDASubprogramAttrs::HostDevice;
@@ -589,7 +741,7 @@ private:
   template <typename A>
   void CheckInheritedExpr(const std::optional<A> &expr, SourceName at) {
     if (expr) {
-      if (auto msg{DeviceExprChecker{context_, callContext_}(*expr)}) {
+      if (auto msg{CUDACallChecker{context_, callContext_}(*expr)}) {
         context_.Say(at, std::move(*msg));
       }
     }
@@ -613,7 +765,7 @@ private:
     }
   }
   template <typename A> void CheckExpressions(const A &x) {
-    DeviceExprVisitor visitor{context_, callContext_};
+    CUDAExprVisitor visitor{context_, callContext_};
     parser::Walk(x, visitor);
   }
   void Check(const parser::ExecutionPartConstruct &epc) {
@@ -946,8 +1098,7 @@ private:
     Check(DEREF(parser::Unwrap<parser::Expr>(x)));
   }
   void Check(const parser::Expr &expr) {
-    if (MaybeMsg msg{
-            DeviceExprChecker{context_, callContext_}(expr.typedExpr)}) {
+    if (MaybeMsg msg{CUDACallChecker{context_, callContext_}(expr.typedExpr)}) {
       context_.Say(expr.source, std::move(*msg));
     }
   }
@@ -957,8 +1108,14 @@ private:
   CallContext callContext_{CallContext::Device};
 };
 
+void CUDAChecker::Enter(const parser::MainProgram &x) {
+  HostCallVisitor visitor{context_};
+  parser::Walk(std::get<parser::SpecificationPart>(x.t), visitor);
+  parser::Walk(std::get<parser::ExecutionPart>(x.t), visitor);
+}
+
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
-  DeviceContextChecker<false>{context_}.CheckSubprogram(
+  CUDAContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t),
       std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement,
@@ -967,7 +1124,7 @@ void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
 }
 
 void CUDAChecker::Enter(const parser::FunctionSubprogram &x) {
-  DeviceContextChecker<false>{context_}.CheckSubprogram(
+  CUDAContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t),
       std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement,
@@ -976,7 +1133,7 @@ void CUDAChecker::Enter(const parser::FunctionSubprogram &x) {
 }
 
 void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
-  DeviceContextChecker<false>{context_}.CheckSubprogram(
+  CUDAContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement.v,
       std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement,
       std::get<parser::SpecificationPart>(x.t),
@@ -1095,26 +1252,13 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
           std::intmax_t{depth});
   }
   if (innerBlock) {
-    DeviceContextChecker<true>{context_}.Check(*innerBlock);
+    CUDAContextChecker<true>{context_}.Check(*innerBlock);
   }
   for (const auto &reduce :
       std::get<std::list<parser::CUFReduction>>(directive.t)) {
     CheckReduce(context_, reduce);
   }
   ++deviceConstructDepth_;
-}
-
-static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
-  const auto &beginBlockDirective =
-      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
-  const auto &blockDirective =
-      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
-  if (blockDirective.v == llvm::acc::ACCD_parallel ||
-      blockDirective.v == llvm::acc::ACCD_serial ||
-      blockDirective.v == llvm::acc::ACCD_kernels) {
-    return true;
-  }
-  return false;
 }
 
 void CUDAChecker::Leave(const parser::CUFKernelDoConstruct &) {
