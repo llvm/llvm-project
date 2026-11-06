@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -907,15 +908,6 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   return false;
 }
 
-static bool isOperandOfOrTree(const Value *V, const Value *Tree,
-                              unsigned MaxDepth) {
-  Value *X, *Y;
-  if (MaxDepth == 0 || !match(Tree, m_Or(m_Value(X), m_Value(Y))))
-    return false;
-  return X == V || Y == V || isOperandOfOrTree(V, X, MaxDepth - 1) ||
-         isOperandOfOrTree(V, Y, MaxDepth - 1);
-}
-
 static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
                                     Value *LHS, Value *RHS, KnownBits &Known,
                                     const SimplifyQuery &Q) {
@@ -1019,9 +1011,16 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       }
     }
     if (Pred == ICmpInst::ICMP_SGT) {
+      std::function<bool(const Value *, unsigned)> IsOperandOfOrTree =
+          [&](const Value *Tree, unsigned MaxDepth) -> bool {
+        Value *X, *Y;
+        if (MaxDepth == 0 || !match(Tree, m_Or(m_Value(X), m_Value(Y))))
+          return false;
+        return X == V || Y == V || IsOperandOfOrTree(X, MaxDepth - 1) ||
+               IsOperandOfOrTree(Y, MaxDepth - 1);
+      };
       // (X | Y | ...) s> -1 -> each operand s> -1
-      if (C->isAllOnes() &&
-          isOperandOfOrTree(V, LHS, MaxAnalysisRecursionDepth))
+      if (C->isAllOnes() && IsOperandOfOrTree(LHS, MaxAnalysisRecursionDepth))
         Known.makeNonNegative();
     }
   } break;
