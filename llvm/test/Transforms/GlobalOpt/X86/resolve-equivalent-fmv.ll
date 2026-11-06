@@ -414,3 +414,48 @@ define float @floating.caller(float %x) #2 {
   %v = call float @floating(float %x)
   ret float %v
 }
+
+; Preserve unsupported callsite contracts even for equivalent versions.
+; CHECK-LABEL: define i32 @bundled.caller(
+; CHECK: call i32 @equal(i32 %x, i32 %y) [ "deopt"(i32 7) ]
+define i32 @bundled.caller(i32 %x, i32 %y) #2 {
+  %v = call i32 @equal(i32 %x, i32 %y) [ "deopt"(i32 7) ]
+  ret i32 %v
+}
+; CHECK-LABEL: define i32 @musttail.caller(
+; CHECK: musttail call i32 @equal(
+define i32 @musttail.caller(i32 %x, i32 %y) #2 {
+  %v = musttail call i32 @equal(i32 %x, i32 %y)
+  ret i32 %v
+}
+; CHECK-LABEL: define i32 @optnone.caller(
+; CHECK: call i32 @equal(
+define i32 @optnone.caller(i32 %x, i32 %y) #6 {
+  %v = call i32 @equal(i32 %x, i32 %y)
+  ret i32 %v
+}
+attributes #6 = { noinline optnone "target-features"="+avx2" }
+
+; Even equal instruction metadata needs an explicit equivalence policy.
+@annotated = weak_odr ifunc i32 (i32, i32), ptr @annotated.resolver
+define ptr @annotated.resolver() {
+  %f = load i32, ptr @features
+  %c = icmp ne i32 %f, 0
+  %v = select i1 %c, ptr @annotated.high, ptr @annotated.low
+  ret ptr %v
+}
+define i32 @annotated.low(i32 %x, i32 %y) #0 {
+  %v = xor i32 %x, 17, !annotation !0
+  ret i32 %v
+}
+define i32 @annotated.high(i32 %x, i32 %y) #1 {
+  %v = xor i32 %x, 17, !annotation !0
+  ret i32 %v
+}
+; CHECK-LABEL: define i32 @annotated.caller(
+; CHECK: call i32 @annotated(
+define i32 @annotated.caller(i32 %x, i32 %y) #2 {
+  %v = call i32 @annotated(i32 %x, i32 %y)
+  ret i32 %v
+}
+!0 = !{!"retain"}
