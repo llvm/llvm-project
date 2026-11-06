@@ -19,6 +19,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -197,7 +198,7 @@ class SPIRVEmitIntrinsicsImpl
   SmallPtrSet<Value *, 0> Named;
 
   // map of function declarations to <pointer arg index => element type>
-  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
+  MapVector<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -334,6 +335,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -1162,7 +1164,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(User *U,
 Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
     User *U, Type *OrigTy, SmallPtrSetImpl<Value *> &Visited,
     bool UnknownElemTypeI8) {
-  if (!U)
+  // Only constant aggregate operands map to aggregate elements.
+  if (!isa_and_nonnull<ConstantAggregate>(U))
     return OrigTy;
 
   // maybe already known
@@ -3187,7 +3190,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
 
 static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
     const Module &M,
-    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+    MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
         &FPFastMathDefaultInfoMap,
     Function *F) {
   auto it = FPFastMathDefaultInfoMap.find(F);
@@ -3261,7 +3264,7 @@ void SPIRVEmitIntrinsicsImpl::insertConstantsForFPFastMathDefault(Module &M) {
   // type. The first element is the smallest bit width, and the last element
   // is the largest bit width, therefore, we will have {half, float, double}
   // in the order of their bit widths.
-  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+  MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   for (unsigned i = 0; i < Node->getNumOperands(); i++) {
@@ -3679,7 +3682,9 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
             B.SetCurrentDebugLocation(DebugLoc());
             GR->buildAssignPtr(B, ElemTy, Arg);
           }
-        } else if (isaGEP(Param)) {
+        } else if (isaGEP(Param) || isa<AllocaInst>(Param)) {
+          // The allocated type defines the size of an alloca, so cast at the
+          // call instead of overriding its pointee type.
           replaceUsesOfWithSpvPtrcast(
               Param, normalizeType(ElemTy, CanUseAnyVectorRank), CI, Ptrcasts);
         } else if (isa<Instruction>(Param)) {
@@ -4309,9 +4314,37 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
   bool Changed = false;
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // Only entry-block allocations execute once per call, so a single array
+    // object has the same meaning as the counted allocation. Allocations in
+    // other blocks keep their lowering.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
+        continue;
+      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
+      if (Count->isZero() || !Count->getValue().isIntN(32))
+        continue;
+      AI->setAllocatedType(
+          ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
+      AI->setOperand(0, ConstantInt::get(I32Ty, 1));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
 
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  // Fold static allocation counts before pointer type inference.
+  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);

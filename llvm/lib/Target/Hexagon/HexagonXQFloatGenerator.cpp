@@ -74,7 +74,7 @@
 // ================================================================================================================================================
 //            |                              | |                               |
 //            |    Inputs to add/subtarct    |                  Inputs to
-//            multiplication instuctions              |     Non-HVX floating
+//            multiplication instructions              |     Non-HVX floating
 //            point    | |    instructions              | |          instruction
 //            | |                              | | |
 // ===============================================================================================================================================|
@@ -177,7 +177,7 @@ static constexpr unsigned XQFPAdd16[] = {
     // vector add instructions
     Hexagon::V6_vadd_hf, Hexagon::V6_vadd_qf16, Hexagon::V6_vadd_qf16_mix,
 
-    // vector subtract intrutions
+    // vector subtract instruction
     Hexagon::V6_vsub_hf, Hexagon::V6_vsub_qf16, Hexagon::V6_vsub_qf16_mix,
     Hexagon::V6_vsub_hf_mix};
 
