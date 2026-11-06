@@ -58,9 +58,7 @@ int main(int argc, char** argv) {
 
   auto register_bm = [&](auto generate, std::string variant) {
     auto name = [variant](std::string op) { return op + " (" + variant + ")"; };
-#if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
     bm.operator()(name("std::sort(std::execution::seq, vector<int>)"), std::execution::seq, generate);
-#endif
     bm.operator()(name("std::sort(std::execution::par, vector<int>)"), std::execution::par, generate);
   };
 
