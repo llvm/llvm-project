@@ -376,3 +376,12 @@ define b256 @neg_bitinsert_ppc_fp128() {
   %r = bitinsert b256 0, ppc_fp128 0xM3FF00000000000000000000000000000, i32 0
   ret b256 %r
 }
+
+define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
+; CHECK-LABEL: define <vscale x 4 x i8> @bitextract_scalable_vec_splat() {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> splat (b32 305419896), <vscale x 4 x i32> splat (i32 16)
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
+;
+  %r = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> splat (b32 305419896), <vscale x 4 x i32> splat (i32 16)
+  ret <vscale x 4 x i8> %r
+}
