@@ -204,14 +204,10 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
 
     uint32_t OriginalInst = 0;
     // Preserve registers and condition bits when updating branch immediates.
-    if ((BC.isAArch64() && (Reloc.Type == ELF::R_AARCH64_CONDBR19 ||
-                            Reloc.Type == ELF::R_AARCH64_TSTBR14)) ||
-        (BC.isRISCV() &&
-         (Reloc.Type == ELF::R_RISCV_JAL || Reloc.Type == ELF::R_RISCV_BRANCH ||
-          Reloc.Type == ELF::R_RISCV_RVC_JUMP ||
-          Reloc.Type == ELF::R_RISCV_RVC_BRANCH))) {
+    if (RH.needsOriginalInst(Reloc.Type)) {
       StringRef Contents = getContents();
       const size_t Size = RH.getSizeForType(Reloc.Type);
+      assert((Size == 2 || Size == 4) && "Unsupported instruction size");
       assert(Contents.size() >= Reloc.Offset + Size &&
              "Complete instruction must lie in contents.");
       OriginalInst =

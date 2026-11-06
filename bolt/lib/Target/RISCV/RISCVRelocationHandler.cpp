@@ -38,6 +38,7 @@ public:
   size_t getSizeForType(uint32_t Type) const override;
   bool skipRelocationType(uint32_t Type) const override;
 
+  bool needsOriginalInst(uint32_t Type) const override;
   uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC,
                        uint32_t OriginalInst) const override;
   bool canEncodeValue(uint32_t Type, uint64_t Value,
@@ -208,6 +209,11 @@ bool RISCVRelocationHandler::canEncodeValue(uint32_t Type, uint64_t Value,
   }
 }
 
+bool RISCVRelocationHandler::needsOriginalInst(uint32_t Type) const {
+  return Type == ELF::R_RISCV_JAL || Type == ELF::R_RISCV_BRANCH ||
+         Type == ELF::R_RISCV_RVC_JUMP || Type == ELF::R_RISCV_RVC_BRANCH;
+}
+
 uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
                                              uint64_t PC,
                                              uint32_t OriginalInst) const {
@@ -218,7 +224,7 @@ uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
     llvm_unreachable("unsupported relocation");
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
-    break;
+    return Value;
   case ELF::R_RISCV_JAL:
     Value -= PC;
     return (OriginalInst & 0x00000fff) | ((Value & 0x100000) << 11) |
@@ -240,7 +246,6 @@ uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
            ((Value & 0x18) << 7) | ((Value & 0xc0) >> 1) |
            ((Value & 0x6) << 2) | ((Value & 0x20) >> 3);
   }
-  return Value;
 }
 
 static uint64_t extractUImmRISCV(uint32_t Contents) {
