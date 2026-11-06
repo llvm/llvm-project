@@ -2664,10 +2664,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             std::optional<bool> ASign = Info.getKnownSign(A);
             std::optional<bool> BSign = Info.getKnownSign(B);
             if (ASign.has_value() != BSign.has_value()) {
-              auto [Negative, Other] =
-                  ASign ? std::pair(*ASign, B) : std::pair(*BSign, A);
-              Info.addFact(Negative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
-                           Other, Constant::getNullValue(A->getType()),
+              bool IsNegative = ASign ? *ASign : *BSign;
+              Value *OtherOp = ASign ? B : A;
+              Info.addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+                           OtherOp, Constant::getNullValue(A->getType()),
                            CB.NumIn, CB.NumOut, DFSInStack);
             }
           }
