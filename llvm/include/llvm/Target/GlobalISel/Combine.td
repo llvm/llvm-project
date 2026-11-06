@@ -162,7 +162,8 @@ class GIBuiltinInst;
 //   "canReplaceReg" is checked before applying the rule.
 def GIReplaceReg : GIBuiltinInst;
 
-// Replace a register defined by the match root with a fresh G_CONSTANT.
+// Redefine a register defined by the match root with a G_CONSTANT, and erase
+// the root. The register itself is kept, so its uses are not rewritten.
 // Splatted across all lanes if the type is a fixed vector.
 //
 // Usage:
@@ -177,7 +178,8 @@ def GIReplaceReg : GIBuiltinInst;
 // - $reg must be a register defined by the match root.
 def GIReplaceRegWithConstant : GIBuiltinInst;
 
-// Replace a register defined by the match root with a fresh G_FCONSTANT.
+// Redefine a register defined by the match root with a G_FCONSTANT, and erase
+// the root. The register itself is kept, so its uses are not rewritten.
 // Splatted across all lanes if the type is a fixed vector.
 //
 // Usage:

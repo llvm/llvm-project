@@ -2261,34 +2261,18 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     assert(MatchOpTable.getDef(Old) == MatchRoot);
     return true;
   }
-  case BI_ReplaceRegWithConstant: {
-    StringRef Old = P.getOperand(0).getOperandName();
-    int64_t Val = P.getOperand(1).getImmValue();
-
-    auto &OldOM = M.getOperandMatcher(Old);
-    unsigned TempRegID = M.allocateTempRegID();
-    auto InsertIt = M.insertAction<MakeTempRegisterAction>(
-        M.actions_begin(), OldOM.getTempTypeIdx(M), TempRegID);
-    M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, Val);
-
-    M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
-                                  TempRegID);
-    assert(MatchOpTable.getDef(Old) == MatchRoot);
-    return true;
-  }
+  case BI_ReplaceRegWithConstant:
   case BI_ReplaceRegWithFConstant: {
     StringRef Old = P.getOperand(0).getOperandName();
-    // Imm is the IEEE bit pattern of $reg's (scalar) type.
+    // For GIReplaceRegWithFConstant, Imm is the IEEE bit pattern of $reg's
+    // (scalar) type.
     int64_t Val = P.getOperand(1).getImmValue();
 
+    // The constant defines $reg itself, which relies on the root being erased.
     auto &OldOM = M.getOperandMatcher(Old);
-    unsigned TempRegID = M.allocateTempRegID();
-    auto InsertIt = M.insertAction<MakeTempRegisterAction>(
-        M.actions_begin(), OldOM.getTempTypeIdx(M), TempRegID);
-    M.insertAction<BuildFConstantAction>(++InsertIt, TempRegID, Val);
-
-    M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
-                                  TempRegID);
+    M.addAction<BuildConstantInPlaceAction>(
+        OldOM.getInsnVarID(), OldOM.getOpIdx(), Val,
+        P.getBuiltinKind() == BI_ReplaceRegWithFConstant);
     assert(MatchOpTable.getDef(Old) == MatchRoot);
     return true;
   }

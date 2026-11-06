@@ -3,8 +3,9 @@
 
 # Exercises GIReplaceRegWithFConstant (via the itof_const_zero_fold_* and
 # undef_to_fp_zero combine rules) across scalar and vector float widths, to
-# make sure the runtime GIR_BuildFConstant handler reconstructs the correct
-# IEEE bit pattern (and splat, for fixed vectors) for each destination type.
+# make sure the runtime GIR_BuildFConstantInPlace handler reconstructs the
+# correct IEEE bit pattern (and splat, for fixed vectors) for each destination
+# type.
 
 ---
 name:            uitofp_zero_f16
@@ -17,8 +18,8 @@ body:             |
     ; CHECK-LABEL: name: uitofp_zero_f16
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
-    ; CHECK-NEXT: $h0 = COPY [[C]](f16)
+    ; CHECK-NEXT: %res:_(f16) = G_FCONSTANT half 0.000000e+00
+    ; CHECK-NEXT: $h0 = COPY %res(f16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %a:_(i32) = G_CONSTANT i32 0
     %res:_(f16) = G_UITOFP %a
@@ -37,8 +38,8 @@ body:             |
     ; CHECK-LABEL: name: sitofp_zero_f16
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
-    ; CHECK-NEXT: $h0 = COPY [[C]](f16)
+    ; CHECK-NEXT: %res:_(f16) = G_FCONSTANT half 0.000000e+00
+    ; CHECK-NEXT: $h0 = COPY %res(f16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %a:_(i32) = G_CONSTANT i32 0
     %res:_(f16) = G_SITOFP %a
@@ -57,8 +58,8 @@ body:             |
     ; CHECK-LABEL: name: uitofp_zero_f32
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: $s0 = COPY [[C]](f32)
+    ; CHECK-NEXT: %res:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: $s0 = COPY %res(f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %a:_(i32) = G_CONSTANT i32 0
     %res:_(f32) = G_UITOFP %a
@@ -77,8 +78,8 @@ body:             |
     ; CHECK-LABEL: name: uitofp_zero_f64
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 0.000000e+00
-    ; CHECK-NEXT: $d0 = COPY [[C]](f64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %a:_(i32) = G_CONSTANT i32 0
     %res:_(f64) = G_UITOFP %a
@@ -97,8 +98,8 @@ body:             |
     ; CHECK-LABEL: name: uitofp_zero_f128
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0.000000e+00
-    ; CHECK-NEXT: $q0 = COPY [[C]](f128)
+    ; CHECK-NEXT: %res:_(f128) = G_FCONSTANT fp128 0.000000e+00
+    ; CHECK-NEXT: $q0 = COPY %res(f128)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %a:_(i32) = G_CONSTANT i32 0
     %res:_(f128) = G_UITOFP %a

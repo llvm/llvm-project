@@ -228,8 +228,9 @@ Semantics:
 
 - Can only appear in an 'apply' pattern.
 - `$reg` must be a register defined by the match root.
-- Replaces all uses of `$reg` with a fresh constant of `$reg`'s type. If that
-  type is a fixed vector, the constant is splatted across all lanes.
+- Builds a `G_CONSTANT` that defines `$reg` itself and erases the match root,
+  so the uses of `$reg` are left untouched. If `$reg` is a fixed vector, the
+  constant is splatted across all lanes.
 
 #### GIReplaceRegWithFConstant
 
@@ -255,8 +256,9 @@ Semantics:
 
 - Can only appear in an 'apply' pattern.
 - `$reg` must be a register defined by the match root.
-- Replaces all uses of `$reg` with a fresh `G_FCONSTANT` of `$reg`'s type. If
-  that type is a fixed vector, the constant is splatted across all lanes.
+- Builds a `G_FCONSTANT` that defines `$reg` itself and erases the match root,
+  so the uses of `$reg` are left untouched. If `$reg` is a fixed vector, the
+  constant is splatted across all lanes.
 
 #### GIEraseRoot
 
@@ -490,7 +492,7 @@ def ReplaceTemp : GICombineRule<
 
 #### Common Pattern #1b: Replace a Register with a Constant
 
-To replace a match root's def with a fresh constant, use
+To turn a match root's def into a constant, use
 `GIReplaceRegWithConstant` (or `GIReplaceRegWithFConstant` for a
 `G_FCONSTANT`, where `Imm` is an IEEE bit pattern rather than a decimal fp
 value).

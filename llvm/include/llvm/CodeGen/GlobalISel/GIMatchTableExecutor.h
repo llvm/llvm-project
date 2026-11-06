@@ -402,12 +402,24 @@ enum {
   /// - Imm(8) - The immediate to add
   GIR_BuildConstant,
 
-  /// Builds an FP constant and stores its result in a TempReg.
-  /// - TempRegID(ULEB128) - Temp Register to define.
-  /// - Imm(8) - Bit pattern of the TempReg's scalar FP type, truncated to
+  /// Builds a constant that defines an existing register operand of a matched
+  /// instruction. Splatted across all lanes if that register is a fixed
+  /// vector. The instruction must be erased before the match table finishes.
+  /// - InsnID(ULEB128) - Instruction ID that defines the register
+  /// - OpIdx(ULEB128) - Operand index of the register to define
+  /// - Imm(8) - The immediate to add
+  GIR_BuildConstantInPlace,
+
+  /// Builds an FP constant that defines an existing register operand of a
+  /// matched instruction. Splatted across all lanes if that register is a
+  /// fixed vector. The instruction must be erased before the match table
+  /// finishes.
+  /// - InsnID(ULEB128) - Instruction ID that defines the register
+  /// - OpIdx(ULEB128) - Operand index of the register to define
+  /// - Imm(8) - Bit pattern of the register's scalar FP type, truncated to
   ///   that width. A non-zero value is a fatal error if that type is wider
   ///   than 64 bits, or is s16, which could be either half or bfloat.
-  GIR_BuildFConstant,
+  GIR_BuildFConstantInPlace,
 
   /// Copy an operand to the specified instruction
   /// - NewInsnID(ULEB128) - Instruction ID to modify

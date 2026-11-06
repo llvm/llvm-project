@@ -2133,13 +2133,15 @@ void BuildConstantAction::emitActionOpcodes(MatchTable &Table) const {
         << MatchTable::IntValue(8, Val) << MatchTable::LineBreak;
 }
 
-//===- BuildFConstantAction -----------------------------------------------===//
+//===- BuildConstantInPlaceAction -----------------------------------------===//
 
-void BuildFConstantAction::emitActionOpcodes(MatchTable &Table) const {
-  Table << MatchTable::Opcode("GIR_BuildFConstant")
-        << MatchTable::Comment("TempRegID")
-        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("Val")
-        << MatchTable::IntValue(8, Val) << MatchTable::LineBreak;
+void BuildConstantInPlaceAction::emitActionOpcodes(MatchTable &Table) const {
+  Table << MatchTable::Opcode(IsFP ? "GIR_BuildFConstantInPlace"
+                                   : "GIR_BuildConstantInPlace")
+        << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+        << MatchTable::Comment("OpIdx") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Val") << MatchTable::IntValue(8, Val)
+        << MatchTable::LineBreak;
 }
 
 //===- EraseInstAction ----------------------------------------------------===//
