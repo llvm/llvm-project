@@ -17,6 +17,7 @@ from lldbsuite.test import lldbutil
 @requireExpressionEvaluation
 class TestCase(TestBase):
     @no_debug_info_test
+    @expectedFailureAll(bugnumber="llvm.org/pr239769", oslist=["windows"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
