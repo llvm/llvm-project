@@ -2425,20 +2425,17 @@ void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
 
   // The node is a flat list of (offset, size, tag) triples, not a list of
   // per-field nodes.
-  llvm::LLVMContext &ctx = getLLVMContext();
-  llvm::Type *i64 = llvm::Type::getInt64Ty(ctx);
-  SmallVector<llvm::Metadata *> operands;
-  operands.reserve(fields.size() * 3);
+  SmallVector<llvm::MDBuilder::TBAAStructField> structFields;
+  structFields.reserve(fields.size());
   for (Attribute field : fields) {
     auto fieldAttr = cast<TBAAStructFieldAttr>(field);
-    operands.push_back(llvm::ConstantAsMetadata::get(
-        llvm::ConstantInt::getSigned(i64, fieldAttr.getOffset())));
-    operands.push_back(llvm::ConstantAsMetadata::get(
-        llvm::ConstantInt::getSigned(i64, fieldAttr.getSize())));
-    operands.push_back(getTBAANode(fieldAttr.getTag()));
+    structFields.emplace_back(static_cast<uint64_t>(fieldAttr.getOffset()),
+                              static_cast<uint64_t>(fieldAttr.getSize()),
+                              getTBAANode(fieldAttr.getTag()));
   }
-  inst->setMetadata(llvm::LLVMContext::MD_tbaa_struct,
-                    llvm::MDNode::get(ctx, operands));
+  inst->setMetadata(
+      llvm::LLVMContext::MD_tbaa_struct,
+      llvm::MDBuilder(getLLVMContext()).createTBAAStructNode(structFields));
 }
 
 void ModuleTranslation::setDereferenceableMetadata(

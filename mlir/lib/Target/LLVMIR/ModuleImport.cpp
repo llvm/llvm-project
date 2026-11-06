@@ -575,6 +575,46 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   return success();
 }
 
+Attribute ModuleImport::convertTBAAStructMetadata(const llvm::MDNode *node) {
+  // Operands come in conceptual groups of three; anything else is malformed.
+  if (node->getNumOperands() == 0 || node->getNumOperands() % 3 != 0)
+    return {};
+
+  SmallVector<Attribute> fields;
+  fields.reserve(node->getNumOperands() / 3);
+  for (unsigned i = 0, e = node->getNumOperands(); i != e; i += 3) {
+    auto *offset = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i));
+    auto *size = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i + 1));
+    if (!offset || !size)
+      return {};
+    // Offsets and sizes are int64 in the attribute; values that do not fit
+    // in 64 bits cannot be represented, and extracting them would assert.
+    // Read them unsigned and keep the bits: LLVM compares offsets
+    // zero-extended, so a narrow constant with its high bit set (e.g. i32
+    // 0x80000000) must keep its unsigned value rather than sign-extending,
+    // and a high-bit i64 offset must round-trip through the signed
+    // attribute unchanged.
+    std::optional<uint64_t> offsetZExt = offset->getValue().tryZExtValue();
+    std::optional<uint64_t> sizeZExt = size->getValue().tryZExtValue();
+    if (!offsetZExt || !sizeZExt)
+      return {};
+    int64_t offsetValue = static_cast<int64_t>(*offsetZExt);
+    int64_t sizeValue = static_cast<int64_t>(*sizeZExt);
+    auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
+    if (!tagNode)
+      return {};
+    auto tag = dyn_cast_if_present<TBAATagAttr>(lookupTBAAAttr(tagNode));
+    if (!tag)
+      return {};
+    fields.push_back(
+        builder.getAttr<TBAAStructFieldAttr>(offsetValue, sizeValue, tag));
+  }
+
+  return builder.getArrayAttr(fields);
+}
+
 LogicalResult
 ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
@@ -1171,8 +1211,8 @@ LogicalResult ModuleImport::convertMetadata() {
         if (failed(processTBAAMetadata(aliasAnalysisNodes.TBAA)))
           return failure();
       // A `!tbaa.struct` node reaches its own tags, and those tags may appear
-      // nowhere else in the module. Without walking them here the lookup in
-      // setTBAAStructAttr finds nothing and the node is declined.
+      // nowhere else in the module. Without walking them here the struct
+      // conversion below finds nothing and the node is declined.
       if (aliasAnalysisNodes.TBAAStruct) {
         const llvm::MDNode *structNode = aliasAnalysisNodes.TBAAStruct;
         for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
@@ -1180,6 +1220,13 @@ LogicalResult ModuleImport::convertMetadata() {
                   dyn_cast_if_present<llvm::MDNode>(structNode->getOperand(i)))
             if (failed(processTBAAMetadata(tag)))
               return failure();
+        // Convert the struct node itself once its tags are in the map. A
+        // node that cannot be modeled is recorded with a null value so it
+        // is not converted again for every instruction carrying it, and is
+        // declined at attach time.
+        if (!tbaaStructMapping.contains(structNode))
+          tbaaStructMapping.insert(
+              {structNode, convertTBAAStructMetadata(structNode)});
       }
       if (aliasAnalysisNodes.Scope)
         if (failed(processAliasScopeMetadata(aliasAnalysisNodes.Scope)))

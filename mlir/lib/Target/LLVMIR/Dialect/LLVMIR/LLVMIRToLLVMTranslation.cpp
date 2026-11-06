@@ -215,57 +215,21 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Converts `!tbaa.struct` to the `tbaa_struct` attribute on the imported
-/// aggregate copy. The node is a flat list of (offset, size, tag) triples: it
-/// says which fields of the aggregate the copy actually touches, so the copy is
-/// not treated as one opaque access and the gaps are known to be padding.
-static LogicalResult setTBAAStructAttr(OpBuilder &builder,
-                                       const llvm::MDNode *node, Operation *op,
+/// Attaches the `tbaa_struct` attribute converted from `!tbaa.struct` by
+/// ModuleImport::convertTBAAStructMetadata to the imported aggregate copy,
+/// like setTBAAAttr does for access tags. Nodes that could not be modeled
+/// are unmapped and declined here.
+static LogicalResult setTBAAStructAttr(const llvm::MDNode *node, Operation *op,
                                        LLVM::ModuleImport &moduleImport) {
-  if (!isa<LLVM::MemcpyOp, LLVM::MemcpyInlineOp, LLVM::MemmoveOp>(op))
+  auto fields =
+      dyn_cast_if_present<ArrayAttr>(moduleImport.lookupTBAAStructAttr(node));
+  if (!fields)
     return failure();
-
-  // Operands come in conceptual groups of three; anything else is malformed.
-  if (node->getNumOperands() == 0 || node->getNumOperands() % 3 != 0)
-    return failure();
-
-  SmallVector<Attribute> fields;
-  fields.reserve(node->getNumOperands() / 3);
-  for (unsigned i = 0, e = node->getNumOperands(); i != e; i += 3) {
-    auto *offset = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
-        node->getOperand(i));
-    auto *size = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
-        node->getOperand(i + 1));
-    if (!offset || !size)
-      return failure();
-    // Offsets and sizes are int64 in the attribute; values that do not fit
-    // in 64 bits cannot be represented, and extracting them would assert.
-    // Read them unsigned and keep the bits: LLVM compares offsets
-    // zero-extended, so a narrow constant with its high bit set (e.g. i32
-    // 0x80000000) must keep its unsigned value rather than sign-extending,
-    // and a high-bit i64 offset must round-trip through the signed
-    // attribute unchanged.
-    std::optional<uint64_t> offsetZExt = offset->getValue().tryZExtValue();
-    std::optional<uint64_t> sizeZExt = size->getValue().tryZExtValue();
-    if (!offsetZExt || !sizeZExt)
-      return failure();
-    int64_t offsetValue = static_cast<int64_t>(*offsetZExt);
-    int64_t sizeValue = static_cast<int64_t>(*sizeZExt);
-    auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
-    if (!tagNode)
-      return failure();
-    auto tag =
-        dyn_cast_if_present<TBAATagAttr>(moduleImport.lookupTBAAAttr(tagNode));
-    if (!tag)
-      return failure();
-    fields.push_back(
-        builder.getAttr<TBAAStructFieldAttr>(offsetValue, sizeValue, tag));
-  }
 
   return TypeSwitch<Operation *, LogicalResult>(op)
       .Case<LLVM::MemcpyOp, LLVM::MemcpyInlineOp, LLVM::MemmoveOp>(
           [&](auto copyOp) {
-            copyOp.setTbaaStructAttr(builder.getArrayAttr(fields));
+            copyOp.setTbaaStructAttr(fields);
             return success();
           })
       .Default([](auto) { return failure(); });
@@ -662,7 +626,7 @@ public:
     if (kind == llvm::LLVMContext::MD_callsite)
       return setCallsiteAttr(builder, node, op);
     if (kind == llvm::LLVMContext::MD_tbaa_struct)
-      return setTBAAStructAttr(builder, node, op, moduleImport);
+      return setTBAAStructAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);
