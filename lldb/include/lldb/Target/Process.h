@@ -19,6 +19,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_set>
 #include <vector>
 
@@ -496,6 +497,8 @@ public:
 
   private:
     bool ForwardEventToPendingListeners(Event *event_ptr) override;
+
+    void PerformStopActions(Process &process, Event *event_ptr);
 
     void SetUpdateStateOnRemoval() { m_update_state++; }
 
@@ -1293,6 +1296,17 @@ public:
   ///
   /// \see lldb::StateType
   lldb::StateType GetState();
+
+  /// Return true if a thread other than the calling one is in
+  /// ProcessEventData::DoOnRemoval for a stop of this process, running the
+  /// stop's StopInfo actions and stop hooks.
+  ///
+  /// The process is stopped, but the stop isn't public yet: to every thread
+  /// except the handling one, GetState() still returns eStateRunning and the
+  /// public run lock is still set to running, so none of them can take the
+  /// run lock, Resume() the process or run an expression until the stop's
+  /// actions are done.
+  bool IsHandlingStopOnOtherThread() const;
 
   lldb::ExpressionResults
   RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
@@ -3423,29 +3437,94 @@ protected:
       return m_current_private_state_thread_sp->SetPrivateRunLockToRunning();
     return false;
   }
-  bool SetPublicRunLockToStopped() {
-    assert(m_current_private_state_thread_sp);
-    if (m_current_private_state_thread_sp)
-      return m_current_private_state_thread_sp->SetPublicRunLockToStopped();
-    return false;
-  }
-  bool SetPublicRunLockToRunning() {
-    assert(m_current_private_state_thread_sp);
-    if (m_current_private_state_thread_sp)
-      return m_current_private_state_thread_sp->SetPublicRunLockToRunning();
-    return false;
-  }
+  bool SetPublicRunLockToStopped();
+  bool SetPublicRunLockToRunning();
+
+  /// The public state and public run lock of a stop that a thread is handling
+  /// in ProcessEventData::DoOnRemoval, before the stop is made public. On the
+  /// handling thread, GetState(), GetPublicState(), SetPublicState(),
+  /// GetRunLock() and SetPublicRunLockToRunning/Stopped() use these instead
+  /// of the PrivateStateThread's public state and public run lock. For every
+  /// other thread, those keep their values from before the stop (eStateRunning
+  /// and a run lock set to running) until DoOnRemoval makes the stop public.
+  ///
+  /// After construction only the handling thread reads or writes the members,
+  /// so they need no lock of their own.
+  struct StopHandlingContext {
+    explicit StopHandlingContext(std::thread::id owner) : m_owner(owner) {}
+
+    const std::thread::id m_owner;
+    lldb::StateType m_public_state = lldb::eStateStopped;
+    ProcessRunLock m_public_run_lock;
+    /// Set once SetPublicRunLockToRunning() succeeds on this context, that is
+    /// once Resume() or ResumeSynchronous() resumed the process while the stop
+    /// was being handled.
+    bool m_resumed = false;
+    /// Whether m_public_run_lock was last set to running. ResumeSynchronous()
+    /// sets it back to stopped when the stop it waits for arrives.
+    bool m_run_lock_running = false;
+  };
+  using StopHandlingContextSP = std::shared_ptr<StopHandlingContext>;
+
+  /// Holds a stop back from every other thread while the current thread
+  /// handles it in ProcessEventData::DoOnRemoval.
+  ///
+  /// Scopes nest on the handling thread. If one of the stop's actions resumes
+  /// the process with ResumeSynchronous(), that call waits for the next stop
+  /// on this same thread, and pulling that stop from its hijack listener runs
+  /// DoOnRemoval again, opening a second scope inside the first. When the
+  /// inner scope ends, its stop is made public into the outer scope's
+  /// context, not the PrivateStateThread's.
+  ///
+  /// DoOnRemoval runs with View::Private on the private state thread and
+  /// creates no scope there, so a stop isn't held back while the private
+  /// state thread runs expressions for it, such as breakpoint conditions. See
+  /// the FIXME in RunThreadPlan.
+  class StopHandlingScope {
+  public:
+    explicit StopHandlingScope(Process &process);
+    ~StopHandlingScope();
+
+    /// True if Resume() or ResumeSynchronous() was called while handling the
+    /// stop and the context's run lock was set back to stopped before the scope
+    /// ended. ResumeSynchronous() does that after consuming the next stop on
+    /// this thread through its hijack listener, so no client got that stop's
+    /// event and it still has to be made public. Resume() does it only when it
+    /// fails, in which case the process never ran.
+    bool StoppedAgainAfterResume() const {
+      return m_context_sp->m_resumed && !m_context_sp->m_run_lock_running;
+    }
+
+    /// The context's public state once the stop is handled, which DoOnRemoval
+    /// then makes public. Usually eStateStopped, or eStateExited if the process
+    /// exited while the stop was being handled.
+    lldb::StateType GetPublicState() const {
+      return m_context_sp->m_public_state;
+    }
+
+  private:
+    Process &m_process;
+    StopHandlingContextSP m_context_sp;
+    StopHandlingContextSP m_enclosing_context_sp;
+    PolicyStack::Guard m_policy_guard;
+
+    StopHandlingScope(const StopHandlingScope &) = delete;
+    const StopHandlingScope &operator=(const StopHandlingScope &) = delete;
+  };
+
+  /// Return m_stop_handling_context_sp if the current thread's policy view is
+  /// HandlingStop and this thread opened that context's StopHandlingScope,
+  /// null otherwise.
+  StopHandlingContextSP GetStopHandlingContextForCurrentThread() const;
+
+  StopHandlingContextSP GetStopHandlingContext() const;
 
   std::recursive_mutex &GetPrivateStateMutex() {
     assert(m_current_private_state_thread_sp);
     return m_current_private_state_thread_sp->GetPrivateStateMutex();
   }
 
-  lldb::StateType GetPublicState() const {
-    if (!m_current_private_state_thread_sp)
-      return lldb::eStateUnloaded;
-    return m_current_private_state_thread_sp->GetPublicState();
-  }
+  lldb::StateType GetPublicState() const;
 
   lldb::StateType GetPrivateState() const {
     if (!m_current_private_state_thread_sp)
@@ -3482,6 +3561,13 @@ protected:
   /// so I can transparently swap it out for the modal one, but there will
   /// always be a private state thread in this slot.
   std::shared_ptr<PrivateStateThread> m_current_private_state_thread_sp;
+
+  /// The context of the stop being handled in DoOnRemoval, or null. Set and
+  /// cleared by StopHandlingScope on the handling thread, and read by any
+  /// thread through GetStopHandlingContextForCurrentThread() and
+  /// IsHandlingStopOnOtherThread(), always under m_stop_handling_mutex.
+  StopHandlingContextSP m_stop_handling_context_sp;
+  mutable std::mutex m_stop_handling_mutex;
 
   ProcessModID m_mod_id; ///< Tracks the state of the process over stops and
                          ///other alterations.

@@ -94,6 +94,25 @@ TEST(PolicyTest, ScriptedExtensionCallWithdrawalIsInherited) {
   EXPECT_FALSE(nested.capabilities.can_try_all_threads);
 }
 
+TEST(PolicyTest, HandlingStop) {
+  Policy p = Policy::CreateHandlingStop();
+  EXPECT_EQ(p.view, Policy::View::HandlingStop);
+  // A stop's actions run in this scope, and they may run expressions.
+  EXPECT_TRUE(p.capabilities.can_evaluate_expressions);
+  EXPECT_TRUE(p.capabilities.can_run_breakpoint_actions);
+  EXPECT_TRUE(p.capabilities.can_load_frame_providers);
+}
+
+TEST(PolicyTest, HandlingStopViewIsInherited) {
+  // An expression run while handling a stop keeps seeing the stop.
+  PolicyStack::Guard outer = PolicyStack::Get().PushHandlingStop();
+  PolicyStack::Guard inner =
+      PolicyStack::Get().PushPublicStateRunningExpression();
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::HandlingStop);
+  EXPECT_FALSE(
+      PolicyStack::Get().Current().capabilities.can_run_breakpoint_actions);
+}
+
 TEST(PolicyTest, StackDefaultIsPublicState) {
   Policy current = PolicyStack::Get().Current();
   EXPECT_EQ(current.view, Policy::View::Public);
@@ -178,6 +197,16 @@ TEST(PolicyTest, DumpPrivateState) {
   Policy::CreatePrivateState().Dump(s);
   EXPECT_EQ(s.GetString(),
             "policy: view=private, capabilities={"
+            "eval_expr=true run_all=true try_all=true "
+            "bp_actions=true frame_providers=true frame_recognizers=true "
+            "bypass_api_mutex=false}");
+}
+
+TEST(PolicyTest, DumpHandlingStop) {
+  StreamString s;
+  Policy::CreateHandlingStop().Dump(s);
+  EXPECT_EQ(s.GetString(),
+            "policy: view=handling-stop, capabilities={"
             "eval_expr=true run_all=true try_all=true "
             "bp_actions=true frame_providers=true frame_recognizers=true "
             "bypass_api_mutex=false}");
