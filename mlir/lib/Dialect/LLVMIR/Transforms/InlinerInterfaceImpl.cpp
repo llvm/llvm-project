@@ -716,9 +716,9 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
       builder.getArrayAttr({builder.getDictionaryAttr({dstAlignAttr})});
   LLVM::MemcpyOp::create(builder, loc, allocaOp, argument, copySize,
                          /*isVolatile=*/false,
+                         /*tbaa_struct=*/nullptr,
                          /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-                         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-                         /*tbaa_struct=*/nullptr, argAttrs,
+                         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, argAttrs,
                          /*res_attrs=*/nullptr);
   return allocaOp;
 }

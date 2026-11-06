@@ -264,10 +264,10 @@ class LLVM_MemcpyIntrOpBase<string name> :
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
-  let requiresTBAAStruct = 1;
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  AnySignlessInteger:$len, I1Attr:$isVolatile);
+                  AnySignlessInteger:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -279,9 +279,9 @@ class LLVM_MemcpyIntrOpBase<string name> :
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-            /*tbaa_struct=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];
@@ -306,10 +306,10 @@ def LLVM_MemcpyInlineOp :
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
-  let requiresTBAAStruct = 1;
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  APIntAttr:$len, I1Attr:$isVolatile);
+                  APIntAttr:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -321,9 +321,9 @@ def LLVM_MemcpyInlineOp :
     OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-            /*tbaa_struct=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];

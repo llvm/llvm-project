@@ -310,12 +310,7 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // interfaces the intrinsic implements. When a flag is set, the "baseArgs"
 // list includes the arguments required by the corresponding interface.
 // Derived intrinsics must append "baseArgs" to their argument list if they
-// enable any of these flags. "requiresTBAAStruct" is not tied to an
-// interface: it adds the tbaa_struct argument after tbaa (when present),
-// for the aggregate-copy intrinsics only. It is set with `let` by those
-// intrinsics. It only wires the argument; the export, import, and
-// verifier sites name those three ops directly, so a future op setting
-// the flag also needs handling there.
+// enable any of these flags.
 //
 // LLVM `immargs` can be represented as MLIR attributes by providing both
 // the `immArgPositions` and `immArgAttrNames` lists. These two lists should
@@ -342,14 +337,6 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
         traits)>,
       LLVM_MemOpPatterns,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
-  // Set with `let` by intrinsics carrying tbaa.struct metadata, like the
-  // aggregate-copy intrinsics. It is a plain field rather than a
-  // constructor argument so that enabling it does not shift the
-  // positional flag arguments of every intrinsic definition. Ops setting
-  // it must also add DeclareOpInterfaceMethods<TBAAStructOpInterface>
-  // to their traits: the flag only wires the argument, the trait
-  // attaches the verification and accessors.
-  bit requiresTBAAStruct = 0;
   dag baseArgs = !con(
         !if(!gt(requiresAccessGroup, 0),
             (ins OptionalAttr<LLVM_AccessGroupArrayAttr>:$access_groups),
@@ -358,9 +345,6 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             (ins OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
-            (ins )),
-        !if(!gt(requiresTBAAStruct, 0),
-            (ins OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct),
             (ins )),
         !if(!gt(requiresArgAndResultAttrs, 0),
             (ins OptionalAttr<DictArrayAttr>:$arg_attrs,
