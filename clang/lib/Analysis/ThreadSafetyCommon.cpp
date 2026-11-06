@@ -258,23 +258,37 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
+void SExprBuilder::markIfStmtExprLocal(const ValueDecl *VD) {
+  // Only the names used by the local variable definitions that are being
+  // looked through matter.
+  if (VarsBeingTranslated.empty())
+    return;
+  if (const StmtExpr *SE = getDeclaringStmtExpr(VD))
+    ReferencedStmtExprs.push_back(SE);
+}
+
 til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
                                             CallingContext *Ctx) {
   assert(VD);
 
   // General recursion guard for x = f(x). If we are already in the process of
   // defining VD, use its pre-assignment value to break the cycle.
-  if (VarsBeingTranslated.contains(VD->getCanonicalDecl()))
+  if (VarsBeingTranslated.contains(VD->getCanonicalDecl())) {
+    markIfStmtExprLocal(VD);
     return new (Arena) til::LiteralPtr(VD);
+  }
 
   // The closure captures state that is updated to correctly translate chains of
   // aliases. Restore it when we are done with recursive translation.
-  llvm::scope_exit Cleanup([&, RestoreClosure = VarsBeingTranslated.empty()
-                                                    ? LookupLocalVarExpr
-                                                    : nullptr] {
+  if (VarsBeingTranslated.empty())
+    OuterLookupLocalVarExpr = LookupLocalVarExpr;
+  llvm::scope_exit Cleanup([&] {
     VarsBeingTranslated.erase(VD->getCanonicalDecl());
-    if (VarsBeingTranslated.empty())
-      LookupLocalVarExpr = RestoreClosure;
+    if (VarsBeingTranslated.empty()) {
+      LookupLocalVarExpr = std::move(OuterLookupLocalVarExpr);
+      OuterLookupLocalVarExpr = nullptr;
+      ReferencedStmtExprs.clear();
+    }
   });
   VarsBeingTranslated.insert(VD->getCanonicalDecl());
 
@@ -286,16 +300,48 @@ til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
       // lookup. This will fail with complex control-flow graphs (where we
       // revert to no alias resolution to retain stable variable names).
       if (const Expr *E = LookupLocalVarExpr(VD)) {
+        size_t NumReferenced = ReferencedStmtExprs.size();
         til::SExpr *Result = translate(E, Ctx);
-        // Unsupported expression (such as heap allocations) will be undefined;
-        // rather than failing here, we simply revert to the pointer being the
-        // canonical variable.
-        if (Result && !isa<til::Undefined>(Result))
+        // A definition that names a variable declared inside a statement
+        // expression that does not enclose the declaration of VD names a
+        // variable that does not exist everywhere VD may be used. A null
+        // entry stands for a name that cannot be used at all.
+        bool NamesStmtExprLocal = false;
+        if (ReferencedStmtExprs.size() > NumReferenced) {
+          const StmtExpr *Scope = getDeclaringStmtExpr(VD);
+          NamesStmtExprLocal =
+              llvm::any_of(llvm::drop_begin(ReferencedStmtExprs, NumReferenced),
+                           [&](const StmtExpr *SE) {
+                             for (const StmtExpr *Cur = Scope; Cur;
+                                  Cur = StmtExprParentCache.lookup(Cur))
+                               if (Cur == SE)
+                                 return false;
+                             return true;
+                           });
+        }
+        // Unsupported expressions (such as heap allocations) will be
+        // undefined; rather than failing here, we simply revert to the
+        // pointer being the canonical variable. Do the same for definitions
+        // that name statement expression locals.
+        if (Result && !isa<til::Undefined>(Result) && !NamesStmtExprLocal)
           return Result;
+        ReferencedStmtExprs.truncate(NumReferenced);
+        // If VD is a name used by the definition of another variable, VD only
+        // denotes the value of its definition E there if E is also the
+        // definition of VD where the outermost variable is used. Otherwise
+        // the other variable cannot be named after VD either.
+        if (NamesStmtExprLocal && VarsBeingTranslated.size() > 1) {
+          LookupLocalVarExprClosure Outer = OuterLookupLocalVarExpr;
+          if (!Outer || Outer(VD) != E)
+            ReferencedStmtExprs.push_back(nullptr);
+        }
       }
     }
   }
 
+  // VD is a name used by the definition of another variable.
+  if (VarsBeingTranslated.size() > 1)
+    markIfStmtExprLocal(VD);
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -534,6 +580,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   }
 
   // For non-local variables, treat it as a reference to a named object.
+  markIfStmtExprLocal(VD);
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -926,6 +973,52 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
     }
   }
   return nullptr;
+}
+
+const StmtExpr *SExprBuilder::getDeclaringStmtExpr(const ValueDecl *VD) {
+  // Variables with static or thread storage duration, including block-scope
+  // extern declarations, exist outside any statement expression.
+  if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+    if (!Var->hasLocalStorage() || isa<ParmVarDecl>(Var))
+      return nullptr;
+  } else if (!isa<BindingDecl>(VD)) {
+    return nullptr;
+  }
+  const auto *Fn = dyn_cast_or_null<Decl>(VD->getParentFunctionOrMethod());
+  if (!Fn)
+    return nullptr;
+  if (ScannedBodies.insert(Fn).second) {
+    // Record the innermost statement expression that declares each local
+    // variable of the function body, and the parent of each statement
+    // expression. Lambdas and blocks have their own bodies.
+    SmallVector<std::pair<const Stmt *, const StmtExpr *>, 32> Worklist;
+    Worklist.emplace_back(Fn->getBody(), nullptr);
+    while (!Worklist.empty()) {
+      auto [S, CurSE] = Worklist.pop_back_val();
+      if (!S || isa<LambdaExpr, BlockExpr>(S))
+        continue;
+      if (const auto *ChildSE = dyn_cast<StmtExpr>(S)) {
+        StmtExprParentCache.try_emplace(ChildSE, CurSE);
+        Worklist.emplace_back(ChildSE->getSubStmt(), ChildSE);
+        continue;
+      }
+      if (const auto *DS = dyn_cast<DeclStmt>(S); DS && CurSE) {
+        for (const Decl *D : DS->decls()) {
+          const auto *Var = dyn_cast<VarDecl>(D);
+          if (!Var || !Var->hasLocalStorage())
+            continue;
+          StmtExprLocalCache.try_emplace(Var->getCanonicalDecl(), CurSE);
+          if (const auto *DD = dyn_cast<DecompositionDecl>(Var))
+            for (const auto *BD : DD->bindings())
+              StmtExprLocalCache.try_emplace(
+                  cast<ValueDecl>(BD->getCanonicalDecl()), CurSE);
+        }
+      }
+      for (const Stmt *Child : S->children())
+        Worklist.emplace_back(Child, CurSE);
+    }
+  }
+  return StmtExprLocalCache.lookup(cast<ValueDecl>(VD->getCanonicalDecl()));
 }
 
 til::SExpr *SExprBuilder::translateStmtExpr(const StmtExpr *SE,

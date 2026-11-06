@@ -8109,6 +8109,36 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   f1->data = 42;
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
+
+#if __cplusplus >= 201703L
+struct FooPair {
+  Foo *first;
+  int second;
+};
+FooPair makeFooPair(Foo *f);
+
+void testStructuredBindingInStmtExpr(Foo *in) {
+  Foo *f = ({
+    auto [x, y] = makeFooPair(in);
+    (void)y;
+    x;
+  });
+  f->mu.Lock(); // expected-note{{mutex acquired here}}
+} // expected-warning{{mutex 'f->mu' is still held at the end of function}}
+#endif
+
+struct Selector {
+  Mutex *pick(Mutex *m);
+};
+void lockSelected(Selector *s, Mutex *m) EXCLUSIVE_LOCK_FUNCTION(*s->pick(m));
+void unlockSelected(Selector *s, Mutex *m) UNLOCK_FUNCTION(*s->pick(m));
+
+void testTwoLocalPointersInCapExpr(Selector *in_s, Mutex *in_m) {
+  Selector *sel = ({ in_s; });
+  Mutex *m = in_m;
+  lockSelected(sel, m);
+  unlockSelected(in_s, in_m);
+}
 }  // namespace CapabilityAliases
 
 namespace WideStringLiteral {
