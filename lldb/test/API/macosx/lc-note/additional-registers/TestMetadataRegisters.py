@@ -74,6 +74,7 @@ class TestMetadataRegisters(TestBase):
         compressed_payload = self.getBuildArtifact("compressed.payload")
         bad_compressed_corefile = self.getBuildArtifact("bad-compressed.core")
         bad_compressed_payload = self.getBuildArtifact("bad-compressed.payload")
+        wrapping_metadata_corefile = self.getBuildArtifact("wrapping-metadata.core")
         add_lcnote = self.getBuildArtifact("add-lcnote")
 
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -166,6 +167,28 @@ class TestMetadataRegisters(TestBase):
         )
         call(cmd, shell=True)
 
+        # Register sizes, "after" included, that sum to 2^32 bytes.
+        big_bitsizes = [2**31] * 15 + [2**31 - 64]
+        big_registers = [
+            '{"name":"big%d", "value":0, "bitsize":%d, "set":0}' % (i, bitsize)
+            for i, bitsize in enumerate(big_bitsizes)
+        ]
+        cmd = (
+            add_lcnote
+            + " -r"
+            + " -i '%s'" % lldb_corefile
+            + " -o '%s'" % wrapping_metadata_corefile
+            + " -n 'process metadata' "
+            + " -s '"
+            + '{"threads":[{"register_info":{"sets":["Special Registers"],'
+            + '"registers":['
+            + ",".join(big_registers)
+            + ',{"name":"after", "value":1234605616436508552, "bitsize":64,'
+            + ' "set":0}]}}]}'
+            + "'"
+        )
+        call(cmd, shell=True)
+
         self.check_metadata_registers(metadata_corefile)
         self.check_metadata_registers(compressed_corefile)
 
@@ -202,3 +225,13 @@ class TestMetadataRegisters(TestBase):
         regset_names = [regset.GetName() for regset in frame.registers]
         self.assertIn("General Purpose Registers", regset_names)
         self.assertNotIn("Special Registers", regset_names)
+
+        # Register sizes that wrap around 32 bits don't truncate the register
+        # buffer.
+        target = self.dbg.CreateTarget("")
+        process = target.LoadCore(wrapping_metadata_corefile)
+        self.assertTrue(process.IsValid())
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        after = frame.FindRegister("after")
+        self.assertTrue(after.IsValid())
+        self.assertEqual(after.GetValueAsUnsigned(), 0x1122334455667788)
