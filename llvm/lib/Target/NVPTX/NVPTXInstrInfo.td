@@ -524,10 +524,11 @@ multiclass F3_fma_component<string op_str, SDNode op_node> {
 // Template for operations with one f32 or f64 source operand.  Provides three
 // instructions: <OpcStr>.f64, <OpcStr>.f32, and <OpcStr>.ftz.f32 (flush
 // subnormal inputs and results to zero).
-multiclass F2<string OpcStr, SDNode OpNode> {
+multiclass F2<string OpcStr, SDNode OpNode, bit AllowFTZ = true> {
   def f64 : BasicNVPTXInst<(outs B64:$dst), (ins B64Op:$a), OpcStr # ".f64">;
   def f32 : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32Op:$a),
-                               (ins FTZFlag:$ftz), OpcStr # "$ftz.f32">;
+                               !if(AllowFTZ, (ins FTZFlag:$ftz), (ins)),
+                               OpcStr # !if(AllowFTZ, "$ftz", "") # ".f32">;
   def : Pat<(f64 (OpNode f64:$a)),
           (!cast<Instruction>(NAME # "f64") reg_or_fpimm:$a)>;
   def : Pat<(f32 (OpNode f32:$a)),
@@ -543,14 +544,12 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
                            OpcStr # ".bf16x2",
                            [(set v2bf16:$dst, (OpNode v2bf16:$a))]>,
                            Requires<[SM80]>;
-   def f16 :       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B16:$a),
-                           (ins FTZFlag:$ftz),
-                           OpcStr # "$ftz.f16",
+   def f16 :       BasicNVPTXInst<(outs B16:$dst), (ins B16:$a),
+                           OpcStr # ".f16",
                            [(set f16:$dst, (OpNode f16:$a))]>,
                            Requires<[SM53, PTX65]>;
-   def f16x2 :     BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a),
-                           (ins FTZFlag:$ftz),
-                           OpcStr # "$ftz.f16x2",
+   def f16x2 :     BasicNVPTXInst<(outs B32:$dst), (ins B32:$a),
+                           OpcStr # ".f16x2",
                            [(set v2f16:$dst, (OpNode v2f16:$a))]>,
                            Requires<[SM53, PTX65]>;
 
@@ -1020,7 +1019,18 @@ def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
 // Test Instructions
 //-----------------------------------
 
-def fabs_oneuse : OneUse1<fabs>;
+// Native sign operations may canonicalize NaNs. Only custom lowering with a
+// non-NaN input or users that ignore NaN bits may create these nodes.
+def nvptx_fabs : SDNode<"NVPTXISD::FABS", SDTFPUnaryOp>;
+def nvptx_fneg : SDNode<"NVPTXISD::FNEG", SDTFPUnaryOp>;
+
+def fabs_oneuse : OneUse1<nvptx_fabs>;
+
+// Generic FNEG expansion must still fold into explicit rounded subtraction.
+class fneg_xor<ValueType vt, ValueType ivt, int signmask> :
+  PatFrag<(ops node:$a), (vt (bitconvert (xor node:$a, (ivt signmask))))>;
+def fneg_xor_f32 : fneg_xor<f32, i32, -2147483648>;
+def fneg_xor_f64 : fneg_xor<f64, i64, -9223372036854775808>;
 
 def TESTP_INFINITE_F32 : BasicNVPTXInst<(outs B1:$p), (ins B32Op:$a), "testp.infinite.f32">;
 def : Pat<(i1 (seteq (fabs_oneuse f32:$a), fpimm_pos_inf)),
@@ -1224,10 +1234,11 @@ defm FMAXABS : FMINIMUMMAXIMUM_ABS<"max", false, nvptx_fmaxnum3>;
 defm FMINNANABS : FMINIMUMMAXIMUM_ABS<"min", true, nvptx_fminimum3>;
 defm FMAXNANABS : FMINIMUMMAXIMUM_ABS<"max", true, nvptx_fmaximum3>;
 
-defm FABS  : F2<"abs", fabs>;
-defm FNEG  : F2<"neg", fneg>;
-defm FABS_H: F2_Support_Half<"abs", fabs>;
-defm FNEG_H: F2_Support_Half<"neg", fneg>;
+// Sign operations preserve subnormals even in functions using FTZ arithmetic.
+defm FABS  : F2<"abs", nvptx_fabs, false>;
+defm FNEG  : F2<"neg", nvptx_fneg, false>;
+defm FABS_H: F2_Support_Half<"abs", nvptx_fabs>;
+defm FNEG_H: F2_Support_Half<"neg", nvptx_fneg>;
 
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
 
@@ -1235,9 +1246,9 @@ defm FSQRT : F2<"sqrt.rn", fsqrt>;
 // F16 NEG
 //
 class FNEG16<RegTyInfo t> :
-      BasicFlagsNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), (ins FTZFlag:$ftz),
-                "neg$ftz." # t.PtxType,
-                [(set t.Ty:$dst, (fneg t.Ty:$src))]>;
+      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+                "neg." # t.PtxType,
+                [(set t.Ty:$dst, (nvptx_fneg t.Ty:$src))]>;
 
 let Predicates = [allowFP16Math, PTX60, SM53] in {
   def NEG_F16    : FNEG16<F16RT>;

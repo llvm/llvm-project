@@ -1815,7 +1815,7 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r2, %r1;
+; SM90-NOFTZ-ALLOW-NEXT:    xor.b32 %r2, %r1, -2147483648;
 ; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.f32 %r3, [%rd1], %r2;
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
@@ -1828,7 +1828,7 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
+; SM90-FTZ-DISALLOW-NEXT:    xor.b32 %r2, %r1, -2147483648;
 ; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.f32 %r3, [%rd1], %r2;
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
@@ -1841,7 +1841,7 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
+; SM90-FTZ-ALLOW-NEXT:    xor.b32 %r2, %r1, -2147483648;
 ; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.f32 %r3, [%rd1], %r2;
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-FTZ-ALLOW-NEXT:    ret;
@@ -2256,7 +2256,7 @@ define double @fsub_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_double_global_cta_param_0];
 ; SM90-NEXT:    ld.param::func.b64 %rd2, [fsub_acq_rel_double_global_cta_param_1];
-; SM90-NEXT:    neg.f64 %rd3, %rd2;
+; SM90-NEXT:    xor.b64 %rd3, %rd2, -9223372036854775808;
 ; SM90-NEXT:    atom.acq_rel.cta.global.add.f64 %rd4, [%rd1], %rd3;
 ; SM90-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; SM90-NEXT:    ret;
@@ -2397,57 +2397,18 @@ define half @fadd_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 }
 
 define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_half_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16 %rs2, %rs1;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fsub_acq_rel_half_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    neg.f16 %rs2, %rs1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fsub_acq_rel_half_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fsub_acq_rel_half_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
-; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fsub_acq_rel_half_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
+; SM90-NEXT:    xor.b16 %rs2, %rs1, -32768;
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
+; SM90-NEXT:    st.param::func.b16 [func_retval0], %rs3;
+; SM90-NEXT:    ret;
         %retval = atomicrmw fsub ptr  addrspace(1) %addr, half %val syncscope("block") acq_rel
         ret half %retval
 }
@@ -3085,7 +3046,7 @@ define bfloat @fsub_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat %va
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_bfloat_global_cta_param_0];
 ; SM90-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_bfloat_global_cta_param_1];
-; SM90-NEXT:    neg.bf16 %rs2, %rs1;
+; SM90-NEXT:    xor.b16 %rs2, %rs1, -32768;
 ; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.bf16 %rs3, [%rd1], %rs2;
 ; SM90-NEXT:    st.param::func.b16 [func_retval0], %rs3;
 ; SM90-NEXT:    ret;
