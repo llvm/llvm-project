@@ -19,8 +19,7 @@ body:             |
     ; CHECK-NEXT: [[ADDW1:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: [[ADDW2:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY2]]
     ; CHECK-NEXT: [[PseudoMERGE:%[0-9]+]]:gpr = PseudoMERGE [[ADDW]], [[ADDW1]], [[ADDW2]]
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[PseudoMERGE]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[PseudoMERGE]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
