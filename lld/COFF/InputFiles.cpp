@@ -1437,9 +1437,14 @@ void BitcodeFile::parse() {
     } else if (objSym.isWeak() && objSym.isIndirect()) {
       // Weak external.
       sym = symtab.addUndefined(symName, this, true);
+      auto *undef = dyn_cast<Undefined>(sym);
+      Symbol *previousAlias = undef ? undef->weakAlias : nullptr;
       std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = symtab.addUndefined(saver.save(fallback));
       checkAndSetWeakAlias(symtab, this, sym, alias, false);
+      if (undef && undef->weakAlias == alias &&
+          (!undef->ltoWeakAliasOwner || previousAlias != alias))
+        undef->ltoWeakAliasOwner = this;
     } else if (comdatIndex != -1) {
       if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;
