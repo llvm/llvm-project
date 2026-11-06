@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Format.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include <cctype>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -23,42 +24,136 @@ using namespace mlir::tblgen;
 // Marker to indicate an error happened when replacing a placeholder.
 const char *const kMarkerForNoSubst = "<no-subst-found>";
 
+char FmtError::ID;
+
+FmtOrigin FmtOrigin::at(ArrayRef<llvm::SMLoc> locations,
+                        const Twine &description) {
+  FmtOrigin result;
+  result.definition = {{locations.begin(), locations.end()}, description.str()};
+  return result;
+}
+
+FmtOrigin &FmtOrigin::withUse(ArrayRef<llvm::SMLoc> locations,
+                              const Twine &description) {
+  uses.push_back({{locations.begin(), locations.end()}, description.str()});
+  return *this;
+}
+
+FmtError::FmtError(StringRef format, SmallVector<FmtIssue> issues,
+                   SmallVector<FmtBinding> bindings, size_t numPositionalArgs)
+    : format(format.str()), issues(std::move(issues)),
+      bindings(std::move(bindings)), numPositionalArgs(numPositionalArgs) {
+  assert(!this->issues.empty() &&
+         "formatting error without failed occurrences");
+}
+
+static void printBindings(raw_ostream &os, ArrayRef<FmtBinding> bindings) {
+  for (const FmtBinding &binding : bindings) {
+    os << '$' << binding.name << " = \"";
+    os.write_escaped(binding.replacement, /*UseHexEscapes=*/true) << "\"\n";
+  }
+}
+
+void FmtError::printBindings(raw_ostream &os) const {
+  ::printBindings(os, bindings);
+}
+
+void FmtError::log(raw_ostream &os) const {
+  for (const FmtIssue &issue : issues) {
+    os << "cannot substitute '" << issue.placeholder
+       << "' at template byte offset " << issue.offset;
+    switch (issue.kind) {
+    case FmtIssueKind::MissingNamedBinding:
+      os << ": missing named binding";
+      break;
+    case FmtIssueKind::PositionalOutOfRange:
+      os << ": positional argument out of range";
+      break;
+    case FmtIssueKind::RangeStartOutOfRange:
+      os << ": positional range starts out of range";
+      break;
+    case FmtIssueKind::InvalidPositionalIndex:
+      os << ": invalid positional index";
+      break;
+    }
+    os << '\n';
+  }
+  os << "template: ";
+  os.write_escaped(format, /*UseHexEscapes=*/true) << '\n';
+  os << "available named substitutions:";
+  if (bindings.empty())
+    os << " (none)";
+  for (const FmtBinding &binding : bindings)
+    os << " $" << binding.name;
+  os << "\npositional arguments supplied: " << numPositionalArgs;
+  for (const FmtOrigin &origin : origins) {
+    os << "\nwhile formatting " << origin.getDefinition().description;
+    for (const FmtSite &use : origin.getUses())
+      os << "\nwhile expanding " << use.description;
+  }
+}
+
+llvm::Error mlir::tblgen::addFmtOrigin(llvm::Error error,
+                                       const FmtOrigin &origin) {
+  return llvm::handleErrors(
+      std::move(error), [&](std::unique_ptr<FmtError> payload) -> llvm::Error {
+        payload->appendOrigin(origin);
+        return llvm::Error(std::move(payload));
+      });
+}
+
 FmtContext::FmtContext(ArrayRef<std::pair<StringRef, StringRef>> subs) {
   for (auto &sub : subs)
     addSubst(sub.first, sub.second);
 }
 
 FmtContext &FmtContext::addSubst(StringRef placeholder, const Twine &subst) {
-  customSubstMap[placeholder] = subst.str();
+  substMap[placeholder] = subst.str();
   return *this;
 }
 
 FmtContext &FmtContext::withBuilder(Twine subst) {
-  builtinSubstMap[PHKind::Builder] = subst.str();
-  return *this;
+  return addSubst("_builder", subst);
 }
 
 FmtContext &FmtContext::withSelf(Twine subst) {
-  builtinSubstMap[PHKind::Self] = subst.str();
-  return *this;
+  return addSubst("_self", subst);
 }
 
 std::optional<StringRef>
 FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
-  if (placeholder == FmtContext::PHKind::None ||
-      placeholder == FmtContext::PHKind::Custom)
+  switch (placeholder) {
+  case PHKind::Builder:
+    return getSubstFor("_builder");
+  case PHKind::Self:
+    return getSubstFor("_self");
+  case PHKind::None:
+  case PHKind::Custom:
     return {};
-  auto it = builtinSubstMap.find(placeholder);
-  if (it == builtinSubstMap.end())
+  }
+  llvm_unreachable("unknown placeholder kind");
+}
+
+std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
+  auto it = substMap.find(placeholder);
+  if (it == substMap.end())
     return {};
   return StringRef(it->second);
 }
 
-std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
-  auto it = customSubstMap.find(placeholder);
-  if (it == customSubstMap.end())
-    return {};
-  return StringRef(it->second);
+SmallVector<FmtBinding> FmtContext::getBindings() const {
+  SmallVector<FmtBinding> bindings;
+  bindings.reserve(substMap.size());
+  for (const auto &entry : substMap)
+    bindings.push_back({entry.getKey().str(), entry.getValue()});
+  llvm::sort(bindings, [](const FmtBinding &lhs, const FmtBinding &rhs) {
+    return lhs.name < rhs.name;
+  });
+  return bindings;
+}
+
+void FmtContext::printBindings(raw_ostream &os) const {
+  ::printBindings(os, getBindings());
 }
 
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
@@ -98,31 +193,37 @@ FmtObjectBase::splitFmtSegment(StringRef fmt) {
   // First try to see if it's a positional placeholder, and then handle special
   // placeholders.
 
-  size_t end =
-      fmt.find_if_not([](char c) { return std::isdigit(c); }, /*From=*/1);
+  size_t end = fmt.find_if_not(llvm::isDigit, /*From=*/1);
   if (end != 1) {
     // We have a positional placeholder. Parse the index.
     size_t index = 0;
-    if (fmt.substr(1, end - 1).consumeInteger(0, index)) {
-      llvm_unreachable("invalid replacement sequence index");
+    if (end == StringRef::npos)
+      end = fmt.size();
+    bool invalid = fmt.slice(1, end).getAsInteger(10, index);
+    bool isRange = fmt.substr(end).starts_with("...");
+    size_t tokenEnd = end + (isRange ? 3 : 0);
+    if (invalid) {
+      FmtReplacement replacement(fmt.take_front(tokenEnd));
+      replacement.type = FmtReplacement::Type::InvalidPH;
+      return {replacement, fmt.drop_front(tokenEnd)};
     }
 
     // Check if this is the part of a range specification.
-    if (fmt.substr(end, 3) == "...") {
+    if (isRange) {
       // Currently only ranges without upper bound are supported.
       return {
           FmtReplacement{fmt.substr(0, end + 3), index, FmtReplacement::kUnset},
           fmt.substr(end + 3)};
     }
 
-    if (end == StringRef::npos) {
+    if (end == fmt.size()) {
       // All the remaining characters are part of the positional placeholder.
       return {FmtReplacement{fmt, index}, StringRef()};
     }
     return {FmtReplacement{fmt.substr(0, end), index}, fmt.substr(end)};
   }
 
-  end = fmt.find_if_not([](char c) { return std::isalnum(c) || c == '_'; }, 1);
+  end = fmt.find_if_not([](char c) { return llvm::isAlnum(c) || c == '_'; }, 1);
   auto placeholder = FmtContext::getPlaceHolderKind(fmt.substr(1, end - 1));
   if (end == StringRef::npos) {
     // All the remaining characters are part of the special placeholder.
@@ -152,6 +253,11 @@ void FmtObjectBase::format(raw_ostream &s) const {
       continue;
     }
 
+    if (repl.type == FmtReplacement::Type::InvalidPH) {
+      s << repl.spec << kMarkerForNoSubst;
+      continue;
+    }
+
     if (repl.type == FmtReplacement::Type::SpecialPH) {
       if (repl.placeholder == FmtContext::PHKind::None) {
         s << repl.spec;
@@ -160,12 +266,8 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
       } else {
         std::optional<StringRef> subst;
-        if (repl.placeholder == FmtContext::PHKind::Custom) {
-          // Skip the leading '$' sign for the custom placeholder
-          subst = context->getSubstFor(repl.spec.substr(1));
-        } else {
-          subst = context->getSubstFor(repl.placeholder);
-        }
+        // Builtin and custom placeholders use the same lookup path.
+        subst = context->getSubstFor(repl.spec.drop_front());
         if (subst)
           s << *subst;
         else
@@ -195,6 +297,43 @@ void FmtObjectBase::format(raw_ostream &s) const {
     }
     adapters[repl.index](s, /*Options=*/"");
   }
+}
+
+llvm::Expected<std::string> FmtObjectBase::strChecked() const {
+  SmallVector<FmtIssue> issues;
+  for (const FmtReplacement &repl : replacements) {
+    std::optional<FmtIssueKind> kind;
+    switch (repl.type) {
+    case FmtReplacement::Type::Empty:
+    case FmtReplacement::Type::Literal:
+      break;
+    case FmtReplacement::Type::InvalidPH:
+      kind = FmtIssueKind::InvalidPositionalIndex;
+      break;
+    case FmtReplacement::Type::SpecialPH:
+      if (repl.placeholder != FmtContext::PHKind::None &&
+          (!context || !context->getSubstFor(repl.spec.drop_front())))
+        kind = FmtIssueKind::MissingNamedBinding;
+      break;
+    case FmtReplacement::Type::PositionalPH:
+      if (repl.index >= adapters.size())
+        kind = FmtIssueKind::PositionalOutOfRange;
+      break;
+    case FmtReplacement::Type::PositionalRangePH:
+      if (repl.index >= adapters.size())
+        kind = FmtIssueKind::RangeStartOutOfRange;
+      break;
+    }
+    if (kind)
+      issues.push_back({*kind, repl.spec.str(),
+                        static_cast<size_t>(repl.spec.data() - fmt.data())});
+  }
+  if (!issues.empty())
+    return llvm::make_error<FmtError>(fmt, std::move(issues),
+                                      context ? context->getBindings()
+                                              : SmallVector<FmtBinding>{},
+                                      adapters.size());
+  return str();
 }
 
 FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
