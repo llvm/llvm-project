@@ -511,6 +511,7 @@ private:
   MachineInstrBuilder buildSpecConstantOp(MachineInstr &I, Register Dest,
                                           Register Src, Register DestType,
                                           uint32_t Opcode) const;
+  Register bitcastConstPtrToI8(MachineInstr &I, Register Src) const;
   MachineInstrBuilder buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
                                            SPIRVTypeInst SrcPtrTy) const;
   Register buildPointerToResource(SPIRVTypeInst ResType,
@@ -1393,21 +1394,22 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
       }
       return true;
     }
+    // The offset of G_PTR_ADD is a byte count, so bitcast a typed base to i8*
+    // in its own storage class and use that offset as the Element operand.
+    // selectAddrSpaceCast() later defines an address-space cast as that i8*
+    // pointer, so no bitcast is emitted for a cast. An i8* base is unchanged.
+    Register ChainBase = IsAddrSpaceCast ? GV : bitcastConstPtrToI8(I, GV);
+
     // It's possible to translate G_PTR_ADD to OpSpecConstantOp: either to
     // initialize a global variable with a constant expression (e.g., the test
     // case opencl/basic/progvar_prog_scope_init.ll), or for another use case
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType))
-                   .addImm(static_cast<uint32_t>(
-                       SPIRV::Opcode::InBoundsPtrAccessChain))
-                   .addUse(GV);
-    // selectAddrSpaceCast() later turns the address space cast into a constant
-    // i8 pointer, so the byte offset is the Element operand.
-    if (!IsAddrSpaceCast)
-      MIB.addUse(buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I));
-    MIB.addUse(I.getOperand(2).getReg());
-    MIB.constrainAllUses(TII, TRI, RBI);
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addImm(static_cast<uint32_t>(SPIRV::Opcode::InBoundsPtrAccessChain))
+        .addUse(ChainBase)
+        .addUse(I.getOperand(2).getReg())
+        .constrainAllUses(TII, TRI, RBI);
     return true;
   }
 
@@ -2958,6 +2960,25 @@ SPIRVInstructionSelector::buildSpecConstantOp(MachineInstr &I, Register Dest,
       .addUse(Src);
 }
 
+// Bitcast a constant pointer to i8* in its own storage class. Src is returned
+// unchanged when it is already that pointer, or is not a pointer.
+Register SPIRVInstructionSelector::bitcastConstPtrToI8(MachineInstr &I,
+                                                       Register Src) const {
+  SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(Src);
+  if (!SrcTy || !SrcTy.isPointer())
+    return Src;
+  SPIRVTypeInst I8Ty = getUcharPtrType(I, GR.getPointerStorageClass(SrcTy));
+  if (SrcTy == I8Ty)
+    return Src;
+  Register Tmp = createVirtualRegister(I8Ty, &GR, MRI, *I.getMF());
+  MachineInstrBuilder Cast =
+      buildSpecConstantOp(I, Tmp, Src, GR.getSPIRVTypeID(I8Ty),
+                          static_cast<uint32_t>(SPIRV::Opcode::Bitcast));
+  GR.add(Cast.getInstr(), Cast);
+  Cast.constrainAllUses(TII, TRI, RBI);
+  return Tmp;
+}
+
 MachineInstrBuilder
 SPIRVInstructionSelector::buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
                                                SPIRVTypeInst SrcPtrTy) const {
@@ -3021,18 +3042,8 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
         isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC);
     if (SrcSC != SPIRV::StorageClass::CodeSectionINTEL &&
         (SpecOpcode || ViaGeneric)) {
-      SPIRVTypeInst UcharSrcPtrTy = getUcharPtrType(I, SrcSC);
-      if (SrcPtrTy != UcharSrcPtrTy) {
-        Register Tmp =
-            createVirtualRegister(UcharSrcPtrTy, &GR, MRI, *I.getMF());
-        MachineInstrBuilder MIB = buildSpecConstantOp(
-            I, Tmp, SrcPtr, GR.getSPIRVTypeID(UcharSrcPtrTy),
-            static_cast<uint32_t>(SPIRV::Opcode::Bitcast));
-        GR.add(MIB.getInstr(), MIB);
-        MIB.constrainAllUses(TII, TRI, RBI);
-        SrcPtr = Tmp;
-        SrcPtrTy = UcharSrcPtrTy;
-      }
+      SrcPtr = bitcastConstPtrToI8(I, SrcPtr);
+      SrcPtrTy = GR.getSPIRVTypeForVReg(SrcPtr);
     }
     if (SpecOpcode) {
       buildSpecConstantOp(I, ResVReg, SrcPtr, getUcharPtrTypeReg(I, DstSC),
