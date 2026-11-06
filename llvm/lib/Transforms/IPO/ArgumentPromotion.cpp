@@ -531,8 +531,7 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec,
-                         FunctionAnalysisManager &FAM,
-                         bool IsolatedCallerStorage = false) {
+                         FunctionAnalysisManager &FAM) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
     return true;
@@ -760,11 +759,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   if (AreStoresAllowed)
     return true;
 
-  // Private caller storage cannot be reached through another argument, so no
-  // operation in the callee can invalidate these loads.
-  if (IsolatedCallerStorage)
-    return true;
-
   // Okay, now we know that the argument is only used by load instructions, and
   // it is safe to unconditionally perform all of them.
 
@@ -871,8 +865,7 @@ static bool isIsolatedCallerStorage(Argument &Arg,
       if (I == Arg.getArgNo())
         continue;
       Value *Other = Call->getArgOperand(I);
-      if (!Other->getType()->isPointerTy() || isa<PoisonValue>(Other) ||
-          isa<ConstantPointerNull>(Other))
+      if (!Other->getType()->isPointerTy() || isa<PoisonValue>(Other))
         continue;
       const Value *OtherRoot = getUnderlyingObject(Other);
       if (OtherRoot == Root || AAR.alias(Root, Other) != AliasResult::NoAlias)
@@ -1221,8 +1214,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
       SmallVector<OffsetAndArgPart, 4> Parts;
       if (!findArgParts(PtrArg, DL, AAR, MaxConstantPropagationFields,
-                        IsRecursive, Parts, FAM,
-                        /*IsolatedCallerStorage=*/true))
+                        IsRecursive, Parts, FAM))
         continue;
 
       // Only propagate constants in functions rejected for having too many
