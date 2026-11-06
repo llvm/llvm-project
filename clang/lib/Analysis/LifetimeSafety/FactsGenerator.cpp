@@ -1083,18 +1083,13 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 
 void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
                                        ArrayRef<const Expr *> Args) {
-  // FIXME: `ParamIdx` accounts for the implicit 'this' parameter of
-  // constructors, but VisitCXXConstructExpr passes only the explicit
-  // arguments, so the index mapping would be off by one.
-  if (isa<CXXConstructorDecl>(FD))
-    return;
   for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
     if (Attr->getOwnKind() != OwnershipAttr::Takes)
       continue;
     for (const ParamIdx &Idx : Attr->args()) {
-      // `getLLVMIndex` encodes zero-origin indices including any implicit
-      // 'this' parameter, matching the layout of the Args array.
-      unsigned ArgIndex = Idx.getLLVMIndex();
+      // Attribute indices count implicit 'this', but constructor Args omits it:
+      // the first explicit parameter (2) maps to Args[0], not Args[1].
+      unsigned ArgIndex = Idx.getLLVMIndex() - isa<CXXConstructorDecl>(FD);
       if (ArgIndex >= Args.size())
         continue;
       OriginList *ArgList = getOriginsList(*Args[ArgIndex]);

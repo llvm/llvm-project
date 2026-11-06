@@ -528,10 +528,7 @@ private:
   static bool isFreeingExpr(const Expr *InvalidationExpr) {
     if (isa<CXXDeleteExpr>(InvalidationExpr))
       return true;
-    const auto *CE = dyn_cast<CallExpr>(InvalidationExpr);
-    if (!CE)
-      return false;
-    const FunctionDecl *FD = CE->getDirectCallee();
+    const FunctionDecl *FD = FunctionCallInfo(InvalidationExpr).FD;
     return FD && isFreeingFunction(*FD);
   }
 

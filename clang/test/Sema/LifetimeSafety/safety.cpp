@@ -3426,6 +3426,7 @@ namespace ownership_functions {
 __attribute__((ownership_returns(malloc))) int *myalloc(void);
 __attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
 __attribute__((ownership_takes(malloc, 1, 2))) void myfree2(int *a, int *b);
+__attribute__((ownership_takes(malloc, 3))) void myfree3(int *a, int *b, int *c);
 __attribute__((ownership_returns(malloc), ownership_takes(malloc, 1))) int *
 myrealloc(int *p);
 
@@ -3492,6 +3493,18 @@ void ownership_returns_multi_arg_free() {
   *b = 1;             // expected-note {{later used here}}
 }
 
+void ownership_returns_third_arg_free() {
+  int *a = myalloc();
+  int *b = myalloc();
+  int *c = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree3(a, b, c);   // expected-note {{object allocated by 'myalloc' is freed here}}
+  *a = 1;
+  *b = 1;
+  *c = 1; // expected-note {{later used here}}
+  myfree(a);
+  myfree(b);
+}
+
 void ownership_returns_realloc() {
   int *p = myalloc();
   p = myrealloc(p); // expected-warning {{object allocated by 'myrealloc' does not live long enough}}
@@ -3548,6 +3561,27 @@ void ownership_returns_member_realloc() {
   *p = 1;            // expected-note {{later used here}}
 }
 
+struct OwnershipTaker {
+  OwnershipTaker(int *p) __attribute__((ownership_takes(malloc, 2)));
+  OwnershipTaker(int *kept, int *freed)
+      __attribute__((ownership_takes(malloc, 3)));
+};
+
+void ownership_takes_constructor() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  OwnershipTaker{p};  // expected-note {{object allocated by 'myalloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_takes_constructor_second_arg() {
+  int *kept = myalloc();
+  int *freed = myalloc();        // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  OwnershipTaker{kept, freed};   // expected-note {{object allocated by 'myalloc' is freed here}}
+  *kept = 1;
+  *freed = 1;                   // expected-note {{later used here}}
+  myfree(kept);
+}
+
 struct UserDefinedNewDeleteOps {
   int x;
   static void *operator new(std::size_t)
@@ -3579,10 +3613,6 @@ void user_defined_new_delete_explicit_allocator_use_after_free() {
   p->x = 1;                                                                    // expected-note {{later used here}}
 }
 
-// FIXME: The ownership attribute is only honored here because the operator is
-// called explicitly (a CallExpr). In
-// `user_defined_new_delete_placement_expr_inert` the same annotated operator
-// is invoked by a `new` expression, which skips the attribute handling.
 void user_defined_new_delete_placement_explicit_call_use_after_free() {
   int local = 42;
   int *p = &local;                                                           // expected-warning {{local variable 'local' does not live long enough}}
@@ -3592,8 +3622,8 @@ void user_defined_new_delete_placement_explicit_call_use_after_free() {
 
 void user_defined_new_delete_placement_expr_inert() {
   char buf[sizeof(UserDefinedNewDeleteOps)];
-  // The class's annotated placement `operator new` is used here, but the
-  // `new` expression path does not consult the ownership attributes.
+  // FIXME: Honor ownership_takes on placement new to diagnose the
+  // use-after-free below.
   auto *p = new (buf) UserDefinedNewDeleteOps;
   p->x = 1;
 }
