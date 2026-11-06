@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
-#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"

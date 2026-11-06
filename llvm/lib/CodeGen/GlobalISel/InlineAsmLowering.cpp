@@ -406,7 +406,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         unsigned InstFlagIdx = StartIdx;
         for (unsigned i = 0; i < DefIdx; ++i)
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
-        assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
+        if (getNumOpRegs(*Inst, InstFlagIdx) != 1) {
+          LLVM_DEBUG(dbgs() << "Matching input constraints with multiple "
+                               "registers are not supported yet\n");
+          return false;
+        }
 
         const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {

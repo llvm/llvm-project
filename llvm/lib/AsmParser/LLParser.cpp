@@ -11553,7 +11553,7 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
 }
 
 /// AllocType
-///   := ('none'|'notcold'|'cold'|'hot')
+///   := ('none'|'notcold'|'cold'|'hot'|'ambiguous')
 bool LLParser::parseAllocType(uint8_t &AllocType) {
   switch (Lex.getKind()) {
   case lltok::kw_none:
@@ -11561,6 +11561,12 @@ bool LLParser::parseAllocType(uint8_t &AllocType) {
     break;
   case lltok::kw_notcold:
     AllocType = (uint8_t)AllocationType::NotCold;
+    break;
+  case lltok::kw_ambiguous:
+    // Both not cold and cold: the contexts reaching the allocation could not
+    // be disambiguated.
+    AllocType =
+        (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
     break;
   case lltok::kw_cold:
     AllocType = (uint8_t)AllocationType::Cold;

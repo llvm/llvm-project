@@ -14,7 +14,6 @@
 #include "VESelectionDAGInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 

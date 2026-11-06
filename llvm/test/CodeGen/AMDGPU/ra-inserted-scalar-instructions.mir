@@ -240,7 +240,7 @@ body:             |
   ; GCN-NEXT:   dead [[V_READFIRSTLANE_B32_3:%[0-9]+]].sub1:sgpr_64 = V_READFIRSTLANE_B32 undef [[DEF1]].sub1, implicit $exec
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GCN-NEXT:   $vcc = COPY [[DEF3]]
+  ; GCN-NEXT:   $vcc_lo = COPY [[DEF3]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.9, implicit $vcc_lo
   ; GCN-NEXT:   S_BRANCH %bb.8
   ; GCN-NEXT: {{  $}}
@@ -400,7 +400,7 @@ body:             |
   ; GCN-NEXT:   [[DEF19:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_10:%[0-9]+]]:sreg_32 = S_AND_B32 [[DEF19]], undef [[S_LOAD_DWORD_IMM6]], implicit-def dead $scc
   ; GCN-NEXT:   dead [[S_AND_B32_11:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[S_AND_B32_10]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; GCN-NEXT:   $vcc = COPY undef [[S_AND_B32_11]]
+  ; GCN-NEXT:   $vcc_lo = COPY undef [[S_AND_B32_11]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.12, implicit $vcc_lo
   ; GCN-NEXT:   S_BRANCH %bb.11
   ; GCN-NEXT: {{  $}}
@@ -490,7 +490,7 @@ body:             |
     %13.sub1:sgpr_64 = V_READFIRSTLANE_B32 undef %1.sub1, implicit $exec
     %92:sreg_32 = IMPLICIT_DEF
     %2:sgpr_32 = S_MOV_B32 0
-    $vcc = COPY %92
+    $vcc_lo = COPY %92
     S_CBRANCH_VCCNZ %bb.9, implicit $vcc
     S_BRANCH %bb.8
 
@@ -589,7 +589,7 @@ body:             |
     %16:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %95, 0, implicit $mode, implicit $exec
     %17:sreg_32 = S_AND_B32 %107, undef %14, implicit-def dead $scc
     %15:sreg_32 = S_AND_B32 undef %17, %2, implicit-def dead $scc
-    $vcc = COPY undef %15
+    $vcc_lo = COPY undef %15
     S_CBRANCH_VCCNZ %bb.12, implicit $vcc
     S_BRANCH %bb.11
 
