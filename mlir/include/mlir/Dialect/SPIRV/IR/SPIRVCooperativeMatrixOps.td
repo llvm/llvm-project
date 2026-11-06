@@ -97,9 +97,6 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     All invocations in a given scope instance must be active or all must be
     inactive.
 
-    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
-    support this optionality in the SPIR-V dialect.
-
     #### Example:
 
     ```
@@ -114,8 +111,8 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
   }];
 
   let assemblyFormat = [{
-    $pointer `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
-      type(operands) `->` type($result)
+    $pointer `,` ( $stride^ `,` )? $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
+      type($pointer) (`,` type($stride)^)? `->` type($result)
   }];
 
   let availability = [
@@ -129,7 +126,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
-    SPIRV_Integer:$stride,
+    Optional<SPIRV_Integer>:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
@@ -183,9 +180,6 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     All invocations in a given scope instance must be active or all must be
     inactive.
 
-    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
-    support this optionality in the SPIR-V dialect.
-
     #### Example:
 
     ```
@@ -198,8 +192,8 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   }];
 
   let assemblyFormat = [{
-    $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
-      type(operands)
+    $pointer `,` $object `,` ( $stride^ `,` )? $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
+      type($pointer) `,` type($object) (`,` type($stride)^)?
   }];
 
   let availability = [
@@ -214,7 +208,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     SPIRV_AnyPtr:$pointer,
     SPIRV_AnyCooperativeMatrix:$object,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
-    SPIRV_Integer:$stride,
+    Optional<SPIRV_Integer>:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
