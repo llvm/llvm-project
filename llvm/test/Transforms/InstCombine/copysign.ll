@@ -443,5 +443,3 @@ define <2 x float> @select_two_copysigns_const_mag_vec(<2 x i1> %c, <2 x float> 
   %r = select <2 x i1> %c, <2 x float> %q, <2 x float> %p
   ret <2 x float> %r
 }
-
-
