@@ -208,7 +208,7 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   T bn_1 = bn2_1;
   T twoOverX = 2.0 / x;
 
-  // If J(n2-1, x) is zero or subnormal, the recursion above cannot recover
+  // If J(n2, x) is zero or subnormal, the recursion above cannot recover
   // the lower orders (e.g. BESSEL_JN(1, 10000, 1.0) would be all zeros).
   // Run Miller's algorithm instead: start from an arbitrary seed, rescale to
   // avoid overflow, and normalize with J(0) + 2 * sum(J(2k)) = 1.
@@ -217,7 +217,7 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   T growth{2 * n2 / absX + 2}; // bounds |J(n-1)| / max(|J(n)|, |J(n+1)|)
   T limit{Limits::max() / (2 * growth)};
   if (n1 >= 0 && n2 - n1 >= 2 && absX < n2 && limit > 1 &&
-      bn_1 < Limits::min() && bn_1 > -Limits::min()) {
+      bn_2 < Limits::min() && bn_2 > -Limits::min()) {
     T jp1{0}, j{1}, evenSum{0};
     int top{n2}; // stored orders above top are zero
     at[0] = n2 - n1 + 1;

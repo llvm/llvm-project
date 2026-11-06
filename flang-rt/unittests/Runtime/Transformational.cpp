@@ -115,6 +115,13 @@ static void testBesselJnUnderflowedAnchors(BesselFuncType<KIND> rtFunc) {
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(0), 0.765197687, 1e-6);
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(1), -0.440050572, 1e-6);
 
+  // Only J(n2) is flushed to zero; J(n2-1) alone loses ~5 digits.
+  if constexpr (KIND == 8) {
+    rtFunc(result, 1, 150, 1.0, 0.0, 3.6728611e-306, __FILE__, __LINE__);
+    EXPECT_NEAR(
+        *result.ZeroBasedIndexedElement<T>(0), 0.4400505857449335, 1e-9);
+  }
+
   // Tiny x: J(0) = 1 although J(2) and J(3) underflow.
   T tinyX{KIND == 4 ? T(1e-20) : T(1e-200)};
   rtFunc(result, 0, 3, tinyX, 0.0, 0.0, __FILE__, __LINE__);
