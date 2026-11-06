@@ -13,8 +13,7 @@ define void @passing2(i64 %str.0, i64 %str.1, i16 signext  %s, i32 %j, i8 signex
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %ah, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    shrq $16, %rax
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %ah, {{[0-9]+}}(%rsp)
