@@ -133,39 +133,52 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
 /// lanes given by `size`). This uses butterfly shuffles to perform the
 /// reduction in a log2(size) number of steps.
 /// NOTE: Implementation taken from TestVectorTransforms.cpp
+/// For float kinds, `fastmath` is set on every combining operation.
 Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
-                        vector::CombiningKind kind, uint32_t size);
+                        vector::CombiningKind kind, uint32_t size,
+                        arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
 /// lower to a set of vector::ReductionOp ops over 1D slices extracted from
 /// `src`. The reduction is performed along `reductionDim`. The result is a
-/// vector with the same shape as `acc`.
+/// vector with the same shape as `acc`. `fastmath` holds the fast-math flags
+/// of the vector::MultiDimReductionOp. Each new vector::ReductionOp gets them.
 /// TODO: Only 2D to 1D reduction is supported for now.
 Value lowerToVectorReductions(TypedValue<VectorType> src,
                               TypedValue<VectorType> acc,
                               vector::CombiningKind kind, int64_t reductionDim,
-                              Location loc, PatternRewriter &rewriter);
+                              Location loc, PatternRewriter &rewriter,
+                              arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Creates a constant filled with the neutral (identity) value for the
 /// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL, all ones
-/// for AND, max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and
-/// +/-infinity for float min/max operations. If \p type is a VectorType,
-/// returns a splat vector constant; otherwise returns a scalar constant.
-/// Returns nullptr if the element type is incompatible with the requested
-/// reduction kind.
+/// for AND, and max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI.
+/// For float min/max kinds, the value must fit the element type and be
+/// allowed by \p fastmath:
+/// - A quiet NaN for the kinds that ignore NaN operands, if the type has NaN
+///   and `nnan` is not set.
+/// - Otherwise the infinity that never wins, if the type has it and `ninf`
+///   is not set.
+/// - Otherwise the lowest (for max) or highest (for min) finite value.
+/// If \p type is a VectorType, returns a splat vector constant; otherwise
+/// returns a scalar constant. Returns nullptr if the element type is
+/// incompatible with the requested reduction kind.
 Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
-                                  vector::CombiningKind kind);
+                                  vector::CombiningKind kind,
+                                  arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Lowers cross-lane reductions to shuffle operations on a 2D vector.
 /// Extracts slices along the reduction dimension, performs subgroup reductions
 /// with shuffles across reductionSize work-items, and inserts the results back
-/// into an accumulator vector.
-Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
-                                        TypedValue<VectorType> acc,
-                                        vector::CombiningKind kind,
-                                        int64_t reductionDim,
-                                        int64_t reductionSize, Location loc,
-                                        PatternRewriter &rewriter);
+/// into an accumulator vector. `fastmath` holds the fast-math flags of the
+/// reduction being lowered. For float kinds, they are set on every combining
+/// operation: the shuffle reductions (see subgroupReduction) and the combine
+/// with each accumulator element.
+Value lowerCrossLaneReductionToShuffles(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter,
+    arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
@@ -241,6 +254,13 @@ bool requireTranspose(const DistributeLayoutAttr layout,
 
 /// Returns true if `type` has a static shape and static strides.
 bool hasStaticShapeAndStrides(MemRefType type);
+
+/// Returns `baseAddr + elemOffset * bitWidth / 8`, i.e. advances the byte
+/// address `baseAddr` by `elemOffset` elements of `memrefTy`'s element type.
+/// Sub-byte element types (e.g. i4) are supported. `baseAddr` and `elemOffset`
+/// must have the same index or integer type, which is also the result type.
+Value addElemOffsetInBytes(OpBuilder &builder, Location loc, Value baseAddr,
+                           Value elemOffset, MemRefType memrefTy);
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,

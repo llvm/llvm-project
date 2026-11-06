@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL1.2 -O1 -triple x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -emit-llvm -o - -cl-std=CL1.2 -O1 -triple x86_64-unknown-linux-gnu | FileCheck %s %}
 // RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=clc++ -O1 -triple x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -emit-llvm -o - -cl-std=clc++ -O1 -triple x86_64-unknown-linux-gnu | FileCheck %s %}
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 

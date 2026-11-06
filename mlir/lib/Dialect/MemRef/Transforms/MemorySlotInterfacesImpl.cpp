@@ -292,7 +292,7 @@ struct SubViewOpAliasModel
 //  Register external models
 //===----------------------------------------------------------------------===//
 
-void mlir::memref::registerMemorySlotOpInterfaceExternalModels(
+void mlir::memref::registerMemorySlotInterfacesExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::SubViewOp::attachInterface<SubViewOpAliasModel>(*ctx);

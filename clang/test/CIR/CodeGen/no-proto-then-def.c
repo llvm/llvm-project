@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -Wno-deprecated-non-prototype %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fclangir -emit-cir -Wno-deprecated-non-prototype %s -o %t-spirv.cir
+// RUN: FileCheck --input-file=%t-spirv.cir %s -check-prefix=SPIRV
 
 extern int default_proc();
 
@@ -21,6 +23,11 @@ int default_proc(int a) { return a; }
 // CIR: cir.func{{.*}}@test_proc_ptr
 // CIR:   cir.get_global @default_proc : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
 // CIR:   cir.cast bitcast %{{.*}} : !cir.ptr<!cir.func<(!s32i) -> !s32i>> -> !cir.ptr<!cir.func<(...) -> !s32i>>
+
+// The retyped address keeps the program address space.
+// SPIRV: cir.func{{.*}}@test_proc_ptr
+// SPIRV:   cir.get_global @default_proc : !cir.ptr<!cir.func<(!s32i) -> !s32i>, target_address_space(4)>
+// SPIRV:   cir.cast bitcast %{{.*}} : !cir.ptr<!cir.func<(!s32i) -> !s32i>, target_address_space(4)> -> !cir.ptr<!cir.func<(...) -> !s32i>, target_address_space(4)>
 
 // LLVM: define{{.*}} @test_proc_ptr
 // LLVM:   store ptr @default_proc, ptr

@@ -403,10 +403,30 @@ public:
     EXPECT_FP_EQ_WITH_EXCEPTION(
         aNaN, func(T(-5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
   }
+  void testWideRangeBoundary(UfromfpFunc func) {
+    using namespace LIBC_NAMESPACE::fputil::testing;
+    ForceRoundingMode rounding(RoundingMode::Nearest);
+    if (!rounding.success)
+      return;
+    constexpr unsigned EXPONENT = FPBits::FRACTION_LEN + 3;
+    constexpr unsigned WIDTH = EXPONENT;
+    FPBits limit = FPBits::one();
+    limit.set_biased_exponent(FPBits::EXP_BIAS + EXPONENT);
+    T boundary = limit.get_val();
+    // Computing a range bound must not raise inexact for an exact zero input.
+    EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(zero, FP_INT_TOWARDZERO, WIDTH), 0);
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(boundary, FP_INT_TOWARDZERO, WIDTH),
+                                FE_INVALID);
+    EXPECT_MATH_ERRNO(0);
+  }
 };
 
 #define LIST_UFROMFP_TESTS(Name, T, func)                                      \
   using LlvmLibc##Name##Test = UfromfpTestTemplate<T>;                         \
+  TEST_F(LlvmLibc##Name##Test, WideRangeBoundary) {                            \
+    testWideRangeBoundary(&func);                                              \
+  }                                                                            \
   TEST_F(LlvmLibc##Name##Test, SpecialNumbersNonzeroWidth) {                   \
     testSpecialNumbersNonzeroWidth(&func);                                     \
   }                                                                            \
