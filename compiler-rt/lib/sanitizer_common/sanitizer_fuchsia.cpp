@@ -485,9 +485,9 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
   return false;
 }
 
-bool ReadFileToVector(const char *file_name,
-                      InternalMmapVectorNoCtor<char> *buff, uptr max_len,
-                      error_t *errno_p) {
+bool ReadFileToVector(const char* file_name,
+                      InternalMmapVectorNoCtor<char>* buff, uptr max_len,
+                      error_t* errno_p) {
   if (errno_p)
     *errno_p = ZX_ERR_NOT_SUPPORTED;
   return false;
