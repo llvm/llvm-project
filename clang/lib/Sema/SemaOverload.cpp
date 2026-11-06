@@ -12526,6 +12526,7 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 }
 
 static const TemplateParameterList *getTemplateParameters(Decl *Templated) {
+  assert(Templated && "Expected non-null templated declaration");
   if (auto *TD = dyn_cast<TemplateDecl>(Templated))
     return TD->getTemplateParameters();
   if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(Templated))

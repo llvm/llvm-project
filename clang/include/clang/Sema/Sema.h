@@ -11695,17 +11695,14 @@ public:
       const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
       bool Complain = true, bool *Unreachable = nullptr);
 
-  /// Diagnose any candidate class template partial specializations that were
-  /// rejected due to unsatisfied constraints.
+  /// Emits notes explaining rejected candidate partial specializations when an
+  /// error occurs on a class or variable template specialization.
   void NoteUnsatisfiedPartialSpecializations(
       SourceLocation Loc, ClassTemplateDecl *Template,
       ArrayRef<TemplateArgument> Args,
       const ClassTemplatePartialSpecializationDecl *Selected = nullptr);
   void NoteUnsatisfiedPartialSpecializations(
       SourceLocation Loc, const ClassTemplateSpecializationDecl *Spec);
-
-  /// Diagnose any candidate variable template partial specializations that
-  /// were rejected due to unsatisfied constraints.
   void NoteUnsatisfiedPartialSpecializations(
       SourceLocation Loc, VarTemplateDecl *Template,
       ArrayRef<TemplateArgument> Args,

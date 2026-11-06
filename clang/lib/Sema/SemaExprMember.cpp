@@ -969,7 +969,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                   ? SS.getRange()
                   : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
       if (const auto *CTSD =
-              dyn_cast_or_null<ClassTemplateSpecializationDecl>(DC))
+              dyn_cast<ClassTemplateSpecializationDecl>(DC))
         NoteUnsatisfiedPartialSpecializations(R.getNameLoc(), CTSD);
     }
     return RetryExpr;

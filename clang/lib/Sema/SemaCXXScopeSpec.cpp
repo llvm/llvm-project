@@ -806,9 +806,11 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   } else if (SS.isSet()) {
     Diag(IdInfo.IdentifierLoc, diag::err_no_member) << IdInfo.Identifier
         << LookupCtx << SS.getRange();
-    if (const auto *CTSD =
-            dyn_cast_or_null<ClassTemplateSpecializationDecl>(LookupCtx))
-      NoteUnsatisfiedPartialSpecializations(IdInfo.IdentifierLoc, CTSD);
+    if (LookupCtx) {
+      if (const auto *CTSD =
+              dyn_cast<ClassTemplateSpecializationDecl>(LookupCtx))
+        NoteUnsatisfiedPartialSpecializations(IdInfo.IdentifierLoc, CTSD);
+    }
   } else
     Diag(IdInfo.IdentifierLoc, diag::err_undeclared_var_use)
         << IdInfo.Identifier;

@@ -922,24 +922,24 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
   return true;
 }
 
-void Sema::NoteUnsatisfiedPartialSpecializations(
-    SourceLocation Loc, ClassTemplateDecl *Template,
-    ArrayRef<TemplateArgument> Args,
-    const ClassTemplatePartialSpecializationDecl *Selected) {
+template <typename TemplateDeclTy, typename PartialSpecDeclTy>
+static void NoteUnsatisfiedPartialSpecializationsImpl(
+    Sema &S, SourceLocation Loc, TemplateDeclTy *Template,
+    ArrayRef<TemplateArgument> Args, const PartialSpecDeclTy *Selected) {
   if (!Template)
     return;
 
-  SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+  SmallVector<PartialSpecDeclTy *, 4> PartialSpecs;
   Template->getPartialSpecializations(PartialSpecs);
   if (PartialSpecs.empty())
     return;
 
-  llvm::sort(PartialSpecs, [this](const auto *A, const auto *B) {
-    return SourceMgr.isBeforeInTranslationUnit(A->getLocation(),
-                                               B->getLocation());
+  llvm::sort(PartialSpecs, [&S](const auto *A, const auto *B) {
+    return S.getSourceManager().isBeforeInTranslationUnit(A->getLocation(),
+                                                          B->getLocation());
   });
 
-  for (ClassTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
+  for (PartialSpecDeclTy *Partial : PartialSpecs) {
     if (Partial == Selected)
       continue;
 
@@ -948,7 +948,7 @@ void Sema::NoteUnsatisfiedPartialSpecializations(
 
     TemplateDeductionInfo Info(Loc);
     TemplateDeductionResult Result =
-        DeduceTemplateArguments(Partial, Args, Info);
+        S.DeduceTemplateArguments(Partial, Args, Info);
 
     if (Result == TemplateDeductionResult::ConstraintsNotSatisfied) {
       SmallString<128> TemplateArgString;
@@ -957,31 +957,39 @@ void Sema::NoteUnsatisfiedPartialSpecializations(
         DeducedArgs = Info.takeCanonical();
       if (DeducedArgs) {
         TemplateArgString = " ";
-        TemplateArgString += getTemplateArgumentBindingsText(
+        TemplateArgString += S.getTemplateArgumentBindingsText(
             Partial->getTemplateParameters(), *DeducedArgs);
         if (TemplateArgString.size() == 1)
           TemplateArgString.clear();
       }
-      Diag(Partial->getLocation(),
-           diag::note_ovl_candidate_unsatisfied_constraints)
+      S.Diag(Partial->getLocation(),
+             diag::note_ovl_candidate_unsatisfied_constraints)
           << TemplateArgString;
-      DiagnoseUnsatisfiedConstraint(Info.AssociatedConstraintsSatisfaction);
+      S.DiagnoseUnsatisfiedConstraint(Info.AssociatedConstraintsSatisfaction);
     } else if (Result == TemplateDeductionResult::Success && Selected) {
       llvm::SmallVector<AssociatedConstraint, 3> ACSelected, ACPartial;
       Selected->getAssociatedConstraints(ACSelected);
       Partial->getAssociatedConstraints(ACPartial);
       bool SelectedAtLeastAsConstrained = false;
       bool PartialAtLeastAsConstrained = false;
-      if (!IsAtLeastAsConstrained(Selected, ACSelected, Partial, ACPartial,
-                                  SelectedAtLeastAsConstrained) &&
-          !IsAtLeastAsConstrained(Partial, ACPartial, Selected, ACSelected,
-                                  PartialAtLeastAsConstrained) &&
+      if (!S.IsAtLeastAsConstrained(Selected, ACSelected, Partial, ACPartial,
+                                   SelectedAtLeastAsConstrained) &&
+          !S.IsAtLeastAsConstrained(Partial, ACPartial, Selected, ACSelected,
+                                   PartialAtLeastAsConstrained) &&
           SelectedAtLeastAsConstrained && !PartialAtLeastAsConstrained) {
-        Diag(Partial->getLocation(),
-             diag::note_partial_spec_not_selected_less_constrained);
+        S.Diag(Partial->getLocation(),
+               diag::note_partial_spec_not_selected_less_constrained);
       }
     }
   }
+}
+
+void Sema::NoteUnsatisfiedPartialSpecializations(
+    SourceLocation Loc, ClassTemplateDecl *Template,
+    ArrayRef<TemplateArgument> Args,
+    const ClassTemplatePartialSpecializationDecl *Selected) {
+  NoteUnsatisfiedPartialSpecializationsImpl(*this, Loc, Template, Args,
+                                            Selected);
 }
 
 void Sema::NoteUnsatisfiedPartialSpecializations(
@@ -989,6 +997,7 @@ void Sema::NoteUnsatisfiedPartialSpecializations(
   if (!Spec)
     return;
   ClassTemplateDecl *Template = Spec->getSpecializedTemplate();
+  // Selected is null if the primary template was instantiated.
   auto *Selected = dyn_cast<ClassTemplatePartialSpecializationDecl *>(
       Spec->getSpecializedTemplateOrPartial());
   NoteUnsatisfiedPartialSpecializations(
@@ -999,62 +1008,8 @@ void Sema::NoteUnsatisfiedPartialSpecializations(
     SourceLocation Loc, VarTemplateDecl *Template,
     ArrayRef<TemplateArgument> Args,
     const VarTemplatePartialSpecializationDecl *Selected) {
-  if (!Template)
-    return;
-
-  SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-  Template->getPartialSpecializations(PartialSpecs);
-  if (PartialSpecs.empty())
-    return;
-
-  llvm::sort(PartialSpecs, [this](const auto *A, const auto *B) {
-    return SourceMgr.isBeforeInTranslationUnit(A->getLocation(),
-                                               B->getLocation());
-  });
-
-  for (VarTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
-    if (Partial == Selected)
-      continue;
-
-    if (!Partial->hasAssociatedConstraints())
-      continue;
-
-    TemplateDeductionInfo Info(Loc);
-    TemplateDeductionResult Result =
-        DeduceTemplateArguments(Partial, Args, Info);
-
-    if (Result == TemplateDeductionResult::ConstraintsNotSatisfied) {
-      SmallString<128> TemplateArgString;
-      TemplateArgumentList *DeducedArgs = Info.takeSugared();
-      if (!DeducedArgs)
-        DeducedArgs = Info.takeCanonical();
-      if (DeducedArgs) {
-        TemplateArgString = " ";
-        TemplateArgString += getTemplateArgumentBindingsText(
-            Partial->getTemplateParameters(), *DeducedArgs);
-        if (TemplateArgString.size() == 1)
-          TemplateArgString.clear();
-      }
-      Diag(Partial->getLocation(),
-           diag::note_ovl_candidate_unsatisfied_constraints)
-          << TemplateArgString;
-      DiagnoseUnsatisfiedConstraint(Info.AssociatedConstraintsSatisfaction);
-    } else if (Result == TemplateDeductionResult::Success && Selected) {
-      llvm::SmallVector<AssociatedConstraint, 3> ACSelected, ACPartial;
-      Selected->getAssociatedConstraints(ACSelected);
-      Partial->getAssociatedConstraints(ACPartial);
-      bool SelectedAtLeastAsConstrained = false;
-      bool PartialAtLeastAsConstrained = false;
-      if (!IsAtLeastAsConstrained(Selected, ACSelected, Partial, ACPartial,
-                                  SelectedAtLeastAsConstrained) &&
-          !IsAtLeastAsConstrained(Partial, ACPartial, Selected, ACSelected,
-                                  PartialAtLeastAsConstrained) &&
-          SelectedAtLeastAsConstrained && !PartialAtLeastAsConstrained) {
-        Diag(Partial->getLocation(),
-             diag::note_partial_spec_not_selected_less_constrained);
-      }
-    }
-  }
+  NoteUnsatisfiedPartialSpecializationsImpl(*this, Loc, Template, Args,
+                                            Selected);
 }
 
 void Sema::NoteUnsatisfiedPartialSpecializations(
@@ -1062,6 +1017,7 @@ void Sema::NoteUnsatisfiedPartialSpecializations(
   if (!Spec)
     return;
   VarTemplateDecl *Template = Spec->getSpecializedTemplate();
+  // Selected is null if the primary template was instantiated.
   auto *Selected = dyn_cast<VarTemplatePartialSpecializationDecl *>(
       Spec->getSpecializedTemplateOrPartial());
   NoteUnsatisfiedPartialSpecializations(
@@ -5231,9 +5187,11 @@ ExprResult Sema::BuildQualifiedTemplateIdExpr(
     DeclContext *DC = computeDeclContext(SS);
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
-    if (const auto *CTSD =
-            dyn_cast_or_null<ClassTemplateSpecializationDecl>(DC))
-      NoteUnsatisfiedPartialSpecializations(NameInfo.getLoc(), CTSD);
+    if (DC) {
+      if (const auto *CTSD =
+              dyn_cast<ClassTemplateSpecializationDecl>(DC))
+        NoteUnsatisfiedPartialSpecializations(NameInfo.getLoc(), CTSD);
+    }
     return ExprError();
   }
 
@@ -5331,7 +5289,7 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
         Diag(Name.getBeginLoc(), diag::err_no_member)
             << DNI.getName() << LookupCtx << SS.getRange();
         if (const auto *CTSD =
-                dyn_cast_or_null<ClassTemplateSpecializationDecl>(LookupCtx))
+                dyn_cast<ClassTemplateSpecializationDecl>(LookupCtx))
           NoteUnsatisfiedPartialSpecializations(Name.getBeginLoc(), CTSD);
       } else
         Diag(Name.getBeginLoc(), diag::err_undeclared_use)
@@ -11807,7 +11765,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
   if (Ctx) {
     Diag(IILoc, DiagID) << FullRange << Name << Ctx;
     if (const auto *CTSD =
-            dyn_cast_or_null<ClassTemplateSpecializationDecl>(Ctx))
+            dyn_cast<ClassTemplateSpecializationDecl>(Ctx))
       NoteUnsatisfiedPartialSpecializations(IILoc, CTSD);
   } else
     Diag(IILoc, DiagID) << FullRange << Name;

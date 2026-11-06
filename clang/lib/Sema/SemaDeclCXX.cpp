@@ -13475,7 +13475,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
       Diag(IdentLoc, diag::err_no_member)
         << NameInfo.getName() << LookupContext << SS.getRange();
       if (const auto *CTSD =
-              dyn_cast_or_null<ClassTemplateSpecializationDecl>(LookupContext))
+              dyn_cast<ClassTemplateSpecializationDecl>(LookupContext))
         NoteUnsatisfiedPartialSpecializations(IdentLoc, CTSD);
       return BuildInvalid();
     }
