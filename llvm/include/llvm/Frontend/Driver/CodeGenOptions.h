@@ -45,6 +45,7 @@ enum class VectorLibrary {
   NoLibrary,          // Don't use any vector library.
   Accelerate,         // Use the Accelerate framework.
   LIBMVEC,            // GLIBC vector math library.
+  MATHVEC,            // LLVM vector math library.
   MASSV,              // IBM MASS vector library.
   SVML,               // Intel short vector math library.
   SLEEF,              // SLEEF SIMD Library for Evaluating Elementary Functions.
