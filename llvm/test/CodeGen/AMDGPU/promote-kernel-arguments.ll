@@ -473,5 +473,51 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @load_acquire_clobbers_ptr_nest_3(ptr addrspace(1) nocapture readonly %Arg, ptr addrspace(1) noalias %flag) {
+; CHECK-LABEL: @load_acquire_clobbers_ptr_nest_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i32 [[I]]
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[FLAG:%.*]] acquire, align 4
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P2]], align 8
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P3]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %i = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %p1 = getelementptr inbounds ptr, ptr addrspace(1) %Arg, i32 %i
+  %acq = load atomic i32, ptr addrspace(1) %flag acquire, align 4
+  %p2 = load ptr, ptr addrspace(1) %p1, align 8
+  %p3 = load ptr, ptr %p2, align 8
+  store float 0.000000e+00, ptr %p3, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_acquire_clobbers_ptr_nest_3(ptr addrspace(1) nocapture readonly %Arg, ptr addrspace(1) noalias %flag) {
+; CHECK-LABEL: @fence_acquire_clobbers_ptr_nest_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i32 [[I]]
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[FLAG:%.*]] monotonic, align 4
+; CHECK-NEXT:    fence acquire
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
+; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %i = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %p1 = getelementptr inbounds ptr, ptr addrspace(1) %Arg, i32 %i
+  %acq = load atomic i32, ptr addrspace(1) %flag monotonic, align 4
+  fence acquire
+  %p2 = load ptr, ptr addrspace(1) %p1, align 8
+  %p3 = load ptr, ptr %p2, align 8
+  store float 0.000000e+00, ptr %p3, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @llvm.amdgcn.s.barrier()
