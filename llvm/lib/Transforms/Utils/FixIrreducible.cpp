@@ -172,6 +172,7 @@ INITIALIZE_PASS_BEGIN(FixIrreducible, "fix-irreducible",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
                     "Convert irreducible control-flow into natural loops",
                     false /* Only looks at CFG */, false /* Analysis Pass */)
@@ -386,14 +387,6 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   // of guard blocks that manage the flow of control from the
   // predecessors to the headers.
   SmallVector<BasicBlock *> GuardBlocks;
-
-  // Minor optimization: The cycle entries are discovered in an order that is
-  // the opposite of the order in which these blocks appear as branch targets.
-  // This results in a lot of condition inversions in the control flow out of
-  // the new ControlFlowHub, which can be mitigated if the orders match. So we
-  // reverse the entries when adding them to the hub.
-  SetVector<BasicBlock *> Entries;
-  Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
 
   CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)

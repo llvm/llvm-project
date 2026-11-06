@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -573,6 +574,10 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
       return op.emitOpError(
           "block argument pointee type must match the innermost array "
           "element type");
+
+    if (expectedEltPtrTy.getAddrSpace() != ptrTy.getAddrSpace())
+      return op.emitOpError(
+          "block argument address space must match the 'addr' address space");
   }
 
   return success();
@@ -2744,7 +2749,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
 
-  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+  // A function address may also be taken in the program address space.
+  auto targetAS =
+      dyn_cast_if_present<TargetAddressSpaceAttr>(resultType.getAddrSpace());
+  bool isProgramAS =
+      isa<FuncOp>(op) && targetAS &&
+      targetAS.getValue() ==
+          CIRDataLayout(getOperation()->getParentOfType<ModuleOp>())
+              .getProgramAddressSpace();
+  if (!isProgramAS && symAddrSpaceAttr != resultType.getAddrSpace()) {
     return emitOpError()
            << "result type address space does not match the address "
               "space of the global @"
@@ -2854,6 +2867,10 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
   result.addAttribute(getCallingConvAttrName(result.name),
                       CallingConvAttr::get(builder.getContext(), callingConv));
+  // A function starts out written in source-level types, and CallConvLowering
+  // rewrites it to the target ABI later.
+  result.addAttribute(getRequiresCallConvLoweringAttrName(result.name),
+                      builder.getUnitAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2882,6 +2899,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
+  mlir::StringAttr requiresCallConvLoweringNameAttr =
+      getRequiresCallConvLoweringAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
   mlir::StringAttr preferredAlignmentNameAttr =
@@ -3129,6 +3148,10 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       annotationsAttr)
     state.addAttribute(annotationsNameAttr, annotationsAttr);
 
+  if (parser.parseOptionalKeyword(requiresCallConvLoweringNameAttr).succeeded())
+    state.addAttribute(requiresCallConvLoweringNameAttr,
+                       parser.getBuilder().getUnitAttr());
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   llvm::SMLoc attrsLoc = parser.getCurrentLocation();
@@ -3328,6 +3351,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ' ';
     p.printAttribute(annotations);
   }
+
+  if (getRequiresCallConvLowering())
+    p << ' ' << getRequiresCallConvLoweringAttrName().getValue();
 
   // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
@@ -5107,7 +5133,7 @@ LogicalResult cir::AtomicFetchOp::verify() {
        getBinop() == cir::AtomicFetchKind::Minimum ||
        getBinop() == cir::AtomicFetchKind::MaximumNum ||
        getBinop() == cir::AtomicFetchKind::MinimumNum) &&
-      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+      !cir::isFPOrVectorOfFPType(getVal().getType()))
     return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
                      "operation could only operate on floating-point values");
 

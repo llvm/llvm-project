@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_ARITH_IR_ARITH_H_
 #define MLIR_DIALECT_ARITH_IR_ARITH_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/ArithDialect.h"
 #include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
