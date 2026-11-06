@@ -28073,6 +28073,13 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
     }
   }
 
+  // Revisit construction-time folds after operands have been combined.
+  if (VT.isFixedLengthVector() && !LegalOperations) {
+    SmallVector<SDValue, 8> Ops(N->ops());
+    if (SDValue V = DAG.foldConcatVectors(SDLoc(N), VT, Ops, LegalOperations))
+      return V;
+  }
+
   // Fold any combination of BUILD_VECTOR or UNDEF nodes into one BUILD_VECTOR.
   // We have already tested above for an UNDEF only concatenation.
   // fold (concat_vectors (BUILD_VECTOR A, B, ...), (BUILD_VECTOR C, D, ...))

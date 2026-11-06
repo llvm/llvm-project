@@ -129,23 +129,21 @@ define void @store_trunc_v2i64i8(ptr %ap, ptr %dest) {
 define void @store_trunc_v2i256i64(ptr %ap, ptr %dest) {
 ; CHECK-LABEL: store_trunc_v2i256i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    ldr d1, [x0, #32]
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    splice z0.d, p0, { z0.d, z1.d }
+; CHECK-NEXT:    ldr d0, [x0, #32]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: store_trunc_v2i256i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #32
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
-; NONEON-NOSVE-NEXT:    ldr d0, [x0, #32]
-; NONEON-NOSVE-NEXT:    ldr d1, [x0]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr x8, [x0, #32]
+; NONEON-NOSVE-NEXT:    ldr x9, [x0]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr q0, [sp]
 ; NONEON-NOSVE-NEXT:    str q0, [x1]
-; NONEON-NOSVE-NEXT:    add sp, sp, #32
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %a = load <2 x i256>, ptr %ap
   %val = trunc <2 x i256> %a to <2 x i64>

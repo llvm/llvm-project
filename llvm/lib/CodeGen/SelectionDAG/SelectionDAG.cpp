@@ -7080,11 +7080,9 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
   return SDValue();
 }
 
-/// Try to simplify vector concatenation to an input value, undef, or build
-/// vector.
-static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
-                                  ArrayRef<SDValue> Ops,
-                                  SelectionDAG &DAG) {
+SDValue SelectionDAG::foldConcatVectors(const SDLoc &DL, EVT VT,
+                                        ArrayRef<SDValue> Ops,
+                                        bool LegalOperations) {
   assert(!Ops.empty() && "Can't concatenate an empty list of vectors!");
   assert(llvm::all_of(Ops,
                       [Ops](SDValue Op) {
@@ -7104,7 +7102,7 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
         AllPoison &= Op.getOpcode() == ISD::POISON;
         return Op.isUndef();
       }))
-    return AllPoison ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
+    return AllPoison ? getPOISON(VT) : getUNDEF(VT);
 
   // Scan the operands and look for extract operations from a single source
   // that correspond to insertion at the same location via this concatenation:
@@ -7135,26 +7133,33 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   if (VT.isScalableVector())
     return SDValue();
 
-  // A CONCAT_VECTOR of scalar sources, such as UNDEF, BUILD_VECTOR and
-  // single-element INSERT_VECTOR_ELT operands can be simplified to one big
-  // BUILD_VECTOR.
-  // FIXME: Add support for SCALAR_TO_VECTOR as well.
+  // A CONCAT_VECTOR of scalar sources, such as UNDEF, BUILD_VECTOR,
+  // SCALAR_TO_VECTOR and single-element INSERT_VECTOR_ELT operands can be
+  // simplified to one big BUILD_VECTOR.
   EVT SVT = VT.getScalarType();
   SmallVector<SDValue, 16> Elts;
   for (SDValue Op : Ops) {
     EVT OpVT = Op.getValueType();
-    if (Op.getOpcode() == ISD::POISON)
-      Elts.append(OpVT.getVectorNumElements(), DAG.getPOISON(SVT));
-    else if (Op.getOpcode() == ISD::UNDEF)
-      Elts.append(OpVT.getVectorNumElements(), DAG.getUNDEF(SVT));
-    else if (Op.getOpcode() == ISD::BUILD_VECTOR)
+    if (Op.getOpcode() == ISD::POISON) {
+      Elts.append(OpVT.getVectorNumElements(), getPOISON(SVT));
+    } else if (Op.getOpcode() == ISD::UNDEF) {
+      Elts.append(OpVT.getVectorNumElements(), getUNDEF(SVT));
+    } else if (Op.getOpcode() == ISD::BUILD_VECTOR) {
       Elts.append(Op->op_begin(), Op->op_end());
-    else if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
-             OpVT.getVectorNumElements() == 1 &&
-             isNullConstant(Op.getOperand(2)))
+    } else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+      // Custom lowering may create concats after BUILD_VECTOR legalization.
+      if (LegalOperations &&
+          !getTargetLoweringInfo().isOperationLegal(ISD::BUILD_VECTOR, VT))
+        return SDValue();
+      Elts.push_back(Op.getOperand(0));
+      Elts.append(OpVT.getVectorNumElements() - 1, getPOISON(SVT));
+    } else if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+               OpVT.getVectorNumElements() == 1 &&
+               isNullConstant(Op.getOperand(2))) {
       Elts.push_back(Op.getOperand(1));
-    else
+    } else {
       return SDValue();
+    }
   }
 
   // BUILD_VECTOR requires all inputs to be of the same type, find the
@@ -7165,18 +7170,18 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   if (SVT.bitsGT(VT.getScalarType())) {
     for (SDValue &Op : Elts) {
       if (Op.getOpcode() == ISD::POISON)
-        Op = DAG.getPOISON(SVT);
+        Op = getPOISON(SVT);
       else if (Op.getOpcode() == ISD::UNDEF)
-        Op = DAG.getUNDEF(SVT);
+        Op = getUNDEF(SVT);
       else
-        Op = DAG.getTargetLoweringInfo().isZExtFree(Op.getValueType(), SVT)
-                 ? DAG.getZExtOrTrunc(Op, DL, SVT)
-                 : DAG.getSExtOrTrunc(Op, DL, SVT);
+        Op = getTargetLoweringInfo().isZExtFree(Op.getValueType(), SVT)
+                 ? getZExtOrTrunc(Op, DL, SVT)
+                 : getSExtOrTrunc(Op, DL, SVT);
     }
   }
 
-  SDValue V = DAG.getBuildVector(VT, DL, Elts);
-  NewSDValueDbgMsg(V, "New node fold concat vectors: ", &DAG);
+  SDValue V = getBuildVector(VT, DL, Elts);
+  NewSDValueDbgMsg(V, "New node fold concat vectors: ", this);
   return V;
 }
 
@@ -7784,7 +7789,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // bail early.
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
-  // foldCONCAT_VECTORS in getNode before this is called.
+  // foldConcatVectors in getNode before this is called.
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
@@ -8685,7 +8690,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::CONCAT_VECTORS: {
     SDValue Ops[] = {N1, N2};
-    if (SDValue V = foldCONCAT_VECTORS(DL, VT, Ops, *this))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   }
@@ -9259,7 +9264,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::CONCAT_VECTORS: {
     SDValue Ops[] = {N1, N2, N3};
-    if (SDValue V = foldCONCAT_VECTORS(DL, VT, Ops, *this))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   }
@@ -12122,7 +12127,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V = foldCONCAT_VECTORS(DL, VT, Ops, *this))
+    if (SDValue V = foldConcatVectors(DL, VT, Ops))
       return V;
     break;
   case ISD::SELECT_CC:
