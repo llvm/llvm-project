@@ -1811,7 +1811,8 @@ let Command = "target modules list" in {
         Desc<"Display state about the symbol table with optional width: "
              "C if it was read from the index cache, F if it was parsed from "
              "the object file, W if it was written to the index cache, S if "
-             "a symbol file added symbols, - if none of these apply.">;
+             "a symbol file added or updated symbols, - if none of these "
+             "apply.">;
   def target_modules_list_pointer : Option<"pointer", "p">,
                                     Group<1>,
                                     OptionalArg<"None">,
