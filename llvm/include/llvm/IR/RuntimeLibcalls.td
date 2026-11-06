@@ -813,7 +813,7 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 
 // Stack Protector Fail
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
-def STACK_SMASH_HANDLER : RuntimeLibcall;
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]>;
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
@@ -896,11 +896,12 @@ def AEABI_UWRITE4 : RuntimeLibcall<Int, [Int, Ptr]>;
 def AEABI_UWRITE8 : RuntimeLibcall<LLong, [LLong, Ptr]>;
 
 // Hexagon calls
-def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
-def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
+def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES
+    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 
 // XCore calls
-def MEMCPY_ALIGN_4 : RuntimeLibcall;
+def MEMCPY_ALIGN_4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
 
 // Objective-C calls
 def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
