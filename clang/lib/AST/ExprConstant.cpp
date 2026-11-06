@@ -1540,7 +1540,33 @@ namespace {
         Designator.setInvalid();
         return;
       }
+
+      if(Base){
+        // Mark invalid and return early if Base points to an invalid decl
+        if(const auto *VD = Base.dyn_cast<const ValueDecl *>()){
+          if(VD->isInvalidDecl()){
+            Designator.setInvalid();
+            return;
+          }
+        }
+        // Mark invalid and return early if Base points to an invalid type
+        QualType BaseTy = getType(Base).getNonReferenceType();
+        if(BaseTy.isNull() || BaseTy->containsErrors() || (!BaseTy->isPointerType() && !BaseTy->isArrayType())){
+          Designator.setInvalid();
+          return;
+        }
+      }
+
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
+        // When a user writes invalid C++ code (e.g., declaring a 
+        // variable as void and then illegally re-declaring/indexing 
+        // it as an array), the AST node representing Base ends up
+        // with an invalid or unexpected type structure. 
+        // => getType(Base) does not fulfill either conditions, causing
+        // the assert statement to fail and crash the compiler.
+
+        // To get a clean error, add a check before entering the above
+        // if-clause
         assert(!Base || getType(Base).getNonReferenceType()->isPointerType() ||
                getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
