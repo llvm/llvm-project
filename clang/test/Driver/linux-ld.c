@@ -30,9 +30,9 @@
 // CHECK-LD-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-64: "-L[[SYSROOT]]/lib"
 // CHECK-LD-64: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-64: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-64: "-lc"
-// CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-64: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 //
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
@@ -42,9 +42,9 @@
 // CHECK-LD-X32: "--eh-frame-hdr"
 // CHECK-LD-X32: "-m" "elf32_x86_64"
 // CHECK-LD-X32: "-dynamic-linker"
-// CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-X32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-X32: "-lc"
-// CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-X32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 //
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux \
@@ -115,9 +115,9 @@
 // CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-GCC: "-L[[SYSROOT]]/lib"
 // CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GCC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-GCC: "-lc"
-// CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GCC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 //
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
@@ -142,9 +142,17 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC %s
 // CHECK-CLANG-NO-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-CLANG-NO-LIBGCC: "-lc"
-// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
+//
+// RUN: %clang -### %s -shared -fPIC -Wl,--as-needed 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-USER-AS-NEEDED %s
+// CHECK-USER-AS-NEEDED: "{{.*}}ld{{(.exe)?}}"
+// CHECK-USER-AS-NEEDED-SAME: "--as-needed" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc"
+// CHECK-USER-AS-NEEDED-NOT: "--no-as-needed
 //
 // RUN: %clangxx -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
@@ -203,9 +211,9 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-DYNAMIC %s
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lc"
-// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 //
 // RUN: %clang -static-libgcc -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
@@ -1732,9 +1740,9 @@
 // CHECK-LD-GENTOO: "{{.*}}/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3{{/|\\\\}}crtbegin.o"
 // CHECK-LD-GENTOO: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3"
 // CHECK-LD-GENTOO: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/../../../../x86_64-pc-linux-gnu/lib"
-// CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-GENTOO: "-lc"
-// CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
@@ -1746,9 +1754,9 @@
 // CHECK-LD-GENTOO-32: "{{.*}}/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/32{{/|\\\\}}crtbegin.o"
 // CHECK-LD-GENTOO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/32"
 // CHECK-LD-GENTOO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/../../../../x86_64-pc-linux-gnu/lib"
-// CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO-32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-GENTOO-32: "-lc"
-// CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO-32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
@@ -1760,9 +1768,9 @@
 // CHECK-LD-GENTOO-X32: "{{.*}}/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/x32{{/|\\\\}}crtbegin.o"
 // CHECK-LD-GENTOO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/x32"
 // CHECK-LD-GENTOO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/../../../../x86_64-pc-linux-gnu/lib"
-// CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO-X32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-GENTOO-X32: "-lc"
-// CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-GENTOO-X32: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 
 // RUN: %clang -### %s -no-pie -fuse-ld=ld 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
@@ -1787,9 +1795,9 @@
 // CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7/../../../../lib64"
 // CHECK-LD-AMI: "-L[[SYSROOT]]/lib"
 // CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-AMI: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-AMI: "-lc"
-// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-AMI: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 
 // Check whether the OpenEmbedded ARM libs are added correctly.
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -1805,7 +1813,7 @@
 // CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0{{/|\\\\}}crtbegin.o"
 // CHECK-OE-ARM: "-L[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0"
 // CHECK-OE-ARM: "-L[[SYSROOT]]/usr/lib"
-// CHECK-OE-ARM: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-ARM: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../lib{{/|\\\\}}crtn.o"
 
@@ -1823,6 +1831,6 @@
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtbegin.o"
 // CHECK-OE-AARCH64: "-L[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0"
 // CHECK-OE-AARCH64: "-L[[SYSROOT]]/usr/lib64"
-// CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-AARCH64: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
