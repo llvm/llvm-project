@@ -556,7 +556,7 @@ static bool isSALUReadsNonVCCSGPR(const MachineInstr &MI,
 
     if (Reg.isPhysical()) {
       // Skip VCC registers
-      if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+      if (TRI.regsOverlap(Reg.asMCReg(), TRI.getVCC()))
         continue;
 
       // Physical SGPR
@@ -592,6 +592,109 @@ static bool isNonVALUReadsSGPR(const MachineInstr &MI,
       return true;
   }
 
+  return false;
+}
+
+/// Check if \p MI is a VALU that defines an SGPR (excluding the implicit
+/// condition register).
+static bool isVALUDefsSGPR(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI,
+                           const SIRegisterInfo &TRI) {
+  if (!SIInstrInfo::isVALU(MI, false))
+    return false;
+
+  for (const MachineOperand &Op : MI.defs()) {
+    Register Reg = Op.getReg();
+    if (Reg == AMDGPU::MODE)
+      continue;
+
+    if (Reg.isVirtual()) {
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+        continue;
+    } else if (TRI.regsOverlap(Reg.asMCReg(), TRI.getVCC()) ||
+               TRI.regsOverlap(Reg.asMCReg(), MCRegister(AMDGPU::EXEC))) {
+      continue;
+    }
+
+    if (TRI.isSGPRReg(MRI, Reg))
+      return true;
+  }
+  return false;
+}
+
+/// Check if \p MI is a VALU that modifies the implicit condition register
+/// consumed by CBRANCH VCCZ or EXECZ.
+static bool isVALUWritesVCCZEXECZ(const MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI,
+                                  const SIRegisterInfo &TRI, bool IsCBranchVCCZ,
+                                  bool IsCBranchEXECZ) {
+  if (!SIInstrInfo::isVALU(MI, false))
+    return false;
+
+  if (IsCBranchEXECZ && MI.modifiesRegister(AMDGPU::EXEC, &TRI))
+    return true;
+
+  if (IsCBranchVCCZ) {
+    if (MI.modifiesRegister(TRI.getVCC(), &TRI))
+      return true;
+
+    for (const MachineOperand &Op : MI.all_defs()) {
+      Register Reg = Op.getReg();
+      if (!Reg.isVirtual())
+        continue;
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+/// Check if \p MI is a VALU that reads an SGPR, M0, or EXEC.
+static bool isVALUReadsSGPR(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI,
+                            const SIRegisterInfo &TRI) {
+  if (!SIInstrInfo::isVALU(MI, false))
+    return false;
+
+  for (const MachineOperand &Op : MI.explicit_uses()) {
+    if (!Op.isReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    if (Reg == AMDGPU::M0)
+      return true;
+
+    if (Reg.isPhysical() &&
+        TRI.regsOverlap(Reg.asMCReg(), MCRegister(AMDGPU::EXEC)))
+      return true;
+
+    if (TRI.isSGPRReg(MRI, Reg))
+      return true;
+  }
+  return false;
+}
+
+/// Check if \p MI is a VALU that modifies the implicit condition register.
+static bool isVALUWritesVCC(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI,
+                            const SIRegisterInfo &TRI) {
+  if (!SIInstrInfo::isVALU(MI, false))
+    return false;
+
+  if (MI.modifiesRegister(TRI.getVCC(), &TRI))
+    return true;
+
+  for (const MachineOperand &Op : MI.all_defs()) {
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+      return true;
+  }
   return false;
 }
 
@@ -644,29 +747,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   const int VASdstWaitStates = ST.isWave64() ? 17 : 16;
   if (isNonVALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy) {
     auto IsVALUDefsSGPRHazardFn = [&MRI, this](const MachineInstr &MI) {
-      if (!SIInstrInfo::isVALU(MI, false))
-        return false;
-
-      for (const MachineOperand &Op : MI.defs()) {
-        Register Reg = Op.getReg();
-        if (Reg == AMDGPU::EXEC || Reg == AMDGPU::MODE)
-          continue;
-
-        // Skip VCC registers
-        if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
-            Reg == AMDGPU::VCC_HI)
-          continue;
-
-        if (Reg.isVirtual()) {
-          const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-          if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-            continue;
-        }
-
-        if (TRI.isSGPRReg(MRI, Reg))
-          return true;
-      }
-      return false;
+      return isVALUDefsSGPR(MI, MRI, TRI);
     };
     int WaitStatesSinceDefsSGPR =
         getWaitStatesSince(IsVALUDefsSGPRHazardFn, VASdstWaitStates);
@@ -687,30 +768,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   if (IsCBranchVCCZ || IsCBranchEXECZ) {
     auto IsVALUWritesVCCZEXECZHazardFn = [&MRI, IsCBranchVCCZ, IsCBranchEXECZ,
                                           this](const MachineInstr &I) {
-      if (!SIInstrInfo::isVALU(I, false))
-        return false;
-
-      for (const MachineOperand &Op : I.all_defs()) {
-        Register Reg = Op.getReg();
-        // Check if VALU writes VCC and CBRANCH reads VCCZ
-        if (IsCBranchVCCZ) {
-          if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
-              Reg == AMDGPU::VCC_HI)
-            return true;
-
-          if (Reg.isPhysical())
-            continue;
-
-          const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-          if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-            return true;
-        }
-        // Check if VALU writes EXEC and CBRANCH reads EXECZ
-        if (IsCBranchEXECZ && (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO ||
-                               Reg == AMDGPU::EXEC_HI))
-          return true;
-      }
-      return false;
+      return isVALUWritesVCCZEXECZ(I, MRI, TRI, IsCBranchVCCZ, IsCBranchEXECZ);
     };
     int WaitStatesSinceWritesVCCZEXECZ =
         getWaitStatesSince(IsVALUWritesVCCZEXECZHazardFn, VASdstWaitStates);
@@ -733,22 +791,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   // VALU reads SGPR, M0, EXEC and SALU/SMEM reads/writes any SGPR.
   const int VALUReadsSGPRHazardCycles = ST.isWave64() ? 7 : 6;
   auto IsVALUReadsSGPRHazardFn = [&MRI, this](const MachineInstr &MI) {
-    if (!SIInstrInfo::isVALU(MI, false))
-      return false;
-
-    for (const MachineOperand &Op : MI.explicit_uses()) {
-      if (!Op.isReg())
-        continue;
-
-      Register Reg = Op.getReg();
-      if (Reg == AMDGPU::M0 || Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO ||
-          Reg == AMDGPU::EXEC_HI)
-        return true;
-
-      if (TRI.isSGPRReg(MRI, Reg))
-        return true;
-    }
-    return false;
+    return isVALUReadsSGPR(MI, MRI, TRI);
   };
   int WaitStatesSinceReadsSGPR =
       getWaitStatesSince(IsVALUReadsSGPRHazardFn, VALUReadsSGPRHazardCycles);
@@ -769,23 +812,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   if (isSALUReadsNonVCCSGPR(MI, MRI, TRI) || IsSALUCopy) {
     const int VALUWritesVCCHazardCycles = ST.isWave64() ? 5 : 4;
     auto IsVALUWritesVCCHazardFn = [&MRI, this](const MachineInstr &MI) {
-      if (!SIInstrInfo::isVALU(MI, false))
-        return false;
-
-      for (const MachineOperand &Op : MI.all_defs()) {
-        Register Reg = Op.getReg();
-        if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
-            Reg == AMDGPU::VCC_HI)
-          return true;
-
-        if (Reg.isPhysical())
-          continue;
-
-        const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-        if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-          return true;
-      }
-      return false;
+      return isVALUWritesVCC(MI, MRI, TRI);
     };
     int WaitStatesSinceWritesVCC =
         getWaitStatesSince(IsVALUWritesVCCHazardFn, VALUWritesVCCHazardCycles);
