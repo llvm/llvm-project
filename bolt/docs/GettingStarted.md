@@ -122,7 +122,7 @@ $ perf record -e cycles:u -j any,u -o perf.data -- <executable> <args> ...
 #### For Services
 
 Once you get the service deployed and warmed-up, it is time to collect
-perf data with LBR (branch information). The exact perf command to use
+perf data with `brstack` information. The exact perf command to use
 will depend on the service. E.g., to collect the data for all processes
 running on the server for the next 3 minutes use:
 

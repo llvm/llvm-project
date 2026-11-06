@@ -424,7 +424,7 @@ void DataReader::readProfile(BinaryFunction &BF) {
 }
 
 void DataReader::matchProfileData(BinaryFunction &BF) {
-  // This functionality is available for LBR-mode only
+  // This functionality is available for brstack-mode only
   // TODO: Implement evaluateProfileData() for samples, checking whether
   // sample addresses match instruction addresses in the function
   if (!hasLBR())
@@ -693,7 +693,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     return false;
   }
 
-  // Could be bad LBR data; ignore the branch. In the case of data collected
+  // Could be bad brstack data; ignore the branch. In the case of data collected
   // in binaries optimized by BOLT, a source BB may be mapped to two output
   // BBs as a result of optimizations. In that case, a branch between these
   // two will be recorded as a branch from A going to A in the source address

@@ -1,5 +1,5 @@
 ## Check that merge-fdata tool correctly processes fdata files with header
-## string produced by no-lbr mode (no_lbr)
+## string produced by non-brstack mode (no_lbr)
 
 # REQUIRES: system-linux
 

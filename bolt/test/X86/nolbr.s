@@ -1,4 +1,4 @@
-## This reproduces a bug where profile collected from perf without LBRs and
+## This reproduces a bug where profile collected from perf without brstack data and
 ## converted into fdata-no-lbr format is reported to not contain profile for any
 ## functions.
 
