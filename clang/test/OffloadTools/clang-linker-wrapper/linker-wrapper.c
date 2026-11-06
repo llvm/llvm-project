@@ -152,8 +152,17 @@ __attribute__((visibility("protected"), used)) int x;
 // SYCL-MERGED-DAG: arch            igca_40r
 
 // With --embed-bitcode, each linked bitcode file is one device image.
-// SYCL-MERGED-BC-COUNT-2: kind            llvm ir
-// SYCL-MERGED-BC-NOT:     kind
+// SYCL-MERGED-BC:      OFFLOADING IMAGE [0]:
+// SYCL-MERGED-BC-NEXT: kind            llvm ir
+// SYCL-MERGED-BC-NEXT: arch            igca_40r
+// SYCL-MERGED-BC-NEXT: triple          spirv64-unknown-unknown
+// SYCL-MERGED-BC-NEXT: producer        sycl
+// SYCL-MERGED-BC:      OFFLOADING IMAGE [1]:
+// SYCL-MERGED-BC-NEXT: kind            llvm ir
+// SYCL-MERGED-BC-NEXT: arch            igca_30r
+// SYCL-MERGED-BC-NEXT: triple          spirv64-unknown-unknown
+// SYCL-MERGED-BC-NEXT: producer        sycl
+// SYCL-MERGED-BC-NOT:  OFFLOADING IMAGE
 
 // With --wrapper-verbose --save-temps, the merged offload binary is wrapped.
 // SYCL-MERGED-VERBOSE: llvm-offload-wrapper{{.*}} --kind=sycl {{.*}} a.out.sycl.merged.out{{$}}
