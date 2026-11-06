@@ -2147,9 +2147,6 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   if (YamlMFI.HasInitWholeWave)
     MFI->setInitWholeWave();
 
-  if (YamlMFI.HasVGPRAsMemoryAccess)
-    MFI->setHasVGPRAsMemoryAccess();
-
   return false;
 }
 

@@ -50,7 +50,6 @@
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
-; CHECK-NEXT: hasVGPRAsMemoryAccess: false
 ; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {

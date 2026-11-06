@@ -58,7 +58,7 @@ public:
   static bool isSupportedBitWidth(unsigned Bits);
 
   static bool classof(const MachineInstr *MI) {
-    return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode()) != nullptr;
+    return SIInstrFlags::isVGPRAsMem(*MI);
   }
 };
 
