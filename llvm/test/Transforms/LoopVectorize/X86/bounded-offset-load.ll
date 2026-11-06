@@ -7,8 +7,9 @@ declare void @llvm.assume(i1)
 ; CHECK-LABEL: define void @bounded_offset(
 ; CHECK: vector.body:
 ; CHECK: load <4 x i64>, ptr {{.*}}, align 8
-; FIXME: The bounded table access can use an ordinary vector load.
-; CHECK: call <4 x i64> @llvm.masked.load
+; CHECK-NOT: @llvm.masked.load
+; CHECK: load <4 x i64>, ptr {{.*}}, align 8
+; CHECK-NOT: @llvm.masked.load
 ; CHECK: middle.block:
 define void @bounded_offset(ptr noalias %out, ptr noalias %conditions, i64 %index) {
 entry:
@@ -45,8 +46,9 @@ exit:
 ; CHECK-LABEL: define void @signed_bounded_offset(
 ; CHECK: vector.body:
 ; CHECK: load <4 x i64>, ptr {{.*}}, align 8
-; FIXME: The bounded table access can use an ordinary vector load.
-; CHECK: call <4 x i64> @llvm.masked.load
+; CHECK-NOT: @llvm.masked.load
+; CHECK: load <4 x i64>, ptr {{.*}}, align 8
+; CHECK-NOT: @llvm.masked.load
 ; CHECK: middle.block:
 define void @signed_bounded_offset(ptr noalias %out, ptr noalias %conditions, i64 %index) {
 entry:
