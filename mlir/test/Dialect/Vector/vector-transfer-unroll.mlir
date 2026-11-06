@@ -528,16 +528,193 @@ func.func @masked_transfer_read_rank_reducing_unroll(%mem : memref<?x4x4xf32>, %
 
 // -----
 
-// Not supported yet: with a non-minor-identity map, the mask tiles are not at
-// the offsets of the vector tiles.
+// With a permutation map, the mask is indexed in the order of the source dims,
+// so the mask tile of the vector tile at [i, j] is at [j, i].
 
 // TargetShape is [2x2]
-// ALL-LABEL: func @negative_masked_transfer_read_permutation(
-//       ALL:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4xf32>, vector<4x4xf32> }
-//  ALL-NEXT:   return %[[R]]
-func.func @negative_masked_transfer_read_permutation(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
+// ALL-LABEL: func @masked_transfer_read_permutation_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<6x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<6x4xi1>
+// Tile [0, 0]
+//   ALL-DAG:   %[[M0:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[R0:.*]] = vector.mask %[[M0]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R0]], %{{.*}} offsets = [0, 0]
+//
+// Tile [0, 2]
+//   ALL-DAG:   %[[M1:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[R1:.*]] = vector.mask %[[M1]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R1]], %{{.*}} offsets = [0, 2]
+//
+// Tile [2, 4]
+//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [4, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]] { vector.transfer_read %[[MEM]]
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [2, 4]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_permutation_unroll(%mem : memref<6x4xf32>, %idx : index, %mask : vector<6x4xi1>) -> vector<4x6xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<6x4xf32>, vector<4x6xf32> } : vector<6x4xi1> -> vector<4x6xf32>
+  return %res : vector<4x6xf32>
+}
+
+// -----
+
+// With a square vector, a mask tile taken at the vector offsets would still be
+// valid IR, so check which mask tile each result tile comes from: the tile at
+// [i, j] reads the mask at [j, i].
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_read_permutation_square_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4x4xi1>
+// Tile [0, 2]
+//   ALL-DAG:   %[[M20:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[R02:.*]] = vector.mask %[[M20]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R02]], %{{.*}} offsets = [0, 2]
+//
+// Tile [2, 0]
+//   ALL-DAG:   %[[M02:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R20:.*]] = vector.mask %[[M02]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R20]], %{{.*}} offsets = [2, 0]
+//
+// Tile [2, 2]
+//
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_permutation_square_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
   %cf0 = arith.constant 0.0 : f32
   %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
+  return %res : vector<4x4xf32>
+}
+
+// -----
+
+// The passthru has the vector's shape, so it is sliced at the vector offsets,
+// while the mask is sliced at the permuted ones.
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_read_permutation_passthru_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4x4xi1>, %[[PASS:.*]]: vector<4x4xf32>
+// Tile [0, 2]
+//   ALL-DAG:   %[[M20:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[P02:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [0, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R02:.*]] = vector.mask %[[M20]], %[[P02]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R02]], %{{.*}} offsets = [0, 2]
+//
+// Tile [2, 2]
+//
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_permutation_passthru_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>, %pass : vector<4x4xf32>) -> vector<4x4xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask, %pass { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
+  return %res : vector<4x4xf32>
+}
+
+// -----
+
+// The map ignores the source dim 1, and the mask is indexed by the source dims
+// 0 and 2: the tile at [i, j] reads the mask at [j, i].
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_read_permutation_unused_dim_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<6x3x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<6x4xi1>
+// Tile [0, 2]
+//   ALL-DAG:   %[[M20:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[R02:.*]] = vector.mask %[[M20]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R02]], %{{.*}} offsets = [0, 2]
+//
+// Tile [2, 4]
+//   ALL-DAG:   %[[M42:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [4, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R24:.*]] = vector.mask %[[M42]] { vector.transfer_read %[[MEM]]
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %[[R24]], %{{.*}} offsets = [2, 4]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_permutation_unused_dim_unroll(%mem : memref<6x3x4xf32>, %idx : index, %mask : vector<6x4xi1>) -> vector<4x6xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1, d2) -> (d2, d0)>} : memref<6x3x4xf32>, vector<4x6xf32> } : vector<6x4xi1> -> vector<4x6xf32>
+  return %res : vector<4x6xf32>
+}
+
+// -----
+
+// A broadcast dim has no mask dim, so tiles that differ only in the broadcast
+// dim get the same mask tile: the tile at [i, j] reads the mask at [j].
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_read_broadcast_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x6xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<6xi1>
+// Tile [0, 2]
+//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2], sizes = [2]
+//   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [0, 2]
+//
+// Tile [0, 4]
+//   ALL-DAG:   %[[M4:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [4], sizes = [2]
+//   ALL-DAG:   %[[R4:.*]] = vector.mask %[[M4]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R4]], %{{.*}} offsets = [0, 4]
+//
+// Tile [2, 4]
+//
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 4]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_broadcast_unroll(%mem : memref<4x6xf32>, %idx : index, %mask : vector<6xi1>) -> vector<4x6xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (0, d1)>} : memref<4x6xf32>, vector<4x6xf32> } : vector<6xi1> -> vector<4x6xf32>
+  return %res : vector<4x6xf32>
+}
+
+// -----
+
+// A transposed broadcast: the vector dim 0 reads the source dim 1 and the
+// vector dim 1 is broadcast, so the tile at [i, j] reads the mask at [i]. The
+// vector is square, so a mask tile taken from the wrong dim is still valid IR.
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_read_transposed_broadcast_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4xi1>
+// Tile [2, 0]
+//   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2], sizes = [2]
+//   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [2, 0]
+//
+// Tile [2, 2]
+//
+//       ALL:   %[[RES:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2]
+//  ALL-NEXT:   return %[[RES]]
+func.func @masked_transfer_read_transposed_broadcast_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4xi1>) -> vector<4x4xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4xi1> -> vector<4x4xf32>
+  return %res : vector<4x4xf32>
+}
+
+// -----
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @masked_transfer_write_permutation_unroll(
+//  ALL-SAME:     %[[MEM:.*]]: memref<6x4xf32>, %[[VEC:.*]]: vector<4x6xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<6x4xi1>
+// Tile [0, 2]
+//   ALL-DAG:   %[[V1:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [0, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[M1:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 0], sizes = [2, 2]
+//   ALL-DAG:   vector.mask %[[M1]] { vector.transfer_write %[[V1]], %[[MEM]]
+//
+// Tile [2, 4]
+//       ALL:   %[[M3:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [4, 2], sizes = [2, 2]
+//       ALL:   vector.mask %[[M3]] { vector.transfer_write {{.*}}, %[[MEM]]
+//  ALL-NEXT:   return
+func.func @masked_transfer_write_permutation_unroll(%mem : memref<6x4xf32>, %vec : vector<4x6xf32>, %idx : index, %mask : vector<6x4xi1>) {
+  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<4x6xf32>, memref<6x4xf32> } : vector<6x4xi1>
+  return
+}
+
+// -----
+
+// Not supported yet: a fully broadcast transfer has a single-element mask that
+// does not correspond to any vector dim.
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @negative_masked_transfer_read_full_broadcast(
+//       ALL:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4xf32>, vector<4x4xf32> }
+//  ALL-NEXT:   return %[[R]]
+func.func @negative_masked_transfer_read_full_broadcast(%mem : memref<4xf32>, %idx : index, %mask : vector<1xi1>) -> vector<4x4xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.mask %mask { vector.transfer_read %mem[%idx], %cf0 {permutation_map = affine_map<(d0) -> (0, 0)>} : memref<4xf32>, vector<4x4xf32> } : vector<1xi1> -> vector<4x4xf32>
   return %res : vector<4x4xf32>
 }
 

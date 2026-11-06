@@ -157,35 +157,48 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   if (xferOp.getVectorType().getRank() != xferOp.getTransferRank())
     return rewriter.notifyMatchFailure(
         xferOp, "masked transfer with a vector element type");
-  // With a minor identity map and a scalar element type, the mask has the same
-  // shape as the vector, so each tile of the vector has the tile of the mask at
-  // the same offsets.
-  if (!xferOp.getPermutationMap().isMinorIdentity())
-    return rewriter.notifyMatchFailure(
-        xferOp, "masked transfer with a non-minor-identity map");
   if (xferOp.getVectorType().isScalable())
     return rewriter.notifyMatchFailure(xferOp, "masked scalable transfer");
+  // The mask has one dim per non-broadcast vector dim (see
+  // inferTransferOpMaskType). A fully broadcast transfer has a single-element
+  // mask that does not correspond to any vector dim.
+  AffineMap maskMap =
+      inversePermutation(compressUnusedDims(xferOp.getPermutationMap()));
+  if (!maskMap || maskMap.getNumResults() == 0)
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked transfer without a dim-wise mask");
   return success();
 }
 
-/// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
-/// tile of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
-/// `sizes`. `maskingOp` is the vector.mask around the original transfer;
-/// `tiledXferOp` is created outside of it. Return `tiledXferOp` itself if
-/// `maskingOp` is null.
+/// Wrap `tiledXferOp`, the new transfer for the tile of `xferOp` at `offsets`
+/// with shape `sizes`, in a vector.mask with the matching tile of `maskingOp`'s
+/// mask (and passthru, if any). `maskingOp` is the vector.mask around the
+/// original transfer; `tiledXferOp` is created outside of it. The mask is
+/// indexed by the non-broadcast vector dims in the order of the source dims, so
+/// its tile is found by mapping the vector tile through the inverse of the
+/// permutation map, as in inferTransferOpMaskType. Return `tiledXferOp` itself
+/// if `maskingOp` is null.
+template <typename TransferOpTy>
 static Operation *maskTile(PatternRewriter &rewriter, Location loc,
-                           Operation *tiledXferOp,
+                           Operation *tiledXferOp, TransferOpTy xferOp,
                            vector::MaskingOpInterface maskingOp,
-                           ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
-                           ArrayRef<int64_t> strides) {
+                           ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes) {
   if (!maskingOp)
     return tiledXferOp;
+  AffineMap maskMap =
+      inversePermutation(compressUnusedDims(xferOp.getPermutationMap()));
+  SmallVector<int64_t> maskOffsets = maskMap.compose(offsets);
+  SmallVector<int64_t> maskSizes = maskMap.compose(sizes);
+  SmallVector<int64_t> maskStrides(maskOffsets.size(), 1);
   Value mask = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-      loc, maskingOp.getMask(), offsets, sizes, strides);
+      loc, maskingOp.getMask(), maskOffsets, maskSizes, maskStrides);
+  // The passthru has the vector's shape, so it is sliced like the vector.
   Value passthru;
-  if (maskingOp.hasPassthru())
+  if (maskingOp.hasPassthru()) {
+    SmallVector<int64_t> strides(offsets.size(), 1);
     passthru = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
         loc, maskingOp.getPassthru(), offsets, sizes, strides);
+  }
   return vector::maskOperation(rewriter, tiledXferOp, mask, passthru);
 }
 
@@ -248,8 +261,8 @@ struct UnrollTransferReadPattern
           rewriter, loc, targetType, readOp.getBase(), indices,
           readOp.getPermutationMapAttr(), readOp.getPadding(), readOp.getMask(),
           readOp.getInBoundsAttr());
-      slicedRead = maskTile(rewriter, loc, slicedRead, maskingOp,
-                            elementOffsets, *targetShape, strides);
+      slicedRead = maskTile(rewriter, loc, slicedRead, readOp, maskingOp,
+                            elementOffsets, *targetShape);
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, slicedRead->getResult(0), result, elementOffsets, strides);
@@ -317,8 +330,8 @@ struct UnrollTransferWritePattern
           rewriter, loc, slicedVector,
           resultTensor ? resultTensor : writeOp.getBase(), indices,
           writeOp.getPermutationMapAttr(), writeOp.getInBoundsAttr());
-      slicedWrite = maskTile(rewriter, loc, slicedWrite, maskingOp,
-                             elementOffsets, *targetShape, strides);
+      slicedWrite = maskTile(rewriter, loc, slicedWrite, writeOp, maskingOp,
+                             elementOffsets, *targetShape);
       // For the tensor case update the destination for the next transfer write.
       if (!slicedWrite->getResults().empty())
         resultTensor = slicedWrite->getResult(0);
