@@ -22,18 +22,17 @@ end subroutine
 ! CHECK-NOT: fir.allocmem !fir.char
 ! CHECK: return
 
-! After elemental fusion, the scalar scratch buffers of an element are
-! reclaimed before the next iteration.
+! Elemental fusion and concatenation fusion must retain one scalar scratch
+! buffer, whose invariant length allows allocation outside the element loop.
 subroutine concat_array(a, b, c)
   character(*) :: a(:), b(:), c(:)
   c = a // b // '!'
 end subroutine
 ! CHECK-LABEL: func.func @_QPconcat_array
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK-NOT: fir.alloca !fir.char
 ! CHECK: fir.do_loop
-! CHECK: llvm.intr.stacksave
-! CHECK: fir.alloca !fir.char<1,?>
-! CHECK: fir.alloca !fir.char<1,?>
-! CHECK: llvm.intr.stackrestore
+! CHECK-NOT: fir.alloca !fir.char
 ! CHECK-NOT: fir.allocmem !fir.char
 ! CHECK: return
 

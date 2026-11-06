@@ -487,13 +487,13 @@ void fir::factory::CharacterExprHelper::createAssign(
 }
 
 fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
-    const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs, bool useHeap) {
+    const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
   auto lhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
                                       lhs.getLen());
   auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
                                       rhs.getLen());
   mlir::Value len = mlir::arith::AddIOp::create(builder, loc, lhsLen, rhsLen);
-  auto temp = createCharacterTemp(getCharacterType(rhs), len, useHeap);
+  auto temp = createCharacterTemp(getCharacterType(rhs), len);
   createCopy(temp, lhs, lhsLen);
   auto one = builder.createIntegerConstant(loc, len.getType(), 1);
   auto upperBound = mlir::arith::SubIOp::create(builder, loc, len, one);

@@ -284,20 +284,29 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
     fir::FirOpBuilder builder(rewriter, concat.getOperation());
     assert(adaptor.getStrings().size() >= 2 &&
            "must have at least two strings operands");
-    if (adaptor.getStrings().size() > 2)
-      TODO(loc, "codegen of optimized chained concatenation of more than two "
-                "strings");
-    hlfir::Entity lhs = getBufferizedExprStorage(adaptor.getStrings()[0]);
-    hlfir::Entity rhs = getBufferizedExprStorage(adaptor.getStrings()[1]);
-    auto [lhsExv, c1] = hlfir::translateToExtendedValue(loc, builder, lhs);
-    auto [rhsExv, c2] = hlfir::translateToExtendedValue(loc, builder, rhs);
-    assert(!c1 && !c2 && "expected variables");
-    bool useHeap = !mlir::cast<fir::CharacterType>(
-                        hlfir::getFortranElementType(concat.getType()))
-                        .hasConstantLen();
-    fir::CharBoxValue temp =
-        fir::factory::CharacterExprHelper{builder, loc}.createConcatenate(
-            *lhsExv.getCharBox(), *rhsExv.getCharBox(), useHeap);
+    fir::factory::CharacterExprHelper helper{builder, loc};
+    auto charType = hlfir::getFortranElementType(concat.getType());
+    auto temp = helper.createCharacterTemp(
+        charType, adaptor.getLength(),
+        /*useHeap=*/!fir::getIntIfConstant(adaptor.getLength()));
+    mlir::Value offset =
+        builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    mlir::Value one =
+        builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+    for (mlir::Value string : adaptor.getStrings()) {
+      auto [source, cleanup] = hlfir::translateToExtendedValue(
+          loc, builder, getBufferizedExprStorage(string));
+      assert(!cleanup && "expected variable");
+      auto charBox = *source.getCharBox();
+      auto lower = mlir::arith::AddIOp::create(builder, loc, offset, one);
+      auto address = helper.genSubstringBase(temp.getBuffer(), lower,
+                                             builder.getRefType(charType), one);
+      helper.createCopy(fir::CharBoxValue{address, charBox.getLen()}, charBox,
+                        charBox.getLen());
+      auto length =
+          builder.createConvert(loc, builder.getIndexType(), charBox.getLen());
+      offset = mlir::arith::AddIOp::create(builder, loc, offset, length);
+    }
     fir::ExtendedValue res = temp;
     // Ensure the memory type is the same as the result type.
     mlir::Type addrType = fir::ReferenceType::get(
