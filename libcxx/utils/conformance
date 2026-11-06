@@ -328,7 +328,7 @@ def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
         logging.info(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
         result = copy.deepcopy(paper)
 
-# If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
+    # If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
     if not took_gh_in_full:
         result.github_issue = gh.github_issue
         result.notes = gh.notes
