@@ -5634,11 +5634,13 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
   if (isa<PoisonValue>(Offset) || Q.isUndefValue(Offset))
     return true;
 
-  // Accessing bits past the end of the value is poison.
-  uint64_t Off;
-  return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
+  // Accessing bits past the end of the value is poison. For vectors, every
+  // element must be accessed out of range.
+  uint64_t Bits = Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue();
+  uint64_t SrcBits =
+      Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
+  return match(Offset, m_SpecificInt_ICMP(ICmpInst::ICMP_UGT,
+                                          APInt(32, SrcBits - Bits)));
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
