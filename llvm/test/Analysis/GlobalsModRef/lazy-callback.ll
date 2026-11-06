@@ -1,25 +1,35 @@
 ; RUN: opt < %s -aa-pipeline=globals-aa -passes='require<globals-aa>,dse' -S | FileCheck %s
 ;
-; Callback targets are modeled like legacy CallGraph edges: a modeled (not
-; erased) declaration may invoke its callback, so the callback's effects must
-; propagate to the caller.
-;
-; @broker is readnone (modeled as no effects) but may invoke @reader, which
-; reads @CBX. The read in the callback observes the first store in @main_cb,
-; so both stores must survive.
-;
-; @pure_broker is readnone and its callback @pure has no memory effects, so
-; the first store in @main_pure must still be removed (no over-poisoning).
-;
-; The nounwind attributes are load-bearing: may-throw calls keep stores via
-; unwind paths regardless of AA.
+; A broker modeled as having no effects may still invoke its callback, so the
+; callback's effects must reach the caller. Callees are nounwind because
+; may-throw calls keep stores regardless of AA.
 
-@CBX = internal global i32 0
-@PBX = internal global i32 0
+@X = internal global i32 0
+@Y = internal global i32 0
+@A = internal global i32 0
+@B = internal global i32 0
 
-define void @reader() nounwind {
-  %v = load i32, ptr @CBX
-  call void @sink(i32 %v)
+declare !callback !0 void @broker(ptr) readnone nounwind
+declare void @sink(ptr) readnone nounwind
+
+define void @reads_x() nounwind {
+  %v = load i32, ptr @X
+  ret void
+}
+
+define void @calls_reads_x() nounwind {
+  call void @broker(ptr @reads_x)
+  ret void
+}
+
+define void @test_callback() {
+; CHECK-LABEL: define void @test_callback(
+; CHECK: store i32 1, ptr @X
+; CHECK-NEXT: call void @calls_reads_x()
+; CHECK-NEXT: store i32 2, ptr @X
+  store i32 1, ptr @X
+  call void @calls_reads_x()
+  store i32 2, ptr @X
   ret void
 }
 
@@ -27,43 +37,52 @@ define void @pure() nounwind {
   ret void
 }
 
-define void @user_cb() nounwind {
-  call void (ptr, ptr) @broker(ptr null, ptr @reader)
+define void @calls_pure() nounwind {
+  call void @broker(ptr @pure)
   ret void
 }
 
-define void @main_cb() {
-; CHECK-LABEL: define void @main_cb(
-; CHECK: store i32 1, ptr @CBX
-; CHECK-NEXT: call void @user_cb()
-; CHECK-NEXT: store i32 2, ptr @CBX
-  store i32 1, ptr @CBX
-  call void @user_cb()
-  store i32 2, ptr @CBX
+define void @test_pure_callback() {
+; CHECK-LABEL: define void @test_pure_callback(
+; CHECK-NOT: store i32 1, ptr @Y
+; CHECK: call void @calls_pure()
+; CHECK-NEXT: store i32 2, ptr @Y
+  store i32 1, ptr @Y
+  call void @calls_pure()
+  store i32 2, ptr @Y
   ret void
 }
 
-define void @user_pure() nounwind {
-  call void @pure_broker(ptr @pure)
+; @user and @reader reference each other, forming one RefSCC of two SCCs. @user
+; is visited first, while @reader only has partial info without the read of @B.
+; This relies on the definition order below.
+define void @test_unvisited_callback() {
+; CHECK-LABEL: define void @test_unvisited_callback(
+; CHECK: store i32 1, ptr @B
+; CHECK-NEXT: call void @user()
+; CHECK-NEXT: store i32 2, ptr @B
+  store i32 1, ptr @B
+  call void @user()
+  store i32 2, ptr @B
   ret void
 }
 
-define void @main_pure() {
-; CHECK-LABEL: define void @main_pure(
-; CHECK-NOT: store i32 1, ptr @PBX
-; CHECK: call void @user_pure()
-; CHECK-NEXT: store i32 2, ptr @PBX
-  store i32 1, ptr @PBX
-  call void @user_pure()
-  store i32 2, ptr @PBX
+define void @user() nounwind {
+  call void @broker(ptr @reader)
   ret void
 }
 
-declare void @sink(i32) readnone nounwind
-declare !callback !0 void @broker(ptr, ptr) readnone nounwind
-declare !callback !2 void @pure_broker(ptr) readnone nounwind
+define void @reader() nounwind {
+  %v = load i32, ptr @A
+  call void @reads_b()
+  call void @sink(ptr @user)
+  ret void
+}
+
+define void @reads_b() nounwind {
+  %v = load i32, ptr @B
+  ret void
+}
 
 !0 = !{!1}
-!1 = !{i64 1, i64 -1}
-!2 = !{!3}
-!3 = !{i64 0, i64 -1}
+!1 = !{i64 0, i64 -1, i1 false}

@@ -624,11 +624,17 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 }
 
 void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
-  // LCG has no declaration nodes; model direct calls from attributes.
   for (Function &F : M) {
-    if (!F.isDeclaration())
+    if (!F.isDeclaration()) {
+      // Definitions the LCG cannot reach are never visited; drop their partial
+      // AnalyzeGlobals info, whose NoModRef would make them look readnone.
+      LazyCallGraph::Node *N = LCG.lookup(F);
+      if (!N || !LCG.lookupSCC(*N))
+        FunctionInfos.erase(&F);
       continue;
+    }
 
+    // LCG has no declaration nodes; model direct calls from attributes.
     FunctionInfo &FI = FunctionInfos[&F];
     if (!addFunctionAttributeInfo(F, FI)) {
       FunctionInfos.erase(&F);
@@ -670,9 +676,8 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
           continue;
         }
 
-        // Only call edges need propagation; ref edges (incl. callbacks) can
-        // fire solely via indirect calls or non-nocallback decls, both poisoned
-        // below.
+        // Only call edges need propagation here. Declarations, indirect calls
+        // and callbacks have no call edges and are handled by the scan below.
         for (LazyCallGraph::Edge &E : N->calls()) {
           if (KnowNothing)
             break;
@@ -750,14 +755,22 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
           forEachCallbackFunction(*CB, [&](Function *Callback) {
             if (CallbackPoison || !SeenCallees.insert(Callback).second)
               return;
+            LazyCallGraph::Node *CallbackN = LCG.lookup(*Callback);
+            LazyCallGraph::SCC *CallbackC =
+                CallbackN ? LCG.lookupSCC(*CallbackN) : nullptr;
+            // Ref edges do not order the SCCs of a RefSCC, so another SCC of
+            // ours may not be visited yet and only have partial info.
+            if (CallbackC && CallbackC != &C &&
+                &CallbackC->getOuterRefSCC() == &RC) {
+              CallbackPoison = true;
+              return;
+            }
             if (FunctionInfo *CallbackFI = getFunctionInfo(Callback)) {
               FI.addFunctionInfo(*CallbackFI);
-            } else {
+            } else if (CallbackC != &C) {
               // Unknown callback; be conservative unless it is inside our
               // SCC, whose effects are being computed into this same FI.
-              LazyCallGraph::Node *CallbackN = LCG.lookup(*Callback);
-              if (!CallbackN || LCG.lookupSCC(*CallbackN) != &C)
-                CallbackPoison = true;
+              CallbackPoison = true;
             }
           });
           if (CallbackPoison) {
