@@ -14674,30 +14674,54 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
-    EVT ParamVT = LibcallOutputVTs[ResNo];
-    SDValue LoadResult =
-        DAG.getLoad(ParamVT, DL, CallChain, ResultPtr, PtrInfo);
-    SDValue OutChain = LoadResult.getValue(1);
+    EVT MemVT = LibcallOutputVTs[ResNo];
+    EVT ReadVT = Node->getValueType(ResNo);
+    SDValue LoadResult;
+    SDValue OutChain;
 
-    if (StoreSDNode *ST = ResultStores[ResNo]) {
-      // Replace store with the library call.
-      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-      PtrInfo = ST->getPointerInfo();
-    } else {
+    // The temporary holds exactly the libcall's parameter width (C int for
+    // FREXP), but the loaded value must use types that are legal at this
+    // point: nodes created inside LegalizeDAG cannot have illegal types,
+    // and the parameter width is promoted on some targets (e.g. i32 is
+    // promoted to i64 on RISC-V RV64).
+    // - Parameter width == declared type: plain load (the common case,
+    //   including the width-matched store folding below).
+    // - Declared type wider than the parameter width: sign-extending load.
+    //   It reads exactly the bytes the libcall wrote while producing the
+    //   declared (legal) result type. The C int exponent is signed.
+    // - Declared type narrower than the parameter width (only when the
+    //   narrow type is itself legal, in which case so is the parameter
+    //   width): load the full parameter width and truncate, matching the
+    //   constant folding behavior.
+    if (MemVT == ReadVT) {
+      LoadResult = DAG.getLoad(ReadVT, DL, CallChain, ResultPtr, PtrInfo);
+      OutChain = LoadResult.getValue(1);
+
+      if (StoreSDNode *ST = ResultStores[ResNo]) {
+        // Replace store with the library call.
+        DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
+        PtrInfo = ST->getPointerInfo();
+      } else {
+        PtrInfo = MachinePointerInfo::getFixedStack(
+            DAG.getMachineFunction(),
+            cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+      }
+    } else if (MemVT.bitsLT(ReadVT)) {
+      LoadResult = DAG.getExtLoad(
+          ISD::SEXTLOAD, DL, ReadVT, CallChain, ResultPtr, PtrInfo, MemVT,
+          DAG.getDataLayout().getABITypeAlign(
+              MemVT.getTypeForEVT(Ctx)->getScalarType()));
+      OutChain = LoadResult.getValue(1);
       PtrInfo = MachinePointerInfo::getFixedStack(
           DAG.getMachineFunction(),
           cast<FrameIndexSDNode>(ResultPtr)->getIndex());
-    }
-
-    if (ParamVT != Node->getValueType(ResNo)) {
-      // Convert the libcall output to the declared result type. Exponents
-      // are signed, so widen by sign extension; for declared types narrower
-      // than C int, truncation matches the constant folding behavior.
-      EVT DeclaredVT = Node->getValueType(ResNo);
-      if (DeclaredVT.getSizeInBits() < ParamVT.getSizeInBits())
-        LoadResult = DAG.getNode(ISD::TRUNCATE, DL, DeclaredVT, LoadResult);
-      else
-        LoadResult = DAG.getNode(ISD::SIGN_EXTEND, DL, DeclaredVT, LoadResult);
+    } else {
+      LoadResult = DAG.getLoad(MemVT, DL, CallChain, ResultPtr, PtrInfo);
+      OutChain = LoadResult.getValue(1);
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          DAG.getMachineFunction(),
+          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+      LoadResult = DAG.getNode(ISD::TRUNCATE, DL, ReadVT, LoadResult);
     }
 
     Results.push_back(LoadResult);
