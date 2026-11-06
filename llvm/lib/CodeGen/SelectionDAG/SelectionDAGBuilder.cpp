@@ -6438,7 +6438,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
 getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+                     const SDValue &N, const DataLayout &DL) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -6450,13 +6450,26 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
+    getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
     return;
   case ISD::BUILD_PAIR:
+    // The registers become DW_OP_LLVM_fragments at increasing offsets, and
+    // a fragment offset counts from the variable's lowest-addressed byte.
+    // BUILD_PAIR's operands are (low half, high half) regardless of byte
+    // order, so on a big-endian target the high half comes first.
+    // (Arguments split into register parts go through RegsForValue, whose
+    // parts are already in memory order; this path is taken by targets
+    // that keep the wide type legal and build it from two registers.)
+    if (DL.isBigEndian()) {
+      getUnderlyingArgRegs(Regs, N.getOperand(1), DL);
+      getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
+      return;
+    }
+    [[fallthrough]];
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
     for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
+      getUnderlyingArgRegs(Regs, Op, DL);
     return;
   default:
     return;
@@ -6584,7 +6597,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    getUnderlyingArgRegs(ArgRegsAndSizes, N, DAG.getDataLayout());
     Register Reg;
     if (ArgRegsAndSizes.size() == 1)
       Reg = ArgRegsAndSizes.front().first;
