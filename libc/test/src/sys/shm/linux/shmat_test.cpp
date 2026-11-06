@@ -68,6 +68,9 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
   EXPECT_THAT(LIBC_NAMESPACE::shmat(shmid, static_cast<const char *>(addr) + 1,
                                     SHM_REMAP),
               Fails(EINVAL, SHM_FAILED));
+
+  // TODO: Detach mapping with shmdt and remove the segment with shmctl
+  // once shmdt and shmctl are implemented.
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
@@ -79,7 +82,7 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   void *addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_NE(addr, SHM_FAILED);
-  
+
   // With SHM_RND, the unaligned address (addr + 1) is rounded down to the
   // nearest multiple of SHMLBA (addr). SHM_REMAP replaces the existing mapping
   // at addr since shmdt is not yet used to detach it first.
@@ -88,6 +91,9 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(reinterpret_cast<uintptr_t>(rounded_addr) % SHMLBA, uintptr_t(0));
   EXPECT_EQ(rounded_addr, addr);
+
+  // TODO: Detach mapping with shmdt and remove the segment with shmctl
+  // once shmdt and shmctl are implemented.
 }
 
 TEST_F(LlvmLibcShmAtTest, InvalidShmidReturnsEinval) {
