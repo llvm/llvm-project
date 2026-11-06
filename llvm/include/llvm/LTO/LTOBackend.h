@@ -32,6 +32,10 @@ class Error;
 class Module;
 class Target;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 namespace lto {
 
 /// Runs middle-end LTO optimizations on \p Mod.
@@ -57,7 +61,8 @@ LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
 /// one source module will be kept open at the most. If \p CodeGenOnly is true,
 /// the backend will skip optimization and only perform code generation. If
 /// \p IRAddStream is not nullptr, it will be called just before code generation
-/// to serialize the optimized IR.
+/// to serialize the optimized IR. If \p FS is not nullptr, module files to be
+/// imported on demand are read through it instead of the real file system.
 LLVM_ABI Error thinBackend(
     const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
     const ModuleSummaryIndex &CombinedIndex,
@@ -65,7 +70,8 @@ LLVM_ABI Error thinBackend(
     const GVSummaryMapTy &DefinedGlobals,
     MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
     ArrayRef<StringRef> BitcodeLibFuncs, AddStreamFn IRAddStream = nullptr,
-    const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
+    const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>(),
+    vfs::FileSystem *FS = nullptr);
 
 LLVM_ABI Error finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile);
 
