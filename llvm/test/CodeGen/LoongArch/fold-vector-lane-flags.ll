@@ -4,13 +4,12 @@
 define double @uitofp(i64 %a, i64 %c, ptr %p) {
 ; CHECK-LABEL: uitofp:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    ffint.d.l $fa0, $fa0
 ; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; CHECK-NEXT:    vffint.d.lu $vr0, $vr1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr1, $a1, 1
 ; CHECK-NEXT:    vffint.d.lu $vr1, $vr1
 ; CHECK-NEXT:    vst $vr1, $a2, 0
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; CHECK-NEXT:    ret
   %s = uitofp nneg i64 %a to double
   %va0 = insertelement <2 x i64> poison, i64 %a, i64 0

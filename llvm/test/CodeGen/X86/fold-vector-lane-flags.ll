@@ -4,8 +4,7 @@
 define float @fadd(float %a, float %c, float %d, float %y, ptr %p) {
 ; CHECK-LABEL: fadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm4
-; CHECK-NEXT:    vmulss %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm0 * xmm3) + xmm3
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
@@ -27,9 +26,7 @@ define float @fadd(float %a, float %c, float %d, float %y, ptr %p) {
 define float @fsub(float %a, float %c, float %d, float %y, ptr %p) {
 ; CHECK-LABEL: fsub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    vsubss %xmm0, %xmm4, %xmm4
-; CHECK-NEXT:    vmulss %xmm4, %xmm3, %xmm3
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm3
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
@@ -51,8 +48,7 @@ define float @fsub(float %a, float %c, float %d, float %y, ptr %p) {
 define float @fmul(float %a, float %b, float %c, float %d, float %e, ptr %p) {
 ; CHECK-LABEL: fmul:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm5
-; CHECK-NEXT:    vaddss %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vfmadd231ss {{.*#+}} xmm4 = (xmm0 * xmm1) + xmm4
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[2,3]
 ; CHECK-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -73,9 +69,11 @@ define float @fmul(float %a, float %b, float %c, float %d, float %e, ptr %p) {
 define float @fdiv(float %a, float %b, float %c, float %d, float %e, ptr %p) {
 ; CHECK-LABEL: fdiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vdivss %xmm1, %xmm0, %xmm5
-; CHECK-NEXT:    vdivss %xmm1, %xmm2, %xmm2
-; CHECK-NEXT:    vaddss %xmm2, %xmm5, %xmm2
+; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vdivss %xmm1, %xmm5, %xmm5
+; CHECK-NEXT:    vmulss %xmm5, %xmm0, %xmm6
+; CHECK-NEXT:    vmulss %xmm5, %xmm2, %xmm2
+; CHECK-NEXT:    vaddss %xmm2, %xmm6, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2,3]
 ; CHECK-NEXT:    vdivps %xmm1, %xmm0, %xmm0
@@ -108,19 +106,18 @@ define float @frem(float %a, float %c, float %d, float %y, ptr %p) {
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
 ; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vorps %xmm0, %xmm4, %xmm4
-; CHECK-NEXT:    vmovaps %xmm4, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vcmpunordss %xmm4, %xmm4, %xmm0
-; CHECK-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; CHECK-NEXT:    vblendvps %xmm0, %xmm3, %xmm4, %xmm0
+; CHECK-NEXT:    vorps %xmm0, %xmm4, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmaxss %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovlps %xmm0, (%rbx)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx
@@ -141,8 +138,7 @@ define float @fma(float %a, float %b, float %e, float %c, float %d, float %f, pt
 ; CHECK-LABEL: fma:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm1[0],xmm4[0],xmm1[2,3]
-; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm0 * xmm1) + xmm2
-; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vfnmsub213ss {{.*#+}} xmm1 = -(xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[2,3]
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} xmm2 = (xmm4 * xmm0) + xmm2
@@ -167,9 +163,7 @@ define float @fneg(float %a, float %c, float %y, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %xmm3, %xmm0, %xmm4
-; CHECK-NEXT:    vcmpunordss %xmm4, %xmm4, %xmm5
-; CHECK-NEXT:    vmaxss %xmm4, %xmm2, %xmm4
-; CHECK-NEXT:    vblendvps %xmm5, %xmm2, %xmm4, %xmm2
+; CHECK-NEXT:    vmaxss %xmm4, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vxorps %xmm3, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -189,9 +183,7 @@ define float @fneg_widen(float %a, float %c, float %y, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %xmm3, %xmm0, %xmm4
-; CHECK-NEXT:    vcmpunordss %xmm4, %xmm4, %xmm5
 ; CHECK-NEXT:    vmaxss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vblendvps %xmm5, %xmm4, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vxorps %xmm3, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -211,9 +203,7 @@ define float @fabs(float %a, float %c, float %y, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
 ; CHECK-NEXT:    vandps %xmm3, %xmm0, %xmm4
-; CHECK-NEXT:    vcmpunordss %xmm4, %xmm4, %xmm5
-; CHECK-NEXT:    vmaxss %xmm4, %xmm2, %xmm4
-; CHECK-NEXT:    vblendvps %xmm5, %xmm2, %xmm4, %xmm2
+; CHECK-NEXT:    vmaxss %xmm4, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vandps %xmm3, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -232,9 +222,7 @@ define float @ceil(float %a, float %c, float %y, ptr %p) {
 ; CHECK-LABEL: ceil:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm3
-; CHECK-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm3
-; CHECK-NEXT:    vblendvps %xmm4, %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vroundps $10, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -253,9 +241,7 @@ define float @floor(float %a, float %c, float %y, ptr %p) {
 ; CHECK-LABEL: floor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm3
-; CHECK-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm3
-; CHECK-NEXT:    vblendvps %xmm4, %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vroundps $9, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -274,9 +260,7 @@ define float @ftrunc(float %a, float %c, float %y, ptr %p) {
 ; CHECK-LABEL: ftrunc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm3
-; CHECK-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm3
-; CHECK-NEXT:    vblendvps %xmm4, %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmaxss %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vroundps $11, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rdi)
@@ -298,9 +282,7 @@ define float @copysign(float %a, float %b, float %c, float %d, float %y, ptr %p)
 ; CHECK-NEXT:    vandnps %xmm1, %xmm5, %xmm6
 ; CHECK-NEXT:    vandps %xmm5, %xmm0, %xmm7
 ; CHECK-NEXT:    vorps %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vcmpunordss %xmm6, %xmm6, %xmm7
-; CHECK-NEXT:    vmaxss %xmm6, %xmm4, %xmm6
-; CHECK-NEXT:    vblendvps %xmm7, %xmm4, %xmm6, %xmm4
+; CHECK-NEXT:    vmaxss %xmm6, %xmm4, %xmm4
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[2,3]
 ; CHECK-NEXT:    vandnps %xmm1, %xmm5, %xmm1
@@ -323,9 +305,7 @@ define float @copysign(float %a, float %b, float %c, float %d, float %y, ptr %p)
 define float @minnum(float %a, float %b, float %c, float %d, ptr %p) {
 ; CHECK-LABEL: minnum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminss %xmm0, %xmm1, %xmm4
-; CHECK-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm5
-; CHECK-NEXT:    vblendvps %xmm5, %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vminss %xmm1, %xmm0, %xmm4
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[2,3]
 ; CHECK-NEXT:    vminps %xmm1, %xmm0, %xmm0
@@ -346,9 +326,7 @@ define double @fpext(float %a, float %c, double %y, ptr %p) {
 ; CHECK-LABEL: fpext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm3
-; CHECK-NEXT:    vcmpunordsd %xmm3, %xmm3, %xmm4
-; CHECK-NEXT:    vmaxsd %xmm3, %xmm2, %xmm3
-; CHECK-NEXT:    vblendvpd %xmm4, %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmaxsd %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
@@ -366,10 +344,8 @@ define double @fpext(float %a, float %c, double %y, ptr %p) {
 define i32 @add(ptr %q, i32 %a, i32 %c, ptr %p) {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    leal 7(%rsi), %eax
-; CHECK-NEXT:    cltq
-; CHECK-NEXT:    movl (%rdi,%rax,4), %eax
+; CHECK-NEXT:    movslq %esi, %rsi
+; CHECK-NEXT:    movl 28(%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    vmovd %esi, %xmm0
 ; CHECK-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [7,9,u,u]
@@ -389,14 +365,13 @@ define i32 @add(ptr %q, i32 %a, i32 %c, ptr %p) {
 define i32 @sub(i32 %a, i32 %c, i32 %d, ptr %p) {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vmovd %esi, %xmm0
 ; CHECK-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %edi, %xmm1
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, (%rcx)
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %s = sub nuw i32 0, %a
   %va0 = insertelement <2 x i32> poison, i32 0, i64 0
@@ -411,10 +386,12 @@ define i32 @sub(i32 %a, i32 %c, i32 %d, ptr %p) {
 define i1 @mul(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
 ; CHECK-LABEL: mul:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovd %edi, %xmm0
-; CHECK-NEXT:    imull %esi, %edi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    sete %r9b
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    orb %r9b, %al
+; CHECK-NEXT:    vmovd %edi, %xmm0
 ; CHECK-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %esi, %xmm1
 ; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
@@ -437,9 +414,8 @@ define i32 @or(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 4(%rsi,%rdi), %eax
 ; CHECK-NEXT:    vmovd %edi, %xmm0
-; CHECK-NEXT:    orl $4, %edi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, (%rcx)
@@ -456,21 +432,19 @@ define i32 @or(i32 %a, i32 %b, i32 %c, ptr %p) {
 define i32 @udiv(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
 ; CHECK-LABEL: udiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %r9d
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $4, %eax
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    orl $1, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    movl %r9d, %eax
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    andl $15, %esi
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    vmovd %eax, %xmm0
+; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, (%r8)
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = shl i32 %a, 4
   %y = or i32 %b, 1
@@ -488,7 +462,7 @@ define i32 @udiv(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
 define i32 @trunc(i32 %a, i32 %c, ptr %p) {
 ; CHECK-LABEL: trunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vmovd %edi, %xmm0
 ; CHECK-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %xmm0, (%rdx)
