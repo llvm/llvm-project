@@ -2,12 +2,15 @@
 ; RUN: opt -passes='default<O2>' -S %s | FileCheck %s
 ;
 ; Matching clone families allow inlining, including calls through a local
-; function pointer and x86-64 ISA-level predicates. A caller with fewer clones,
-; a CPU-model predicate, or a global initializer must retain runtime dispatch.
+; function pointer and x86-64 ISA-level predicates. Equivalent integer bodies
+; also allow callers with fewer clones and a global initializer to inline.
+; CPU-model versions without dispatch metadata still retain runtime dispatch.
 ; The resolvers use separate bits for AVX2, SSE4.2 and the x86-64-v3 predicate.
 
 target triple = "x86_64-unknown-linux-gnu"
 
+; CHECK: @dynamic_init = {{.*}}global i32 1
+; CHECK: @llvm.global_ctors = appending global [0 x
 @dynamic_init = global i32 0, align 4
 @features = external global i32
 @cpu_model = external global i32
@@ -101,7 +104,9 @@ define ptr @caller.resolver() {
 }
 
 ; CHECK-LABEL: define{{.*}} i32 @limited.default.1(
-; CHECK: call i32 @callee(
+; CHECK-NOT: call
+; CHECK: add nsw i32
+; CHECK-NEXT: ret i32
 define i32 @limited.default.1(i32 %x) #0 {
 entry:
   %call = call i32 @callee(i32 %x)
@@ -109,7 +114,9 @@ entry:
 }
 
 ; CHECK-LABEL: define{{.*}} i32 @limited.sse4.2.0(
-; CHECK: call i32 @callee(
+; CHECK-NOT: call
+; CHECK: add nsw i32
+; CHECK-NEXT: ret i32
 define i32 @limited.sse4.2.0(i32 %x) #1 {
 entry:
   %call = call i32 @callee(i32 %x)
@@ -221,8 +228,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: define{{.*}} void @global_init(
-; CHECK: call i32 @callee(
+; The equivalent helper bodies let GlobalOpt fold this initializer to 1.
 define internal void @global_init() {
 entry:
   call void @__cxx_global_var_init()
