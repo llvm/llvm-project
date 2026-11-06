@@ -2248,6 +2248,36 @@ define void @f() "no-sse" { ... }
     be replaced with jumps to externally-defined architecture-specific symbols.
     For X86, this symbol's identifier is `__x86_return_thunk`.
 
+`"fmv-features"="PREDICATES"`
+:   Describes a conjunction of target-specific runtime predicates for a function
+    version selected by an indirect function (IFUNC) resolver. An empty value
+    denotes an unconditional predicate, as used by a fallback version. Static
+    IFUNC resolution uses these predicates together with the resolver's version
+    priorities. The predicates must describe the conditions used by the resolver.
+
+    On X86, a comma-separated list can contain runtime feature or x86-64 ISA-level
+    names recognized by `__builtin_cpu_supports`, and `arch=CPU` predicates with
+    the CPU-identity semantics of `__builtin_cpu_is`. CPU type and subtype tests
+    are distinct. Alias names that test the same runtime field and value denote
+    the same predicate. These predicates are separate from the code-generation
+    settings in `target-cpu` and `target-features`.
+
+`"fmv-priority"="N"`
+:   On X86, supplies an unsigned 64-bit decimal priority for static IFUNC
+    resolution. Larger values precede smaller values. Priorities must preserve
+    the resolver's complete selection order, including tie-breaking, and are
+    compared only between versions of the same IFUNC. Each version in an IFUNC
+    family containing a CPU-identity predicate must provide this attribute.
+    Static resolution is disabled for families mixing explicit ordering with
+    legacy feature priorities, or when a CPU version lacks this attribute.
+
+    Clang encodes the runtime feature/CPU priority in the high 32 bits and the
+    inverse source-list index in the low 32 bits for `target_clones` families
+    containing CPU-model versions. This preserves source order when runtime
+    priorities tie. Feature-only families without this attribute continue to
+    use the target's feature priority. Unparseable or out-of-range values disable
+    static resolution for that version's IFUNC family.
+
 `"frame-pointer"`
 :   This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer

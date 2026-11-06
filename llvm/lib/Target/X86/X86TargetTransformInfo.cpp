@@ -60,6 +60,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 
@@ -81,29 +82,41 @@ static SmallVector<StringRef, 8> getFMVFeatures(const Function &F) {
 
 // CPU predicates use the same (field, ABI value) identity as __builtin_cpu_is.
 // Distinct bits make no assumptions about CPU/ISA implication or exclusivity.
-static constexpr unsigned CPUTypeBits = 1 + std::max({
-                                                0u,
-#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) ABI_VALUE##u,
+static constexpr unsigned FeatureBits =
+    32 * std::tuple_size_v<decltype(X86::getCpuSupportsMask({}))>;
+static constexpr unsigned CPUTypeBits = [] {
+  unsigned Max = 0;
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) Max = std::max(Max, ABI_VALUE##u);
 #include "llvm/TargetParser/X86TargetParser.def"
-                                            });
-static constexpr unsigned CPUSubtypeBits = 1 + std::max({
-                                                   0u,
-#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) ABI_VALUE##u,
+  return Max + 1;
+}();
+static constexpr unsigned CPUSubtypeBits = [] {
+  unsigned Max = 0;
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) Max = std::max(Max, ABI_VALUE##u);
 #include "llvm/TargetParser/X86TargetParser.def"
-                                               });
+  return Max + 1;
+}();
+
+static std::optional<uint64_t> getFMVPriority(const Function &F) {
+  Attribute Attr = F.getFnAttribute("fmv-priority");
+  uint64_t Priority;
+  if (!Attr.isValid() || Attr.getValueAsString().getAsInteger(10, Priority))
+    return std::nullopt;
+  return Priority;
+}
 
 APInt X86TTIImpl::getFeatureMask(const Function &F) const {
   SmallVector<StringRef, 8> Features;
-  APInt Mask(128 + CPUTypeBits + CPUSubtypeBits, 0);
+  APInt Mask(FeatureBits + CPUTypeBits + CPUSubtypeBits, 0);
   for (StringRef Predicate : getFMVFeatures(F)) {
     if (!Predicate.consume_front("arch=")) {
       Features.push_back(Predicate);
       continue;
     }
     unsigned Bit = StringSwitch<unsigned>(Predicate)
-#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, 128 + ABI_VALUE)
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, FeatureBits + ABI_VALUE)
 #define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)                                  \
-  .Case(STR, 128 + CPUTypeBits + ABI_VALUE)
+  .Case(STR, FeatureBits + CPUTypeBits + ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
                        .Default(~0u);
     assert(Bit != ~0u && "Unknown CPU identity predicate");
@@ -116,13 +129,17 @@ APInt X86TTIImpl::getFeatureMask(const Function &F) const {
 }
 
 APInt X86TTIImpl::getPriorityMask(const Function &F) const {
-  if (F.hasFnAttribute("fmv-priority"))
-    return APInt(64, F.getFnAttribute("fmv-priority").getValueAsString(), 10);
-  return APInt(64, X86::getFMVPriority(getFMVFeatures(F))) << 32;
+  if (std::optional<uint64_t> Priority = getFMVPriority(F))
+    return APInt(64, *Priority);
+  // Legacy feature-only IR has no source-order tie breaker. Keep its
+  // encoding distinct so mixed families cannot be ordered speculatively.
+  return APInt(32, X86::getFMVPriority(getFMVFeatures(F)));
 }
 
 bool X86TTIImpl::isMultiversionedFunction(const Function &F) const {
   if (!F.hasFnAttribute("fmv-features"))
+    return false;
+  if (F.hasFnAttribute("fmv-priority") && !getFMVPriority(F))
     return false;
   // CPU predicates require the resolver's exact ordering, including ties.
   if (F.getFnAttribute("fmv-features").getValueAsString().contains("arch="))
@@ -131,8 +148,7 @@ bool X86TTIImpl::isMultiversionedFunction(const Function &F) const {
 }
 
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
-using TypeConversionCostKindTblEntry =
-    TypeConversionCostTblEntryT<CostKindCosts>;
+using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) const {

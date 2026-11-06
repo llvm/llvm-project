@@ -8,6 +8,44 @@ target triple = "x86_64-unknown-linux-gnu"
 @haswell = external global i1
 @v3 = external global i1
 @atom = external global i1
+@goldmont = external global i1
+
+; Missing or malformed ordering must disable resolution. CPU type and subtype
+; ABI values also occupy distinct namespaces (goldmont-plus and Haswell are 13).
+@malformed = weak_odr ifunc i32 (i32), ptr @malformed.resolver
+declare i32 @malformed_version(i32) #8
+define ptr @malformed.resolver() {
+  %c = load i1, ptr @haswell
+  %r = select i1 %c, ptr @malformed_version, ptr @default
+  ret ptr %r
+}
+
+@overflow = weak_odr ifunc i32 (i32), ptr @overflow.resolver
+declare i32 @overflow_version(i32) #9
+define ptr @overflow.resolver() {
+  %c = load i1, ptr @haswell
+  %r = select i1 %c, ptr @overflow_version, ptr @default
+  ret ptr %r
+}
+
+@type13 = weak_odr ifunc i32 (i32), ptr @type13.resolver
+declare i32 @type13_version(i32) #10
+define ptr @type13.resolver() {
+  %c = load i1, ptr @goldmont
+  %r = select i1 %c, ptr @type13_version, ptr @default
+  ret ptr %r
+}
+
+; Mixed old/new bitcode cannot establish the complete resolver order.
+@mixed_encoding = weak_odr ifunc i32 (i32), ptr @mixed_encoding.resolver
+declare i32 @legacy_v3(i32) #11
+define ptr @mixed_encoding.resolver() {
+  %h = load i1, ptr @haswell
+  %v = load i1, ptr @v3
+  %lo = select i1 %v, ptr @legacy_v3, ptr @default
+  %r = select i1 %h, ptr @haswell_version, ptr %lo
+  ret ptr %r
+}
 
 @unordered = weak_odr ifunc i32 (i32), ptr @unordered.resolver
 @simple = weak_odr ifunc i32 (i32), ptr @simple.resolver
@@ -47,9 +85,17 @@ define i32 @simple_haswell(i32 %x) #1 {
 ; CHECK-LABEL: define i32 @simple_haswell(
 ; CHECK: call i32 @haswell_version(
 ; CHECK: call i32 @unordered(
+; CHECK: call i32 @malformed(
+; CHECK: call i32 @overflow(
+; CHECK: call i32 @type13(
+; CHECK: call i32 @mixed_encoding(
   %r = call i32 @simple(i32 %x)
   %u = call i32 @unordered(i32 %r)
-  ret i32 %u
+  %m = call i32 @malformed(i32 %u)
+  %o = call i32 @overflow(i32 %m)
+  %t = call i32 @type13(i32 %o)
+  %e = call i32 @mixed_encoding(i32 %t)
+  ret i32 %e
 }
 
 define i32 @simple_default(i32 %x) #0 {
@@ -133,3 +179,7 @@ attributes #4 = { "fmv-features"="arch=haswell" "fmv-priority"="30" }
 attributes #5 = { "fmv-features"="x86-64-v3" "fmv-priority"="20" }
 attributes #6 = { "fmv-features"="arch=atom" "fmv-priority"="20" }
 attributes #7 = { "fmv-features"="arch=haswell" }
+attributes #8 = { "fmv-features"="arch=haswell" "fmv-priority"="invalid" }
+attributes #9 = { "fmv-features"="arch=haswell" "fmv-priority"="18446744073709551616" }
+attributes #10 = { "fmv-features"="arch=goldmont-plus" "fmv-priority"="20" }
+attributes #11 = { "fmv-features"="x86-64-v3" }
