@@ -2254,10 +2254,11 @@ static bool haveSameIntegerBody(const Function &L, const Function &R) {
 //
 // Presentation in EuroLLVM2025:
 // https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
-static bool OptimizeNonTrivialIFuncs(
-    Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI,
-    function_ref<TargetLibraryInfo &(Function &)> GetTLI,
-    function_ref<AssumptionCache &(Function &)> GetAC) {
+static bool
+OptimizeNonTrivialIFuncs(Module &M,
+                         function_ref<TargetTransformInfo &(Function &)> GetTTI,
+                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                         function_ref<AssumptionCache &(Function &)> GetAC) {
   const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
@@ -2614,8 +2615,9 @@ PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     };
     auto DeleteFnCallback = [&FAM](Function &F) { FAM.clear(F, F.getName()); };
 
-    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetAC, GetBFI, LookupDomTree,
-                                 ChangedCFGCallback, DeleteFnCallback))
+    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetAC, GetBFI,
+                                 LookupDomTree, ChangedCFGCallback,
+                                 DeleteFnCallback))
       return PreservedAnalyses::all();
 
     PreservedAnalyses PA = PreservedAnalyses::none();
