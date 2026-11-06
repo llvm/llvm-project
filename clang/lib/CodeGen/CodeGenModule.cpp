@@ -3616,15 +3616,30 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
              TC) {
     std::optional<StringRef> Arch =
         TC->getX86Architecture(GD.getMultiVersionIndex());
-    // A CPU-model predicate such as arch=haswell tests CPU identity, not just
-    // supported ISA features. Leave it to runtime dispatch: fmv-features only
-    // represents feature predicates and x86-64 ISA levels.
-    if (!Arch || Arch->starts_with("x86-64")) {
-      StringRef Feature =
-          Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
-      Attrs.addAttribute("fmv-features", Feature == "default" ? "" : Feature);
-      AddedAttr = true;
+    // Preserve CPU-identity predicates separately from feature predicates.
+    // In particular, arch=haswell must not mean "supports Haswell's ISA".
+    StringRef Feature =
+        Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
+    std::string Predicate = Arch && !Arch->starts_with("x86-64")
+                                ? ("arch=" + *Arch).str()
+                                : Feature.str();
+    Attrs.addAttribute("fmv-features", Predicate == "default" ? "" : Predicate);
+    bool HasCPUModel = false;
+    for (unsigned I = 0, E = TC->featuresStrs_size(); I != E; ++I) {
+      std::optional<StringRef> CPU = TC->getX86Architecture(I);
+      HasCPUModel |= CPU && !CPU->starts_with("x86-64");
     }
+    if (HasCPUModel) {
+      // Runtime dispatch is stable for equal-priority predicates. Preserve the
+      // target_clones source order in the low bits for static resolution too.
+      uint64_t Priority =
+          Feature == "default"
+              ? 0
+              : getTarget().getFMVPriority({Feature}).getZExtValue();
+      Priority = (Priority << 32) | (UINT32_MAX - GD.getMultiVersionIndex());
+      Attrs.addAttribute("fmv-priority", std::to_string(Priority));
+    }
+    AddedAttr = true;
   }
   return AddedAttr;
 }

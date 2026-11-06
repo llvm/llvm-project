@@ -50,6 +50,7 @@
 
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -78,24 +79,60 @@ static SmallVector<StringRef, 8> getFMVFeatures(const Function &F) {
   return Features;
 }
 
+// CPU predicates use the same (field, ABI value) identity as __builtin_cpu_is.
+// Distinct bits make no assumptions about CPU/ISA implication or exclusivity.
+static constexpr unsigned CPUTypeBits = 1 + std::max({
+                                                0u,
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) ABI_VALUE##u,
+#include "llvm/TargetParser/X86TargetParser.def"
+                                            });
+static constexpr unsigned CPUSubtypeBits = 1 + std::max({
+                                                   0u,
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) ABI_VALUE##u,
+#include "llvm/TargetParser/X86TargetParser.def"
+                                               });
+
 APInt X86TTIImpl::getFeatureMask(const Function &F) const {
-  auto Words = X86::getCpuSupportsMask(getFMVFeatures(F));
-  APInt Mask(32 * Words.size(), 0);
+  SmallVector<StringRef, 8> Features;
+  APInt Mask(128 + CPUTypeBits + CPUSubtypeBits, 0);
+  for (StringRef Predicate : getFMVFeatures(F)) {
+    if (!Predicate.consume_front("arch=")) {
+      Features.push_back(Predicate);
+      continue;
+    }
+    unsigned Bit = StringSwitch<unsigned>(Predicate)
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, 128 + ABI_VALUE)
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)                                  \
+  .Case(STR, 128 + CPUTypeBits + ABI_VALUE)
+#include "llvm/TargetParser/X86TargetParser.def"
+                       .Default(~0u);
+    assert(Bit != ~0u && "Unknown CPU identity predicate");
+    Mask.setBit(Bit);
+  }
+  auto Words = X86::getCpuSupportsMask(Features);
   for (auto [I, Word] : enumerate(Words))
     Mask |= APInt(Mask.getBitWidth(), Word) << (32 * I);
   return Mask;
 }
 
 APInt X86TTIImpl::getPriorityMask(const Function &F) const {
-  return APInt(32, X86::getFMVPriority(getFMVFeatures(F)));
+  if (F.hasFnAttribute("fmv-priority"))
+    return APInt(64, F.getFnAttribute("fmv-priority").getValueAsString(), 10);
+  return APInt(64, X86::getFMVPriority(getFMVFeatures(F))) << 32;
 }
 
 bool X86TTIImpl::isMultiversionedFunction(const Function &F) const {
-  return F.hasFnAttribute("fmv-features");
+  if (!F.hasFnAttribute("fmv-features"))
+    return false;
+  // CPU predicates require the resolver's exact ordering, including ties.
+  if (F.getFnAttribute("fmv-features").getValueAsString().contains("arch="))
+    return F.hasFnAttribute("fmv-priority");
+  return true;
 }
 
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
-using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
+using TypeConversionCostKindTblEntry =
+    TypeConversionCostTblEntryT<CostKindCosts>;
 
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) const {
