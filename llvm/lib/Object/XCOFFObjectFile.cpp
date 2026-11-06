@@ -1525,7 +1525,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
   // indicates the presence of vector parameters.
   if (Cur && (FixedParmsNum + FloatingParmsNum) > 0) {
     Expected<SmallString<32>> ParmsTypeOrError =
-        hasVectorInfo()
+        VectorParmsNum > 0
             ? parseParmsTypeWithVecInfo(ParamsTypeValue, FixedParmsNum,
                                         FloatingParmsNum, VectorParmsNum)
             : parseParmsType(ParamsTypeValue, FixedParmsNum, FloatingParmsNum);

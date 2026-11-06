@@ -26,7 +26,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "CIROpDefinitions.h"

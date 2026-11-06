@@ -12,7 +12,7 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
     #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
 } {
-  cir.func @scalar_valist(%arg0: !cir.ptr<!cir.ptr<!s8i>>) -> !s32i {
+  cir.func @scalar_valist(%arg0: !cir.ptr<!cir.ptr<!s8i>>) -> !s32i requires_call_conv_lowering {
     %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !s32i
     cir.return %0 : !s32i
   }
