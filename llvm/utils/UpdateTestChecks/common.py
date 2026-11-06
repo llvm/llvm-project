@@ -507,13 +507,19 @@ def getSubstitutions(sourcepath):
     ]
 
 
-def split_run_line(run_line):
-    """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
+def unwrap_lit_if(run_line):
+    """Return the commands of a `%if <condition> %{ <commands> %}` RUN line, without
+    evaluating the condition."""
     if "%if" in run_line:
         match = re.search(r"%{\s*(.*?)\s*%}", run_line)
         if match:
             run_line = match.group(1)
+    return run_line
 
+
+def split_run_line(run_line):
+    """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
+    run_line = unwrap_lit_if(run_line)
     commands = [cmd.strip() for cmd in run_line.split("|")]
     assert len(commands) >= 2
     preprocess_cmd = " | ".join(commands[:-2]) or None
