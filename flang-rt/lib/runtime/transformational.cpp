@@ -203,9 +203,66 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   //
   //     J(n, x) = (2.0 / x) * (n + 1) * J(n+1, x) - J(n+2, x)
   //
-  CppTypeFor<CAT, KIND> bn_2 = bn2;
-  CppTypeFor<CAT, KIND> bn_1 = bn2_1;
-  CppTypeFor<CAT, KIND> twoOverX = 2.0 / x;
+  using T = CppTypeFor<CAT, KIND>;
+  T bn_2 = bn2;
+  T bn_1 = bn2_1;
+  T twoOverX = 2.0 / x;
+
+  // If J(n2-1, x) is zero or subnormal, the recursion above cannot recover
+  // the lower orders (e.g. BESSEL_JN(1, 10000, 1.0) would be all zeros).
+  // Run Miller's algorithm instead: start from an arbitrary seed, rescale to
+  // avoid overflow, and normalize with J(0) + 2 * sum(J(2k)) = 1.
+  constexpr T tiny{static_cast<T>(KIND == 4 ? 1e-37L
+          : KIND == 8                       ? 1e-307L
+                                            : 1e-4931L)};
+  constexpr T limit{static_cast<T>(KIND == 4 ? 1e15L : 1e100L)};
+  T growth{(twoOverX < 0 ? -twoOverX : twoOverX) * n2 + 1};
+  if ((bn_1 < tiny && bn_1 > -tiny) && x == x && twoOverX == twoOverX &&
+      growth < limit && n2 - n1 >= 2) {
+    T jp1{0}, j{1}, evenSum{0};
+    at[0] = n2 - n1 + 1;
+    *result.Element<T>(at) = j;
+    if (n2 > 0 && (n2 & 1) == 0) {
+      evenSum += 2 * j;
+    }
+    for (int n{n2}; n >= 1; --n) {
+      T jm{twoOverX * n * j - jp1}; // J(n-1)
+      jp1 = j;
+      j = jm;
+      if ((jm < 0 ? -jm : jm) > limit) {
+        T inv{1 / jm};
+        for (int k{n}; k <= n2; ++k) {
+          if (k >= n1) {
+            at[0] = k - n1 + 1;
+            *result.Element<T>(at) *= inv;
+          }
+        }
+        evenSum *= inv;
+        jp1 *= inv;
+        j = jm * inv;
+      }
+      if (n - 1 >= n1) {
+        at[0] = n - 1 - n1 + 1;
+        *result.Element<T>(at) = j;
+      }
+      if (n - 1 == 0) {
+        evenSum += j;
+      } else if (((n - 1) & 1) == 0) {
+        evenSum += 2 * j;
+      }
+    }
+    for (int k{n1}; k <= n2; ++k) {
+      at[0] = k - n1 + 1;
+      *result.Element<T>(at) /= evenSum;
+    }
+    // Keep the caller's more accurate values for the top two orders.
+    at[0] = n2 - n1 + 1;
+    *result.Element<T>(at) = bn2;
+    at[0] = n2 - n1;
+    *result.Element<T>(at) = bn2_1;
+    return;
+  }
+
   for (int n{n2 - 2}; n >= n1; --n) {
     auto bn = twoOverX * (n + 1) * bn_1 - bn_2;
 

@@ -98,6 +98,20 @@ template <int KIND> static void testBesselJn(BesselFuncType<KIND> rtFunc) {
       {-0.327579111, 0.046565145, 0.364831239, 0.391232371, 0.261140555});
 }
 
+// The anchors J(n2) and J(n2-1) underflow to zero here; the lower orders
+// must still be computed.
+template <int KIND>
+static void testBesselJnUnderflowedAnchors(BesselFuncType<KIND> rtFunc) {
+  StaticDescriptor desc;
+  Descriptor &result{desc.descriptor()};
+  rtFunc(result, 1, 1000, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 1000);
+  using T = CppTypeFor<TypeCategory::Real, KIND>;
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(0), 0.440050572, 1e-6);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(1), 0.114903487, 1e-6);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(2), 0.019563354, 1e-6);
+}
+
 template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
   testBesselJnX0<KIND>(rtFunc, 1, 0);
   testBesselJnX0<KIND>(rtFunc, 0, 0);
@@ -109,6 +123,8 @@ template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
 static void testBesselJn() {
   testBesselJn<4>(RTNAME(BesselJn_4));
   testBesselJn<8>(RTNAME(BesselJn_8));
+  testBesselJnUnderflowedAnchors<4>(RTNAME(BesselJn_4));
+  testBesselJnUnderflowedAnchors<8>(RTNAME(BesselJn_8));
 #if HAS_FLOAT80
   testBesselJn<10>(RTNAME(BesselJn_10));
 #endif
