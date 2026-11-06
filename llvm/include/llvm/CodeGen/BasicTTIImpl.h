@@ -107,6 +107,14 @@ private:
     return Cost;
   }
 
+  /// Return the integer type, or vector of integer type, with the same element
+  /// width as \p Ty. bitinsert and bitextract are lowered in this type.
+  Type *getBitRangeIntType(Type *Ty) const {
+    const DataLayout &DL = this->getDataLayout();
+    unsigned Bits = DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue();
+    return Ty->getWithNewType(IntegerType::get(Ty->getContext(), Bits));
+  }
+
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
   InstructionCost
@@ -1430,6 +1438,45 @@ public:
                                        CostKind, Index, nullptr, nullptr) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),
                                      TTI::CastContextHint::None, CostKind);
+  }
+
+  InstructionCost
+  getBitExtractCost(Type *Dst, Type *Src, TTI::OperandValueInfo OffsetInfo,
+                    TTI::TargetCostKind CostKind) const override {
+    // A bitextract is lowered to a right shift of the source, as an integer,
+    // and a truncation to the width of the result.
+    Type *IntSrcTy = getBitRangeIntType(Src);
+    Type *IntTy = getBitRangeIntType(Dst);
+    InstructionCost Cost = thisT()->getArithmeticInstrCost(
+        Instruction::LShr, IntSrcTy, CostKind, {}, OffsetInfo);
+    if (IntTy != IntSrcTy)
+      Cost += thisT()->getCastInstrCost(Instruction::Trunc, IntTy, IntSrcTy,
+                                        TTI::CastContextHint::None, CostKind);
+    return Cost;
+  }
+
+  InstructionCost
+  getBitInsertCost(Type *Base, Type *Val, TTI::OperandValueInfo OffsetInfo,
+                   TTI::TargetCostKind CostKind) const override {
+    // A bitinsert is lowered to clearing the bit range of the base with a
+    // mask, and or-ing in the value, zero-extended and shifted to the offset.
+    Type *IntTy = getBitRangeIntType(Base);
+    Type *IntValTy = getBitRangeIntType(Val);
+    InstructionCost Cost =
+        thisT()->getArithmeticInstrCost(Instruction::And, IntTy, CostKind) +
+        thisT()->getArithmeticInstrCost(Instruction::Shl, IntTy, CostKind, {},
+                                        OffsetInfo) +
+        thisT()->getArithmeticInstrCost(Instruction::Or, IntTy, CostKind);
+    if (IntValTy != IntTy)
+      Cost += thisT()->getCastInstrCost(Instruction::ZExt, IntTy, IntValTy,
+                                        TTI::CastContextHint::None, CostKind);
+    // With a variable offset, the mask is also shifted and inverted.
+    if (!OffsetInfo.isConstant())
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Shl, IntTy, CostKind, {},
+                                          OffsetInfo) +
+          thisT()->getArithmeticInstrCost(Instruction::Xor, IntTy, CostKind);
+    return Cost;
   }
 
   InstructionCost

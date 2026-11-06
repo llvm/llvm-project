@@ -1715,6 +1715,18 @@ public:
   getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
                            unsigned Index, TTI::TargetCostKind CostKind) const;
 
+  /// \return The expected cost of a bitextract of a value of type \p Dst from
+  /// a byte value of type \p Src. \p OffsetInfo describes the offset operand.
+  LLVM_ABI InstructionCost getBitExtractCost(
+      Type *Dst, Type *Src, OperandValueInfo OffsetInfo,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
+  /// \return The expected cost of a bitinsert of a value of type \p Val into a
+  /// byte value of type \p Base. \p OffsetInfo describes the offset operand.
+  LLVM_ABI InstructionCost getBitInsertCost(
+      Type *Base, Type *Val, OperandValueInfo OffsetInfo,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
   LLVM_ABI InstructionCost getCFInstrCost(unsigned Opcode,

@@ -7,11 +7,11 @@ define void @bitextract(b32 %b32, <4 x b32> %v4b32, <8 x b32> %v8b32, <2 x b64> 
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %i8 = bitextract i8, b32 %b32, i32 8
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %i8.var = bitextract i8, b32 %b32, i32 %off
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %i32 = bitextract i32, b32 %b32, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v4i8.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v8i16.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:2 SizeLat:2 for: %v4i8 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:16 Lat:13 SizeLat:20 for: %v4i8.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:3 Lat:3 SizeLat:3 for: %v8i16 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:31 Lat:25 SizeLat:39 for: %v8i16.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
+; SSE2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:7 SizeLat:8 for: %v2f32 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v2ptr = bitextract <2 x ptr>, <2 x b64> %v2b64, <2 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -19,11 +19,11 @@ define void @bitextract(b32 %b32, <4 x b32> %v4b32, <8 x b32> %v8b32, <2 x b64> 
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %i8 = bitextract i8, b32 %b32, i32 8
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %i8.var = bitextract i8, b32 %b32, i32 %off
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %i32 = bitextract i32, b32 %b32, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v4i8.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v8i16.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
+; AVX2-NEXT:  Cost Model: Found costs of 2 for: %v4i8 = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> splat (i32 8)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:4 SizeLat:4 for: %v4i8.var = bitextract <4 x i8>, <4 x b32> %v4b32, <4 x i32> %v4off
+; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:3 SizeLat:3 for: %v8i16 = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> splat (i32 16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:4 for: %v8i16.var = bitextract <8 x i16>, <8 x b32> %v8b32, <8 x i32> %v8off
+; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:4 SizeLat:2 for: %v2f32 = bitextract <2 x float>, <2 x b64> %v2b64, <2 x i32> <i32 0, i32 32>
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v2ptr = bitextract <2 x ptr>, <2 x b64> %v2b64, <2 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -41,25 +41,25 @@ define void @bitextract(b32 %b32, <4 x b32> %v4b32, <8 x b32> %v8b32, <2 x b64> 
 
 define void @bitinsert(b32 %b32, <4 x b32> %v4b32, <8 x b32> %v8b32, <2 x b64> %v2b64, i8 %i8, <4 x i8> %v4i8, <8 x i16> %v8i16, <2 x float> %v2f32, <2 x ptr> %v2ptr, i32 %off, <4 x i32> %v4off, <8 x i32> %v8off) {
 ; SSE2-LABEL: 'bitinsert'
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %b32.i8 = bitinsert b32 %b32, i8 %i8, i32 8
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %b32.i8.var = bitinsert b32 %b32, i8 %i8, i32 %off
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v4b32.v4i8 = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> splat (i32 8)
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v4b32.v4i8.var = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> %v4off
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v8b32.v8i16 = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> splat (i32 16)
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v8b32.v8i16.var = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> %v8off
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v2b64.v2f32 = bitinsert <2 x b64> %v2b64, <2 x float> %v2f32, <2 x i32> <i32 0, i32 32>
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %v2b64.v2ptr = bitinsert <2 x b64> %v2b64, <2 x ptr> %v2ptr, <2 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of 4 for: %b32.i8 = bitinsert b32 %b32, i8 %i8, i32 8
+; SSE2-NEXT:  Cost Model: Found costs of 6 for: %b32.i8.var = bitinsert b32 %b32, i8 %i8, i32 %off
+; SSE2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %v4b32.v4i8 = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> splat (i32 8)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:24 Lat:42 SizeLat:28 for: %v4b32.v4i8.var = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> %v4off
+; SSE2-NEXT:  Cost Model: Found costs of 8 for: %v8b32.v8i16 = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> splat (i32 16)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:48 Lat:84 SizeLat:56 for: %v8b32.v8i16.var = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> %v8off
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:9 SizeLat:10 for: %v2b64.v2f32 = bitinsert <2 x b64> %v2b64, <2 x float> %v2f32, <2 x i32> <i32 0, i32 32>
+; SSE2-NEXT:  Cost Model: Found costs of 3 for: %v2b64.v2ptr = bitinsert <2 x b64> %v2b64, <2 x ptr> %v2ptr, <2 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'bitinsert'
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %b32.i8 = bitinsert b32 %b32, i8 %i8, i32 8
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %b32.i8.var = bitinsert b32 %b32, i8 %i8, i32 %off
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v4b32.v4i8 = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> splat (i32 8)
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v4b32.v4i8.var = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> %v4off
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v8b32.v8i16 = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> splat (i32 16)
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v8b32.v8i16.var = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> %v8off
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v2b64.v2f32 = bitinsert <2 x b64> %v2b64, <2 x float> %v2f32, <2 x i32> <i32 0, i32 32>
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %v2b64.v2ptr = bitinsert <2 x b64> %v2b64, <2 x ptr> %v2ptr, <2 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of 4 for: %b32.i8 = bitinsert b32 %b32, i8 %i8, i32 8
+; AVX2-NEXT:  Cost Model: Found costs of 6 for: %b32.i8.var = bitinsert b32 %b32, i8 %i8, i32 %off
+; AVX2-NEXT:  Cost Model: Found costs of 4 for: %v4b32.v4i8 = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> splat (i32 8)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:10 SizeLat:10 for: %v4b32.v4i8.var = bitinsert <4 x b32> %v4b32, <4 x i8> %v4i8, <4 x i32> %v4off
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:7 for: %v8b32.v8i16 = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> splat (i32 16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:6 Lat:12 SizeLat:13 for: %v8b32.v8i16.var = bitinsert <8 x b32> %v8b32, <8 x i16> %v8i16, <8 x i32> %v8off
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %v2b64.v2f32 = bitinsert <2 x b64> %v2b64, <2 x float> %v2f32, <2 x i32> <i32 0, i32 32>
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %v2b64.v2ptr = bitinsert <2 x b64> %v2b64, <2 x ptr> %v2ptr, <2 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %b32.i8 = bitinsert b32 %b32, i8 %i8, i32 8
