@@ -13,10 +13,13 @@
 
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "mlir/IR/IRMapping.h"
@@ -504,6 +507,40 @@ void Fortran::lower::genAllocateNonAllocatableSaveCoarray(
   mlir::Operation *localAddrOp = builder.clone(op, mapping);
   Fortran::lower::genAllocateCoarray(converter, loc, sym,
                                      localAddrOp->getResult(0));
+}
+
+void Fortran::lower::initializeCoarrayAfterDeclare(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, fir::FortranVariableOpInterface var,
+    bool initInGlobalAllocFunc) {
+  if (const auto *details =
+          sym.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    Fortran::lower::SymMap symMap;
+    Fortran::lower::StatementContext stmtCtx;
+
+    if (initInGlobalAllocFunc) {
+      mlir::ModuleOp mod = builder.getModule();
+      auto func =
+          mif::getOrCreateInitFunc(builder, mod, mifSaveCoarraysAllocName);
+      assert(!func.empty() && "should not be empty");
+
+      mlir::Block &entry = func.getBody().front();
+      auto returnOp = entry.getTerminator();
+
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(returnOp);
+    }
+    if (details->init()) {
+      hlfir::Entity initVal = Fortran::lower::convertExprToHLFIR(
+          loc, converter, *details->init(), symMap, stmtCtx);
+      hlfir::Entity base{var.getBase()};
+      base = hlfir::derefPointersAndAllocatables(loc, builder, base);
+      hlfir::AssignOp::create(builder, loc, initVal, base);
+      stmtCtx.finalizeAndPop();
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
