@@ -14115,6 +14115,10 @@ def err_hlsl_samplecmp_requires_float
             "a floating point type">;
 def err_hlsl_gathercmp_invalid_component
     : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
+def err_hlsl_vulkan_resource_element_type
+    : Error<"resource type %0 with element type %1 is not supported when "
+            "targeting Vulkan; %1 is %2 bits wide, but Vulkan requires a "
+            "32-bit type or a 64-bit integer type">;
 
 def err_hlsl_resource_member_array_access_not_constant
     : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;

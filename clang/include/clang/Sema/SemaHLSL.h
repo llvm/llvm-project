@@ -133,6 +133,7 @@ public:
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
   bool ActOnUninitializedVarDecl(VarDecl *D);
+  void DiagnoseVulkanResourceElementTypes(const VarDecl *VD);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   bool ActOnResourceMemberAccessExpr(MemberExpr *ME);
   void CheckEntryPoint(FunctionDecl *FD);

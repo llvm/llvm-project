@@ -6449,6 +6449,60 @@ void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
   }
 }
 
+// Vulkan requires the Sampled Type of every image, which each typed resource
+// lowers to, to be a 32-bit float or a 32-bit or 64-bit integer
+// (VUID-StandaloneSpirv-OpTypeImage-04656). Diagnoses each typed resource that
+// the variable or parameter VD declares, or embeds in a struct, at the
+// declaration or at the field.
+void SemaHLSL::DiagnoseVulkanResourceElementTypes(const VarDecl *VD) {
+  ASTContext &Ctx = getASTContext();
+  if (!Ctx.getTargetInfo().getTriple().isSPIRV() ||
+      VD->getType()->isDependentType() ||
+      !SemaRef.isCompleteType(VD->getLocation(),
+                              Ctx.getBaseElementType(VD->getType())))
+    return;
+
+  // The methods of the built-in resource types declare locals and parameters
+  // of their own resource type without a source location. Skip them: the
+  // user's declaration that instantiated the method is diagnosed instead.
+  if (VD->getLocation().isInvalid())
+    return;
+
+  SmallVector<std::pair<QualType, SourceLocation>, 4> Worklist = {
+      {VD->getType(), VD->getLocation()}};
+  while (!Worklist.empty()) {
+    auto [Ty, Loc] = Worklist.pop_back_val();
+    Ty = Ctx.getBaseElementType(Ty);
+    if (!Ty->isHLSLIntangibleType())
+      continue;
+
+    const HLSLAttributedResourceType *HandleTy =
+        HLSLAttributedResourceType::findHandleTypeOnResource(Ty.getTypePtr());
+    if (!HandleTy) {
+      if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+        for (const CXXBaseSpecifier &Base : RD->bases())
+          Worklist.emplace_back(Base.getType(), Loc);
+        for (const FieldDecl *FD : RD->fields())
+          Worklist.emplace_back(FD->getType(), FD->getLocation());
+      }
+      continue;
+    }
+
+    ResourceClass RC = HandleTy->getAttrs().ResourceClass;
+    if (HandleTy->isRaw() || !HandleTy->hasContainedType() ||
+        (RC != ResourceClass::SRV && RC != ResourceClass::UAV))
+      continue;
+    QualType EltTy =
+        getElementTypeOf(HandleTy->getContainedType(), /*IncludeMatrix=*/false);
+    if (!EltTy->isArithmeticType())
+      continue;
+    uint64_t Size = Ctx.getTypeSize(EltTy);
+    if (Size != 32 && !(Size == 64 && EltTy->isIntegerType()))
+      Diag(Loc, diag::err_hlsl_vulkan_resource_element_type)
+          << Ty << EltTy << Size;
+  }
+}
+
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type

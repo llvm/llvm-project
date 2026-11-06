@@ -13,7 +13,7 @@
 RWBuffer<float> Buf1 : register(u5, space3);
 
 // Resource with implicit binding
-Buffer<double> Buf2;
+Buffer<unsigned int> Buf2;
 
 export void foo() {
     // Local resource declaration
@@ -21,10 +21,10 @@ export void foo() {
 }
 
 // CHECK-DXIL: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", float, 1, 0, 0) }
-// CHECK-DXIL: %"class.hlsl::Buffer" = type { target("dx.TypedBuffer", double, 0, 0, 0) }
+// CHECK-DXIL: %"class.hlsl::Buffer" = type { target("dx.TypedBuffer", i32, 0, 0, 0) }
 // CHECK-DXIL: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", i32, 1, 0, 1) }
 // CHECK-SPIRV: %"class.hlsl::RWBuffer" = type { target("spirv.Image", float, 5, 2, 0, 0, 2, 3) }
-// CHECK-SPIRV: %"class.hlsl::Buffer" = type { target("spirv.Image", double, 5, 2, 0, 0, 1, 0) }
+// CHECK-SPIRV: %"class.hlsl::Buffer" = type { target("spirv.Image", i32, 5, 2, 0, 0, 1, 0) }
 // CHECK-SPIRV: %"class.hlsl::RWBuffer.0" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 24) }
 
 // CHECK-DXIL: @Buf1 = internal global %"class.hlsl::RWBuffer" poison, align 4
@@ -64,24 +64,24 @@ export void foo() {
 // CHECK-SPIRV: define internal spir_func void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT: call {{(spir_func )?}}void @hlsl::Buffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK-NEXT: call {{(spir_func )?}}void @hlsl::Buffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @Buf2, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
-// Buf2 initialization part 2 - body of Buffer<double>::__createFromImplicitBinding call
-// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::Buffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// Buf2 initialization part 2 - body of Buffer<unsigned int>::__createFromImplicitBinding call
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::Buffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::Buffer") align 4 %[[RetValue2:.*]], i32 noundef %orderId,
 // CHECK-SPIRV-SAME: (ptr {{.*}} sret(%"class.hlsl::Buffer") align 4 %[[RetValue2:.*]], i32 noundef %orderId,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK-DXIL: %[[Tmp2:.*]] = alloca %"class.hlsl::Buffer", align 4
 // CHECK-SPIRV: %[[Tmp2:.*]] = alloca %"class.hlsl::Buffer", align 4
-// CHECK-DXIL: %[[Handle2:.*]] = call target("dx.TypedBuffer", double, 0, 0, 0)
-// CHECK-DXIL-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_f64_0_0_0t(
-// CHECK-SPIRV: %[[Handle2:.*]] = call target("spirv.Image", double, 5, 2, 0, 0, 1, 0)
-// CHECK-SPIRV-SAME: @llvm.spv.resource.handlefromimplicitbinding.tspirv.Image_f64_5_2_0_0_1_0t(
+// CHECK-DXIL: %[[Handle2:.*]] = call target("dx.TypedBuffer", i32, 0, 0, 0)
+// CHECK-DXIL-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_i32_0_0_0t(
+// CHECK-SPIRV: %[[Handle2:.*]] = call target("spirv.Image", i32, 5, 2, 0, 0, 1, 0)
+// CHECK-SPIRV-SAME: @llvm.spv.resource.handlefromimplicitbinding.tspirv.Image_i32_5_2_0_0_1_0t(
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %[[Tmp2]], i32 0, i32 0
-// CHECK-DXIL: store target("dx.TypedBuffer", double, 0, 0, 0) %[[Handle2]], ptr %__handle, align 4
-// CHECK-SPIRV: store target("spirv.Image", double, 5, 2, 0, 0, 1, 0) %[[Handle2]], ptr %__handle, align 4
-// CHECK: call {{(spir_func )?}}void @hlsl::Buffer<double>::Buffer(hlsl::Buffer<double> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
+// CHECK-DXIL: store target("dx.TypedBuffer", i32, 0, 0, 0) %[[Handle2]], ptr %__handle, align 4
+// CHECK-SPIRV: store target("spirv.Image", i32, 5, 2, 0, 0, 1, 0) %[[Handle2]], ptr %__handle, align 4
+// CHECK: call {{(spir_func )?}}void @hlsl::Buffer<unsigned int>::Buffer(hlsl::Buffer<unsigned int> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by RWBuffer<int> C1 default constructor
 // CHECK-DXIL: define void @foo()
