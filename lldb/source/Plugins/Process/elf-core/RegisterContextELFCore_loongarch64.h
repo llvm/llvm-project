@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_riscv64.h ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_LOONGARCH64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_LOONGARCH64_H
 
-#include "Plugins/Register/Core/RegisterContextCore_riscv64.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Plugins/Register/Core/RegisterContextCore_loongarch64.h"
+#include "Register/Common/RegisterInfo_loongarch64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -19,14 +19,15 @@
 
 #include <memory>
 
-class RegisterContextCorePOSIX_riscv64 : public RegisterContextCore_riscv64 {
+class RegisterContextELFCore_loongarch64
+    : public RegisterContextCore_loongarch64 {
 public:
-  static std::unique_ptr<RegisterContextCorePOSIX_riscv64>
+  static std::unique_ptr<RegisterContextELFCore_loongarch64>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
          const lldb_private::DataExtractor &gpregset,
          llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  ~RegisterContextCorePOSIX_riscv64() override;
+  ~RegisterContextELFCore_loongarch64() override;
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;
@@ -35,9 +36,9 @@ public:
                      const lldb_private::RegisterValue &value) override;
 
 protected:
-  RegisterContextCorePOSIX_riscv64(
+  RegisterContextELFCore_loongarch64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_riscv64> register_info,
+      std::unique_ptr<RegisterInfo_loongarch64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 
@@ -54,4 +55,4 @@ private:
   lldb_private::DataExtractor m_fpr;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_LOONGARCH64_H

@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_s390x.cpp --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_s390x.h"
+#include "RegisterContextELFCore_s390x.h"
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -16,7 +16,7 @@
 
 using namespace lldb_private;
 
-RegisterContextCorePOSIX_s390x::RegisterContextCorePOSIX_s390x(
+RegisterContextELFCore_s390x::RegisterContextELFCore_s390x(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_s390x(thread, 0, register_info) {
@@ -33,23 +33,23 @@ RegisterContextCorePOSIX_s390x::RegisterContextCorePOSIX_s390x(
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_s390x::~RegisterContextCorePOSIX_s390x() = default;
+RegisterContextELFCore_s390x::~RegisterContextELFCore_s390x() = default;
 
-bool RegisterContextCorePOSIX_s390x::ReadGPR() { return true; }
+bool RegisterContextELFCore_s390x::ReadGPR() { return true; }
 
-bool RegisterContextCorePOSIX_s390x::ReadFPR() { return true; }
+bool RegisterContextELFCore_s390x::ReadFPR() { return true; }
 
-bool RegisterContextCorePOSIX_s390x::WriteGPR() {
+bool RegisterContextELFCore_s390x::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::WriteFPR() {
+bool RegisterContextELFCore_s390x::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::ReadRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_s390x::ReadRegister(const RegisterInfo *reg_info,
                                                   RegisterValue &value) {
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM)
@@ -76,21 +76,21 @@ bool RegisterContextCorePOSIX_s390x::ReadRegister(const RegisterInfo *reg_info,
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::ReadAllRegisterValues(
+bool RegisterContextELFCore_s390x::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::WriteRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_s390x::WriteRegister(const RegisterInfo *reg_info,
                                                    const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::WriteAllRegisterValues(
+bool RegisterContextELFCore_s390x::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_s390x::HardwareSingleStep(bool enable) {
+bool RegisterContextELFCore_s390x::HardwareSingleStep(bool enable) {
   return false;
 }

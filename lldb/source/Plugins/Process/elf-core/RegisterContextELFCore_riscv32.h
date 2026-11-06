@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_riscv32.h ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV32_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV32_H
 
 #include "Register/Common/RegisterInfoDynamic_riscv32.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -18,19 +18,19 @@
 
 #include <memory>
 
-class RegisterContextCorePOSIX_riscv32 : public lldb_private::RegisterContext {
+class RegisterContextELFCore_riscv32 : public lldb_private::RegisterContext {
 public:
   struct csr_kv_t {
     uint32_t addr; // CSR address/index
     uint32_t val;  // CSR value
   };
 
-  static std::unique_ptr<RegisterContextCorePOSIX_riscv32>
+  static std::unique_ptr<RegisterContextELFCore_riscv32>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
          const lldb_private::DataExtractor &gpregset,
          llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  ~RegisterContextCorePOSIX_riscv32() override;
+  ~RegisterContextELFCore_riscv32() override;
 
   void InvalidateAllRegisters() override;
 
@@ -49,7 +49,7 @@ public:
                      const lldb_private::RegisterValue &value) override;
 
 protected:
-  RegisterContextCorePOSIX_riscv32(
+  RegisterContextELFCore_riscv32(
       lldb_private::Thread &thread,
       std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
       const lldb_private::DataExtractor &gpregset,
@@ -77,4 +77,4 @@ private:
   lldb_private::DataExtractor m_csregset;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV32_H

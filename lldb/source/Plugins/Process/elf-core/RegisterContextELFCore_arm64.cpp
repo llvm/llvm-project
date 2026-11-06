@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_arm64.cpp --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_arm64.h"
+#include "RegisterContextELFCore_arm64.h"
 #include "Register/Common/RegisterInfo_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
@@ -20,8 +20,8 @@
 
 using namespace lldb_private;
 
-std::unique_ptr<RegisterContextCorePOSIX_arm64>
-RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
+std::unique_ptr<RegisterContextELFCore_arm64>
+RegisterContextELFCore_arm64::Create(Thread &thread, const ArchSpec &arch,
                                        const DataExtractor &gpregset,
                                        llvm::ArrayRef<CoreNote> notes) {
   Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
@@ -87,12 +87,12 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
 
   auto register_info_up =
       std::make_unique<RegisterInfo_arm64>(arch, opt_regsets);
-  return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
-      new RegisterContextCorePOSIX_arm64(thread, std::move(register_info_up),
+  return std::unique_ptr<RegisterContextELFCore_arm64>(
+      new RegisterContextELFCore_arm64(thread, std::move(register_info_up),
                                          gpregset, notes));
 }
 
-RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
+RegisterContextELFCore_arm64::RegisterContextELFCore_arm64(
     Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_arm64(thread, std::move(register_info)) {
@@ -166,27 +166,27 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
   ConfigureRegisterContext();
 }
 
-RegisterContextCorePOSIX_arm64::~RegisterContextCorePOSIX_arm64() = default;
+RegisterContextELFCore_arm64::~RegisterContextELFCore_arm64() = default;
 
-bool RegisterContextCorePOSIX_arm64::ReadGPR() { return true; }
+bool RegisterContextELFCore_arm64::ReadGPR() { return true; }
 
-bool RegisterContextCorePOSIX_arm64::ReadFPR() { return false; }
+bool RegisterContextELFCore_arm64::ReadFPR() { return false; }
 
-bool RegisterContextCorePOSIX_arm64::WriteGPR() {
+bool RegisterContextELFCore_arm64::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm64::WriteFPR() {
+bool RegisterContextELFCore_arm64::WriteFPR() {
   assert(0);
   return false;
 }
 
-const uint8_t *RegisterContextCorePOSIX_arm64::GetSVEBuffer(uint64_t offset) {
+const uint8_t *RegisterContextELFCore_arm64::GetSVEBuffer(uint64_t offset) {
   return m_sve_data.GetDataStart() + offset;
 }
 
-void RegisterContextCorePOSIX_arm64::ConfigureRegisterContext() {
+void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
   if (m_sve_data.GetByteSize() > sizeof(sve::user_sve_header)) {
     uint64_t sve_header_field_offset = 8;
     m_sve_vector_length = m_sve_data.GetU16(&sve_header_field_offset);
@@ -232,7 +232,7 @@ void RegisterContextCorePOSIX_arm64::ConfigureRegisterContext() {
   }
 }
 
-uint32_t RegisterContextCorePOSIX_arm64::CalculateSVEOffset(
+uint32_t RegisterContextELFCore_arm64::CalculateSVEOffset(
     const RegisterInfo *reg_info) {
   // Start of Z0 data is after GPRs plus 8 bytes of vg register
   uint32_t sve_reg_offset = LLDB_INVALID_INDEX32;
@@ -249,7 +249,7 @@ uint32_t RegisterContextCorePOSIX_arm64::CalculateSVEOffset(
   return sve_reg_offset;
 }
 
-bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                   RegisterValue &value) {
   Status error;
   lldb::offset_t offset;
@@ -426,21 +426,21 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
   return error.Success();
 }
 
-bool RegisterContextCorePOSIX_arm64::ReadAllRegisterValues(
+bool RegisterContextELFCore_arm64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm64::WriteRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_arm64::WriteRegister(const RegisterInfo *reg_info,
                                                    const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm64::WriteAllRegisterValues(
+bool RegisterContextELFCore_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm64::HardwareSingleStep(bool enable) {
+bool RegisterContextELFCore_arm64::HardwareSingleStep(bool enable) {
   return false;
 }

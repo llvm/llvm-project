@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_ppc64le.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_ppc64le.h"
+#include "RegisterContextELFCore_ppc64le.h"
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -19,7 +19,7 @@
 
 using namespace lldb_private;
 
-RegisterContextCorePOSIX_ppc64le::RegisterContextCorePOSIX_ppc64le(
+RegisterContextELFCore_ppc64le::RegisterContextELFCore_ppc64le(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_ppc64le(thread, 0, register_info) {
@@ -48,20 +48,20 @@ RegisterContextCorePOSIX_ppc64le::RegisterContextCorePOSIX_ppc64le(
   m_vsx.SetByteOrder(vsxregset.GetByteOrder());
 }
 
-size_t RegisterContextCorePOSIX_ppc64le::GetFPRSize() const {
+size_t RegisterContextELFCore_ppc64le::GetFPRSize() const {
   return k_num_fpr_registers_ppc64le * sizeof(uint64_t);
 }
 
-size_t RegisterContextCorePOSIX_ppc64le::GetVMXSize() const {
+size_t RegisterContextELFCore_ppc64le::GetVMXSize() const {
   return (k_num_vmx_registers_ppc64le - 1) * sizeof(uint64_t) * 2 +
          sizeof(uint32_t);
 }
 
-size_t RegisterContextCorePOSIX_ppc64le::GetVSXSize() const {
+size_t RegisterContextELFCore_ppc64le::GetVSXSize() const {
   return k_num_vsx_registers_ppc64le * sizeof(uint64_t) * 2;
 }
 
-bool RegisterContextCorePOSIX_ppc64le::ReadRegister(
+bool RegisterContextELFCore_ppc64le::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
 
@@ -127,7 +127,7 @@ bool RegisterContextCorePOSIX_ppc64le::ReadRegister(
   return false;
 }
 
-bool RegisterContextCorePOSIX_ppc64le::WriteRegister(
+bool RegisterContextELFCore_ppc64le::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }

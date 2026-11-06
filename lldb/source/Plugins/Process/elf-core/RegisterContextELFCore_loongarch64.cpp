@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_loongarch64.cpp --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_loongarch64.h"
+#include "RegisterContextELFCore_loongarch64.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 
 using namespace lldb_private;
 
-std::unique_ptr<RegisterContextCorePOSIX_loongarch64>
-RegisterContextCorePOSIX_loongarch64::Create(Thread &thread,
+std::unique_ptr<RegisterContextELFCore_loongarch64>
+RegisterContextELFCore_loongarch64::Create(Thread &thread,
                                              const ArchSpec &arch,
                                              const DataExtractor &gpregset,
                                              llvm::ArrayRef<CoreNote> notes) {
-  return std::unique_ptr<RegisterContextCorePOSIX_loongarch64>(
-      new RegisterContextCorePOSIX_loongarch64(
+  return std::unique_ptr<RegisterContextELFCore_loongarch64>(
+      new RegisterContextELFCore_loongarch64(
           thread,
           std::make_unique<RegisterInfo_loongarch64>(arch, Flags()),
           gpregset, notes));
 }
 
-RegisterContextCorePOSIX_loongarch64::RegisterContextCorePOSIX_loongarch64(
+RegisterContextELFCore_loongarch64::RegisterContextELFCore_loongarch64(
     Thread &thread,
     std::unique_ptr<RegisterInfo_loongarch64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
@@ -41,24 +41,24 @@ RegisterContextCorePOSIX_loongarch64::RegisterContextCorePOSIX_loongarch64(
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_loongarch64::~RegisterContextCorePOSIX_loongarch64() =
+RegisterContextELFCore_loongarch64::~RegisterContextELFCore_loongarch64() =
     default;
 
-bool RegisterContextCorePOSIX_loongarch64::ReadGPR() { return true; }
+bool RegisterContextELFCore_loongarch64::ReadGPR() { return true; }
 
-bool RegisterContextCorePOSIX_loongarch64::ReadFPR() { return true; }
+bool RegisterContextELFCore_loongarch64::ReadFPR() { return true; }
 
-bool RegisterContextCorePOSIX_loongarch64::WriteGPR() {
+bool RegisterContextELFCore_loongarch64::WriteGPR() {
   assert(false && "Writing registers is not allowed for core dumps");
   return false;
 }
 
-bool RegisterContextCorePOSIX_loongarch64::WriteFPR() {
+bool RegisterContextELFCore_loongarch64::WriteFPR() {
   assert(false && "Writing registers is not allowed for core dumps");
   return false;
 }
 
-bool RegisterContextCorePOSIX_loongarch64::ReadRegister(
+bool RegisterContextELFCore_loongarch64::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   const uint8_t *src = nullptr;
   lldb::offset_t offset = reg_info->byte_offset;
@@ -78,7 +78,7 @@ bool RegisterContextCorePOSIX_loongarch64::ReadRegister(
   return error.Success();
 }
 
-bool RegisterContextCorePOSIX_loongarch64::WriteRegister(
+bool RegisterContextELFCore_loongarch64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }

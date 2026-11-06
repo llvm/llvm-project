@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_powerpc.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_powerpc.h"
+#include "RegisterContextELFCore_powerpc.h"
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -16,7 +16,7 @@
 
 using namespace lldb_private;
 
-RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
+RegisterContextELFCore_powerpc::RegisterContextELFCore_powerpc(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_powerpc(thread, 0, register_info) {
@@ -39,30 +39,30 @@ RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
   m_vec.SetByteOrder(vregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc() = default;
+RegisterContextELFCore_powerpc::~RegisterContextELFCore_powerpc() = default;
 
-bool RegisterContextCorePOSIX_powerpc::ReadGPR() { return true; }
+bool RegisterContextELFCore_powerpc::ReadGPR() { return true; }
 
-bool RegisterContextCorePOSIX_powerpc::ReadFPR() { return true; }
+bool RegisterContextELFCore_powerpc::ReadFPR() { return true; }
 
-bool RegisterContextCorePOSIX_powerpc::ReadVMX() { return true; }
+bool RegisterContextELFCore_powerpc::ReadVMX() { return true; }
 
-bool RegisterContextCorePOSIX_powerpc::WriteGPR() {
+bool RegisterContextELFCore_powerpc::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::WriteFPR() {
+bool RegisterContextELFCore_powerpc::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::WriteVMX() {
+bool RegisterContextELFCore_powerpc::WriteVMX() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::ReadRegister(
+bool RegisterContextELFCore_powerpc::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
   if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
@@ -91,21 +91,21 @@ bool RegisterContextCorePOSIX_powerpc::ReadRegister(
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::ReadAllRegisterValues(
+bool RegisterContextELFCore_powerpc::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::WriteRegister(
+bool RegisterContextELFCore_powerpc::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::WriteAllRegisterValues(
+bool RegisterContextELFCore_powerpc::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_powerpc::HardwareSingleStep(bool enable) {
+bool RegisterContextELFCore_powerpc::HardwareSingleStep(bool enable) {
   return false;
 }

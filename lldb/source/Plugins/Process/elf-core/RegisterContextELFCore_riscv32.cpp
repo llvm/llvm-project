@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_riscv32.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_riscv32.h"
+#include "RegisterContextELFCore_riscv32.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -36,17 +36,17 @@ static std::vector<uint32_t> CopyRegisterListToVector(const uint32_t *regs) {
   return std::vector<uint32_t>(regs, end);
 }
 
-std::unique_ptr<RegisterContextCorePOSIX_riscv32>
-RegisterContextCorePOSIX_riscv32::Create(Thread &thread, const ArchSpec &arch,
+std::unique_ptr<RegisterContextELFCore_riscv32>
+RegisterContextELFCore_riscv32::Create(Thread &thread, const ArchSpec &arch,
                                          const DataExtractor &gpregset,
                                          llvm::ArrayRef<CoreNote> notes) {
-  return std::unique_ptr<RegisterContextCorePOSIX_riscv32>(
-      new RegisterContextCorePOSIX_riscv32(
+  return std::unique_ptr<RegisterContextELFCore_riscv32>(
+      new RegisterContextELFCore_riscv32(
           thread, std::make_unique<RegisterInfoDynamic_riscv32>(arch),
           gpregset, notes));
 }
 
-RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
+RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
     Thread &thread,
     std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
@@ -138,31 +138,31 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
   m_reg_infos_up->SetRegisterInfo(std::move(registers));
 }
 
-RegisterContextCorePOSIX_riscv32::~RegisterContextCorePOSIX_riscv32() = default;
+RegisterContextELFCore_riscv32::~RegisterContextELFCore_riscv32() = default;
 
-void RegisterContextCorePOSIX_riscv32::InvalidateAllRegisters() {}
+void RegisterContextELFCore_riscv32::InvalidateAllRegisters() {}
 
-size_t RegisterContextCorePOSIX_riscv32::GetRegisterCount() {
+size_t RegisterContextELFCore_riscv32::GetRegisterCount() {
   return m_reg_infos_up->GetRegisterCount();
 }
 
 const lldb_private::RegisterInfo *
-RegisterContextCorePOSIX_riscv32::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextELFCore_riscv32::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < GetRegisterCount())
     return &m_reg_infos_up->GetRegisterInfo()[static_cast<uint32_t>(reg)];
   return nullptr;
 }
 
-size_t RegisterContextCorePOSIX_riscv32::GetRegisterSetCount() {
+size_t RegisterContextELFCore_riscv32::GetRegisterSetCount() {
   return m_reg_infos_up->GetRegisterSetCount();
 }
 
 const lldb_private::RegisterSet *
-RegisterContextCorePOSIX_riscv32::GetRegisterSet(size_t set) {
+RegisterContextELFCore_riscv32::GetRegisterSet(size_t set) {
   return m_reg_infos_up->GetRegisterSet(static_cast<uint32_t>(set));
 }
 
-bool RegisterContextCorePOSIX_riscv32::ReadRegister(
+bool RegisterContextELFCore_riscv32::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   const lldb_private::RegisterInfo *dyn_reg_info;
   const uint8_t *src = nullptr;
@@ -295,12 +295,12 @@ bool RegisterContextCorePOSIX_riscv32::ReadRegister(
   }
 }
 
-bool RegisterContextCorePOSIX_riscv32::WriteRegister(
+bool RegisterContextELFCore_riscv32::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_riscv32::IsGPR(unsigned reg) {
+bool RegisterContextELFCore_riscv32::IsGPR(unsigned reg) {
   if (llvm::StringRef(
           GetRegisterSet(m_reg_infos_up->GetRegisterSetFromRegisterIndex(reg))
               ->name)
@@ -309,7 +309,7 @@ bool RegisterContextCorePOSIX_riscv32::IsGPR(unsigned reg) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_riscv32::IsFPR(unsigned reg) {
+bool RegisterContextELFCore_riscv32::IsFPR(unsigned reg) {
   if (llvm::StringRef(
           GetRegisterSet(m_reg_infos_up->GetRegisterSetFromRegisterIndex(reg))
               ->name)
@@ -318,7 +318,7 @@ bool RegisterContextCorePOSIX_riscv32::IsFPR(unsigned reg) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_riscv32::IsCSR(unsigned reg) {
+bool RegisterContextELFCore_riscv32::IsCSR(unsigned reg) {
   if (llvm::StringRef(
           GetRegisterSet(m_reg_infos_up->GetRegisterSetFromRegisterIndex(reg))
               ->name)
@@ -328,7 +328,7 @@ bool RegisterContextCorePOSIX_riscv32::IsCSR(unsigned reg) {
 }
 
 lldb_private::DynamicRegisterInfo::Register
-RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
+RegisterContextELFCore_riscv32::BuildDynamicRegister(
     const lldb_private::RegisterInfo &reg_info,
     const lldb_private::ConstString &set_name, uint32_t byte_offset) {
   return DynamicRegisterInfo::Register{
@@ -349,7 +349,7 @@ RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
       reg_info.register_type};
 }
 
-void RegisterContextCorePOSIX_riscv32::GetFeatures(
+void RegisterContextELFCore_riscv32::GetFeatures(
     llvm::SmallVectorImpl<std::string> &features) const {
   Log *log = GetLog(LLDBLog::Process);
   features.clear();
