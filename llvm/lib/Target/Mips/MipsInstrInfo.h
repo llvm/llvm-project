@@ -93,6 +93,9 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
+  /// Predicate to determine if an instruction is safe right after mfhi/mflo.
+  /// MIPS I to IV need two instructions between a read and a HI/LO write.
+  /// Inline assembly is never safe.
   bool SafeAfterMflo(const MachineInstr &MI) const;
 
   /// Predicate to determine if an instruction can go in a forbidden slot.
