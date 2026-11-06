@@ -595,10 +595,19 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     bool needsUniv) {
   // TODO: Argument `numCases` only used when generating iterator-based sparse
   // loops. Simplify the code upon feature complete.
-  // TODO: handle coiteration with sparse iterator.
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
-    if (tidLvls.size() == 1) {
-      auto [tid, lvl] = unpackTensorLevel(tidLvls.front());
+    SmallVector<TensorLevel> encodedTidLvls;
+    for (TensorLevel tidLvl : tidLvls) {
+      TensorId tid = unpackTensorLevel(tidLvl).first;
+      if (isSynTensor(tid))
+        continue;
+      SparseTensorType stt = getSparseTensorType(tensors[tid]);
+      if (stt.hasEncoding())
+        encodedTidLvls.push_back(tidLvl);
+    }
+
+    if (encodedTidLvls.size() == 1) {
+      auto [tid, lvl] = unpackTensorLevel(encodedTidLvls.front());
       Value t = tensors[tid];
 
       // Extract and iterate over the iteration space.
