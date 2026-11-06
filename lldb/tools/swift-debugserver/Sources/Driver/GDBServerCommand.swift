@@ -15,12 +15,6 @@ struct GDBServerCommand: Subcommand {
   let nativeRegs: Bool
   let setsid: Bool
 
-  init(fd: CInt?, nativeRegs: Bool, setsid: Bool) {
-    self.fd = fd
-    self.nativeRegs = nativeRegs
-    self.setsid = setsid
-  }
-
   static func parse(_ args: ArraySlice<String>)
       throws(ArgumentParseError) -> GDBServerCommand {
     var fd: CInt?
