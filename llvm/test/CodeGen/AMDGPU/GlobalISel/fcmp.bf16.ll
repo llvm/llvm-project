@@ -241,8 +241,8 @@ define amdgpu_ps <2 x i32> @fcmp_ogt_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b)
 ; GFX1250-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v2, v3
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cmp = fcmp ogt <2 x bfloat> %a, %b
@@ -335,11 +335,11 @@ define amdgpu_ps <3 x i32> @fcmp_ole_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b)
 ; GFX1250-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_le_f32_e32 vcc_lo, v4, v5
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_le_f32_e32 vcc_lo, v1, v3
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cmp = fcmp ole <3 x bfloat> %a, %b
@@ -394,14 +394,14 @@ define amdgpu_ps <4 x i32> @fcmp_one_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b)
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v6, 16, v6 :: v_dual_lshlrev_b32 v7, 16, v7
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_lg_f32_e32 vcc_lo, v0, v5
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_lg_f32_e32 vcc_lo, v1, v3
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_lg_f32_e32 vcc_lo, v6, v7
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cmp = fcmp one <4 x bfloat> %a, %b

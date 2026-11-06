@@ -17,7 +17,9 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -121,6 +123,35 @@ static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
          getNamedOp(MI, AMDGPU::OpName::src2).getReg();
 }
 
+// Extra checks for e64 CNDMASK to use the regular VOPD encoding.
+// The common VOPD checks validate src0 and the source register classes.
+static bool canMapVCndMaskToVOPD(const SIInstrInfo &TII,
+                                 const MachineInstr &MI) {
+  if (MI.getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::src0_modifiers).getImm() != 0 ||
+      getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() != 0)
+    return false;
+
+  const MachineOperand &Src1 = getNamedOp(MI, AMDGPU::OpName::src1);
+  if (Src1.isReg() && !AMDGPU::VGPR_32RegClass.contains(Src1.getReg()))
+    return false;
+  if (!Src1.isReg() && !Src1.isImm())
+    return false;
+
+  const MachineOperand &Src2 = getNamedOp(MI, AMDGPU::OpName::src2);
+  return Src2.isReg() && Src2.getReg() == TII.getRegisterInfo().getVCC();
+}
+
+static bool canMapVOP3ToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
+                             bool &Commute) {
+  if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
+    Commute = false;
+    return canMapVCndMaskToVOPD(TII, MI);
+  }
+  return canMapVOP3PToVOPD(TII, MI, Commute);
+}
+
 // In a VOPD3 whose OPX is a 64-bit operation, an OPY VGPR source operand reads
 // back the wrong value if it is the last VGPR the wave owns.
 // A wave always owns a whole number of VGPR allocation granules, so only a
@@ -188,8 +219,8 @@ static bool checkVOPDRegConstraints(
   // below look at their operands as they will be after the commute.
   bool Commute[2] = {false, false};
   if (!IsVOPD3 &&
-      ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(TII, MIX, Commute[VOPD::X])) ||
-       (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(TII, MIY, Commute[VOPD::Y]))))
+      ((TII.isVOP3(MIX) && !canMapVOP3ToVOPD(TII, MIX, Commute[VOPD::X])) ||
+       (TII.isVOP3(MIY) && !canMapVOP3ToVOPD(TII, MIY, Commute[VOPD::Y]))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
@@ -211,7 +242,9 @@ static bool checkVOPDRegConstraints(
   };
   // Immediates which the caller will move into a scalar register. Identical
   // values share one register, so they count like one scalar operand each.
-  SmallSet<int32_t, 2> MaterializedLiterals;
+  SmallSet<int32_t, 2> MaterializedSGPRLiterals;
+  // Immediates which the caller will move into one shared vector register.
+  SmallSet<int32_t, 2> MaterializedVGPRLiterals;
   SmallSet<Register, 4> UniqueScalarRegs;
 
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
@@ -257,8 +290,9 @@ static bool checkVOPDRegConstraints(
         // Only the low bits reach the register, so two operands which name
         // the same value share one move whichever way they were written.
         int32_t Imm = static_cast<int32_t>(Src0.getImm());
-        MaterializedLiterals.insert(Imm);
-        Fixups.push_back({CompIdx, static_cast<unsigned>(OpIdx), Imm, SlotRC});
+        MaterializedSGPRLiterals.insert(Imm);
+        Fixups.push_back({CompIdx, static_cast<unsigned>(OpIdx), Imm,
+                          VOPDMaterializationKind::SGPR, SlotRC});
       }
     }
 
@@ -271,15 +305,36 @@ static bool checkVOPDRegConstraints(
 
     // VOPD only. Affects V_CNDMASK_B32_e32.
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
-      UniqueScalarRegs.insert(AMDGPU::VCC_LO);
+      UniqueScalarRegs.insert(TRI->getVCC());
+    // An e64 CNDMASK also reads VCC after it changes to regular VOPD.
+    if (!IsVOPD3 && MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64)
+      UniqueScalarRegs.insert(TRI->getVCC());
 
     if (const MachineOperand *Src1 = TII.getNamedOperand(MI, Src1Name)) {
       if (Src1->isReg()) {
         if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 1, Src1->getReg()))
           return false;
         assert(TRI->isVectorRegister(MRI, Src1->getReg()));
-      } else if (IsVOPD3) {
-        return false;
+      } else {
+        // The regular CNDMASK VOPD encoding needs a VGPR in src1. On GFX12
+        // and later targets, both components can read the same VGPR. One move
+        // can provide an immediate used by both components.
+        if (IsVOPD3 || MI.getOpcode() != AMDGPU::V_CNDMASK_B32_e64 ||
+            !AllowSameVGPR || !canMaterializeVOPDLiterals(*MF) ||
+            !Src1->isImm())
+          return false;
+        int OpIdx = getNamedOperandIdx(MI.getOpcode(), Src1Name);
+        if (TII.getOpSize(MI, OpIdx) != 4)
+          return false;
+        const TargetRegisterClass *SlotRC =
+            TRI->getCommonSubClass(getVOPDSrcRegClass(TII, VOPDOpc, CompIdx, 1),
+                                   &AMDGPU::VGPR_32RegClass);
+        if (!SlotRC)
+          return false;
+        int32_t Imm = static_cast<int32_t>(Src1->getImm());
+        MaterializedVGPRLiterals.insert(Imm);
+        Fixups.push_back({CompIdx, static_cast<unsigned>(OpIdx), Imm,
+                          VOPDMaterializationKind::VGPR, SlotRC});
       }
     }
 
@@ -323,9 +378,19 @@ static bool checkVOPDRegConstraints(
     return false;
   // Keep materialization pair-local and do not increase instruction count or
   // register pressure by producing two different values for one pair.
-  if (MaterializedLiterals.size() > 1)
+  if (MaterializedSGPRLiterals.size() > 1 ||
+      MaterializedVGPRLiterals.size() > 1)
     return false;
-  if ((UniqueLiterals.size() + MaterializedLiterals.size() +
+  if (!MaterializedSGPRLiterals.empty() && !MaterializedVGPRLiterals.empty())
+    return false;
+  // A VGPR materialization is supported only when both components read the
+  // same VGPR. A single materialized source would need a bank-aware search.
+  if (!MaterializedVGPRLiterals.empty() &&
+      (Fixups.size() != 2 || !all_of(Fixups, [](const VOPDLiteralFixup &Fixup) {
+         return Fixup.Kind == VOPDMaterializationKind::VGPR;
+       })))
+    return false;
+  if ((UniqueLiterals.size() + MaterializedSGPRLiterals.size() +
        UniqueScalarRegs.size()) > 2)
     return false;
 
@@ -388,7 +453,9 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   const GCNSubtarget &ST = TII.getSubtarget();
   bool AllowSameVGPR = ST.hasGFX12Insts();
 
+  // The next statement applies to SGPR fixups.
   // Only a VOPD3 component can need a fixup; a plain one may hold a literal.
+  // A regular CNDMASK component can need a VGPR fixup.
   // checkVOPDRegConstraints() only writes these when it succeeds.
   SmallVector<VOPDLiteralFixup, 2> Fixups;
   bool CommuteXY[2] = {false, false};

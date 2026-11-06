@@ -15778,9 +15778,9 @@ define amdgpu_kernel void @umin_i64_constant(ptr addrspace(1) %out) {
 ; GFX1332-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1332-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX1332-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1332-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
-; GFX1332-NEXT:    v_cndmask_b32_e64 v0, 5, -1, vcc_lo
-; GFX1332-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1332-NEXT:    v_mov_b32_e32 v2, -1
+; GFX1332-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1332-NEXT:    v_dual_cndmask_b32 v1, 0, v2 :: v_dual_cndmask_b32 v0, 5, v2
 ; GFX1332-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX1332-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
 ; GFX1332-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo

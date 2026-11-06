@@ -17,9 +17,12 @@
 /// stay pair-local, so fusion adds at most one move and does not extend
 /// register pressure across pairs.
 ///
+/// A regular CNDMASK pair can also move a shared src1 immediate into one VGPR.
+///
 /// The pass considers every adjacent candidate. It first maximizes the number
 /// of pairs, then minimizes scalar moves among equal-size matchings. The
 /// earlier candidate wins an exact tie.
+/// VGPR moves use the same score.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -43,11 +46,10 @@
 #define DEBUG_TYPE "gcn-create-vopd"
 STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
 STATISTIC(NumLiteralsMaterialized,
-          "Number of immediates moved into a scalar register to allow VOPD3 "
-          "pairing.");
-STATISTIC(NumCandidateEdgesWithoutFreeSGPR,
-          "Number of VOPD3 candidate edges skipped because no scalar register "
-          "was free for their immediate.");
+          "Number of immediates moved into a register to allow VOPD pairing.");
+STATISTIC(NumCandidateEdgesWithoutFreeReg,
+          "Number of VOPD candidate edges skipped because no register was "
+          "free for their immediate.");
 
 using namespace llvm;
 
@@ -66,6 +68,16 @@ struct VOPDCandidate {
 };
 
 } // namespace
+
+static VOPDMaterializationKind
+getMaterializationKind(ArrayRef<VOPDLiteralFixup> Fixups) {
+  assert(!Fixups.empty());
+  VOPDMaterializationKind Kind = Fixups.front().Kind;
+  assert(all_of(Fixups, [Kind](const VOPDLiteralFixup &Fixup) {
+    return Fixup.Kind == Kind;
+  }));
+  return Kind;
+}
 
 /// Add everything the instructions in [\p Begin, \p RangeEnd] touch to
 /// \p Live, which already holds what is live after \p RangeEnd.
@@ -88,12 +100,33 @@ static Register takeFreeSGPR(const GCNSubtarget &ST,
                              const LiveRegUnits &Live,
                              ArrayRef<VOPDLiteralFixup> Fixups) {
   assert(!Fixups.empty());
+  assert(getMaterializationKind(Fixups) == VOPDMaterializationKind::SGPR);
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   for (MCPhysReg Reg : AMDGPU::SGPR_32RegClass) {
     // SGPR_32 also holds the halves of VCC. Writing those changes VCCZ,
     // which is not modelled by \p Live, so a free half is not safe to use.
     if (MRI.isReserved(Reg) || TRI->isSubRegisterEq(AMDGPU::VCC, Reg) ||
         !Live.available(Reg))
+      continue;
+    if (!all_of(Fixups, [Reg](const VOPDLiteralFixup &Fixup) {
+          return Fixup.SlotRC->contains(Reg);
+        }))
+      continue;
+    return Reg;
+  }
+  return Register();
+}
+
+/// Return a VGPR which every fixup can read and which no value in \p Live
+/// occupies, or a null register. The matcher ensures that both components can
+/// read the same VGPR.
+static Register takeFreeVGPR(const MachineRegisterInfo &MRI,
+                             const LiveRegUnits &Live,
+                             ArrayRef<VOPDLiteralFixup> Fixups) {
+  assert(!Fixups.empty());
+  assert(getMaterializationKind(Fixups) == VOPDMaterializationKind::VGPR);
+  for (MCPhysReg Reg : AMDGPU::VGPR_32RegClass) {
+    if (MRI.isReserved(Reg) || !Live.available(Reg))
       continue;
     if (!all_of(Fixups, [Reg](const VOPDLiteralFixup &Fixup) {
           return Fixup.SlotRC->contains(Reg);
@@ -135,8 +168,15 @@ public:
         LiveRegUnits RangeLive = Walk;
         addRangeUses(RangeLive, Candidate->Match.InOrder[0]->getIterator(),
                      *Candidate->Match.InOrder[1]);
-        Candidate->MaterializationReg =
-            takeFreeSGPR(*ST, MRI, RangeLive, Candidate->Match.LiteralFixups);
+        ArrayRef<VOPDLiteralFixup> Fixups = Candidate->Match.LiteralFixups;
+        VOPDMaterializationKind Kind = getMaterializationKind(Fixups);
+        if (Kind == VOPDMaterializationKind::SGPR)
+          Candidate->MaterializationReg =
+              takeFreeSGPR(*ST, MRI, RangeLive, Fixups);
+        else {
+          assert(Kind == VOPDMaterializationKind::VGPR);
+          Candidate->MaterializationReg = takeFreeVGPR(MRI, RangeLive, Fixups);
+        }
         ++Candidate;
         SkipPlainCandidates();
       }
@@ -170,7 +210,7 @@ public:
     for (size_t I = NumCandidates; I-- != 0;) {
       Best[I] = Best[I + 1];
       if (!Candidates[I].isFeasible()) {
-        ++NumCandidateEdgesWithoutFreeSGPR;
+        ++NumCandidateEdgesWithoutFreeReg;
         continue;
       }
 
@@ -217,8 +257,12 @@ public:
                   }));
 
     MachineInstr *InsertPt = Candidate.Match.InOrder[0];
-    BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
-            TII.get(AMDGPU::S_MOV_B32), Candidate.MaterializationReg)
+    VOPDMaterializationKind Kind = getMaterializationKind(Fixups);
+    unsigned MoveOpcode = Kind == VOPDMaterializationKind::SGPR
+                              ? AMDGPU::S_MOV_B32
+                              : AMDGPU::V_MOV_B32_e32;
+    BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(), TII.get(MoveOpcode),
+            Candidate.MaterializationReg)
         .addImm(Fixups.front().Imm);
     ++NumLiteralsMaterialized;
 
@@ -267,9 +311,21 @@ public:
                                        AMDGPU::OpName::src1_modifiers,
                                        AMDGPU::OpName::src2_modifiers};
     const unsigned VOPDOpc = VOPDInst->getOpcode();
+    SmallVector<const MachineOperand *, 2> ImplicitCndMaskPredicates;
 
     for (auto CompIdx : VOPD::COMPONENTS) {
-      auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
+      unsigned CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
+      if (!Match.IsVOPD3 &&
+          MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
+        // Regular VOPD reads the CNDMASK predicate from VCC. Keep the flags
+        // from the explicit e64 predicate when it becomes an implicit use.
+        assert(CompSrcOprNum == 3);
+        --CompSrcOprNum;
+        const MachineOperand *Predicate =
+            SII->getNamedOperand(*MI[CompIdx], AMDGPU::OpName::src2);
+        assert(Predicate && Predicate->isReg());
+        ImplicitCndMaskPredicates.push_back(Predicate);
+      }
       bool IsVOP3 = SII->isVOP3(*MI[CompIdx]);
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
         if (AMDGPU::hasNamedOperand(VOPDOpc, Mods[CompIdx][CompSrcIdx])) {
@@ -294,6 +350,11 @@ public:
     SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
+    for (const MachineOperand *Predicate : ImplicitCndMaskPredicates) {
+      MachineOperand ImplicitPredicate = *Predicate;
+      ImplicitPredicate.setImplicit();
+      VOPDInst.add(ImplicitPredicate);
+    }
 
     LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: " << *MIX
                       << "\tY: " << *MIY << "\n");
