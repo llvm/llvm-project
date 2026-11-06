@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// XFAIL: amdgpu
+// XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgpu-amd-amdhsa-LTO
 
 #include <assert.h>
 #include <omp.h>
