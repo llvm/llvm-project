@@ -156,6 +156,10 @@ defm : ValueField<"aarch64-umov-fold-scan-limit", "unsigned", "16",
 // pre-/post-index instructions.
 defm : ValueField<"aarch64-update-scan-limit", "unsigned", "100",
   "">;
+// Allow LDP/STP pairing for far-offset scaled loads/stores by inserting an
+// ADDXri to adjust the base register.
+defm : BoolField<"aarch64-ldp-stp-base-adjust", "true",
+  "">;
 
 // AArch64LowerHomogeneousPrologEpilog.cpp
 defm : ValueField<"frame-helper-size-threshold", "int", "2",
