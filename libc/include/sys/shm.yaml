@@ -37,6 +37,12 @@ functions:
       - type: int
       - type: const void *
       - type: int
+  - name: shmdt
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const void *
   - name: shmget
     standards:
       - posix
