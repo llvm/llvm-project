@@ -276,8 +276,9 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
   CHECK_NE(p, (void*)0);
-  if (!thr->slot) {
-    // Very early/late in thread lifetime, or during fork.
+  if (!thr->slot || thr->ignore_interceptors) {
+    // Very early/late in thread lifetime, during fork, or inside an ignored
+    // interceptor (such as pthread_create/join/detach freeing internal TLS).
     UNUSED uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, false);
     DPrintf("#%d: free(0x%zx, %zu) (no slot)\n", thr->tid, p, sz);
     return;
