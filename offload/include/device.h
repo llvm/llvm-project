@@ -34,13 +34,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
-#include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "PluginInterface.h"
 #include "Program.h"
 
-using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -121,8 +119,6 @@ using RecordReplayTy = llvm::omp::target::rr::RecordReplayTy;
 
 struct DeviceTy {
   int32_t DeviceID;
-  GenericPluginTy *RTL = nullptr;
-  int32_t RTLDeviceID = -1;
   ol_platform_handle_t Platform;
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;

@@ -1725,14 +1725,6 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 
 namespace tmp {
 // Temporary helpers to help transition of libomptarget to liboffload
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
-  return Platform->Plugin.get();
-}
-
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
-  return Device->DeviceNum;
-}
-
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
