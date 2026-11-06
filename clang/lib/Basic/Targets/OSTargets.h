@@ -556,9 +556,25 @@ public:
   }
 };
 
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY PPC64ILP32TargetInfo
+    : public OSTargetInfo<Target> {
+public:
+  PPC64ILP32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->LongWidth = this->LongAlign = 32;
+    this->PointerWidth = this->PointerAlign = 32;
+    this->IntMaxType = TargetInfo::SignedLongLong;
+    this->Int64Type = TargetInfo::SignedLongLong;
+    this->SizeType = TargetInfo::UnsignedInt;
+    this->resetDataLayout();
+  }
+};
+
 // PS3 PPU Target
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY PS3PPUTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY PS3PPUTargetInfo
+    : public PPC64ILP32TargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -572,14 +588,31 @@ protected:
 
 public:
   PS3PPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    this->LongWidth = this->LongAlign = 32;
-    this->PointerWidth = this->PointerAlign = 32;
-    this->IntMaxType = TargetInfo::SignedLongLong;
-    this->Int64Type = TargetInfo::SignedLongLong;
-    this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout();
+      : PPC64ILP32TargetInfo<Target>(Triple, Opts) {}
+};
+
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY Xbox360TargetInfo
+    : public PPC64ILP32TargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &, const llvm::Triple &,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("_XBOX_VER", "200");
+    Builder.defineMacro("_M_PPC", "5401");
+    Builder.defineMacro("_M_PPCBE");
+    Builder.defineMacro("_WIN32");
   }
+
+public:
+  Xbox360TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : PPC64ILP32TargetInfo<Target>(Triple, Opts) {
+    this->LongDoubleWidth = this->LongDoubleAlign = 64;
+    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    this->WCharType = TargetInfo::UnsignedShort;
+    this->ABI.clear();
+  }
+
+  bool setABI(const std::string &) override { return false; }
 };
 
 // Common base class for PS4/PS5 targets.

@@ -403,6 +403,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<LinuxTargetInfo<PPC64TargetInfo>>(Triple, Opts);
     case llvm::Triple::Lv2:
       return std::make_unique<PS3PPUTargetInfo<PPC64TargetInfo>>(Triple, Opts);
+    case llvm::Triple::Xbox360:
+      return std::make_unique<Xbox360TargetInfo<PPC64TargetInfo>>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<PPC64TargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:
