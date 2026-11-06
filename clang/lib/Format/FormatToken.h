@@ -631,6 +631,10 @@ public:
   ///   >0: number of right braces
   int8_t BraceCount = 0;
 
+  /// Whether a left brace was already inserted after this token when an
+  /// earlier run was analyzed.
+  bool LBraceInserted = false;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
@@ -2131,6 +2135,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
                                  const FormatToken *Previous,
                                  const FormatToken *MinColumnToken) {
   if (!Previous || !MinColumnToken)
+    return false;
+  // Do not continue a comment section across a formatting-disabled boundary.
+  if (FormatTok.Finalized != Previous->Finalized)
     return false;
   unsigned MinContinueColumn =
       MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);

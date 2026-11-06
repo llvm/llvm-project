@@ -2,7 +2,9 @@
 // destructors will be called if an exception is thrown.
 //
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -std=c++98 -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -std=c++98 -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s %}
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -std=c++11 -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -std=c++11 -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s %}
 
 struct ImplicitCopy {
   int x;

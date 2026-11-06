@@ -14,6 +14,56 @@
 namespace Fortran::evaluate {
 
 auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
+    const Constant<Type<TypeCategory::Character>> &x, FoldingContext &context)
+    -> Result {
+  const int kind{x.kind()};
+  if (offset < 0 || offset + bytes > data_.size()) {
+    return OutOfRange;
+  } else {
+    auto optElements{TotalElementCount(x.shape())};
+    if (!optElements) {
+      return TooManyElems;
+    }
+    auto elements{*optElements};
+    auto elementBytes{bytes > 0 ? bytes / elements : 0};
+    if (elements * elementBytes != bytes) {
+      return SizeMismatch;
+    } else if (bytes == 0) {
+      return OkNoChange;
+    } else {
+      Result result{OkNoChange};
+      for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
+        value::CharacterValue scalar{x.At(at)};
+        auto scalarBytes{scalar.size() * kind};
+        if (scalarBytes != elementBytes) {
+          result = LengthMismatch;
+        }
+        auto *to{&data_.at(offset)};
+        bool changed{false};
+        if (std::size_t unit{ByteSwapUnit(
+                context, TypeCategory::Character, kind, elementBytes)};
+            unit > 1) {
+          llvm::SmallVector<char, 64> buffer(elementBytes);
+          scalar.StoreRawBytes(buffer.data(), elementBytes);
+          ReverseByteUnits(buffer.data(), elementBytes, unit);
+          if (std::memcmp(to, buffer.data(), elementBytes) != 0) {
+            std::memcpy(to, buffer.data(), elementBytes);
+            changed = true;
+          }
+        } else {
+          scalar.StoreRawBytes(to, elementBytes, &changed);
+        }
+        if (changed && result == OkNoChange) {
+          result = Ok;
+        }
+        offset += elementBytes;
+      }
+      return result;
+    }
+  }
+}
+
+auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
     const Constant<SomeDerived> &x, FoldingContext &context) -> Result {
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
