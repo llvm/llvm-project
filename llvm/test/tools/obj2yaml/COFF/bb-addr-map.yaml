@@ -1,7 +1,7 @@
 ## Check how obj2yaml produces YAML .llvm_bb_addr_map descriptions.
 
 ## Check that obj2yaml uses the "Entries" tag to describe an .llvm_bb_addr_map
-## section, omits the derived SizeOfRawData and preserves relocations.
+## section, omits SectionData and SizeOfRawData and preserves relocations.
 ## Addresses are 8 bytes on 64-bit machines and 4 bytes on 32-bit machines.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
@@ -12,7 +12,6 @@
 
 # VALID:        - Name:            .llvm_bb_addr_map
 # VALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# VALID-NEXT:     SectionData:     ''
 # VALID-NEXT:     Entries:
 # VALID-NEXT:       - Version:         3
 ## The 'Feature' and 'BaseAddress' fields are omitted when they are zero.
@@ -107,7 +106,6 @@ symbols:
 # EMPTY:      sections:
 # EMPTY-NEXT:   - Name:            .llvm_bb_addr_map
 # EMPTY-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# EMPTY-NEXT:     SectionData:     ''
 # EMPTY-NEXT: symbols:
 
 --- !COFF
@@ -127,7 +125,6 @@ symbols: []
 # MULTI:      sections:
 # MULTI-NEXT:   - Name:            .llvm_bb_addr_map
 # MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# MULTI-NEXT:     SectionData:     ''
 # MULTI-NEXT:     Entries:
 ## Fields 'BaseAddress' and 'Feature' are omitted when they are zero.
 # MULTI-NEXT:       - Version:         0
@@ -139,7 +136,6 @@ symbols: []
 # MULTI-NEXT:                 Metadata:        0x3
 # MULTI-NEXT:   - Name:            .llvm_bb_addr_map
 # MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# MULTI-NEXT:     SectionData:     ''
 # MULTI-NEXT:     Entries:
 # MULTI-NEXT:       - Version:         0
 # MULTI-NEXT:         BBRanges:

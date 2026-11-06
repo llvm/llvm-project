@@ -9,7 +9,6 @@
 # VALID:      sections:
 # VALID-NEXT:   - Name:            .llvm_bb_addr_map
 # VALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# VALID-NEXT:     SectionData:     ''
 # VALID-NEXT:     Entries:
 # VALID-NEXT:       - Version:         5
 # VALID-NEXT:         Feature:         0x87
@@ -125,7 +124,6 @@ symbols: []
 # MULTI:      sections:
 # MULTI-NEXT:   - Name:            .llvm_bb_addr_map
 # MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# MULTI-NEXT:     SectionData:     ''
 # MULTI-NEXT:     Entries:
 ## The 'BaseAddress' field is omitted when it's zero.
 # MULTI-NEXT:       - Version:         0
@@ -142,7 +140,6 @@ symbols: []
 # MULTI-NEXT:           - BBFreq:          0
 # MULTI-NEXT:   - Name:            .llvm_bb_addr_map
 # MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-# MULTI-NEXT:     SectionData:     ''
 # MULTI-NEXT:     Entries:
 # MULTI-NEXT:       - Version:         0
 # MULTI-NEXT:         Feature:         0x1

@@ -139,8 +139,10 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
 
 static void dumpBBAddrMap(COFFYAML::Section &Sec, ArrayRef<uint8_t> Content,
                           unsigned AddressSize) {
-  if (Content.empty())
+  if (Content.empty()) {
+    Sec.SectionData.reset();
     return;
+  }
 
   ExitOnError Err("invalid .llvm_bb_addr_map section: ");
   Err(BBAddrMapYAML::decodePayload(Content, llvm::endianness::little,
@@ -150,7 +152,7 @@ static void dumpBBAddrMap(COFFYAML::Section &Sec, ArrayRef<uint8_t> Content,
   // COFFYAML rejects Entries with SectionData or SizeOfRawData, since yaml2obj
   // derives both from Entries.
   if (Sec.BBAddrMapEntries) {
-    Sec.SectionData = yaml::BinaryRef();
+    Sec.SectionData.reset();
     Sec.Header.SizeOfRawData = 0;
   }
 }
