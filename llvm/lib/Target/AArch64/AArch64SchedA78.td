@@ -8,6 +8,9 @@
 //
 // This file defines the scheduling model for the Arm Cortex-A78 processors.
 //
+// Model parameters are based on the Arm Cortex-A78 Core Software
+// Optimization Guide: https://support.arm.com/documentation/110656/
+//
 //===----------------------------------------------------------------------===//
 
 def CortexA78Model : SchedMachineModel {
