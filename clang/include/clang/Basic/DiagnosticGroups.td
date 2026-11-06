@@ -651,7 +651,8 @@ This warning may produce false-positives diagnostics when it cannot fully model 
 def LifetimeSafetyInapplicableLifetimeboundReturn
     : DiagGroup<"lifetime-safety-inapplicable-lifetimebound-return"> {
   code Documentation = [{
-Detects uses of [[clang::lifetimebound]] that may be incorrect or indicate a missing lifetime annotation on the return type.
+Flags ``[[clang::lifetimebound]]`` in function definitions with untracked
+return types.
   }];
 }
 
@@ -785,11 +786,30 @@ from. May report destructors that never read the borrow (e.g. ``std::function``)
   }];
 }
 
+def LifetimeSafetyInapplicableLifetimeboundCtorReturn
+    : DiagGroup<"lifetime-safety-experimental-inapplicable-lifetimebound-ctor-return"> {
+  code Documentation = [{
+Experimental. Flags ``[[clang::lifetimebound]]`` on constructor parameters
+when the constructed type falls outside the lifetime model for that constructor.
+  }];
+}
+
+def LifetimeSafetyStrictLifetimeboundReturn
+    : DiagGroup<"lifetime-safety-experimental-strict-lifetimebound-return"> {
+  code Documentation = [{
+Experimental. Flags ``[[clang::lifetimebound]]`` when calls or constructions
+in the definition cause the analysis to track the return type or constructed
+type.
+  }];
+}
+
 def LifetimeSafetyExperimental
     : DiagGroup<"lifetime-safety-experimental",
                 [LifetimeSafetyInvalidation,
                  LifetimeSafetyFieldOriginEscape,
-                 LifetimeSafetyDestructorUse]> {
+                 LifetimeSafetyDestructorUse,
+                 LifetimeSafetyInapplicableLifetimeboundCtorReturn,
+                 LifetimeSafetyStrictLifetimeboundReturn]> {
   code Documentation = [{
 Experimental lifetime safety warnings. These may have known false positives and
 their behavior may change. Not enabled by -Wlifetime-safety-all.

@@ -11197,8 +11197,18 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def warn_lifetime_safety_inapplicable_lifetimebound_return
-    : Warning<"'lifetimebound' attribute may not apply to return type %0">,
+    : Warning<"result type %0 is not known to carry a lifetime">,
       InGroup<LifetimeSafetyInapplicableLifetimeboundReturn>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_inapplicable_lifetimebound_ctor_return
+    : Warning<"'lifetimebound' attribute may not apply to constructed object type %0">,
+      InGroup<LifetimeSafetyInapplicableLifetimeboundCtorReturn>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_strict_lifetimebound_return
+    : Warning<"%select{result type|constructed object type}0 %1 may not carry a lifetime">,
+      InGroup<LifetimeSafetyStrictLifetimeboundReturn>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;

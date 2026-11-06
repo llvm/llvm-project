@@ -733,6 +733,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `-Wlifetime-safety-experimental-destructor-use`, which warns when an object
     whose non-trivial destructor may read a borrow is destroyed after the
     storage it borrows from.
+  - `-Wlifetime-safety-experimental-inapplicable-lifetimebound-ctor-return`,
+    which flags `[[clang::lifetimebound]]` on constructor parameters when the
+    constructed type falls outside the lifetime model for that constructor.
+  - `-Wlifetime-safety-experimental-strict-lifetimebound-return`, which flags
+    `[[clang::lifetimebound]]` when calls or constructions in the definition
+    cause the analysis to track the result type.
+
+- Added `-Wlifetime-safety-inapplicable-lifetimebound-return` under
+  `-Wlifetime-safety-annotation-placement`. It flags `[[clang::lifetimebound]]`
+  in function definitions with untracked return types.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
