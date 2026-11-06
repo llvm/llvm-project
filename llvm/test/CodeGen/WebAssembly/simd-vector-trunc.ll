@@ -94,13 +94,36 @@ entry:
   ret <16 x i8> %0
 }
 
+define <8 x i8> @trunc8i32_8i8(<8 x i32> %a) {
+; CHECK-LABEL: trunc8i32_8i8:
+; CHECK:         .functype trunc8i32_8i8 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %0 = trunc <8 x i32> %a to <8 x i8>
+  ret <8 x i8> %0
+}
+
 define <8 x i8>  @trunc8i16_8i8(<8 x i16> %a) {
 ; CHECK-LABEL: trunc8i16_8i8:
 ; CHECK:         .functype trunc8i16_8i8 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %0 = trunc <8 x i16> %a to <8 x i8>
