@@ -1865,10 +1865,6 @@ lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
 
   /* Subtraction is more subtle than one might naively expect.  */
   if (subtract) {
-    if ((bits < 0) && !semantics->hasSignedRepr)
-      llvm_unreachable(
-          "This floating point format does not support signed values");
-
     IEEEFloat temp_rhs(rhs);
     bool lost_fraction_is_from_rhs = false;
 
@@ -2147,6 +2143,16 @@ APFloat::opStatus IEEEFloat::addOrSubtract(const IEEEFloat &rhs,
       sign = false;
   }
 
+  // A format without a sign cannot represent a negative result.
+  if (sign && !semantics->hasSignedRepr) {
+    if (category == fcZero) {
+      sign = false;
+    } else {
+      makeNaN();
+      fs = opInvalidOp;
+    }
+  }
+
   return fs;
 }
 
@@ -2206,6 +2212,26 @@ APFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   opStatus fs = remainderSpecials(rhs);
   if (fs != opDivByZero)
     return fs;
+
+  // The steps below go through negative values, so a format without a sign
+  // computes in a signed copy of itself. A negative remainder has no encoding.
+  if (!semantics->hasSignedRepr) {
+    fltSemantics signedSemantics = *semantics;
+    signedSemantics.hasSignedRepr = true;
+    const fltSemantics &origSemantics = *semantics;
+    bool losesInfo;
+    IEEEFloat V = *this, P = rhs;
+    V.convert(signedSemantics, rmNearestTiesToEven, &losesInfo);
+    P.convert(signedSemantics, rmNearestTiesToEven, &losesInfo);
+    fs = V.remainder(P);
+    if (V.isNegative() && !V.isZero()) {
+      makeNaN();
+      return opInvalidOp;
+    }
+    V.convert(origSemantics, rmNearestTiesToEven, &losesInfo);
+    *this = V;
+    return fs;
+  }
 
   fs = opOK;
 
@@ -2558,6 +2584,13 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   const fltSemantics &fromSemantics = *semantics;
   bool is_signaling = isSignaling();
 
+  // A format without a sign has no encoding for a negative value. A negative
+  // zero or NaN only loses its sign; any other negative value becomes NaN.
+  bool droppedSign = sign && !toSemantics.hasSignedRepr;
+  bool negativeValue = droppedSign && category != fcZero && category != fcNaN;
+  if (droppedSign)
+    sign = false;
+
   lostFraction lostFraction = lfExactlyZero;
   unsigned newPartCount = partCountForBits(toSemantics.precision + 1);
   unsigned oldPartCount = partCount();
@@ -2690,8 +2723,13 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   // The paths above only report what rounding lost, so report these here too:
   // a caller that checks losesInfo would otherwise accept a result the target
   // cannot represent, and printing that result asserts.
-  if ((sign && !semantics->hasSignedRepr) ||
-      (category == fcZero && !semantics->hasZero)) {
+  if (negativeValue) {
+    makeNaN();
+    *losesInfo = true;
+    return opInvalidOp;
+  }
+
+  if (droppedSign || (category == fcZero && !semantics->hasZero)) {
     *losesInfo = true;
     if (fs == opOK)
       fs = opInexact;
