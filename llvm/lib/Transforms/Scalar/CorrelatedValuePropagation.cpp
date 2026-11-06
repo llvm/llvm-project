@@ -25,6 +25,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -352,12 +353,13 @@ bool CVPImpl::processICmp(ICmpInst *Cmp) {
     return false;
 
   bool Changed = false;
-
+  SmallVector<DbgVariableRecord *, 2> DebugUsers;
   ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                                 /*UndefAllowed=*/false),
+                                                 /*UndefAllowed=*/false,
+                                                 &DebugUsers),
                 CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                                 /*UndefAllowed=*/false);
-
+                                                 /*UndefAllowed=*/false,
+                                                 &DebugUsers);
   if (Cmp->isSigned()) {
     ICmpInst::Predicate UnsignedPred =
         ConstantRange::getEquivalentPredWithFlippedSignedness(
@@ -365,6 +367,11 @@ bool CVPImpl::processICmp(ICmpInst *Cmp) {
 
     if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
       return false;
+
+    // Since the instruction changed, all debug users of
+    // this value must be poisoned
+    for (auto *Record : DebugUsers)
+      Record->setKillLocation();
 
     ++NumSICmps;
     Cmp->setPredicate(UnsignedPred);
