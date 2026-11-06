@@ -1992,6 +1992,14 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
     return nullptr;
 
+  // The vendor predicated pseudos are only available with the short forward
+  // branch tune, not with late select expansion alone.
+  if (!STI.hasShortForwardBranchIALU() &&
+      (MI->getOpcode() == RISCV::QC_LI || MI->getOpcode() == RISCV::QC_E_LI ||
+       MI->getOpcode() == RISCV::NDS_BFOS ||
+       MI->getOpcode() == RISCV::NDS_BFOZ))
+    return nullptr;
+
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
     return nullptr;
@@ -2027,7 +2035,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                bool PreferFalse) const {
   assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
          "Unknown select instruction");
-  if (!STI.hasShortForwardBranchIALU())
+  if (!STI.hasLateSelectExpansion())
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();

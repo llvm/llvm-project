@@ -65,6 +65,9 @@ let EndGroup = true in {
 def : WriteRes<WriteJal, [VeeREH1ALU]>;
 def : WriteRes<WriteJalr, [VeeREH1ALU]>;
 }
+// Short forward branch: the branch and the ALU op it skips, one per ALU.
+let NumMicroOps = 2 in
+def : WriteRes<WriteSFB, [VeeREH1ALU0, VeeREH1ALU1]>;
 
 // Integer arithmetic and logic.
 def : WriteRes<WriteIALU32, [VeeREH1ALU]>;
@@ -141,6 +144,11 @@ defvar VeeREH1ALUWrites = [WriteIALU, WriteIALU32, WriteShiftImm,
 
 // A branch can issue in the same cycle as a load or multiply it depends on.
 def : ReadAdvance<ReadJmp, 3, VeeREH1LateWrites>;
+// The short forward branch pseudo reads its operands at full latency. Giving
+// its branch the late read costs Embench-IoT aha-mont64 3% and depthconv 4% on
+// the RTL.
+def : ReadAdvance<ReadSFBJmp, 0>;
+def : ReadAdvance<ReadSFBALU, 0>;
 def : ReadAdvance<ReadJalr, 0>;
 def : ReadAdvance<ReadCSR, 0>;
 // Store data is read late. An i0 ALU op can feed the store data of an i1 store
@@ -171,7 +179,6 @@ def : ReadAdvance<ReadIRem32, 0>;
 // Unsupported extensions
 defm : UnsupportedSchedA;
 defm : UnsupportedSchedF;
-defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZba;

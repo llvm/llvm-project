@@ -11,6 +11,10 @@
 ; RUN:     | FileCheck %s --check-prefixes=RV32-CMOV
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi,+zca,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:     | FileCheck %s --check-prefixes=RV64-CMOV
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi,+late-select-expansion -verify-machineinstrs < %s \
+; RUN:     | FileCheck %s --check-prefixes=RV32-LATE
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi,+zca,+conditional-cmv-fusion,+late-select-expansion -verify-machineinstrs < %s \
+; RUN:     | FileCheck %s --check-prefixes=RV32-CMOV-LATE
 
 ; Basic select eq with Zibi immediate: should use bnei+mv SFB pattern when SFB enabled.
 define i32 @select_eq(i32 %a, i32 %b, i32 %c) {
@@ -71,6 +75,24 @@ define i32 @select_eq(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB0_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqi a0, 5, .LBB0_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB0_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, 5, .LBB0_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB0_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -135,6 +157,24 @@ define i32 @select_ne(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB1_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_ne:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    bnei a0, 5, .LBB1_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB1_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_ne:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    bnei a0, 5, .LBB1_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB1_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -199,6 +239,24 @@ define i32 @select_eq_xor(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB2_2:
 ; RV64-CMOV-NEXT:    mv a0, a2
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_xor:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    addi a0, a0, -5
+; RV32-LATE-NEXT:    snez a0, a0
+; RV32-LATE-NEXT:    addi a0, a0, -1
+; RV32-LATE-NEXT:    and a0, a0, a2
+; RV32-LATE-NEXT:    xor a0, a1, a0
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_xor:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    bnei a0, 5, .LBB2_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    xor a1, a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB2_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %xor = xor i32 %b, %c
   %ret = select i1 %tst, i32 %xor, i32 %b
@@ -263,6 +321,24 @@ define i32 @select_ne_add(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB3_2:
 ; RV64-CMOV-NEXT:    mv a0, a2
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_ne_add:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    addi a0, a0, -5
+; RV32-LATE-NEXT:    seqz a0, a0
+; RV32-LATE-NEXT:    addi a0, a0, -1
+; RV32-LATE-NEXT:    and a0, a0, a2
+; RV32-LATE-NEXT:    add a0, a1, a0
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_ne_add:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, 5, .LBB3_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    add a1, a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB3_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %add = add i32 %b, %c
   %ret = select i1 %tst, i32 %add, i32 %b
@@ -328,6 +404,24 @@ define i32 @select_eq_imm1(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB4_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_imm1:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqi a0, 1, .LBB4_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB4_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_imm1:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, 1, .LBB4_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB4_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 1
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -392,6 +486,24 @@ define i32 @select_eq_imm31(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB5_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_imm31:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqi a0, 31, .LBB5_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB5_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_imm31:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, 31, .LBB5_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB5_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 31
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -456,6 +568,24 @@ define i32 @select_eq_imm_neg1(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB6_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_imm_neg1:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqi a0, -1, .LBB6_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB6_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_imm_neg1:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, -1, .LBB6_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB6_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, -1
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -526,6 +656,26 @@ define i32 @select_eq_imm32(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB7_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_imm32:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    li a3, 32
+; RV32-LATE-NEXT:    beq a0, a3, .LBB7_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB7_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_imm32:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    li a3, 32
+; RV32-CMOV-LATE-NEXT:    beq a0, a3, .LBB7_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB7_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 32
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -590,6 +740,24 @@ define i32 @select_eq_imm0(i32 %a, i32 %b, i32 %c) {
 ; RV64-CMOV-NEXT:  .LBB8_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_imm0:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqz a0, .LBB8_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB8_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_imm0:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqz a0, .LBB8_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB8_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 0
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -654,6 +822,24 @@ define i32 @select_eq_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-CMOV-NEXT:  .LBB9_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_minsize:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    beqi a0, 5, .LBB9_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB9_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_minsize:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    beqi a0, 5, .LBB9_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB9_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -717,6 +903,24 @@ define i32 @select_ne_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-CMOV-NEXT:  .LBB10_2:
 ; RV64-CMOV-NEXT:    mv a0, a1
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_ne_minsize:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    bnei a0, 5, .LBB10_2
+; RV32-LATE-NEXT:  # %bb.1:
+; RV32-LATE-NEXT:    mv a1, a2
+; RV32-LATE-NEXT:  .LBB10_2:
+; RV32-LATE-NEXT:    mv a0, a1
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_ne_minsize:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    bnei a0, 5, .LBB10_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    mv a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB10_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -783,6 +987,24 @@ define i32 @select_eq_xor_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-CMOV-NEXT:  .LBB11_2:
 ; RV64-CMOV-NEXT:    mv a0, a2
 ; RV64-CMOV-NEXT:    ret
+;
+; RV32-LATE-LABEL: select_eq_xor_minsize:
+; RV32-LATE:       # %bb.0:
+; RV32-LATE-NEXT:    addi a0, a0, -5
+; RV32-LATE-NEXT:    snez a0, a0
+; RV32-LATE-NEXT:    addi a0, a0, -1
+; RV32-LATE-NEXT:    and a0, a0, a2
+; RV32-LATE-NEXT:    xor a0, a1, a0
+; RV32-LATE-NEXT:    ret
+;
+; RV32-CMOV-LATE-LABEL: select_eq_xor_minsize:
+; RV32-CMOV-LATE:       # %bb.0:
+; RV32-CMOV-LATE-NEXT:    bnei a0, 5, .LBB11_2
+; RV32-CMOV-LATE-NEXT:  # %bb.1:
+; RV32-CMOV-LATE-NEXT:    xor a1, a1, a2
+; RV32-CMOV-LATE-NEXT:  .LBB11_2:
+; RV32-CMOV-LATE-NEXT:    mv a0, a1
+; RV32-CMOV-LATE-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %xor = xor i32 %b, %c
   %ret = select i1 %tst, i32 %xor, i32 %b

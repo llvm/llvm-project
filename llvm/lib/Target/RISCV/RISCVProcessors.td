@@ -790,7 +790,9 @@ class VeeREH1TuneInfo : RISCVTuneInfo {
 // VeeR EH1 has no data cache and a single load/store unit, so clustering
 // loads gains no locality and only adds register pressure. Store clustering
 // stays on: disabling it measured neutral. Misaligned loads and stores to
-// idempotent memory are split by the core without a trap.
+// idempotent memory are split by the core without a trap. A branch over a
+// move is a real branch, so selects keep their branchless lowerings and only
+// the late select expansion is used.
 def CHIPSALLIANCE_VEER_EH1 : RISCVProcessorModel<"chipsalliance-veer-eh1",
                                                  VeeREH1Model,
                                                  [Feature32Bit,
@@ -802,7 +804,8 @@ def CHIPSALLIANCE_VEER_EH1 : RISCVProcessorModel<"chipsalliance-veer-eh1",
                                                   FeatureUnalignedScalarMem],
                                                  [TuneNoDefaultUnroll,
                                                   TuneDisableMISchedLoadClustering,
-                                                  TunePostRAScheduler]>,
+                                                  TunePostRAScheduler,
+                                                  TuneLateSelectExpansion]>,
                              VeeREH1TuneInfo;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
