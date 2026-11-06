@@ -4478,6 +4478,30 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         for (auto &SR : LI.subranges())
           UpdateDefIndex(SR);
       }
+
+      // A use tied to an early-clobber def is read at the early-clobber slot.
+      // The three-address instruction has no tied operands, so the use is now
+      // read at the register slot.
+      const MachineOperand &OldDef = MI.getOperand(0);
+      if (OldDef.isEarlyClobber()) {
+        assert(OldDef.isTied() &&
+               "expected a tied def in the two-address form");
+        Register UseReg =
+            MI.getOperand(MI.findTiedOperandIdx(OldDef.getOperandNo()))
+                .getReg();
+        SlotIndex Idx = LIS->getInstructionIndex(*NewMI);
+        SlotIndex OldEnd = Idx.getRegSlot(true);
+        SlotIndex NewEnd = Idx.getRegSlot();
+        auto UpdateUseIndex = [&](LiveRange &LR) {
+          LiveRange::Segment *S = LR.getSegmentContaining(Idx);
+          if (S && S->end == OldEnd)
+            S->end = NewEnd;
+        };
+        LiveInterval &LI = LIS->getInterval(UseReg);
+        UpdateUseIndex(LI);
+        for (LiveInterval::SubRange &SR : LI.subranges())
+          UpdateUseIndex(SR);
+      }
     }
   }
 

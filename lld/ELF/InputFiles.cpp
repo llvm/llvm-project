@@ -26,10 +26,12 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <thread>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -343,13 +345,50 @@ template <class ELFT>
 static void
 doParseFiles(Ctx &ctx,
              const SmallVector<std::unique_ptr<InputFile>, 0> &files) {
+  // Use worker threads to intern global symbol names while the doParseFile loop
+  // below parses files. The workers use a copy of files as doParseFile may add
+  // additional files. If there is a Fatal error in doParseFile then control
+  // flow longjmps out of this frame while the worker threads are still running,
+  // so their state remains on the heap and leaks along with ctx.
+  struct InternQueue {
+    SmallVector<ObjFile<ELFT> *, 0> files;
+    std::atomic<size_t> next = 0;
+    parallel::TaskGroup tg;
+  };
+  auto queue = std::make_unique<InternQueue>();
+  if (ctx.arg.threadCount > 1) {
+    for (const std::unique_ptr<InputFile> &f : files) {
+      if (f->kind() == InputFile::ObjKind && f->ekind == ctx.arg.ekind)
+        queue->files.push_back(cast<ObjFile<ELFT>>(f.get()));
+    }
+  }
+  ctx.symtab->concurrent = !queue->files.empty();
+  for (size_t i = 1; i < ctx.arg.threadCount; ++i)
+    queue->tg.spawn([q = queue.get()] {
+      size_t j;
+      while ((j = q->next.fetch_add(1, std::memory_order_relaxed)) <
+             q->files.size())
+        q->files[j]->internSymbols();
+    });
+
   // Add all files to the symbol table. This will add almost all symbols that we
   // need to the symbol table. This process might add files to the link due to
   // addDependentLibrary.
-  for (size_t i = 0; i < files.size(); ++i) {
+  for (size_t i = 0, j = 0; i < files.size(); ++i) {
     llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
+    // Claim the file unless a worker has claimed it. If one has, wait for it.
+    if (j < queue->files.size() && files[i].get() == queue->files[j]) {
+      size_t expected = j;
+      if (!queue->next.compare_exchange_strong(expected, j + 1,
+                                               std::memory_order_relaxed))
+        while (!queue->files[j]->interned)
+          std::this_thread::yield();
+      ++j;
+    }
     doParseFile<ELFT>(ctx, files[i].get());
   }
+  queue.reset();
+  ctx.symtab->concurrent = false;
   if (ctx.driver.armCmseImpLib)
     cast<ObjFile<ELFT>>(*ctx.driver.armCmseImpLib).importCmseSymbols();
 }
@@ -524,6 +563,21 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
   numSymbols = eSyms.size();
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
+}
+
+template <class ELFT> void ObjFile<ELFT>::internSymbols() {
+  assert(!interned);
+  // Leave names with '@' and errors to the serial parse loop.
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    Expected<StringRef> name = eSyms[i].getName(stringTable);
+    if (!name)
+      consumeError(name.takeError());
+    else if (!name->contains('@'))
+      symbols[i] = ctx.symtab->intern(CachedHashStringRef(*name));
+  }
+  interned = true;
 }
 
 template <class ELFT>
@@ -1197,6 +1251,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
+template <class ELFT> Symbol *ObjFile<ELFT>::insertGlobal(size_t i) {
+  if (symbols[i])
+    return ctx.symtab->insert(symbols[i]);
+  return ctx.symtab->insert(
+      CHECK2(this->getELFSyms<ELFT>()[i].getName(stringTable), this));
+}
+
 // Initialize symbols. symbols is a parallel array to the corresponding ELF
 // symbol table.
 template <class ELFT>
@@ -1205,11 +1266,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
 
-  // Some entries have been filled by LazyObjFile.
-  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-    if (!symbols[i])
-      symbols[i] = symtab->insert(CHECK2(eSyms[i].getName(stringTable), this));
+    symbols[i] = insertGlobal(i);
 
   // Perform symbol resolution on non-local symbols.
   SmallVector<unsigned, 32> undefineds;
@@ -2027,16 +2085,16 @@ std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
   numSymbols = eSyms.size();
-  symbols = std::make_unique<Symbol *[]>(numSymbols);
+  if (!symbols)
+    symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
-    symbols[i] = symtab->insert(CHECK2(eSyms[i].getName(stringTable), this));
+    symbols[i] = insertGlobal(i);
     symbols[i]->resolve(ctx, LazySymbol{*this});
     if (!lazy)
       break;

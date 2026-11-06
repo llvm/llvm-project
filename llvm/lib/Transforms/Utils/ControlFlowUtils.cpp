@@ -351,10 +351,11 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DTU->applyUpdates(Updates);
   }
 
-  for (auto I : DeletionCandidates) {
-    if (I->use_empty())
-      if (auto *Inst = dyn_cast_or_null<Instruction>(I))
+  for (auto &I : DeletionCandidates) {
+    if (auto *Inst = dyn_cast_if_present<Instruction>(I)) {
+      if (Inst->use_empty())
         Inst->eraseFromParent();
+    }
   }
 
   return {FirstGuardBlock, true};

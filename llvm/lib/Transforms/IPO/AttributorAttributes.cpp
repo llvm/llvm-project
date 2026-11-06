@@ -7059,6 +7059,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         return true;
       }
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        // A musttail call cannot access allocas of the caller, and its marker
+        // cannot be removed.
+        if (CB->isMustTailCall()) {
+          LLVM_DEBUG(dbgs() << "[H2S] musttail user: " << *UserI << "\n");
+          ValidUsesOnly = false;
+          return true;
+        }
+
         if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
           return true;
         if (DeallocationInfos.count(CB)) {

@@ -2039,8 +2039,11 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
-                                                 getLoadStorePointerOperand(I));
+    Type *ScalarTy = getLoadStoreType(I);
+    Value *Ptr = getLoadStorePointerOperand(I);
+    if (Legal->isCompressedLoadOrStore(I))
+      return false; // We can't scalarize compressed loads/stores.
+    bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
     return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
            !isLegalGatherOrScatter(I, VF);
   }
@@ -2280,8 +2283,18 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
-  // In order to be widened, the pointer should be consecutive, first of all.
+  // In order to be widened, the pointer should be consecutive or compressed.
   int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
+
+  // Check if the pointer is derived from a conditional induction PHI, which
+  // can be widened as a compressstore/expandload.
+  if (std::optional<CompressedPtrInfo> PtrInfo =
+          Legal->getCompressedPtrInfo(Ptr)) {
+    Stride = getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, ScalarTy, Ptr, PSE)
+                 .value_or(0);
+    assert(Stride == 1 && "Compressed memory ops must be consecutive");
+  }
+
   if (!Stride)
     return std::nullopt;
 
@@ -2959,6 +2972,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPExpandSCEVSC:
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
+      case VPRecipeBase::VPConditionalInductionPHISC:
         continue;
       case VPRecipeBase::VPReductionSC:
       case VPRecipeBase::VPActiveLaneMaskPHISC:
@@ -3041,6 +3055,12 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
                   return RecurrenceDescriptor::isFindLastRecurrenceKind(
                       RedPhi.getRecurrenceKind());
                 });
+}
+
+/// Returns true if the VPlan contains a VPConditionalInductionPHIRecipe.
+static bool hasConditionalInductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                IsaPred<VPConditionalInductionPHIRecipe>);
 }
 
 /// Determine how to lower the epilogue for the vector epilogue loop.
@@ -3398,6 +3418,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // exits because the VPInstruction::AnyOf code cannot currently handle
   // multiple parts.
   if (Plan.hasEarlyExit())
+    return 1;
+
+  // TODO: Conditional inductions don't support interleaving yet.
+  if (hasConditionalInductionPhi(Plan))
     return 1;
 
   const bool HasReductions =
@@ -3796,8 +3820,10 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // of the instruction.
         // 2. Scalable VF, as that would lead to invalid scalarization costs.
         // 3. Emulated masked memrefs, if a hacked cost is needed.
+        // 4. Compressed loads/stores (which do not support scalarization)
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
+            !Legal->isCompressedLoadOrStore(&I) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
           for (const auto &[I, IC] : ScalarCosts)
             ScalarCostsVF.insert({I, IC});
@@ -4056,9 +4082,14 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
   if (isMaskRequired(I)) {
-    unsigned IID = I->getOpcode() == Instruction::Load
-                       ? Intrinsic::masked_load
-                       : Intrinsic::masked_store;
+    Intrinsic::ID LoadIID = Intrinsic::masked_load;
+    Intrinsic::ID StoreIID = Intrinsic::masked_store;
+    if (Legal->isCompressedLoadOrStore(I)) {
+      LoadIID = Intrinsic::masked_expandload;
+      StoreIID = Intrinsic::masked_compressstore;
+    }
+
+    unsigned IID = I->getOpcode() == Instruction::Load ? LoadIID : StoreIID;
     Cost += TTI.getMemIntrinsicInstrCost(
         MemIntrinsicCostAttributes(IID, VectorTy, Alignment, AS),
         Config.CostKind);
@@ -4336,6 +4367,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         setWideningDecision(&I, VF, *Decision, WidenCost);
         continue;
       }
+
+      assert(!Legal->isCompressedLoadOrStore(&I) &&
+             "compressed loads/stores should be handled in "
+             "memoryInstructionCanBeWidened");
 
       // Choose between Interleaving, Gather/Scatter or Scalarization.
       InstructionCost InterleaveCost = InstructionCost::getInvalid();
@@ -4862,6 +4897,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
+        // TODO: Add 'Compressed' hint (not needed for any targets yet).
+        if (Legal->isCompressedLoadOrStore(I))
+          return TTI::CastContextHint::None;
         return isPredicatedInst(I) ? TTI::CastContextHint::Masked
                                    : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
@@ -5870,6 +5908,43 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
+std::optional<CompressedPtrInfo>
+VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
+  if (!is_contained({Instruction::Load, Instruction::Store}, VPI->getOpcode()))
+    return std::nullopt;
+  Instruction *I = VPI->getUnderlyingInstr();
+  return Legal->getCompressedPtrInfo(getLoadStorePointerOperand(I));
+}
+
+VPWidenMemIntrinsicRecipe *
+VPRecipeBuilder::widenCompressedLoadOrStore(VPInstruction *VPI) {
+  assert(getCompressedPtrInfo(VPI) && "Expected a compressed load/store");
+
+  VPBuilder::InsertPointGuard Guard(Builder);
+  Builder.setInsertPoint(VPI);
+
+  VPValue *Mask = VPI->getMask();
+  Type *AccessTy = vputils::getLoadStoreValueType(VPI);
+  Align Alignment = getLoadStoreAlignment(VPI->getUnderlyingInstr());
+
+  VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
+                                                       : VPI->getOperand(1);
+  Ptr = Builder.createConsecutiveVectorPointer(Ptr, AccessTy,
+                                               /*Reverse=*/false,
+                                               VPI->getDebugLoc());
+
+  // Note: For expandload we fill masked-off lanes with passthru poison.
+  if (VPI->getOpcode() == Instruction::Load)
+    return new VPWidenMemIntrinsicRecipe(
+        Intrinsic::masked_expandload, {Ptr, Mask, Plan.getPoison(AccessTy)},
+        AccessTy, Alignment, *VPI, VPI->getDebugLoc());
+
+  VPValue *StoredValue = VPI->getOperand(0);
+  return new VPWidenMemIntrinsicRecipe(Intrinsic::masked_compressstore,
+                                       {StoredValue, Ptr, Mask}, AccessTy,
+                                       Alignment, *VPI, VPI->getDebugLoc());
+}
+
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
     VPInstruction *VPI, VPBuilder &FinalRedStoresBuilder) {
   StoreInst *SI;
@@ -6125,8 +6200,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   if (!RUN_VPLAN_PASS(
           VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop, ORE,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
-          Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
-          Config.getHints().allowReordering())) {
+          Legal->getConditionalInductions(), Legal->getFixedOrderRecurrences(),
+          Config.getInLoopReductions(), Config.getHints().allowReordering())) {
     return nullptr;
   }
 
@@ -6331,6 +6406,10 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, Legal, PlanCM, Builder);
+
+  if (!RUN_VPLAN_PASS(VPlanTransforms::widenCompressingPatterns, *Plan,
+                      RecipeBuilder, *PSE.getSE()))
+    return nullptr;
 
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
                  Range.Start);
@@ -7243,7 +7322,10 @@ static void preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      PHINode *IndPhi =
+          isa<VPWidenInductionRecipe>(&R)
+              ? cast<VPWidenInductionRecipe>(&R)->getPHINode()
+              : cast<VPConditionalInductionPHIRecipe>(&R)->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
     }
@@ -7664,6 +7746,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
     IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
                   "Unable to interleave due to early exit with side effects."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
+  if (InterleaveLoop && LVL.hasConditionalInductions()) {
+    LLVM_DEBUG(
+        dbgs() << "LV: Not interleaving due to conditional inductions.\n");
+    IntDiagMsg = {"ConditionalInductionsPreventInterleaving",
+                  "Unable to interleave due to conditional inductions."};
     InterleaveLoop = false;
     IC = 1;
   }
