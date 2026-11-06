@@ -834,12 +834,11 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo2(ptr addrspace(1) %a, double %x, do
 ; GFX1251-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
-; GFX1251-SDAG-NEXT:    s_xor_b32 s3, s3, 0x80000000
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7]
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7] neg_lo:[0,1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-SDAG-NEXT:    s_endpgm
 ;
@@ -890,12 +889,11 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, double %x, do
 ; GFX1251-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
-; GFX1251-SDAG-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[6:7]
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7]
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7] neg_hi:[0,1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-SDAG-NEXT:    s_endpgm
 ;
@@ -2925,4 +2923,29 @@ define amdgpu_kernel void @fma_v2_imm_imm_s(ptr addrspace(1) %a) {
   %fma = tail call <2 x double> @llvm.fma.v2f64(<2 x double> <double 100.0, double 100.0>, <2 x double> <double 200.0, double 200.0>, <2 x double> %s2)
   store <2 x double> %fma, ptr addrspace(1) %gep, align 8
   ret void
+}
+
+define <2 x double> @fma_v2_fneg_bv(<2 x double> %a, <2 x double> %b, double %x, double %y) {
+; GFX1251-SDAG-LABEL: fma_v2_fneg_bv:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[8:11] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1251-GISEL-LABEL: fma_v2_fneg_bv:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v9, 0x80000000, v9
+; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v11, 0x80000000, v11
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[8:11]
+; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nx = fneg double %x
+  %ny = fneg double %y
+  %v0 = insertelement <2 x double> poison, double %nx, i64 0
+  %v1 = insertelement <2 x double> %v0, double %ny, i64 1
+  %fma = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %v1)
+  ret <2 x double> %fma
 }

@@ -4957,6 +4957,289 @@ define <2 x float> @strict_fmul_v2_ss(<2 x float> inreg %a, <2 x float> inreg %b
   ret <2 x float> %mul
 }
 
+define <2 x float> @fma_v2_fneg_bv(<2 x float> %a, <2 x float> %b, float %x, float %y) {
+; GFX900-LABEL: fma_v2_fneg_bv:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v2, -v4
+; GFX900-NEXT:    v_fma_f32 v1, v1, v3, -v5
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fma_v2_fneg_bv:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fma_v2_fneg_bv:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fma_v2_fneg_bv:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fma_v2_fneg_bv:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nx = fneg float %x
+  %ny = fneg float %y
+  %v0 = insertelement <2 x float> poison, float %nx, i64 0
+  %v1 = insertelement <2 x float> %v0, float %ny, i64 1
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %v1)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fma_v2_fneg_bv_lo(<2 x float> %a, <2 x float> %b, float %x, float %y) {
+; GFX900-LABEL: fma_v2_fneg_bv_lo:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v2, -v4
+; GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fma_v2_fneg_bv_lo:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1]
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fma_v2_fneg_bv_lo:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fma_v2_fneg_bv_lo:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1]
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fma_v2_fneg_bv_lo:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nx = fneg float %x
+  %v0 = insertelement <2 x float> poison, float %nx, i64 0
+  %v1 = insertelement <2 x float> %v0, float %y, i64 1
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %v1)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fma_v2_fneg_bv_hi(<2 x float> %a, <2 x float> %b, float %x, float %y) {
+; GFX900-LABEL: fma_v2_fneg_bv_hi:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GFX900-NEXT:    v_fma_f32 v1, v1, v3, -v5
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fma_v2_fneg_bv_hi:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_hi:[0,0,1]
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fma_v2_fneg_bv_hi:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fma_v2_fneg_bv_hi:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_hi:[0,0,1]
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fma_v2_fneg_bv_hi:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %ny = fneg float %y
+  %v0 = insertelement <2 x float> poison, float %x, i64 0
+  %v1 = insertelement <2 x float> %v0, float %ny, i64 1
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %v1)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fma_v2_fneg_fneg_bv_hi(<2 x float> %a, <2 x float> %b, float %x, float %y) {
+; GFX900-LABEL: fma_v2_fneg_fneg_bv_hi:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v2, -v4
+; GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fma_v2_fneg_fneg_bv_hi:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1]
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fma_v2_fneg_fneg_bv_hi:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fma_v2_fneg_fneg_bv_hi:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1]
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fma_v2_fneg_fneg_bv_hi:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %ny = fneg float %y
+  %v0 = insertelement <2 x float> poison, float %x, i64 0
+  %v1 = insertelement <2 x float> %v0, float %ny, i64 1
+  %neg = fneg <2 x float> %v1
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %neg)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fmul_v2_fneg_bv(<2 x float> %a, float %x, float %y) {
+; GFX900-LABEL: fmul_v2_fneg_bv:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mul_f32_e64 v0, v0, -v2
+; GFX900-NEXT:    v_mul_f32_e64 v1, v1, -v3
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fmul_v2_fneg_bv:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3] neg_lo:[0,1] neg_hi:[0,1]
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fmul_v2_fneg_bv:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fmul_v2_fneg_bv:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fmul_v2_fneg_bv:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nx = fneg float %x
+  %ny = fneg float %y
+  %v0 = insertelement <2 x float> poison, float %nx, i64 0
+  %v1 = insertelement <2 x float> %v0, float %ny, i64 1
+  %mul = fmul <2 x float> %a, %v1
+  ret <2 x float> %mul
+}
+
+define <2 x float> @fmul_v2_fneg_bv_multi_use(<2 x float> %a, float %x, float %y, ptr addrspace(1) %p) {
+; GFX900-LABEL: fmul_v2_fneg_bv_multi_use:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v6, 0x80000000, v2
+; GFX900-NEXT:    v_xor_b32_e32 v7, 0x80000000, v3
+; GFX900-NEXT:    v_mul_f32_e64 v0, v0, -v2
+; GFX900-NEXT:    v_mul_f32_e64 v1, v1, -v3
+; GFX900-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-SDAG-LABEL: fmul_v2_fneg_bv_multi_use:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-SDAG-NEXT:    v_xor_b32_e32 v6, 0x80000000, v2
+; PACKED-SDAG-NEXT:    v_xor_b32_e32 v7, 0x80000000, v3
+; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3] neg_lo:[0,1] neg_hi:[0,1]
+; PACKED-SDAG-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; PACKED-GISEL-LABEL: fmul_v2_fneg_bv_multi_use:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; PACKED-GISEL-NEXT:    global_store_dwordx2 v[4:5], v[2:3], off
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: fmul_v2_fneg_bv_multi_use:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v6, 0x80000000, v2
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v7, 0x80000000, v3
+; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    global_store_b64 v[4:5], v[6:7], off
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: fmul_v2_fneg_bv_multi_use:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1250-GISEL-NEXT:    global_store_b64 v[4:5], v[2:3], off
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nx = fneg float %x
+  %ny = fneg float %y
+  %v0 = insertelement <2 x float> poison, float %nx, i64 0
+  %v1 = insertelement <2 x float> %v0, float %ny, i64 1
+  store <2 x float> %v1, ptr addrspace(1) %p
+  %mul = fmul <2 x float> %a, %v1
+  ret <2 x float> %mul
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)

@@ -3863,6 +3863,42 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       }
     }
 
+    // A packed 32-bit or 64-bit operand is just a pair of registers, so
+    // negated elements can be folded into the modifiers by rebuilding the
+    // pair from the un-negated elements.
+    if (VecSize > 32) {
+      SDValue Elts[2] = {stripBitcast(Src.getOperand(0)),
+                         stripBitcast(Src.getOperand(1))};
+      unsigned EltMods = VecMods;
+      if (Elts[0].getOpcode() == ISD::FNEG) {
+        Elts[0] = Elts[0].getOperand(0);
+        EltMods ^= SISrcMods::NEG;
+      }
+      if (Elts[1].getOpcode() == ISD::FNEG) {
+        Elts[1] = Elts[1].getOperand(0);
+        EltMods ^= SISrcMods::NEG_HI;
+      }
+
+      if (EltMods != VecMods) {
+        SDLoc SL(In);
+        const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+        auto RC = Src->isDivergent() ? TRI->getVGPRClassForBitWidth(VecSize)
+                                     : TRI->getSGPRClassForBitWidth(VecSize);
+        unsigned NumRegs = VecSize / 64;
+        const SDValue Ops[] = {
+            CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Elts[0],
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs),
+                                      SL, MVT::i32),
+            Elts[1],
+            CurDAG->getTargetConstant(
+                TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
+        Src = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
+                                             Src.getValueType(), Ops),
+                      0);
+        VecMods = EltMods;
+      }
+    }
+
     Mods = VecMods;
   } else if (Src.getOpcode() == ISD::VECTOR_SHUFFLE &&
              Src.getNumOperands() == 2) {
