@@ -15,13 +15,13 @@ define amdgpu_kernel void @select_vectors_with_identical_lanes(i32 %a, i32 %b, i
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; CHECK-NEXT:    s_mov_b32 s6, 0
+; CHECK-NEXT:    s_wait_xcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s5, 16
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s7, s2
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_eq_u32 s6, 7
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_cselect_b32 s7, s2, s2
-; CHECK-NEXT:    s_cselect_b32 s5, 16, 16
 ; CHECK-NEXT:    s_cselect_b32 s4, s0, s1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[4:7]
