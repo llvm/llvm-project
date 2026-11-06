@@ -1805,9 +1805,9 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1332-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1332-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1332-NEXT:    ; implicit-def: $vgpr0
 ; GFX1332-NEXT:    s_mov_b32 s4, s6
 ; GFX1332-NEXT:    s_mov_b32 s6, -1
+; GFX1332-NEXT:    ; implicit-def: $vgpr0
 ; GFX1332-NEXT:    s_and_saveexec_b32 s8, vcc_lo
 ; GFX1332-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1332-NEXT:  ; %bb.1:
@@ -6445,9 +6445,9 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1332-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1332-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1332-NEXT:    ; implicit-def: $vgpr0
 ; GFX1332-NEXT:    s_mov_b32 s4, s6
 ; GFX1332-NEXT:    s_mov_b32 s6, -1
+; GFX1332-NEXT:    ; implicit-def: $vgpr0
 ; GFX1332-NEXT:    s_and_saveexec_b32 s8, vcc_lo
 ; GFX1332-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX1332-NEXT:  ; %bb.1:

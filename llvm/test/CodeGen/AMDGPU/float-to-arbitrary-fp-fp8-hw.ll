@@ -3257,10 +3257,9 @@ define i8 @to_e5m3fnu_f32_sat(float %x) {
 ; GFX1310-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
 ; GFX1310-NEXT:    v_or_b32_e32 v3, v4, v3
 ; GFX1310-NEXT:    v_lshl_or_b32 v4, v1, 3, v2
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1310-NEXT:    v_cndmask_b32_e64 v1, v4, v3, s2
 ; GFX1310-NEXT:    s_or_b32 s0, s1, s0
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1310-NEXT:    v_cndmask_b32_e64 v1, v4, v3, s2
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v1, v1, 0xfe, s0
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo

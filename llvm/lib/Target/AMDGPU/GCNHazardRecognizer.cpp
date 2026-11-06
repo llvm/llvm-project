@@ -538,50 +538,14 @@ static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   return std::get<0>(AMDGPU::Hwreg::HwregEncoding::decode(RegOp->getImm()));
 }
 
-/// Check if \p MI is a SALU instruction that reads an SGPR which is not VCC.
-static bool isSALUReadsNonVCCSGPR(const MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI,
-                                  const SIRegisterInfo &TRI) {
-  if (!SIInstrInfo::isSALU(MI))
-    return false;
-
-  for (const MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isReg())
-      continue;
-
-    Register Reg = Op.getReg();
-
-    if (!TRI.isSGPRReg(MRI, Reg))
-      continue;
-
-    if (Reg.isPhysical()) {
-      // Skip VCC registers
-      if (TRI.regsOverlap(Reg.asMCReg(), TRI.getVCC()))
-        continue;
-
-      // Physical SGPR
-      return true;
-    }
-
-    if (Reg.isVirtual()) {
-      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-        continue;
-
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Check if \p MI is a SALU/SMEM/Tex/LDS/Export instruction that reads an SGPR
 /// operand.
 static bool isNonVALUReadsSGPR(const MachineInstr &MI,
                                const MachineRegisterInfo &MRI,
                                const SIRegisterInfo &TRI) {
-  if (!SIInstrInfo::isSALU(MI) && !SIInstrInfo::isSMRD(MI) &&
-      !SIInstrInfo::isDS(MI) && !SIInstrInfo::isEXP(MI) &&
-      !SIInstrInfo::isVMEM(MI))
+  if (!(SIInstrInfo::isSALU(MI) || SIInstrInfo::isSMRD(MI) ||
+        SIInstrInfo::isDS(MI) || SIInstrInfo::isEXP(MI) ||
+        SIInstrInfo::isVMEM(MI)))
     return false;
 
   for (const MachineOperand &Op : MI.explicit_uses()) {
@@ -595,8 +559,7 @@ static bool isNonVALUReadsSGPR(const MachineInstr &MI,
   return false;
 }
 
-/// Check if \p MI is a VALU that defines an SGPR (excluding the implicit
-/// condition register).
+/// Check if \p MI is a VALU that defines an SGPR
 static bool isVALUDefsSGPR(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI,
                            const SIRegisterInfo &TRI) {
@@ -604,51 +567,9 @@ static bool isVALUDefsSGPR(const MachineInstr &MI,
     return false;
 
   for (const MachineOperand &Op : MI.defs()) {
-    Register Reg = Op.getReg();
-    if (Reg == AMDGPU::MODE)
-      continue;
-
-    if (Reg.isVirtual()) {
-      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-        continue;
-    } else if (TRI.regsOverlap(Reg.asMCReg(), TRI.getVCC()) ||
-               TRI.regsOverlap(Reg.asMCReg(), MCRegister(AMDGPU::EXEC))) {
-      continue;
-    }
-
-    if (TRI.isSGPRReg(MRI, Reg))
+    if (TRI.isSGPRReg(MRI, Op.getReg()))
       return true;
   }
-  return false;
-}
-
-/// Check if \p MI is a VALU that modifies the implicit condition register
-/// consumed by CBRANCH VCCZ or EXECZ.
-static bool isVALUWritesVCCZEXECZ(const MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI,
-                                  const SIRegisterInfo &TRI, bool IsCBranchVCCZ,
-                                  bool IsCBranchEXECZ) {
-  if (!SIInstrInfo::isVALU(MI, false))
-    return false;
-
-  if (IsCBranchEXECZ && MI.modifiesRegister(AMDGPU::EXEC, &TRI))
-    return true;
-
-  if (IsCBranchVCCZ) {
-    if (MI.modifiesRegister(TRI.getVCC(), &TRI))
-      return true;
-
-    for (const MachineOperand &Op : MI.all_defs()) {
-      Register Reg = Op.getReg();
-      if (!Reg.isVirtual())
-        continue;
-      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-        return true;
-    }
-  }
-
   return false;
 }
 
@@ -667,38 +588,13 @@ static bool isVALUReadsSGPR(const MachineInstr &MI,
     if (Reg == AMDGPU::M0)
       return true;
 
-    if (Reg.isPhysical() &&
-        TRI.regsOverlap(Reg.asMCReg(), MCRegister(AMDGPU::EXEC)))
-      return true;
-
     if (TRI.isSGPRReg(MRI, Reg))
       return true;
   }
   return false;
 }
 
-/// Check if \p MI is a VALU that modifies the implicit condition register.
-static bool isVALUWritesVCC(const MachineInstr &MI,
-                            const MachineRegisterInfo &MRI,
-                            const SIRegisterInfo &TRI) {
-  if (!SIInstrInfo::isVALU(MI, false))
-    return false;
-
-  if (MI.modifiesRegister(TRI.getVCC(), &TRI))
-    return true;
-
-  for (const MachineOperand &Op : MI.all_defs()) {
-    Register Reg = Op.getReg();
-    if (!Reg.isVirtual())
-      continue;
-    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-    if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
-      return true;
-  }
-  return false;
-}
-
-/// Check if \p MI is a CBRANCH instruction that reads VCCZ.
+// Check if \p MI is a CBRANCH instruction that reads VCCZ.
 static bool isCBranchReadVCCZ(const MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   return Opc == AMDGPU::S_CBRANCH_VCCZ || Opc == AMDGPU::S_CBRANCH_VCCNZ;
@@ -742,10 +638,18 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
       !IsVMEM && !IsDS && !IsEXP)
     return StallsNeeded;
 
-  // VALU writes SGPR, and SALU/SMEM/Tex/LDS/Export reads any SGPR
-  // Note: VALU writes to VCC are handled separately below.
+  // 1. VALU writes SGPR, and SALU/SMEM/Tex/LDS/Export reads any SGPR
+  // 2. VALU writes VCC and SALU reads non-VCC. Note, we must use
+  // (getWaveMaskRegClass || getBoolRC) to gaurantee that we capture any
+  // register which may be assigned to VCC. Thus, to define this hazard in terms
+  // of RegisterClass, we can only capture an extremely narrow subset. For now,
+  // it is just folded in here.
+  // TODO: Can we use opcode based approach to do finer-grain hazard detection
+  // 3. VALU writes VCCZ/EXECZ and CBRANCH reads VCCZ/EXECZ. We use VALU writes
+  // VCC / EXEC as a proxy for writing VCCZ / EXECZ. See note above.
   const int VASdstWaitStates = ST.isWave64() ? 17 : 16;
-  if (isNonVALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy) {
+  if (isNonVALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy || IsCBranchVCCZ ||
+      IsCBranchEXECZ) {
     auto IsVALUDefsSGPRHazardFn = [&MRI, this](const MachineInstr &MI) {
       return isVALUDefsSGPR(MI, MRI, TRI);
     };
@@ -759,31 +663,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
     }
   }
 
-  if (IsVMEM || IsEXP || IsDS)
-    return StallsNeeded;
-
-  assert(IsSALU || IsSMEM || IsSALUCopy || IsCBranchVCCZ || IsCBranchEXECZ);
-
-  // VALU writes VCCZ or EXECZ and CBranch consumes it.
-  if (IsCBranchVCCZ || IsCBranchEXECZ) {
-    auto IsVALUWritesVCCZEXECZHazardFn = [&MRI, IsCBranchVCCZ, IsCBranchEXECZ,
-                                          this](const MachineInstr &I) {
-      return isVALUWritesVCCZEXECZ(I, MRI, TRI, IsCBranchVCCZ, IsCBranchEXECZ);
-    };
-    int WaitStatesSinceWritesVCCZEXECZ =
-        getWaitStatesSince(IsVALUWritesVCCZEXECZHazardFn, VASdstWaitStates);
-    if (WaitStatesSinceWritesVCCZEXECZ < VASdstWaitStates) {
-      unsigned Stall = VASdstWaitStates - WaitStatesSinceWritesVCCZEXECZ;
-      LLVM_DEBUG(
-          dbgs() << "checkVASSrcVASDstHazards: VALU writes VCCZ/EXECZ, stall "
-                 << Stall << " cycles for: " << MI);
-      StallsNeeded = std::max(Stall, StallsNeeded);
-    }
-  }
-
-  // Check for va_ssrc hazards.
-  // These hazards only apply if the second instruction is SALU/SMEM.
-  if (IsCBranchVCCZ || IsCBranchEXECZ)
+  if (IsVMEM || IsEXP || IsDS || IsCBranchVCCZ || IsCBranchEXECZ)
     return StallsNeeded;
 
   assert(IsSALU || IsSMEM || IsSALUCopy);
@@ -801,27 +681,6 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
         dbgs() << "checkVASSrcVASDstHazards: VALU reads SGPR/M0/EXEC, stall "
                << Stall << " cycles for: " << MI);
     StallsNeeded = std::max(Stall, StallsNeeded);
-  }
-
-  if (IsSMEM)
-    return StallsNeeded;
-
-  assert(IsSALU || IsSALUCopy);
-
-  // VALU writes VCC followed by SALU which reads non-VCC SGPR
-  if (isSALUReadsNonVCCSGPR(MI, MRI, TRI) || IsSALUCopy) {
-    const int VALUWritesVCCHazardCycles = ST.isWave64() ? 5 : 4;
-    auto IsVALUWritesVCCHazardFn = [&MRI, this](const MachineInstr &MI) {
-      return isVALUWritesVCC(MI, MRI, TRI);
-    };
-    int WaitStatesSinceWritesVCC =
-        getWaitStatesSince(IsVALUWritesVCCHazardFn, VALUWritesVCCHazardCycles);
-    if (WaitStatesSinceWritesVCC < VALUWritesVCCHazardCycles) {
-      unsigned Stall = VALUWritesVCCHazardCycles - WaitStatesSinceWritesVCC;
-      LLVM_DEBUG(dbgs() << "checkVASSrcVASDstHazards: VALU writes VCC, stall "
-                        << Stall << " cycles for: " << MI);
-      StallsNeeded = std::max(Stall, StallsNeeded);
-    }
   }
 
   return StallsNeeded;
