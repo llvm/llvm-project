@@ -212,8 +212,7 @@ createThreadFlowLocation(json::Object &&Location,
 ///  @}
 
 StringRef SarifUriBase::remapUriToBaseUri(
-    StringRef FileURI,
-    const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds,
+    StringRef FileURI, const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds,
     StringRef &ParentId) {
   // Iterate through the map of original URI bases to find the longest matching
   // prefix for the given FileURI. If a match is found, remap the FileURI to the
@@ -225,9 +224,10 @@ StringRef SarifUriBase::remapUriToBaseUri(
                   const std::string &BaseURI = Entry.second.URI;
                   // Prevents base URI matching with itself
                   if (BaseURI.size() < FileURI.size() &&
-                    FileURI.starts_with(BaseURI)) {
+                      FileURI.starts_with(BaseURI)) {
                     const size_t MatchLength = BaseURI.size();
-                    // Equal bases: the smallest id wins, independent of map order.
+                    // Equal bases: the smallest id wins, independent of map
+                    // order.
                     if (MatchLength > BestMatchLength ||
                         (MatchLength == BestMatchLength &&
                          Entry.getKey() < BestMatchKey)) {

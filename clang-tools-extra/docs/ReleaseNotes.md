@@ -148,8 +148,7 @@ infrastructure are described first, followed by tool-specific sections.
   format.
 
 - Added a new {program}`clang-tidy` command line option
-  `-sarif-base-uri=<id>=<path|uri>` to define base URIs, so that SARIF
-  artifact locations are written relative to them.
+  `-experimental-sarif-base-uri=<id>=<path|uri>` to define base URIs, allowing artifactLocations to be written as relative URIs with a matching uriBaseId.
 
 #### New checks
 

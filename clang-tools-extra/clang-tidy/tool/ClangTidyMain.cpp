@@ -324,8 +324,10 @@ usual diagnostic output.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
-static cl::list<std::string> SarifBaseUri("sarif-base-uri", desc(R"(
-Defines a SARIF base URI as <id>=<path|uri>.
+static cl::list<std::string> SarifBaseUri("experimental-sarif-base-uri",
+                                          desc(R"(
+Used with --experimental-sarif-base-uri to
+define a SARIF base URI as <id>=<path|uri>.
 Paths are converted to file URIs. Values with
 '://' are used verbatim. Artifact locations
 under a base are written relative to it, all
