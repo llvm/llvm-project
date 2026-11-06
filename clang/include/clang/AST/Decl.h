@@ -3510,6 +3510,8 @@ public:
   /// \p nullptr if either the attribute or the field doesn't exist.
   const FieldDecl *findCountedByField() const;
 
+  bool isUnusedPrivateField() const;
+
 private:
   void setLazyInClassInitializer(LazyDeclStmtPtr NewInit);
 
