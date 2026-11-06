@@ -105,6 +105,8 @@ def IsOSCygMing : LibcallPredicate<[{TT.isOSCygMing()}]>;
 def IsOSWindowsOrUEFI : LibcallPredicate<[{TT.isOSWindowsOrUEFI()}]>;
 
 def IsMIPS : LibcallPredicate<[{TT.isMIPS()}]>;
+def IsMIPS32 : LibcallPredicate<[{TT.isMIPS32()}]>;
+def IsMipsR6 : LibcallPredicate<[{TT.getSubArch() == Triple::MipsSubArch_r6}]>;
 def IsLoongArch : LibcallPredicate<[{TT.isLoongArch()}]>;
 def IsVE : LibcallPredicate<[{TT.isVE()}]>;
 def IsBPF : LibcallPredicate<[{TT.isBPF()}]>;
@@ -811,7 +813,7 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 
 // Stack Protector Fail
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
-def STACK_SMASH_HANDLER : RuntimeLibcall;
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]>;
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
@@ -837,10 +839,13 @@ def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
 
 // Mips16 calls
-def MIPS16_RET_DC : RuntimeLibcall;
-def MIPS16_RET_DF : RuntimeLibcall;
-def MIPS16_RET_SC : RuntimeLibcall;
-def MIPS16_RET_SF : RuntimeLibcall;
+def ComplexF32 : StructFuncArgType<[Flt, Flt]>;
+def ComplexF64 : StructFuncArgType<[Dbl, Dbl]>;
+
+def MIPS16_RET_DC : RuntimeLibcall<Void, [ComplexF64]>;
+def MIPS16_RET_DF : RuntimeLibcall<Void, [Dbl]>;
+def MIPS16_RET_SC : RuntimeLibcall<Void, [ComplexF32]>;
+def MIPS16_RET_SF : RuntimeLibcall<Void, [Flt]>;
 
 // Produce libcall impls for all float types. If provided, `rtbasename` should
 // contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
@@ -891,11 +896,12 @@ def AEABI_UWRITE4 : RuntimeLibcall<Int, [Int, Ptr]>;
 def AEABI_UWRITE8 : RuntimeLibcall<LLong, [LLong, Ptr]>;
 
 // Hexagon calls
-def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
-def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
+def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES
+    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 
 // XCore calls
-def MEMCPY_ALIGN_4 : RuntimeLibcall;
+def MEMCPY_ALIGN_4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
 
 // Objective-C calls
 def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
@@ -3156,40 +3162,49 @@ def LanaiSystemLibrary
 //===----------------------------------------------------------------------===//
 
 // Hard float libcalls
-def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
-def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
-def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
-def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
-def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
-def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
-def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
-def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
-def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
-def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
-def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
-def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
-def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
-def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
-def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
-def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
-def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
-def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
-def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
-def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
-def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
-def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
-def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
-def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
-def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
-def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
-def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
-def __mips16_ret_sf : RuntimeLibcallImpl<MIPS16_RET_SF>;
-def __mips16_subdf3 : RuntimeLibcallImpl<SUB_F64>;
-def __mips16_subsf3 : RuntimeLibcallImpl<SUB_F32>;
-def __mips16_truncdfsf2 : RuntimeLibcallImpl<FPROUND_F64_F32>;
-def __mips16_unorddf2 : RuntimeLibcallImpl<UO_F64>;
-def __mips16_unordsf2 : RuntimeLibcallImpl<UO_F32>;
+defset list<RuntimeLibcallImpl> Mips16HardFloatLibcalls = {
+  def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
+  def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
+  def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
+  def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
+  def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+  def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
+  def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
+  def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
+  def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
+  def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
+  def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
+  def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
+  def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
+  def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+  def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+  def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+  def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+  def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+  def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+  def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+  def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
+  def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
+  def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
+  def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+  def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
+  def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
+  def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
+  def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
+  def __mips16_ret_sf : RuntimeLibcallImpl<MIPS16_RET_SF>;
+  def __mips16_subdf3 : RuntimeLibcallImpl<SUB_F64>;
+  def __mips16_subsf3 : RuntimeLibcallImpl<SUB_F32>;
+  def __mips16_truncdfsf2 : RuntimeLibcallImpl<FPROUND_F64_F32>;
+  def __mips16_unorddf2 : RuntimeLibcallImpl<UO_F64>;
+  def __mips16_unordsf2 : RuntimeLibcallImpl<UO_F32>;
+}
+
+// libgcc's mips16.S provides these for O32, and not for R6.
+def isMips16HardFloat
+    : RuntimeLibcallAvailability<(all_of IsMIPS32, (not IsMipsR6))>;
+
+def Mips16CompilerRt : LibcallLibrary<"compiler-rt",
+  (add Mips16HardFloatLibcalls), isMips16HardFloat>;
 
 //===----------------------------------------------------------------------===//
 // MSP430 Runtime Libcalls

@@ -2225,7 +2225,8 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       // Both accesses are in the same class, which may already have been
       // erased for an earlier dependence.
       MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
-      MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+      [[maybe_unused]] MemAccessInfo Dst =
+          DepChecker.getAccess(Dep.Destination);
       assert((!DepCands.contains(Src) || DepCands.isEquivalent(Src, Dst)) &&
              "Dependences must be between accesses in the same class");
       DepCands.eraseClass(Src);

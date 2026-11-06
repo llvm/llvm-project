@@ -139,6 +139,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
+#include <array>
 #include <limits>
 #include <map>
 #include <optional>
@@ -1213,7 +1214,8 @@ struct InformationCache {
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
 
   /// A map type from opcodes to instructions with this opcode.
-  using OpcodeInstMapTy = DenseMap<unsigned, InstructionVectorTy *>;
+  using OpcodeInstMapTy =
+      std::array<InstructionVectorTy *, Instruction::OtherOpsEnd>;
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
@@ -1307,7 +1309,7 @@ private:
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
-    OpcodeInstMapTy OpcodeInstMap;
+    OpcodeInstMapTy OpcodeInstMap = {};
 
     /// A map from functions to their instructions that may read or write
     /// memory.
