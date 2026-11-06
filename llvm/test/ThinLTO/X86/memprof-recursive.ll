@@ -85,7 +85,11 @@
 ; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=SKIP-RECUR-CONTEXTS
 
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:4:0: created clone _Z1Dv.memprof.1
-; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv marked with memprof allocation attribute notcold
+;; When the recursive cold context is not cloned, it stays on the original D,
+;; whose allocation then keeps the ambiguous attribute (both cold and not cold
+;; contexts reach it).
+; ALLOW-RECUR-CONTEXTS: memprof_recursive.cc:5:10: call in clone _Z1Dv marked with memprof allocation attribute notcold
+; SKIP-RECUR-CONTEXTS: memprof_recursive.cc:5:10: call in clone _Z1Dv marked with memprof allocation attribute ambiguous
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:8:0: created clone _Z1Ci.memprof.1
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:10:12: call in clone _Z1Ci.memprof.1 assigned to call function clone _Z1Dv.memprof.1

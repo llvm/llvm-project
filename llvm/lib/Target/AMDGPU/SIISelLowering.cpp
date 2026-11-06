@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -1874,13 +1875,22 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
-    bool IsStore = IntrID == Intrinsic::amdgcn_av_store_b128;
+    bool IsStore = CI.getType()->isVoidTy();
+    Type *DataTy = IsStore ? CI.getArgOperand(1)->getType() : CI.getType();
     Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::v4i32;
+    Info.memVT = MVT::getVT(DataTy);
     Info.ptrVal = CI.getArgOperand(0);
-    Info.align = Align(16);
+    Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
@@ -1996,7 +2006,15 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128:
     Ptr = II->getArgOperand(0);
     break;
@@ -2854,7 +2872,8 @@ SDValue SITargetLowering::getPreloadedValue(
   };
 
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       AMDGPU::isChainCC(CC) || CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     AMDGPU::ClusterDimsAttr ClusterDims = MFI.getClusterDims();
     bool HasFixedDims = ClusterDims.isFixedDims();
 
@@ -8752,10 +8771,8 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   bool HaveChain = Intr->getOpcode() == ISD::INTRINSIC_VOID ||
                    Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
-  assert(!SetCC ||
-         (SetCC->getConstantOperandVal(1) == 1 &&
-          cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
-              ISD::SETNE));
+  assert(!SetCC || (SetCC->getConstantOperandVal(1) == 1 &&
+                    SetCC->getOperandCondCode(2) == ISD::SETNE));
 
   // operands of the new intrinsic call
   SmallVector<SDValue, 4> Ops;
@@ -9024,7 +9041,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
     // TODO: are all of those cases correct, and are there more?
     return ISD::ANY_EXTEND;
   case ISD::SETCC: {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     return ISD::isSignedIntSetCC(CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
   }
   default:
@@ -9093,7 +9110,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   // setcc always return i1/i1 vec so no need to truncate after.
   if (Opc == ISD::SETCC) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
   }
 
@@ -12547,6 +12564,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
@@ -13258,6 +13279,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
@@ -15137,8 +15162,8 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   // (and (fcmp ord x, x), (fcmp une (fabs x), inf)) ->
   // fp_class x, ~(s_nan | q_nan | n_infinity | p_infinity)
   if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == ISD::SETCC) {
-    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
-    ISD::CondCode RCC = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
+    ISD::CondCode LCC = LHS.getOperandCondCode(2);
+    ISD::CondCode RCC = RHS.getOperandCondCode(2);
 
     SDValue X = LHS.getOperand(0);
     SDValue Y = RHS.getOperand(0);
@@ -15179,7 +15204,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 
   if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == AMDGPUISD::FP_CLASS &&
       RHS.hasOneUse()) {
-    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    ISD::CondCode LCC = LHS.getOperandCondCode(2);
     // and (fcmp seto), (fp_class x, mask) -> fp_class x, mask & ~(p_nan |
     // n_nan) and (fcmp setuo), (fp_class x, mask) -> fp_class x, mask & (p_nan
     // | n_nan)
@@ -17152,6 +17177,35 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   return SDValue();
 }
 
+/// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+/// field of their f32 scale operand.
+SDValue
+SITargetLowering::performExponentOnlyScaleCombine(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(N->getConstantOperandVal(0));
+  if (!ScaleArgIdx)
+    return SDValue();
+
+  // Operand 0 is the intrinsic ID.
+  unsigned OpIdx = *ScaleArgIdx + 1;
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Scale = N->getOperand(OpIdx);
+  APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
+
+  if (SDValue DemandedScale =
+          SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
+  }
+
+  if (SimplifyDemandedBits(Scale, Demanded, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
 // expanded into a set of cmp/select instructions.
 bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
@@ -18858,7 +18912,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   EVT VT = LHS.getValueType();
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
 
   auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
   if (!CRHS) {
@@ -19246,7 +19300,7 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   // Handle SETCC conditions for inf/nan tests.
   // The canonical form of these checks is fcmp + fabs.
   if (Cond.getOpcode() == ISD::SETCC) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    ISD::CondCode CC = Cond.getOperandCondCode(2);
     SDValue CondLHS = Cond.getOperand(0);
     SDValue CondRHS = Cond.getOperand(1);
 
@@ -19326,7 +19380,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 
   SDValue LHS = Cond.getOperand(0);
   SDValue RHS = Cond.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  ISD::CondCode CC = Cond.getOperandCondCode(2);
 
   bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
   bool isInteger = LHS.getValueType().isInteger();
@@ -19513,6 +19567,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFMed3Combine(N, DCI);
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
     return performCvtPkRTZCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    if (SDValue Res = performExponentOnlyScaleCombine(N, DCI))
+      return Res;
+    break;
   case AMDGPUISD::CLAMP:
     return performClampCombine(N, DCI);
   case ISD::SCALAR_TO_VECTOR: {
@@ -19996,13 +20054,6 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
-
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII->isLegalPkFMAF32OpSel(MI)) {
-      TII->decomposePkFMAF32(MI, MRI);
-      return;
-    }
 
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.
@@ -20664,6 +20715,28 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // Result is the data operand's value from some lane.
       VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
                               Depth + 1);
+      break;
+    }
+    case Intrinsic::amdgcn_mul_u24:
+    case Intrinsic::amdgcn_mul_i24: {
+      Register LHS = MI->getOperand(2).getReg();
+      Register RHS = MI->getOperand(3).getReg();
+
+      KnownBits RHSKnown;
+      VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
+      if (RHSKnown.isUnknown())
+        break;
+
+      KnownBits LHSKnown;
+      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
+      if (LHSKnown.isUnknown())
+        break;
+
+      bool SelfMultiply =
+          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
+                                       IID == Intrinsic::amdgcn_mul_i24,
+                                       SelfMultiply);
       break;
     }
     }
