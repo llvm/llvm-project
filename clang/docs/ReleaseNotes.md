@@ -1176,6 +1176,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash when expanding a macro with consecutive `##` operators and
+  an empty argument that leaves a trailing `##`. Clang now diagnoses this
+  invalid paste and cases that leave a leading `##`. (#GH239457)
+
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
