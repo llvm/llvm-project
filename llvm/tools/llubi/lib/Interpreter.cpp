@@ -116,7 +116,7 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
   if (!MO)
     return true;
 
-  if (MO->getState() != MemoryObjectState::Alive)
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
