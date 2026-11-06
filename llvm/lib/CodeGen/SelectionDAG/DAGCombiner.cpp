@@ -13377,7 +13377,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
       IsSigned ? m_SExtOrSelf(m_Specific(RHS)) : m_ZExtOrSelf(m_Specific(RHS));
   auto GetAbdNode = [&] {
     auto AbdNode = DAG.getNode(ABDOpc, DL, AbdVT, LHS, RHS);
-    return DAG.getZExtOrTrunc(AbdNode, DL, VT);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AbdNode);
   };
 
   switch (CC) {
