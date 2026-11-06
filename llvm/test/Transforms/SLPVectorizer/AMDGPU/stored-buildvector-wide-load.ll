@@ -8,26 +8,46 @@
 ; stored with two scalar stores are a store chain of 32-bit elements.
 
 define void @stored_bv2_i64_halves(ptr addrspace(1) %x, ptr addrspace(1) %y, ptr addrspace(1) %out) {
-; CHECK-LABEL: define void @stored_bv2_i64_halves(
-; CHECK-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[XW:%.*]] = load i64, ptr addrspace(1) [[X]], align 8
-; CHECK-NEXT:    [[YW:%.*]] = load i64, ptr addrspace(1) [[Y]], align 8
-; CHECK-NEXT:    [[X_LO:%.*]] = trunc i64 [[XW]] to i32
-; CHECK-NEXT:    [[X_SH:%.*]] = lshr i64 [[XW]], 32
-; CHECK-NEXT:    [[X_HI:%.*]] = trunc i64 [[X_SH]] to i32
-; CHECK-NEXT:    [[Y_LO:%.*]] = trunc i64 [[YW]] to i32
-; CHECK-NEXT:    [[Y_SH:%.*]] = lshr i64 [[YW]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = trunc i64 [[Y_SH]] to i32
-; CHECK-NEXT:    [[X0:%.*]] = bitcast i32 [[X_LO]] to float
-; CHECK-NEXT:    [[X1:%.*]] = bitcast i32 [[X_HI]] to float
-; CHECK-NEXT:    [[Y0:%.*]] = bitcast i32 [[Y_LO]] to float
-; CHECK-NEXT:    [[Y1:%.*]] = bitcast i32 [[Y_HI]] to float
-; CHECK-NEXT:    [[S0:%.*]] = fadd float [[X0]], [[Y0]]
-; CHECK-NEXT:    [[S1:%.*]] = fadd float [[X1]], [[Y1]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
-; CHECK-NEXT:    store <2 x float> [[V1]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    ret void
+; GFX900-LABEL: define void @stored_bv2_i64_halves(
+; GFX900-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; GFX900-NEXT:    [[XW:%.*]] = load i64, ptr addrspace(1) [[X]], align 8
+; GFX900-NEXT:    [[YW:%.*]] = load i64, ptr addrspace(1) [[Y]], align 8
+; GFX900-NEXT:    [[X_LO:%.*]] = trunc i64 [[XW]] to i32
+; GFX900-NEXT:    [[X_SH:%.*]] = lshr i64 [[XW]], 32
+; GFX900-NEXT:    [[X_HI:%.*]] = trunc i64 [[X_SH]] to i32
+; GFX900-NEXT:    [[Y_LO:%.*]] = trunc i64 [[YW]] to i32
+; GFX900-NEXT:    [[Y_SH:%.*]] = lshr i64 [[YW]], 32
+; GFX900-NEXT:    [[Y_HI:%.*]] = trunc i64 [[Y_SH]] to i32
+; GFX900-NEXT:    [[X0:%.*]] = bitcast i32 [[X_LO]] to float
+; GFX900-NEXT:    [[X1:%.*]] = bitcast i32 [[X_HI]] to float
+; GFX900-NEXT:    [[Y0:%.*]] = bitcast i32 [[Y_LO]] to float
+; GFX900-NEXT:    [[Y1:%.*]] = bitcast i32 [[Y_HI]] to float
+; GFX900-NEXT:    [[S0:%.*]] = fadd float [[X0]], [[Y0]]
+; GFX900-NEXT:    [[S1:%.*]] = fadd float [[X1]], [[Y1]]
+; GFX900-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
+; GFX900-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
+; GFX900-NEXT:    store <2 x float> [[V1]], ptr addrspace(1) [[OUT]], align 8
+; GFX900-NEXT:    ret void
+;
+; GFX90A-LABEL: define void @stored_bv2_i64_halves(
+; GFX90A-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; GFX90A-NEXT:    [[XW:%.*]] = load i64, ptr addrspace(1) [[X]], align 8
+; GFX90A-NEXT:    [[YW:%.*]] = load i64, ptr addrspace(1) [[Y]], align 8
+; GFX90A-NEXT:    [[X_SH:%.*]] = lshr i64 [[XW]], 32
+; GFX90A-NEXT:    [[Y_SH:%.*]] = lshr i64 [[YW]], 32
+; GFX90A-NEXT:    [[TMP1:%.*]] = trunc i64 [[XW]] to i32
+; GFX90A-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; GFX90A-NEXT:    [[TMP3:%.*]] = trunc i64 [[X_SH]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; GFX90A-NEXT:    [[TMP5:%.*]] = trunc i64 [[YW]] to i32
+; GFX90A-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
+; GFX90A-NEXT:    [[TMP7:%.*]] = trunc i64 [[Y_SH]] to i32
+; GFX90A-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP7]], i64 1
+; GFX90A-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
+; GFX90A-NEXT:    [[TMP10:%.*]] = bitcast <2 x i32> [[TMP8]] to <2 x float>
+; GFX90A-NEXT:    [[TMP11:%.*]] = fadd <2 x float> [[TMP9]], [[TMP10]]
+; GFX90A-NEXT:    store <2 x float> [[TMP11]], ptr addrspace(1) [[OUT]], align 8
+; GFX90A-NEXT:    ret void
 ;
   %xw = load i64, ptr addrspace(1) %x, align 8
   %yw = load i64, ptr addrspace(1) %y, align 8
@@ -50,26 +70,46 @@ define void @stored_bv2_i64_halves(ptr addrspace(1) %x, ptr addrspace(1) %y, ptr
 }
 
 define void @stored_bv2_i128_quarters(ptr addrspace(1) %x, ptr addrspace(1) %y, ptr addrspace(1) %out) {
-; CHECK-LABEL: define void @stored_bv2_i128_quarters(
-; CHECK-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[XW:%.*]] = load i128, ptr addrspace(1) [[X]], align 16
-; CHECK-NEXT:    [[YW:%.*]] = load i128, ptr addrspace(1) [[Y]], align 16
-; CHECK-NEXT:    [[X_LO:%.*]] = trunc i128 [[XW]] to i32
-; CHECK-NEXT:    [[X_SH:%.*]] = lshr i128 [[XW]], 32
-; CHECK-NEXT:    [[X_HI:%.*]] = trunc i128 [[X_SH]] to i32
-; CHECK-NEXT:    [[Y_LO:%.*]] = trunc i128 [[YW]] to i32
-; CHECK-NEXT:    [[Y_SH:%.*]] = lshr i128 [[YW]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = trunc i128 [[Y_SH]] to i32
-; CHECK-NEXT:    [[X0:%.*]] = bitcast i32 [[X_LO]] to float
-; CHECK-NEXT:    [[X1:%.*]] = bitcast i32 [[X_HI]] to float
-; CHECK-NEXT:    [[Y0:%.*]] = bitcast i32 [[Y_LO]] to float
-; CHECK-NEXT:    [[Y1:%.*]] = bitcast i32 [[Y_HI]] to float
-; CHECK-NEXT:    [[S0:%.*]] = fadd float [[X0]], [[Y0]]
-; CHECK-NEXT:    [[S1:%.*]] = fadd float [[X1]], [[Y1]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
-; CHECK-NEXT:    store <2 x float> [[V1]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    ret void
+; GFX900-LABEL: define void @stored_bv2_i128_quarters(
+; GFX900-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; GFX900-NEXT:    [[XW:%.*]] = load i128, ptr addrspace(1) [[X]], align 16
+; GFX900-NEXT:    [[YW:%.*]] = load i128, ptr addrspace(1) [[Y]], align 16
+; GFX900-NEXT:    [[X_LO:%.*]] = trunc i128 [[XW]] to i32
+; GFX900-NEXT:    [[X_SH:%.*]] = lshr i128 [[XW]], 32
+; GFX900-NEXT:    [[X_HI:%.*]] = trunc i128 [[X_SH]] to i32
+; GFX900-NEXT:    [[Y_LO:%.*]] = trunc i128 [[YW]] to i32
+; GFX900-NEXT:    [[Y_SH:%.*]] = lshr i128 [[YW]], 32
+; GFX900-NEXT:    [[Y_HI:%.*]] = trunc i128 [[Y_SH]] to i32
+; GFX900-NEXT:    [[X0:%.*]] = bitcast i32 [[X_LO]] to float
+; GFX900-NEXT:    [[X1:%.*]] = bitcast i32 [[X_HI]] to float
+; GFX900-NEXT:    [[Y0:%.*]] = bitcast i32 [[Y_LO]] to float
+; GFX900-NEXT:    [[Y1:%.*]] = bitcast i32 [[Y_HI]] to float
+; GFX900-NEXT:    [[S0:%.*]] = fadd float [[X0]], [[Y0]]
+; GFX900-NEXT:    [[S1:%.*]] = fadd float [[X1]], [[Y1]]
+; GFX900-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
+; GFX900-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
+; GFX900-NEXT:    store <2 x float> [[V1]], ptr addrspace(1) [[OUT]], align 8
+; GFX900-NEXT:    ret void
+;
+; GFX90A-LABEL: define void @stored_bv2_i128_quarters(
+; GFX90A-SAME: ptr addrspace(1) [[X:%.*]], ptr addrspace(1) [[Y:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; GFX90A-NEXT:    [[XW:%.*]] = load i128, ptr addrspace(1) [[X]], align 16
+; GFX90A-NEXT:    [[YW:%.*]] = load i128, ptr addrspace(1) [[Y]], align 16
+; GFX90A-NEXT:    [[X_SH:%.*]] = lshr i128 [[XW]], 32
+; GFX90A-NEXT:    [[Y_SH:%.*]] = lshr i128 [[YW]], 32
+; GFX90A-NEXT:    [[TMP1:%.*]] = trunc i128 [[XW]] to i32
+; GFX90A-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; GFX90A-NEXT:    [[TMP3:%.*]] = trunc i128 [[X_SH]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; GFX90A-NEXT:    [[TMP5:%.*]] = trunc i128 [[YW]] to i32
+; GFX90A-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
+; GFX90A-NEXT:    [[TMP7:%.*]] = trunc i128 [[Y_SH]] to i32
+; GFX90A-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP7]], i64 1
+; GFX90A-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
+; GFX90A-NEXT:    [[TMP10:%.*]] = bitcast <2 x i32> [[TMP8]] to <2 x float>
+; GFX90A-NEXT:    [[TMP11:%.*]] = fadd <2 x float> [[TMP9]], [[TMP10]]
+; GFX90A-NEXT:    store <2 x float> [[TMP11]], ptr addrspace(1) [[OUT]], align 8
+; GFX90A-NEXT:    ret void
 ;
   %xw = load i128, ptr addrspace(1) %x, align 16
   %yw = load i128, ptr addrspace(1) %y, align 16
@@ -210,6 +250,3 @@ define void @stored_bv4_i64_halves(ptr addrspace(1) %x, ptr addrspace(1) %y, ptr
   store <4 x float> %v3, ptr addrspace(1) %out, align 16
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX900: {{.*}}
-; GFX90A: {{.*}}
