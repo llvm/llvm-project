@@ -1571,6 +1571,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PACSignLR:
     case AArch64::SEH_SaveAnyRegI:
     case AArch64::SEH_SaveAnyRegIP:
+    case AArch64::SEH_SaveAnyRegQ:
+    case AArch64::SEH_SaveAnyRegQX:
     case AArch64::SEH_SaveAnyRegQP:
     case AArch64::SEH_SaveAnyRegQPX:
     case AArch64::SEH_AllocZ:
@@ -1751,7 +1753,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
-static bool UpdateOperandRegClass(MachineInstr &Instr) {
+static void updateOperandRegClass(MachineInstr &Instr) {
   MachineBasicBlock *MBB = Instr.getParent();
   assert(MBB && "Can't get MachineBasicBlock here");
   MachineFunction *MF = MBB->getParent();
@@ -1760,33 +1762,16 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
 
-  for (unsigned OpIdx = 0, EndIdx = Instr.getNumOperands(); OpIdx < EndIdx;
-       ++OpIdx) {
-    MachineOperand &MO = Instr.getOperand(OpIdx);
-    const TargetRegisterClass *OpRegCstraints =
-        Instr.getRegClassConstraint(OpIdx, TII, TRI);
-
-    // If there's no constraint, there's nothing to do.
-    if (!OpRegCstraints)
+  for (const auto &[OpIdx, MO] : enumerate(Instr.operands())) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
-    // If the operand is a frame index, there's nothing to do here.
-    // A frame index operand will resolve correctly during PEI.
-    if (MO.isFI())
-      continue;
-
-    assert(MO.isReg() &&
-           "Operand has register constraints without being a register!");
 
     Register Reg = MO.getReg();
-    if (Reg.isPhysical()) {
-      if (!OpRegCstraints->contains(Reg))
-        return false;
-    } else if (!OpRegCstraints->hasSubClassEq(MRI->getRegClass(Reg)) &&
-               !MRI->constrainRegClass(Reg, OpRegCstraints))
-      return false;
+    const TargetRegisterClass *NewRC = Instr.getRegClassConstraintEffect(
+        OpIdx, MRI->getRegClass(Reg), TII, TRI);
+    if (!NewRC || !MRI->constrainRegClass(Reg, NewRC))
+      llvm_unreachable("Operand register classes are incompatible");
   }
-
-  return true;
 }
 
 /// Return the opcode that does not set flags when possible - otherwise
@@ -2043,9 +2028,7 @@ bool AArch64InstrInfo::optimizePTestInstr(
   PTest->eraseFromParent();
   if (*NewOp != PredOpcode) {
     Pred->setDesc(get(*NewOp));
-    bool succeeded = UpdateOperandRegClass(*Pred);
-    (void)succeeded;
-    assert(succeeded && "Operands have incompatible register classes!");
+    updateOperandRegClass(*Pred);
     Pred->addRegisterDefined(AArch64::NZCV, TRI);
   }
 
@@ -2096,9 +2079,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
     const MCInstrDesc &MCID = get(NewOpc);
     CmpInstr.setDesc(MCID);
     CmpInstr.removeOperand(DeadNZCVIdx);
-    bool succeeded = UpdateOperandRegClass(CmpInstr);
-    (void)succeeded;
-    assert(succeeded && "Some operands reg class are incompatible!");
+    updateOperandRegClass(CmpInstr);
     return true;
   }
 
@@ -2447,9 +2428,7 @@ bool AArch64InstrInfo::substituteCmpToZero(
   // Update the instruction to set NZCV.
   MI->setDesc(get(NewOpc));
   CmpInstr.eraseFromParent();
-  bool succeeded = UpdateOperandRegClass(*MI);
-  (void)succeeded;
-  assert(succeeded && "Some operands reg class are incompatible!");
+  updateOperandRegClass(*MI);
   MI->addRegisterDefined(AArch64::NZCV, &TRI);
   return true;
 }
@@ -5568,6 +5547,8 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   case AArch64::HLT:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIASPPC:
+  case AArch64::PACIBSPPC:
     // Implicit BTI behavior.
     return true;
   case AArch64::PAUTH_PROLOGUE:

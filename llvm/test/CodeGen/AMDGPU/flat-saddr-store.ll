@@ -1843,8 +1843,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1858,8 +1856,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b32 v[2:3], v1 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1878,8 +1874,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b32 v[0:1], v2 offset:-128 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1893,8 +1887,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b32 v[2:3], v1 offset:-128 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1915,8 +1907,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1931,8 +1921,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b64 v[0:1], v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1952,8 +1940,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1968,8 +1954,6 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b64 v[0:1], v[4:5] offset:-128 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64

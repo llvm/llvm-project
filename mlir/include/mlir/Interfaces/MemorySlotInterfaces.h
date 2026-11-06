@@ -10,7 +10,6 @@
 #define MLIR_INTERFACES_MEMORYSLOTINTERFACES_H
 
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 
 #include "llvm/ADT/DenseMap.h"
