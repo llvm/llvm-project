@@ -13,4 +13,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "IPOOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::IPOOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::IPOOptions)
