@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -103,12 +105,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   bool MatchReg = true;
 
   MVT VT = Op.getSimpleValueType();
-
-  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
-  // using i128, when it should probably be using v2i64.
-  const TargetRegisterClass *UseRC =
-      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
-
+  const TargetRegisterClass *UseRC = nullptr;
   for (SDNode *User : Op->users()) {
     bool Match = true;
     if (User->getOpcode() == ISD::CopyToReg && User->getOperand(2) == Op) {
@@ -128,10 +125,12 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
         if (User->isMachineOpcode()) {
           const MCInstrDesc &II = TII->get(User->getMachineOpcode());
           const TargetRegisterClass *RC = nullptr;
-          if (i + II.getNumDefs() < II.getNumOperands()) {
-            RC = TRI->getAllocatableClass(
-                TII->getRegClass(II, i + II.getNumDefs()));
-          }
+          // Delay getAllocatableClass until after inspecting all uses and
+          // reconciling with RegClassForVT so that non-allocatable union
+          // operand classes (e.g., AMDGPU::VS_32) are not prematurely
+          // collapsed to a single allocatable subclass.
+          if (i + II.getNumDefs() < II.getNumOperands())
+            RC = TII->getRegClass(II, i + II.getNumDefs());
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
@@ -149,6 +148,32 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
     if (VRBase)
       break;
   }
+
+  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
+  // using i128, when it should probably be using v2i64.
+  const TargetRegisterClass *RegClassForVT =
+      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
+
+  // Reconcile the operand constraint (UseRC) with the type/divergence
+  // preference (RegClassForVT):
+  // 1. If uses impose no register class constraint, use RegClassForVT.
+  // 2. If UseRC and RegClassForVT share a common subclass (e.g.,
+  // non-allocatable
+  //    VS_32 intersected with SReg_32), narrow to that common subclass.
+  // 3. If they are disjoint and UseRC is allocatable, keep UseRC to satisfy the
+  //    user operand directly without emitting an extra copy.
+  // 4. If they are disjoint and UseRC is not allocatable (e.g., a special flag
+  //    register class), fall back to RegClassForVT.
+  if (!UseRC) {
+    UseRC = RegClassForVT;
+  } else if (RegClassForVT) {
+    if (const TargetRegisterClass *CommonSubClass =
+            TRI->getCommonSubClass(UseRC, RegClassForVT))
+      UseRC = CommonSubClass;
+    else if (!UseRC->isAllocatable())
+      UseRC = RegClassForVT;
+  }
+  UseRC = TRI->getAllocatableClass(UseRC);
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
   SrcRC = TRI->getMinimalPhysRegClass(SrcReg);

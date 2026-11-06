@@ -9,9 +9,8 @@
 define amdgpu_ps float @copy_from_phys_sgpr_to_vgpr_use() {
   ; CHECK-LABEL: name: copy_from_phys_sgpr_to_vgpr_use
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $m0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-  ; CHECK-NEXT:   [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY1]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $m0
+  ; CHECK-NEXT:   [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY]], 0, 0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[DS_SWIZZLE_B32_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %s_val = call i32 @llvm.read_register.i32(metadata !0)
@@ -50,9 +49,8 @@ define amdgpu_ps float @copy_from_phys_sgpr_to_vs32_and_vgpr_uses(i32 %v_op) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $m0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY2]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $m0
+  ; CHECK-NEXT:   [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY1]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[V_ADD3_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD3_U32_e64 [[COPY1]], [[COPY]], [[DS_SWIZZLE_B32_]], implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD3_U32_e64_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
