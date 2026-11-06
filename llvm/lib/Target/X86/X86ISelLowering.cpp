@@ -34470,7 +34470,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
 
   assert((!N->isExpandingLoad() || Subtarget.hasVBMI2() ||
           ScalarVT.getSizeInBits() >= 32) &&
-         "Expanding masked load is supported for only 32 and 64-bit types "
+         "Expanding masked load is only supported for 32 and 64-bit types "
          "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
@@ -34521,7 +34521,7 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
 
   assert((!N->isCompressingStore() || Subtarget.hasVBMI2() ||
           ScalarVT.getSizeInBits() >= 32) &&
-         "Compressing masked store is supported for only 32 and 64-bit types "
+         "Compressing masked store is only supported for 32 and 64-bit types "
          "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
