@@ -110,6 +110,27 @@ static void testBesselJnUnderflowedAnchors(BesselFuncType<KIND> rtFunc) {
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(0), 0.440050572, 1e-6);
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(1), 0.114903487, 1e-6);
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(2), 0.019563354, 1e-6);
+
+  rtFunc(result, 0, 1000, -1.0, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(0), 0.765197687, 1e-6);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(1), -0.440050572, 1e-6);
+
+  // Tiny x: J(0) = 1 although J(2) and J(3) underflow.
+  T tinyX{KIND == 4 ? T(1e-20) : T(1e-200)};
+  rtFunc(result, 0, 3, tinyX, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(0), 1.0, 1e-6);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<T>(1) / (tinyX / 2), 1.0, 1e-6);
+
+  // Inputs outside the n > |x| regime keep the plain recursion.
+  T inf{std::numeric_limits<T>::infinity()};
+  rtFunc(result, 0, 5, inf, 0.0, 0.0, __FILE__, __LINE__);
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*result.ZeroBasedIndexedElement<T>(j), 0.0);
+  }
+  rtFunc(result, -300, -200, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+  for (int j{0}; j < 101; ++j) {
+    EXPECT_EQ(*result.ZeroBasedIndexedElement<T>(j), 0.0);
+  }
 }
 
 template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {

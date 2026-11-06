@@ -212,17 +212,17 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   // the lower orders (e.g. BESSEL_JN(1, 10000, 1.0) would be all zeros).
   // Run Miller's algorithm instead: start from an arbitrary seed, rescale to
   // avoid overflow, and normalize with J(0) + 2 * sum(J(2k)) = 1.
-  constexpr T tiny{static_cast<T>(KIND == 4 ? 1e-37L
-          : KIND == 8                       ? 1e-307L
-                                            : 1e-4931L)};
-  constexpr T limit{static_cast<T>(KIND == 4 ? 1e15L : 1e100L)};
-  T growth{(twoOverX < 0 ? -twoOverX : twoOverX) * n2 + 1};
-  if ((bn_1 < tiny && bn_1 > -tiny) && x == x && twoOverX == twoOverX &&
-      growth < limit && n2 - n1 >= 2) {
+  using Limits = common::numeric_limits<T>;
+  T absX{x < 0 ? -x : x};
+  T growth{2 * n2 / absX + 2}; // bounds |J(n-1)| / max(|J(n)|, |J(n+1)|)
+  T limit{Limits::max() / (2 * growth)};
+  if (n1 >= 0 && n2 - n1 >= 2 && absX < n2 && limit > 1 &&
+      bn_1 < Limits::min() && bn_1 > -Limits::min()) {
     T jp1{0}, j{1}, evenSum{0};
+    int top{n2}; // stored orders above top are zero
     at[0] = n2 - n1 + 1;
     *result.Element<T>(at) = j;
-    if (n2 > 0 && (n2 & 1) == 0) {
+    if ((n2 & 1) == 0) {
       evenSum += 2 * j;
     }
     for (int n{n2}; n >= 1; --n) {
@@ -231,10 +231,16 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
       j = jm;
       if ((jm < 0 ? -jm : jm) > limit) {
         T inv{1 / jm};
-        for (int k{n}; k <= n2; ++k) {
-          if (k >= n1) {
-            at[0] = k - n1 + 1;
-            *result.Element<T>(at) *= inv;
+        // Stored orders shrink as k grows: once one underflows, zero the rest
+        // and never revisit them.
+        for (int k{n > n1 ? n : n1}; k <= top; ++k) {
+          at[0] = k - n1 + 1;
+          if ((*result.Element<T>(at) *= inv) == 0) {
+            for (int m{k + 1}; m <= top; ++m) {
+              at[0] = m - n1 + 1;
+              *result.Element<T>(at) = 0;
+            }
+            top = k - 1;
           }
         }
         evenSum *= inv;
