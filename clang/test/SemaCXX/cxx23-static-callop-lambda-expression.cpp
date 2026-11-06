@@ -9,12 +9,12 @@ namespace ns1 {
 
 namespace ns1_1 {
 
-  auto lstatic = []() static consteval  //expected-error{{cannot take address of consteval call}} \
-                                          expected-note {{declared here}}
+  auto lstatic = []() static consteval // expected-note {{operator int (*)()' is an immediate function because its body evaluates the address of a consteval function 'operator()'}} \
+                                       // expected-note {{declared here}}
   { return 3; };
 
-  // FIXME: the above error should indicate that it was triggered below.
-  int (*f2)(void) = lstatic;
+  int (*f2)(void) = lstatic; // expected-error {{call to immediate function 'ns1_1::(lambda)::operator int (*)()' is not a constant expression}} \
+                             // expected-note {{pointer to a consteval declaration is not a constant expression}}
 
 }
 

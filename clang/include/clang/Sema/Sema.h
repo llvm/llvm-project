@@ -13806,11 +13806,11 @@ public:
     ~SynthesizedFunctionScope() {
       if (PushedCodeSynthesisContext)
         S.popCodeSynthesisContext();
+      S.PopExpressionEvaluationContext();
       if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext)) {
         FD->setWillHaveBody(false);
         S.CheckImmediateEscalatingFunctionDefinition(FD, S.getCurFunction());
       }
-      S.PopExpressionEvaluationContext();
       S.PopFunctionScopeInfo();
     }
 
