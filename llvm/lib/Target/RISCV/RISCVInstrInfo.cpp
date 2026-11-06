@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -69,7 +68,7 @@ namespace llvm::RISCV {
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
     : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
                         RISCV::ADJCALLSTACKUP),
-      RegInfo(STI.getHwMode()), STI(STI) {}
+      RegInfo(STI.getHwMode(), STI.getUserReservedXRegs()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -1716,9 +1715,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1737,9 +1733,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -5105,7 +5098,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
   } else if (int ShXAmount, ShiftAmount;
-             STI.hasShlAdd(3) &&
+             STI.hasStdExtZba() &&
              (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;

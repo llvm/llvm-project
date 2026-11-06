@@ -94,6 +94,14 @@ public:
   SourceMgrDiagnosticVerifier &
   operator=(const SourceMgrDiagnosticVerifier &) = delete;
 
+  /// Given a diagnostic kind, return a human readable string for it.
+  static StringRef getDiagKindStr(SourceMgr::DiagKind kind);
+
+  /// Prints an error to \p os without going through \p mgr's diagnostic
+  /// handler, which may be the one feeding the verifier.
+  static void printMessage(raw_ostream &os, const SourceMgr &mgr, SMLoc loc,
+                           const Twine &msg, ArrayRef<SMRange> ranges = {});
+
   /// Computes and caches the list of expected diagnostics for \p buf, if not
   /// already cached. Returns the (mutable) cached list.
   MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &os,
