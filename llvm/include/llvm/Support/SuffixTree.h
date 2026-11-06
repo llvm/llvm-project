@@ -56,16 +56,24 @@ public:
   };
 
 private:
+  /// The minimum length of a repeated substring to find.
+  /// Since we're outlining, we want at least two instructions in the range.
+  /// FIXME: This may not be true for targets like X86 which support many
+  /// instruction lengths.
+  static constexpr unsigned MinLength = 2;
+
+  const unsigned BoundaryStart;
+
+  bool isBoundary(unsigned Value) const { return Value >= BoundaryStart; }
+
   /// Maintains internal nodes in the tree.
-  SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
-  /// Maintains leaf nodes in the tree.
-  SpecificBumpPtrAllocator<SuffixTreeLeafNode> LeafNodeAllocator;
+  SpecificBumpPtrAllocator<SuffixTreeNode> InternalNodeAllocator;
 
   /// The root of the suffix tree.
   ///
   /// The root represents the empty string. It is maintained by the
   /// \p NodeAllocator like every other node in the tree.
-  SuffixTreeInternalNode *Root = nullptr;
+  SuffixTreeNode *Root = nullptr;
 
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = SuffixTreeNode::EmptyIdx;
@@ -74,7 +82,7 @@ private:
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
-    SuffixTreeInternalNode *Node = nullptr;
+    SuffixTreeNode *Node = nullptr;
 
     /// The index of the first character in the substring currently being added.
     unsigned Idx = SuffixTreeNode::EmptyIdx;
@@ -87,15 +95,13 @@ private:
   /// construction algorithm.
   ActiveState Active;
 
-  /// Allocate a leaf node and add it to the tree.
+  /// Add a leaf node to the tree.
   ///
   /// \param Parent The parent of this node.
   /// \param StartIdx The start index of this node's associated string.
   /// \param Edge The label on the edge leaving \p Parent to this node.
-  ///
-  /// \returns A pointer to the allocated leaf node.
-  SuffixTreeNode *insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
-                             unsigned Edge);
+  /// The leaf is represented by its incoming edge start index.
+  void insertLeaf(SuffixTreeNode &Parent, unsigned StartIdx, unsigned Edge);
 
   /// Allocate an internal node and add it to the tree.
   ///
@@ -105,18 +111,13 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated internal node.
-  SuffixTreeInternalNode *insertInternalNode(SuffixTreeInternalNode *Parent,
-                                             unsigned StartIdx, unsigned EndIdx,
-                                             unsigned Edge);
+  SuffixTreeNode *insertInternalNode(SuffixTreeNode *Parent, unsigned StartIdx,
+                                     unsigned EndIdx, unsigned Edge);
 
   /// Allocate the root node and add it to the tree.
   ///
   /// \returns A pointer to the root.
-  SuffixTreeInternalNode *insertRoot();
-
-  /// Set the suffix indices of the leaves to the start indices of their
-  /// respective suffixes.
-  void setSuffixIndices();
+  SuffixTreeNode *insertRoot();
 
   /// Construct the suffix tree for the prefix of the input ending at
   /// \p EndIdx.
@@ -138,7 +139,8 @@ private:
   /// are identified using post-order depth-first traversal, so that the order
   /// of these leaf nodes in the vector matches the order of the leaves in the
   /// tree from left to right if one were to draw the tree on paper.
-  std::vector<SuffixTreeLeafNode *> LeafNodes;
+  /// Each leaf is represented by its suffix start index.
+  std::vector<unsigned> LeafNodes;
 
   /// Perform a post-order depth-first traversal of the tree and perform two
   /// tasks during the traversal. The first is to populate LeafNodes, adding
@@ -153,8 +155,11 @@ public:
   /// \param Str The string to construct the suffix tree for.
   /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
   /// only leaf children (used by Machine Outliner).
+  /// \param BoundaryStart Values at or above this lower bound must be unique
+  /// terminators.
   LLVM_ABI SuffixTree(const ArrayRef<unsigned> &Str,
-                      bool OutlinerLeafDescendants = false);
+                      bool OutlinerLeafDescendants = false,
+                      unsigned BoundaryStart = SuffixTreeNode::EmptyIdx);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
@@ -166,16 +171,11 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
-
-    /// The minimum length of a repeated substring to find.
-    /// Since we're outlining, we want at least two instructions in the range.
-    /// FIXME: This may not be true for targets like X86 which support many
-    /// instruction lengths.
-    const unsigned MinLength = 2;
+    SmallVector<SuffixTreeNode *> InternalNodesToVisit;
 
     /// Vector of leaf nodes of the suffix tree.
-    const std::vector<SuffixTreeLeafNode *> &LeafNodes;
+    /// Each leaf is represented by its suffix start index.
+    const std::vector<unsigned> &LeafNodes;
 
     /// Whether to consider leaf descendants or only leaf children.
     bool OutlinerLeafDescendants = !LeafNodes.empty();
@@ -205,9 +205,8 @@ public:
       return !(*this == Other);
     }
 
-    RepeatedSubstringIterator(
-        SuffixTreeInternalNode *N,
-        const std::vector<SuffixTreeLeafNode *> &LeafNodes = {})
+    RepeatedSubstringIterator(SuffixTreeNode *N,
+                              const std::vector<unsigned> &LeafNodes = {})
         : N(N), LeafNodes(LeafNodes) {
       // Do we have a non-null node?
       if (!N)
