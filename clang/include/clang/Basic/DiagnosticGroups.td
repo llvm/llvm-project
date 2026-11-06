@@ -634,9 +634,10 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
-def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
+def LifetimeSafetyInvalidation
+    : DiagGroup<"lifetime-safety-experimental-invalidation"> {
   code Documentation = [{
-Warning to detect invalidation of references.
+Experimental. Warning to detect invalidation of references.
   }];
 }
 
@@ -681,8 +682,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
-                                    LifetimeSafetyDanglingGlobalInMain,
-                                    LifetimeSafetyInvalidation]>;
+                                    LifetimeSafetyDanglingGlobalInMain]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
@@ -745,12 +745,33 @@ Validates correct usage and adherence to lifetime safety annotations like [[clan
 }
 
 def LifetimeSafetyFieldOriginEscape
-    : DiagGroup<"experimental-lifetime-safety-field-origin-escape"> {
+    : DiagGroup<"lifetime-safety-experimental-field-origin-escape"> {
   code Documentation = [{
 Experimental. Detects member functions returning a value derived from a
 pointer, reference, or view field rather than from ``*this``. May report owned
 pointer fields (e.g., ``Vector::data()``), which can be silenced by marking the
 method ``[[clang::lifetimebound]]``.
+  }];
+}
+
+def LifetimeSafetyDestructorUse
+    : DiagGroup<"lifetime-safety-experimental-destructor-use"> {
+  code Documentation = [{
+Experimental. Treats a non-trivial destructor running at scope exit as a use of
+the borrows the object holds, since the analysis cannot see whether the
+destructor reads them. Detects objects destroyed after the storage they borrow
+from. May report destructors that never read the borrow (e.g. ``std::function``).
+  }];
+}
+
+def LifetimeSafetyExperimental
+    : DiagGroup<"lifetime-safety-experimental",
+                [LifetimeSafetyInvalidation,
+                 LifetimeSafetyFieldOriginEscape,
+                 LifetimeSafetyDestructorUse]> {
+  code Documentation = [{
+Experimental lifetime safety warnings. These may have known false positives and
+their behavior may change. Not enabled by -Wlifetime-safety-all.
   }];
 }
 

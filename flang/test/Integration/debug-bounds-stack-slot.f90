@@ -42,7 +42,7 @@ end subroutine
 ! CHECK-DAG: ![[SUBRANGE]] = !DISubrange(count: ![[COUNT]], lowerBound: ![[LB]])
 ! CHECK-DAG: ![[LEN]] = !DILocalVariable(name: "._QFchar_lenEc1"{{.*}}flags: DIFlagArtificial)
 ! CHECK-DAG: !DILocalVariable(name: "c"{{.*}}type: ![[CTY:[0-9]+]])
-! CHECK-DAG: ![[CTY]] = !DIStringType(stringLength: ![[LEN]], encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[CTY]] = !DIStringType(stringLength: ![[LEN]], encoding: DW_ATE_ASCII, charType: !{{.*}})
 
 ! The slots are only made at -O0. Above it a bound is described by its value,
 ! as it was before, so a debugger has to find that value in a register.

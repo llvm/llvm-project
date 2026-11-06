@@ -335,6 +335,184 @@ define i8 @fptoui_sat_f16_i8(half %x) {
   %res = call i8 @llvm.fptoui.sat(half %x)
   ret i8 %res
 }
+
+define i32 @fptosi_sat_f16_i32(half %x) {
+; CHECK-LABEL: define i32 @fptosi_sat_f16_i32(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 -1
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP4]], 31
+; CHECK-NEXT:    [[TMP5:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP5]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i16 [[BIASED_EXP]], 31
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]], !prof [[PROF0]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP2]], i32 2147483647, i32 -2147483648
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i16 [[TMP10]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], [[TMP3]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP14:%.*]] = zext i16 [[SIGNIFICAND]] to i32
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i16 [[TMP13]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], [[TMP3]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[TMP8]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP12]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP17]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[TMP18]]
+;
+  %res = call i32 @llvm.fptosi.sat(half %x)
+  ret i32 %res
+}
+
+define i32 @fptoui_sat_f16_i32(half %x) {
+; CHECK-LABEL: define i32 @fptoui_sat_f16_i32(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP2]], 31
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i16 [[BIASED_EXP]], 31
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]], !prof [[PROF0]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP9]] to i32
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i16 [[SIGNIFICAND]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i16 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i32 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ -1, %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP10]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP14]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[TMP15]]
+;
+  %res = call i32 @llvm.fptoui.sat(half %x)
+  ret i32 %res
+}
+
+define i64 @fptosi_sat_f16_i64(half %x) {
+; CHECK-LABEL: define i64 @fptosi_sat_f16_i64(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 1, i64 -1
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP4]], 31
+; CHECK-NEXT:    [[TMP5:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP5]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i16 [[BIASED_EXP]], 31
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]], !prof [[PROF0]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP2]], i64 9223372036854775807, i64 -9223372036854775808
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i16 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], [[TMP3]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP14:%.*]] = zext i16 [[SIGNIFICAND]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i16 [[TMP13]] to i64
+; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], [[TMP3]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i64 [ [[TMP8]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP12]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP17]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i64 [[TMP18]]
+;
+  %res = call i64 @llvm.fptosi.sat(half %x)
+  ret i64 %res
+}
+
+define i64 @fptoui_sat_f16_i64(half %x) {
+; CHECK-LABEL: define i64 @fptoui_sat_f16_i64(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP2]], 31
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i16 [[BIASED_EXP]], 31
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]], !prof [[PROF0]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP9]] to i64
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i16 [[SIGNIFICAND]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i16 [[TMP11]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i64 [ -1, %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP10]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP14]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i64 [[TMP15]]
+;
+  %res = call i64 @llvm.fptoui.sat(half %x)
+  ret i64 %res
+}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

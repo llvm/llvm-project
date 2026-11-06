@@ -1140,6 +1140,33 @@ exit:
 }
 
 
+;; The latch exit can be taken early, so the reduction must not be used on it.
+define i64 @combined_exit_conditions_with_reduction(ptr align 1 dereferenceable(1024) %src, ptr noalias %dst) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions_with_reduction'
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ 0, %entry ], [ %rdx.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw i8, ptr %src, i64 %iv
+  %data = load i8, ptr %src.ptr, align 1
+  %ext = zext i8 %data to i64
+  %rdx.next = add i64 %rdx, %ext
+  %dst.ptr = getelementptr inbounds nuw i64, ptr %dst, i64 %iv
+  store i64 %ext, ptr %dst.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 1021
+  %ee.val = load i8, ptr %src.ptr, align 1
+  %ee.cond = icmp eq i8 %ee.val, 0
+  %combined.cond = or i1 %counted.cond, %ee.cond
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret i64 %rdx.next
+}
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();
 

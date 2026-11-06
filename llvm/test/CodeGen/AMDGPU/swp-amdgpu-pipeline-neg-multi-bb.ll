@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
 ; Reject a loop whose body lowers to more than one basic block: the runtime-masked
 ; load is scalarized into cond.load blocks, so the pipeliner bails (single-block only).
 ; CHECK: Not a single basic block

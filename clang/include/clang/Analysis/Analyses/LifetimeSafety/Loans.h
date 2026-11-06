@@ -126,14 +126,13 @@ public:
 /// TODO: Model access paths of other types, e.g. heap and globals.
 class AccessPath {
   /// The base of the access path: a variable, temporary, placeholder, or an
-  /// allocation expression (a `CXXNewExpr` or an allocating call).
+  /// allocation expression (a `CXXNewExpr` or an allocating `CallExpr`).
   ///
   /// NOTE: Keep the number of alternatives low; PointerUnion packs the
   /// discriminator in the low bits of the pointer, so more alternatives
   /// require more alignment than 32-bit builds can always provide.
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *,
-                           const PlaceholderBase *, const clang::Expr *>
+  const llvm::PointerUnion<const clang::ValueDecl *, const PlaceholderBase *,
+                           const clang::Expr *>
       Base;
   /// The path elements representing field accesses and access to unnamed
   /// interior regions.
@@ -158,7 +157,8 @@ public:
   }
 
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return dyn_cast<const clang::MaterializeTemporaryExpr *>(Base);
+    return dyn_cast_or_null<clang::MaterializeTemporaryExpr>(
+        dyn_cast<const clang::Expr *>(Base));
   }
 
   const PlaceholderBase *getAsPlaceholderBase() const {
@@ -166,9 +166,10 @@ public:
   }
 
   /// Returns the allocation expression that created this loan: a
-  /// `CXXNewExpr` or an allocating call.
+  /// `CXXNewExpr` or an allocating `CallExpr`.
   const clang::Expr *getAsAllocation() const {
-    return dyn_cast<const clang::Expr *>(Base);
+    const auto *E = dyn_cast<const clang::Expr *>(Base);
+    return isa_and_nonnull<clang::CXXNewExpr, clang::CallExpr>(E) ? E : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {

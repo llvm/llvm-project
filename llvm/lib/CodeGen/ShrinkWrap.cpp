@@ -311,12 +311,13 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
   ///
   auto IsKnownNonStackPtr = [](MachineMemOperand *Op) {
     if (Op->getValue()) {
-      const Value *UO = getUnderlyingObject(Op->getValue());
-      if (!UO)
-        return false;
-      if (auto *Arg = dyn_cast<Argument>(UO))
-        return !Arg->hasPassPointeeByValueCopyAttr();
-      return isa<GlobalValue>(UO);
+      SmallVector<const Value *, 2> Objs;
+      getUnderlyingObjects(Op->getValue(), Objs);
+      return !Objs.empty() && all_of(Objs, [](const Value *UO) {
+        if (auto *Arg = dyn_cast<Argument>(UO))
+          return !Arg->hasPassPointeeByValueCopyAttr();
+        return isa<GlobalValue>(UO);
+      });
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
       return PSV->isJumpTable() || PSV->isConstantPool();
@@ -1051,6 +1052,7 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
            // sanitizers to be able to get a correct stack frame.
            !(MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
+             MF.getFunction().hasFnAttribute(Attribute::SanitizeConcurrency) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress));
