@@ -26,6 +26,9 @@ class StringRef;
   class Value;
   class Function;
 
+  /// Returns true if \p L and \p R have the same TBAA and alias scope metadata.
+  bool hasSameAliasingMetadata(const Instruction *L, const Instruction *R);
+
   /// The interface for consumers of difference data.
   class Consumer {
     virtual void anchor();
