@@ -72,6 +72,7 @@
 # RUN: %python %p/Inputs/code-signature-check.py %t 16544 320 0 16544 | FileCheck %s --check-prefix=CHECK-TEXT-SEGMENT
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

@@ -44,6 +44,7 @@
 
 #--- armv7-symtab.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0000000C
@@ -136,6 +137,7 @@ LinkEditData:
 
 #--- arm64-symtab.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

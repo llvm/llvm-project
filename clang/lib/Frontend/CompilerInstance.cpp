@@ -1145,8 +1145,9 @@ void CompilerInstance::parseLLVMArgs() {
     Args[NumArgs + 1] = nullptr;
     // With no stream to report to, the parser calls exit(), which ends the
     // process that embeds clang. Keep its output where it already went.
-    if (!llvm::cl::ParseCommandLineOptions(
-            NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
+    if (!llvm::cl::parseCommandLineOptions(
+            LibraryOptions, ArrayRef(Args.get(), NumArgs + 1),
+            /*Overview=*/"", /*Errs=*/&llvm::errs(),
             /*VFS=*/&getVirtualFileSystem()))
       getDiagnostics().Report(diag::err_fe_invalid_forwarded_option) << 0;
   }
