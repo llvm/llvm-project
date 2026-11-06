@@ -1687,16 +1687,12 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // to false.
     bool IsListInit = ListInitialization ||
                       (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
-    if (IsListInit)
-      Result = CXXFunctionalCastExpr::CreateListInitializer(
-          Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
-          Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides(),
-          RParenOrBraceLoc);
-    else
-      Result = CXXFunctionalCastExpr::Create(
-          Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
-          Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides(),
-          LParenOrBraceLoc, RParenOrBraceLoc);
+    auto LParenOrBraceOrNullLoc =
+        IsListInit ? SourceLocation() : LParenOrBraceLoc;
+    Result = CXXFunctionalCastExpr::Create(
+        Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
+        Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides(),
+        LParenOrBraceOrNullLoc, RParenOrBraceLoc);
   }
 
   return Result;
