@@ -563,6 +563,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     `FFI_LIBRARY_DIR` to the directories where `ffi.h` and `libffi.so` can be
     found, respectively. Defaults to OFF.
 
+**LLVM_ENABLE_GLIBC_CONDVAR_WORKAROUND**:BOOL
+
+:   Work around lost `pthread_cond_signal` wakeups in glibc before 2.41 ([BZ 25847](https://sourceware.org/bugzilla/show_bug.cgi?id=25847)), which can hang `llvm::parallelFor` and other `llvm::parallel` callers.
+    Enable it when the built binaries may run on a glibc without the fix, such as Debian 12 (2.36).
+    Defaults to OFF.
+
 **LLVM_ENABLE_HTTPLIB**:BOOL
 
 :   Enables the optional cpp-httplib dependency which is used by
