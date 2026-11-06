@@ -393,8 +393,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double)
 ; CHECK-NEXT: declare float @fmodf(float, float)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr)
-; CHECK-NEXT: declare float @frexpf(float, ptr)
+; CHECK-NEXT: declare double @frexp(double, ptr align 2 dereferenceable(2))
+; CHECK-NEXT: declare float @frexpf(float, ptr align 2 dereferenceable(2))
 ; CHECK-NEXT: declare double @ldexp(double, i16)
 ; CHECK-NEXT: declare float @ldexpf(float, i16)
 ; CHECK-NEXT: declare i64 @llrint(double)

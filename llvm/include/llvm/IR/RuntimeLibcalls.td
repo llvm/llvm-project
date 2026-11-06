@@ -376,7 +376,10 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
   def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
   def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  // The exponent is written through an int * parameter (C int).
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamPointeeTypes = [NoneType, Int];
+  }
   def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
   def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
   def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;

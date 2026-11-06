@@ -452,7 +452,7 @@
 ; CHECK-NEXT: declare double @"#fmod"(double, double)
 ; CHECK-NEXT: declare float @"#fmodf"(float, float)
 ; CHECK-NEXT: declare void @"#free"(ptr)
-; CHECK-NEXT: declare double @"#frexp"(double, ptr)
+; CHECK-NEXT: declare double @"#frexp"(double, ptr align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#ldexp"(double, i32)
 ; CHECK-NEXT: declare i64 @"#llrint"(double)
 ; CHECK-NEXT: declare i64 @"#llrintf"(float)

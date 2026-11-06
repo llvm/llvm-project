@@ -14545,6 +14545,52 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
 
+  // The C libcall may write fewer bits through an output pointer than the
+  // declared result type. Use the libcall's type signature to determine the
+  // written width: the signature's ParamPointeeTypes carry the pointee type
+  // of each pointer parameter, surfaced as a dereferenceable attribute when
+  // the signature is materialized. FREXP's exponent output is C int; the
+  // MODF/SINCOS/SINCOSPI outputs write the floating-point type itself,
+  // which is exactly the declared result type, so their signatures carry no
+  // pointee information and the declared type is used directly.
+  // Allocate temporaries, write and read back at the libcall's parameter
+  // width, and convert to the declared type when reading the result back.
+  // Plain variables rather than structured bindings: capturing the bindings
+  // in the lambda below is a C++20 extension.
+  std::pair<FunctionType *, AttributeList> LibcallSig =
+      DAG.getTargetLoweringInfo().getRuntimeLibcallsInfo().getFunctionTy(
+          Ctx, DAG.getTarget().getTargetTriple(), DAG.getDataLayout(),
+          LibcallImpl);
+  FunctionType *LibcallFTy = LibcallSig.first;
+  AttributeList LibcallAttrs = LibcallSig.second;
+  // The type the libcall actually writes for result ResNo, whose output
+  // pointer is signature parameter \p ParamArgNo.
+  auto LibcallOutputVT = [&](unsigned ResNo, unsigned ParamArgNo) {
+    EVT DeclaredVT = Node->getValueType(ResNo);
+    if (LibcallFTy && ParamArgNo < LibcallFTy->getNumParams() &&
+        LibcallFTy->getParamType(ParamArgNo)->isPointerTy()) {
+      // Only integer outputs can have a pointee narrower than the declared
+      // type (the FREXP exponent); the other outputs are the declared FP
+      // type.
+      uint64_t PointeeBytes =
+          LibcallAttrs.getParamDereferenceableBytes(ParamArgNo);
+      if (DeclaredVT.isInteger() && PointeeBytes)
+        return EVT::getIntegerVT(Ctx, PointeeBytes * 8);
+    }
+    return DeclaredVT;
+  };
+  // Map each result to its output pointer parameter index: the parameters
+  // are the node's operands followed by one pointer per non-returned result
+  // (and an optional trailing vector mask, which never carries pointee
+  // information relevant here).
+  SmallVector<EVT> LibcallOutputVTs(NumResults);
+  unsigned ParamArgNo = Node->getNumOperands();
+  for (unsigned ResNo = 0; ResNo != NumResults; ++ResNo) {
+    if (ResNo == CallRetResNo)
+      continue;
+    LibcallOutputVTs[ResNo] = LibcallOutputVT(ResNo, ParamArgNo++);
+  }
+
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
   SDValue StoresInChain;
@@ -14557,6 +14603,11 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     unsigned ResNo = StoreValue.getResNo();
     // Ensure the store corresponds to an output pointer.
     if (CallRetResNo == ResNo)
+      continue;
+    // Only reuse the store if its width matches what the libcall writes
+    // through the output pointer; a differently-sized destination must keep
+    // its store so that the converted result is stored in full afterwards.
+    if (StoreValue.getValueType() != LibcallOutputVTs[ResNo])
       continue;
     // Ensure the store to the default address space and not atomic or volatile.
     if (!ST->isSimple() || ST->getAddressSpace() != 0)
@@ -14593,8 +14644,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
     if (ResNo == CallRetResNo)
       continue;
-    EVT ResVT = Node->getValueType(ResNo);
-    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(ResVT);
+    SDValue ResultPtr = ST ? ST->getBasePtr()
+                           : DAG.CreateStackTemporary(LibcallOutputVTs[ResNo]);
     ResultPtrs[ResNo] = ResultPtr;
     Args.emplace_back(ResultPtr, PointerTy);
   }
@@ -14627,18 +14678,54 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
-    SDValue LoadResult = DAG.getLoad(Node->getValueType(ResNo), DL, CallChain,
-                                     ResultPtr, PtrInfo);
-    SDValue OutChain = LoadResult.getValue(1);
+    EVT MemVT = LibcallOutputVTs[ResNo];
+    EVT ReadVT = Node->getValueType(ResNo);
+    SDValue LoadResult;
+    SDValue OutChain;
 
-    if (StoreSDNode *ST = ResultStores[ResNo]) {
-      // Replace store with the library call.
-      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-      PtrInfo = ST->getPointerInfo();
-    } else {
+    // The temporary holds exactly the libcall's parameter width (C int for
+    // FREXP), but the loaded value must use types that are legal at this
+    // point: nodes created inside LegalizeDAG cannot have illegal types,
+    // and the parameter width is promoted on some targets (e.g. i32 is
+    // promoted to i64 on RISC-V RV64).
+    // - Parameter width == declared type: plain load (the common case,
+    //   including the width-matched store folding below).
+    // - Declared type wider than the parameter width: sign-extending load.
+    //   It reads exactly the bytes the libcall wrote while producing the
+    //   declared (legal) result type. The C int exponent is signed.
+    // - Declared type narrower than the parameter width (only when the
+    //   narrow type is itself legal, in which case so is the parameter
+    //   width): load the full parameter width and truncate, matching the
+    //   constant folding behavior.
+    if (MemVT == ReadVT) {
+      LoadResult = DAG.getLoad(ReadVT, DL, CallChain, ResultPtr, PtrInfo);
+      OutChain = LoadResult.getValue(1);
+
+      if (StoreSDNode *ST = ResultStores[ResNo]) {
+        // Replace store with the library call.
+        DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
+        PtrInfo = ST->getPointerInfo();
+      } else {
+        PtrInfo = MachinePointerInfo::getFixedStack(
+            DAG.getMachineFunction(),
+            cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+      }
+    } else if (MemVT.bitsLT(ReadVT)) {
+      LoadResult = DAG.getExtLoad(
+          ISD::SEXTLOAD, DL, ReadVT, CallChain, ResultPtr, PtrInfo, MemVT,
+          DAG.getDataLayout().getABITypeAlign(
+              MemVT.getTypeForEVT(Ctx)->getScalarType()));
+      OutChain = LoadResult.getValue(1);
       PtrInfo = MachinePointerInfo::getFixedStack(
           DAG.getMachineFunction(),
           cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    } else {
+      LoadResult = DAG.getLoad(MemVT, DL, CallChain, ResultPtr, PtrInfo);
+      OutChain = LoadResult.getValue(1);
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          DAG.getMachineFunction(),
+          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+      LoadResult = DAG.getNode(ISD::TRUNCATE, DL, ReadVT, LoadResult);
     }
 
     Results.push_back(LoadResult);

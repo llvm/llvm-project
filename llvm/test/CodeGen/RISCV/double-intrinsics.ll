@@ -1713,9 +1713,9 @@ define {double, i32} @frexp_double(double %x) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    mv a0, sp
+; RV64IFD-NEXT:    addi a0, sp, 4
 ; RV64IFD-NEXT:    call frexp
-; RV64IFD-NEXT:    ld a0, 0(sp)
+; RV64IFD-NEXT:    lw a0, 4(sp)
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
@@ -1735,9 +1735,9 @@ define {double, i32} @frexp_double(double %x) nounwind {
 ; RV64IZFINXZDINX:       # %bb.0:
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFINXZDINX-NEXT:    mv a1, sp
+; RV64IZFINXZDINX-NEXT:    addi a1, sp, 4
 ; RV64IZFINXZDINX-NEXT:    call frexp
-; RV64IZFINXZDINX-NEXT:    ld a1, 0(sp)
+; RV64IZFINXZDINX-NEXT:    lw a1, 4(sp)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZFINXZDINX-NEXT:    ret

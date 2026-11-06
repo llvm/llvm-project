@@ -535,25 +535,25 @@ define { <vscale x 2 x double>, <vscale x 2 x i32> } @unroll_two_result_op_vscal
 ; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    mov z3.d, x9
 ; CHECK-NEXT:    str z0, [x8, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov z0.d, z0.d[2]
-; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    add x0, sp, #4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    cmpeq p0.d, p1/z, z1.d, z2.d
 ; CHECK-NEXT:    str p0, [x8, #31, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    cmpeq p0.d, p1/z, z1.d, z3.d
 ; CHECK-NEXT:    str p0, [x8, #30, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    bl frexp
-; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ldr z0, [x8, #2, mul vl] // 16-byte Folded Reload
@@ -561,34 +561,34 @@ define { <vscale x 2 x double>, <vscale x 2 x i32> } @unroll_two_result_op_vscal
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x9, sp, #32
-; CHECK-NEXT:    ldr x8, [sp, #8]
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    ldrsw x8, [sp, #4]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    add x0, sp, #16
-; CHECK-NEXT:    ld1rd { z1.d }, p0/z, [sp]
+; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    ld1rsw { z1.d }, p0/z, [sp]
 ; CHECK-NEXT:    ldr p0, [x9, #30, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z1.d, p0/m, x8
-; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr z0, [x8, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z1, [x8, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    bl frexp
-; CHECK-NEXT:    add x9, sp, #32
-; CHECK-NEXT:    ldr x8, [sp, #16]
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    ldrsw x8, [sp, #8]
 ; CHECK-NEXT:    fmov d9, d0
 ; CHECK-NEXT:    ldr p0, [x9, #31, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    ldr z1, [x9, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #24
+; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    mov z1.d, p0/m, x8
-; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    ldr z0, [x8, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    str z1, [x8, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl frexp
-; CHECK-NEXT:    add x8, sp, #32
-; CHECK-NEXT:    add x9, sp, #32
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr p0, [x8, #30, mul vl] // 2-byte Reload
@@ -596,12 +596,12 @@ define { <vscale x 2 x double>, <vscale x 2 x i32> } @unroll_two_result_op_vscal
 ; CHECK-NEXT:    ldr z1, [x9, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov z2.d, p0/m, d8
 ; CHECK-NEXT:    ldr p0, [x8, #31, mul vl] // 2-byte Reload
-; CHECK-NEXT:    ldr x8, [sp, #24]
+; CHECK-NEXT:    ldrsw x8, [sp, #12]
 ; CHECK-NEXT:    mov z2.d, p0/m, d9
 ; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    mov z1.d, p0/m, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload

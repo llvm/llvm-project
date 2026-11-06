@@ -341,8 +341,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @fmodf(float, float) addrspace(1)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) addrspace(1) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr) addrspace(1)
-; CHECK-NEXT: declare float @frexpf(float, ptr) addrspace(1)
+; CHECK-NEXT: declare double @frexp(double, ptr align 1 dereferenceable(2)) addrspace(1)
+; CHECK-NEXT: declare float @frexpf(float, ptr align 1 dereferenceable(2)) addrspace(1)
 ; CHECK-NEXT: declare double @ldexp(double, i16) addrspace(1)
 ; CHECK-NEXT: declare float @ldexpf(float, i16) addrspace(1)
 ; CHECK-NEXT: declare i64 @llrint(double) addrspace(1)
