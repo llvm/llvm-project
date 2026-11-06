@@ -76,12 +76,12 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
       }
 
       if (PrevV.getCount() > CurrV.getCount())
-        os << "Reference count decremented.";
+        os << "Reference count decremented";
       else
-        os << "Reference count incremented.";
+        os << "Reference count incremented";
 
       if (unsigned Count = CurrV.getCount())
-        os << " The object now has a +" << Count << " retain count.";
+        os << "; the object now has a +" << Count << " retain count";
 
       return true;
 
@@ -89,9 +89,10 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
       if (CurrV.getIvarAccessHistory() ==
               RefVal::IvarAccessHistory::ReleasedAfterDirectAccess &&
           CurrV.getIvarAccessHistory() != PrevV.getIvarAccessHistory()) {
-        os << "Strong instance variable relinquished. ";
+        os << "Strong instance variable relinquished; object released";
+      } else {
+        os << "Object released";
       }
-      os << "Object released.";
       return true;
 
     case RefVal::ReturnedOwned:
@@ -745,8 +746,8 @@ RefLeakReportVisitor::getEndPath(const ExplodedNode *EndN,
         } else {
           os << "whose name ('" << MD->getSelector().getAsString()
              << "') does not start with "
-                "'copy', 'mutableCopy', 'alloc' or 'new'."
-                "  This violates the naming convention rules"
+                "'copy', 'mutableCopy', 'alloc' or 'new';"
+                " violating the naming convention rules"
                 " given in the Memory Management Guide for Cocoa";
         }
       } else {
@@ -754,7 +755,7 @@ RefLeakReportVisitor::getEndPath(const ExplodedNode *EndN,
         ObjKind K = RV->getObjKind();
         if (K == ObjKind::ObjC || K == ObjKind::CF) {
           os << "whose name ('" << *FD
-             << "') does not contain 'Copy' or 'Create'.  This violates the "
+             << "') does not contain 'Copy' or 'Create'; violating the "
                 "naming convention rules given in the Memory Management Guide "
                 "for Core Foundation";
         } else if (RV->getObjKind() == ObjKind::OS) {

@@ -113,31 +113,31 @@ template <class _Tp>
 inline constexpr _Tp phi_v = __illformed<_Tp>{};
 
 template <floating_point _Tp>
-inline constexpr _Tp e_v<_Tp> = 2.718281828459045235360287471352662;
+inline constexpr _Tp e_v<_Tp> = 2.718281828459045235360287471352662498L;
 template <floating_point _Tp>
-inline constexpr _Tp log2e_v<_Tp> = 1.442695040888963407359924681001892;
+inline constexpr _Tp log2e_v<_Tp> = 1.442695040888963407359924681001892137L;
 template <floating_point _Tp>
-inline constexpr _Tp log10e_v<_Tp> = 0.434294481903251827651128918916605;
+inline constexpr _Tp log10e_v<_Tp> = 0.434294481903251827651128918916605082L;
 template <floating_point _Tp>
-inline constexpr _Tp pi_v<_Tp> = 3.141592653589793238462643383279502;
+inline constexpr _Tp pi_v<_Tp> = 3.141592653589793238462643383279502884L;
 template <floating_point _Tp>
-inline constexpr _Tp inv_pi_v<_Tp> = 0.318309886183790671537767526745028;
+inline constexpr _Tp inv_pi_v<_Tp> = 0.318309886183790671537767526745028724L;
 template <floating_point _Tp>
-inline constexpr _Tp inv_sqrtpi_v<_Tp> = 0.564189583547756286948079451560772;
+inline constexpr _Tp inv_sqrtpi_v<_Tp> = 0.564189583547756286948079451560772586L;
 template <floating_point _Tp>
-inline constexpr _Tp ln2_v<_Tp> = 0.693147180559945309417232121458176;
+inline constexpr _Tp ln2_v<_Tp> = 0.693147180559945309417232121458176568L;
 template <floating_point _Tp>
-inline constexpr _Tp ln10_v<_Tp> = 2.302585092994045684017991454684364;
+inline constexpr _Tp ln10_v<_Tp> = 2.302585092994045684017991454684364208L;
 template <floating_point _Tp>
-inline constexpr _Tp sqrt2_v<_Tp> = 1.414213562373095048801688724209698;
+inline constexpr _Tp sqrt2_v<_Tp> = 1.414213562373095048801688724209698079L;
 template <floating_point _Tp>
-inline constexpr _Tp sqrt3_v<_Tp> = 1.732050807568877293527446341505872;
+inline constexpr _Tp sqrt3_v<_Tp> = 1.732050807568877293527446341505872367L;
 template <floating_point _Tp>
-inline constexpr _Tp inv_sqrt3_v<_Tp> = 0.577350269189625764509148780501957;
+inline constexpr _Tp inv_sqrt3_v<_Tp> = 0.577350269189625764509148780501957456L;
 template <floating_point _Tp>
-inline constexpr _Tp egamma_v<_Tp> = 0.577215664901532860606512090082402;
+inline constexpr _Tp egamma_v<_Tp> = 0.577215664901532860606512090082402431L;
 template <floating_point _Tp>
-inline constexpr _Tp phi_v<_Tp> = 1.618033988749894848204586834365638;
+inline constexpr _Tp phi_v<_Tp> = 1.618033988749894848204586834365638118L;
 
 inline constexpr double e          = e_v<double>;
 inline constexpr double log2e      = log2e_v<double>;

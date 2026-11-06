@@ -6,7 +6,7 @@ define void @smin_copyable_sext(ptr %p, ptr %out) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP2]], <4 x i16> <i16 5, i16 6, i16 -1, i16 7>)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP2]], <4 x i16> <i16 5, i16 6, i16 127, i16 7>)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i16> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    ret void
@@ -123,7 +123,7 @@ define void @smax_copyable_minus_two(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i16> [[TMP2]], <i16 0, i16 0, i16 -2, i16 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[TMP3]], <4 x i16> <i16 5, i16 6, i16 0, i16 7>)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[TMP3]], <4 x i16> <i16 5, i16 6, i16 -2, i16 7>)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i16> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    ret void

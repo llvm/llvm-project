@@ -33,6 +33,8 @@ public:
 
   void ClearSingleStepping() { m_single_stepping = false; }
 
+  void SetSingleStepFlag();
+
   std::string GetName() override;
 
   lldb::StateType GetState() override { return m_state; }
