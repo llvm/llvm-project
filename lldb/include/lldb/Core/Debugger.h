@@ -178,6 +178,11 @@ public:
 
   void RestoreInputTerminalState();
 
+  /// Remember text that LLDB printed to the terminal, so that IOHandlers that
+  /// draw over the screen can redraw what they covered.
+  void AppendToTerminalHistory(llvm::StringRef text);
+  std::string GetTerminalHistory();
+
   lldb::StreamUP GetAsyncOutputStream();
 
   lldb::StreamUP GetAsyncErrorStream();
@@ -822,6 +827,9 @@ protected:
   /// Mutex protecting the m_statusline member.
   std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
+
+  std::mutex m_terminal_history_mutex;
+  std::string m_terminal_history;
   /// Raised by FlushStatusLine to request a flush at the next redraw.
   std::atomic<bool> m_flush_statusline = false;
 

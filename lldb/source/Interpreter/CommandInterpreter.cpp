@@ -40,6 +40,9 @@
 #include "Commands/CommandObjectSource.h"
 #include "Commands/CommandObjectStats.h"
 #include "Commands/CommandObjectTarget.h"
+#ifndef NDEBUG
+#include "Commands/CommandObjectTestPicker.h"
+#endif
 #include "Commands/CommandObjectThread.h"
 #include "Commands/CommandObjectTrace.h"
 #include "Commands/CommandObjectType.h"
@@ -605,6 +608,9 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("version", CommandObjectVersion);
   REGISTER_COMMAND_OBJECT("watchpoint", CommandObjectMultiwordWatchpoint);
   REGISTER_COMMAND_OBJECT("language", CommandObjectLanguage);
+#ifndef NDEBUG
+  REGISTER_COMMAND_OBJECT("test-picker", CommandObjectTestPicker);
+#endif
 
   // clang-format off
   const char *break_regexes[][2] = {
@@ -3375,6 +3381,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   while (!str.empty()) {
     llvm::StringRef line;
     std::tie(line, str) = str.split('\n');
+    m_debugger.AppendToTerminalHistory(line);
+    m_debugger.AppendToTerminalHistory("\n");
     {
       LockedStreamFile stream_file = stream->Lock();
       stream_file.Write(line.data(), line.size());
@@ -3431,7 +3439,13 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       LockedStreamFile locked_stream =
           io_handler.GetOutputStreamFileSP()->Lock();
       locked_stream.Printf("%s%s\n", io_handler.GetPrompt(), line.c_str());
+      m_debugger.AppendToTerminalHistory(
+          llvm::formatv("{0}{1}\n", io_handler.GetPrompt(), line).str());
     }
+  } else {
+    // The IOHandler already echoed the line as the user typed it.
+    m_debugger.AppendToTerminalHistory(
+        llvm::formatv("{0}{1}\n", io_handler.GetPrompt(), line).str());
   }
 
   StartHandlingCommand();

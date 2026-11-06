@@ -1316,6 +1316,24 @@ void Debugger::RestoreInputTerminalState() {
   }
 }
 
+void Debugger::AppendToTerminalHistory(llvm::StringRef text) {
+  // Far more than a screen's worth, even on a large terminal.
+  constexpr size_t max_size = 64 * 1024;
+  std::lock_guard<std::mutex> guard(m_terminal_history_mutex);
+  m_terminal_history += text;
+  if (m_terminal_history.size() <= max_size)
+    return;
+  // Drop whole lines so the history never starts mid-line.
+  size_t start = m_terminal_history.find('\n', m_terminal_history.size() -
+                                                    max_size);
+  m_terminal_history.erase(0, start == std::string::npos ? start : start + 1);
+}
+
+std::string Debugger::GetTerminalHistory() {
+  std::lock_guard<std::mutex> guard(m_terminal_history_mutex);
+  return m_terminal_history;
+}
+
 void Debugger::RedrawStatusline(
     std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
@@ -1440,6 +1458,7 @@ bool Debugger::CheckTopIOHandlerTypes(IOHandler::Type top_type,
 }
 
 void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  AppendToTerminalHistory(llvm::StringRef(s, len));
   bool printed = m_io_handler_stack.PrintAsync(s, len, is_stdout);
   if (!printed) {
     LockableStreamFileSP stream_sp =

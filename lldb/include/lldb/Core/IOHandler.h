@@ -47,6 +47,7 @@ public:
     PythonInterpreter,
     LuaInterpreter,
     PythonCode,
+    Picker,
     Other
   };
 
