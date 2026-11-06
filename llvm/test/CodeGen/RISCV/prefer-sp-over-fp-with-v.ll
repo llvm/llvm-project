@@ -27,7 +27,6 @@ define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV32-VEXT-NEXT:    lw a0, -12(s0)
 ; RV32-VEXT-NEXT:    lw a1, -16(s0)
 ; RV32-VEXT-NEXT:    add a0, a0, a1
-; RV32-VEXT-NEXT:    addi sp, s0, -16
 ; RV32-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-VEXT-NEXT:    addi sp, sp, 16
@@ -64,7 +63,6 @@ define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV64-VEXT-NEXT:    lw a0, -20(s0)
 ; RV64-VEXT-NEXT:    lw a1, -24(s0)
 ; RV64-VEXT-NEXT:    addw a0, a0, a1
-; RV64-VEXT-NEXT:    addi sp, s0, -32
 ; RV64-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-VEXT-NEXT:    addi sp, sp, 32

@@ -1341,8 +1341,17 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
-  bool RestoreSPFromFP = RI->hasStackRealignment(MF) ||
-                         MFI.hasVarSizedObjects() || !hasReservedCallFrame(MF);
+  // An unreserved call frame moves SP only around calls that pass arguments
+  // on the stack. Otherwise SP is where the prologue left it, and the FP
+  // restore is worth keeping only where it replaces the multi-instruction
+  // undo of an RVV area or a split SP adjustment.
+  bool CallFrameMovesSP =
+      !hasReservedCallFrame(MF) &&
+      (!MFI.isMaxCallFrameSizeComputed() || MFI.getMaxCallFrameSize() != 0);
+  bool RestoreSPFromFP =
+      RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+      CallFrameMovesSP ||
+      (!hasReservedCallFrame(MF) && (RVVStackSize || FirstSPAdjustAmount));
   if (RVVStackSize) {
     // If RestoreSPFromFP the stack pointer will be restored using the frame
     // pointer value.
