@@ -7541,43 +7541,57 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
-/// Compute the high half of the product of two values that are split into two
-/// narrow parts each, adding the partial products with carry chains instead of
-/// summing zero-extended carries.
+/// Compute the high half of the product of two values that are split into
+/// narrow parts, adding the partial products row by row with carry chains
+/// instead of summing zero-extended carries.
 static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
                                     ArrayRef<Register> Src1Parts,
                                     ArrayRef<Register> Src2Parts,
                                     SmallVectorImpl<Register> &HighParts) {
   LLT CarryTy = LLT::integer(1);
-  Register A0 = Src1Parts[0], A1 = Src1Parts[1];
-  Register B0 = Src2Parts[0], B1 = Src2Parts[1];
+  unsigned NumParts = Src1Parts.size();
   auto Zero = B.buildConstant(NarrowTy, 0);
 
-  // The partial products that contribute to the high half.
-  auto Hi00 = B.buildUMulH(NarrowTy, A0, B0);
-  auto Lo01 = B.buildMul(NarrowTy, A0, B1);
-  auto Hi01 = B.buildUMulH(NarrowTy, A0, B1);
-  auto Lo10 = B.buildMul(NarrowTy, A1, B0);
-  auto Hi10 = B.buildUMulH(NarrowTy, A1, B0);
-  auto Lo11 = B.buildMul(NarrowTy, A1, B1);
-  auto Hi11 = B.buildUMulH(NarrowTy, A1, B1);
+  // The running sum of the product, one narrow part per element.
+  SmallVector<Register, 8> Acc(2 * NumParts);
+  for (unsigned I = 0; I != NumParts; ++I) {
+    // Build the row Src1Parts[I] * Src2, which takes NumParts + 1 parts.
+    SmallVector<Register, 8> Row;
+    Row.push_back(B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[0]).getReg(0));
+    Register Carry;
+    for (unsigned J = 1; J != NumParts; ++J) {
+      auto Lo = B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[J]);
+      auto Hi = B.buildUMulH(NarrowTy, Src1Parts[I], Src2Parts[J - 1]);
+      auto Sum = J == 1 ? B.buildUAddo(NarrowTy, CarryTy, Lo, Hi)
+                        : B.buildUAdde(NarrowTy, CarryTy, Lo, Hi, Carry);
+      Row.push_back(Sum.getReg(0));
+      Carry = Sum.getReg(1);
+    }
+    // The top part of the row cannot overflow.
+    auto HiTop = B.buildUMulH(NarrowTy, Src1Parts[I], Src2Parts[NumParts - 1]);
+    Row.push_back(
+        B.buildUAdde(NarrowTy, CarryTy, HiTop, Zero, Carry).getReg(0));
 
-  // Add A0 * B1 to the high half of A0 * B0. The upper word cannot overflow.
-  auto Col1 = B.buildUAddo(NarrowTy, CarryTy, Hi00, Lo01);
-  auto Col2 = B.buildUAdde(NarrowTy, CarryTy, Hi01, Zero, Col1.getReg(1));
-  // Add A1 * B0. This can carry out of the second column.
-  auto Col1B = B.buildUAddo(NarrowTy, CarryTy, Col1.getReg(0), Lo10);
-  auto Col2B =
-      B.buildUAdde(NarrowTy, CarryTy, Col2.getReg(0), Hi10, Col1B.getReg(1));
-  // Add that carry to the high half of A1 * B1, which cannot overflow.
-  auto Hi11C = B.buildUAdde(NarrowTy, CarryTy, Hi11, Zero, Col2B.getReg(1));
-  // Add A1 * B1 to get the two high words of the product.
-  auto Res0 = B.buildUAddo(NarrowTy, CarryTy, Col2B.getReg(0), Lo11);
-  auto Res1 =
-      B.buildUAdde(NarrowTy, CarryTy, Hi11C.getReg(0), Zero, Res0.getReg(1));
+    if (I == 0) {
+      std::copy(Row.begin(), Row.end(), Acc.begin());
+      continue;
+    }
 
-  HighParts.push_back(Res0.getReg(0));
-  HighParts.push_back(Res1.getReg(0));
+    // Add the row into the running sum, starting at part I. The part above
+    // the row is still zero, so the top addition cannot overflow.
+    auto Sum = B.buildUAddo(NarrowTy, CarryTy, Acc[I], Row[0]);
+    Acc[I] = Sum.getReg(0);
+    Carry = Sum.getReg(1);
+    for (unsigned K = 1; K != NumParts; ++K) {
+      Sum = B.buildUAdde(NarrowTy, CarryTy, Acc[I + K], Row[K], Carry);
+      Acc[I + K] = Sum.getReg(0);
+      Carry = Sum.getReg(1);
+    }
+    Acc[I + NumParts] =
+        B.buildUAdde(NarrowTy, CarryTy, Row[NumParts], Zero, Carry).getReg(0);
+  }
+
+  HighParts.append(Acc.begin() + NumParts, Acc.end());
 }
 
 LegalizerHelper::LegalizeResult
@@ -7604,7 +7618,7 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
 
   SmallVector<Register, 2> DstTmpRegs;
   ArrayRef<Register> DstRegs;
-  if (IsMulHigh && NumParts == 2 &&
+  if (IsMulHigh &&
       LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, LLT::integer(1)}})) {
     // Chain the carries directly when add-with-carry is available.
     buildMulHighWithCarries(MIRBuilder, NarrowTy, Src1Parts, Src2Parts,
