@@ -16,6 +16,7 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -51,8 +52,13 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::omp::target::plugin::DeviceImageTy *
 __ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-llvm::omp::target::plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context);
+llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
+                                         ol_device_handle_t Device,
+                                         TargetAllocTy Kind, int64_t Size,
+                                         void *HostPtr);
+llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
+                             ol_device_handle_t Device, void *Ptr,
+                             TargetAllocTy Kind);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -149,8 +155,6 @@ llvm::Error DeviceTy::init() {
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
-  IsHostDevice =
-      getInfo<ol_device_type_t>(OL_DEVICE_INFO_TYPE) == OL_DEVICE_TYPE_HOST;
 
   RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
   RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
@@ -412,10 +416,6 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
-llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
-  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
-}
-
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -424,16 +424,8 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to allocate device memory: device " << DeviceID
-             << " has no context";
-    return nullptr;
-  }
-
-  auto AllocOrErr =
-      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
-                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
+      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -452,16 +444,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
-             << ": device " << DeviceID << " has no context";
-    return OFFLOAD_FAIL;
-  }
-
-  if (auto Err =
-          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
-                                static_cast<TargetAllocTy>(Kind))) {
+  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
+          Context, DeviceHandle, TgtAllocBegin,
+          static_cast<TargetAllocTy>(Kind))) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
              << llvm::toString(std::move(Err));
     return OFFLOAD_FAIL;
@@ -889,16 +874,21 @@ static uint32_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
 /// Get the default number of blocks for a kernel in Generic-SPMD mode.
 static uint32_t
 getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
-  // Envar to set the default number of blocks per compute unit for a kernel in
-  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
-  // default number of blocks of other kernels.
+  // Envar to override the default number of teams per compute unit for a kernel
+  // in Generic-SPMD mode. Zero uses the default number of blocks of kernels in
+  // any other execution mode.
   static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 0);
 
-  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
-      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+  uint32_t TeamsPerCU =
+      OMPX_GenericSPMDTeamsPerCU.isPresent()
+          ? OMPX_GenericSPMDTeamsPerCU.get()
+          : llvm::omp::target::BackendConfig::get(Props.Backend)
+                .DefaultGenericSPMDTeamsPerCU;
+
+  if (!TeamsPerCU || !Props.NumComputeUnits)
     return Props.DefaultNumBlocks;
-  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
+  return Props.NumComputeUnits * TeamsPerCU;
 }
 
 /// Threshold for the reduction data size (in bytes) above which a cross-team
@@ -1310,8 +1300,9 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
   LaunchConfigTy Config = buildLaunchConfig(KernelArgs);
 
-  // Host kernels are only supported for the latest ABI.
-  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
+  // Some backends (e.g. host) only support the latest ABI.
+  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION &&
+      getConfig().RequiresLatestKernelArgVersion) {
     REPORT() << "Incompatible kernel argument version for kernel "
              << KernelLaunchInfo.Name << " on host device";
     return OFFLOAD_FAIL;

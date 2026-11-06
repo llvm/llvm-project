@@ -1001,7 +1001,6 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 }
 
 // Lower one parallel dimension.
-// Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
 FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       vector::ContractionOp op,
@@ -1042,19 +1041,10 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       diag << "expected either lhsIndex=" << lhsIndex
            << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  // value_or(-1) means that we tolerate a dimension not appearing
-  // in the result map. That can't happen for actual parallel iterators, but
-  // the caller ContractionOpLowering::matchAndRewrite is currently calling
-  // lowerParallel also for the case of unit-size reduction dims appearing only
-  // on one of LHS or RHS, not both. At the moment, such cases are created by
-  // CastAwayContractionLeadingOneDim, so we need to either support that or
-  // modify that pattern.
+
   int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
-  if (resIndex == -1 && dimSize != 1)
-    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expected the dimension for iterIndex=" << iterIndex
-           << " to either appear in the result map, or to be a unit dimension";
-    });
+  assert(resIndex != -1 && "A dimension missing from the accumulator indexing "
+                           "map is not a parallel dim!");
 
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {

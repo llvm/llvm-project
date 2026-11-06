@@ -245,17 +245,29 @@ void initializeRootSignatureAnalysisWrapperPass(PassRegistry &);
 /// Initializer for dxil::SignatureAnalysisWrapper pass.
 void initializeSignatureAnalysisWrapperPass(PassRegistry &);
 
-/// Initializer for DXContainerGlobals pass.
-void initializeDXContainerGlobalsPass(PassRegistry &);
+/// Initializer for DXILContainerGlobals pass.
+void initializeDXILContainerGlobalsLegacyPass(PassRegistry &);
 
 /// Pass for generating DXContainer part globals.
-ModulePass *createDXContainerGlobalsPass();
+class DXILContainerGlobalsPass
+    : public RequiredPassInfoMixin<DXILContainerGlobalsPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
 
-/// Initializer for DXContainerPDB pass.
-void initializeDXContainerPDBPass(PassRegistry &);
+ModulePass *createDXILContainerGlobalsLegacyPass();
+
+/// Initializer for DXILContainerPDB pass.
+void initializeDXILContainerPDBLegacyPass(PassRegistry &);
 
 /// Pass for emitting DirectX PDB files.
-ModulePass *createDXContainerPDBPass();
+class DXILContainerPDBPass
+    : public RequiredPassInfoMixin<DXILContainerPDBPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createDXILContainerPDBLegacyPass();
 
 /// Pass to update the linkage of functions to make sure only
 /// shader entry points and exported functions are visible from

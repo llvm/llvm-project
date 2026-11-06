@@ -274,33 +274,31 @@ struct TransferWriteNonPermutationLowering
     for (AffineExpr exp : map.getResults())
       foundDim[cast<AffineDimExpr>(exp).getPosition()] = true;
     SmallVector<AffineExpr> exprs;
-    bool foundFirstDim = false;
+    std::optional<size_t> firstDim;
     SmallVector<int64_t> missingInnerDim;
     for (size_t i = 0; i < foundDim.size(); i++) {
       if (foundDim[i]) {
-        foundFirstDim = true;
+        if (!firstDim)
+          firstDim = i;
         continue;
       }
-      if (!foundFirstDim)
+      if (!firstDim)
         continue;
       // Once we found one outer dimension existing in the map keep track of all
-      // the missing dimensions after that.
-      missingInnerDim.push_back(i);
+      // the missing dimensions after that, relative to that dimension.
+      missingInnerDim.push_back(i - *firstDim);
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
     // Vector: add unit dims at the beginning of the shape.
     Value newVec = insertUnitDims(
         rewriter, op.getLoc(), op.getVector(),
         llvm::to_vector(llvm::seq<int64_t>(missingInnerDim.size())));
-    // Mask: add unit dims at the end of the shape.
+    // Mask: add unit dims at the positions of the missing dimensions. Dim 0 of
+    // the mask is the first written dim.
     Value newMask;
-    if (op.getMask()) {
-      int64_t maskRank = op.getMask().getType().getRank();
+    if (op.getMask())
       newMask =
-          insertUnitDims(rewriter, op.getLoc(), op.getMask(),
-                         llvm::to_vector(llvm::seq<int64_t>(
-                             maskRank, maskRank + missingInnerDim.size())));
-    }
+          insertUnitDims(rewriter, op.getLoc(), op.getMask(), missingInnerDim);
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
