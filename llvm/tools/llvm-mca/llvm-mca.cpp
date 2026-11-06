@@ -66,7 +66,7 @@
 
 using namespace llvm;
 
-static mc::RegisterMCTargetOptionsFlags MOF;
+static mc::RegisterMCToolOptions MOF;
 
 static cl::OptionCategory ToolOptions("Tool Options");
 static cl::OptionCategory ViewOptions("View Options");

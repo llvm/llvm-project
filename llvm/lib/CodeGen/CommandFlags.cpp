@@ -468,7 +468,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  mc::RegisterMCTargetOptionsFlags();
+  mc::RegisterMCToolOptions();
 }
 
 codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
