@@ -1724,10 +1724,24 @@ void AccAttributeVisitor::CheckAssociatedLoop(
   Symbol::Flag flag = Symbol::Flag::AccPrivate;
   llvm::SmallVector<Symbol *> ivs;
 
+  // A REAL lower bound, upper bound, or step is a Fortran extension. An
+  // explicit OpenACC loop requires integer controls; diagnosing it here
+  // avoids lowering, which aborts while building the default step.
+  auto checkRealAccLoopBound = [&](const parser::Expr *expr) {
+    if (!expr)
+      return;
+    if (auto analyzed{semantics::AnalyzeExpr(context_, *expr)}; analyzed &&
+        semantics::ExprHasTypeCategory(*analyzed, common::TypeCategory::Real)) {
+      context_.Say(expr->source,
+          "OpenACC loop bound expression must have INTEGER type"_err_en_US);
+    }
+  };
+
   // Iterate the index variables of one DoConstruct, calling fn(name, lower,
-  // upper) for each: once for a regular do loop, once per control variable for
-  // a do concurrent loop.  Null pointers signal a loop without valid bounds
-  // (e.g. do while); the level must still be consumed.
+  // upper, step) for each: once for a regular do loop, once per control
+  // variable for a do concurrent loop.  Null pointers signal a loop without
+  // valid bounds (e.g. do while); the level must still be consumed. A DO
+  // CONCURRENT step is an integer expression, so it is not passed here.
   auto forEachIndex = [this](const parser::DoConstruct &loop, auto &&fn) {
     if (loop.IsDoConcurrent()) {
       const auto &loopControl{*loop.GetLoopControl()};
@@ -1738,24 +1752,29 @@ void AccAttributeVisitor::CheckAssociatedLoop(
           std::get<std::list<parser::ConcurrentControl>>(header.t)) {
         fn(&std::get<parser::Name>(control.t),
             &parser::UnwrapRef<parser::Expr>(std::get<1>(control.t)),
-            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)));
+            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)),
+            /*step=*/nullptr);
       }
     } else {
       auto bounds{GetLoopBounds(loop)};
       const parser::ScalarExpr *lower{std::get<1>(bounds)};
       const parser::ScalarExpr *upper{std::get<2>(bounds)};
+      const parser::ScalarExpr *step{std::get<3>(bounds)};
       fn(std::get<0>(bounds),
           lower ? &parser::UnwrapRef<parser::Expr>(*lower) : nullptr,
-          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr);
+          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr,
+          step ? &parser::UnwrapRef<parser::Expr>(*step) : nullptr);
     }
   };
 
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     forEachIndex(*loop,
         [&](const parser::Name *ivName, const parser::Expr *lower,
-            const parser::Expr *upper) {
+            const parser::Expr *upper, const parser::Expr *step) {
           if (level <= 0)
             return;
+          for (const parser::Expr *bound : {lower, upper, step})
+            checkRealAccLoopBound(bound);
           if (ivName && lower && upper) {
             if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
               if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {
