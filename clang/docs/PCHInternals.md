@@ -1,8 +1,5 @@
 # Precompiled Header and Modules Internals
 
-```{contents}
-:local: true
-```
 
 This document describes the design and implementation of Clang's precompiled
 headers (PCH) and modules. If you are interested in the end-user view, please

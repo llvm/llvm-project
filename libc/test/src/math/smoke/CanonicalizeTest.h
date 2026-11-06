@@ -51,8 +51,9 @@ public:
     TEST_SPECIAL(cx, neg_inf, 0, 0);
     EXPECT_FP_EQ(cx, neg_inf);
 
-    TEST_SPECIAL(cx, sNaN, 1, FE_INVALID);
+    TEST_SPECIAL(cx, sNaN, 0, FE_INVALID);
     EXPECT_FP_EQ(cx, aNaN);
+    EXPECT_FALSE(FPBits(cx).is_signaling_nan());
   }
 
   void testX64_80SpecialNumbers(CanonicalizeFunc f) {
@@ -266,18 +267,14 @@ public:
   }
 };
 
-#define LIST_CANONICALIZE_TESTS(T, func)                                       \
-  using LlvmLibcCanonicalizeTest = CanonicalizeTest<T>;                        \
-  TEST_F(LlvmLibcCanonicalizeTest, SpecialNumbers) {                           \
-    testSpecialNumbers(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcCanonicalizeTest, RegularNubmers) {                           \
-    testRegularNumbers(&func);                                                 \
-  }
+#define LIST_CANONICALIZE_TESTS(Name, T, func)                                 \
+  using LlvmLibc##Name##Test = CanonicalizeTest<T>;                            \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RegularNumbers) { testRegularNumbers(&func); }
 
-#define X86_80_SPECIAL_CANONICALIZE_TEST(T, func)                              \
-  using LlvmLibcCanonicalizeTest = CanonicalizeTest<T>;                        \
-  TEST_F(LlvmLibcCanonicalizeTest, X64_80SpecialNumbers) {                     \
+#define X86_80_SPECIAL_CANONICALIZE_TEST(Name, T, func)                        \
+  using LlvmLibc##Name##Test = CanonicalizeTest<T>;                            \
+  TEST_F(LlvmLibc##Name##Test, X64_80SpecialNumbers) {                         \
     testX64_80SpecialNumbers(&func);                                           \
   }
 

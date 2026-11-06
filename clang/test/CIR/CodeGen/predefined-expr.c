@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=OGCG
 
-// CIR: cir.global "private" internal dso_local @staticFuncName.name = #cir.global_view<@".str.4"> : !cir.ptr<!s8i> {alignment = 8 : i64} loc(#loc1)
+// CIR: cir.global "private" internal dso_local @staticFuncName.name = #cir.global_view<@".str.4"> : !cir.ptr<!s8i> align(8) loc(#loc1)
 // CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.zero : !cir.array<!s8i x 1>
 // CIR: cir.global external @func = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 // CIR: cir.global "private" constant cir_private dso_local @__func__.plainFunction = #cir.const_array<"plainFunction" : !cir.array<!s8i x 13>, trailing_zeros>

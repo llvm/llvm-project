@@ -58,7 +58,7 @@ void test() {
 // CIR: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!u64i>
 // CIR: %[[VAL_ARR:.*]] = cir.alloca "values" {{.*}} init : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR: %[[GET_GLOB_VAL:.*]] = cir.get_global @__const._Z3fooIJ2S12S22S3EEDav.values : !cir.ptr<!cir.array<!s32i x 4>>
-// CIR: cir.copy %[[GET_GLOB_VAL]] to %[[VAL_ARR]] : !cir.ptr<!cir.array<!s32i x 4>>
+// CIR: cir.copy %[[GET_GLOB_VAL]] align(16) to %[[VAL_ARR]] align(16) : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
 // CIR: cir.store %[[THREE]], %[[RETVAL]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[RET_LOAD:.*]] = cir.load %[[RETVAL]]  : !cir.ptr<!u64i>, !u64i
@@ -67,7 +67,7 @@ void test() {
 // LLVM: define {{.*}}i64 @_Z3fooIJ2S12S22S3EEDav()
 // LLVM: %[[RETVAL:.*]] = alloca i64
 // LLVM: %[[VAL_ARR:.*]] = alloca [4 x i32]
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL_ARR]], ptr align 4 @__const._Z3fooIJ2S12S22S3EEDav.values, i64 16, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[VAL_ARR]], ptr align 16 @__const._Z3fooIJ2S12S22S3EEDav.values, i64 16, i1 false)
 // LLVM: store i64 3, ptr %[[RETVAL]]
 // LLVM: %[[RET_LOAD:.*]] = load i64, ptr %[[RETVAL]]
 // LLVM: ret i64 %[[RET_LOAD]]

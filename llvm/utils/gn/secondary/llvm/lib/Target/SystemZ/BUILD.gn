@@ -39,6 +39,7 @@ static_library("LLVMSystemZCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "SystemZAlignGlobals.cpp",
     "SystemZAsmPrinter.cpp",
     "SystemZCallingConv.cpp",
     "SystemZConstantPoolValue.cpp",

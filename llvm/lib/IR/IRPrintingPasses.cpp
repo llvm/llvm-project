@@ -28,7 +28,7 @@ namespace {
 
 static void printModule(raw_ostream &OS, StringRef Banner,
                         bool ShouldPreserveUseListOrder, Module &M) {
-  if (llvm::isFunctionInPrintList("*")) {
+  if (shouldPrintAllFunctions()) {
     if (!Banner.empty())
       OS << Banner << "\n";
     M.print(OS, nullptr, ShouldPreserveUseListOrder);
@@ -37,7 +37,7 @@ static void printModule(raw_ostream &OS, StringRef Banner,
 
   bool BannerPrinted = false;
   for (const auto &F : M.functions()) {
-    if (!llvm::isFunctionInPrintList(F.getName()))
+    if (!shouldPrintFunction(F))
       continue;
     if (!BannerPrinted && !Banner.empty()) {
       OS << Banner << "\n";
@@ -91,7 +91,7 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    if (isFunctionInPrintList(F.getName())) {
+    if (shouldPrintFunction(F)) {
       if (forcePrintModuleIR()) {
         OS << Banner << " (function: " << F.getName() << ")\n";
         F.getParent()->print(OS, nullptr);

@@ -1,9 +1,9 @@
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 --vec-extabi < %s | FileCheck --check-prefixes=CHECK,OLD %s
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 --vec-extabi < %s | FileCheck --check-prefixes=CHECK,OLD %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 -target-abi=vec-extabi < %s | FileCheck --check-prefixes=CHECK,OLD %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 -target-abi=vec-extabi < %s | FileCheck --check-prefixes=CHECK,OLD %s
 
 ; RUN: llc -mtriple powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck --check-prefixes=CHECK,MODERN  %s
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 -mattr=+modern-aix-as --vec-extabi < %s | FileCheck --check-prefixes=CHECK,MODERN %s
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 -mattr=+modern-aix-as --vec-extabi < %s | FileCheck --check-prefixes=CHECK,MODERN %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 -mattr=+modern-aix-as -target-abi=vec-extabi < %s | FileCheck --check-prefixes=CHECK,MODERN %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 -mattr=+modern-aix-as -target-abi=vec-extabi < %s | FileCheck --check-prefixes=CHECK,MODERN %s
 
 define <2 x double> @splat1(<2 x double> %A, <2 x double> %B) {
 entry:

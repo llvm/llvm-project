@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/bedrock/sys/TargetTriple.h"
 
 #include "orc-rt-internal/bedrock/TargetDetails.h"
+#include "orc-rt-internal/support/StringExtras.h"
 
-namespace orc_rt {
+namespace orc_rt::sys {
 
-std::string ExecutorProcessInfo::detectTargetTriple() noexcept {
+std::string detectTargetTriple() noexcept {
   static const std::string Cache = [] {
     using namespace target_detail;
 
@@ -35,13 +36,13 @@ std::string ExecutorProcessInfo::detectTargetTriple() noexcept {
 #endif
 
 #if defined(__GLIBC__)
-    return makeTargetTriple({Arch, Vendor, "linux", "gnu"});
+    return join({Arch, Vendor, "linux", "gnu"}, "-");
 #else
-    return makeTargetTriple({Arch, Vendor, "linux"});
+    return join({Arch, Vendor, "linux"}, "-");
 #endif
   }();
 
   return Cache;
 }
 
-} // namespace orc_rt
+} // namespace orc_rt::sys

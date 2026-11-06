@@ -19,7 +19,7 @@
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/FuncletLayout.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
-#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -104,7 +103,8 @@ public:
                 MachineCopyPropagationPass, TailDuplicatePass,
                 StackMapLivenessPass, PostRAMachineSinkingPass,
                 PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass>();
+                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+                MachineBlockPlacementPass>();
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
@@ -181,6 +181,7 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // our pass pipeline didn't add it.
   flushFPMsToMPM(PMW);
   addModulePass(NVVMReflectPass(ST.getSmVersion()), PMW);
+  addModulePass(NVPTXCanonicalizeDynamicSharedPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(NVPTXImageOptimizerPass(), PMW);
@@ -280,12 +281,6 @@ Error NVPTXCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
 
 Error NVPTXCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(ProcessImplicitDefsPass(), PMW);
-  // LiveVariables requires pure SSA form and no unreachable blocks; the legacy
-  // pass manager pulls UnreachableMachineBlockElim in as an implicit
-  // dependency, so add it explicitly here.
-  addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
@@ -324,6 +319,9 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // Before anything relies on alias analysis.
+        PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+
         // We do not want to fold out calls to nvvm.reflect early if the user
         // has not provided a target architecture just yet.
         if (Subtarget.hasTargetName())
@@ -337,6 +335,13 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
+
+  // Linking can bring in further declarations of the dynamic shared memory.
+  auto CanonicalizeAfterLink = [](ModulePassManager &PM, OptimizationLevel) {
+    PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+  };
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
+  PB.registerThinLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
 
   if (!NoKernelInfoEndLTO) {
     PB.registerFullLinkTimeOptimizationLastEPCallback(

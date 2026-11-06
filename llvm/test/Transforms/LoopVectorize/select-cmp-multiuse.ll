@@ -1173,7 +1173,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %all.0.off010 = phi i1 [ true, %entry ], [ %all.0.off0., %for.body ]
   %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %for.body ]
-  %max.015 = phi float [ 0xFFF0000000000000, %entry ], [ %.max.0, %for.body ]
+  %max.015 = phi float [ -inf, %entry ], [ %.max.0, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %load1 = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp ogt float %load1, %max.015
@@ -1646,7 +1646,7 @@ exit:
 ; CHECK-VF4-IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK-VF4-IC1: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK-VF4-IC1: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK-VF4-IC1: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK-VF4-IC1: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; CHECK-VF4-IC1: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK-VF4-IC1: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; CHECK-VF4-IC1: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
@@ -1662,7 +1662,7 @@ exit:
 ; CHECK-VF4-IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK-VF4-IC2: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK-VF4-IC2: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK-VF4-IC2: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK-VF4-IC2: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; CHECK-VF4-IC2: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK-VF4-IC2: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; CHECK-VF4-IC2: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
@@ -1678,7 +1678,7 @@ exit:
 ; CHECK-VF1-IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK-VF1-IC2: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK-VF1-IC2: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK-VF1-IC2: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK-VF1-IC2: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; CHECK-VF1-IC2: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK-VF1-IC2: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; CHECK-VF1-IC2: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}

@@ -10,14 +10,12 @@
 #define MLIR_TARGET_LLVMIR_EXPORT_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 
 namespace llvm {
 class LLVMContext;
 class Module;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace mlir {

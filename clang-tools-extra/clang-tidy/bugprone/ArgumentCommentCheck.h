@@ -58,6 +58,8 @@ private:
   const unsigned CommentStringLiterals : 1;
   const unsigned CommentTypedInitLists : 1;
   const unsigned CommentUserDefinedLiterals : 1;
+  const std::vector<StringRef> IgnoredParameterNames;
+  std::vector<llvm::Regex> IgnoredParameterNameRegexes;
   llvm::Regex IdentRE;
 
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,

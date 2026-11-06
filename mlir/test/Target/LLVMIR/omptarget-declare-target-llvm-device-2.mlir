@@ -4,7 +4,7 @@
 // for link and to clauses. And verifies we continue to make the correct replacement accesses
 // within the target region.
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.requires = #omp<clause_requires unified_shared_memory>} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.requires = #omp.clause_requires<unified_shared_memory>} {
   // CHECK-DAG: @_QMtest_0Evar_to_usm_decl_tgt_ref_ptr = weak global ptr null, align 8
   llvm.mlir.global external @_QMtest_0Evar_to_usm() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : i32 {
     %0 = llvm.mlir.constant(1 : i32) : i32

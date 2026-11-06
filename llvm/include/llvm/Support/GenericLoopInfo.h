@@ -374,12 +374,6 @@ public:
   /// is not valid to replace the loop header with this method.
   void addBasicBlockToLoop(BlockT *NewBB, LoopInfoBase<BlockT, LoopT> &LI);
 
-  /// This is used when splitting loops up. It replaces the OldChild entry in
-  /// our children list with NewChild, and updates the parent pointer of
-  /// OldChild to be null and the NewChild to be this loop.
-  /// This updates the loop depth of the new child.
-  void replaceChildLoopWith(LoopT *OldChild, LoopT *NewChild);
-
   /// Add the specified loop to be a child of this loop.
   /// This updates the loop depth of the new child.
   void addChildLoop(LoopT *NewChild) {
@@ -479,15 +473,10 @@ protected:
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
 
-  // Since loop passes like SCEV are allowed to key analysis results off of
-  // `Loop` pointers, we cannot re-use pointers within a loop pass manager.
-  // This means loop passes should not be `delete` ing `Loop` objects directly
-  // (and risk a later `Loop` allocation re-using the address of a previous one)
-  // but should be using LoopInfo::markAsRemoved, which keeps around the `Loop`
-  // pointer till the end of the lifetime of the `LoopInfo` object.
-  //
-  // To make it easier to follow this rule, we mark the destructor as
-  // non-public.
+  // ScalarEvolution and others key results off `Loop` pointers, so an address
+  // must never come to name a different loop. Passes call LoopInfo::destroy()
+  // rather than `delete`, retaining the memory until the owning LoopInfo dies;
+  // the non-public destructor enforces that.
   ~LoopBase() {
     for (auto *SubLoop : SubLoops)
       SubLoop->~LoopT();
@@ -495,6 +484,10 @@ protected:
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     IsInvalid = true;
 #endif
+    clear();
+  }
+
+  void clear() {
     SubLoops.clear();
     // The block storage is reclaimed by the owning LoopInfo.
     BlockData = nullptr;
@@ -649,14 +642,27 @@ private:
     return Number < BBMap.size() ? BBMap[Number] : nullptr;
   }
 
+  /// Maps a header to the loop recompute() refills for it, if any.
+  using ReuseLoopT = function_ref<LoopT *(BlockT *)>;
+
   /// AllocateLoop for analyze(): stash \p Header (see pendingHeader).
   /// getHeader() only works once the layout carve has replaced the stash with
-  /// the loop's block list.
-  LoopT *allocateLoop(BlockT *Header) {
-    LoopT *L = AllocateLoop();
+  /// the loop's block list. \p ReuseLoop, if specified, returns an existing
+  /// loop rather than a fresh one for LoopInfoBase::recompute.
+  LoopT *allocateLoop(BlockT *Header, ReuseLoopT ReuseLoop) {
+    LoopT *L = ReuseLoop ? ReuseLoop(Header) : nullptr;
+    if (!L)
+      L = AllocateLoop();
     L->PendingHeader = Header;
     return L;
   }
+
+  void analyzeImpl(
+      ParentT F,
+      function_ref<const DominatorTreeBase<BlockT, false> &()> GetDomTree,
+      ReuseLoopT ReuseLoop);
+  void analyzeImpl(const DominatorTreeBase<BlockT, false> &DomTree,
+                   ReuseLoopT ReuseLoop);
 
   /// The header of a loop under construction, stashed until the layout carve
   /// builds the block list.
@@ -726,16 +732,6 @@ public:
                  L.BlockData;
   }
 
-  /// Remove every block satisfying \p Pred from \p Start and each of its
-  /// ancestors up to but not including \p Stop, which must be null or an
-  /// ancestor of \p Start; a null \p Stop walks to the top level.
-  template <typename PredicateT>
-  void removeBlocksFromLoopAndAncestors(LoopT *Start, LoopT *Stop,
-                                        PredicateT Pred) {
-    for (LoopT *Cur = Start; Cur != Stop; Cur = Cur->getParentLoop())
-      removeBlocksIf(*Cur, Pred);
-  }
-
   /// Detach and return the children of \p Parent (the top-level loops if
   /// \p Parent is null) that satisfy \p Pred, clearing their parent pointers.
   /// Both the remaining and the returned children keep their relative order.
@@ -799,14 +795,17 @@ public:
     BBMap[Number] = L;
   }
 
-  /// Replace the specified loop in the top-level loops list with the indicated
-  /// loop.
-  void changeTopLevelLoop(LoopT *OldLoop, LoopT *NewLoop) {
-    auto I = find(TopLevelLoops, OldLoop);
-    assert(I != TopLevelLoops.end() && "Old loop not at top level!");
-    *I = NewLoop;
-    assert(!NewLoop->ParentLoop && !OldLoop->ParentLoop &&
-           "Loops already embedded into a subloop!");
+  /// Replace a loop among its siblings (a parent loop's child list or the
+  /// top-level list) with a new loop.
+  void replaceLoop(LoopT *Old, LoopT *New) {
+    assert(!New->ParentLoop && "New loop already has a parent!");
+    LoopT *Parent = Old->ParentLoop;
+    auto &Siblings = Parent ? Parent->SubLoops : TopLevelLoops;
+    auto I = find(Siblings, Old);
+    assert(I != Siblings.end() && "Old loop is not among its siblings!");
+    *I = New;
+    Old->ParentLoop = nullptr;
+    New->ParentLoop = Parent;
   }
 
   /// This adds the specified loop to the collection of top-level loops.
@@ -853,6 +852,18 @@ public:
   /// Analyze the function \p DomTree describes.
   void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
   ///@}
+
+  /// Rebuild the loop forest from the CFG, refilling the existing loop object
+  /// of every block that still heads a loop, so that analyses keyed on loop
+  /// pointers stay valid for the survivors.
+  ///
+  /// Returns the loops whose header no longer heads one, each with its former
+  /// header, in a deterministic order. They are left empty and unlinked; the
+  /// caller must run its deletion callbacks on them and then destroy() them.
+  ///
+  /// Every loop's header must still belong to the function.
+  SmallVector<std::pair<LoopT *, BlockT *>, 4>
+  recompute(const DominatorTreeBase<BlockT, false> &DomTree);
 
   // Debugging
   void print(raw_ostream &OS) const;

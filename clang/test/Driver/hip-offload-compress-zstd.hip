@@ -1,56 +1,43 @@
 // REQUIRES: zstd
 
-// Test compress bundled bitcode.
-
-// RUN: rm -rf %t.bc
-// RUN: %clang -c -v --target=x86_64-linux-gnu \
-// RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   --no-offload-new-driver -fgpu-rdc -nogpuinc -nogpulib \
-// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
-// RUN:   --offload-compress --offload-compression-level=9 \
-// RUN:   --offload-device-only --gpu-bundle-output \
-// RUN:   -o %t.bc \
-// RUN: 2>&1 | FileCheck %s
-
-// CHECK: clang-offload-bundler{{.*}} -type=o
-// CHECK-SAME: -targets={{.*}}hip-amdgpu11.00-amd-amdhsa-unknown-gfx1100,hip-amdgpu11.01-amd-amdhsa-unknown-gfx1101
-// CHECK-SAME: --compress --verbose --compression-level=9
-// CHECK: Compressed bundle format
-
-// Test uncompress of bundled bitcode.
-
-// RUN: %clang --hip-link -### -v --target=x86_64-linux-gnu \
-// RUN:   --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   --no-offload-new-driver -fgpu-rdc -nogpulib \
-// RUN:   %t.bc --offload-device-only \
-// RUN: 2>&1 | FileCheck -check-prefix=UNBUNDLE %s
-
-// UNBUNDLE: clang-offload-bundler{{.*}} "-type=bc"
-// UNBUNDLE-SAME: -targets={{.*}}hip-amdgpu11.00-amd-amdhsa-unknown-gfx1100,hip-amdgpu11.01-amd-amdhsa-unknown-gfx1101
-// UNBUNDLE-SAME: -unbundle
-// UNBUNDLE-SAME: -verbose
-
-// Test compress bundled code objects.
-
-// RUN: %clang -c -### -v --target=x86_64-linux-gnu \
-// RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   --no-offload-new-driver -nogpuinc -nogpulib \
-// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
-// RUN:   --offload-compress \
-// RUN: 2>&1 | FileCheck -check-prefix=CO %s
-
-// CO: clang-offload-bundler{{.*}} "-type=o"
-// CO-SAME: -targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx1100,hipv4-amdgcn-amd-amdhsa--gfx1101
-// CO-SAME: "--compress" "--verbose"
+// Test HIP offload compression.
 
 // RUN: rm -rf %t.bc
 // RUN: %clang -### -v --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   --offload-new-driver -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   --offload-compress --offload-compression-level=9 \
 // RUN:   --gpu-bundle-output \
 // RUN:   -o %t.bc \
 // RUN: 2>&1 | FileCheck %s --check-prefix=NEWDRIVER
 
-// NEWDRIVER: clang-linker-wrapper{{.*}}"--compress" "--verbose" "--compression-level=9"
+// NEWDRIVER: llvm-offload-binary{{.*}}"--image={{[^"]*}}arch=gfx1101{{[^"]*}}" "--compress" "--compression-format=zstd" "--compression-level=9"{{$}}
+// NEWDRIVER: clang-linker-wrapper{{.*}}"--compress" "--compression-level=9"
+// NEWDRIVER-NOT: "--verbose"
+
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
+// RUN:   -nogpuinc -nogpulib -c %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   --offload-compress \
+// RUN: 2>&1 | FileCheck %s --check-prefix=NORDC
+
+// NORDC: llvm-offload-binary{{.*}}"--image={{[^"]*}}arch=gfx1101{{[^"]*}}"{{$}}
+// NORDC-NOT: "--compress"
+// NORDC: clang-linker-wrapper{{.*}}"--emit-fatbin-only"{{.*}}"--compress"
+
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   -x hip --offload-arch=gfx1100 \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib -c %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   --offload-compress --no-offload-compress \
+// RUN: 2>&1 | FileCheck %s --check-prefix=NOCOMPRESS
+
+// NOCOMPRESS: llvm-offload-binary{{.*}}"--image={{[^"]*}}arch=gfx1100{{[^"]*}}"{{$}}
+
+// --offload-compress is HIP only, so other offload packagers ignore it.
+// RUN: %clang -### --target=x86_64-linux-gnu -x c -fopenmp \
+// RUN:   --offload-arch=gfx1100 -nogpulib --offload-compress -c %s \
+// RUN: 2>&1 | FileCheck %s --check-prefix=OMP
+
+// OMP: llvm-offload-binary{{.*}}kind=openmp
+// OMP-NOT: "--compress"

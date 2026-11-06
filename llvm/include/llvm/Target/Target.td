@@ -14,7 +14,7 @@
 // Include all information about LLVM intrinsics.
 include "llvm/IR/Intrinsics.td"
 
-class Predicate; // Forward def
+include "llvm/Target/TargetSubtarget.td"
 
 //===----------------------------------------------------------------------===//
 // Register file description - These classes are used to fill in the target
@@ -522,60 +522,6 @@ class DwarfRegAlias<Register reg> {
       Register DwarfAlias = reg;
 }
 
-// Determine whether inlining is allowed if caller and callee differ in whether
-// a feature is enabled.
-class InlineBehavior;
-
-// Arbitrary differences are allowed.
-def InlineIgnore : InlineBehavior;
-// A callee with this feature enabled cannot be inlined into a caller without
-// it enabled.
-def InlineDefault : InlineBehavior;
-// A callee without this feature enabled cannot be inlined into a caller with
-// it enabled.
-def InlineInverse : InlineBehavior;
-// The feature must be either enabled in both caller and callee, or disabled in
-// both.
-def InlineMustMatch : InlineBehavior;
-
-//===----------------------------------------------------------------------===//
-// SubtargetFeature - A characteristic of the chip set.
-//
-class SubtargetFeature<string n, string f, string v, string d,
-                       list<SubtargetFeature> i = [],
-                       InlineBehavior ib = InlineDefault> {
-  // Name - Feature name. Used by command line (-mattr=) to determine the
-  // appropriate target chip.
-  //
-  string Name = n;
-
-  // FieldName - Field in XXXSubtarget to be set by feature.
-  //
-  string FieldName = f;
-
-  // Value - Value the XXXSubtarget field to be set to by feature.
-  //
-  // A value of "true" or "false" implies the field is a bool. Otherwise,
-  // it is assumed to be an integer. the integer value may be the name of an
-  // enum constant. If multiple features use the same integer field, the
-  // field will be set to the maximum value of all enabled features that
-  // share the field.
-  //
-  string Value = v;
-
-  // Desc - Feature description. Used by command line (-mattr=) to display help
-  // information.
-  //
-  string Desc = d;
-
-  // Implies - Features that this feature implies are present. If one of those
-  // features isn't set, then this one shouldn't be set either.
-  //
-  list<SubtargetFeature> Implies = !sort(f, i, f.Name);
-
-  InlineBehavior InlineBehavior = ib;
-}
-
 /// Specifies a Subtarget feature that this instruction is deprecated on.
 class Deprecated<SubtargetFeature dep> {
   SubtargetFeature DeprecatedFeatureMask = dep;
@@ -586,16 +532,6 @@ class Deprecated<SubtargetFeature dep> {
 class ComplexDeprecationPredicate<string dep> {
   string ComplexDeprecationPredicate = dep;
 }
-
-//===----------------------------------------------------------------------===//
-// Pull in the common support for MCPredicate (portable scheduling predicates).
-//
-include "llvm/Target/TargetInstrPredicate.td"
-
-//===----------------------------------------------------------------------===//
-// Pull in the common support for scheduling
-//
-include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
   // Size of encoded instruction in bytes.
@@ -658,7 +594,7 @@ class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
 
 //===----------------------------------------------------------------------===//
 // Instruction set description - These classes correspond to the C++ classes in
-// the Target/TargetInstrInfo.h file.
+// the CodeGen/TargetInstrInfo.h file.
 //
 class Instruction : InstructionEncoding {
   string Namespace = "";
@@ -906,55 +842,6 @@ class PseudoInstExpansion<dag Result> {
   bit isPseudo = true;
 }
 
-/// Predicates - These are extra conditionals which are turned into instruction
-/// selector matching code. Currently each predicate is just a string.
-class Predicate<code cond> {
-
-  /// This is a C++ expression which can be evaluated to return a bool,
-  /// representing whether the predicate is satisfied.
-  ///
-  /// The following variables are in scope:
-  /// - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
-  ///   instance.
-  code CondString = cond;
-
-  /// AssemblerMatcherPredicate - If this feature can be used by the assembler
-  /// matcher, this is true. Targets should set this by inheriting their
-  /// feature from the AssemblerPredicate class in addition to Predicate.
-  bit AssemblerMatcherPredicate = false;
-
-  /// AssemblerCondDag - Set of subtarget features being tested used
-  /// as alternative condition string used for assembler matcher. Must be used
-  /// with (all_of) to indicate that all features must be present, or (any_of)
-  /// to indicate that at least one must be. The required lack of presence of
-  /// a feature can be tested using a (not) node including the feature.
-  /// e.g. "(all_of ModeThumb)" is translated to "(Bits & ModeThumb) != 0".
-  ///      "(all_of (not ModeThumb))" is translated to
-  ///      "(Bits & ModeThumb) == 0".
-  ///      "(all_of ModeThumb, FeatureThumb2)" is translated to
-  ///      "(Bits & ModeThumb) != 0 && (Bits & FeatureThumb2) != 0".
-  ///      "(any_of ModeTumb, FeatureThumb2)" is translated to
-  ///      "(Bits & ModeThumb) != 0 || (Bits & FeatureThumb2) != 0".
-  /// all_of and any_of cannot be combined in a single dag, instead multiple
-  /// predicates can be placed onto Instruction definitions.
-  dag AssemblerCondDag;
-
-  /// PredicateName - User-level name to use for the predicate. Mainly for use
-  /// in diagnostics such as missing feature errors in the asm matcher.
-  string PredicateName = "";
-
-  /// Setting this to '1' indicates that the predicate must be recomputed on
-  /// every function change. Most predicates can leave this at '0'.
-  ///
-  /// Ignored by SelectionDAG, it always recomputes the predicate on every use.
-  bit RecomputePerFunction = false;
-}
-
-/// NoHonorSignDependentRounding - This predicate is true if support for
-/// sign-dependent-rounding is not enabled.
-def NoHonorSignDependentRounding
- : Predicate<"!TM.Options.HonorSignDependentRoundingFPMath()">;
-
 class Requires<list<Predicate> preds> {
   list<Predicate> Predicates = preds;
 }
@@ -1006,23 +893,6 @@ def slice;
 def encoder;
 def decoder;
 
-/// PointerLikeRegClass - Pseudoinstruction operands that are designed
-/// to have pointer width are derived from this. This should only be
-/// used by StandardPseudoInstruction instructions. No target specific
-/// instruction should use this.
-class PointerLikeRegClass<int Kind> {
-  int RegClassKind = Kind;
-}
-
-/// ptr_rc definition - Mark this operand as being a pointer value
-/// whose register class needs to be defined by the target. Targets
-/// should provide instruction definition overrides which substitute
-/// the uses of this with the backend defined RegisterClass or
-/// RegClassByHwMode to use for pointer virtual registers for a
-/// particular opcode (typically by defining a subsitute instruction
-/// with RemapPointerOperands).
-def ptr_rc : PointerLikeRegClass<0>;
-
 /// RegClassByHwMode - Operands that change the register class based
 /// on the subtarget are derived from this. TableGen
 /// treats the register class as having a symbolic kind that it
@@ -1035,6 +905,13 @@ class RegClassByHwMode<list<HwMode> Modes,
   : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
   list<RegisterClass> Objects = RegClasses;
 }
+
+/// ptr_rc - Placeholder pointer operand for the generic
+/// StandardPseudoInstructions. It has no register classes of its own; each
+/// target must substitute a real RegClassByHwMode (or RegisterClass) via
+/// RemapPointerOperands (typically RemapAllTargetPseudoPointerOperands). An
+/// unremapped ptr_rc reaching the instruction-info emitter is an error.
+def ptr_rc : RegClassByHwMode<[], []>;
 
 /// unknown definition - Mark this operand as being of unknown type, causing
 /// it to be resolved by inference in the context it is used.
@@ -1766,7 +1643,7 @@ defvar PseudosWithPtrOps = [
 ];
 
 
-/// Replace PointerLikeRegClass operands in OperandList with new_rc.
+/// Replace ptr_rc placeholder operands in OperandList with new_rc.
 class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
   // Collect the set of names so we can query and rewrite them.
   list<string> op_names = !foreach(i, !range(!size(OperandList)),
@@ -1782,7 +1659,7 @@ class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
   dag ret =
     !foldl(OperandList, op_names, acc, name,
       !cond(
-        !initialized(!getdagarg<PointerLikeRegClass>(OperandList, name))
+        !initialized(!getdagarg<RegClassByHwMode>(OperandList, name))
           : !setdagarg(acc, name, new_rc),
         !initialized(!getdagarg<unknown_class>(OperandList, name)) : acc,
         !initialized(!getdagarg<DAGOperand>(OperandList, name)) : acc
@@ -1848,6 +1725,11 @@ class AsmParser {
   // several registers share the same alias (i.e. not a 1:1 mapping).
   bit ShouldEmitMatchRegisterAltName = false;
 
+  // Generate MatchRegisterAltName(StringRef Name, unsigned AltIdx), matching
+  // only explicit names for AltIdx, without fallback. Duplicate names are
+  // checked per index, subject to AllowDuplicateRegisterNames.
+  bit ShouldEmitMatchRegisterAltNameWithIndex = false;
+
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
   // should be generated even if there are duplicate register names. The
   // target is responsible for coercing aliased registers as necessary
@@ -1867,6 +1749,15 @@ class AsmParser {
   // to matching the parsed instruction, so to allow more detailed error
   // messages.
   bit ReportMultipleNearMisses = false;
+
+  // PrioritizeFeatureInMultiMismatchFallback -
+  // When 0, retain the first operand near-miss as the fallback diagnostic when an
+  // instruction has multiple invalid operands.
+  // When 1, prioritize a feature near-miss over the first operand near-miss when
+  // recording a MultiMismatchFallback entry, so that diagnostics point to the
+  // missing extension rather than an operand mismatch.
+  // Only effective when ReportMultipleNearMisses is also 1.
+  bit PrioritizeFeatureInMultiMismatchFallback = false;
 
   // OperandParserMethod - If non-empty, this is the name of a custom
   // member function of the AsmParser class to call for every custom instruction
@@ -1893,7 +1784,7 @@ class AsmParser {
   // be preferentially selected.
   //
   // The preference order is:
-  //    Instrution size (if this option is enabled, smallest first)
+  //    Instruction size (if this option is enabled, smallest first)
   //    Number of Operands (least first),
   //    Operand Classes (lexicographically by operand),
   //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details),
@@ -1943,21 +1834,6 @@ class AsmParserVariant {
   string BreakCharacters = "";
 }
 def DefaultAsmParserVariant : AsmParserVariant;
-
-// Operators for combining SubtargetFeatures in AssemblerPredicates
-def any_of;
-def all_of;
-
-/// AssemblerPredicate - This is a Predicate that can be used when the assembler
-/// matches instructions and aliases.
-class AssemblerPredicate<dag cond, string name = ""> {
-  // See `Predicate.AssemblerMatcherPredicate`
-  bit AssemblerMatcherPredicate = true;
-  // See: Predicate.AssemblerCondDag`
-  dag AssemblerCondDag = cond;
-  // See: Predicate.PredicateName
-  string PredicateName = name;
-}
 
 /// TokenAlias - This class allows targets to define assembler token
 /// operand aliases. That is, a token literal operand which is equivalent
@@ -2061,6 +1937,11 @@ class AsmWriter {
   // will specify which alternative to use. For example "{x|y|z}" with Variant
   // == 1, will expand to "y".
   int Variant = 0;
+
+  // If set, emit a bytecode table and interpreter loop instead of a large
+  // switch statement for remaining operands that do not fit in the 64-bit
+  // table-driven printer.
+  bit UseBytecode = 0;
 }
 def DefaultAsmWriter : AsmWriter;
 
@@ -2100,55 +1981,6 @@ class Target {
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
   bit RegistersAreIntervals = false;
-}
-
-//===----------------------------------------------------------------------===//
-// Processor chip sets - These values represent each of the chip sets supported
-// by the scheduler. Each Processor definition requires corresponding
-// instruction itineraries.
-//
-class Processor<string n, ProcessorItineraries pi, list<SubtargetFeature> f,
-                list<SubtargetFeature> tunef = []> {
-  // Name - Chip set name. Used by command line (-mcpu=) to determine the
-  // appropriate target chip.
-  //
-  string Name = n;
-
-  // SchedModel - The machine model for scheduling and instruction cost.
-  //
-  SchedMachineModel SchedModel = NoSchedModel;
-
-  // ProcItin - The scheduling information for the target processor.
-  //
-  ProcessorItineraries ProcItin = pi;
-
-  // Features - list of
-  list<SubtargetFeature> Features = f;
-
-  // TuneFeatures - list of features for tuning for this CPU. If the target
-  // supports -mtune, this should contain the list of features used to make
-  // microarchitectural optimization decisions for a given processor. While
-  // Features should contain the architectural features for the processor.
-  list<SubtargetFeature> TuneFeatures = tunef;
-}
-
-// ProcessorModel allows subtargets to specify the more general
-// SchedMachineModel instead if a ProcessorItinerary. Subtargets will
-// gradually move to this newer form.
-//
-// Although this class always passes NoItineraries to the Processor
-// class, the SchedMachineModel may still define valid Itineraries.
-class ProcessorModel<string n, SchedMachineModel m, list<SubtargetFeature> f,
-                     list<SubtargetFeature> tunef = []>
-  : Processor<n, NoItineraries, f, tunef> {
-  let SchedModel = m;
-}
-
-// Defines an alternate name 'n' for the processor 'alias', resolving
-// to the same subtarget features and scheduling model.
-class ProcessorAlias<string n, string alias> {
-  string Name = n;
-  string Alias = alias;
 }
 
 //===----------------------------------------------------------------------===//

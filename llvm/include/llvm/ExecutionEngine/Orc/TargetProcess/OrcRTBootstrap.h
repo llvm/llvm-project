@@ -23,10 +23,10 @@
 namespace llvm::orc::rt_bootstrap {
 
 /// Adds executor-side wrappers for the run-as function proxies.
-void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M);
+LLVM_ABI void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M);
 
 /// Adds all default target-process bootstrap wrappers.
-void addTo(StringMap<ExecutorAddr> &M);
+LLVM_ABI void addTo(StringMap<ExecutorAddr> &M);
 
 } // namespace llvm::orc::rt_bootstrap
 

@@ -18,6 +18,7 @@
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
+#include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -46,7 +47,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVModuleAnalysisWrapperPassPass(PR);
   initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
@@ -58,13 +59,15 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
   initializeSPIRVPostLegalizerLegacyPass(PR);
+  initializeSPIRVPrepareModuleAnalysisLegacyPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
-  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
+  initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
+  initializeSPIRVRemoveUnusedResourcesLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -82,7 +85,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
@@ -101,9 +104,6 @@ public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM), TM(TM) {}
 
-  SPIRVTargetMachine &getSPIRVTargetMachine() const {
-    return getTM<SPIRVTargetMachine>();
-  }
   void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
@@ -119,6 +119,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addPreEmitPass2() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -157,6 +158,10 @@ void SPIRVPassConfig::addPostRegAlloc() {
   TargetPassConfig::addPostRegAlloc();
 }
 
+void SPIRVPassConfig::addPreEmitPass2() {
+  addPass(createSPIRVPrepareModuleAnalysisLegacyPass());
+}
+
 TargetTransformInfo
 SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(std::make_unique<SPIRVTTIImpl>(this, F));
@@ -164,6 +169,11 @@ SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
+}
+
+// CSE can merge same-LLT values with different SPIR-V types.
+CSEConfigBase *SPIRVTargetMachine::createCSEConfig() const {
+  return new CSEConfigBase();
 }
 
 void SPIRVPassConfig::addIRPasses() {
@@ -174,6 +184,7 @@ void SPIRVPassConfig::addIRPasses() {
   if (TM.getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None)
       addPass(createSPIRVFinalizeShaderLinkagePass(TM));
+    addPass(createSPIRVRemoveUnusedResourcesLegacyPass());
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
@@ -224,7 +235,7 @@ void SPIRVPassConfig::addISelPrepare() {
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createStripConvergenceIntrinsicsPass());
-  addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeResourceBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
@@ -266,7 +277,7 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
     cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
              "instructions"),
-    cl::Optional, cl::init(false));
+    cl::init(false));
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {

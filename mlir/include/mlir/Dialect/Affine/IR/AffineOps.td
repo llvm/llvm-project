@@ -21,11 +21,11 @@ include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
@@ -139,7 +139,8 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields", "getStaticTripCount"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     DeclareOpInterfaceMethods<PromotableRegionOpInterface>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
@@ -628,7 +629,8 @@ def AffineMaxOp : AffineMinMaxOpBase<"max",
 }
 
 def AffineParallelOp : Affine_Op<"parallel",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+    [AutomaticAllocationScope, HasParallelRegion, ImplicitAffineTerminator,
+     RecursivelySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";

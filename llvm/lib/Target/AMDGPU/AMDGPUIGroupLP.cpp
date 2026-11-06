@@ -18,7 +18,6 @@
 #include "AMDGPUIGroupLP.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -58,27 +57,6 @@ static cl::opt<bool> UseCostHeur(
              "attempting to put the later nodes in the later sched groups. "
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
-
-// Components of the mask that determines which instruction types may be may be
-// classified into a SchedGroup.
-enum class SchedGroupMask {
-  NONE = 0u,
-  ALU = 1u << 0,
-  VALU = 1u << 1,
-  SALU = 1u << 2,
-  MFMA = 1u << 3,
-  VMEM = 1u << 4,
-  VMEM_READ = 1u << 5,
-  VMEM_WRITE = 1u << 6,
-  DS = 1u << 7,
-  DS_READ = 1u << 8,
-  DS_WRITE = 1u << 9,
-  TRANS = 1u << 10,
-  LDSDMA = 1u << 11,
-  ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS | LDSDMA,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
-};
 
 class SchedGroup;
 
@@ -475,7 +453,7 @@ void PipelineSolver::makePipeline() {
       for (auto &SU : SG.Collection) {
         if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
           SGBarr = SU;
-        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ")\n");
+        LLVM_DEBUG(dbgs() << *SU << "\n");
       }
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
@@ -677,7 +655,8 @@ void PipelineSolver::retreatPosition() {
     while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
-    CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
+    CurrConflInstNo =
+        static_cast<int>(PipelineInstrs[CurrSyncGroupIdx].size() - 1);
   }
 }
 
@@ -743,8 +722,8 @@ bool PipelineSolver::solveExact() {
   assert(static_cast<size_t>(CurrConflInstNo) <
          PipelineInstrs[CurrSyncGroupIdx].size());
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
@@ -813,7 +792,7 @@ bool PipelineSolver::solveExact() {
   CurrCost += MissPenalty;
   advancePosition();
 
-  LLVM_DEBUG(dbgs() << "NOT Assigned (" << CurrSU.first->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "NOT Assigned " << *CurrSU.first << "\n");
 
   bool FinishedExploring = false;
   if (CurrCost < BestCost || BestCost == -1) {
@@ -842,8 +821,8 @@ void PipelineSolver::greedyFind(
   std::optional<GroupInfo> Best;
 
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
 
@@ -922,7 +901,7 @@ bool PipelineSolver::solveGreedy() {
 unsigned PipelineSolver::computeProblemSize() {
   unsigned ProblemSize = 0;
   for (auto &PipeConflicts : PipelineInstrs) {
-    ProblemSize += PipeConflicts.size();
+    ProblemSize += static_cast<unsigned>(PipeConflicts.size());
   }
 
   return ProblemSize;
@@ -1188,7 +1167,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1196,7 +1175,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          size_t SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1228,7 +1207,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1236,7 +1215,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          size_t SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1426,7 +1405,7 @@ private:
 
   // Whether the instruction occurs after the first TRANS instruction. This
   // implies the instruction can not be a predecessor of the first TRANS
-  // insruction
+  // instruction.
   class OccursAfterExp final : public InstructionRule {
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
@@ -1565,7 +1544,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  MFMAPipeCount = MFMAPipeSUs.size();
+  MFMAPipeCount = static_cast<unsigned>(MFMAPipeSUs.size());
 
   assert(TempExp && TempMFMA);
   assert(MFMAPipeCount > 0);
@@ -1610,17 +1589,17 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   }
 
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount =
+  unsigned PackSuccCount = static_cast<unsigned>(
       llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
-      });
+      }));
 
   // The number of bit pack operations an MFMA depends on
-  unsigned PackPredCount =
+  unsigned PackPredCount = static_cast<unsigned>(
       llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
         auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
         return isBitPack(Opc);
-      });
+      }));
 
   auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
@@ -1633,19 +1612,19 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   MFMAEnablement = 0;
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
-  MFMAEnablement =
+  MFMAEnablement = static_cast<unsigned>(
       llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
         return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-      });
+      }));
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
-  ExpRequirement =
+  ExpRequirement = static_cast<unsigned>(
       llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
         return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-      });
+      }));
 
   ExpRequirement *= PackPredCount;
   return true;
@@ -2106,7 +2085,7 @@ private:
       if (!Collection.size())
         return true;
 
-      int NumBits = 0;
+      uint64_t NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
       auto &MRI = MI->getMF()->getRegInfo();
@@ -2238,7 +2217,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   }
 
   if (IsInitial) {
-    DSWWithPermCount = DSWithPerms.size();
+    DSWWithPermCount = static_cast<unsigned>(DSWithPerms.size());
     auto *I = DSWithPerms.begin();
     auto *E = DSWithPerms.end();
 
@@ -2589,8 +2568,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI, /*AllowLDSDMA=*/true) && !TII->isMFMAorWMMA(MI) &&
-           !TII->isTRANS(MI) && !TII->isLDSDMA(MI)) {
+           TII->isVALU(MI, /*AllowLDSDMA=*/false) && !TII->isMFMAorWMMA(MI) &&
+           !TII->isTRANS(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
@@ -2820,9 +2799,9 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
-  int32_t SGMask = SGB.getOperand(0).getImm();
-  int32_t Size = SGB.getOperand(1).getImm();
-  int32_t SyncID = SGB.getOperand(2).getImm();
+  int64_t SGMask = SGB.getOperand(0).getImm();
+  int32_t Size = static_cast<int32_t>(SGB.getOperand(1).getImm());
+  int32_t SyncID = static_cast<int32_t>(SGB.getOperand(2).getImm());
 
   Size++; // Make room for the SCHED_GROUP_BARRIER instruction
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,

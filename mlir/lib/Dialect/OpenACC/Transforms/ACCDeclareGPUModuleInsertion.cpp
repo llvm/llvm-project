@@ -1,5 +1,4 @@
-//===- ACCDeclareGPUModuleInsertion.cpp
-//------------------------------------===//
+//===- ACCDeclareGPUModuleInsertion.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,6 +49,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -69,7 +69,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool hasAccDeclareGlobals(ModuleOp mod) {
   for (Operation &op : mod.getBody()->getOperations())
     if (op.getDiscardableAttr(acc::getDeclareAttrName()))
@@ -95,6 +94,12 @@ public:
   using acc::impl::ACCDeclareGPUModuleInsertionBase<
       ACCDeclareGPUModuleInsertion>::ACCDeclareGPUModuleInsertionBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCDeclareGPUModuleInsertionBase<
+        ACCDeclareGPUModuleInsertion>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   LogicalResult copyGlobalsToGPUModule(gpu::GPUModuleOp gpuMod, ModuleOp mod,
                                        acc::OpenACCSupport &accSupport) const {
     SymbolTable gpuSymTable(gpuMod);
@@ -116,7 +121,8 @@ public:
           cudaUnified &&
           declareAttr.getDataClause().getValue() !=
               acc::DataClause::acc_declare_device_resident &&
-          (!globalVar || !globalVar.isConstant());
+          (!globalVar || !globalVar.isConstant() ||
+           globalVar.isCompilerGenerated());
       if (makeUnifiedDeclaration)
         makeDeviceGlobalDeclaration(*deviceGlobal);
 
@@ -188,5 +194,4 @@ public:
       return;
   }
 };
-
 } // namespace

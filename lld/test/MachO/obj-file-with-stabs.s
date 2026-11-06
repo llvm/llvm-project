@@ -11,6 +11,7 @@
 # RUN: %lld -lSystem -arch x86_64 %t.o -o %t
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

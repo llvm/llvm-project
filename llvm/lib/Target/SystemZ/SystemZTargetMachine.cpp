@@ -68,9 +68,25 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<SystemZELFTargetObjectFile>();
 }
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
-  // Static code is suitable for use in a dynamic executable; there is no
-  // separate DynamicNoPIC model.
+static Reloc::Model getEffectiveRelocModel(const Triple &TT,
+                                           std::optional<Reloc::Model> RM) {
+  if (TT.isOSzOS()) {
+    // z/OS code is always position-independent, so -fpic and -fno-pic have
+    // no effect. Ignore the relocation model requested by the frontend.
+    // This also prevents optimizations (such as relative lookup tables)
+    // that generate 32-bit relative offsets, which are
+    // incompatible with the GOFF binder's requirement for 8-byte relocations
+    // in C_WSA64.
+    //
+    // Constant globals whose initializers contain pointer relocations (e.g.
+    // vtables) must be placed in a writable section (C_WSA64) so the GOFF
+    // binder can apply relocations at link time. Using DynamicNoPIC causes
+    // getKindForGlobal() to classify such globals as ReadOnlyWithRel instead
+    // of ReadOnly, which routes them to C_WSA64 rather than C_CODE64.
+    return Reloc::DynamicNoPIC;
+  }
+  // For ELF/Linux, static code is suitable for use in a dynamic executable;
+  // there is no separate DynamicNoPIC model.
   if (!RM || *RM == Reloc::DynamicNoPIC)
     return Reloc::Static;
   return *RM;
@@ -127,9 +143,8 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
-          getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
+          T, TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
+          getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(TT, RM), JIT),
           OL),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
@@ -211,6 +226,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createSystemZAlignGlobalsPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }

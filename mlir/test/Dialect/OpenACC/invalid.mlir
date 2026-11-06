@@ -870,13 +870,13 @@ func.func @acc_loop_container() {
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{no data clause modifiers are allowed}}
-%0 = acc.private varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier zero>}> -> memref<f32>
+%0 = acc.private varPtr(%value : memref<f32>) <{modifiers = #acc.data_clause_modifier<zero>}> -> memref<f32>
 
 // -----
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
-%0 = acc.create varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}> -> memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>) <{modifiers = #acc.data_clause_modifier<readonly,zero,capture,always>}> -> memref<f32>
 
 // -----
 
@@ -990,5 +990,15 @@ func.func @verify_parallel_async_missing_device_type(%arg0: i64) {
   }> ({
     acc.yield
   }) : (i64) -> ()
+  return
+}
+
+// -----
+
+func.func @host_data_block_arg(%arg0: memref<?xf32>) {
+  // expected-error@+1 {{expect data entry operation as defining op}}
+  acc.host_data dataOperands(%arg0 : memref<?xf32>) {
+    acc.terminator
+  }
   return
 }

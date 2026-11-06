@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/bedrock/sys/TargetTriple.h"
 
-namespace orc_rt {
+namespace orc_rt::sys {
 
-std::string ExecutorProcessInfo::detectTargetTriple() noexcept { return {}; }
+std::string detectTargetTriple() noexcept {
+#if defined(_M_X64)
+  return "x86_64-pc-windows-msvc";
+#else
+#error "Unsupported Windows architecture"
+#endif
+}
 
-} // namespace orc_rt
+} // namespace orc_rt::sys

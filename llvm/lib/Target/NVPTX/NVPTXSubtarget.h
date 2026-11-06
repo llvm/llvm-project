@@ -85,15 +85,23 @@ public:
   bool hasUsedBytesMaskPragma() const {
     return hasFeature(NVPTX::SM50) && hasFeature(NVPTX::PTX83);
   }
+  bool hasABIPreserve() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX90);
+  }
   bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
-  bool hasAtomBitwise64() const { return hasFeature(NVPTX::SM32); }
-  bool hasAtomMinMax64() const { return hasFeature(NVPTX::SM32); }
+  bool hasAtomMinMaxAndOrXor() const { return hasFeature(NVPTX::SM32); }
   bool hasAtomCas16() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX63);
   }
   bool hasAtomSwap128() const {
     return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX83);
+  }
+  bool hasLdStB128() const {
+    return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX83);
+  }
+  bool hasSysScopeLdStB128() const {
+    return hasLdStB128() && hasFeature(NVPTX::PTX84);
   }
   bool hasClusters() const { return hasFeature(NVPTX::SM90); }
   bool hasLDG() const { return hasFeature(NVPTX::SM32); }
@@ -119,7 +127,11 @@ public:
   bool hasRelaxedMMIO() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX82);
   }
+  bool hasLocalVolatile() const { return hasFeature(NVPTX::PTX91); }
   bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
+  bool hasCLMAD() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX93);
+  }
   // Cache hint SM/PTX version requirements
   bool hasL1EvictionHint() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX74);
