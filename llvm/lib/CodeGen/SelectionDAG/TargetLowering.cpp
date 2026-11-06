@@ -14547,22 +14547,46 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   unsigned NumResults = Node->getNumValues();
 
   // The C libcall may write fewer bits through an output pointer than the
-  // declared result type. So far this only applies to FREXP, whose exponent
-  // output is C int (the same mismatch is handled in SoftenFloatRes_FFREXP);
-  // MODF/SINCOS/SINCOSPI outputs use the floating-point type itself.
+  // declared result type. Use the libcall's type signature to determine the
+  // written width: the signature's ParamPointeeTypes carry the pointee type
+  // of each pointer parameter, surfaced as a dereferenceable attribute when
+  // the signature is materialized. FREXP's exponent output is C int; the
+  // MODF/SINCOS/SINCOSPI outputs write the floating-point type itself,
+  // which is exactly the declared result type, so their signatures carry no
+  // pointee information and the declared type is used directly.
   // Allocate temporaries, write and read back at the libcall's parameter
   // width, and convert to the declared type when reading the result back.
-  bool IsFrexp = LC == RTLIB::getFREXP(VT);
-  EVT IntVT = EVT::getIntegerVT(Ctx, DAG.getLibInfo().getIntSize());
-  // The element type that the libcall actually writes for result ResNo.
-  auto LibcallOutputVT = [&](unsigned ResNo) {
+  auto [LibcallFTy, LibcallAttrs] =
+      DAG.getTargetLoweringInfo().getRuntimeLibcallsInfo().getFunctionTy(
+          Ctx, DAG.getTarget().getTargetTriple(), DAG.getDataLayout(),
+          LibcallImpl);
+  // The type the libcall actually writes for result ResNo, whose output
+  // pointer is signature parameter \p ParamArgNo.
+  auto LibcallOutputVT = [&](unsigned ResNo, unsigned ParamArgNo) {
     EVT DeclaredVT = Node->getValueType(ResNo);
-    if (!IsFrexp || ResNo == CallRetResNo)
-      return DeclaredVT;
-    if (DeclaredVT.isVector())
-      return EVT::getVectorVT(Ctx, IntVT, DeclaredVT.getVectorElementCount());
-    return IntVT;
+    if (LibcallFTy && ParamArgNo < LibcallFTy->getNumParams() &&
+        LibcallFTy->getParamType(ParamArgNo)->isPointerTy()) {
+      // Only integer outputs can have a pointee narrower than the declared
+      // type (the FREXP exponent); the other outputs are the declared FP
+      // type.
+      uint64_t PointeeBytes =
+          LibcallAttrs.getParamDereferenceableBytes(ParamArgNo);
+      if (DeclaredVT.isInteger() && PointeeBytes)
+        return EVT::getIntegerVT(Ctx, PointeeBytes * 8);
+    }
+    return DeclaredVT;
   };
+  // Map each result to its output pointer parameter index: the parameters
+  // are the node's operands followed by one pointer per non-returned result
+  // (and an optional trailing vector mask, which never carries pointee
+  // information relevant here).
+  SmallVector<EVT> LibcallOutputVTs(NumResults);
+  unsigned ParamArgNo = Node->getNumOperands();
+  for (unsigned ResNo = 0; ResNo != NumResults; ++ResNo) {
+    if (ResNo == CallRetResNo)
+      continue;
+    LibcallOutputVTs[ResNo] = LibcallOutputVT(ResNo, ParamArgNo++);
+  }
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
@@ -14580,7 +14604,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     // Only reuse the store if its width matches what the libcall writes
     // through the output pointer; a differently-sized destination must keep
     // its store so that the converted result is stored in full afterwards.
-    if (StoreValue.getValueType() != LibcallOutputVT(ResNo))
+    if (StoreValue.getValueType() != LibcallOutputVTs[ResNo])
       continue;
     // Ensure the store to the default address space and not atomic or volatile.
     if (!ST->isSimple() || ST->getAddressSpace() != 0)
@@ -14617,9 +14641,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
     if (ResNo == CallRetResNo)
       continue;
-    EVT ParamVT = LibcallOutputVT(ResNo);
-    SDValue ResultPtr =
-        ST ? ST->getBasePtr() : DAG.CreateStackTemporary(ParamVT);
+    SDValue ResultPtr = ST ? ST->getBasePtr()
+                           : DAG.CreateStackTemporary(LibcallOutputVTs[ResNo]);
     ResultPtrs[ResNo] = ResultPtr;
     Args.emplace_back(ResultPtr, PointerTy);
   }
@@ -14651,7 +14674,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
-    EVT ParamVT = LibcallOutputVT(ResNo);
+    EVT ParamVT = LibcallOutputVTs[ResNo];
     SDValue LoadResult =
         DAG.getLoad(ParamVT, DL, CallChain, ResultPtr, PtrInfo);
     SDValue OutChain = LoadResult.getValue(1);

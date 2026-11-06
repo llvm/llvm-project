@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 
 ; C frexp/frexpf write the exponent through an int * parameter (32 bits),
 ; but the declared exponent type may be wider (i64) or narrower (i8/i16).
