@@ -79,6 +79,8 @@ TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
     }
   }
   shape_ = Fold(context, std::move(shape_));
+  CHECK(IsSubscriptIntegerKind(LEN_));
+  CHECK(!shape_ || IsSubscriptIntegerKind(*shape_));
   return *this;
 }
 
