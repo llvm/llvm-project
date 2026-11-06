@@ -937,6 +937,10 @@ void MemorySanitizer::initializeModule(Module &M) {
       case Triple::loongarch64:
         MapParams = Linux_LoongArch_MemoryMapParams.bits64;
         break;
+      // riscv64 (Sv48) shares loongarch64's 47-bit shadow/origin layout.
+      case Triple::riscv64:
+        MapParams = Linux_LoongArch_MemoryMapParams.bits64;
+        break;
       case Triple::hexagon:
         MapParams = Linux_Hexagon_MemoryMapParams_P.bits32;
         break;

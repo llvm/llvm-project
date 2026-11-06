@@ -86,7 +86,7 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 
 using PrimaryAllocator = SizeClassAllocator64<AP64>;
 
-#elif defined(__loongarch_lp64)
+#elif defined(__loongarch_lp64) || (defined(__riscv) && (__riscv_xlen == 64))
 const uptr kAllocatorSpace = 0x700000000000ULL;
 const uptr kMaxAllowedMallocSize = 8UL << 30;
 
