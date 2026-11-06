@@ -13363,14 +13363,16 @@ static void readPhysRegsAtBlockEntry(SDValue &V, MachineBasicBlock &MBB,
 
     // Copy a register that can't be copied directly, such as EFLAGS, through
     // the class that the target copies it to. The use of the copy then
-    // restores it, which the target lowers.
+    // restores it, which the target lowers. Otherwise, use VT's class, which
+    // leaves the register allocator the most choice, if VT has one and it
+    // contains PhysReg. An Untyped register pair, such as an i128 on SystemZ,
+    // has none, so it keeps the pair's own class.
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
     bool CrossCopy = RC->expensiveOrImpossibleToCopy();
     if (CrossCopy)
       RC = TRI->getCrossCopyRegClass(RC);
-    else if (const TargetRegisterClass *VTRC = TLI.getRegClassFor(VT);
-             VTRC->contains(PhysReg))
-      RC = VTRC;
+    else if (TLI.isTypeLegal(VT) && TLI.getRegClassFor(VT)->contains(PhysReg))
+      RC = TLI.getRegClassFor(VT);
 
     // This marks PhysReg live-in, once, and reuses the copy if another output
     // reads the same register, such as a second flag output.
