@@ -741,6 +741,23 @@ private:
   template <class _InputIterator>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(_InputIterator __first, size_type __n);
 
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
+  // Iterators are bounded by the capacity, but loops over a vector stop at its end. Telling the compiler that
+  // begin <= end <= capacity lets it prove that such loops never reach the iterator's bound, so it can remove the
+  // per-element bounds checks. This only relies on the vector's own invariants, never on positions passed in by users.
+  //
+  // With the pointer-based layout, current compilers can only use this for single-byte element types (see
+  // https://llvm.org/PR101372); with the size-based layout, it works for all types.
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assume_valid_bounds() const _NOEXCEPT {
+    auto __begin = std::__to_address(__layout_.__begin_ptr());
+    auto __end   = std::__to_address(__layout_.__end_ptr());
+    auto __cap   = std::__to_address(__layout_.__capacity_ptr());
+    _LIBCPP_ASSERT_INTERNAL(__begin <= __end && __end <= __cap, "vector: begin, end and capacity are inconsistent");
+    std::__assume(__begin <= __end);
+    std::__assume(__end <= __cap);
+  }
+#endif
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
@@ -752,6 +769,7 @@ private:
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
     // don't have a way to update existing valid iterators when the container is resized and thus have to go with
     // a laxer approach.
+    __assume_valid_bounds();
     return std::__make_bounded_iter(__p, __layout_.__begin_ptr(), __layout_.__capacity_ptr());
 #else
     return iterator(__p);
@@ -761,6 +779,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
+    __assume_valid_bounds();
     return std::__make_bounded_iter(__p, __layout_.__begin_ptr(), __layout_.__capacity_ptr());
 #else
     return const_iterator(__p);
