@@ -1729,12 +1729,13 @@ define i64 @v_mul_add_1_i64(i64 %x, i64 %y) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
+; GFX1250-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mad_u32 v1, v1, v2, v5
-; GFX1250-NEXT:    v_mad_u32 v1, v0, v3, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    v_mad_nc_u64_u32 v[2:3], v0, v5, v[0:1]
+; GFX1250-NEXT:    v_mad_u32 v1, v1, v5, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_mad_u32 v1, v0, v4, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_mul_add_1_i64:
@@ -1815,12 +1816,13 @@ define i64 @v_mul_add_1_i64_commute(i64 %x, i64 %y) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
+; GFX1250-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mad_u32 v1, v1, v2, v5
-; GFX1250-NEXT:    v_mad_u32 v1, v0, v3, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    v_mad_nc_u64_u32 v[2:3], v0, v5, v[0:1]
+; GFX1250-NEXT:    v_mad_u32 v1, v1, v5, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_mad_u32 v1, v0, v4, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_mul_add_1_i64_commute:
@@ -1901,12 +1903,13 @@ define i64 @v_mul_add_x_i64(i64 %x, i64 %y) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
+; GFX1250-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mad_u32 v1, v1, v2, v5
-; GFX1250-NEXT:    v_mad_u32 v1, v0, v3, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    v_mad_nc_u64_u32 v[2:3], v0, v5, v[0:1]
+; GFX1250-NEXT:    v_mad_u32 v1, v1, v5, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_mad_u32 v1, v0, v4, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_mul_add_x_i64:
