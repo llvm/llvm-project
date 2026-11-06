@@ -20,6 +20,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -190,6 +191,34 @@ class MachineSinking {
   DenseMap<const MachineBasicBlock *, std::vector<unsigned>>
       CachedRegisterPressure;
 
+  /// Cached sorted successor lists per basic block across an RPO sweep.
+  AllSuccsCache CachedAllSuccessors;
+
+  /// Per-register cache for MRI->isConstantPhysReg(MCRegister), avoiding
+  /// repeated linear scans over physical-register use-def chains.
+  mutable SmallVector<int8_t, 0> CachedConstantPhysRegs;
+
+  struct VRegUseSummary {
+    MachineBasicBlock *EffectiveNCD = nullptr;
+    MachineBasicBlock *CommonPHIMBB = nullptr;
+    MachineBasicBlock *CommonPHIIncomingMBB = nullptr;
+    bool Empty = false;
+    bool HasNonPHIUseInNCD = false;
+  };
+
+  /// Cached use-dominance summary for single-def virtual registers.
+  mutable DenseMap<Register, VRegUseSummary> VRegUseSummaries;
+
+  struct BlockFastSinkInfo {
+    uint32_t DomDepth = 0;
+    uint32_t BadEnterCount = 0;
+    uint32_t LiveInCount = 0;
+    uint32_t SingleSuccCount = 0;
+  };
+
+  /// Dominator-tree prefix counts for O(1) multi-block sinking queries.
+  DenseMap<const MachineBasicBlock *, BlockFastSinkInfo> FastSinkInfo;
+
   bool EnableSinkAndFold;
 
 public:
@@ -208,9 +237,17 @@ public:
   void releaseMemory() {
     CEBCandidates.clear();
     CEMergeCandidates.clear();
+    CachedAllSuccessors.clear();
+    CachedConstantPhysRegs.clear();
+    VRegUseSummaries.clear();
+    FastSinkInfo.clear();
+    CachedRegisterPressure.clear();
   }
 
 private:
+  bool isConstantPhysReg(MCRegister PhysReg) const;
+  const VRegUseSummary &getVRegUseSummary(Register Reg) const;
+  void invalidateInstRegCaches(const MachineInstr &MI);
   bool ProcessBlock(MachineBasicBlock &MBB);
   void ProcessDbgInst(MachineInstr &MI);
   bool isLegalToBreakCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
@@ -368,6 +405,106 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
   return false;
 }
 
+bool MachineSinking::isConstantPhysReg(MCRegister PhysReg) const {
+  unsigned RegNo = PhysReg.id();
+  if (RegNo < CachedConstantPhysRegs.size() &&
+      CachedConstantPhysRegs[RegNo] != -1)
+    return CachedConstantPhysRegs[RegNo] != 0;
+  if (CachedConstantPhysRegs.size() <= RegNo)
+    CachedConstantPhysRegs.resize(TRI->getNumRegs(), -1);
+  bool Val = MRI->isConstantPhysReg(PhysReg);
+  CachedConstantPhysRegs[RegNo] = Val ? 1 : 0;
+  return Val;
+}
+
+void MachineSinking::invalidateInstRegCaches(const MachineInstr &Inst) {
+  bool HasPhysDef = false;
+  for (const MachineOperand &MO : Inst.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (Reg.isVirtual())
+      VRegUseSummaries.erase(Reg);
+    else if (MO.isDef())
+      HasPhysDef = true;
+  }
+  if (HasPhysDef)
+    CachedConstantPhysRegs.clear();
+}
+
+const MachineSinking::VRegUseSummary &
+MachineSinking::getVRegUseSummary(Register Reg) const {
+  auto It = VRegUseSummaries.find(Reg);
+  if (It != VRegUseSummaries.end())
+    return It->second;
+
+  VRegUseSummary Summary;
+  auto Uses = MRI->use_nodbg_operands(Reg);
+  if (Uses.empty()) {
+    Summary.Empty = true;
+    return VRegUseSummaries.try_emplace(Reg, Summary).first->second;
+  }
+
+  bool AllPHIsSame = true;
+  MachineBasicBlock *NonPHINCD = nullptr;
+  bool HasNonPHIInNonPHINCD = false;
+
+  for (MachineOperand &MO : Uses) {
+    MachineInstr *UseInst = MO.getParent();
+    unsigned OpNo = MO.getOperandNo();
+    MachineBasicBlock *UseBlock = UseInst->getParent();
+    MachineBasicBlock *EffectiveUseBlock = UseBlock;
+
+    if (UseInst->isPHI()) {
+      MachineBasicBlock *IncomingBB = UseInst->getOperand(OpNo + 1).getMBB();
+      EffectiveUseBlock = IncomingBB;
+      if (AllPHIsSame) {
+        if (!Summary.CommonPHIMBB) {
+          Summary.CommonPHIMBB = UseBlock;
+          Summary.CommonPHIIncomingMBB = IncomingBB;
+        } else if (Summary.CommonPHIMBB != UseBlock ||
+                   Summary.CommonPHIIncomingMBB != IncomingBB) {
+          AllPHIsSame = false;
+        }
+      }
+    } else {
+      AllPHIsSame = false;
+      if (DT->isReachableFromEntry(UseBlock)) {
+        if (!NonPHINCD) {
+          NonPHINCD = UseBlock;
+          HasNonPHIInNonPHINCD = true;
+        } else {
+          MachineBasicBlock *NewNCD =
+              DT->findNearestCommonDominator(NonPHINCD, UseBlock);
+          if (NewNCD == UseBlock)
+            HasNonPHIInNonPHINCD = true;
+          else if (NewNCD != NonPHINCD)
+            HasNonPHIInNonPHINCD = false;
+          NonPHINCD = NewNCD;
+        }
+      }
+    }
+
+    if (DT->isReachableFromEntry(EffectiveUseBlock)) {
+      Summary.EffectiveNCD = Summary.EffectiveNCD
+                                 ? DT->findNearestCommonDominator(
+                                       Summary.EffectiveNCD, EffectiveUseBlock)
+                                 : EffectiveUseBlock;
+    }
+  }
+
+  if (!AllPHIsSame) {
+    Summary.CommonPHIMBB = nullptr;
+    Summary.CommonPHIIncomingMBB = nullptr;
+  }
+  Summary.HasNonPHIUseInNCD =
+      NonPHINCD && NonPHINCD == Summary.EffectiveNCD && HasNonPHIInNonPHINCD;
+
+  return VRegUseSummaries.try_emplace(Reg, Summary).first->second;
+}
+
 bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
                                                      MachineBasicBlock *MBB) {
   if (!MI.isCopy())
@@ -390,6 +527,10 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
   LLVM_DEBUG(dbgs() << "*** to: " << MI);
   MRI->replaceRegWith(DstReg, SrcReg);
+  VRegUseSummaries.erase(DstReg);
+  VRegUseSummaries.erase(SrcReg);
+  CachedRegisterPressure.erase(MBB);
+  invalidateInstRegCaches(MI);
   MI.eraseFromParent();
 
   // Conservatively, clear any kill flags, since it's possible that they are no
@@ -456,7 +597,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
 
     if (Reg.isPhysical() && MO.isUse() &&
-        (MRI->isConstantPhysReg(Reg) ||
+        (isConstantPhysReg(Reg) ||
          TII->isIgnorableUse(MI, MI.getOperandNo(&MO))))
       continue;
 
@@ -600,6 +741,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
         MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
+    CachedRegisterPressure.erase(SinkDst->getParent());
+    invalidateInstRegCaches(*New);
+    invalidateInstRegCaches(*SinkDst);
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
     if (SinkDst->mayStore() && !SinkDst->hasOrderedMemoryRef())
       StoreInstrCache.clear();
@@ -627,6 +771,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
   for (MachineOperand *MO : Cleanup) {
     MachineInstr *I = MO->getParent();
     if (I->isCopy()) {
+      CachedRegisterPressure.erase(I->getParent());
+      invalidateInstRegCaches(*I);
       I->eraseFromParent();
     } else {
       MO->setReg(0);
@@ -634,6 +780,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
   }
 
+  CachedRegisterPressure.erase(MBB);
+  invalidateInstRegCaches(MI);
   MI.eraseFromParent();
   return true;
 }
@@ -648,6 +796,25 @@ bool MachineSinking::AllUsesDominatedByBlock(Register Reg,
                                              bool &BreakPHIEdge,
                                              bool &LocalUse) const {
   assert(Reg.isVirtual() && "Only makes sense for vregs");
+
+  if (MRI->hasOneDef(Reg)) {
+    const VRegUseSummary &Summary = getVRegUseSummary(Reg);
+    if (Summary.Empty)
+      return true;
+    if (Summary.CommonPHIMBB == MBB && Summary.CommonPHIIncomingMBB == DefMBB) {
+      BreakPHIEdge = true;
+      return true;
+    }
+    if (!Summary.EffectiveNCD)
+      return true;
+    if (DT->dominates(DefMBB, Summary.EffectiveNCD)) {
+      if (Summary.EffectiveNCD == DefMBB && Summary.HasNonPHIUseInNCD) {
+        LocalUse = true;
+        return false;
+      }
+      return DT->dominates(MBB, Summary.EffectiveNCD);
+    }
+  }
 
   // Ignore debug uses because debug info doesn't affect the code.
   if (MRI->use_nodbg_empty(Reg))
@@ -830,6 +997,9 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
 bool MachineSinking::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "******** Machine Sinking ********\n");
 
+  if (MF.empty())
+    return false;
+
   STI = &MF.getSubtarget();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
@@ -837,17 +1007,56 @@ bool MachineSinking::run(MachineFunction &MF) {
 
   bool EverMadeChange = false;
 
+  // Traverse reachable blocks in reverse post-order so sinking along forward
+  // CFG edges propagates down the entire chain in a single sweep even when
+  // physical block layout is out of topological order.
+  SmallVector<MachineBasicBlock *, 16> RPOBlocks;
+  auto RebuildRPO = [&]() {
+    RPOBlocks.clear();
+    FastSinkInfo.clear();
+    ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+    llvm::append_range(RPOBlocks, RPOT);
+    FastSinkInfo.reserve(RPOBlocks.size());
+    for (MachineBasicBlock *BB : RPOBlocks) {
+      MachineDomTreeNode *DTN = DT->getNode(BB);
+      if (!DTN)
+        continue;
+      MachineBasicBlock::const_iterator End =
+          BB->SkipPHIsAndLabels(BB->begin());
+      bool HasPrologue = false;
+      for (MachineBasicBlock::const_iterator PI = BB->getFirstNonPHI();
+           PI != End; ++PI) {
+        if (TII->isBasicBlockPrologue(*PI)) {
+          HasPrologue = true;
+          break;
+        }
+      }
+      bool CanEnter = !CI->getCycle(BB) && !BB->isEHPad() &&
+                      !BB->isInlineAsmBrIndirectTarget() && !HasPrologue;
+      BlockFastSinkInfo ParentInfo;
+      if (MachineDomTreeNode *IDom = DTN->getIDom())
+        ParentInfo = FastSinkInfo.lookup(IDom->getBlock());
+      FastSinkInfo[BB] = {
+          ParentInfo.DomDepth + 1,
+          ParentInfo.BadEnterCount + (!CanEnter ? 1 : 0),
+          ParentInfo.LiveInCount + (!BB->livein_empty() ? 1 : 0),
+          ParentInfo.SingleSuccCount + (BB->succ_size() <= 1 ? 1 : 0)};
+    }
+  };
+  RebuildRPO();
+
   while (true) {
     bool MadeChange = false;
 
-    // Process all basic blocks.
+    // Process all reachable basic blocks in RPO.
     CEBCandidates.clear();
     CEMergeCandidates.clear();
     ToSplit.clear();
-    for (auto &MBB : MF)
-      MadeChange |= ProcessBlock(MBB);
+    for (MachineBasicBlock *MBB : RPOBlocks)
+      MadeChange |= ProcessBlock(*MBB);
 
     // If we have anything we marked as toSplit, split it now.
+    bool DidSplit = false;
     MachineDomTreeUpdater MDTU(DT, PDT,
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
@@ -862,10 +1071,21 @@ bool MachineSinking::run(MachineFunction &MF) {
           MBFI->onEdgeSplit(*Pair.first, *NewSucc, *MBPI);
 
         MadeChange = true;
+        DidSplit = true;
         ++NumSplit;
         CI->splitCriticalEdge(Pair.first, Pair.second, NewSucc);
       } else
         LLVM_DEBUG(dbgs() << " *** Not legal to break critical edge\n");
+    }
+    if (DidSplit) {
+      MDTU.flush();
+      CachedAllSuccessors.clear();
+      VRegUseSummaries.clear();
+      CachedConstantPhysRegs.clear();
+      CachedRegisterPressure.clear();
+      HasStoreCache.clear();
+      StoreInstrCache.clear();
+      RebuildRPO();
     }
     // If this iteration over the code changed anything, keep iterating.
     if (!MadeChange)
@@ -958,9 +1178,6 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
 
   bool MadeChange = false;
 
-  // Cache all successors, sorted by frequency info and cycle depth.
-  AllSuccsCache AllSuccessors;
-
   // Walk the basic block bottom-up.  Remember if we saw a store.
   MachineBasicBlock::iterator I = MBB.end();
   --I;
@@ -994,7 +1211,7 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (SinkInstruction(MI, SawStore, AllSuccessors)) {
+    if (SinkInstruction(MI, SawStore, CachedAllSuccessors)) {
       ++NumSunk;
       MadeChange = true;
     }
@@ -1004,8 +1221,6 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
 
   SeenDbgUsers.clear();
   SeenDbgVars.clear();
-  // recalculate the bb register pressure after sinking one BB.
-  CachedRegisterPressure.clear();
   return MadeChange;
 }
 
@@ -1234,7 +1449,7 @@ bool MachineSinking::registerPressureSetExceedsLimit(
     const MachineBasicBlock &MBB) {
   unsigned Weight = NRegs * TRI->getRegClassWeight(RC).RegWeight;
   const int *PS = TRI->getRegClassPressureSets(RC);
-  std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB);
+  const std::vector<unsigned> &BBRegisterPressure = getBBRegisterPressure(MBB);
   for (; *PS != -1; PS++)
     if (Weight + BBRegisterPressure[*PS] >=
         RegClassInfo->getRegPressureSetLimit(*PS))
@@ -1245,7 +1460,8 @@ bool MachineSinking::registerPressureSetExceedsLimit(
 // Recalculate RP and check if any pressure set exceeds the set limit.
 bool MachineSinking::registerPressureExceedsLimit(
     const MachineBasicBlock &MBB) {
-  std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB, false);
+  const std::vector<unsigned> &BBRegisterPressure =
+      getBBRegisterPressure(MBB, false);
 
   for (unsigned PS = 0; PS < BBRegisterPressure.size(); ++PS) {
     if (BBRegisterPressure[PS] >= RegClassInfo->getRegPressureSetLimit(PS)) {
@@ -1277,10 +1493,27 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
 
   // Check if only use in post dominated block is PHI instruction.
   bool NonPHIUse = false;
-  for (MachineInstr &UseInst : MRI->use_nodbg_instructions(Reg)) {
-    MachineBasicBlock *UseBlock = UseInst.getParent();
-    if (UseBlock == SuccToSinkTo && !UseInst.isPHI())
-      NonPHIUse = true;
+  if (MRI->hasOneDef(Reg)) {
+    const VRegUseSummary &Summary = getVRegUseSummary(Reg);
+    if (!Summary.Empty && Summary.EffectiveNCD &&
+        DT->dominates(SuccToSinkTo, Summary.EffectiveNCD)) {
+      NonPHIUse =
+          Summary.EffectiveNCD == SuccToSinkTo && Summary.HasNonPHIUseInNCD;
+    } else if (!Summary.Empty) {
+      for (MachineInstr &UseInst : MRI->use_nodbg_instructions(Reg)) {
+        if (UseInst.getParent() == SuccToSinkTo && !UseInst.isPHI()) {
+          NonPHIUse = true;
+          break;
+        }
+      }
+    }
+  } else {
+    for (MachineInstr &UseInst : MRI->use_nodbg_instructions(Reg)) {
+      if (UseInst.getParent() == SuccToSinkTo && !UseInst.isPHI()) {
+        NonPHIUse = true;
+        break;
+      }
+    }
   }
   if (!NonPHIUse)
     return true;
@@ -1312,7 +1545,7 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
 
     if (Reg.isPhysical()) {
       // Don't handle non-constant and non-ignorable physical register uses.
-      if (MO.isUse() && !MRI->isConstantPhysReg(Reg) &&
+      if (MO.isUse() && !isConstantPhysReg(Reg) &&
           !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
         return false;
       continue;
@@ -1376,7 +1609,7 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
   //
   for (MachineDomTreeNode *DTChild : DT->getNode(MBB)->children()) {
     // DomTree children of MBB that have MBB as immediate dominator are added.
-    if (DTChild->getIDom()->getBlock() == MI.getParent() &&
+    if (DTChild->getIDom()->getBlock() == MBB &&
         // Skip MBBs already added to the AllSuccs vector above.
         !MBB->isSuccessor(DTChild->getBlock()))
       AllSuccs.push_back(DTChild->getBlock());
@@ -1424,7 +1657,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg) &&
+        if (!isConstantPhysReg(Reg) &&
             !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
           return nullptr;
       } else if (!MO.isDead()) {
@@ -1940,6 +2173,67 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     return false;
   }
 
+  // When sinking a side-effect-free single-def instruction down a deep acyclic
+  // dominator chain whose intermediate blocks have multiple successors and no
+  // prologue instructions, advance directly to the deepest legal dominator
+  // instead of splicing one block at a time.
+  bool DontMoveAcrossStore = true;
+  if (!MI.isCopy() && !MI.mayLoadOrStore() &&
+      MI.isSafeToMove(DontMoveAcrossStore) && !TII->isBasicBlockPrologue(MI) &&
+      !CI->getCycle(ParentBlock) && !CI->getCycle(SuccToSinkTo)) {
+    Register DefReg;
+    bool CanFastSinkDefs = true;
+    bool HasPhysDeadDef = false;
+    for (const MachineOperand &MO : MI.all_defs()) {
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      if (Reg.isPhysical()) {
+        if (!MO.isDead()) {
+          CanFastSinkDefs = false;
+          break;
+        }
+        HasPhysDeadDef = true;
+      } else if (!DefReg && MO.getSubReg() == 0) {
+        DefReg = Reg;
+      } else {
+        CanFastSinkDefs = false;
+        break;
+      }
+    }
+    if (CanFastSinkDefs && DefReg && MRI->hasOneDef(DefReg) &&
+        !SeenDbgUsers.contains(DefReg)) {
+      const VRegUseSummary &Summary = getVRegUseSummary(DefReg);
+      MachineBasicBlock *Cand = Summary.EffectiveNCD;
+      if (Cand && Cand != SuccToSinkTo && DT->dominates(SuccToSinkTo, Cand)) {
+        if (Summary.HasNonPHIUseInNCD) {
+          MachineBasicBlock *CandIDom =
+              DT->getNode(Cand)->getIDom()->getBlock();
+          if (PDT->dominates(Cand, CandIDom))
+            Cand = CandIDom;
+        }
+        BlockFastSinkInfo CandInfo = FastSinkInfo.lookup(Cand);
+        BlockFastSinkInfo SuccInfo = FastSinkInfo.lookup(SuccToSinkTo);
+        if (CandInfo.DomDepth >= SuccInfo.DomDepth + 8) {
+          MachineBasicBlock *CandIDom =
+              DT->getNode(Cand)->getIDom()->getBlock();
+          MachineDomTreeNode *SuccIDom = DT->getNode(SuccToSinkTo)->getIDom();
+          uint32_t BaseSingleSucc =
+              SuccIDom
+                  ? FastSinkInfo.lookup(SuccIDom->getBlock()).SingleSuccCount
+                  : 0;
+          if (CandInfo.BadEnterCount == SuccInfo.BadEnterCount &&
+              (!HasPhysDeadDef ||
+               CandInfo.LiveInCount == SuccInfo.LiveInCount) &&
+              FastSinkInfo.lookup(CandIDom).SingleSuccCount == BaseSingleSucc &&
+              TII->isSafeToSink(MI, Cand, CI)) {
+            SuccToSinkTo = Cand;
+          }
+        }
+      }
+    }
+  }
+
   // Determine where to insert into. Skip phi nodes.
   MachineBasicBlock::iterator InsertPos =
       SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
@@ -1980,14 +2274,20 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
+  CachedRegisterPressure.erase(ParentBlock);
+  CachedRegisterPressure.erase(SuccToSinkTo);
 
   // Conservatively, clear any kill flags, since it's possible that they are no
   // longer correct.
   // Note that we have to clear the kill flags for any register this instruction
   // uses as we may sink over another instruction which currently kills the
   // used registers.
-  for (MachineOperand &MO : MI.all_uses())
-    RegsToClearKillFlags.insert(MO.getReg()); // Remember to clear kill flags.
+  for (MachineOperand &MO : MI.all_uses()) {
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual())
+      VRegUseSummaries.erase(Reg);
+    RegsToClearKillFlags.insert(Reg); // Remember to clear kill flags.
+  }
 
   return true;
 }
