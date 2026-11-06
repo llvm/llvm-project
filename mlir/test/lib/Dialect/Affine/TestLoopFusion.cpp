@@ -144,7 +144,7 @@ static bool testLoopFusionUtilities(AffineForOp forOpA, AffineForOp forOpB,
     FusionResult result = canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value != FusionResult::Success)
       continue;
-    fuseLoops(forOpA, forOpB, sliceUnion);
+    forOpB = fuseLoops(forOpA, forOpB, sliceUnion);
     // Note: 'forOpA' is removed to simplify test output. A proper loop
     // fusion pass should perform additional checks to check safe removal.
     if (forOpA.use_empty())
