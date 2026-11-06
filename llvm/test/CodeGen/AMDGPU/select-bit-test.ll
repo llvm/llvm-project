@@ -167,22 +167,25 @@ define i32 @select_trunc_variable_bit(i32 %x, i32 %n, i32 %y) {
   ret i32 %s
 }
 
+; The 64-bit select is split into two selects of the same bit.
 define i64 @select_trunc_bit5_i64(i32 %x, i64 %y) {
 ; GFX942-LABEL: select_trunc_bit5_i64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_bfe_i32 v3, v0, 5, 1
-; GFX942-NEXT:    v_and_b32_e32 v0, v3, v1
-; GFX942-NEXT:    v_and_b32_e32 v1, v3, v2
+; GFX942-NEXT:    v_and_b32_e32 v0, 32, v0
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_trunc_bit5_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_bfe_i32 v3, v0, 5, 1
+; GFX11-NEXT:    v_and_b32_e32 v0, 32, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, v3, v1
-; GFX11-NEXT:    v_and_b32_e32 v1, v3, v2
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sh = lshr i32 %x, 5
   %t = trunc i32 %sh to i1
@@ -211,24 +214,27 @@ define i32 @select_trunc_bit5_const(i32 %x) {
   ret i32 %s
 }
 
+; Two selects use the same bit.
 define i32 @select_trunc_bit5_two_selects(i32 %x, i32 %y, i32 %z) {
 ; GFX942-LABEL: select_trunc_bit5_two_selects:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_bfe_i32 v0, v0, 5, 1
-; GFX942-NEXT:    v_and_b32_e32 v1, v0, v1
-; GFX942-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX942-NEXT:    v_add_u32_e32 v0, v1, v0
+; GFX942-NEXT:    v_and_b32_e32 v0, 32, v0
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
+; GFX942-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_trunc_bit5_two_selects:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_bfe_i32 v0, v0, 5, 1
+; GFX11-NEXT:    v_and_b32_e32 v0, 32, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v1, v0, v1
-; GFX11-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, v1, v0
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sh = lshr i32 %x, 5
   %t = trunc i32 %sh to i1
