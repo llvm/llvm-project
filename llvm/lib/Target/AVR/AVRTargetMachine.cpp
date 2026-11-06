@@ -95,7 +95,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
 
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRAsmPrinterPass(PR);
-  initializeAVRExpandPseudoPass(PR);
+  initializeAVRExpandPseudoLegacyPass(PR);
   initializeAVRShiftExpandLegacyPass(PR);
   initializeAVRDAGToDAGISelLegacyPass(PR);
 }
@@ -133,7 +133,9 @@ bool AVRPassConfig::addInstSelector() {
   return false;
 }
 
-void AVRPassConfig::addPreSched2() { addPass(createAVRExpandPseudoPass()); }
+void AVRPassConfig::addPreSched2() {
+  addPass(createAVRExpandPseudoLegacyPass());
+}
 
 void AVRPassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.
