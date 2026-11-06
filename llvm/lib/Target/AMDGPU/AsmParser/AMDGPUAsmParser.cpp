@@ -4630,6 +4630,19 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
     return false;
   }
 
+  // On gfx1250 the LDS address of an async load to LDS only gets the low 16
+  // bits of the offset, zero extended, the global address gets all of it.
+  if (AMDGPU::isGFX1250(getSTI())) {
+    StringRef Name = MII.getName(Opcode);
+    if ((Name.starts_with("GLOBAL_LOAD_ASYNC_TO_LDS") ||
+         Name.starts_with("CLUSTER_LOAD_ASYNC_TO_LDS")) &&
+        !isUInt<16>(Op.getImm())) {
+      Error(getFlatOffsetLoc(Operands),
+            "expected a 16-bit unsigned offset for an async load to LDS");
+      return false;
+    }
+  }
+
   return true;
 }
 
