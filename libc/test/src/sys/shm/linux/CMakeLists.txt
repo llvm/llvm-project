@@ -13,6 +13,25 @@ add_libc_test(
     libc.hdr.sys_shm_macros
     libc.hdr.sys_stat_macros
     libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmdt
+    libc.src.sys.shm.shmget
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  shmdt_test
+  SUITE
+    libc-sys-shm-tests
+  SRCS
+    shmdt_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_shm_macros
+    libc.hdr.sys_stat_macros
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmdt
     libc.src.sys.shm.shmget
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
