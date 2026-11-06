@@ -34,6 +34,7 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Operator.h"
 
@@ -1650,9 +1651,16 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   return true;
 }
 
+// SelectionDAG lowers llvm.swift.async.context.addr together with the loads
+// and stores that use it.
+static bool isSwiftAsyncContextAddr(const Value *V) {
+  const auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->getIntrinsicID() == Intrinsic::swift_async_context_addr;
+}
+
 bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const auto *Load = cast<LoadInst>(I);
-  if (Load->isAtomic())
+  if (Load->isAtomic() || isSwiftAsyncContextAddr(Load->getPointerOperand()))
     return false;
   if (!WebAssembly::isDefaultAddressSpace(Load->getPointerAddressSpace()))
     return false;
@@ -1704,7 +1712,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 
 bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   const auto *Store = cast<StoreInst>(I);
-  if (Store->isAtomic())
+  if (Store->isAtomic() || isSwiftAsyncContextAddr(Store->getPointerOperand()))
     return false;
   if (!WebAssembly::isDefaultAddressSpace(Store->getPointerAddressSpace()))
     return false;
