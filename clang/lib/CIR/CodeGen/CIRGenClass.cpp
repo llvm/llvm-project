@@ -112,9 +112,7 @@ public:
     }
 
     CharUnits memcpySize = getMemcpySize(firstByteOffset);
-    QualType recordTy = cgf.getContext().getTagType(
-        ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, classDecl,
-        /*OwnsTag=*/false);
+    CanQualType recordTy = cgf.getContext().getCanonicalTagType(classDecl);
     Address thisPtr = cgf.loadCXXThisAddress();
     LValue destLv = cgf.makeAddrLValue(thisPtr, recordTy);
     LValue dest = cgf.emitLValueForFieldInitialization(destLv, firstField,
