@@ -317,6 +317,9 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   // Handle special cases as StableHLO implementation does:
   // 1. When b == 0, set imag(exp(z)) = 0
   // 2. When exp(x) == inf, use exp(x/2)*(cos(y)+I*sin(y))*exp(x/2)
+  // Handle non-finite inputs according to C99 annex G:
+  // 3. When x == -inf and y is non-finite, return 0 + I*0.
+  // 4. When x == +inf and y is non-finite, return inf + I*NaN.
   LogicalResult
   matchAndRewrite(complex::ExpOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -360,6 +363,24 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     Value imagNonZero =
         arith::SelectOp::create(b, expIsInf, imagOverflow, imagNormal);
     Value resultImag = arith::SelectOp::create(b, yIsZero, zero, imagNonZero);
+
+    // When x is +-inf and y is +-inf or NaN, exp(x) * cos(y) is inf * NaN or
+    // 0 * NaN. C99 Annex G gives exp(-inf + I*y) = +-0 +- 0*I and
+    // exp(+inf + I*y) = +-inf + NaN*I for these y.
+    if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::ninf)) {
+      Value absX = math::AbsFOp::create(b, x);
+      Value absY = math::AbsFOp::create(b, y);
+      Value yIsNotFinite =
+          arith::CmpFOp::create(b, arith::CmpFPredicate::UGE, absY, inf);
+      Value xIsInf =
+          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absX, inf);
+      Value xIsNeg =
+          arith::CmpFOp::create(b, arith::CmpFPredicate::OLT, x, zero);
+      Value useExpX = arith::AndIOp::create(b, xIsInf, yIsNotFinite);
+      Value useZeroImag = arith::AndIOp::create(b, useExpX, xIsNeg);
+      resultReal = arith::SelectOp::create(b, useExpX, exp, resultReal);
+      resultImag = arith::SelectOp::create(b, useZeroImag, zero, resultImag);
+    }
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);

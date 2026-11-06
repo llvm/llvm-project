@@ -268,7 +268,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   case TargetOpcode::G_OR: {
     // 32 and 64-bit or can be mapped on either FPR or
     // GPR for the same cost.
-    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -289,7 +289,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_BITCAST: {
-    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -329,7 +329,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_LOAD: {
-    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
     if (Size != 64)
       break;
 
@@ -520,7 +520,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     if (foldTruncOfI32Constant(MI, 1, MRI))
       return applyDefaultMapping(OpdMapper);
 
@@ -765,7 +765,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             const AArch64RegisterInfo &TRI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
-  case AArch64::G_DUP:
+  case TargetOpcode::G_SPLAT_VECTOR:
   case AArch64::G_SADDLP:
   case AArch64::G_UADDLP:
   case TargetOpcode::G_SITOFP:
@@ -831,9 +831,9 @@ bool AArch64RegisterBankInfo::shouldUseFPRForCvtOperand(
   if (MRI.getType(BankedReg).isVector())
     return true;
 
-  TypeSize BankedSize = getSizeInBits(BankedReg, MRI, TRI);
+  TypeSize BankedSize = TRI.getRegSizeInBits(BankedReg, MRI);
   TypeSize OtherSize =
-      getSizeInBits(MI.getOperand(OtherOpIdx).getReg(), MRI, TRI);
+      TRI.getRegSizeInBits(MI.getOperand(OtherOpIdx).getReg(), MRI);
   if ((ForceFPRForBankedOp16 && BankedSize == 16) ||
       (ForceFPRForOtherOp16 && OtherSize == 16))
     return true;
@@ -952,7 +952,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register SrcReg = MI.getOperand(1).getReg();
     const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
     if (SrcRB) {
-      TypeSize Size = getSizeInBits(SrcReg, MRI, TRI);
+      TypeSize Size = TRI.getRegSizeInBits(SrcReg, MRI);
       return getInstructionMapping(
           DefaultMappingID, 0,
           getCopyMapping(SrcRB->getID(), SrcRB->getID(), Size),
@@ -976,7 +976,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // If both RB are null that means both registers are generic.
       // We shouldn't be here.
       assert(DstRB && SrcRB && "Both RegBank were nullptr");
-      TypeSize Size = getSizeInBits(DstReg, MRI, TRI);
+      TypeSize Size = TRI.getRegSizeInBits(DstReg, MRI);
       return getInstructionMapping(
           DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
           getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
@@ -1072,17 +1072,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     Register ScalarReg = MI.getOperand(1).getReg();
     LLT ScalarTy = MRI.getType(ScalarReg);
     auto ScalarDef = MRI.getVRegDef(ScalarReg);
     // We want to select dup(load) into LD1R.
     if (ScalarDef->getOpcode() == TargetOpcode::G_LOAD)
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
-    // s8 is an exception for G_DUP, which we always want on gpr.
-    else if (ScalarTy.getSizeInBits() != 8 &&
-             (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
-              onlyDefinesFP(*ScalarDef, MRI, TRI)))
+    else if (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+             onlyDefinesFP(*ScalarDef, MRI, TRI))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else {
       if (ScalarTy.getSizeInBits() < 32 &&
@@ -1130,8 +1128,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
       break;
     }
-    TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
-    TypeSize SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, TRI);
+    TypeSize DstSize = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
+    TypeSize SrcSize = TRI.getRegSizeInBits(MI.getOperand(1).getReg(), MRI);
     if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
         all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {

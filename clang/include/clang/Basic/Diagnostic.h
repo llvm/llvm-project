@@ -446,6 +446,7 @@ private:
     void clear(bool Soft) {
       // Just clear the cache when in soft mode.
       Files.clear();
+      LastLookupFileID = FileID::getSentinel();
       if (!Soft) {
         FirstDiagState = CurDiagState = nullptr;
         CurDiagStateLoc = SourceLocation();
@@ -504,6 +505,11 @@ private:
     /// The diagnostic states for each file.
     mutable std::map<FileID, File> Files;
 
+    /// One-entry cache for getFile(): Files gets large, and most
+    /// lookups are for the same FileID as the previous one.
+    mutable FileID LastLookupFileID = FileID::getSentinel();
+    mutable File *LastLookupFile = nullptr;
+
     /// The initial diagnostic state.
     DiagState *FirstDiagState;
 
@@ -515,6 +521,7 @@ private:
 
     /// Get the diagnostic state information for a file.
     File *getFile(SourceManager &SrcMgr, FileID ID) const;
+    File *getFileUncached(SourceManager &SrcMgr, FileID ID) const;
   };
 
   DiagStateMap DiagStatesByLoc;

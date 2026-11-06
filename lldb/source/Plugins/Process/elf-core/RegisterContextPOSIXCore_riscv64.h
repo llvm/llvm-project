@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_riscv64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Plugins/Register/Core/RegisterContextCore_riscv64.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -19,7 +19,7 @@
 
 #include <memory>
 
-class RegisterContextCorePOSIX_riscv64 : public RegisterContextPOSIX_riscv64 {
+class RegisterContextCorePOSIX_riscv64 : public RegisterContextCore_riscv64 {
 public:
   static std::unique_ptr<RegisterContextCorePOSIX_riscv64>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
@@ -37,7 +37,7 @@ public:
 protected:
   RegisterContextCorePOSIX_riscv64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info,
+      std::unique_ptr<RegisterInfo_riscv64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 

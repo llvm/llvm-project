@@ -1,4 +1,4 @@
-add_custom_target(libc-locale-tests)
+add_libc_testsuite(libc-locale-tests)
 
 add_libc_test(
   locale_test
@@ -9,6 +9,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.locale_macros
     libc.src.locale.newlocale
+    libc.src.locale.setlocale
     libc.src.locale.uselocale
     libc.src.locale.freelocale
 )
