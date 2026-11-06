@@ -3301,10 +3301,8 @@ bool FinishInitGlobal(InterpState &S) {
     return true;
 
   finishGlobalRecurse(S, Ptr.view());
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
 
   return true;
 }

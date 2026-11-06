@@ -56,7 +56,6 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
-  bool canBeInitialized() const { return Pointee; }
   const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
@@ -845,12 +844,6 @@ public:
       return Opaque.isRoot();
     return true;
   }
-  /// If this pointer has an InlineDescriptor we can use to initialize.
-  bool canBeInitialized() const {
-    if (!isBlockPointer())
-      return false;
-    return view().canBeInitialized();
-  }
 
   [[nodiscard]] const BlockPointer &asBlockPointer() const {
     assert(isBlockPointer());
@@ -1259,7 +1252,11 @@ public:
   bool isElementAlive(unsigned Index) const;
 
   /// Activates a field.
-  void activate() const { view().activate(); }
+  void activate() const {
+    if (!isBlockPointer())
+      return;
+    view().activate();
+  }
   /// Deactivates an entire strurcutre.
   void deactivate() const {
     // TODO: this only appears in constructors, so nothing to deactivate.
