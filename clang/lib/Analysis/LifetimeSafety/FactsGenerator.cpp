@@ -237,9 +237,9 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
 }
 
 void FactsGenerator::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE) {
-  // The CFG does not visit a default argument's expression (PR13385), but it
-  // does expire the temporaries it materializes. Issue the loan here, reported
-  // at the call.
+  // The CFG does not visit a default argument's expression (GH13757), but it
+  // does expire the temporaries it materializes.
+  // Issue the loan here, reported at the call.
   // FIXME: Model temporaries nested deeper in the default argument.
   const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(
       DAE->getExpr()->IgnoreParenBaseCasts());

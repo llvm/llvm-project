@@ -2205,6 +2205,7 @@ struct DerivedObj : MyObj {};
 View view(const MyObj &obj [[clang::lifetimebound]] = MyObj());
 View view_converted(const MyObj &obj [[clang::lifetimebound]] = 1);
 View view_of_base(const MyObj &obj [[clang::lifetimebound]] = DerivedObj());
+View view_cast(const MyObj &obj [[clang::lifetimebound]] = static_cast<const MyObj &>(MyObj()));
 View view_by_value(View v [[clang::lifetimebound]] = MyObj());
 View view_nested(View v [[clang::lifetimebound]] = view());
 template <typename T> View view_t(const T &obj [[clang::lifetimebound]] = T());
@@ -2237,6 +2238,14 @@ void derived_to_base() {
                       // expected-note {{temporary object is destroyed here}} \
                       // expected-note {{result of call to 'view_of_base' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
   use(v);             // expected-note {{later used here}}
+}
+
+void explicit_cast() {
+  View v;
+  v = view_cast(); // expected-warning {{temporary object does not live long enough}} \
+                   // expected-note {{temporary object is destroyed here}} \
+                   // expected-note {{result of call to 'view_cast' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);          // expected-note {{later used here}}
 }
 
 void each_call_reported() {
@@ -2298,8 +2307,7 @@ void used_within_full_expression() {
 
 void not_yet_modeled() {
   View v;
-  // FIXME: These dangle, but the temporary is nested inside the default
-  // argument.
+  // FIXME: These dangle, but the temporary is nested inside the default argument.
   v = view_by_value();
   use(v);
   v = view_nested();
