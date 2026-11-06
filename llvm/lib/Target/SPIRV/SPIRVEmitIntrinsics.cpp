@@ -1788,11 +1788,20 @@ static bool isAggregateValueIdInstr(const Instruction &I) {
 // arm matches the result once it is mutated to a value-id.
 void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
                                                            IRBuilder<> &B) {
+  bool HasPoisonExt = TM.getSubtargetImpl(*CurrF)->canUseExtension(
+      SPIRV::Extension::SPV_KHR_poison_freeze);
   auto *Phi = dyn_cast<PHINode>(I);
+  // A switch can list an incoming block twice, and both entries need the same
+  // value, so build one chain per block.
+  SmallDenseMap<BasicBlock *, Value *> PhiArms;
   for (Use &U : I->operands()) {
     Value *Op = U.get();
     if (!isMultiRegisterAggregate(Op))
       continue;
+    if (Value *Arm = Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
+      U.set(Arm);
+      continue;
+    }
     // A PHI arm materializes in its incoming block, everything else after the
     // producer.
     if (Phi)
@@ -1804,8 +1813,20 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
     for (unsigned Idx = 0, E = AggrTy->getNumElements(); Idx != E; ++Idx) {
       Value *Field = B.CreateExtractValue(Op, Idx);
       Composite = B.CreateInsertValue(Composite, Field, Idx);
+      // preprocessUndefsAndPoisons already ran, so give the poison at the start
+      // of the chain a typed placeholder here, the way it would have. A bare
+      // poison turns into i32 undef in visitInsertValueInst. That is one shared
+      // constant, so every chain would take the struct type of the first one.
+      if (auto *First = dyn_cast<InsertValueInst>(Composite); First && !Idx) {
+        B.SetInsertPoint(First);
+        First->setOperand(0, lowerUndefOrPoison(First->getAggregateOperand(), B,
+                                                HasPoisonExt));
+        B.SetInsertPoint(First->getNextNode());
+      }
     }
     U.set(Composite);
+    if (Phi)
+      PhiArms[Phi->getIncomingBlock(U)] = Composite;
   }
 }
 
