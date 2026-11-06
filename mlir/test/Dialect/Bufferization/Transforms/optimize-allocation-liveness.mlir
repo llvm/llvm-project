@@ -304,7 +304,7 @@ func.func @nested_result(%cond: i1) {
 func.func private @foo()
 // CHECK-LABEL:   func.func @allocation_with_no_uses() {
 // CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<8xi32>
-// CHECK:           memref.dealloc1 %[[ALLOC_0]] : memref<8xi32>
+// CHECK:           memref.dealloc %[[ALLOC_0]] : memref<8xi32>
 // CHECK:           call @foo() : () -> ()
 // CHECK:           return
 // CHECK:         }
