@@ -342,8 +342,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cir::GlobalOp vtable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, name, vtType, linkage, CharUnits::fromQuantity(align));
 
-  // V-tables are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  // dynamic_cast relies on a unique vtable address, so the address only
+  // becomes insignificant without RTTI or when the vtable may be duplicated.
+  if (!cgm.shouldEmitRTTI() || cgm.mayVTableBeDuplicated(vtable.getLinkage()))
+    vtable.setUnnamedAddr(true);
 
   mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
       loc, cgm.getASTContext().getCanonicalTagType(base.getBase()));
@@ -1103,4 +1105,10 @@ void CIRGenModule::emitVTablesOpportunistically() {
 
 bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
+}
+
+bool CIRGenModule::mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         cir::isWeakForLinker(linkage);
 }
