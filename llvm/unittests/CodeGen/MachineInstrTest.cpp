@@ -681,7 +681,7 @@ TEST(MachineInstrTest, SwapOperands) {
   EXPECT_THAT(RegOps(B), testing::ElementsAre(Op(1)));
 
   // Swap a register with an immediate.
-  MI->swapOperands(4, 3);
+  MI->swapOperands(4, 3, &MRI);
   EXPECT_EQ(MI->getOperand(3).getReg(), A);
   EXPECT_TRUE(MI->getOperand(4).isImm());
   EXPECT_EQ(MI->getOperand(4).getImm(), 7);
@@ -705,7 +705,7 @@ TEST(MachineInstrTest, SwapOperands) {
 
   // Swap operands of an instruction that is not in a function.
   MachineInstr *Clone = MF->CloneMachineInstr(MI);
-  Clone->swapOperands(1, 2);
+  Clone->swapOperands(1, 2, /*MRI=*/nullptr);
   EXPECT_EQ(Clone->getOperand(1).getReg(), A);
   EXPECT_EQ(Clone->getOperand(2).getReg(), B);
   EXPECT_FALSE(Clone->getOperand(1).isTied());
