@@ -221,28 +221,28 @@ define amdgpu_ps bfloat @fptrunc_f64_to_bf16_s(double inreg %a) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[0:1], v2
 ; GFX1250-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, s[0:1], v[0:1]
-; GFX1250-NEXT:    v_cmp_ngt_f64_e64 s0, |s[0:1]|, |v[0:1]|
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX1250-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; GFX1250-NEXT:    v_cmp_ngt_f64_e64 s0, |s[0:1]|, |v[0:1]|
 ; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX1250-NEXT:    s_or_b32 s2, s2, s1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX1250-NEXT:    s_and_b32 s2, s2, 1
 ; GFX1250-NEXT:    s_or_b32 s0, s0, 1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_add_co_i32 s0, s1, s0
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s1, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX1250-NEXT:    s_or_b32 s2, s0, 0x400000
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_addk_co_i32 s1, 0x7fff
 ; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s2, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fptrunc double %a to bfloat
