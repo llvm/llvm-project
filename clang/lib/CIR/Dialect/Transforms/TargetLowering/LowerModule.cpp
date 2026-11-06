@@ -135,10 +135,12 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
 
-  clang::DiagnosticOptions diagOpts;
-  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
-                                 new clang::IgnoringDiagConsumer());
-  targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
+  if (targetInfo) {
+    clang::DiagnosticOptions diagOpts;
+    clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                   new clang::IgnoringDiagConsumer());
+    targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
+  }
 
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,
