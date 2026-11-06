@@ -560,7 +560,7 @@ def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldp_acq : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp_rel : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
@@ -1244,7 +1244,8 @@ def AArch64uunpkhi : SDNode<"AArch64ISD::UUNPKHI", SDT_AArch64unpk>;
 def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ldiapp : SDNode<"AArch64ISD::LDIAPP", SDT_AArch64ldiapp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldp_acq : SDNode<"AArch64ISD::LDP_ACQ", SDT_AArch64ldp_acq, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldap : SDNode<"AArch64ISD::LDAP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stp_rel : SDNode<"AArch64ISD::STP_REL", SDT_AArch64stp_rel, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -3932,6 +3933,8 @@ defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
 defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
 defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
 
+def : Pat<(AArch64ldap GPR64sp:$Rn), (LDAPi GPR64sp:$Rn)>;
+def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDAPPi GPR64sp:$Rn)>;
 def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
           (STLPi GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 }
@@ -12471,10 +12474,11 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
   def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
-  def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
-  let Predicates = [HasRCPC3, NoLSCP] in
+  let Predicates = [HasRCPC3, NoLSCP] in {
+  def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
   def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
             (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+  }
 
   // Aliases for when offset=0
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;

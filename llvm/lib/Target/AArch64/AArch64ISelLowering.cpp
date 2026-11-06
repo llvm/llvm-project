@@ -978,7 +978,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::i128, Custom);
 
   // Aligned 128-bit loads and stores are single-copy atomic according to the
-  // v8.4a spec. LRCPC3 introduces 128-bit STILP/LDIAPP but still requires LSE2.
+  // v8.4a spec. The paired loads/stores from LRCPC3 and LSCP still require
+  // LSE2.
   if (Subtarget->hasLSE2()) {
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
@@ -33426,10 +33427,16 @@ void AArch64TargetLowering::ReplaceNodeResults(
       auto *AN = dyn_cast<AtomicSDNode>(LoadNode);
       bool isLoadAcquire =
           AN && AN->getSuccessOrdering() == AtomicOrdering::Acquire;
-      unsigned Opcode = isLoadAcquire ? AArch64ISD::LDIAPP : AArch64ISD::LDP;
-
-      if (isLoadAcquire)
-        assert(Subtarget->hasFeature(AArch64::FeatureRCPC3));
+      bool isSeqCst = AN && AN->getSuccessOrdering() ==
+                                AtomicOrdering::SequentiallyConsistent;
+      unsigned Opcode = AArch64ISD::LDP;
+      if (isSeqCst) {
+        assert(Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDAP;
+      } else if (isLoadAcquire) {
+        assert(Subtarget->hasRCPC3() || Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDP_ACQ;
+      }
 
       SDValue Result = DAG.getMemIntrinsicNode(
           Opcode, SDLoc(N), DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
@@ -33654,6 +33661,11 @@ bool AArch64TargetLowering::isOpSuitableForLSCP(const Instruction *I) const {
   if (!Subtarget->hasLSE2() || !Subtarget->hasLSCP())
     return false;
 
+  if (auto LI = dyn_cast<LoadInst>(I))
+    return LI->getType()->getPrimitiveSizeInBits() == 128 &&
+           LI->getAlign() >= Align(16) &&
+           isAcquireOrStronger(LI->getOrdering());
+
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
            SI->getAlign() >= Align(16) &&
@@ -33749,6 +33761,8 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
   if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForLSCP(LI))
     return AtomicExpansionKind::None;
   if (isOpSuitableForRCPC3(LI))
     return AtomicExpansionKind::None;
