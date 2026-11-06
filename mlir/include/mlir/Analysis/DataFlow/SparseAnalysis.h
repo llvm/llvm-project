@@ -210,10 +210,10 @@ protected:
       ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
 
   /// Compute lattice values for successor values not supplied by control-flow
-  /// forwarding. Changes to the operation's operand lattices revisit this hook.
-  /// Implementations must register dependencies for any other lattices read.
+  /// forwarding at `point`. Lattice reads must register dependencies on
+  /// `point`.
   virtual void visitNonControlFlowArgumentsImpl(
-      Operation *op, const RegionSuccessor &successor,
+      ProgramPoint *point, Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) = 0;
 
@@ -260,13 +260,6 @@ private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
 
-  /// Infer non-forwarded successor values at `point`. Changes to operand
-  /// lattices cause this inference to run again.
-  void visitNonControlFlowArguments(
-      ProgramPoint *point, Operation *op, const RegionSuccessor &successor,
-      ValueRange nonSuccessorInputs,
-      ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices);
-
   /// Visit an operation. If this is a call operation or an operation with
   /// region control-flow, then its result lattices are set accordingly.
   /// Otherwise, the operation transfer function is invoked.
@@ -310,6 +303,9 @@ class SparseForwardDataFlowAnalysis
       "analysis state class expected to subclass AbstractSparseLattice");
 
 public:
+  /// Read a value's lattice and register a dependency on the current visit.
+  using GetLatticeFn = function_ref<const StateT *(Value)>;
+
   explicit SparseForwardDataFlowAnalysis(DataFlowSolver &solver)
       : AbstractSparseForwardDataFlowAnalysis(solver) {}
 
@@ -330,14 +326,16 @@ public:
   /// Given an operation with possible region control-flow, the lattices of the
   /// operands, and a region successor, compute the lattice values for
   /// non-successor-inputs (ex. loop induction variables) of a given region
-  /// successor. Changes to the operation's operand lattices revisit this hook.
-  /// Implementations must register dependencies for any other lattices read.
+  /// successor. Use `getLattice` to read lattices, including those of captured
+  /// values. Changes to the lattices read through this callback revisit this
+  /// hook. The callback is valid only for the duration of this call.
   /// By default, this method marks all lattice elements as having reached a
   /// pessimistic fixpoint.
   virtual void
   visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
                                ValueRange nonSuccessorInputs,
-                               ArrayRef<StateT *> nonSuccessorInputLattices) {
+                               ArrayRef<StateT *> nonSuccessorInputLattices,
+                               GetLatticeFn getLattice) {
     assert(nonSuccessorInputs.size() == nonSuccessorInputLattices.size() &&
            "size mismatch");
     setAllToEntryStates(nonSuccessorInputLattices);
@@ -390,13 +388,14 @@ private:
          resultLattices.size()});
   }
   void visitNonControlFlowArgumentsImpl(
-      Operation *op, const RegionSuccessor &successor,
+      ProgramPoint *point, Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) override {
     visitNonControlFlowArguments(
         op, successor, nonSuccessorInputs,
         {reinterpret_cast<StateT *const *>(nonSuccessorInputLattices.begin()),
-         nonSuccessorInputLattices.size()});
+         nonSuccessorInputLattices.size()},
+        [&](Value value) { return getLatticeElementFor(point, value); });
   }
 
   void setToEntryState(AbstractSparseLattice *lattice) override {
