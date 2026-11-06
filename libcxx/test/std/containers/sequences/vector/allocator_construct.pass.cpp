@@ -19,6 +19,7 @@
 #include <initializer_list>
 #include <memory>
 #include <new>
+#include <utility>
 #include <vector>
 
 #include "test_macros.h"
@@ -100,7 +101,54 @@ void test_copy_from_range(Elem* first, Elem* last) {
   }
 }
 
+template <class T>
+struct MoveConstructAllocator {
+  using value_type = T;
+
+  MoveConstructAllocator() = default;
+  template <class U>
+  MoveConstructAllocator(const MoveConstructAllocator<U>&) {}
+
+  T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+  void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+
+  void construct(T* p, T&& x) { ::new (static_cast<void*>(p)) T(std::move(x)); }
+
+  friend bool operator==(const MoveConstructAllocator&, const MoveConstructAllocator&) { return true; }
+  friend bool operator!=(const MoveConstructAllocator&, const MoveConstructAllocator&) { return false; }
+};
+
+// Ranges of volatile elements must not be handed to memmove, which doesn't accept volatile pointers.
+template <class Alloc>
+void test_volatile_range() {
+  using Vec = std::vector<int, Alloc>;
+
+  volatile int arr[]  = {1, 2, 3};
+  volatile int* first = arr;
+  volatile int* last  = arr + 3;
+
+  { // vector(first, last)
+    Vec v(first, last);
+    assert(v.size() == 3 && v[0] == 1 && v[1] == 2 && v[2] == 3);
+  }
+  { // insert(pos, first, last)
+    Vec v;
+    v.insert(v.end(), first, last);
+    assert(v.size() == 3 && v[0] == 1 && v[1] == 2 && v[2] == 3);
+  }
+  { // assign(first, last) with and without reallocation
+    Vec v;
+    v.assign(first, last);
+    assert(v.size() == 3 && v[0] == 1 && v[1] == 2 && v[2] == 3);
+    v.assign(first, first + 2);
+    assert(v.size() == 2 && v[0] == 1 && v[1] == 2);
+  }
+}
+
 int main(int, char**) {
+  test_volatile_range<std::allocator<int> >();
+  test_volatile_range<MoveConstructAllocator<int> >();
+
   {
     using Vec = std::vector<Trivial, ConstRefConstructAllocator<Trivial> >;
 
