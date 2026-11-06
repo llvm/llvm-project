@@ -158,8 +158,16 @@ bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   return true;
 }
 
+// Input denormals must be flushed when requested, whereas output flushing is
+// optional. Select FTZ instructions based on the input mode.
+// In practice, both input and output should match anyway.
+bool NVPTXTargetLowering::useF16FTZ(const MachineFunction &MF) const {
+  return MF.getDenormalMode(APFloat::IEEEhalf()).Input ==
+         DenormalMode::PreserveSign;
+}
+
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
-  return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
+  return MF.getDenormalMode(APFloat::IEEEsingle()).Input ==
          DenormalMode::PreserveSign;
 }
 
@@ -8039,7 +8047,7 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
-      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Input ==
                        DenormalMode::PreserveSign;
       bool UseNative = IgnoreFTZMismatch;
       switch (AddressSpace) {
@@ -8058,7 +8066,7 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
       // function that is not in FTZ mode for f16.
-      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Input ==
                        DenormalMode::PreserveSign;
       if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))

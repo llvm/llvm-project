@@ -1733,8 +1733,22 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
 
-RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
-  return Device->Device->getRecordReplay();
+DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
+  return Program->Image;
+}
+
+void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
+  return Device->Device->getSuggestedVirtualAddress();
+}
+
+Expected<void *> __ol_tgt_AllocWithVirtualAddress(ol_device_handle_t Device,
+                                                  uint64_t Size, void *VAddr) {
+  return Device->Device->allocateWithVirtualAddress(Size, VAddr);
+}
+
+Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
+                                         uint64_t Size) {
+  return Device->Device->deallocateWithVirtualAddress(VAddr, Size);
 }
 
 // Same as olMemAlloc/olMemAllocHost, but takes the plugin allocation kind and
