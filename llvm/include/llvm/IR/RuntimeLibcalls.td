@@ -127,7 +127,6 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 
 def isAArch64 : RuntimeLibcallAvailability<(all_of IsAArch64)>;
 
-def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
 def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
 def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
 def isLongDoubleWide : RuntimeLibcallAvailability<
