@@ -162,8 +162,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   void updateRegAllocHint(Register Reg, Register NewReg,
                           MachineFunction &MF) const override;
 
-  Register findVRegWithEncoding(const TargetRegisterClass &RegClass,
-                                uint16_t Encoding) const;
+  MCRegister findVRegWithEncoding(const TargetRegisterClass &RegClass,
+                                  uint16_t Encoding) const;
 
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&

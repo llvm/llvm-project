@@ -13,8 +13,16 @@
 
 using namespace llvm;
 
-/// Given a diagnostic kind, return a human readable string for it.
-static StringRef getDiagKindStr(SourceMgr::DiagKind kind) {
+void SourceMgrDiagnosticVerifier::printMessage(raw_ostream &os,
+                                               const SourceMgr &mgr, SMLoc loc,
+                                               const Twine &msg,
+                                               ArrayRef<SMRange> ranges) {
+  mgr.printIncludeStackForDiagnostic(loc, os);
+  mgr.GetMessage(loc, SourceMgr::DK_Error, msg, ranges).print(nullptr, os);
+}
+
+StringRef
+SourceMgrDiagnosticVerifier::getDiagKindStr(SourceMgr::DiagKind kind) {
   switch (kind) {
   case SourceMgr::DK_Note:
     return "note";
@@ -33,9 +41,9 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(
   if (fileLoc.isValid()) {
     SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
                                                  substring.size()));
-    mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg, range);
+    printMessage(os, mgr, fileLoc, msg, range);
   } else {
-    mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg);
+    printMessage(os, mgr, fileLoc, msg);
   }
   return false;
 }
@@ -244,10 +252,10 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
 
   // Otherwise, emit an error for the near miss.
   if (nearMiss) {
-    mgr.PrintMessage(os, nearMiss->fileLoc, SourceMgr::DK_Error,
-                     "'" + getDiagKindStr(kind) +
-                         "' diagnostic emitted when expecting a '" +
-                         getDiagKindStr(nearMiss->kind) + "'");
+    printMessage(os, mgr, nearMiss->fileLoc,
+                 "'" + getDiagKindStr(kind) +
+                     "' diagnostic emitted when expecting a '" +
+                     getDiagKindStr(nearMiss->kind) + "'");
     return MatchResult::NearMiss;
   }
   return MatchResult::Unexpected;

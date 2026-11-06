@@ -241,13 +241,16 @@ def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
 
 class OpenMP_CopyprivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<OpenMP_PointerLikeType>:$copyprivate_vars,
     OptionalAttr<SymbolRefArrayAttr>:$copyprivate_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$copyprivate_assume_bounded_recipe_effects
+  ), (ins)));
 
   let optAssemblyFormat = [{
     `copyprivate` `(`
@@ -259,6 +262,15 @@ class OpenMP_CopyprivateClauseSkip<
     If `copyprivate` variables and functions are specified, then each thread
     variable is updated with the variable value of the thread that executed
     the single region, using the specified copy functions.
+
+    The optional `copyprivate_assume_bounded_recipe_effects` unit attribute
+    asserts that referenced copyprivatisation recipes may only read or write
+    `copyprivate` variables associated with the clause.
+    These effects apply only to storage directly designated by the `copyprivate`
+    variables. Recipes may not access other storage, including globals or
+    pointees reached by loading pointers from these variables. Without the
+    attribute, referenced copy functions are assumed to have arbitrary memory
+    effects.
   }];
 }
 
@@ -1515,7 +1527,6 @@ def OpenMP_PriorityClause : OpenMP_PriorityClauseSkip<>;
 class OpenMP_PrivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false,
-    // Only sections currently consumes the recipe-effect assumption.
     bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
@@ -1584,7 +1595,6 @@ def OpenMP_ProcBindClause : OpenMP_ProcBindClauseSkip<>;
 class OpenMP_ReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false,
-    // Only sections currently consumes the recipe-effect assumption.
     bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {

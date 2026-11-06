@@ -226,22 +226,6 @@ private:
   bool hasErrors_{false};
 };
 
-template <TypeCategory CAT> struct TypeVisitor {
-  using Result = bool;
-  using Types = evaluate::CategoryTypes<CAT>;
-  template <typename T> Result Test(int kind) {
-    if (kind == exprType.kind()) {
-      CaseValues<T>(kind, context, exprType).Check(caseList);
-      return true;
-    } else {
-      return false;
-    }
-  }
-  SemanticsContext &context;
-  const evaluate::DynamicType &exprType;
-  const std::list<parser::CaseConstruct::Case> &caseList;
-};
-
 // Convert a single enumeration CASE value to its __ordinal integer.
 static bool ConvertEnumCaseValue(SemanticsContext &context,
     const parser::CaseValue &caseValue,
@@ -346,20 +330,23 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
         std::get<std::list<parser::CaseConstruct::Case>>(construct.t)};
     switch (exprType->category()) {
     case TypeCategory::Integer:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Integer>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Unsigned:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Unsigned>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical>>{1, context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Character>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Character>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Derived:
       if (const auto *derived{evaluate::GetDerivedTypeSpec(*exprType)}) {

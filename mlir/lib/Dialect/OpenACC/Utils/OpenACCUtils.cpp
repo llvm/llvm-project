@@ -44,6 +44,21 @@ mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
   return computeReg.getOperand(barg);
 }
 
+mlir::BlockArgument
+mlir::acc::getACCBlockArgForOperand(mlir::OpOperand &operand) {
+  auto computeReg =
+      mlir::dyn_cast<mlir::acc::ComputeRegionOp>(operand.getOwner());
+  if (!computeReg)
+    return nullptr;
+  // `launch` then `ins` lead the operand list and map to the body arguments in
+  // order.
+  unsigned idx = operand.getOperandNumber();
+  if (idx >=
+      computeReg.getLaunchArgs().size() + computeReg.getInputArgs().size())
+    return nullptr;
+  return computeReg.getBody()->getArgument(idx);
+}
+
 mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
   mlir::Value orig = getACCOperandForBlockArg(v);
   if (!orig)

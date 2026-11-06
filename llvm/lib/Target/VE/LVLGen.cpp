@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/Pass.h"
 
