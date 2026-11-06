@@ -17,15 +17,15 @@ define void @merge_read_write_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %a1 = getelementptr i32, ptr %a, i64 %offset
 ; CHECK-NEXT:          %a0 = getelementptr i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %a1 = getelementptr i32, ptr %a, i64 %offset
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %bp = getelementptr i32, ptr %b, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (384 + %a))
-; CHECK-NEXT:            Member: {(256 + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {(256 + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (128 + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nw><%loop>

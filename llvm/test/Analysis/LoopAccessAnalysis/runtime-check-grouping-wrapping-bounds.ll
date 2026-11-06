@@ -13,16 +13,16 @@ define void @cond_access_large_negative_offset(ptr %a, ptr %b, i64 %n, i64 %k) {
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop.header>
+; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -66,16 +66,16 @@ define void @cond_access_small_negative_offset(ptr %a, ptr %b, i64 %n, i64 %k) {
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4 + %a) High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {(-4 + %a),+,4}<%loop.header>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop.header>
+; CHECK-NEXT:            Member: {(-4 + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -119,16 +119,16 @@ define void @uncond_accesses_large_negative_offset(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -165,16 +165,16 @@ define void @cond_accesses_same_block_large_negative_offset(ptr %a, ptr %b, i64 
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-NEXT:            Member: {%a,+,4}<%loop.header>
+; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -232,16 +232,16 @@ define void @cond_store_same_block_uncond_load_large_negative_offset(ptr %a, ptr
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop.header>
+; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -286,16 +286,16 @@ define void @uncond_accesses_invariant_and_addrec(ptr %a, ptr %b) {
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.100 = getelementptr inbounds i32, ptr %a, i64 100
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.100 = getelementptr inbounds i32, ptr %a, i64 100
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: (400 + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: (404 + %a))
-; CHECK-NEXT:            Member: (400 + %a)<nuw>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: (400 + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -332,16 +332,16 @@ define void @uncond_accesses_large_negative_offset_early_exit(ptr %a, ptr %b, i6
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.off = getelementptr i32, ptr %a, i64 %iv.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: (4 + (4 * (%k umin_seq (-1 + %n))) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: (4 + (4 * (%k umin_seq (-1 + %n))) + %a))
-; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop.header>
+; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
