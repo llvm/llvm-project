@@ -476,6 +476,8 @@ mlir::Value Fortran::lower::genAllocateCoarray(
     uniqName = converter.mangleName(sym);
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
+  if (hasStat)
+    return fir::LoadOp::create(builder, loc, stat);
   return stat;
 }
 
