@@ -1,0 +1,228 @@
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=si-shrink-instructions %s -o - | FileCheck %s
+
+# Swapping the sources of a V_CNDMASK by inverting the V_CMP that computes its
+# condition lets src1 be a VGPR, which the VOP2 and VOPD forms need.
+
+---
+name: fcmp_imm_src1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: fcmp_imm_src1
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NLT_F32_e64 0, %0, 0, %1, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: %3:vgpr_32 = V_CNDMASK_B32_e64 0, 1065353216, 0, %0, [[CMP]], implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_LT_F32_e64 0, %0, 0, %1, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 1065353216, %2, implicit $exec
+    $vgpr0 = COPY %3
+    SI_RETURN implicit $vgpr0
+...
+
+---
+name: icmp_sgpr_src1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0
+    ; CHECK-LABEL: name: icmp_sgpr_src1
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 %0, %1, implicit $exec
+    ; CHECK-NEXT: %4:vgpr_32 = V_CNDMASK_B32_e64 0, %2, 0, %0, [[CMP]], implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sgpr_32 = COPY $sgpr0
+    %3:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 %0, %1, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, %2, %3, implicit $exec
+    $vgpr0 = COPY %4
+    SI_RETURN implicit $vgpr0
+...
+
+# Source modifiers prevent VOP2 and VOPD forms, so there is no gain.
+---
+name: src_mods_no_gain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0
+    ; CHECK-LABEL: name: src_mods_no_gain
+    ; CHECK: V_CMP_EQ_U32_e64 %0, %1, implicit $exec
+    ; CHECK-NEXT: %4:vgpr_32 = V_CNDMASK_B32_e64 1, %0, 0, %2, %3, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sgpr_32 = COPY $sgpr0
+    %3:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 %0, %1, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 1, %0, 0, %2, %3, implicit $exec
+    $vgpr0 = COPY %4
+    SI_RETURN implicit $vgpr0
+...
+
+# A user with source modifiers is swapped along with one that gains.
+---
+name: src_mods_swapped
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: src_mods_swapped
+    ; CHECK: V_CMP_NGT_F32_e64 0, %0, 0, %1, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, 99, 0, %0, %2, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %1, 1, %0, %2, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_GT_F32_e64 0, %0, 0, %1, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 1, %0, 0, %1, %2, implicit $exec
+    $vgpr0 = COPY %3
+    $vgpr1 = COPY %4
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+...
+
+# Two users, one gains and one loses a VGPR in src1. No net benefit.
+---
+name: no_net_gain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: no_net_gain
+    ; CHECK: V_CMP_LT_I32_e64
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, 99, 0, %1, %2, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_LT_I32_e64 %0, %1, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 99, 0, %1, %2, implicit $exec
+    $vgpr0 = COPY %3
+    $vgpr1 = COPY %4
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+...
+
+# Two users which both gain, one of them visited after the V_CMP is inverted.
+---
+name: two_users
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: two_users
+    ; CHECK: V_CMP_LE_U32_e64 %0, %1, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, 99, 0, %0, %2, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, 99, 0, %1, %2, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_GT_U32_e64 %0, %1, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, %1, 0, 99, %2, implicit $exec
+    $vgpr0 = COPY %3
+    $vgpr1 = COPY %4
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+...
+
+# The condition has a use which is not a V_CNDMASK.
+---
+name: other_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0
+    ; CHECK-LABEL: name: other_use
+    ; CHECK: V_CMP_LT_I32_e64
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %0, 0, 99, %3, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32 = COPY $sgpr0
+    %3:sreg_32_xm0_xexec = V_CMP_LT_I32_e64 %0, %1, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %3, implicit $exec
+    %5:sreg_32 = S_AND_B32 %3, %2, implicit-def dead $scc
+    $vgpr0 = COPY %4
+    $sgpr0 = COPY %5
+    SI_RETURN implicit $vgpr0, implicit $sgpr0
+...
+
+# The condition is not computed by a V_CMP.
+---
+name: not_vcmp
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $sgpr0
+    ; CHECK-LABEL: name: not_vcmp
+    ; CHECK: V_CNDMASK_B32_e64 0, %0, 0, 99, %1, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32_xm0_xexec = COPY $sgpr0
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %1, implicit $exec
+    $vgpr0 = COPY %2
+    SI_RETURN implicit $vgpr0
+...
+
+# V_CMP_F/V_CMP_TRU are not inverted.
+---
+name: fcmp_true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: fcmp_true
+    ; CHECK: V_CMP_TRU_F32_e64
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_TRU_F32_e64 0, %0, 0, %1, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %2, implicit $exec
+    $vgpr0 = COPY %3
+    SI_RETURN implicit $vgpr0
+...
+
+# A literal class mask whose complement is inline is inverted.
+---
+name: class_literal_mask
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: class_literal_mask
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, %0, 3, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, 99, 0, %0, [[CMP]], implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, %0, 1020, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %1, implicit $exec
+    $vgpr0 = COPY %2
+    SI_RETURN implicit $vgpr0
+...
+
+# An inline class mask whose complement is a literal is not inverted.
+---
+name: class_inline_mask
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: class_inline_mask
+    ; CHECK: V_CMP_CLASS_F32_e64 0, %0, 3, implicit $exec
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %0, 0, 99, %1, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, %0, 3, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, 99, %1, implicit $exec
+    $vgpr0 = COPY %2
+    SI_RETURN implicit $vgpr0
+...
+
+# Both sources are already VGPRs.
+---
+name: both_vgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: both_vgpr
+    ; CHECK: V_CMP_LT_I32_e64
+    ; CHECK-NEXT: V_CNDMASK_B32_e64 0, %0, 0, %1, %2, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_32_xm0_xexec = V_CMP_LT_I32_e64 %0, %1, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, %0, 0, %1, %2, implicit $exec
+    $vgpr0 = COPY %3
+    SI_RETURN implicit $vgpr0
+...

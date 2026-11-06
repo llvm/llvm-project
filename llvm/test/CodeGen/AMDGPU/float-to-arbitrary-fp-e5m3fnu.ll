@@ -139,11 +139,11 @@ define i8 @to_e5m3fnu_dynamic(float %x) {
 ; CHECK-NEXT:    v_and_b32_e32 v3, v3, v5
 ; CHECK-NEXT:    v_add_nc_u32_e32 v2, v7, v2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v3, v9, v3
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 7, v2
+; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 7, v2
 ; CHECK-NEXT:    v_cmp_lt_i32_e64 s4, 7, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc_lo
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc_lo
 ; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, 8, vcc_lo
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, 8, 0, vcc_lo
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 14, v1, s4
 ; CHECK-NEXT:    v_or_b32_e32 v2, v4, v2
 ; CHECK-NEXT:    v_lshl_or_b32 v3, v1, 3, v3

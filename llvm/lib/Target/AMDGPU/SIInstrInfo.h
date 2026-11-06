@@ -409,6 +409,12 @@ public:
   LLVM_READONLY
   int commuteOpcode(unsigned Opc) const;
 
+  /// Return the opcode of the V_CMP_*_e64 instruction which computes the
+  /// logical negation of \p Opc for all inputs, including NaNs, or -1 if there
+  /// is none or it is not available on the subtarget.
+  LLVM_READONLY
+  int getInvertedVCmpOpcode(unsigned Opc) const;
+
   LLVM_READONLY
   inline int commuteOpcode(const MachineInstr &MI) const {
     return commuteOpcode(MI.getOpcode());

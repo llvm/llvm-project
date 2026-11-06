@@ -2138,9 +2138,9 @@ define half @fabs_fptrunc_f64_to_f16(double %x) {
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s4
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX10-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX10-GISEL-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v1, 0x8000, v0
@@ -2232,10 +2232,10 @@ define half @fabs_fptrunc_f64_to_f16(double %x) {
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX11-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX11-GISEL-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1

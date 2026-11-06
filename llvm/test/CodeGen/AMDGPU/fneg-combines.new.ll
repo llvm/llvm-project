@@ -246,8 +246,8 @@ define amdgpu_ps float @fneg_fadd_0_safe_f32(float inreg %tmp2, float inreg %tmp
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_safe_f32:
@@ -270,8 +270,8 @@ define amdgpu_ps float @fneg_fadd_0_safe_f32(float inreg %tmp2, float inreg %tmp
 ; VI-NEXT:    v_mad_f32 v0, v0, 0, 0
 ; VI-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; VI-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
-; VI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; VI-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv float 1.000000e+00, %tmp6
@@ -298,8 +298,8 @@ define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6
 ; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv afn float 1.000000e+00, %tmp6
@@ -1657,20 +1657,20 @@ define double @v_fneg_inv2pi_minimum_f64(double %a) #0 {
 ; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
 ; SI-NEXT:    s_mov_b32 s5, 0xbfc45f30
 ; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
-; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_min_f64 v[2:3], v[0:1], 0.15915494309189532
-; VI-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; VI-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xfff80000
-; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e64 v1, -v3, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v1, v1, -v3, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimum.f64(double 0x3fc45f306dc9c882, double %a)
   %fneg = fneg double %min
@@ -1684,20 +1684,20 @@ define double @v_fneg_neg_inv2pi_minimum_f64(double %a) #0 {
 ; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
 ; SI-NEXT:    s_mov_b32 s5, 0x3fc45f30
 ; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
-; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_neg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], 0.15915494309189532
-; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; VI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimum.f64(double 0xbfc45f306dc9c882, double %a)
   %fneg = fneg double %min
@@ -4067,9 +4067,9 @@ define float @v_fneg_select_infloop_regression_f32(float %arg, i1 %arg1) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = fneg float %i
@@ -4097,9 +4097,9 @@ define float @v_fneg_select_infloop_regression_f32_commute1(float %arg, i1 %arg1
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = fneg float %i
@@ -4128,9 +4128,9 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32(float %arg, i1 %ar
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 2.0, float %arg
   %i2 = fneg float %i
@@ -4158,9 +4158,9 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32_commute1(float %ar
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 2.0, float %arg
   %i2 = fneg float %i
@@ -4189,9 +4189,9 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32(float %arg, i1
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float -2.0, float %arg
   %i2 = fneg float %i
@@ -4219,9 +4219,9 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1(float
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float -2.0, float %arg
   %i2 = fneg float %i
@@ -4297,10 +4297,10 @@ define double @v_fneg_select_infloop_regression_f64(double %arg, i1 %arg1) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_bfrev_b32_e32 v3, 1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v1, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, -v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, double 0.0, double %arg
   %i2 = fneg double %i
@@ -4352,20 +4352,20 @@ define half @v_fneg_select_infloop_regression_f16(half %arg, i1 %arg1) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v1, 1, v1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; SI-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
-; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_select_infloop_regression_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_and_b32_e32 v1, 1, v1
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, half 0.0, half %arg
   %i2 = fneg half %i
@@ -4415,10 +4415,10 @@ define <2 x half> @v_fneg_select_infloop_regression_v2f16(<2 x half> %arg, i1 %a
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %arg
   %i2 = fneg <2 x half> %i
@@ -4477,11 +4477,11 @@ define <2 x float> @v_fneg_select_infloop_regression_v2f32(<2 x float> %arg, i1 
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_bfrev_b32_e32 v3, 1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v1, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, -v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v3, -v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, <2 x float> zeroinitializer, <2 x float> %arg
   %i2 = fneg <2 x float> %i
@@ -4529,9 +4529,9 @@ define float @v_fabs_select_infloop_regression_f32(float %arg, i1 %arg1) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, |v0|, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, |v0|, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = call float @llvm.fabs.f32(float %i)
@@ -4580,9 +4580,9 @@ define float @v_fneg_fabs_select_infloop_regression(float %arg, i1 %arg1) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -|v0|, 0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -|v0|, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = call float @llvm.fabs.f32(float %i)

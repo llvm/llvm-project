@@ -29,11 +29,11 @@ define i8 @to_fp8_f32(float %x) {
 ; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
-; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v2
+; GFX942-NEXT:    v_cmp_ge_i32_e32 vcc, 7, v2
 ; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 8, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX942-NEXT:    v_cndmask_b32_e64 v4, 8, 0, vcc
 ; GFX942-NEXT:    v_or3_b32 v2, v5, v4, v2
 ; GFX942-NEXT:    v_and_b32_e32 v4, 0x7ffff, v1
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
@@ -87,11 +87,11 @@ define i8 @to_bf8_f32(float %x) {
 ; GFX942-NEXT:    v_bfe_u32 v6, v1, 21, 2
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
-; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 3, v2
+; GFX942-NEXT:    v_cmp_ge_i32_e32 vcc, 3, v2
 ; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 4, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX942-NEXT:    v_cndmask_b32_e64 v4, 4, 0, vcc
 ; GFX942-NEXT:    v_or3_b32 v2, v5, v4, v2
 ; GFX942-NEXT:    v_and_b32_e32 v4, 0xfffff, v1
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4

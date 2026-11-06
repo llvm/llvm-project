@@ -1334,6 +1334,53 @@ int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   return Opcode;
 }
 
+int SIInstrInfo::getInvertedVCmpOpcode(unsigned Opc) const {
+  int NewOpc;
+  switch (Opc) {
+#define INVERT_VCMP(A, B, T)                                                   \
+  case AMDGPU::V_CMP_##A##_##T##_e64:                                          \
+    NewOpc = AMDGPU::V_CMP_##B##_##T##_e64;                                    \
+    break;                                                                     \
+  case AMDGPU::V_CMP_##B##_##T##_e64:                                          \
+    NewOpc = AMDGPU::V_CMP_##A##_##T##_e64;                                    \
+    break;
+#define INVERT_VCMP16(A, B, T)                                                 \
+  INVERT_VCMP(A, B, T)                                                         \
+  INVERT_VCMP(A, B, T##_t16)                                                   \
+  INVERT_VCMP(A, B, T##_fake16)
+#define INVERT_VCMP_FP(A, B)                                                   \
+  INVERT_VCMP16(A, B, F16)                                                     \
+  INVERT_VCMP(A, B, F32)                                                       \
+  INVERT_VCMP(A, B, F64)
+#define INVERT_VCMP_INT(A, B)                                                  \
+  INVERT_VCMP16(A, B, I16)                                                     \
+  INVERT_VCMP16(A, B, U16)                                                     \
+  INVERT_VCMP(A, B, I32)                                                       \
+  INVERT_VCMP(A, B, U32)                                                       \
+  INVERT_VCMP(A, B, I64)                                                       \
+  INVERT_VCMP(A, B, U64)
+    // The N* floating-point predicates are the unordered complements of the
+    // ordered ones, so these are exact inverses even for NaN inputs.
+    INVERT_VCMP_FP(LT, NLT)
+    INVERT_VCMP_FP(EQ, NEQ)
+    INVERT_VCMP_FP(LE, NLE)
+    INVERT_VCMP_FP(GT, NGT)
+    INVERT_VCMP_FP(LG, NLG)
+    INVERT_VCMP_FP(GE, NGE)
+    INVERT_VCMP_FP(O, U)
+    INVERT_VCMP_INT(EQ, NE)
+    INVERT_VCMP_INT(LT, GE)
+    INVERT_VCMP_INT(GT, LE)
+#undef INVERT_VCMP_INT
+#undef INVERT_VCMP_FP
+#undef INVERT_VCMP16
+#undef INVERT_VCMP
+  default:
+    return -1;
+  }
+  return pseudoToMCOpcode(NewOpc) != -1 ? NewOpc : -1;
+}
+
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                           const Register Reg,
                                           int64_t &ImmVal) const {

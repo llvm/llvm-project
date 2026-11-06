@@ -218,11 +218,11 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v14
 ; GISEL-NEXT:    v_cndmask_b32_e32 v5, v11, v15, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, v12, v16, vcc
-; GISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v14
+; GISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v14
 ; GISEL-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, -1, s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e64 v11, v11, -1, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, -1, v5, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v11, -1, v11, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v2, v9, v2
 ; GISEL-NEXT:    v_and_b32_e32 v3, v10, v3
 ; GISEL-NEXT:    v_and_or_b32 v0, v5, v0, v2
@@ -486,11 +486,11 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v13
 ; GISEL-NEXT:    v_cndmask_b32_e32 v5, v10, v14, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v10, v11, v15, vcc
-; GISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v13
+; GISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v13
 ; GISEL-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, -1, s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e64 v10, v10, -1, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, -1, v5, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v10, -1, v10, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v2, v8, v2
 ; GISEL-NEXT:    v_and_b32_e32 v3, v9, v3
 ; GISEL-NEXT:    v_and_or_b32 v0, v5, v0, v2

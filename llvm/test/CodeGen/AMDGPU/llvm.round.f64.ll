@@ -85,9 +85,9 @@ define amdgpu_kernel void @v_round_f64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    v_and_b32_e32 v7, 0x80000000, v3
 ; SI-NEXT:    v_bfi_b32 v5, v5, 0, v3
 ; SI-NEXT:    v_bfi_b32 v4, v4, 0, v2
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v6
-; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; SI-NEXT:    v_cmp_le_i32_e32 vcc, 0, v6
+; SI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; SI-NEXT:    v_cmp_lt_i32_e32 vcc, 51, v6
 ; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc

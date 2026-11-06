@@ -21,8 +21,8 @@ define i32 @scmp_i128(i128 %a, i128 %b) {
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v8, 1, v8
-; GFX7-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v0, v8, -1, vcc
+; GFX7-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v0, -1, v8, vcc
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: scmp_i128:
@@ -71,9 +71,9 @@ define i32 @scmp_i128(i128 %a, i128 %b) {
 ; GFX12-SDAG-NEXT:    v_and_b16 v0.l, 1, v0.l
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX12-SDAG-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 1, v0.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, -1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v0, -1, v1, vcc_lo
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: scmp_i128:
