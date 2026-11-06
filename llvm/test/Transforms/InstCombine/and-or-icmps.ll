@@ -2282,11 +2282,11 @@ define <2 x i1> @bitwise_and_icmp_and_partial_poison(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @notallzeros_notallone_poison_lane(<2 x i8> %x) {
-; CHECK-LABEL: @notallzeros_notallone_poison_lane(
-; CHECK-NEXT:    [[AND_1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 4)
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ne <2 x i8> [[AND_1]], <i8 0, i8 poison>
-; CHECK-NEXT:    ret <2 x i1> [[CMP_1]]
+define <2 x i1> @and_notallzeros_notallone_poison_lane(<2 x i8> %x) {
+; CHECK-LABEL: @and_notallzeros_notallone_poison_lane(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[RV:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RV]]
 ;
   %and = and <2 x i8> %x, splat (i8 12)
   %cmp = icmp ne <2 x i8> %and, zeroinitializer
@@ -2296,11 +2296,25 @@ define <2 x i1> @notallzeros_notallone_poison_lane(<2 x i8> %x) {
   ret <2 x i1> %rv
 }
 
-define i1 @notallzeros_notallone_trunc_flags(i8 %x) {
-; CHECK-LABEL: @notallzeros_notallone_trunc_flags(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i3
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ne i3 [[TRUNC]], 0
-; CHECK-NEXT:    ret i1 [[CMP_1]]
+define <2 x i1> @or_notallzeros_notallone_poison_lane(<2 x i8> %x) {
+; CHECK-LABEL: @or_notallzeros_notallone_poison_lane(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %a = and <2 x i8> %x, splat (i8 12)
+  %c = icmp eq <2 x i8> %a, splat (i8 12)
+  %a1 = and <2 x i8> %x, splat (i8 4)
+  %c1 = icmp ne <2 x i8> %a1, <i8 0, i8 poison>
+  %r = select <2 x i1> %c, <2 x i1> splat (i1 true), <2 x i1> %c1
+  ret <2 x i1> %r
+}
+
+define i1 @and_notallzeros_notallone_trunc_flags(i8 %x) {
+; CHECK-LABEL: @and_notallzeros_notallone_trunc_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %and = and i8 %x, 15
   %cmp = icmp ne i8 %and, 0

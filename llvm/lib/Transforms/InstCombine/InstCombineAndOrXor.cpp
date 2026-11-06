@@ -347,6 +347,22 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
       std::make_pair(LeftType, RightType));
 }
 
+/// When foldLogOpOfMaskedICmps returns RHS for a logical and/or, we need to
+/// make sure that RHS is not more poisonous, e.g. as a result of poison flags
+/// on icmp or trunc, or via poison elements in vector constants. Using freeze
+/// is insufficient here, because we need the constants to match those the
+/// analysis was performed on.
+/// D and E are expected to be poison-free constants here.
+static Value *getReconstructedMaskedICmp(IRBuilderBase &Builder, bool IsLogical,
+                                         Value *RHS, Value *A, Value *D,
+                                         Value *E, ICmpInst::Predicate PredR) {
+  if (!IsLogical)
+    return RHS;
+
+  Value *And = Builder.CreateAnd(A, D);
+  return Builder.CreateICmp(PredR, And, E);
+}
+
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
 /// (icmp(A & X) ==/!= Y), where the left-hand side is of type Mask_NotAllZeros
 /// and the right hand side is of type BMask_Mixed. For example,
@@ -469,18 +485,6 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
     return nullptr;
   }
 
-  auto GetRHS = [&]() {
-    if (!IsLogical)
-      return RHS;
-
-    // Make sure that the RHS is not more poisonous, e.g. as a result of
-    // poison flags on icmp or trunc, or via poison elements in vector
-    // constants. Using freeze is insufficient here, because we need the
-    // constants to match those the analysis was performed on.
-    Value *And = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *DCst));
-    return Builder.CreateICmp(NewCC, And, ConstantInt::get(A->getType(), ECst));
-  };
-
   // At this point, B, D, E aren't zero and (B & D) == B, (B & D) == D or B ==
   // D. If B is a superset of (or equal to) D, since E is not zero, LHS is
   // subsumed by RHS (RHS implies LHS.) So the whole expression becomes
@@ -488,14 +492,14 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   if (IsSuperSetOrEqual(BCst, DCst))
-    return GetRHS();
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
 
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
   if ((*BCst & ECst) != 0)
-    return GetRHS();
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
 
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
@@ -628,13 +632,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD) {
-        if (IsLogical) {
-          if (auto *RHSI = dyn_cast<Instruction>(RHS))
-            RHSI->dropPoisonGeneratingFlags();
-        }
-        return RHS;
-      }
+      if (NewMask == *ConstD)
+        return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E,
+                                          PredR);
     }
 
     if (Mask & AMask_NotAllOnes) {
