@@ -1891,6 +1891,7 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
+  metadata.SetLanguageType(Language::GetPrimaryLanguage(cu_language));
   if (!attrs.is_forward_declaration)
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
