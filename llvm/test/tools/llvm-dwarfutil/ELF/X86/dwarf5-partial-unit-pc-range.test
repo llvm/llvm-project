@@ -1,0 +1,167 @@
+## Check that both linkers set the DW_AT_low_pc/DW_AT_high_pc of a
+## DW_TAG_partial_unit root to the linked range, as for a DW_TAG_compile_unit.
+## The root covers foo1, foo2 and foo3, but only foo2 is linked. DW_AT_high_pc
+## is cloned by different code as an address and as a length, so both are used.
+
+## DW_TAG_compile_unit root, DW_AT_high_pc as an address.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1160 -DFOO2LOW=0x1140 -o %t.cu-addr.o
+# RUN: llvm-dwarfutil %t.cu-addr.o %t.cu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu-addr.classic | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu-addr.classic
+# RUN: llvm-dwarfutil --linker parallel %t.cu-addr.o %t.cu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu-addr.parallel | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu-addr.parallel
+
+## DW_TAG_compile_unit root, DW_AT_high_pc as a length.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x30 -DFOO2LOW=0x1140 -o %t.cu-len.o
+# RUN: llvm-dwarfutil %t.cu-len.o %t.cu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu-len.classic | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu-len.classic
+# RUN: llvm-dwarfutil --linker parallel %t.cu-len.o %t.cu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu-len.parallel | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu-len.parallel
+
+## DW_TAG_partial_unit root, DW_AT_high_pc as an address.
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1160 -DFOO2LOW=0x1140 -o %t.pu-addr.o
+# RUN: llvm-dwarfutil %t.pu-addr.o %t.pu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu-addr.classic | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu-addr.classic
+# RUN: llvm-dwarfutil --linker parallel %t.pu-addr.o %t.pu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu-addr.parallel | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu-addr.parallel
+
+## DW_TAG_partial_unit root, DW_AT_high_pc as a length.
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x30 -DFOO2LOW=0x1140 -o %t.pu-len.o
+# RUN: llvm-dwarfutil %t.pu-len.o %t.pu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu-len.classic | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu-len.classic
+# RUN: llvm-dwarfutil --linker parallel %t.pu-len.o %t.pu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu-len.parallel | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu-len.parallel
+
+## The same inputs with foo2 tombstoned too, so only gvar keeps the unit.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1160 -DFOO2LOW=0x0 -o %t.drop-cu-addr.o
+# RUN: llvm-dwarfutil %t.drop-cu-addr.o %t.drop-cu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-addr.classic | FileCheck %s --check-prefixes=CU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-cu-addr.o %t.drop-cu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-addr.parallel | FileCheck %s --check-prefixes=CU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x30 -DFOO2LOW=0x0 -o %t.drop-cu-len.o
+# RUN: llvm-dwarfutil %t.drop-cu-len.o %t.drop-cu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-len.classic | FileCheck %s --check-prefixes=CU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-cu-len.o %t.drop-cu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-len.parallel | FileCheck %s --check-prefixes=CU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1160 -DFOO2LOW=0x0 -o %t.drop-pu-addr.o
+# RUN: llvm-dwarfutil %t.drop-pu-addr.o %t.drop-pu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-addr.classic | FileCheck %s --check-prefixes=PU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-pu-addr.o %t.drop-pu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-addr.parallel | FileCheck %s --check-prefixes=PU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x30 -DFOO2LOW=0x0 -o %t.drop-pu-len.o
+# RUN: llvm-dwarfutil %t.drop-pu-len.o %t.drop-pu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-len.classic | FileCheck %s --check-prefixes=PU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-pu-len.o %t.drop-pu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-len.parallel | FileCheck %s --check-prefixes=PU,DROP
+
+## The root's range is foo2's.
+# CU: DW_TAG_compile_unit
+# PU: DW_TAG_partial_unit
+# CHECK:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:   DW_AT_name ("U1")
+# CHECK-NEXT:   DW_AT_low_pc (0x0000000000001140)
+# CHECK-NEXT:   DW_AT_high_pc (0x0000000000001150)
+# CHECK:        DW_TAG_subprogram
+# CHECK-NEXT:     DW_AT_name ("foo2")
+# CHECK-NEXT:     DW_AT_low_pc (0x0000000000001140)
+# CHECK-NEXT:     DW_AT_high_pc (0x0000000000001150)
+
+## With no live function, the root's DW_AT_low_pc and DW_AT_high_pc are
+## dropped.
+# DROP:          DW_AT_producer ("by_hand")
+# DROP-NEXT:     DW_AT_name ("U1")
+# DROP-NEXT:     DW_AT_str_offsets_base (0x00000008)
+# DROP:        DW_TAG_variable
+# DROP-NEXT:     DW_AT_name ("gvar")
+
+## foo1 and foo3 are tombstoned, and foo2 too when FOO2LOW is 0.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      [[HIGHPCFORM]]
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_location
+            Form:      DW_FORM_exprloc
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U1
+            - Value: 0x1130
+            - Value: [[HIGHPC]]
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x0
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: [[FOO2LOW]]
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x0
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - CStr: gvar
+            - BlockData: [ 0x03, 0x40, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]
+        - AbbrCode: 0
+...
