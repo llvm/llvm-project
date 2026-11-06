@@ -22,7 +22,7 @@ body: |
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
     ; GFX1250-NEXT: TENSOR_SAVE $sgpr0_sgpr1, 0, 0, implicit $exec
-    ; GFX1250-NEXT: S_WAIT_XCNT 1
+    ; GFX1250-NEXT: S_WAIT_XCNT 0
     ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
     TENSOR_SAVE $sgpr0_sgpr1, 0, 0, implicit $exec
@@ -46,7 +46,7 @@ body: |
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
     ; GFX1250-NEXT: TENSOR_STOP 0, implicit $exec
-    ; GFX1250-NEXT: S_WAIT_XCNT 1
+    ; GFX1250-NEXT: S_WAIT_XCNT 0
     ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
     TENSOR_STOP 0, implicit $exec
@@ -69,7 +69,6 @@ body: |
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: TENSOR_SAVE $sgpr0_sgpr1, 0, 0, implicit $exec
-    ; GFX1250-NEXT: S_WAIT_XCNT 0
     ; GFX1250-NEXT: $exec = S_MOV_B64 $sgpr2_sgpr3
     TENSOR_SAVE $sgpr0_sgpr1, 0, 0, implicit $exec
     $exec = S_MOV_B64 $sgpr2_sgpr3
@@ -91,7 +90,6 @@ body: |
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: TENSOR_STOP 0, implicit $exec
-    ; GFX1250-NEXT: S_WAIT_XCNT 0
     ; GFX1250-NEXT: $exec = S_MOV_B64 $sgpr0_sgpr1
     TENSOR_STOP 0, implicit $exec
     $exec = S_MOV_B64 $sgpr0_sgpr1
