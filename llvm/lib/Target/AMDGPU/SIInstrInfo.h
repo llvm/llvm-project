@@ -38,6 +38,10 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
+namespace AMDGPU {
+enum class AsyncStages : uint32_t;
+} // namespace AMDGPU
+
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
 
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
@@ -874,6 +878,24 @@ public:
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d2 &&
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
+
+  bool isNonAsyncLdsDmaWrite(const MachineInstr &MI) const {
+    return mayWriteLDSThroughDMA(MI) && !isAsync(MI);
+  }
+
+  /// \returns true if \p MI creates an async operation.
+  bool isAsync(const MachineInstr &MI) const {
+    if (!isLDSDMA(MI))
+      return false;
+    if (usesASYNC_CNT(MI) || usesTENSOR_CNT(MI))
+      return true;
+    const MachineOperand *Async = getNamedOperand(MI, AMDGPU::OpName::IsAsync);
+    return Async && (Async->getImm());
+  }
+
+  /// \returns the asyncmark stage that the async operation initiated by \p MI
+  /// belongs to, or no stage if \p MI does not initiate an async operation.
+  AMDGPU::AsyncStages getAsyncStage(const MachineInstr &MI) const;
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
     return Opcode == AMDGPU::S_BARRIER_LEAVE ||

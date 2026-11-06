@@ -3418,6 +3418,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
