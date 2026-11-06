@@ -63,13 +63,15 @@ public:
   void createAssign(const fir::ExtendedValue &lhs,
                     const fir::ExtendedValue &rhs);
 
-  /// Create lhs // rhs in temp obtained with fir.alloca
+  /// Create lhs // rhs in a stack or heap temporary.
   fir::CharBoxValue createConcatenate(const fir::CharBoxValue &lhs,
-                                      const fir::CharBoxValue &rhs);
+                                      const fir::CharBoxValue &rhs,
+                                      bool useHeap = false);
 
-  /// Create {max,min}(lhs,rhs) in temp obtained with fir.alloca
-  fir::CharBoxValue
-  createCharExtremum(bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs);
+  /// Create {max,min}(lhs,rhs) in a stack or heap temporary.
+  fir::CharBoxValue createCharExtremum(bool predIsMin,
+                                       llvm::ArrayRef<fir::CharBoxValue> opCBVs,
+                                       bool useHeap = false);
 
   /// LEN_TRIM intrinsic.
   mlir::Value createLenTrim(const fir::CharBoxValue &str);
@@ -93,8 +95,10 @@ public:
   std::pair<mlir::Value, mlir::Value> createUnboxChar(mlir::Value boxChar);
 
   /// Allocate a temp of fir::CharacterType type and length len.
-  /// Returns related fir.ref<fir.array<? x fir.char<kind>>>.
-  fir::CharBoxValue createCharacterTemp(mlir::Type type, mlir::Value len);
+  /// Use heap storage when useHeap is true. The caller must then free the
+  /// returned temporary.
+  fir::CharBoxValue createCharacterTemp(mlir::Type type, mlir::Value len,
+                                        bool useHeap = false);
 
   /// Allocate a temp of compile time constant length.
   /// Returns related fir.ref<fir.array<len x fir.char<kind>>>.
@@ -235,10 +239,12 @@ std::pair<mlir::Value, mlir::Value>
 extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value tuple, bool openBoxProc = true);
 
+/// Convert into a temporary, using heap storage when useHeap is true. The
+/// caller must free the result when heap storage is requested.
 fir::CharBoxValue convertCharacterKind(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
-                                       fir::CharBoxValue srcBoxChar,
-                                       int toKind);
+                                       fir::CharBoxValue srcBoxChar, int toKind,
+                                       bool useHeap = false);
 
 } // namespace fir::factory
 

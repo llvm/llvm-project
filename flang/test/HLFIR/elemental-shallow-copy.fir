@@ -1,5 +1,6 @@
 // Check that an elemental result of a derived type with an allocatable
-// component is shallow-copied into the array result.
+// component is shallow-copied into the array result. The skipped scalar
+// as_expr must not leave behind its bufferization tuple or a destroy.
 // RUN: fir-opt %s --bufferize-hlfir | FileCheck %s
 
 func.func @_QMtypesPtest() {
@@ -13,7 +14,9 @@ func.func @_QMtypesPtest() {
   ^bb0(%arg0: index):
     %26:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>)
     %27 = hlfir.as_expr %26#0 move %false : (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, i1) -> !hlfir.expr<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
-    hlfir.yield_element %27 : !hlfir.expr<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
+    hlfir.yield_element %27 : !hlfir.expr<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>> cleanup {
+      hlfir.destroy %27 : !hlfir.expr<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
+    }
   }
   hlfir.assign %23 to %19#0 : !hlfir.expr<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>
   hlfir.destroy %23 : !hlfir.expr<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
@@ -25,7 +28,9 @@ func.func @_QMtypesPtest() {
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%{{.*}}) uniq_name(".tmp.array") : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>)
 // CHECK:           fir.do_loop %[[VAL_10:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>)
+// CHECK-NOT:         fir.undefined tuple
 // CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_10]])  : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
 // CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
 // CHECK:             fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
+// CHECK-NOT:         @_FortranADestroy
 // CHECK:           }

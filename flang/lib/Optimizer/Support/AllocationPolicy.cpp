@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -128,11 +129,23 @@ bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
                                    stackBytesUsed);
 }
 
+bool fir::isCharacterTemporary(const AllocationInfo &info) {
+  auto allocmem = mlir::dyn_cast_if_present<fir::AllocMemOp>(info.op);
+  return allocmem && info.isTemporary &&
+         mlir::isa<fir::CharacterType>(allocmem.getAllocatedType());
+}
+
 fir::AllocationPlacement
 fir::decideAllocationPlacement(const AllocationInfo &info,
                                const AllocationPolicy &basePolicy,
                                std::size_t stackBytesUsed) {
   using P = fir::AllocationPlacement;
+  // Scalar character expression buffers retain their historical stack
+  // storage independently of the array size policy, including in device
+  // regions. The caller still has to prove the lifetime is safe.
+  if (isCharacterTemporary(info))
+    return P::Stack;
+
   AllocationPolicy policy = policyFor(info, basePolicy);
 
   // An allocation that is not known to be dynamic but whose size cannot be
