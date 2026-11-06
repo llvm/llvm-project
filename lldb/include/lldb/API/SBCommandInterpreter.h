@@ -240,10 +240,79 @@ public:
       lldb::SBStringList &matches, lldb::SBStringList &descriptions);
 #endif
 
+  /// Same as `HandleCompletion`, but also fills in `descriptions` with a
+  /// description for each match.
+  ///
+  /// \param[in] current_line
+  ///     The command line to complete.
+  ///
+  /// \param[in] cursor_pos
+  ///     The offset in \a current_line to complete at. It must not be past the
+  ///     end of the line.
+  ///
+  /// \param[in] match_start_point
+  ///     Unused.
+  ///
+  /// \param[in] max_return_elements
+  ///     The maximum number of matches to return. A negative value means no
+  ///     limit, and 0 returns nothing.
+  ///
+  /// \param[out] matches
+  ///     The matches are appended to it. Element 0 is the text common to all
+  ///     the matches that is not already typed, or empty if there is none or
+  ///     \a current_line has no arguments. The rest of the elements are the
+  ///     matches.
+  ///
+  /// \param[out] descriptions
+  ///     The descriptions are appended to it, one for each element of
+  ///     \a matches, including element 0, which is always empty. A match
+  ///     without a description has an empty string.
+  ///
+  /// \return
+  ///     The number of matches, not counting element 0.
   int HandleCompletionWithDescriptions(const char *current_line,
                                        uint32_t cursor_pos,
                                        int match_start_point,
                                        int max_return_elements,
+                                       lldb::SBStringList &matches,
+                                       lldb::SBStringList &descriptions);
+
+  /// Same as `HandleCompletionWithDescriptions`, but completes in \a exe_ctx
+  /// instead of current Interpreter's context e.g. to complete the
+  /// variables of a frame. It doesn't change the selection.
+  ///
+  /// \param[in] current_line
+  ///     The command line to complete.
+  ///
+  /// \param[in] cursor_pos
+  ///     The offset in \a current_line to complete at. It must not be past the
+  ///     end of the line.
+  ///
+  /// \param[in] max_return_elements
+  ///     The maximum number of matches to return. A negative value means no
+  ///     limit, and 0 returns nothing.
+  ///
+  /// \param[in] exe_ctx
+  ///     The execution context to complete in. If it is empty, the selected
+  ///     target, thread and frame are used.
+  ///
+  /// \param[out] matches
+  ///     The matches are appended to it. Element 0 is the text common to all
+  ///     the matches that is not already typed, or empty if there is none or
+  ///     \a current_line has no arguments. The rest of the elements are the
+  ///     matches.
+  ///
+  /// \param[out] descriptions
+  ///     The descriptions are appended to it, one for each element of
+  ///     \a matches, including element 0, which is always empty. A match
+  ///     without a description has an empty string.
+  ///
+  /// \return
+  ///     The number of matches, not counting element 0.
+  int HandleCompletionWithDescriptions(const char *current_line,
+                                       uint32_t cursor_pos,
+                                       int max_return_elements,
+                                       lldb::SBExecutionContext &exe_ctx,
                                        lldb::SBStringList &matches,
                                        lldb::SBStringList &descriptions);
 
