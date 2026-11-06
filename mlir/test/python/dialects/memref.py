@@ -1,5 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import numpy as np
+
 import mlir.dialects.arith as arith
 import mlir.dialects.memref as memref
 import mlir.extras.types as T
