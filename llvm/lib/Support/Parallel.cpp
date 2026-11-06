@@ -121,6 +121,12 @@ public:
 
   size_t getThreadCount() const { return ThreadCount; }
 
+  void notifyAll() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    if (!WorkStack.empty())
+      Cond.notify_all();
+  }
+
 private:
   // Pop one task from the queue and run it. Must be called with Lock held;
   // releases Lock before executing the task.
@@ -235,8 +241,20 @@ TaskGroup::~TaskGroup() {
 #if LLVM_ENABLE_THREADS
   // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
   bool IsNested = threadIndex != UINT_MAX;
-  if (Parallel && IsNested)
-    getDefaultExecutor()->helpSync(L);
+  if (Parallel) {
+    if (IsNested)
+      getDefaultExecutor()->helpSync(L);
+#if defined(__linux__) && defined(__GLIBC__) && __GLIBC__ == 2 &&              \
+    __GLIBC_MINOR__ < 38
+    // Workaround for https://sourceware.org/bugzilla/show_bug.cgi?id=25847
+    // Fixed in glibc 2.38, but LTS distros such as Ubuntu 22.04 (2.35),
+    // Debian 12 (2.36), and RHEL 9 (2.34) distribute older versions of glibc
+    // where notify_one() (pthread_cond_signal) can drop wakeups under
+    // contention. Broadcast wakes all workers so tasks aren't stranded.
+    else
+      getDefaultExecutor()->notifyAll();
+#endif
+  }
 #endif
   L.sync();
 }
