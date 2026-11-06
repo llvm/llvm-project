@@ -29,7 +29,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -72,7 +71,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -119,7 +117,6 @@ char RISCVPreAllocZilsdOptLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVPreAllocZilsdOptLegacy, "riscv-prera-zilsd-opt",
                       "RISC-V pre-allocation Zilsd optimization", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RISCVPreAllocZilsdOptLegacy, "riscv-prera-zilsd-opt",
                     "RISC-V pre-allocation Zilsd optimization", false, false)
 
