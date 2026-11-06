@@ -1,4 +1,4 @@
-struct Version {
+struct VersionCommand: Subcommand {
   static let helpText = """
     Usage:
       swift-debugserver version
@@ -7,11 +7,11 @@ struct Version {
     """
 
   static func parse(_ args: ArraySlice<String>)
-      throws(ArgumentParseError) -> Version {
+      throws(ArgumentParseError) -> VersionCommand {
     if let extra = args.first {
       throw .unexpectedArgument(extra)
     }
-    return Version()
+    return VersionCommand()
   }
 
   func run() {

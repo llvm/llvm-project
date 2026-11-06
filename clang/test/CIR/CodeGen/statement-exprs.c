@@ -100,7 +100,7 @@ int nested(void) {
 // CIR:     cir.return %[[RES]] : !s32i
 // CIR:   }
 // CIR:   %[[FINAL_RES:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[FINAL_RES]] : !s32i
+// CIR:   cir.return implicit %[[FINAL_RES]] : !s32i
 
 // LLVM: define dso_local i32 @nested()
 // LLVM:   %[[VAR6:.+]] = alloca i32, 

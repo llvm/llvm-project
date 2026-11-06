@@ -2894,6 +2894,11 @@ void ACCCGToGPULowering::processPredicateRegion(
         }
         if (failedReductionKind)
           return;
+        // A private destination has a copy per block (or finer), so no other
+        // block writes it and the store must stay a plain store.
+        if (blockReduceKind && getPrivateScopeForMemref(storeOp.getMemref()) !=
+                                   PrivateMemScope::None)
+          blockReduceKind.reset();
         if (blockReduceKind) {
           Value input = mapping.lookupOrDefault(storeOp.getValueToStore());
           Value memref = mapping.lookupOrDefault(storeOp.getMemref());

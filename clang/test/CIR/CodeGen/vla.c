@@ -340,7 +340,7 @@ int f5(unsigned long len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
-// CIR:   cir.return %[[RET_VAL]] : !s32i
+// CIR:   cir.return implicit %[[RET_VAL]] : !s32i
 
 // LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[CLEANUP_DEST:.*]] = alloca i32
