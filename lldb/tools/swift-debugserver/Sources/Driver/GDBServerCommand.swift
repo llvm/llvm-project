@@ -11,13 +11,21 @@ struct GDBServerCommand: Subcommand {
       --setsid        Run debugserver in a new session.
     """
 
-  var fd: CInt?
-  var nativeRegs = false
-  var setsid = false
+  let fd: CInt?
+  let nativeRegs: Bool
+  let setsid: Bool
+
+  init(fd: CInt?, nativeRegs: Bool, setsid: Bool) {
+    self.fd = fd
+    self.nativeRegs = nativeRegs
+    self.setsid = setsid
+  }
 
   static func parse(_ args: ArraySlice<String>)
       throws(ArgumentParseError) -> GDBServerCommand {
-    var server = GDBServerCommand()
+    var fd: CInt?
+    var nativeRegs = false
+    var setsid = false
     var remaining = args
     while let arg = remaining.popFirst() {
       // Options may be spelled `--name value` or `--name=value`.
@@ -37,16 +45,19 @@ struct GDBServerCommand: Subcommand {
 
       switch name {
       case "--native-regs" where storage == nil:
-        server.nativeRegs = true
+        nativeRegs = true
       case "--setsid" where storage == nil:
-        server.setsid = true
+        setsid = true
       case "--fd":
-        server.fd = try parseFileDescriptor(try value())
+        guard fd == nil else {
+          throw .failure("Multiple instances of \(name), only pass one")
+        }
+        fd = try parseFileDescriptor(try value())
       default:
         throw .unexpectedArgument(arg)
       }
     }
-    return server
+    return GDBServerCommand(fd: fd, nativeRegs: nativeRegs, setsid: setsid)
   }
 
   private static func parseFileDescriptor(_ value: String)
