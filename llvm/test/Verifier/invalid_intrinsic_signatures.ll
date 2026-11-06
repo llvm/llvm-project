@@ -232,15 +232,15 @@ declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, <16 x i1>, <8 x fl
 ; CHECK-NEXT: declare ptr @llvm.masked.gather.p0.v8p0(<8 x ptr>, <8 x i1>, <8 x float>)
 declare ptr @llvm.masked.gather.p0.v8p0(<8 x ptr>, <8 x i1>, <8 x float>)
 
-; CHECK: intrinsic argument 0 type (vector of pointers to elements of overload type 0) expected vector (overload type 0 is <8 x float>), but got ptr
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got ptr
 ; CHECK-NEXT: declare <8 x float> @llvm.masked.gather.v8f32.p0(ptr, <8 x i1>, <8 x float>)
 declare <8 x float> @llvm.masked.gather.v8f32.p0(ptr, <8 x i1>, <8 x float>)
 
-; CHECK: intrinsic argument 0 type (vector of pointers to elements of overload type 0) expected vector of pointers with 8 elements (overload type 0 is <8 x float>), but got <8 x float>
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got <8 x float>
 ; CHECK-NEXT: declare <8 x float> @llvm.masked.gather.v8f32.v8f32(<8 x float>, <8 x i1>, <8 x float>)
 declare <8 x float> @llvm.masked.gather.v8f32.v8f32(<8 x float>, <8 x i1>, <8 x float>)
 
-; CHECK: intrinsic argument 0 type (vector of pointers to elements of overload type 0) expected vector of pointers with 8 elements (overload type 0 is <8 x float>), but got <16 x ptr>
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got <16 x ptr>
 ; CHECK-NEXT: declare <8 x float> @llvm.masked.gather.v8f32.v16p0(<16 x ptr>, <8 x i1>, <8 x float>)
 declare <8 x float> @llvm.masked.gather.v8f32.v16p0(<16 x ptr>, <8 x i1>, <8 x float>)
 
@@ -260,15 +260,15 @@ declare void @llvm.masked.scatter.v8f32.v8p0(<8 x float>, <8 x ptr>, <16 x i1>)
 ; CHECK-NEXT: declare void @llvm.masked.scatter.p0.v8p0(ptr, <8 x ptr>, <8 x i1>)
 declare void @llvm.masked.scatter.p0.v8p0(ptr, <8 x ptr>, <8 x i1>)
 
-; CHECK: intrinsic argument 1 type (vector of pointers to elements of overload type 0) expected vector (overload type 0 is <8 x float>), but got ptr
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got ptr
 ; CHECK-NEXT: declare void @llvm.masked.scatter.v8f32.p0(<8 x float>, ptr, <8 x i1>)
 declare void @llvm.masked.scatter.v8f32.p0(<8 x float>, ptr, <8 x i1>)
 
-; CHECK: intrinsic argument 1 type (vector of pointers to elements of overload type 0) expected vector of pointers with 8 elements (overload type 0 is <8 x float>), but got <8 x float>
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got <8 x float>
 ; CHECK-NEXT: declare void @llvm.masked.scatter.v8f32.v8f32(<8 x float>, <8 x float>, <8 x i1>)
 declare void @llvm.masked.scatter.v8f32.v8f32(<8 x float>, <8 x float>, <8 x i1>)
 
-; CHECK: intrinsic argument 1 type (vector of pointers to elements of overload type 0) expected vector of pointers with 8 elements (overload type 0 is <8 x float>), but got <16 x ptr>
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected pointer vector with 8 elements (overload type 0 is <8 x float>), but got <16 x ptr>
 ; CHECK-NEXT: declare void @llvm.masked.scatter.v8f32.v16p0(<8 x float>, <16 x ptr>, <8 x i1>)
 declare void @llvm.masked.scatter.v8f32.v16p0(<8 x float>, <16 x ptr>, <8 x i1>)
 
@@ -707,7 +707,7 @@ declare bfloat @llvm.nvvm.fmax.bf16(bfloat, half)
 ; CHECK-NEXT: declare bfloat @llvm.nvvm.fmin.bf16(bfloat)
 declare bfloat @llvm.nvvm.fmin.bf16(bfloat)
 
-; CHECK: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got ptr
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i8), but got ptr
 ; CHECK-NEXT: declare i8 @llvm.convert.to.arbitrary.fp.i8.ptr(ptr, metadata, metadata, i1)
 declare i8 @llvm.convert.to.arbitrary.fp.i8.ptr(ptr, metadata, metadata, i1)
 
@@ -715,7 +715,7 @@ declare i8 @llvm.convert.to.arbitrary.fp.i8.ptr(ptr, metadata, metadata, i1)
 ; CHECK-NEXT: declare ptr @llvm.convert.from.arbitrary.fp.ptr.i8(i8, metadata)
 declare ptr @llvm.convert.from.arbitrary.fp.ptr.i8(i8, metadata)
 
-; CHECK: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got i32
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i8), but got i32
 ; CHECK-NEXT: declare i8 @llvm.convert.to.arbitrary.fp.i8.i32(i32, metadata, metadata, i1)
 declare i8 @llvm.convert.to.arbitrary.fp.i8.i32(i32, metadata, metadata, i1)
 
@@ -723,7 +723,7 @@ declare i8 @llvm.convert.to.arbitrary.fp.i8.i32(i32, metadata, metadata, i1)
 ; CHECK-NEXT: declare i32 @llvm.convert.from.arbitrary.fp.i32.i8(i8, metadata)
 declare i32 @llvm.convert.from.arbitrary.fp.i32.i8(i8, metadata)
 
-; CHECK: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got <4 x ptr>
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 4 elements (overload type 0 is <4 x i8>), but got <4 x ptr>
 ; CHECK-NEXT: declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4ptr(<4 x ptr>, metadata, metadata, i1)
 declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4ptr(<4 x ptr>, metadata, metadata, i1)
 
@@ -738,3 +738,87 @@ declare <4 x float> @llvm.arm.neon.vcvthf2fp(<vscale x 4 x i16>)
 ; CHECK: intrinsic return type expected vector with 4 elements, but got <vscale x 4 x i16>
 ; CHECK-NEXT: declare <vscale x 4 x i16> @llvm.arm.neon.vcvtfp2hf(<vscale x 4 x float>)
 declare <vscale x 4 x i16> @llvm.arm.neon.vcvtfp2hf(<vscale x 4 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i32), but got <1 x float>
+; CHECK-NEXT: declare i32 @llvm.fptosi.sat.i32.v1f32(<1 x float>)
+declare i32 @llvm.fptosi.sat.i32.v1f32(<1 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 2 elements (overload type 0 is <2 x i32>), but got <1 x float>
+; CHECK-NEXT: declare <2 x i32> @llvm.fptosi.sat.v2i32.v1f32(<1 x float>)
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v1f32(<1 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i32), but got <1 x float>
+; CHECK-NEXT: declare i32 @llvm.fptoui.sat.i32.v1f32(<1 x float>)
+declare i32 @llvm.fptoui.sat.i32.v1f32(<1 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 2 elements (overload type 0 is <2 x i32>), but got <1 x float>
+; CHECK-NEXT: declare <2 x i32> @llvm.fptoui.sat.v2i32.v1f32(<1 x float>)
+declare <2 x i32> @llvm.fptoui.sat.v2i32.v1f32(<1 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i32), but got i32
+; CHECK-NEXT: declare i32 @llvm.fptosi.sat.i32.i32(i32)
+declare i32 @llvm.fptosi.sat.i32.i32(i32)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 2 elements (overload type 0 is <2 x i32>), but got <2 x i32>
+; CHECK-NEXT: declare <2 x i32> @llvm.fptoui.sat.v2i32.v2i32(<2 x i32>)
+declare <2 x i32> @llvm.fptoui.sat.v2i32.v2i32(<2 x i32>)
+
+; CHECK: intrinsic return type (same vector width of overload type 1) expected integer (overload type 1 is i32), but got float
+; CHECK-NEXT: declare float @llvm.scmp.f32.i32(i32, i32)
+declare float @llvm.scmp.f32.i32(i32, i32)
+
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected integer (overload type 0 is ptr), but got float
+; CHECK-NEXT: declare ptr @llvm.ptrmask.p0.f32(ptr, float)
+declare ptr @llvm.ptrmask.p0.f32(ptr, float)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 2 elements (overload type 0 is <2 x i32>), but got <vscale x 2 x float>
+; CHECK-NEXT: declare <2 x i32> @llvm.fptosi.sat.v2i32.nxv2f32(<vscale x 2 x float>)
+declare <2 x i32> @llvm.fptosi.sat.v2i32.nxv2f32(<vscale x 2 x float>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with vscale x 2 elements (overload type 0 is <vscale x 2 x i32>), but got <2 x float>
+; CHECK-NEXT: declare <vscale x 2 x i32> @llvm.fptosi.sat.nxv2i32.v2f32(<2 x float>)
+declare <vscale x 2 x i32> @llvm.fptosi.sat.nxv2i32.v2f32(<2 x float>)
+
+; CHECK: intrinsic return type (same vector width of overload type 1) expected integer vector with vscale x 2 elements (overload type 1 is <vscale x 2 x i32>), but got <vscale x 4 x i32>
+; CHECK-NEXT: declare <vscale x 4 x i32> @llvm.scmp.nxv4i32.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
+declare <vscale x 4 x i32> @llvm.scmp.nxv4i32.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with vscale x 2 elements (overload type 0 is <vscale x 2 x i32>), but got <vscale x 2 x i32>
+; CHECK-NEXT: declare <vscale x 2 x i32> @llvm.fptoui.sat.nxv2i32.nxv2i32(<vscale x 2 x i32>)
+declare <vscale x 2 x i32> @llvm.fptoui.sat.nxv2i32.nxv2i32(<vscale x 2 x i32>)
+
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected integer vector with vscale x 2 elements (overload type 0 is <vscale x 2 x ptr>), but got <vscale x 2 x float>
+; CHECK-NEXT: declare <vscale x 2 x ptr> @llvm.ptrmask.nxv2p0.nxv2f32(<vscale x 2 x ptr>, <vscale x 2 x float>)
+declare <vscale x 2 x ptr> @llvm.ptrmask.nxv2p0.nxv2f32(<vscale x 2 x ptr>, <vscale x 2 x float>)
+
+; CHECK: intrinsic return type (same vector width of overload type 1) expected integer vector with 4 elements (overload type 1 is <4 x i32>), but got <8 x i32>
+; CHECK-NEXT: declare <8 x i32> @llvm.scmp.v8i32.v4i32(<4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.scmp.v8i32.v4i32(<4 x i32>, <4 x i32>)
+
+; CHECK: intrinsic return type (same vector width of overload type 1) expected integer vector with 4 elements (overload type 1 is <4 x i32>), but got i2
+; CHECK-NEXT: declare i2 @llvm.scmp.i2.v4i32(<4 x i32>, <4 x i32>)
+declare i2 @llvm.scmp.i2.v4i32(<4 x i32>, <4 x i32>)
+
+; CHECK: intrinsic return type (same vector width of overload type 1) expected integer (overload type 1 is i32), but got <4 x i32>
+; CHECK-NEXT: declare <4 x i32> @llvm.scmp.v4i32.i32(i32, i32)
+declare <4 x i32> @llvm.scmp.v4i32.i32(i32, i32)
+
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected integer (overload type 0 is ptr), but got <4 x i64>
+; CHECK-NEXT: declare ptr @llvm.ptrmask.p0.v4i64(ptr, <4 x i64>)
+declare ptr @llvm.ptrmask.p0.v4i64(ptr, <4 x i64>)
+
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected integer vector with 2 elements (overload type 0 is <2 x ptr>), but got i64
+; CHECK-NEXT: declare <2 x ptr> @llvm.ptrmask.v2p0.i64(<2 x ptr>, i64)
+declare <2 x ptr> @llvm.ptrmask.v2p0.i64(<2 x ptr>, i64)
+
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected integer vector with 2 elements (overload type 0 is <2 x ptr>), but got <4 x i64>
+; CHECK-NEXT: declare <2 x ptr> @llvm.ptrmask.v2p0.v4i64(<2 x ptr>, <4 x i64>)
+declare <2 x ptr> @llvm.ptrmask.v2p0.v4i64(<2 x ptr>, <4 x i64>)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp (overload type 0 is i8), but got <4 x half>
+; CHECK-NEXT: declare i8 @llvm.convert.to.arbitrary.fp.i8.v4f16(<4 x half>, metadata, metadata, i1)
+declare i8 @llvm.convert.to.arbitrary.fp.i8.v4f16(<4 x half>, metadata, metadata, i1)
+
+; CHECK: intrinsic argument 0 type (same vector width of overload type 0) expected fp vector with 4 elements (overload type 0 is <4 x i8>), but got <2 x float>
+; CHECK-NEXT: declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(<2 x float>, metadata, metadata, i1)
+declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(<2 x float>, metadata, metadata, i1)
