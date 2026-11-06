@@ -3357,6 +3357,13 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     }
   }
 
+  // Start with the default bounds of the inlined region: the instructions
+  // right before and after the call. An invoke is a terminator and has nothing
+  // after it, so we update that bound below to the branch to its normal
+  // destination.
+  Instruction *InstBeforeInlined = CB.getPrevNode();
+  Instruction *InstAfterInlined = CB.getNextNode();
+
   // If we cloned in _exactly one_ basic block, and if that block ends in a
   // return instruction, we splice the body of the inlined callee directly into
   // the calling basic block.
@@ -3373,6 +3380,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       UncondBrInst *NewBr =
           UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
       NewBr->setDebugLoc(Returns[0]->getDebugLoc());
+      InstAfterInlined = NewBr;
     }
 
     // If the return instruction returned a value, replace uses of the call with
@@ -3393,6 +3401,12 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     if (MergeAttributes)
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 
+    // The inlined code starts right after the instruction that was before the
+    // call, or at the start of the block if the call was its first instruction.
+    IFI.InlinedRegionBegin =
+        InstBeforeInlined ? InstBeforeInlined->getNextNode() : &OrigBB->front();
+    IFI.InlinedRegionEnd = InstAfterInlined;
+
     // We are now done with the inlining.
     return;
   }
@@ -3412,6 +3426,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
     // We intend to replace this DebugLoc with another later.
     CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getTemporary());
+    InstAfterInlined = CreatedBranchToNormalDest;
 
     // Split the basic block.  This guarantees that no PHI nodes will have to be
     // updated due to new incoming edges, and make the invoke case more
@@ -3527,8 +3542,14 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   // If we inlined any musttail calls and the original return is now
   // unreachable, delete it.  It can only contain a ret.
-  if (InlinedMustTailCalls && pred_empty(AfterCallBB))
+  if (InlinedMustTailCalls && pred_empty(AfterCallBB)) {
     AfterCallBB->eraseFromParent();
+
+    // The instruction after the inlined code goes with it too, so the region
+    // has no end. Not sure how to handle this case yet, so for now we skip it
+    // in simplifyInlinedRegion.
+    InstAfterInlined = nullptr;
+  }
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...
@@ -3544,6 +3565,12 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   // Now we can remove the CalleeEntry block, which is now empty.
   CalleeEntry->eraseFromParent();
+
+  // The inlined code starts right after the instruction that was before the
+  // call, or at the start of the block if the call was its first instruction.
+  IFI.InlinedRegionBegin =
+      InstBeforeInlined ? InstBeforeInlined->getNextNode() : &OrigBB->front();
+  IFI.InlinedRegionEnd = InstAfterInlined;
 
   // If we inserted a phi node, check to see if it has a single value (e.g. all
   // the entries are the same or undef).  If so, remove the PHI so it doesn't
