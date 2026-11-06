@@ -34,12 +34,13 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   }
 
   if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
-    Out = C->getAPIntValue().getSExtValue();
+    Out = static_cast<uint32_t>(C->getAPIntValue().getSExtValue());
     return true;
   }
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N)) {
-    Out = C->getValueAPF().bitcastToAPInt().getSExtValue();
+    Out =
+        static_cast<uint32_t>(C->getValueAPF().bitcastToAPInt().getSExtValue());
     return true;
   }
 
@@ -122,8 +123,8 @@ private:
   const TargetRegisterClass *getOperandRegClass(SDNode *N, unsigned OpNo) const;
   virtual bool SelectADDRVTX_READ(SDValue Addr, SDValue &Base, SDValue &Offset);
   virtual bool SelectADDRIndirect(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool isDSOffsetLegal(SDValue Base, unsigned Offset) const;
-  bool isDSOffset2Legal(SDValue Base, unsigned Offset0, unsigned Offset1,
+  bool isDSOffsetLegal(SDValue Base, int64_t Offset) const;
+  bool isDSOffset2Legal(SDValue Base, int64_t Offset0, int64_t Offset1,
                         unsigned Size) const;
 
   bool isFlatScratchBaseLegal(SDValue Addr) const;
