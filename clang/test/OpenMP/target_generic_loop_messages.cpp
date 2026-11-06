@@ -61,6 +61,11 @@ void foo()
   for (i=0; i<1000; ++i) {
   }
 
+  // expected-error@+1 {{region cannot be closely nested inside 'target' region; perhaps you forget to enclose 'omp loop' directive into a teams region?}}
+  #pragma omp target loop bind(teams)
+  for (i=0; i<1000; ++i) {
+  }
+
   // collapse clause
 
   // expected-error@+4 {{expected 2 for loops after '#pragma omp target loop', but found only 1}}

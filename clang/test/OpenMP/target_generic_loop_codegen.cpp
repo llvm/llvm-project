@@ -44,7 +44,7 @@ void tl(int *a, int n) {
     a[i] += 1;
 }
 
-// bind(teams) binds to the single team and thread of 'target'.
+// bind(parallel) binds to the implicit parallel region of 'target'.
 // HOST-LABEL: define {{.*}}void @_Z7tl_bindPii(
 // HOST: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 1, i32 1,
 // HOST-SAME: ptr @.{{.*}}_Z7tl_bindPii_l{{[0-9]+}}.region_id,
@@ -57,8 +57,45 @@ void tl(int *a, int n) {
 // SIMD-LABEL: define {{.*}}void @_Z7tl_bindPii(
 // SIMD: br label %for.cond, !llvm.loop
 void tl_bind(int *a, int n) {
-#pragma omp target loop bind(teams) map(tofrom: a[0:n])
+#pragma omp target loop bind(parallel) map(tofrom: a[0:n])
   for (int i = 0; i < n; ++i)
+    a[i] += 1;
+}
+
+// A nested loop transformation: the target body is a directive, not a loop.
+// HOST-LABEL: define {{.*}}void @_Z7tl_tilePii(
+// HOST: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 1, i32 1,
+// HOST-SAME: ptr @.{{.*}}_Z7tl_tilePii_l{{[0-9]+}}.region_id,
+
+// DEV: define {{.*}}void @{{.*}}_Z7tl_tilePii_l{{[0-9]+}}(
+
+// SIMD-LABEL: define {{.*}}void @_Z7tl_tilePii(
+void tl_tile(int *a, int n) {
+#pragma omp target loop map(tofrom: a[0:n])
+#pragma omp tile sizes(4)
+  for (int i = 0; i < n; ++i)
+    a[i] += 1;
+}
+
+// 'if' applies only to 'target', not to the loop.
+// HOST-LABEL: define {{.*}}void @_Z5tl_ifPiii(
+// HOST: br i1 %{{.*}}, label %omp_if.then, label %omp_if.else
+// HOST: define internal void @{{.*}}_Z5tl_ifPiii_l{{[0-9]+}}(
+// HOST-NOT: omp_if
+// HOST: br label %omp.inner.for.cond, !llvm.loop
+// HOST-NOT: omp_if
+// HOST: ret void
+
+// DEV: define {{.*}}void @{{.*}}_Z5tl_ifPiii_l{{[0-9]+}}(
+// DEV-NOT: omp_if
+// DEV: br label %omp.inner.for.cond, !llvm.loop
+// DEV-NOT: omp_if
+// DEV: ret void
+
+// SIMD-LABEL: define {{.*}}void @_Z5tl_ifPiii(
+void tl_if(int *a, int m, int n) {
+#pragma omp target loop if(n > 10) map(tofrom: a[0:m])
+  for (int i = 0; i < m; ++i)
     a[i] += 1;
 }
 

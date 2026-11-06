@@ -10733,6 +10733,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
       return nullptr;
     case OMPD_target_parallel:
     case OMPD_target_simd:
+    case OMPD_target_loop:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
       return nullptr;

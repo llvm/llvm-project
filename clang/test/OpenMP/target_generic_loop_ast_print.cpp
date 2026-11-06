@@ -79,8 +79,8 @@ void test() {
     }
   }
 
-  //CHECK: #pragma omp target loop bind(teams) thread_limit(16) defaultmap(tofrom: scalar)
-  #pragma omp target loop bind(teams) thread_limit(16) defaultmap(tofrom:scalar)
+  //CHECK: #pragma omp target loop bind(parallel) thread_limit(16) defaultmap(tofrom: scalar)
+  #pragma omp target loop bind(parallel) thread_limit(16) defaultmap(tofrom:scalar)
   for (auto i = 0; i < N; ++i) { }
 
   int pr;

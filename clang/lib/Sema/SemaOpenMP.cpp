@@ -12173,6 +12173,20 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
 StmtResult SemaOpenMP::ActOnOpenMPTargetGenericLoopDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  // OpenMP 5.1 [2.11.7, loop Construct, Restrictions]
+  // If the bind clause is present on the loop construct and binding is teams
+  // then the corresponding loop region must be strictly nested inside a teams
+  // region.
+  if (const auto *BC =
+          OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses);
+      BC && BC->getBindKind() == OMPC_BIND_teams) {
+    llvm::omp::Version OMPVersion = getLangOpts().getOpenMPVersion();
+    Diag(StartLoc, diag::err_omp_prohibited_region)
+        << /*IsClose=*/true << getOpenMPDirectiveName(OMPD_target, OMPVersion)
+        << /*ShouldBeInTeamsRegion=*/4
+        << getOpenMPDirectiveName(OMPD_loop, OMPVersion);
+    return StmtError();
+  }
   return actOnTargetGenericLoopDirective<OMPTargetGenericLoopDirective>(
       *this, DSAStack, OMPD_target_loop, Clauses, AStmt, StartLoc, EndLoc,
       VarsWithImplicitDSA);

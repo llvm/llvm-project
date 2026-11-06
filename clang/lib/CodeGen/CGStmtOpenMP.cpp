@@ -3186,8 +3186,7 @@ static void emitCommonSimdLoop(CodeGenFunction &CGF, const OMPLoopDirective &S,
     BodyCodeGen(CGF);
   };
   const Expr *IfCond = nullptr;
-  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
-  if (isOpenMPSimdDirective(EKind)) {
+  if (isOpenMPSimdDirective(S.getDirectiveKind())) {
     for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
       if (CGF.getLangOpts().OpenMP >= 50 &&
           (C->getNameModifier() == OMPD_unknown ||
