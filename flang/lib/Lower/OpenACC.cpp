@@ -2204,9 +2204,21 @@ void AccDataMap::remapDataOperandSymbols(
     mlir::Value hostInput = hostDeclare.getMemref();
     mlir::Type hostType = hostInput.getType();
     mlir::Type computeType = value.getType();
+    auto hostBoxType = llvm::dyn_cast<fir::BaseBoxType>(hostType);
+    auto computeBoxType = llvm::dyn_cast<fir::BaseBoxType>(computeType);
     if (hostType == computeType) {
       mapper.map(hostInput, value);
-    } else if (llvm::isa<fir::BaseBoxType>(computeType)) {
+    } else if (hostBoxType && computeBoxType &&
+               hostBoxType.getBoxTypeWithNewAttr(
+                   fir::BaseBoxType::Attribute::None) ==
+                   computeBoxType.getBoxTypeWithNewAttr(
+                       fir::BaseBoxType::Attribute::None)) {
+      // The host declare input may describe an allocatable or pointer while
+      // the declared variable does not (e.g. a SELECT TYPE associate name with
+      // an allocatable or pointer selector). hlfir.declare drops that from its
+      // results, so the data operation result can be declared directly.
+      mapper.map(hostInput, value);
+    } else if (computeBoxType) {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
              "box type mismatch between compute region variable and "
              "hlfir.declare input unexpected");

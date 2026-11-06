@@ -552,6 +552,11 @@ const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
 unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
                           unsigned LoopAwareTripCount);
 
+/// Check if two insertelement instructions are from the same buildvector.
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
