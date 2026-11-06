@@ -691,7 +691,9 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
-def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []>;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
+  let FnAttrs = [NoUnwind];
+}
 def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
 
 // Note: there are two sets of atomics libcalls; see
