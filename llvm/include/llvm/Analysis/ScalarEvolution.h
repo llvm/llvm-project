@@ -743,6 +743,9 @@ public:
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   LLVM_ABI const SCEV *getExistingSCEV(Value *V);
 
+  /// Return the Value set from which the SCEV expr is generated.
+  LLVM_ABI ArrayRef<Value *> getSCEVValues(const SCEV *S);
+
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
   LLVM_ABI const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
@@ -1773,9 +1776,6 @@ private:
 
   /// Memoized values for the getConstantMultiple
   DenseMap<const SCEV *, APInt> ConstantMultipleCache;
-
-  /// Return the Value set from which the SCEV expr is generated.
-  ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
   /// Private helper method for the getConstantMultiple method. If \p CtxI is
   /// not nullptr, return a constant multiple valid at \p CtxI.
