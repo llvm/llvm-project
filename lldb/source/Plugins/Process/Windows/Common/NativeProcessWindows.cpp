@@ -606,7 +606,7 @@ void NativeProcessWindows::ReportDeferredStop() {
   m_deferred_stop = false;
   for (const auto &t : m_threads) {
     auto *thread = static_cast<NativeThreadWindows *>(t.get());
-    if (thread->CompleteStepWithoutTrap()) {
+    if (thread->CompleteSingleStepWithoutTrap()) {
       LLDB_LOG(GetLog(WindowsLog::Exception),
                "thread {0:x} completed its single step but its trap is not in "
                "yet, reporting the step",
@@ -649,13 +649,12 @@ bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
-  NativeThreadWindows *stepped_thread = GetThreadByID(record.GetThreadID());
-  const bool step_reported =
-      stepped_thread && stepped_thread->TakePendingStepTrap();
+  NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+  const bool step_reported = thread && thread->TakePendingSingleStepTrap();
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
   Log *log = GetLog(WindowsLog::Exception);
-  if (NativeThreadWindows *thread = stepped_thread) {
+  if (thread) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =
         reg_ctx.GetWatchpointHitIndex(wp_id, record.GetExceptionAddress());
@@ -674,7 +673,6 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
   }
 #endif
   if (wp_id == LLDB_INVALID_INDEX32) {
-    NativeThreadWindows *thread = stepped_thread;
     if (step_reported) {
       LLDB_LOG(GetLog(WindowsLog::Exception),
                "dropping the trap of the single step thread {0:x} already "
