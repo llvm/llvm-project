@@ -146,20 +146,14 @@ cl::opt<int> SampleColdCallSiteThreshold(
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
 
-static cl::opt<bool> ImportLocalIndirectTargets(
-    "sample-profile-import-local-indirect-targets", cl::Hidden, cl::init(false),
-    cl::desc("In ThinLTO pre-link, also add hot profiled targets of a deferred "
-             "indirect call to the import list when they are defined in the "
-             "current module, so they can be imported together with the caller "
-             "into other modules."));
-
-static cl::opt<bool> OrphanedLocalRoots(
-    "sample-profile-orphaned-local-roots", cl::Hidden, cl::init(false),
+static cl::opt<bool> PreserveDeferredInlines(
+    "sample-profile-preserve-deferred-inlines", cl::Hidden, cl::init(false),
     cl::desc(
-        "Keep the profile of a local function usable when the pre-inliner "
-        "kept it top-level but ThinLTO pre-link inlines it anyway: copy its "
-        "import GUIDs to its caller in pre-link, and resolve its inlined "
-        "frames from its top-level profile in post-link."));
+        "In ThinLTO, keep profile inline decisions that pre-link defers to "
+        "post-link usable: import the local targets of deferred indirect "
+        "calls, keep the import GUIDs of a local function that pre-link "
+        "inlines away, and resolve its inlined frames from its top-level "
+        "profile in post-link."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -634,7 +628,7 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
     else
       it.first->second = Samples->findFunctionSamples(
           DIL, Reader->getRemapper(), &FuncNameToProfNameMap);
-    if (!it.first->second && OrphanedLocalRoots &&
+    if (!it.first->second && PreserveDeferredInlines &&
         LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink &&
         !FunctionSamples::ProfileIsCS)
       it.first->second = findOrphanedRootSamples(DIL);
@@ -1145,7 +1139,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
             findExternalInlineCandidate(I, FS, InlinedGUIDs,
                                         PSI->getOrCompHotCountThreshold(),
-                                        ImportLocalIndirectTargets);
+                                        PreserveDeferredInlines);
             continue;
           }
           if (!callsiteIsHot(FS, PSI, ProfAccForSymsInList))
@@ -1414,7 +1408,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
           findExternalInlineCandidate(I, FS, InlinedGUIDs,
                                       PSI->getOrCompHotCountThreshold(),
-                                      ImportLocalIndirectTargets);
+                                      PreserveDeferredInlines);
           continue;
         }
         uint64_t EntryCountDistributed =
@@ -2159,7 +2153,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
     retval |= runOnFunction(*F, AM);
   }
 
-  if (OrphanedLocalRoots && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (PreserveDeferredInlines && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
     hoistImportsOfSoleCallees(M);
 
   // Account for cold calls not inlined....

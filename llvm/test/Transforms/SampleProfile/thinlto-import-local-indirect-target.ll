@@ -1,7 +1,7 @@
 ; In ThinLTO pre-link the sample loader defers promotion of indirect calls to
 ; the backend. When the caller is imported into another module, its callees
 ; are imported by following its summary edges. Check that
-; -sample-profile-import-local-indirect-targets adds hot profiled targets of a
+; -sample-profile-preserve-deferred-inlines adds hot profiled targets of a
 ; deferred indirect call that are defined in this module, and that the caller's
 ; summary then imports them together with the caller.
 ;
@@ -23,7 +23,7 @@
 ;; are added; zero is not.
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -S | FileCheck %s --check-prefix=NESTED
 ;; A stored GUID can differ from the current name's hash. Preserve that
 ;; identity in the import hint and in the resulting summary edge.
@@ -31,30 +31,30 @@
 ; RUN: echo '!900 = !{i64 42}' >> assigned-guid.ll
 ; RUN: opt assigned-guid.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -thinlto-bc -o assigned-guid.bc
 ; RUN: llvm-dis assigned-guid.bc -o - | FileCheck %s --check-prefix=ASSIGNED
 
 ;; Exercise the non-prioritized sample-loader path as well.
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -sample-profile-prioritized-inline=false -S | FileCheck %s --check-prefix=NESTED
 ;; Without the pre-inliner decision only total samples above the hot threshold count.
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=HOT
 ;; Context-sensitive profile: head samples above the hot threshold, or, with
 ;; the pre-inliner decision (the default for this pre-inlined profile), contexts
 ;; marked as should-be-inlined.
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=cs.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=cs.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -S | FileCheck %s --check-prefix=CSPRE
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=cs.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=cs.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=HOT
 
 ;; Import the caller's callees into caller.ll.
@@ -66,7 +66,7 @@
 ; RUN:   -sample-profile-file=nested.prof -thinlto-bc -o dispatch-off.bc
 ; RUN: opt dispatch.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -thinlto-bc -o dispatch-on.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o index-off.bc dispatch-off.bc caller.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o index-on.bc dispatch-on.bc caller.bc
@@ -85,11 +85,11 @@
 ; RUN: sed -e 's/call noundef i32 %5(/call noundef i32 @hot(/g' -e 's/@hot(i32 noundef %0) #0/@hot(i32 noundef %0) noinline #0/' dispatch.ll > direct.ll
 ; RUN: opt direct.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -S | FileCheck %s --check-prefix=DIRECT
 ; RUN: opt direct.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -sample-profile-prioritized-inline=false -S | FileCheck %s --check-prefix=DIRECT
 
 ; DIRECT: define {{.*}} @dispatch({{.*}} !prof ![[#D:]]
@@ -101,7 +101,7 @@
 ; RUN: sed 's/@called(i32 noundef %0) #0/@called(i32 noundef %0) noinline #0/' dispatch.ll > dispatch-retained.ll
 ; RUN: opt dispatch-retained.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -profile-summary-hot-count=1000 -profile-summary-cold-count=10 \
-; RUN:   -sample-profile-file=nested.prof -sample-profile-import-local-indirect-targets \
+; RUN:   -sample-profile-file=nested.prof -sample-profile-preserve-deferred-inlines \
 ; RUN:   -thinlto-bc -o dispatch-retained.bc
 ; RUN: llvm-dis dispatch-retained.bc -o - | FileCheck %s --check-prefix=RETAINED
 ; RUN: llvm-lto -thinlto-action=thinlink -o index-retained.bc dispatch-retained.bc caller.bc

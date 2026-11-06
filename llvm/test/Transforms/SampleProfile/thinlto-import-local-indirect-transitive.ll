@@ -3,7 +3,7 @@
 ; on a separate base profile or on a surviving direct call to create edges.
 ; RUN: split-file %s %t && cd %t
 ; RUN: llvm-profdata merge --sample --extbinary nested.txt -o p.prof
-; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=p.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-import-local-indirect-targets -thinlto-bc -o lim.bc
+; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=p.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-preserve-deferred-inlines -thinlto-bc -o lim.bc
 ; RUN: llvm-dis lim.bc -o - | FileCheck %s --check-prefix=ALL
 ; RUN: opt user.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=p.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -thinlto-bc -o user.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o index.bc lim.bc user.bc
@@ -13,19 +13,19 @@
 ; A repeated function name is another finite context, not an IR-graph cycle.
 ; Its GUID must appear only once, and its nested leaf must still be traversed.
 ; RUN: llvm-profdata merge --sample --extbinary recursive.txt -o recursive.prof
-; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=recursive.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-import-local-indirect-targets -S | FileCheck %s --check-prefix=ALL
+; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=recursive.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-preserve-deferred-inlines -S | FileCheck %s --check-prefix=ALL
 ;
 ; With pre-inliner decisions disabled, prune a cold nested leaf. Retain the
 ; hot residual target even though it has no nested FunctionSamples here.
 ; RUN: llvm-profdata merge --sample --extbinary cold-leaf.txt -o cold-leaf.prof
-; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cold-leaf.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-import-local-indirect-targets -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=RESIDUAL
+; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cold-leaf.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-preserve-deferred-inlines -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=RESIDUAL
 ;
 ; CS profiles use context-entry hotness and prune descendants when their
 ; ancestor is cold and not selected. A hot grandchild cannot bypass that gate.
 ; RUN: llvm-profdata merge --sample --extbinary cs-hot.txt -o cs-hot.prof
-; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cs-hot.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-import-local-indirect-targets -S | FileCheck %s --check-prefix=ALL
+; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cs-hot.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-preserve-deferred-inlines -S | FileCheck %s --check-prefix=ALL
 ; RUN: llvm-profdata merge --sample --extbinary cs-cold.txt -o cs-cold.prof
-; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cs-cold.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-import-local-indirect-targets -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=COLD
+; RUN: opt lim.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=cs-cold.prof -profile-summary-hot-count=1000 -profile-summary-cold-count=10 -sample-profile-preserve-deferred-inlines -sample-profile-use-preinliner=false -S | FileCheck %s --check-prefix=COLD
 
 ; ALL: define {{.*}} @dispatch4({{.*}} !prof ![[#D:]]
 ; ALL: ![[#D]] = !{!"function_entry_count", i64 1000000, i64 1969880780693113886, i64 4395024877212874786, i64 7399155579282764986}
