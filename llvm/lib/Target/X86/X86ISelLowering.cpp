@@ -1055,8 +1055,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
 
     if (!Subtarget.is64Bit()) {
-      setOperationAction(ISD::MULHU, MVT::v2i64, Custom);
-      setOperationAction(ISD::MULHS, MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHS,            MVT::v2i64, Custom);
     }
 
     setOperationAction(ISD::SMULO,              MVT::v16i8, Custom);
@@ -2369,9 +2369,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     };
 
     // AVX512_FP16 scalar operations
+    // clang-format off
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
-    // clang-format off
     setOperationAction(ISD::FREM,                 MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
@@ -23368,10 +23368,11 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   for (unsigned I = 0; I != NumElts; I += ChunkElts) {
     SDValue AC = A, BC = B;
     if (NumElts > ChunkElts) {
-      AC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, A,
-                       DAG.getIntPtrConstant(I, Dl));
-      BC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, B,
-                       DAG.getIntPtrConstant(I, Dl));
+
+      AC = DAG.getExtractSubvector(dl, ChunkVT, A,
+                                     DAG.getIntPtrConstant(I, Dl));
+      BC = DAG.getExtractSubvector(Dl, ChunkVT, B,
+                                     DAG.getIntPtrConstant(I, Dl));
     }
     SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, AC);
     SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, BC);
