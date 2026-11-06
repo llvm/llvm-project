@@ -317,9 +317,6 @@ public:
 
 /// A 'default' clause, has the optional 'none' or 'present' argument.
 class OpenACCDefaultClause : public OpenACCClauseWithParams {
-  friend class ASTReaderStmt;
-  friend class ASTWriterStmt;
-
   OpenACCDefaultClauseKind DefaultClauseKind;
 
 protected:

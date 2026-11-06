@@ -48,7 +48,7 @@ body:             |
     %0:gr32 = COPY $edi
     TEST32rr %0, %0, implicit-def $eflags
     %1:gr8 = SETCCr 15, implicit $eflags
-    %2:gr32 = MOVZX32rr8 killed %1,  debug-instr-number 1
+    %2:gr32 = MOVZX32rr8 %1,  debug-instr-number 1
     DBG_INSTR_REF !4, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),  debug-location !8
     $eax = COPY %2
     RET 0, $eax
