@@ -74,7 +74,7 @@
 ; MSVC-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32)
 ; MSVC-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; MSVC-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
-; MSVC-NEXT: declare void @__chkstk(...)
+; MSVC-NEXT: declare void @__chkstk()
 ; MSVC-NEXT: declare void @__clear_cache(ptr, ptr)
 ; MSVC-NEXT: declare i32 @__clzdi2(i64)
 ; MSVC-NEXT: declare i32 @__clzsi2(i32)
@@ -439,7 +439,7 @@
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; MINGW: declare void @_Unwind_Resume(ptr)
-; MINGW-NEXT: declare void @___chkstk_ms(...)
+; MINGW-NEXT: declare void @___chkstk_ms()
 ; MINGW-NEXT: declare double @__adddf3(double, double)
 ; MINGW-NEXT: declare float @__addsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -982,7 +982,7 @@
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; CYGWIN: declare void @_Unwind_Resume(ptr)
-; CYGWIN-NEXT: declare void @___chkstk_ms(...)
+; CYGWIN-NEXT: declare void @___chkstk_ms()
 ; CYGWIN-NEXT: declare double @__adddf3(double, double)
 ; CYGWIN-NEXT: declare float @__addsf3(float, float)
 ; CYGWIN-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -1541,7 +1541,7 @@
 ; UEFI-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32)
 ; UEFI-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; UEFI-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
-; UEFI-NEXT: declare void @__chkstk(...)
+; UEFI-NEXT: declare void @__chkstk()
 ; UEFI-NEXT: declare void @__clear_cache(ptr, ptr)
 ; UEFI-NEXT: declare i32 @__clzdi2(i64)
 ; UEFI-NEXT: declare i32 @__clzsi2(i32)

@@ -172,7 +172,7 @@
 ; CHECK-NEXT: declare void @"#__atomic_store_2"(ptr, i16 zeroext, i32)
 ; CHECK-NEXT: declare void @"#__atomic_store_4"(ptr, i32, i32)
 ; CHECK-NEXT: declare void @"#__atomic_store_8"(ptr, i64, i32)
-; CHECK-NEXT: declare void @"#__chkstk_arm64ec"(...)
+; CHECK-NEXT: declare void @"#__chkstk_arm64ec"()
 ; CHECK-NEXT: declare void @"#__clear_cache"(ptr, ptr)
 ; CHECK-NEXT: declare i32 @"#__clzdi2"(i64)
 ; CHECK-NEXT: declare i32 @"#__clzsi2"(i32)

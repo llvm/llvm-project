@@ -821,7 +821,7 @@ def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
 // Really a global variable, not a function
 def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
 
-def STACK_PROBE : RuntimeLibcall;
+def STACK_PROBE : RuntimeLibcall<Void, []>;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
