@@ -10,7 +10,7 @@ llvm_tablegen(NVPTXGenSDNodeInfo.inc -gen-sd-node-info)
 llvm_tablegen(NVPTXGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS NVPTXOptions.td)
-tablegen(LLVM NVPTXOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(NVPTXOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(NVPTXCommonTableGen)
 
