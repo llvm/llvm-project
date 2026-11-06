@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <dlfcn.h>
 #include <memory>
 #include <vector>
 
@@ -91,7 +92,7 @@ EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
   initRuntime();
-  if (PM->delayRegisterLib(Desc))
+  if (PM->delayRegisterLib(__tgt_register_lib, Desc))
     return;
 
   PM->registerLib(Desc);
@@ -189,7 +190,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
 
     if (Rc == OFFLOAD_SUCCESS) {
       printSyncInfo(Loc, DeviceId, AsyncInfo);
-      Rc = AsyncInfo.synchronize();
+      Rc = AsyncInfo.finalize();
     }
   }
 
@@ -444,7 +445,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
     if (Rc == OFFLOAD_SUCCESS) {
       printSyncInfo(Loc, DeviceId, AsyncInfo);
-      Rc = AsyncInfo.synchronize();
+      Rc = AsyncInfo.finalize();
     }
 
     handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -557,7 +558,7 @@ EXTERN int __tgt_target_kernel_replay(
                     LoopTripCount, AsyncInfo, ReplayOutcome);
 
   if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+    Rc = AsyncInfo.finalize();
 
   if (Rc != OFFLOAD_SUCCESS) {
     ODBG(ODT_Interface) << "Kernel replay failed in device " << DeviceId;
@@ -629,7 +630,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
-  if (AsyncInfo->synchronize())
+  if (AsyncInfo->finalize())
     FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.
@@ -649,21 +650,14 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
-  if (!PM || !PM->isLibOffloadInitialized())
-    return;
+  registerRPCCallback(Callback);
 
-  if (auto Err = iteratePlatforms(
-          [](ol_platform_handle_t Platform, void *Data) {
-            bool Active = false;
-            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
-                                  sizeof(Active), &Active) == OL_SUCCESS &&
-                Active)
-              olPlatformRegisterRPCCallback(
-                  Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
-            return true;
-          },
-          reinterpret_cast<void *>(Callback)))
-    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
+  // The OpenACC runtime has its own liboffload state, and this is the entry
+  // point the Fortran runtime finds when both runtimes are linked.
+  using AccRegisterFnTy = void (*)(unsigned (*)(void *, unsigned));
+  if (auto AccRegister = reinterpret_cast<AccRegisterFnTy>(
+          dlsym(RTLD_DEFAULT, "__tgt_acc_register_rpc_callback")))
+    AccRegister(Callback);
 }
 
 EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {

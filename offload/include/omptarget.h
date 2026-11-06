@@ -26,7 +26,9 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <mutex>
 #include <type_traits>
+#include <variant>
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -119,7 +121,8 @@ struct DeviceTy;
 /// mistakes.
 class AsyncInfoTy {
 public:
-  enum class SyncTy { BLOCKING, NON_BLOCKING };
+  enum class SyncTy { BLOCKING, NON_BLOCKING, STATIC_NON_BLOCKING };
+  using PostProcFuncTy = std::function<int()>;
 
 private:
   /// Locations we used in (potentially) asynchronous calls which should live
@@ -129,8 +132,8 @@ private:
   /// Post-processing operations executed after a successful synchronization.
   /// \note the post-processing function should return OFFLOAD_SUCCESS or
   /// OFFLOAD_FAIL appropriately.
-  using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
+  std::mutex PostProcessingFunctionsMutex;
 
   ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
@@ -162,16 +165,29 @@ public:
   /// Get the underlying queue handle.
   ol_queue_handle_t getQueue() const { return Queue; }
 
-  /// Synchronize all pending actions.
+  /// Finalizes this instance of AsyncInfoTy.
   ///
-  /// \note synchronization will be performance in a blocking or non-blocking
-  /// manner, depending on the SyncType.
+  /// \note synchronization will be performed only if SyncType is blocking.
   ///
-  /// \note if the operations are completed, the registered post-processing
-  /// functions will be executed once and unregistered afterwards.
+  /// \note in all SyncType cases, if the operations are completed, the
+  /// registered post-processing functions will be executed once and
+  /// unregistered afterwards.
   ///
   /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS appropriately.
+  int finalize();
+
+  /// Synchronize all pending actions.
+  ///
+  /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS depending on whether an error was
+  /// encountered.
   int synchronize();
+
+  /// Queries whether all pending actions are done. This function does not
+  /// return the queue to the RTL.
+  ///
+  /// \returns OFFLOAD_FAIL on error, 0 when the actions are done, and 1 when
+  /// they are pending.
+  int query();
 
   /// Return a void* reference with a lifetime that is at least as long as this
   /// AsyncInfoTy object. The location can be used as intermediate buffer.
@@ -179,7 +195,7 @@ public:
 
   /// Check if all asynchronous operations are completed.
   ///
-  /// \note only a lightweight check. If needed, use synchronize() to query the
+  /// \note only a lightweight check. If needed, use finalize() to query the
   /// status of AsyncInfo before checking.
   ///
   /// \returns true if there is no pending asynchronous operations, false
@@ -195,6 +211,7 @@ public:
     static_assert(std::is_convertible_v<FuncTy, PostProcFuncTy>,
                   "Invalid post-processing function type. Please check "
                   "function signature!");
+    std::lock_guard<std::mutex> PPFGuard{PostProcessingFunctionsMutex};
     PostProcessingFunctions.emplace_back(Function);
   }
 
@@ -287,6 +304,48 @@ struct __tgt_target_non_contig {
   uint64_t Stride;
 };
 
+struct NonContigDescTy {
+  llvm::SmallVector<__tgt_target_non_contig, 6> Dims;
+
+  const __tgt_target_non_contig &getDim(unsigned I) { return Dims[I]; }
+  unsigned getRank() const { return Dims.size(); }
+
+  /// Drop the innermost dimensions that are already covered by the contiguous
+  /// chunk the copy moves for the final dimension. A dimension is absorbed only
+  /// when it exactly tiles the stride of the one enclosing it, and only while
+  /// every dimension inside it was absorbed too: dropping a dimension that
+  /// still has gaps would widen the chunk over elements outside the region.
+  void mergeContiguousDims() {
+    int RemovedDim = 0;
+    for (int I = getRank() - 1; I > 0; --I) {
+      if (Dims[I].Count * Dims[I].Stride != Dims[I - 1].Stride)
+        break;
+      RemovedDim++;
+    }
+    Dims.resize(getRank() - RemovedDim);
+  }
+
+  uint64_t getLastDimCopySize() const {
+    return Dims.back().Count * Dims.back().Stride;
+  }
+
+  /// Bytes spanned from the start of the region to the end of its last chunk.
+  /// The copy walks the final dimension as one contiguous chunk while the
+  /// preceding dimensions only pick where those chunks start, so each of them
+  /// reaches its last starting position rather than a whole stride beyond it;
+  /// the gap after that final chunk belongs to whatever surrounds the region.
+  uint64_t getAllocSize() const {
+    for (const auto &Dim : Dims)
+      if (Dim.Count == 0)
+        return 0;
+
+    uint64_t Size = getLastDimCopySize();
+    for (unsigned I = 0; I + 1 < getRank(); ++I)
+      Size += (Dims[I].Count - 1 + Dims[I].Offset) * Dims[I].Stride;
+    return Size;
+  }
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -376,6 +435,12 @@ void __tgt_target_data_begin_mapper(ident_t *Loc, int64_t DeviceId,
                                     void **Args, int64_t *ArgSizes,
                                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                                     void **ArgMappers);
+void __tgt_target_data_begin_async_mapper(ident_t *Loc, int64_t DeviceId,
+                                          int32_t ArgNum, void **ArgsBase,
+                                          void **Args, int64_t *ArgSizes,
+                                          int64_t *ArgTypes,
+                                          map_var_info_t *ArgNames,
+                                          void **ArgMappers, int32_t Queue);
 void __tgt_target_data_begin_nowait_mapper(
     ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
@@ -396,6 +461,12 @@ void __tgt_target_data_end_mapper(ident_t *Loc, int64_t DeviceId,
                                   int32_t ArgNum, void **ArgsBase, void **Args,
                                   int64_t *ArgSizes, int64_t *ArgTypes,
                                   map_var_info_t *ArgNames, void **ArgMappers);
+void __tgt_target_data_end_async_mapper(ident_t *Loc, int64_t DeviceId,
+                                        int32_t ArgNum, void **ArgsBase,
+                                        void **Args, int64_t *ArgSizes,
+                                        int64_t *ArgTypes,
+                                        map_var_info_t *ArgNames,
+                                        void **ArgMappers, int32_t Queue);
 void __tgt_target_data_end_nowait_mapper(
     ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
@@ -423,6 +494,12 @@ void __tgt_target_data_update_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList);
+void __tgt_target_data_update_async_mapper(ident_t *Loc, int64_t DeviceId,
+                                           int32_t ArgNum, void **ArgsBase,
+                                           void **Args, int64_t *ArgSizes,
+                                           int64_t *ArgTypes,
+                                           map_var_info_t *ArgNames,
+                                           void **ArgMappers, int32_t Queue);
 
 // Performs the same actions as data_begin in case ArgNum is non-zero
 // and initiates run of offloaded region on target platform; if ArgNum
@@ -432,6 +509,10 @@ void __tgt_target_data_update_nowait_mapper(
 // target and an int different from zero otherwise.
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                         int32_t ThreadLimit, void *HostPtr, KernelArgsTy *Args);
+
+int __tgt_target_kernel_async(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                              int32_t ThreadLimit, void *HostPtr,
+                              KernelArgsTy *KernelArgs, int32_t Queue);
 
 // Non-blocking synchronization for target nowait regions. This function
 // acquires the asynchronous context from task data of the current task being

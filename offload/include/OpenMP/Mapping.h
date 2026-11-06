@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <variant>
 
 #include "llvm/ADT/SmallSet.h"
 
@@ -667,9 +668,11 @@ struct MappingInfoTy {
   /// - Data transfer issue fails.
   TargetPointerResultTy getTargetPointer(
       HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
-      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
-      bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
+      int64_t TgtPadding,
+      std::variant<int64_t, const NonContigDescTy *> MemInfo,
+      map_var_info_t HstPtrName, bool HasFlagTo, bool HasFlagAlways,
+      bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
+      bool HasPresentModifier, bool HasHoldModifier, bool IsNoCreate,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
       bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr,
       const ident_t *Loc = nullptr);
@@ -712,6 +715,11 @@ struct MappingInfoTy {
 
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
+
+  void printNonContigCopyInfo(void *TgtPtrBegin, void *HstPtrBegin,
+                              const NonContigDescTy &CopyInfo, bool H2D,
+                              HostDataToTargetTy *Entry,
+                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr);
 
   /// Print information about the transfer from \p HstPtr to \p TgtPtr (or vice
   /// versa if \p H2D is false). If there is an existing mapping, or if \p Entry

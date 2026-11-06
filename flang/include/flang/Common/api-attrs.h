@@ -127,7 +127,7 @@
  * separate host and device compilations.
  */
 #if ((defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)) || \
-    (defined(_OPENMP) && (defined(__AMDGCN__) || defined(__NVPTX__)))
+    (defined(__AMDGCN__) || defined(__NVPTX__))
 #define RT_DEVICE_COMPILATION 1
 #else
 #undef RT_DEVICE_COMPILATION
@@ -152,8 +152,10 @@
  * of a clang CUDA build, and the regular CUDA runtime library does compile
  * them, hence the RT_DEVICE_COMPILATION check. The CUDA PTX library leaves
  * them out and sets RT_THIN_IO itself from CMake.
+ * RT_DEVICE_COMPILATION is also set for native GPU builds, so it cannot be used
+ * to tell them apart from the CUDA and OpenMP device passes.
  */
-#if RT_GPU_TARGET && !defined(RT_DEVICE_COMPILATION)
+#if RT_GPU_TARGET && !defined(__CUDA_ARCH__) && !defined(_OPENMP)
 #define RT_THIN_IO 1
 #endif
 

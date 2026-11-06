@@ -200,6 +200,7 @@ set(gpu_sources
   reduction.cpp
   temporary-stack.cpp
   io-api-gpu.cpp
+  stl-overrides.cpp
 )
 
 file(GLOB_RECURSE public_headers

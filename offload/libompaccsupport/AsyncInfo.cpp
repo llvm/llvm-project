@@ -15,6 +15,7 @@
 #include <cstdint>
 
 using namespace llvm::omp::target::debug;
+using llvm::SmallVector;
 
 AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
     : Device(Device), SyncType(SyncType) {
@@ -26,14 +27,14 @@ AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
 }
 
 AsyncInfoTy::~AsyncInfoTy() {
-  synchronize();
+  finalize();
   if (Queue) {
     if (auto Res = olDestroyQueue(Queue))
       REPORT() << "Failed to destroy queue " << Queue << ": " << Res->Details;
   }
 }
 
-int AsyncInfoTy::synchronize() {
+int AsyncInfoTy::finalize() {
   int Result = OFFLOAD_SUCCESS;
   if (!isQueueEmpty()) {
     switch (SyncType) {
@@ -43,6 +44,10 @@ int AsyncInfoTy::synchronize() {
       break;
     case SyncTy::NON_BLOCKING:
       Result = Device.queryAsync(*this);
+      break;
+    case SyncTy::STATIC_NON_BLOCKING:
+      Result = Device.queryAsyncStatic(*this) == OFFLOAD_FAIL ? OFFLOAD_FAIL
+                                                              : OFFLOAD_SUCCESS;
       break;
     }
   }
@@ -57,6 +62,48 @@ int AsyncInfoTy::synchronize() {
   return Result;
 }
 
+static int32_t processPPFs(SmallVector<AsyncInfoTy::PostProcFuncTy> &PPFs) {
+  for (size_t I = 0; I < PPFs.size(); ++I)
+    if (int Res = PPFs[I](); Res != OFFLOAD_SUCCESS)
+      return Res;
+  return OFFLOAD_SUCCESS;
+}
+
+int AsyncInfoTy::synchronize() {
+  assert(SyncType == SyncTy::STATIC_NON_BLOCKING);
+
+  // We still have not created a queue, or this specific device does not
+  // generate queues.
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+
+  // STATIC_NON_BLOCKING retains its queue thus more careful handling of the
+  // post processing functions is required.
+
+  // Collect the enqueued PPFs until this point.
+  SmallVector<PostProcFuncTy> LocalPPFs;
+  {
+    std::lock_guard<std::mutex> PPFGuard{PostProcessingFunctionsMutex};
+    std::swap(LocalPPFs, PostProcessingFunctions);
+  }
+  int Result = Device.synchronizeStatic(*this);
+  // Run any pending post-processing function collected _before_ we
+  // synchronize. This is important as between before the synchronization and
+  // after we could have enqueued more post processing operations, which we
+  // must not run yet.
+  if (Result == OFFLOAD_SUCCESS)
+    Result = processPPFs(LocalPPFs);
+
+  return Result;
+}
+
+int AsyncInfoTy::query() {
+  // If we don't have a queue, there are no pending actions.
+  if (!Queue)
+    return 0;
+  return Device.queryAsyncStatic(*this);
+}
+
 void *&AsyncInfoTy::getVoidPtrLocation() {
   BufferLocations.push_back(nullptr);
   return BufferLocations.back();
@@ -65,19 +112,20 @@ void *&AsyncInfoTy::getVoidPtrLocation() {
 bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
 
 int32_t AsyncInfoTy::runPostProcessing() {
-  size_t Size = PostProcessingFunctions.size();
-  for (size_t I = 0; I < Size; ++I) {
-    const int Result = PostProcessingFunctions[I]();
+  // Post-processing procedures might add new procedures themselves, so
+  // repeatedly process them until we are done.
+  while (true) {
+    SmallVector<PostProcFuncTy> LocalPPFs;
+    {
+      std::lock_guard<std::mutex> PPFGuard{PostProcessingFunctionsMutex};
+      std::swap(LocalPPFs, PostProcessingFunctions);
+    }
+    if (LocalPPFs.size() == 0)
+      return OFFLOAD_SUCCESS;
+    int32_t Result = processPPFs(LocalPPFs);
     if (Result != OFFLOAD_SUCCESS)
       return Result;
   }
-
-  // Clear the vector up until the last known function, since post-processing
-  // procedures might add new procedures themselves.
-  const auto *PrevBegin = PostProcessingFunctions.begin();
-  PostProcessingFunctions.erase(PrevBegin, PrevBegin + Size);
-
-  return OFFLOAD_SUCCESS;
 }
 
 bool AsyncInfoTy::isQueueEmpty() const {
