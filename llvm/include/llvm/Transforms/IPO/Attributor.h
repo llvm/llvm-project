@@ -1564,10 +1564,14 @@ struct Attributor {
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site.
     {
-      TimeTraceScope TimeScope("initialize", [&]() {
-        return AA.getName().str() +
-               std::to_string(AA.getIRPosition().getPositionKind());
-      });
+      std::optional<TimeTraceScope> TimeScope;
+      if (TimeTraceEnabled) {
+        TimeScope.emplace("initialize", [&]() {
+          return AA.getName().str() +
+                 std::to_string(AA.getIRPosition().getPositionKind());
+        });
+      }
+
       ++InitializationChainLength;
       AA.initialize(*this);
       --InitializationChainLength;
@@ -2561,6 +2565,10 @@ private:
 
   /// The current initialization chain length. Tracked to avoid stack overflows.
   unsigned InitializationChainLength = 0;
+
+  /// Whether time trace scopes are recorded for every initialization and
+  /// update. Checking it is not cheap.
+  const bool TimeTraceEnabled = timeTraceProfilerEnabled();
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///

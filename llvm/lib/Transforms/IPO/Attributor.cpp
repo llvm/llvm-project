@@ -2758,10 +2758,14 @@ ChangeStatus Attributor::run() {
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
-  TimeTraceScope TimeScope("updateAA", [&]() {
-    return AA.getName().str() +
-           std::to_string(AA.getIRPosition().getPositionKind());
-  });
+  std::optional<TimeTraceScope> TimeScope;
+  if (TimeTraceEnabled) {
+    TimeScope.emplace("updateAA", [&]() {
+      return AA.getName().str() +
+             std::to_string(AA.getIRPosition().getPositionKind());
+    });
+  }
+
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");
 
