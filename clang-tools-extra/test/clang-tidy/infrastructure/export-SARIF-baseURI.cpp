@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t/project/src/testing
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t/project/src/testing/export-SARIF-baseURI-input.cpp
-// RUN: not clang-tidy %t/project/src/testing/export-SARIF-baseURI-input.cpp -checks="-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array" --warnings-as-errors="clang-diagnostic-missing-prototypes,google-explicit-constructor" -sarif-export=%t.sarif -sarif-base-uri=PROJROOT=%t/././project -sarif-base-uri=SRCROOT=%t/project/src/../src/../src -sarif-base-uri=TESTDIR=file://%if system-windows %{/%}%/t/project/src/testing -sarif-base-uri=%EXAMPLE%=%t/example/ -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
+// RUN: not clang-tidy %t/project/src/testing/export-SARIF-baseURI-input.cpp -checks="-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array" --warnings-as-errors="clang-diagnostic-missing-prototypes,google-explicit-constructor" -experimental-sarif-export=%t.sarif -sarif-base-uri=PROJROOT=%t/././project -sarif-base-uri=SRCROOT=%t/project/src/../src/../src -sarif-base-uri=TESTDIR=file://%if system-windows %{/%}%/t/project/src/testing -sarif-base-uri=%EXAMPLE%=%t/example/ -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 #define X(n) void n ## n() {}
