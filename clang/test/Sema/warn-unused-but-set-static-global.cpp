@@ -2,21 +2,25 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -Wno-unused-but-set-global -verify=no-global -std=c++17 %s
 // no-global-no-diagnostics
 
+#ifndef __MVS__
 static thread_local int tl_set_unused;  // expected-warning {{variable 'tl_set_unused' set but not used}}
 static thread_local int tl_set_and_used;
 thread_local int tl_no_static_set_unused;
+#endif
 
 // Warning should respect attributes.
 [[maybe_unused]] static int with_maybe_unused;
 __attribute__((unused)) static int with_unused_attr;
 
 void f0() {
+#ifndef __MVS__
   tl_set_unused = 1;
   tl_set_and_used = 2;
   int x = tl_set_and_used;
   (void)x;
 
   tl_no_static_set_unused = 3;
+#endif
 
   with_maybe_unused = 4;
   with_unused_attr = 5;

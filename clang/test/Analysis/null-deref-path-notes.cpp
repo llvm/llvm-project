@@ -41,6 +41,7 @@ void no_crash_in_br_visitors(int *p) {
   // expected-note@-2    {{Dereference of null pointer (loaded from variable 'p')}}
 }
 
+#ifndef __MVS__
 // Thread local variables are implicitly static, so let's test them too.
 void thread_local_alternative(int *p) {
   if (p) {}
@@ -57,4 +58,5 @@ void thread_local_alternative(int *p) {
   // expected-warning@-1 {{Dereference of null pointer (loaded from variable 'p')}}
   // expected-note@-2    {{Dereference of null pointer (loaded from variable 'p')}}
 }
+#endif
 } // namespace GH124975
