@@ -9,6 +9,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "BackendConsumer.h"
 #include "CGCall.h"
+#include "CGHLSLRuntime.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
 #include "MacroPPCallbacks.h"
@@ -185,6 +186,9 @@ bool BackendConsumer::LinkInModules(llvm::Module *M) {
 }
 
 void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
+  if (CI.getLangOpts().HLSL && !Diags.hasErrorOccurred())
+    Gen->CGM().getHLSLRuntime().setPreciseFPOptions(CI.getLangOpts());
+
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
