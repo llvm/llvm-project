@@ -1413,6 +1413,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dead";
   if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
+  if (!P.isInitialized()) {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+    OS << " uninitialized";
+  }
   return OS;
 }
 

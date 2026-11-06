@@ -3723,12 +3723,8 @@ bool Memcpy(InterpState &S, CodePtr OpPC) {
   if (!Dest.isBlockPointer())
     return false;
 
-  if ((Src.getRecord() && Src.getRecord()->isUnion() &&
-       !Src.getRecord()->isAnonymousUnion()) ||
-      Src.inUnion()) {
-    if (!CheckLoad(S, OpPC, Src))
-      return false;
-  }
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }
