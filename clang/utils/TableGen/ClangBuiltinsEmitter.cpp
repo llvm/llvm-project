@@ -264,6 +264,15 @@ private:
       return Number;
     };
 
+    // Modifiers apply to the type that follows them, so we need to
+    // make sure we have more tokens to parse in T.
+    auto TypeIsMissing = [&T, this](StringRef Modifier) {
+      if (!T.trim().empty())
+        return false;
+      PrintError(Loc, "Expected a type after '" + Modifier + "'");
+      return true;
+    };
+
     if (T.consume_back("*")) {
       // Pointers may have an address space qualifier immediately before them.
       std::optional<unsigned> AS = ConsumeAddrSpace();
@@ -296,21 +305,31 @@ private:
       ParseType(T);
       Type += "&";
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
+      if (TypeIsMissing("long long"))
+        return;
       Type += "O";
       ParseType(T);
     } else if (T.consume_front("long")) {
+      if (TypeIsMissing("long"))
+        return;
       Type += "L";
       ParseType(T);
     } else if (T.consume_front("signed")) {
+      if (TypeIsMissing("signed"))
+        return;
       Type += "S";
       ParseType(T);
     } else if (T.consume_front("unsigned")) {
+      if (TypeIsMissing("unsigned"))
+        return;
       Type += "U";
       ParseType(T);
     } else if (T.consume_front("_Complex")) {
       Type += "X";
       ParseType(T);
     } else if (T.consume_front("_Constant")) {
+      if (TypeIsMissing("_Constant"))
+        return;
       Type += "I";
       ParseType(T);
     } else if (T.consume_front("T")) {
@@ -394,8 +413,10 @@ private:
                                .Case("wchar_t", "w")
                                .Case("...", ".")
                                .Default("error");
-      if (ReturnTypeVal == "error")
-        PrintFatalError(Loc, "Unknown Type: " + T);
+      if (ReturnTypeVal == "error") {
+        PrintError(Loc, "Unknown Type: " + T);
+        return;
+      }
       Type += ReturnTypeVal;
     }
   }
