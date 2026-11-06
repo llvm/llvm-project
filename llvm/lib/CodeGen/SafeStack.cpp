@@ -390,7 +390,8 @@ void SafeStack::findInsts(Function &F,
       if (IsSafeStackAlloca(AI, Size))
         continue;
 
-      if (AI->isStaticAlloca()) {
+      std::optional<TypeSize> AllocSize = AI->getAllocationSize(DL);
+      if (AI->isStaticAlloca() && (!AllocSize || AllocSize->isFixed())) {
         ++NumUnsafeStaticAllocas;
         StaticAllocas.push_back(AI);
       } else {
