@@ -264,16 +264,21 @@ int fallthrough_attributed_labels(int n) {
   [[unlikely]] default:
     return -1;
   }
+  return n;
+}
+
+// Fallthrough into attributed labels without an annotation should warn.
+int fallthrough_into_attributed_labels(int n) {
   switch (n) {
-    case 4:
-      n++;
-    [[unlikely]] case 5: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
-      n++;
-      break;
-    [[unlikely]] case 6:
-      n++;
-    [[unlikely]] default: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
-      return 2;
+  case 0:
+    n++;
+  [[unlikely]] case 1: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+    n++;
+    break;
+  [[unlikely]] case 2:
+    n++;
+  [[unlikely]] default: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+    return 2;
   }
   return n;
 }
