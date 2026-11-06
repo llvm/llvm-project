@@ -62,9 +62,9 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
   // Pushes the new task at the bottom of the queue, only called by the owner.
   // Returns false if the queue is full.
   bool push(Task* task) noexcept {
-    std::uint64_t b = bottom.load();
-    std::uint64_t t = top.load();
-    if (b - t > mask)
+    std::size_t b = bottom.load();
+    std::size_t t = top.load();
+    if (b - t > mask) // top never passes bottom while the owner is pushing, so b - t is the current size
       return false;
     put(b, task);
     bottom.store(b + 1);
@@ -74,15 +74,13 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
   // Pops a task from the bottom of the queue, only called by the owner.
   // Returns nullptr if the queue is empty.
   Task* pop() noexcept {
-    std::uint64_t b = bottom.load();
-    if (b == 0)
-      return nullptr;
-    --b;
+    std::size_t b = bottom.load();
+    --b; // May wrap around, which is fine
     bottom.store(b);
-    std::uint64_t t = top.load();
-    if (t <= b) {
+    std::size_t t = top.load();
+    if (distance(b, t) >= 0) {
       Task* task = get(b);
-      if (b > t)
+      if (distance(b, t) > 0)
         return task;
       if (top.compare_exchange_strong(t, t + 1)) {
         bottom.store(t + 1);
@@ -100,9 +98,9 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
   // Steals a task from the top of the queue, can be called by any thread.
   // Returns nullptr if the queue is empty or if the steal fails due to contention.
   Task* steal() noexcept {
-    std::uint64_t t = top.load();
-    std::uint64_t b = bottom.load();
-    if (t >= b)
+    std::size_t t = top.load();
+    std::size_t b = bottom.load();
+    if (distance(b, t) <= 0)
       return nullptr;
 
     Task* task = get(t);
@@ -113,18 +111,23 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
   }
 
 private:
-  Task* get(std::uint64_t index) const noexcept {
+  // The indices are allowed to wrap around, so they must be compared via their difference.
+  // (a - b) mod 2^N interpreted as signed, correct as long as the real distance is below 2^(N-1).
+  static std::ptrdiff_t distance(std::size_t a, std::size_t b) noexcept { return static_cast<std::ptrdiff_t>(a - b); }
+
+  Task* get(std::size_t index) const noexcept {
     // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
     return std::atomic_ref<Task*>(elements[index & mask]).load(std::memory_order_relaxed);
   }
 
-  void put(std::uint64_t index, Task* task) noexcept {
+  void put(std::size_t index, Task* task) noexcept {
     // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
     std::atomic_ref<Task*>(elements[index & mask]).store(task, std::memory_order_relaxed);
   }
 
-  std::atomic_uint64_t bottom{0};
-  std::atomic_uint64_t top{0};
+  static_assert(std::atomic_size_t::is_always_lock_free);
+  std::atomic_size_t bottom{0};
+  std::atomic_size_t top{0};
   std::unique_ptr<Task*[]> elements;
   std::size_t mask{0};
 };
