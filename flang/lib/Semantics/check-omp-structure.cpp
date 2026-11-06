@@ -6167,6 +6167,8 @@ void OmpStructureChecker::CheckArraySection(
             context_.Say(GetContext().clauseSource,
                 "'%s' in %s clause must have a positive stride"_err_en_US,
                 name.ToString(), parser::omp::GetUpperName(clause, version));
+            // Avoid additional zero-size diagnostics for an invalid stride.
+            continue;
           }
         }
         std::optional<int64_t> lval{lower ? GetIntValue(lower) : std::nullopt};
@@ -6198,7 +6200,7 @@ void OmpStructureChecker::CheckArraySection(
           }
         }
         if (lval && uval) {
-          if ((strideVal && *strideVal < 0) ? *uval >= *lval : *uval < *lval) {
+          if ((strideVal && *strideVal < 0) ? *uval > *lval : *uval < *lval) {
             context_.Say(GetContext().clauseSource,
                 "'%s' in %s clause"
                 " is a zero size array section"_err_en_US,

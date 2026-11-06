@@ -10,10 +10,8 @@
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
-#include <queue>
 
 #define DEBUG_TYPE "cs-preinliner"
 
