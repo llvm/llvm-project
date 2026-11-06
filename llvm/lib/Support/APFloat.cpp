@@ -86,14 +86,14 @@ unsigned int IEEEFloat::partCountForSemantic() {
     return 1;
 }
 
-template <const fltSemantics &S> APInt bitcastForSemantics(const FloatRepr &R) {
+template <const fltSemantics &S> APInt bitcastForSemantics(FloatRepr R) {
   const IEEEFloat &f{IEEEFloat::fromRepr(R)};
   assert(f.partCount() == IEEEFloat::partCountForSemantic<S>());
   return f.convertIEEEFloatToAPInt<S>();
 }
 
 template <const fltSemantics &S>
-void initFromAPIntForSemantics(FloatRepr &R, const APInt &api) {
+void initFromAPIntForSemantics(FloatRepr R, const APInt &api) {
   IEEEFloat::fromRepr(R).initFromIEEEAPInt<S>(api);
 }
 } // namespace detail
@@ -5932,9 +5932,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
 APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
-detail::IEEEFloat &detail::IEEEFloat::fromRepr(const FloatRepr &R) {
-  return *R.Repr;
-}
+detail::IEEEFloat &detail::IEEEFloat::fromRepr(FloatRepr R) { return *R.Repr; }
 
 void FloatRepr::initialize(const fltSemantics &Sem) { Repr->initialize(&Sem); }
 
