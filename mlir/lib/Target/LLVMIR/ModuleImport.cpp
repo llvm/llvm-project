@@ -1211,11 +1211,17 @@ LogicalResult ModuleImport::convertMetadata() {
       // conversion below finds nothing and the node is declined.
       if (aliasAnalysisNodes.TBAAStruct) {
         const llvm::MDNode *structNode = aliasAnalysisNodes.TBAAStruct;
-        for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
-          if (auto *tag =
-                  dyn_cast_if_present<llvm::MDNode>(structNode->getOperand(i)))
-            if (failed(processTBAAMetadata(tag)))
-              return failure();
+        // Operands come in groups of three: check the count before
+        // walking the tags. The verifier rejects malformed nodes
+        // before CLI import, so this guards direct API use.
+        bool wellFormed = structNode->getNumOperands() % 3 == 0;
+        if (wellFormed) {
+          for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
+            if (auto *tag = dyn_cast_if_present<llvm::MDNode>(
+                    structNode->getOperand(i)))
+              if (failed(processTBAAMetadata(tag)))
+                return failure();
+        }
         // Convert the struct node itself once its tags are in the map. A
         // node that cannot be modeled is recorded with a null value so it
         // is not converted again for every instruction carrying it, and is
