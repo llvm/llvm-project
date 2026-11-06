@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS TapiOpts.td)
-tablegen(LLVM TapiOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(TapiOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ReadTAPIOptsTableGen)
 
 add_llvm_tool(llvm-readtapi
