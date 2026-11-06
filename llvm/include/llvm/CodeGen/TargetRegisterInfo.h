@@ -892,6 +892,14 @@ public:
     return 30;
   }
 
+  /// Return true if the greedy register allocator should take
+  /// the lowest-cost choice before using an unused CSR.
+  /// This uses tryAssignCSRFirstTimeMinCost instead of
+  /// tryAssignCSRFirstTime.
+  virtual bool enableCSRFirstTimeMinCost(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
   virtual bool requiresRegisterScavenging(const MachineFunction &MF) const {
