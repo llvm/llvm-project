@@ -1316,14 +1316,14 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     // represented by replacing their base with a pointer constant.
     if (SPIRVTypeInst BaseType = GR.getSPIRVTypeForVReg(GV);
         IsAddrSpaceCast && (!BaseType || !BaseType.isPointer())) {
-      MachineInstr *BaseDef = getImm((*II).getOperand(1), MRI);
-      if (!BaseDef || foldImm((*II).getOperand(1), MRI) != 0)
+      // MachineInstr *BaseDef = getImm((*II).getOperand(1), MRI);
+      if (!getImm((*II).getOperand(1), MRI) ||
+          foldImm((*II).getOperand(1), MRI) != 0)
         return diagnoseUnsupported(
             I, "address space cast of a non-null integer used as a G_PTR_ADD "
                "base");
-      SPIRVTypeInst NullPtrTy = GR.getOrCreateSPIRVPointerType(
-          Type::getInt8Ty(I.getMF()->getFunction().getContext()), I,
-          GR.getPointerStorageClass(ResType));
+      SPIRVTypeInst NullPtrTy =
+          getUcharPtrType(I, GR.getPointerStorageClass(ResType));
       MachineBasicBlock &DepMBB = I.getMF()->front();
       MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
       GV = GR.getOrCreateConstNullPtr(MIRBuilder, NullPtrTy);
