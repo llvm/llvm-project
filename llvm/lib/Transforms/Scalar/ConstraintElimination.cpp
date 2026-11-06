@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "ScalarOptions.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
