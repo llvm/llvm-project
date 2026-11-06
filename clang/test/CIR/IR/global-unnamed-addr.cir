@@ -5,7 +5,7 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 
-module {
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global "private" constant cir_private dso_local unnamed_addr @".str" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> align(1)
   // CHECK: cir.global "private" constant cir_private dso_local unnamed_addr @".str"
   // MLIR: llvm.mlir.global private unnamed_addr constant @".str"
