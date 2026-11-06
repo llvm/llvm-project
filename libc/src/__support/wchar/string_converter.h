@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRING_CONVERTER_H
 #define LLVM_LIBC_SRC___SUPPORT_STRING_CONVERTER_H
 
-#include "hdr/types/char32_t.h"
-#include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
