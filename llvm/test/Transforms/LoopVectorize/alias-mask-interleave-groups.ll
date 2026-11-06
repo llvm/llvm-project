@@ -47,7 +47,7 @@ define i32 @load_group_reordered_with_store(ptr %a, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i32 -4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 -4
 ; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP14]], <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP18]], <8 x i1> [[INTERLEAVED_MASK]], <8 x i32> poison)
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_MASKED_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>

@@ -271,6 +271,12 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool useNeonVector(const Type *Ty) const;
 
+  // The expansion uses overlapping unaligned accesses, which are split up under
+  // strict alignment, and MOPS has its own variable-length lowering.
+  uint64_t getMaxBoundedMemSetInlineSize() const override {
+    return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
+  }
+
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
@@ -322,12 +328,6 @@ public:
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
-
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
-      unsigned Bits = DataType->getPrimitiveSizeInBits();
-      if (Bits != 64 && Bits != 128)
-        return false; // Fall back to scalarization of masked operations.
-    }
 
     // Type legalization cannot scalarize the data of a masked load/store.
     // Reject types that would be legalized to a scalar (e.g. <1 x half>).

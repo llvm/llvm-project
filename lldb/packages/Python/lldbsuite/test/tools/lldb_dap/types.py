@@ -784,6 +784,7 @@ class CompileUnit:
     id: int
     compileUnitPath: str
     language: Optional[str] = None
+    isOptimized: Optional[bool] = None
 
 
 @dataclass(frozen=True)
@@ -798,7 +799,9 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
-    compileUnitId: Optional[int] = None
+    compileUnitId: Optional[int] = field(
+        metadata={"alias": "$__lldb_compileUnitId"}, default=None
+    )
     languageSpecificData: Optional[Dict[str, Any]] = field(
         metadata={"alias": "$__lldb_languageSpecificData"}, default=None
     )
