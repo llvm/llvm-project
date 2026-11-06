@@ -2834,21 +2834,36 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   return error.takeError();
 }
 
-/// Construct a key for headerbyte files in the DataFileCache.
-///
-/// \param[in] file_spec
-///     The base filename is included in the key for ease of 
-///     understanding what files generated headerbyte files in
-///     the DataFileCache.
-///
-/// \param[in] uuid
-///     The UUID of the binary, caller must check that uuid.IsValid()
-///     so the headerbytes key is unique to this build of this file.
-///
-/// \return
-///     The DataFileCache filename to use.
-static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
-                                               const UUID &uuid) {
+std::optional<std::string>
+Process::GetHeaderBytesCacheKey(const FileSpec &file_spec, const UUID &uuid,
+                                lldb::addr_t header_addr) {
+  if (!uuid.IsValid())
+    return {};
+
+  DynamicLoader *dyld = GetDynamicLoader();
+  if (dyld && dyld->SharedCacheInUse()) {
+    // On a Darwin system with a shared cache, a binary will have its
+    // file addresses changed when the shared cache is constructed.
+    addr_t base_addr;
+    UUID shared_cache_uuid;
+    LazyBool using_shared_cache;
+    LazyBool private_shared_cache;
+    FileSpec sc_filepath;
+    std::optional<uint64_t> size;
+    // Without the shared cache range we can't tell if this binary is
+    // in it, and a key without the shared cache UUID may not be unique.
+    if (!dyld->GetSharedCacheInformation(
+            base_addr, shared_cache_uuid, using_shared_cache,
+            private_shared_cache, sc_filepath, size) ||
+        !size || !shared_cache_uuid.IsValid() ||
+        base_addr == LLDB_INVALID_ADDRESS)
+      return {};
+    if (header_addr >= base_addr && header_addr - base_addr < *size)
+      return llvm::formatv("{0}-file-{1}-sc-{2}-headerbytes",
+                           file_spec.GetFilename(), uuid.GetAsString(),
+                           shared_cache_uuid.GetAsString());
+  }
+
   return llvm::formatv("{0}-{1}-headerbytes", file_spec.GetFilename(),
                        uuid.GetAsString());
 }
@@ -2890,13 +2905,17 @@ llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
   // of no use when that is disabled.  If no UUID, the cache_key name
   // may not be unique.
   DataFileCache *cache = nullptr;
-  if (uuid.IsValid() && IsLiveDebugSession() && !GetDisableMemoryCache())
+  if (IsLiveDebugSession() && !GetDisableMemoryCache())
     cache = Module::GetIndexCache(/*memory_module=*/true);
   if (!cache)
     return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
 
-  const std::string cache_key = get_memory_binary_cache_key(file_spec, uuid);
-  if (LoadHeaderBytesFromCache(*cache, cache_key, header_addr, size_to_read))
+  std::optional<std::string> cache_key =
+      GetHeaderBytesCacheKey(file_spec, uuid, header_addr);
+  if (!cache_key)
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  if (LoadHeaderBytesFromCache(*cache, *cache_key, header_addr, size_to_read))
     return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
 
   llvm::Expected<ModuleSP> module_sp_or_err =
@@ -2912,7 +2931,7 @@ llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
     if (ReadMemory(header_addr, data.data(), size_to_read, error) ==
             size_to_read &&
         error.Success())
-      cache->SetCachedData(cache_key, data);
+      cache->SetCachedData(*cache_key, data);
   }
   return module_sp_or_err;
 }

@@ -1399,10 +1399,9 @@ public:
 
   // Get information about the library shared cache, if that exists
   //
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about the library shared cache (a set of standard
-  // libraries that are loaded at the same location for all processes on a
-  // system) in use.
+  // On Darwin systems, debugserver can return information about the library
+  // shared cache (a set of standard libraries that are loaded at the same
+  // location for all processes on a system) in use.
   virtual lldb_private::StructuredData::ObjectSP GetSharedCacheInfo() {
     return StructuredData::ObjectSP();
   }
@@ -3192,6 +3191,29 @@ protected:
   }
 
   void ForceNextEventDelivery() { m_force_next_event_delivery = true; }
+
+  /// Construct a key for headerbyte files in the DataFileCache.
+  ///
+  /// \param[in] file_spec
+  ///     The base filename is included in the key for ease of
+  ///     understanding what files generated headerbyte files in
+  ///     the DataFileCache.
+  ///
+  /// \param[in] uuid
+  ///     The UUID of the binary, caller must check that uuid.IsValid()
+  ///     so the headerbytes key is unique to this build of this file.
+  ///
+  /// \param[in] header_addr
+  ///     The starting load address of the binary.  On a target using a
+  ///     system shared cache, the key includes the shared cache UUID for
+  ///     binaries inside the shared cache region.
+  ///
+  /// \return
+  ///     The DataFileCache filename to use, or std::nullopt if a unique
+  ///     key can't be constructed.
+  std::optional<std::string> GetHeaderBytesCacheKey(const FileSpec &file_spec,
+                                                    const UUID &uuid,
+                                                    lldb::addr_t header_addr);
 
   /// Loads any plugins associated with asynchronous structured data and maps
   /// the relevant supported type name to the plugin.

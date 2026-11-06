@@ -842,6 +842,12 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
   return false;
 }
 
+bool DynamicLoaderMacOS::SharedCacheInUse() {
+  // If we get back a shared cache StructuredData, this system
+  // is using a shared cache.
+  return (m_process->GetSharedCacheInfo().get());
+}
+
 void DynamicLoaderMacOS::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
