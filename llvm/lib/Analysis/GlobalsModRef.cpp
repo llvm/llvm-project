@@ -1176,7 +1176,7 @@ GlobalsAAResult::~GlobalsAAResult() = default;
 /*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
     Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
     LazyCallGraph &LCG) {
-  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
+  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout(), GetTLI);
 
   // Find non-addr taken globals.
   Result.AnalyzeGlobals(M);
