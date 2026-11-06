@@ -65,6 +65,12 @@ def _needsLibatomic(cfg):
 
 features = [
     Feature(
+        name="has-observable-checkpoint",
+        when=lambda cfg: sourceBuilds(
+            cfg, "int main() { __builtin_observable_checkpoint(); }"
+        ),
+    ),
+    Feature(
         name="diagnose-if-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],

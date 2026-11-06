@@ -47,6 +47,11 @@ export namespace std {
   using std::unreachable;
 #endif // _LIBCPP_STD_VER >= 23
 
+  // [utility.undefined], undefined behavior
+#if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_observable_checkpoint)
+  using std::observable_checkpoint;
+#endif
+
   // [intseq], compile-time integer sequences
   using std::index_sequence;
   using std::integer_sequence;

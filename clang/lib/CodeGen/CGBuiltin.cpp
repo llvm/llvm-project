@@ -4221,6 +4221,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_observable_checkpoint:
+    return RValue::get(
+        Builder.CreateCall(CGM.getIntrinsic(Intrinsic::observable_checkpoint)));
 
   case Builtin::BI__builtin_powi:
   case Builtin::BI__builtin_powif:

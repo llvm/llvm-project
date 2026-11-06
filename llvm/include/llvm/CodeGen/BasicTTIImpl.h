@@ -2496,6 +2496,7 @@ public:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
     case Intrinsic::sideeffect:
+    case Intrinsic::observable_checkpoint:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
       return 0;

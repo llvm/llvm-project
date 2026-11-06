@@ -52,6 +52,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added the `llvm.observable.checkpoint` intrinsic to support partial program
+  correctness. It protects preceding observable behavior from subsequent
+  undefined behavior and is removed during instruction selection.
+
 * LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
   avoids repeated module-wide scans to rebuild metadata numbering, which can
   significantly speed up debug and pass printing on large modules. Keeping
