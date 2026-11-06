@@ -148,6 +148,8 @@ which doesn't currently support Windows.
   - get_info, get_profiling_info (no liboffload support) are not implemented
   - get_wait_list should be aligned with the results of this discussion: <https://github.com/KhronosGroup/SYCL-Docs/issues/1017>
 
+- `half`: usage in kernels is not restricted to devices with `aspect::fp16` (requires clang support of an attribute attaching aspects to types)
+
 - `range`, `id` - `__SYCL_DISABLE_ID_TO_INT_CONV__` and `__SYCL_ASSUME_ID_RANGE` optimizations are not implemented
 
 - general opens:
