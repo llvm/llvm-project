@@ -688,17 +688,23 @@ $(PCH_OUTPUT) : $(PCH_CXX_SOURCE) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
 endif
 
+# The compiler can write $*.d after $@. Touch $@ so that it stays newer than
+# its $*.d prerequisite.
 %.o: %.c %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.cpp %.d $(PCH_OUTPUT) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.m %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.mm %.d $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create
