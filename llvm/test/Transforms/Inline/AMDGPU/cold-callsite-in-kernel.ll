@@ -1,4 +1,4 @@
-; RUN: opt -passes=inline -mtriple=amdgpu-amd-amdhsa -inline-instr-cost=50 \
+; RUN: opt -passes=inline -mtriple=amdgpu-amd-amdhsa -inline-instr-cost=200 \
 ; RUN:     -pass-remarks=inline -pass-remarks-missed=inline < %s 2>&1 | FileCheck %s
 
 ; A call left out of line in a kernel is register allocated against the worst

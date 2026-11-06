@@ -84,7 +84,8 @@ entry:
 }
 
 ; Calling each (non-)inlining function twice to make sure they won't get the sole call inlining cost bonus. 
-define i32 @Caller(ptr noundef %in) {
+; Caller is an amdgpu_kernel to avoid function caller threshold bonus.
+define amdgpu_kernel void @Caller(ptr noundef %in) {
 entry:
   %arrayidx = getelementptr inbounds i32, ptr %in, i64 0
   %a0 = load i32, ptr %arrayidx, align 4
@@ -160,5 +161,5 @@ entry:
   %add3 = add i32 %add2, %inlinecall1
   %inlinecall2 = call noundef i32 @inlining_call(i32 noundef %a0, i32 noundef %b0, i32 noundef %c0, i32 noundef %d0, i32 noundef %e0, i32 noundef %f0, i32 noundef %g0, i32 noundef %h0, i32 noundef %i0, i32 noundef %j0, i32 noundef %k0, i32 noundef %l0, i32 noundef %m0, i32 noundef %n0, i32 noundef %o0, i32 noundef %p0, i32 noundef %q0, i32 noundef %r0, i32 noundef %s0, i32 noundef %t0, i32 noundef %u0, i32 noundef %v0, i32 noundef %w0, i32 noundef %x0, i32 noundef %y0, i32 noundef %z0, i32 noundef %a1, i32 noundef %b1, i32 noundef %c1, i32 noundef %d1, i32 noundef %e1, i32 noundef %f1, i32 noundef %g1)
   %add4 = add i32 %add3, %inlinecall2
-  ret i32 %add4
+  ret void
 }
