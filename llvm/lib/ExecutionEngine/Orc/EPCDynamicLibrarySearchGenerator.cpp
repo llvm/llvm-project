@@ -19,14 +19,14 @@ namespace orc {
 
 Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
-    ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
-    SymbolPredicate Allow, AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
+    DylibManager &DylibMgr, const char *LibraryPath, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   auto Handle = DylibMgr.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      ES, DylibMgr, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
+      DylibMgr, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
 }
 
 Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
@@ -77,15 +77,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
                "Result has incorrect number of elements");
 
         auto SymsIt = Result->begin();
-        SymbolNameSet MissingSymbols;
         SymbolMap NewSymbols;
         for (auto &[Name, Flags] : LookupSymbols) {
           const auto &Sym = *SymsIt++;
           if (Sym && *Sym)
             NewSymbols[Name] = {*Sym, JITSymbolFlags::Exported};
-          else if (LLVM_UNLIKELY(!Sym &&
-                                 Flags == SymbolLookupFlags::RequiredSymbol))
-            MissingSymbols.insert(Name);
         }
 
         LLVM_DEBUG({
@@ -93,18 +89,12 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
                  << NewSymbols << "\n";
         });
 
-        // If there were no resolved symbols bail out.
+        // If no resolved symbols then exit early with success.
         if (NewSymbols.empty())
           return LS.continueLookup(Error::success());
 
-        if (LLVM_UNLIKELY(!MissingSymbols.empty()))
-          return LS.continueLookup(make_error<SymbolsNotFound>(
-              this->ES.getSymbolStringPool(), std::move(MissingSymbols)));
-
         // Define resolved symbols.
-        Error Err = addAbsolutes(JD, std::move(NewSymbols));
-
-        LS.continueLookup(std::move(Err));
+        LS.continueLookup(addAbsolutes(JD, std::move(NewSymbols)));
       });
 
   return Error::success();

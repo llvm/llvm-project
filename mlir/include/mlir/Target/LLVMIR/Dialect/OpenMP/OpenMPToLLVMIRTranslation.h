@@ -18,6 +18,10 @@ namespace mlir {
 class DialectRegistry;
 class MLIRContext;
 
+/// Register OpenMP translation command-line options before parsing them.
+/// Repeated calls reuse the same options.
+void registerOpenMPTranslationCLOptions();
+
 /// Register the OpenMP dialect and the translation from it to the LLVM IR in
 /// the given registry;
 void registerOpenMPDialectTranslation(DialectRegistry &registry);

@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "ExclusiveAccess.h"
-#include "OpenMP/InteropAPI.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -36,7 +35,6 @@
 #include "MemoryManager.h"
 #include "OffloadError.h"
 #include "RPC.h"
-#include "RecordReplay.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/DenseMapInfo.h"
@@ -312,9 +310,6 @@ class DeviceImageTy {
   /// The managed image data.
   std::unique_ptr<MemoryBuffer> Image;
 
-  /// An optional buffer for an IR image.
-  std::unique_ptr<MemoryBuffer> DeviceIRImage;
-
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
@@ -341,21 +336,6 @@ public:
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
-  }
-
-  /// Get a memory buffer reference to the whole IR image.
-  MemoryBufferRef getIRImageMemoryBuffer() const {
-    if (DeviceIRImage)
-      return MemoryBufferRef(*DeviceIRImage);
-
-    return MemoryBufferRef();
-  }
-
-  bool hasIRImage() const { return DeviceIRImage != nullptr; }
-
-  /// Set the IR image.
-  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
-    DeviceIRImage = std::move(ImageBuffer);
   }
 };
 
@@ -1161,6 +1141,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// resident on the device simultaneously.
   virtual uint64_t getHardwareParallelism() const { return 0; }
 
+  /// Get the maximum size of a synchronous host-to-device transfer that may be
+  /// done by the host writing the device memory directly, or zero if the
+  /// device does not support direct writes.
+  virtual uint64_t getMaxDirectWriteSize() const { return 0; }
+
   /// Get the RPC server running on this device.
   RPCServerTy *getRPCServer() const { return RPCServer; }
 
@@ -1205,27 +1190,18 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                          "%s not supported by platform", __func__);
   }
 
+  /// Return the backend-native handle of the platform this device belongs to,
+  /// reinterpreted as a void pointer.
+  virtual Expected<void *> getNativePlatformHandle() {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
   /// Return the backend-native handle of the queue held by \p AsyncInfo,
   /// reinterpreted as a void pointer.
   virtual Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "%s not supported by platform", __func__);
-  }
-
-  virtual Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "%s not supported by platform", __func__);
-  }
-
-  virtual Error releaseInterop(omp_interop_val_t *Interop) {
-    return Plugin::success();
-  }
-
-  virtual interop_spec_t selectInteropPreference(int32_t InteropType,
-                                                 int32_t NumPrefers,
-                                                 interop_spec_t *Prefers) {
-    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
   }
 
   /// Allocate and construct a kernel object.
@@ -1274,30 +1250,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return ATI;
   }
 
-  Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
-                         bool IsNative, bool SaveOutput, bool EmitReport,
-                         const char *ReportFilename,
-                         const char *OutputDirPath) {
-    if (RecordReplay)
-      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
-                           "RR already initialized");
-    // Other formats could be supported in the future.
-    if (!IsNative)
-      return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                           "non-native RR not available");
-
-    RecordReplayTy::StatusTy Status = IsRecord
-                                          ? RecordReplayTy::StatusTy::Recording
-                                          : RecordReplayTy::StatusTy::Replaying;
-
-    RecordReplay =
-        new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, ReportFilename, *this);
-    return RecordReplay->init(Size, VAddr);
-  }
-
-  RecordReplayTy *getRecordReplay() { return RecordReplay; }
-
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -1342,9 +1294,6 @@ private:
   /// Environment variables defined by the LLVM OpenMP implementation.
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
-
-  /// Record and replay manager.
-  RecordReplayTy *RecordReplay = nullptr;
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1534,20 +1483,6 @@ struct GenericPluginTy {
     return isImageCompatible(Image);
   }
 
-  virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
-    return Plugin::success();
-  }
-
-  virtual Error syncBarrierImpl(omp_interop_val_t *Interop) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "sync_barrier not supported");
-  }
-
-  virtual Error asyncBarrierImpl(omp_interop_val_t *Interop) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "async_barrier not supported");
-  }
-
   /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
   createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
@@ -1571,39 +1506,7 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Initializes the record and replay mechanism inside the plugin.
-  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
-                                   void *VAddr, bool IsRecord, bool IsNative,
-                                   bool SaveOutput, bool EmitReport,
-                                   const char *ReportFilename,
-                                   const char *OutputDirPath);
 
-  /// Return the interop specification that the plugin supports
-  /// It might not be one of the user specified ones.
-  interop_spec_t select_interop_preference(int32_t ID, int32_t InteropType,
-                                           int32_t NumPrefers,
-                                           interop_spec_t *Prefers) {
-    auto &Device = getDevice(ID);
-    return Device.selectInteropPreference(InteropType, NumPrefers, Prefers);
-  }
-
-  /// Create OpenMP interop with the given interop context
-  omp_interop_val_t *create_interop(int32_t ID, int32_t InteropContext,
-                                    interop_spec_t *InteropSpec);
-
-  /// Release OpenMP interop object
-  int32_t release_interop(int32_t ID, omp_interop_val_t *Interop);
-
-  /// Flush the queue associated with the interop object if necessary
-  int32_t flush_queue(omp_interop_val_t *Interop);
-
-  /// Perform a host synchronization with the queue associated with the interop
-  /// object and wait for it to complete.
-  int32_t sync_barrier(omp_interop_val_t *Interop);
-
-  /// Queue an asynchronous barrier in the queue associated with the interop
-  /// object and return immediately.
-  int32_t async_barrier(omp_interop_val_t *Interop);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
