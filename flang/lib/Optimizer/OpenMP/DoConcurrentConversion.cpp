@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
@@ -1188,6 +1189,27 @@ struct CallbackListener : public mlir::RewriterBase::Listener {
   std::function<void(mlir::Operation *op)> onOperationErased;
 };
 
+/// Only pure procedures can be referenced in a `do concurrent` loop, but the
+/// loop and the procedure can be in different translation units.
+/// Mark every pure procedure defined here as implicitly `declare target`
+/// to ensure a device version is emitted for device-mapped loops elsewhere.
+static void markPureProceduresDeclareTarget(mlir::ModuleOp module) {
+  for (auto funcOp : module.getOps<mlir::func::FuncOp>()) {
+    if (funcOp.isExternal() ||
+        !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp))
+      continue;
+
+    auto declareTargetOp =
+        mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*funcOp);
+    if (!declareTargetOp || declareTargetOp.getDeclareTarget())
+      continue;
+
+    declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
+                                     mlir::omp::DeclareTargetCaptureClause::to,
+                                     /*automap=*/false, /*implicit=*/true);
+  }
+}
+
 class DoConcurrentConversionPass
     : public flangomp::impl::DoConcurrentConversionPassBase<
           DoConcurrentConversionPass> {
@@ -1234,7 +1256,11 @@ public:
     if (mlir::failed(mlir::applyFullConversion(module, target,
                                                std::move(patterns), config))) {
       signalPassFailure();
+      return;
     }
+
+    if (mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device)
+      markPureProceduresDeclareTarget(module);
   }
 };
 } // namespace
