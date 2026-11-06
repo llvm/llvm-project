@@ -143,6 +143,13 @@ features cannot lower the translation-unit ABI level;
   longer classified according to a single member. `-fclang-abi-compat=23`
   restores the previous behavior. (#GH227130)
 
+- `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
+  over-aligned `T`, such as an `int` typedef declared with
+  `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
+  affects the layout of structures with such members. In the Microsoft record
+  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
+  like the typedef itself. (#GH111295)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears
@@ -156,13 +163,6 @@ features cannot lower the translation-unit ABI level;
   are nested in structs or arrays. This matches MSVC and fixes misaligned
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
-
-- `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
-  over-aligned `T`, such as an `int` typedef declared with
-  `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
-  affects the layout of structures with such members. In the Microsoft record
-  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
-  like the typedef itself. (#GH111295)
 
 ### AST Dumping Potentially Breaking Changes
 
