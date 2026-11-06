@@ -1,9 +1,9 @@
-# RUN: not llvm-mc -triple riscv32 -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -filetype obj -o /dev/null < %s
 
-  jal a0, far_distant # CHECK: :[[@LINE]]:11: error: fixup value out of range
-  jal a0, unaligned # CHECK: :[[@LINE]]:11: error: fixup value must be 2-byte aligned
+  jal a0, far_distant # expected-error:11 {{fixup value out of range}}
+  jal a0, unaligned # expected-error:11 {{fixup value must be 2-byte aligned}}
 
-  blt t0, t1, unaligned # CHECK: :[[@LINE]]:15: error: fixup value must be 2-byte aligned
+  blt t0, t1, unaligned # expected-error:15 {{fixup value must be 2-byte aligned}}
 
   .byte 0
 unaligned:

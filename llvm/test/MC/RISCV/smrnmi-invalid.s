@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+smrnmi < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+smrnmi < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+smrnmi < %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+smrnmi < %s
 
-mnret 0x10 # CHECK: :[[@LINE]]:7: error: unexpected extra operand for instruction
+mnret 0x10 # expected-error:7 {{unexpected extra operand for instruction}}
