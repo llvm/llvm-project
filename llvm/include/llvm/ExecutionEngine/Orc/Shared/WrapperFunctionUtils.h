@@ -425,10 +425,6 @@ public:
   }
 };
 
-template <typename SPSRetTagT, typename RetT> class AsyncCallResultHelper {
-  // Did you forget to use Error / Expected in your handler?
-};
-
 } // end namespace detail
 
 template <typename SPSSignature> class WrapperFunction;
