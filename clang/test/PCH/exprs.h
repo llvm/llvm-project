@@ -41,6 +41,7 @@ typedef typeof(__builtin_offsetof(struct Z, y.array[1 + 2].member))
 // UnaryExprOrTypeTraitExpr
 typedef typeof(sizeof(int)) typeof_sizeof;
 typedef typeof(sizeof(Enumerator)) typeof_sizeof2;
+enum { AddressSpaceOfI = __addrspaceof(i) };
 
 // ArraySubscriptExpr
 extern double values[];
