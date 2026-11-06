@@ -452,8 +452,6 @@ LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
 LogicalResult
 TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
                                              PatternRewriter &rewriter) const {
-  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
-    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto subview = op.getBase().getDefiningOp<memref::SubViewOp>();
   if (!subview)
     return rewriter.notifyMatchFailure(op, "not accessing a subview");
@@ -479,6 +477,12 @@ TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
     return rewriter.notifyMatchFailure(subview,
                                        "failed op-specific preconditions");
 
+  // The region of a `vector.mask` can only hold the masked op, so create the
+  // new indices above it.
+  auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+  OpBuilder::InsertionGuard guard(rewriter);
+  if (maskableOp.isMasked())
+    rewriter.setInsertionPoint(maskableOp.getMaskingOp());
   SmallVector<Value> newIndices;
   affine::resolveIndicesIntoOpWithOffsetsAndStrides(
       rewriter, op.getLoc(), subview.getMixedOffsets(),
@@ -491,8 +495,6 @@ TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
 
 LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
     VectorTransferOpInterface op, PatternRewriter &rewriter) const {
-  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
-    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto expand = op.getBase().getDefiningOp<memref::ExpandShapeOp>();
   if (!expand)
     return rewriter.notifyMatchFailure(op, "not accessing an expand_shape");
@@ -537,12 +539,18 @@ LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
   if (failed(op.mayUpdateStartingPosition(expand.getSrc().getType(), newPerm)))
     return rewriter.notifyMatchFailure(op, "failed op-specific preconditions");
 
+  // The region of a `vector.mask` can only hold the masked op, so create the
+  // new indices above it.
+  auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+  OpBuilder::InsertionGuard guard(rewriter);
+  if (maskableOp.isMasked())
+    rewriter.setInsertionPoint(maskableOp.getMaskingOp());
   SmallVector<Value> newIndices;
   // We can use a disjoint linearization if we aren't masking, because then all
   // indicators show that the start position will be in bounds.
-  memref::resolveSourceIndicesExpandShape(op.getLoc(), rewriter, expand,
-                                          op.getIndices(), newIndices,
-                                          /*startsInbounds=*/!op.getMask());
+  memref::resolveSourceIndicesExpandShape(
+      op.getLoc(), rewriter, expand, op.getIndices(), newIndices,
+      /*startsInbounds=*/!op.getMask() && !maskableOp.isMasked());
 
   op.updateStartingPosition(rewriter, expand.getViewSource(), newIndices,
                             AffineMapAttr::get(newPerm));
@@ -551,8 +559,6 @@ LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
 
 LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
     VectorTransferOpInterface op, PatternRewriter &rewriter) const {
-  if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
-    return rewriter.notifyMatchFailure(op, "masked by vector.mask");
   auto collapse = op.getBase().getDefiningOp<memref::CollapseShapeOp>();
   if (!collapse)
     return rewriter.notifyMatchFailure(op, "not accessing a collapse_shape");
@@ -585,10 +591,16 @@ LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
           op.mayUpdateStartingPosition(collapse.getSrc().getType(), newPerm)))
     return rewriter.notifyMatchFailure(op, "failed op-specific preconditions");
 
+  // The region of a `vector.mask` can only hold the masked op, so create the
+  // new indices above it.
+  auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+  OpBuilder::InsertionGuard guard(rewriter);
+  if (maskableOp.isMasked())
+    rewriter.setInsertionPoint(maskableOp.getMaskingOp());
   SmallVector<Value> newIndices;
-  memref::resolveSourceIndicesCollapseShape(op.getLoc(), rewriter, collapse,
-                                            op.getIndices(), newIndices,
-                                            /*startsInbounds=*/!op.getMask());
+  memref::resolveSourceIndicesCollapseShape(
+      op.getLoc(), rewriter, collapse, op.getIndices(), newIndices,
+      /*startsInbounds=*/!op.getMask() && !maskableOp.isMasked());
 
   op.updateStartingPosition(rewriter, collapse.getViewSource(), newIndices,
                             AffineMapAttr::get(newPerm));
