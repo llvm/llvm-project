@@ -4006,7 +4006,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
       return;
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
-    auto ExtOpc = ExtA->getCastOpcode();
+    Instruction::CastOps ExtOpc = ExtA->getCastOpcode();
     const APInt *Const;
     if (!match(ValB, m_APInt(Const)) ||
         !llvm::canConstantBeExtended(
@@ -5218,7 +5218,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
   const APInt *Const;
   if (match(Op, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
     auto *ExtA = cast<VPWidenCastRecipe>(Op->getOperand(0));
-    auto ExtOpc = ExtA->getCastOpcode();
+    Instruction::CastOps ExtOpc = ExtA->getCastOpcode();
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
     if (!Op->hasOneUse() ||
         !llvm::canConstantBeExtended(
