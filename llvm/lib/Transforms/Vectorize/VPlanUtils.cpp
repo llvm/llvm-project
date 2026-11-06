@@ -462,6 +462,8 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Select:
+  case Instruction::BitInsert:
+  case Instruction::BitExtract:
   case VPInstruction::Not:
   case VPInstruction::Broadcast:
   case VPInstruction::MaskedCond:
