@@ -19,17 +19,13 @@
 ; silently discard the low two offset bits.
 
 ; Reviewer reproducer: the i32 load is promoted to an any-extending load.
-define i32 @anyext_frame_offset() "frame-pointer"="all" {
+define i32 @anyext_frame_offset() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: anyext_frame_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
 ; CHECK-NEXT:    ori $a0, $a0, 1071
@@ -51,17 +47,13 @@ entry:
 }
 
 ; The pre-existing sign-extending pattern needs the same final-offset check.
-define i64 @sext_frame_offset() "frame-pointer"="all" {
+define i64 @sext_frame_offset() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: sext_frame_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
 ; CHECK-NEXT:    ori $a0, $a0, 1071
@@ -83,17 +75,13 @@ entry:
   ret i64 %ext
 }
 
-define i64 @load64_frame_offset() "frame-pointer"="all" {
+define i64 @load64_frame_offset() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: load64_frame_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
 ; CHECK-NEXT:    ori $a0, $a0, 1071
@@ -116,17 +104,13 @@ entry:
 
 ; Use a constant stored value so no extra callee-saved register changes
 ; the stack layout. Volatile keeps the store to the local object alive.
-define void @store32_frame_offset() "frame-pointer"="all" {
+define void @store32_frame_offset() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: store32_frame_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
 ; CHECK-NEXT:    ori $a0, $a0, 1071
@@ -147,17 +131,13 @@ entry:
   ret void
 }
 
-define void @store64_frame_offset() "frame-pointer"="all" {
+define void @store64_frame_offset() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: store64_frame_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
 ; CHECK-NEXT:    ori $a0, $a0, 1071
