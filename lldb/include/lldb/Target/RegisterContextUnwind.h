@@ -137,15 +137,9 @@ private:
   // user somehow.
   bool IsSkipFrame() const;
 
-  /// Determines if a SymbolContext is a trap handler or not
-  ///
-  /// Given a SymbolContext, determines if this is a trap handler function
-  /// aka asynchronous signal handler.
-  ///
-  /// \return
-  ///     Returns true if the SymbolContext is a trap handler.
-  bool IsTrapHandlerSymbol(lldb_private::Process *process,
-                           const lldb_private::SymbolContext &m_sym_ctx) const;
+  /// Identify a trap handler from its symbol name or signal-frame CFI at
+  /// m_current_pc, before selecting an unwind plan.
+  bool IsTrapHandler(lldb_private::Process *process) const;
 
   /// Check if the given unwind plan indicates a signal trap handler, and
   /// update frame type and symbol context if so.

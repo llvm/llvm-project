@@ -206,7 +206,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
                current_pc);
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -570,11 +570,11 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (IsTrapHandler(process)) {
     // Signal dispatch may set the return address of the handler it calls to
-    // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
-    // so do not decrement and recompute if the symbol we already found is a trap
-    // handler.
+    // point to the first byte of a return trampoline (like
+    // __kernel_rt_sigreturn), so do not decrement and recompute if the current
+    // function is a trap handler.
     decr_pc_and_recompute_addr_range = false;
   } else if (m_behaves_like_zeroth_frame) {
     decr_pc_and_recompute_addr_range = false;
@@ -622,7 +622,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -1312,9 +1312,7 @@ bool RegisterContextUnwind::IsSkipFrame() const {
   return m_frame_type == eSkipFrame;
 }
 
-bool RegisterContextUnwind::IsTrapHandlerSymbol(
-    lldb_private::Process *process,
-    const lldb_private::SymbolContext &m_sym_ctx) const {
+bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
     const std::vector<std::string> &trap_handler_names(
@@ -1339,7 +1337,23 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
     }
   }
 
-  return false;
+  // Recognize signal trampolines before choosing a fast unwind plan, which
+  // could otherwise hide their signal-frame CFI. At trampoline entry this also
+  // lets us recognize a synthetic return address before backing up into the
+  // preceding function, just as the name-based checks above do.
+  // The signal-frame flag describes the caller's saved context; it does not
+  // imply that this frame's own PC is an interrupted PC.
+  ModuleSP module_sp = m_current_pc.GetModule();
+  if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
+    return false;
+
+  DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
+  if (!eh_frame)
+    return false;
+
+  std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(m_current_pc);
+  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+         plan_up->PlanValidAtAddress(m_current_pc);
 }
 
 // Search this stack frame's UnwindPlans for the AbstractRegisterLocation
