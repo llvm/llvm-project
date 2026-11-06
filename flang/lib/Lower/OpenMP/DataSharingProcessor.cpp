@@ -101,6 +101,11 @@ void DataSharingProcessor::processStep1(
     collectIndirectReferences();
   }
 
+  locallyPrivatizedSymbols.clear();
+  for (const semantics::Symbol *sym : allPrivatizedSymbols)
+    if (!symbolsUsingEnclosingStorage.contains(sym))
+      locallyPrivatizedSymbols.push_back(sym);
+
   privatize(clauseOps, dir);
 
   insertBarrier(clauseOps);
@@ -125,8 +130,16 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   }
 }
 
+// Call before processStep1. These symbols use an enclosing construct's
+// private storage, but still participate in lastprivate copy-back.
+void DataSharingProcessor::setSymbolsUsingEnclosingStorage(
+    llvm::ArrayRef<const semantics::Symbol *> symbols) {
+  symbolsUsingEnclosingStorage.clear();
+  symbolsUsingEnclosingStorage.insert(symbols.begin(), symbols.end());
+}
+
 void DataSharingProcessor::insertDeallocs() {
-  for (const semantics::Symbol *sym : allPrivatizedSymbols)
+  for (const semantics::Symbol *sym : locallyPrivatizedSymbols)
     if (semantics::IsAllocatable(sym->GetUltimate())) {
       if (!useDelayedPrivatization) {
         converter.createHostAssociateVarCloneDealloc(*sym);
@@ -340,7 +353,7 @@ bool DataSharingProcessor::needBarrier() {
                      parser::omp::GetOmpDirectiveName(*ompEval).v))
     return false;
 
-  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
+  for (const semantics::Symbol *sym : locallyPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
          mightHaveReadHostSym.contains(sym)))
@@ -703,7 +716,7 @@ void DataSharingProcessor::collectIndirectReferences() {
 
 void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps,
                                      std::optional<llvm::omp::Directive> dir) {
-  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
+  for (const semantics::Symbol *sym : locallyPrivatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
