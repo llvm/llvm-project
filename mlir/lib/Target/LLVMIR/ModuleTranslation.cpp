@@ -2531,13 +2531,8 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
     if (fields)
       walker.walk(fields);
   };
-  mlirModule->walk([&](Operation *op) {
-    if (auto copyOp = dyn_cast<LLVM::MemcpyOp>(op))
-      walkStructFields(copyOp.getTbaaStructAttr());
-    else if (auto copyOp = dyn_cast<LLVM::MemcpyInlineOp>(op))
-      walkStructFields(copyOp.getTbaaStructAttr());
-    else if (auto copyOp = dyn_cast<LLVM::MemmoveOp>(op))
-      walkStructFields(copyOp.getTbaaStructAttr());
+  mlirModule->walk([&](TBAAStructOpInterface tbaaStructOp) {
+    walkStructFields(tbaaStructOp.getTBAAStructOrNull());
   });
 
   return success();

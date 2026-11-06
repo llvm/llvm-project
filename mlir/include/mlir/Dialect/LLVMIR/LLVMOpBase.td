@@ -345,7 +345,10 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   // Set with `let` by intrinsics carrying tbaa.struct metadata, like the
   // aggregate-copy intrinsics. It is a plain field rather than a
   // constructor argument so that enabling it does not shift the
-  // positional flag arguments of every intrinsic definition.
+  // positional flag arguments of every intrinsic definition. Ops setting
+  // it must also add DeclareOpInterfaceMethods<TBAAStructOpInterface>
+  // to their traits: the flag only wires the argument, the trait
+  // attaches the verification and accessors.
   bit requiresTBAAStruct = 0;
   dag baseArgs = !con(
         !if(!gt(requiresAccessGroup, 0),

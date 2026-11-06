@@ -226,13 +226,11 @@ static LogicalResult setTBAAStructAttr(const llvm::MDNode *node, Operation *op,
   if (!fields)
     return failure();
 
-  return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<LLVM::MemcpyOp, LLVM::MemcpyInlineOp, LLVM::MemmoveOp>(
-          [&](auto copyOp) {
-            copyOp.setTbaaStructAttr(fields);
-            return success();
-          })
-      .Default([](auto) { return failure(); });
+  auto iface = dyn_cast<TBAAStructOpInterface>(op);
+  if (!iface)
+    return failure();
+  iface.setTBAAStruct(fields);
+  return success();
 }
 
 /// Looks up all the access group attributes that map to the access group nodes

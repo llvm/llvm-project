@@ -259,7 +259,8 @@ class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
@@ -293,18 +294,15 @@ class LLVM_MemcpyIntrOpBase<string name> :
       # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
 }
 
-def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy"> {
-  let hasVerifier = 1;
-}
-def LLVM_MemmoveOp : LLVM_MemcpyIntrOpBase<"memmove"> {
-  let hasVerifier = 1;
-}
+def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy">;
+def LLVM_MemmoveOp : LLVM_MemcpyIntrOpBase<"memmove">;
 
 def LLVM_MemcpyInlineOp :
     LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
@@ -334,8 +332,6 @@ def LLVM_MemcpyInlineOp :
   let llvmBuilder = baseLlvmBuilder # setAccessGroupsMetadataCode
       # setAliasAnalysisMetadataCode # setTBAAStructMetadataCode
       # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
-
-  let hasVerifier = 1;
 }
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],

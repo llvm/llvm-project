@@ -451,35 +451,6 @@ LogicalResult AllocaOp::verify() {
   return success();
 }
 
-// tbaa.struct field offsets must be non-decreasing, matching LLVM's verifier
-// rule. Compare unsigned: LLVM zero-extends the offsets before comparing.
-static LogicalResult verifyTBAAStructFieldOffsets(Operation *op,
-                                                  ArrayAttr fields) {
-  if (!fields)
-    return success();
-  std::optional<uint64_t> prevOffset;
-  for (Attribute field : fields) {
-    uint64_t offset = cast<TBAAStructFieldAttr>(field).getOffset();
-    if (prevOffset && offset < *prevOffset)
-      return op->emitOpError(
-          "tbaa.struct field offsets must be non-decreasing");
-    prevOffset = offset;
-  }
-  return success();
-}
-
-LogicalResult MemcpyOp::verify() {
-  return verifyTBAAStructFieldOffsets(getOperation(), getTbaaStructAttr());
-}
-
-LogicalResult MemmoveOp::verify() {
-  return verifyTBAAStructFieldOffsets(getOperation(), getTbaaStructAttr());
-}
-
-LogicalResult MemcpyInlineOp::verify() {
-  return verifyTBAAStructFieldOffsets(getOperation(), getTbaaStructAttr());
-}
-
 LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
   // Convert `alloca Ty, C` to the canonical `alloca [C x Ty], 1` form.
   APInt numElements;
