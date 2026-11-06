@@ -79,7 +79,7 @@ class TestCase(TestBase):
         """Test dwim-print with expressions."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
-        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)")
+        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)", "argc - 1", "argc > 1")
         for expr in exprs:
             self._expect_cmd(f"dwim-print {expr}", "expression")
 
@@ -179,6 +179,7 @@ class TestCase(TestBase):
         self._expect_cmd("dwim-print w.s", "frame variable")
         self._expect_cmd("dwim-print wp->s", "expression")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_direct_child_access(self):
         """Test dwim-print supports accessing members/ivars without qualification."""
         self.build()

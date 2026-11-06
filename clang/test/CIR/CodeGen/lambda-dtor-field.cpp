@@ -28,17 +28,15 @@ void capture_one(S s) {
 // CIR:           cir.yield
 // CIR:         }
 
-// TODO(cir): CIR marks the indirect parameter byref and drops noundef where
-// classic CodeGen emits a plain noundef pointer.
 // LLVM-LABEL: define dso_local void @_Z11capture_one1S(
-// LLVM-SAME:    ptr byref(%struct.S) align 4 %[[S_ARG:[^,)]+]])
+// LLVM-SAME:    ptr nofreeobj noundef align 4 dereferenceable(4) %[[S_ARG:[^,)]+]])
 // LLVM:   %[[LAM1:.*]] = alloca %[[LAM_TY_1:[^,]*]]
 // LLVM:   %[[F1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[F1]], ptr {{.*}} %[[S_ARG]])
 // LLVM:   call void @"_ZZ11capture_one1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM1]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z11capture_one1S(ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
+// OGCG-LABEL: define dso_local void @_Z11capture_one1S(ptr nofreeobj noundef align 4 dereferenceable(4) %{{[^,)]+}})
 // OGCG:   %[[LAM1:.*]] = alloca %[[LAM_TY_1:.*]], align 4
 // OGCG:   %[[FIELD1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FIELD1]], ptr {{.*}} %s)
@@ -69,7 +67,7 @@ void capture_two(S a, S b) {
 // CIR:         }
 
 // LLVM-LABEL: define dso_local void @_Z11capture_two1SS_(
-// LLVM-SAME:    ptr byref(%struct.S) align 4 %[[A_ARG:[^,)]+]], ptr byref(%struct.S) align 4 %[[B_ARG:[^,)]+]]) #{{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM-SAME:    ptr nofreeobj noundef align 4 dereferenceable(4) %[[A_ARG:[^,)]+]], ptr nofreeobj noundef align 4 dereferenceable(4) %[[B_ARG:[^,)]+]]) #{{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[LAM2:.*]] = alloca %[[LAM_TY_2:[^,]*]]
 // LLVM:   %[[FA:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %[[A_ARG]])
@@ -108,7 +106,7 @@ void capture_mixed(int n, S s) {
 // CIR:         }
 
 // LLVM-LABEL: define dso_local void @_Z13capture_mixedi1S(
-// LLVM-SAME:    i32 {{[^,)]*}} %{{[^,)]+}}, ptr byref(%struct.S) align 4 %[[S_ARG2:[^,)]+]])
+// LLVM-SAME:    i32 {{[^,)]*}} %{{[^,)]+}}, ptr nofreeobj noundef align 4 dereferenceable(4) %[[S_ARG2:[^,)]+]])
 // LLVM:   %[[N_ALLOCA:.*]] = alloca i32
 // LLVM:   %[[LAM3:.*]] = alloca %[[LAM_TY_3:[^,]*]]
 // LLVM:   %[[FN:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0

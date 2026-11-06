@@ -65,14 +65,12 @@ enum XtensaFeatureKind : uint64_t {
   XF_PRID = 1ULL << 34,
   XF_REGPROTECT = 1ULL << 35,
   XF_MISCSR = 1ULL << 36,
-  XF_ESP32S2OPS = 1ULL << 37
+  XF_ESP32S2OPS = 1ULL << 37,
+  XF_ESP32S3OPS = 1ULL << 38
 };
 
 LLVM_ABI CPUKind parseCPUKind(StringRef CPU);
 LLVM_ABI StringRef getBaseName(StringRef CPU);
-LLVM_ABI void getCPUFeatures(StringRef CPU,
-                             SmallVectorImpl<StringRef> &Features);
-LLVM_ABI void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace Xtensa
 } // namespace llvm

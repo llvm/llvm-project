@@ -143,8 +143,9 @@ void AllocationPlacementPass::runOnOperation() {
   if (func.empty())
     return;
 
-  // Start from the policy recorded on the module. A pass option overrides it
-  // only where it was set explicitly.
+  // Start from the policy in effect for the function, which is its own if it
+  // has one (device procedures do) and the module one otherwise. A pass option
+  // overrides it only where it was set explicitly.
   fir::AllocationPolicy basePolicy = fir::getAllocationPolicy(func);
   fir::overrideIfExplicitlySet(basePolicy.stackArrays, stackArrays);
   fir::overrideIfExplicitlySet(basePolicy.smallArrayThresholdBytes,
@@ -199,12 +200,14 @@ void AllocationPlacementPass::runOnOperation() {
 
     fir::AllocationInfo info;
     info.op = op;
+    info.context = op;
     info.isCurrentlyOnStack = static_cast<bool>(alloca);
     info.isTemporary = isTemporaryAllocation(op);
     info.isDynamic =
         alloca ? alloca.isDynamic()
                : (allocmem.hasLenParams() || allocmem.hasShapeOperands());
     info.byteSize = getConstantByteSize(op, dl, kindMap);
+    info.alignment = alloca ? alloca.getAlignment() : allocmem.getAlignment();
 
     // A hook, if provided, fully overrides the default policy; it may delegate
     // back to decideAllocationPlacement after adjusting the policy.
@@ -213,9 +216,11 @@ void AllocationPlacementPass::runOnOperation() {
             ? placementHook(info, basePolicy, stackBytesUsed)
             : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
 
-    // Account for the decision in the running stack budget.
-    if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize)
-      stackBytesUsed += static_cast<std::size_t>(*info.byteSize);
+    // Account for the decision in the running stack budget, with the same
+    // figure the decision used (size plus worst-case alignment padding).
+    if (endsUpOnStack(placement, info.isCurrentlyOnStack))
+      if (std::optional<std::size_t> bytes = fir::stackBytesNeeded(info))
+        stackBytesUsed += *bytes;
 
     LLVM_DEBUG({
       llvm::dbgs() << "allocation-placement: "

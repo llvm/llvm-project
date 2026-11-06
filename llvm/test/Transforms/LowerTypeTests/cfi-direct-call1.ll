@@ -57,8 +57,8 @@ entry:
 
 ; Indirect references to extern_weak and extern_decl must go through jump table
 ; FULL: [[CMP:%.*]] = icmp ne ptr @extern_weak, null
-; FULL: [[SEL:%.*]] = select i1 [[CMP]], ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 2), ptr null
-; FULL: %fptr2 = select i1 %cmp.i, ptr [[SEL]], ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 3)
+; FULL: [[SEL:%.*]] = select i1 [[CMP]], ptr getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 16), ptr null
+; FULL: %fptr2 = select i1 %cmp.i, ptr [[SEL]], ptr getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 24)
 
 ; Direct calls to extern_weak and extern_decl should go to original names
 ; FULL: %call5 = tail call i32 @extern_decl()

@@ -35,6 +35,11 @@ public:
   ///
   const MSP430RegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &MSP430::GR16RegClass;
+  }
+
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,

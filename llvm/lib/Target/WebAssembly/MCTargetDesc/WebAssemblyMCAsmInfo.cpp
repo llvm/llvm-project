@@ -58,7 +58,6 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
 
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::None;
 
   initializeAtSpecifiers(atSpecifiers);
 }

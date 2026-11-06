@@ -17,6 +17,7 @@
 
 #include "VPlan.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <utility>
 
@@ -214,6 +215,9 @@ inline match_bind<VPInstruction> m_VPInstruction(VPInstruction *&V) {
   return V;
 }
 
+template <typename T>
+using hasOpcode_t = decltype(std::declval<T &>().getOpcode()); // NOLINT
+
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
 struct Recipe_match {
@@ -289,13 +293,9 @@ private:
   template <typename RecipeTy>
   static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<RecipeTy>(R);
-    // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
-                  std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
-                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
-      return DefR;
-    else
+    if constexpr (Opcode && is_detected<hasOpcode_t, RecipeTy>::value)
       return DefR && DefR->getOpcode() == Opcode;
+    return DefR;
   }
 
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
@@ -343,13 +343,6 @@ m_c_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
 /// number of operands is not fixed.
 inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return m_VPInstruction<VPInstruction::BuildVector>();
-}
-
-/// BuildStructVector matches only its opcode, w/o matching its operands as the
-/// number of operands is not fixed.
-inline VPInstruction_match<VPInstruction::BuildStructVector>
-m_BuildStructVector() {
-  return m_VPInstruction<VPInstruction::BuildStructVector>();
 }
 
 template <typename Op0_t>
@@ -593,8 +586,12 @@ m_ZExtOrSelf(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
+template <typename Op0_t> inline auto m_ZExtOrTrunc(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0));
+}
+
 template <typename Op0_t> inline auto m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
-  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0), Op0);
+  return m_CombineOr(m_ZExtOrTrunc(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
@@ -649,6 +646,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::LShr, Op0_t, Op1_t>
 m_LShr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::LShr, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::AShr, Op0_t, Op1_t>
+m_AShr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::AShr, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -781,6 +784,12 @@ inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp> m_ICmp(const Op0_t &Op0,
 }
 
 template <typename Op0_t, typename Op1_t>
+inline auto m_c_ICmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Op0, Op1),
+                     Cmp_match<Op1_t, Op0_t, Instruction::ICmp>(Op1, Op0));
+}
+
+template <typename Op0_t, typename Op1_t>
 inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp>
 m_ICmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
   return Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Pred, Op0, Op1);
@@ -798,6 +807,13 @@ inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
 m_Cmp(const Op0_t &Op0, const Op1_t &Op1) {
   return Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(Op0,
                                                                        Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline auto m_c_Cmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(Op0, Op1),
+      Cmp_match<Op1_t, Op0_t, Instruction::ICmp, Instruction::FCmp>(Op1, Op0));
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -917,7 +933,8 @@ inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_c_Select(Op0, m_True(), Op1);
+  return m_CombineOr(m_c_Select(Op0, m_True(), Op1),
+                     m_c_Select(Op1, m_True(), Op0));
 }
 
 /// Match the canonical induction variable (IV) of any loop region.
@@ -1023,6 +1040,38 @@ template <typename Addr_t, typename Val_t, typename Mask_t>
 inline Store_match<Addr_t, Val_t, Mask_t>
 m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
   return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VectorPointerRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPVectorPointerRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VectorPointerRecipe_match<Op0_t, Op1_t> m_VecPtr(const Op0_t &Op0,
+                                                 const Op1_t &Op1) {
+  return VectorPointerRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t>
+using VPWidenLoadRecipe_match =
+    Recipe_match<std::tuple<Op0_t>, 0,
+                 /*Commutative*/ false, VPWidenLoadRecipe>;
+
+template <typename Op0_t>
+VPWidenLoadRecipe_match<Op0_t> m_WidenLoad(const Op0_t &Op0) {
+  return VPWidenLoadRecipe_match<Op0_t>(Op0);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VPWidenStoreRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPWidenStoreRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VPWidenStoreRecipe_match<Op0_t, Op1_t> m_WidenStore(const Op0_t &Op0,
+                                                    const Op1_t &Op1) {
+  return VPWidenStoreRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -1191,22 +1240,24 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
                       /*Commutative*/ false, VPInstruction>({Op0, Op1});
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+/// Return the sole user of \p V matching pattern \p P, casting it to \p
+/// RecipeTy, or nullptr.
+template <typename RecipeTy, typename MatchT>
+RecipeTy *findSingleUser(VPValue *V, const MatchT &P) {
+  return find_singleton<RecipeTy>(V->users(), [&P](VPUser *U, bool) {
+    return match(U, P) ? cast<RecipeTy>(U) : nullptr;
+  });
 }
 
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> VPInstruction *findUserOf(VPValue *V) {
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+/// Return the sole user of \p V that is a VPInstruction with \p Opcode, or
+/// nullptr.
+template <unsigned Opcode> VPInstruction *findSingleUser(VPValue *V) {
+  return findSingleUser<VPInstruction>(V, m_VPInstruction<Opcode>());
 }
 
-template <typename RecipeTy> RecipeTy *findUserOf(VPValue *V) {
-  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
+/// Return the sole user of \p V that is a \p RecipeTy, or nullptr.
+template <typename RecipeTy> RecipeTy *findSingleUser(VPValue *V) {
+  return findSingleUser<RecipeTy>(V, m_Isa<RecipeTy>());
 }
 } // namespace llvm::VPlanPatternMatch
 

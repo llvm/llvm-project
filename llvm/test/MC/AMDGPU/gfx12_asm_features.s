@@ -80,3 +80,6 @@ tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:
 
 tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 scope:SCOPE_SYS th:TH_LOAD_BYPASS
 // GFX12: tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x22,0xc4,0x04,0xe0,0xbc,0x02,0x00,0xff,0xff,0x7f]
+
+v_mul_f16_e64 v5.h, v1.h, v2.l
+// GFX12: v_mul_f16_e64 v5.h, v1.h, v2.l op_sel:[1,0,1] ; encoding: [0x05,0x48,0x35,0xd5,0x01,0x05,0x02,0x02]

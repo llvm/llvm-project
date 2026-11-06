@@ -90,7 +90,7 @@ public:
                            base_exponent + 1};
     T x = NormalFloat(Sign::POS, 0, MANTISSA);
     for (int32_t exp : exp_array) {
-      ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
+      ASSERT_FP_EQ(func(x, -exp), x > T(0) ? zero : neg_zero);
     }
   }
 
@@ -103,7 +103,7 @@ public:
                            base_exponent + 1};
     T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA);
     for (int32_t exp : exp_array) {
-      ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
+      ASSERT_FP_EQ(func(x, -exp), x > T(0) ? zero : neg_zero);
     }
   }
 
@@ -136,8 +136,8 @@ public:
     // Normal which trigger mantissa overflow.
     T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
                       StorageType(2) * NormalFloat::ONE - StorageType(1));
-    ASSERT_FP_EQ(func(x, -1), T(x / 2));
-    ASSERT_FP_EQ(func(-x, -1), -T(x / 2));
+    ASSERT_FP_EQ(func(x, -1), x / T(2));
+    ASSERT_FP_EQ(func(-x, -1), -(x / T(2)));
 
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.
@@ -167,18 +167,20 @@ public:
   }
 };
 
-#define LIST_LDEXP_TESTS(T, func)                                              \
-  using LlvmLibcLdExpTest = LdExpTestTemplate<T>;                              \
-  TEST_F(LlvmLibcLdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcLdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcLdExpTest, OverFlow) { testOverflow(&func); }                 \
-  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnNormal) {                         \
+#define LIST_LDEXP_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = LdExpTestTemplate<T>;                           \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, OverFlow) { testOverflow(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, UnderflowToZeroOnNormal) {                      \
     testUnderflowToZeroOnNormal(&func);                                        \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
+  TEST_F(LlvmLibc##Name##Test, UnderflowToZeroOnSubnormal) {                   \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }   \
+  TEST_F(LlvmLibc##Name##Test, NormalOperation) {                              \
+    testNormalOperation(&func);                                                \
+  }                                                                            \
   static_assert(true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H

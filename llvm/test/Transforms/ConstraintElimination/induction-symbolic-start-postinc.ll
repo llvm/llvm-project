@@ -21,7 +21,7 @@ define void @postinc_symbolic_start_unsigned(i32 %start, i32 %n, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
@@ -71,7 +71,7 @@ define void @postinc_symbolic_start_signed(i32 %start, i32 %n, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
@@ -205,8 +205,7 @@ define void @postinc_constant_start_step4(i8 %k0, i1 %c) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 4, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 4
@@ -255,7 +254,7 @@ define void @phi_compare_symbolic_start_non_strict_precondition(i32 %start, i32 
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i32 [[IV]], [[START]]
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -554,7 +553,7 @@ define void @postinc_symbolic_start_header_is_latch(i32 %start, i32 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
@@ -590,8 +589,7 @@ define void @phi_compare_symbolic_start_header_is_latch(i32 %start, i32 %n) {
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i32 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sle i32 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -633,7 +631,7 @@ define void @postinc_symbolic_start_header_is_latch_exit_block(i32 %start, i32 %
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:

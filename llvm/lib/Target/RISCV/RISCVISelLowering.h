@@ -62,8 +62,10 @@ public:
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                             bool ForCodeSize) const override;
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 
@@ -217,8 +219,18 @@ public:
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
                                     unsigned AddrSpace) const override {
-    // If we can replace 4 or more scalar stores, there will be a reduction
-    // in instructions even after we add a vector constant load.
+    // Replacing 4 or more element stores is a net reduction in instructions
+    // even after accounting for the vmv.v.i needed to materialize the zero
+    // vector.  MemVT may already be a vector, since memset lowers to LMUL1
+    // stores that we rely on this merge to widen, so use the total element
+    // count.
+    unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
+    if (IsZero)
+      return NumElem * NumMemElts >= 4;
+
+    // Materializing a non-zero vector constant isn't free (it may need
+    // several instructions like li + vmv.v.x or a constant-pool load), so stay
+    // conservative and only merge when replacing 4 or more stores.
     return NumElem >= 4;
   }
 
@@ -232,6 +244,8 @@ public:
   unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const override;
 
   bool preferZeroCompareBranch() const override { return true; }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override;
 
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
@@ -337,6 +351,11 @@ public:
   /// specified type.
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      unsigned *Fast = nullptr) const override;
+
+  bool allowsMisalignedMemoryAccesses(
+      LLT Ty, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
@@ -602,6 +621,8 @@ private:
 
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
+
+  bool isProfitableToFoldVScaleAdd(SDValue N) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to

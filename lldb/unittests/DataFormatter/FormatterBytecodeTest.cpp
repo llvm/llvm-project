@@ -10,6 +10,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace FormatterBytecode;
+using llvm::Failed;
 using llvm::FailedWithMessage;
 using llvm::StringRef;
 
@@ -17,11 +18,12 @@ namespace {
 class FormatterBytecodeTest : public ::testing::Test {};
 } // namespace
 
-static bool Interpret(std::vector<uint8_t> code, DataStack &data) {
+static bool Interpret(std::vector<uint8_t> code, DataStack &data,
+                      uint32_t version = 1) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
-  if (auto error = Interpret(control, data, sig_summary)) {
+  if (auto error = Interpret(control, data, sig_summary, version)) {
 #ifndef NDEBUG
     llvm::errs() << llvm::toString(std::move(error)) << '\n';
 #else
@@ -34,12 +36,13 @@ static bool Interpret(std::vector<uint8_t> code, DataStack &data) {
 
 /// Like Interpret() above, but returns (instead of discarding) the Error,
 /// allowing tests to assert on the error message.
-static llvm::Error InterpretFail(std::vector<uint8_t> code) {
+static llvm::Error InterpretFail(std::vector<uint8_t> code,
+                                 uint32_t version = 1) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
   DataStack data;
-  return Interpret(control, data, sig_summary);
+  return Interpret(control, data, sig_summary, version);
 }
 
 TEST_F(FormatterBytecodeTest, StackOps) {
@@ -124,6 +127,16 @@ TEST_F(FormatterBytecodeTest, ConversionOps) {
   {
     DataStack data(lldb::ValueObjectSP{});
     ASSERT_TRUE(Interpret({op_is_null}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null}, data));
+    ASSERT_FALSE(data.Pop<lldb::ValueObjectSP>());
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null, op_is_null}, data));
     ASSERT_EQ(data.Pop<uint64_t>(), 1u);
   }
   {
@@ -477,16 +490,272 @@ TEST_F(FormatterBytecodeTest, CallOps) {
     ASSERT_EQ(data.Pop<uint64_t>(), 5u);
   }
   {
+    // Version 2 selectors return Integer instead of UInt.
+    DataStack data;
+    data.Push(std::string{"hello"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_strlen, op_call}, data,
+                          /*version=*/2));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(5));
+  }
+  {
     DataStack data;
     data.Push(std::string{"A"});
     data.Push(std::string{"B"});
     data.Push(std::string{"{1}{0}"});
     ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
     ASSERT_EQ(data.Pop<std::string>(), "BA");
+    // The arguments are consumed.
+    ASSERT_TRUE(data.empty());
+  }
+  {
+    // Only the arguments are consumed, not values below them.
+    DataStack data;
+    data.Push(std::string{"below"});
+    data.Push(std::string{"x"});
+    data.Push(std::string{"<{}>"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+    ASSERT_EQ(data.Pop<std::string>(), "<x>");
+    ASSERT_EQ(data.size(), 1u);
+    ASSERT_EQ(data.Pop<std::string>(), "below");
+  }
+  {
+    // A format string without replacements consumes nothing else.
+    DataStack data;
+    data.Push(std::string{"below"});
+    data.Push(std::string{"plain"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+    ASSERT_EQ(data.Pop<std::string>(), "plain");
+    ASSERT_EQ(data.Pop<std::string>(), "below");
   }
   {
     DataStack data;
     data.Push(std::string{"{0}"});
     ASSERT_FALSE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, FormatVersion2) {
+  auto fmt = [](std::vector<std::string> args, std::string fmt) {
+    DataStack data;
+    for (auto &arg : args)
+      data.Push(arg);
+    data.Push(fmt);
+    EXPECT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data,
+                          /*version=*/2));
+    EXPECT_EQ(data.size(), 1u);
+    return data.Pop<std::string>();
+  };
+  // Replacements are automatically indexed, in stack order.
+  EXPECT_EQ(fmt({"A", "B"}, "{}{}"), "AB");
+  EXPECT_EQ(fmt({"A"}, "<{}>"), "<A>");
+  EXPECT_EQ(fmt({}, "plain"), "plain");
+  // "{{" is a literal "{", and "}" is a literal.
+  EXPECT_EQ(fmt({"A"}, "{{{}}"), "{A}");
+  EXPECT_EQ(fmt({}, "a}b"), "a}b");
+  // A "}" outside of a replacement is always a literal, even if it follows a
+  // replacement, or another "}". Unlike "{{", "}}" is not an escape.
+  EXPECT_EQ(fmt({}, "}"), "}");
+  EXPECT_EQ(fmt({"A"}, "{}}"), "A}");
+  EXPECT_EQ(fmt({}, "}}"), "}}");
+
+  // Layouts and options are accepted, but not yet supported, so they are
+  // ignored and format the same as "{}".
+  EXPECT_EQ(fmt({"ab"}, "[{,8}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{,*=8}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{:x}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{,8:x}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{:a:b,c}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab", "cd"}, "[{,}{:}]"), "[abcd]");
+  // Layouts and options don't change the automatic indexing.
+  EXPECT_EQ(fmt({"A", "B", "C"}, "{}{,8}{:x}"), "ABC");
+
+  // Error: explicit indexes and malformed replacements.
+  auto fmt_error = [](std::string fmt) {
+    std::vector<uint8_t> code = {op_lit_string, uint8_t(fmt.size())};
+    code.insert(code.end(), fmt.begin(), fmt.end());
+    code.insert(code.end(), {op_lit_selector, sel_fmt, op_call});
+    return InterpretFail(code, /*version=*/2);
+  };
+  EXPECT_THAT_ERROR(
+      fmt_error("{0}"),
+      FailedWithMessage("invalid replacement in format string at offset 0"));
+  EXPECT_THAT_ERROR(
+      fmt_error("ab{1,8}"),
+      FailedWithMessage("invalid replacement in format string at offset 2"));
+  EXPECT_THAT_ERROR(fmt_error("{x}"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{{{"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{,8"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{:x"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{,a{}"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{:a{}"), Failed());
+
+  // Version 1 still supports explicit indexes.
+  {
+    DataStack data;
+    data.Push(std::string{"A"});
+    data.Push(std::string{"B"});
+    data.Push(std::string{"{1}{0}"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data,
+                          /*version=*/1));
+    ASSERT_EQ(data.Pop<std::string>(), "BA");
+  }
+}
+
+TEST_F(FormatterBytecodeTest, DictionaryOps) {
+  {
+    // Set key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 42,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+
+  {
+    // Add keys a and b, then read them back.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_lit_integer,
+                           1,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_lit_integer,
+                           2,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_dict_get,
+                           op_swap,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_dict_get},
+                          data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  {
+    // Set key a, reassign key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_lit_integer,
+                   2, op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  // Error: get value of missing key.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_dict, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("key not found in dictionary(opcode=dict_get)"));
+  // Error: get value from a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("expected Dictionary"));
+  // Error: check for key in a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_has}),
+      FailedWithMessage("expected Dictionary"));
+
+  {
+    // Check a key, then get its value.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_dict_has,
+                   op_swap, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Check for a non-existing key.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_lit_string, 1, 'a', op_dict_has}, data));
+    ASSERT_FALSE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Use dict_has in combination with `if`.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_has, op_begin, 2,
+                   op_lit_integer, 42, op_if},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+
+  {
+    // dict_has yields a signed Integer, usable with comparison operators.
+    DataStack data;
+    ASSERT_TRUE(Interpret(
+        {op_dict, op_lit_string, 1, 'a', op_dict_has, op_lit_integer, 0, op_eq},
+        data));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Dictionaries can be nested.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_dup, op_lit_string, 1, 'k', op_dict,
+                           op_dict_set, op_lit_string, 1, 'k', op_dict_get},
+                          data));
+    ASSERT_TRUE(data.Pop<std::shared_ptr<Dictionary>>());
+  }
+
+  // Error: store a dictionary in itself.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict, op_dup, op_lit_string, 1, 'k', op_over, op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+  // Error: store b in a, when a is already in b.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict,     op_dict,     op_dup,  op_lit_string, 1,
+           'k',         op_lit_uint, 0,       op_pick,       op_dict_set,
+           op_lit_uint, 0,           op_pick, op_lit_string, 1,
+           'k',         op_lit_uint, 1,       op_pick,       op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+
+  {
+    // Dictionaries shared by multiple parents. Starting from [d0 d0], each
+    // level turns [.. p] into [.. n] where n["a"] and n["b"] are both p. The
+    // number of paths to d0 doubles per level, so cycle detection must not
+    // walk every path.
+    std::vector<uint8_t> code = {op_dict, op_dup};
+    for (int i = 0; i < 64; ++i)
+      code.insert(code.end(),
+                  {op_dict, op_swap, op_over, op_over, op_lit_string, 1, 'a',
+                   op_swap, op_dict_set, op_over, op_over, op_lit_string, 1,
+                   'b', op_swap, op_dict_set, op_drop});
+    {
+      DataStack data;
+      ASSERT_TRUE(Interpret(code, data));
+      ASSERT_EQ(data.size(), 2u);
+    }
+    // Error: store the top dictionary in d0, which it reaches via sharing.
+    code.insert(code.end(), {op_over, op_swap, op_lit_string, 1, 'k', op_swap,
+                             op_dict_set});
+    EXPECT_THAT_ERROR(
+        InterpretFail(code),
+        FailedWithMessage(
+            "dict_set would create a reference cycle(opcode=dict_set)"));
   }
 }

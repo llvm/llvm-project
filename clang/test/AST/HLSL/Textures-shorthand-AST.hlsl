@@ -1,23 +1,42 @@
+// Texture1D
+// Texture1D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture1D -o \
+// RUN:   - %s | FileCheck %s -DTEXTURE=Texture1D
+
+// Texture1DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture1DArray -o - %s | FileCheck %s \
+// RUN:   -DTEXTURE=Texture1DArray
+
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o \
-// RUN:   - %s \
-// RUN:   | FileCheck %s -DTEXTURE=Texture2D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
-// RUN:   -o - %s \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCube
+// RUN:   - %s | FileCheck %s -DTEXTURE=Texture2D
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header \
-// RUN:   -DTEXTURE=TextureCubeArray -o - %s \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header \
-// RUN:   -DTEXTURE=Texture2DArray -o - %s \
-// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray
+// RUN:   -DTEXTURE=Texture2DArray -o - %s | FileCheck %s \
+// RUN:   -DTEXTURE=Texture2DArray
+
+// Texture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture3D \
 // RUN:   -o - %s \
 // RUN:   | FileCheck %s -DTEXTURE=Texture3D
+
+// TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
+// RUN:   -o - %s | FileCheck %s -DTEXTURE=TextureCube
+
+// TextureCubeArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=TextureCubeArray -o - %s | FileCheck %s \
+// RUN:   -DTEXTURE=TextureCubeArray
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

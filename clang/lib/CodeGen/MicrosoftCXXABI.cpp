@@ -1168,12 +1168,13 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   if (RD->needsImplicitCopyAssignment() && !RD->hasSimpleCopyAssignment())
     return false;
   for (const Decl *D : RD->decls()) {
-    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
-      if (Ctor->isUserProvided())
-        return false;
-    } else if (auto *Template = dyn_cast<FunctionTemplateDecl>(D)) {
-      if (isa<CXXConstructorDecl>(Template->getTemplatedDecl()))
-        return false;
+    auto *Ctor = dyn_cast<CXXConstructorDecl>(D);
+    if (!Ctor) {
+      if (auto *Template = dyn_cast<FunctionTemplateDecl>(D))
+        Ctor = dyn_cast<CXXConstructorDecl>(Template->getTemplatedDecl());
+    }
+    if (Ctor && Ctor->isUserProvided()) {
+      return false;
     } else if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(D)) {
       if (MethodDecl->isCopyAssignmentOperator() && MethodDecl->isDeleted())
         return false;
@@ -1953,13 +1954,14 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // importing it.  We never reference the RTTI data directly so there is no
   // need to make room for it.
   if (VTableAliasIsRequred) {
-    llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 1)};
+    llvm::Constant *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 1)};
     // Create a GEP which points just after the first entry in the VFTable,
     // this should be the location of the first virtual method.
-    llvm::Constant *VTableGEP = llvm::ConstantExpr::getInBoundsGetElementPtr(
-        VTable->getValueType(), VTable, GEPIndices);
+    llvm::Constant *VTableGEP = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), VTable->getValueType(), VTable, GEPIndices,
+        llvm::GEPNoWrapFlags::inBounds());
     if (llvm::GlobalValue::isWeakForLinker(VFTableLinkage)) {
       VFTableLinkage = llvm::GlobalValue::ExternalLinkage;
       if (C)

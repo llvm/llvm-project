@@ -37,7 +37,7 @@ def testGlobalStoreOp():
     m = builtin.ModuleOp()
     m.sym_name = StringAttr.get("symbol1")
     m.sym_visibility = StringAttr.get("public")
-    # CHECK: module @symbol1 attributes {sym_visibility = "public"} {
+    # CHECK: module @symbol1 <sym_visibility = "public"> {
     # CHECK:   ml_program.global public mutable @symbol2 : f32
     # CHECK: }
     with InsertionPoint(m.body):

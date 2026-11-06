@@ -18,22 +18,22 @@
 
 #include "orc-rt-c/support/Compiler.h"
 #include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/RTTI.h"
 
 ORC_RT_C_EXTERN_C_BEGIN
 
+/**
+ * Opaque reference to an error instance. Null serves as the 'success' value.
+ */
+typedef struct orc_rt_OpaqueError *orc_rt_ErrorRef;
+
 #define orc_rt_ErrorSuccess ((orc_rt_ErrorRef)0)
 
-/**
- * Error type identifier.
- */
-typedef const void *orc_rt_Error_TypeId;
+ORC_RT_RTTI_PARTICIPANT(Error)
 
-/**
- * Returns the type id for the given error instance, which must be a failure
- * value (i.e. non-null).
- */
-ORC_RT_C_EXPORT orc_rt_Error_TypeId orc_rt_Error_getTypeId(orc_rt_ErrorRef Err)
-    ORC_RT_C_NOTHROW;
+typedef struct orc_rt_OpaqueStringError *orc_rt_StringErrorRef;
+
+ORC_RT_RTTI_PARTICIPANT(StringError)
 
 /**
  * Dispose of the given error without handling it. This operation consumes the
@@ -67,12 +67,6 @@ orc_rt_Error_toString(orc_rt_ErrorRef Err) ORC_RT_C_NOTHROW;
  */
 ORC_RT_C_EXPORT void
 orc_rt_Error_freeErrorMessage(char *ErrMsg) ORC_RT_C_NOTHROW;
-
-/**
- * Returns the type id for llvm StringError.
- */
-ORC_RT_C_EXPORT orc_rt_Error_TypeId orc_rt_StringError_getTypeId(void)
-    ORC_RT_C_NOTHROW;
 
 /**
  * Create a StringError.

@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_LINALG_IR_LINALG_H
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
@@ -146,6 +145,20 @@ template <typename OpTy,
           typename = std::enable_if_t<std::is_same_v<OpTy, linalg::PackOp> ||
                                       std::is_same_v<OpTy, linalg::UnPackOp>>>
 SmallVector<int64_t> getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack);
+
+/// Elementwise Arity and Kind groups.
+struct ArityGroupAndKind {
+  // The enum class {Unary, Binary, Ternary, ..}
+  ElementwiseArityGroup arityGroup;
+
+  // The kind (e.g. `exp` or `add`) belonging to the arity group.
+  union Kind {
+    UnaryFn unaryFn;
+    BinaryFn binaryFn;
+    TernaryFn ternaryFn;
+  } kind;
+};
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind);
 
 /// Specialization of `linalg.matmul` op that has a transpose map on A
 class MatmulTransposeAOp : public MatmulOp {

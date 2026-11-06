@@ -181,7 +181,7 @@ void bad_attributes_in_do_while() {
                        // expected-error@-1 {{expected ';' after do/while}}
 } // expected-error 2{{expected ')'}} expected-error {{expected expression}}
 
-[[]] using T = int; // expected-error {{an attribute list cannot appear here}}
+[[]] using T = int; // expected-error {{misplaced attributes; expected attributes here}}
 using T [[]] = int; // ok
 template<typename T> using U [[]] = T;
 using ns::i [[]];
@@ -199,6 +199,10 @@ using T [[unknown]] = int; // expected-warning {{unknown attribute 'unknown' ign
 using T [[noreturn]] = int; // expected-error {{'noreturn' attribute only applies to functions}}
 using V = int; // expected-note {{previous}}
 using V [[gnu::vector_size(16)]] = int; // expected-error {{redefinition with different types}}
+
+void using_alias_in_block() {
+  [[maybe_unused]] using BlockAlias = int; // expected-error {{misplaced attributes; expected attributes here}}
+}
 
 auto trailing() -> [[]] const int; // expected-error {{an attribute list cannot appear here}}
 auto trailing() -> const [[]] int; // expected-error {{an attribute list cannot appear here}}

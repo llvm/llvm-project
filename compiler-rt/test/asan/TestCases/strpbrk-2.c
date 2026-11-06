@@ -2,7 +2,8 @@
 // RUN: %clang_asan %s -o %t && %env_asan_opts=strict_string_checks=true not %run %t 2>&1 | FileCheck %s
 
 // Test intercept_strpbrk asan option
-// RUN: %env_asan_opts=intercept_strpbrk=false %run %t 2>&1
+// Bionic's strpbrk calls strcspn via PLT, so also disable intercept_strspn.
+// RUN: %env_asan_opts=intercept_strpbrk=false%if android-37 %{:intercept_strspn=false%} %run %t 2>&1
 
 #include <assert.h>
 #include <string.h>

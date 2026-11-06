@@ -787,14 +787,15 @@ static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
                  const TargetInstrInfo &TII) {
-  MachineInstr &CallParams = *CallResults.getPrevNode();
-  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
+  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() ==
+         (IsRetCall ? WebAssembly::RET_CALL_PARAMS : WebAssembly::CALL_PARAMS));
 
   bool IsIndirect =
       CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
-  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
   if (IsIndirect && CallParams.getOperand(0).isReg()) {
@@ -867,7 +868,8 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     }
   }
 
-  for (auto Use : CallParams.uses())
+  // Avoid duplicating the implicit operands.
+  for (auto Use : CallParams.explicit_uses())
     MIB.add(Use);
 
   BB->insert(CallResults.getIterator(), MIB);
@@ -1354,6 +1356,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+
+    // A byval argument is copied into this function's stack frame below, and
+    // a tail call releases that frame before the callee reads the copy.
+    if (llvm::any_of(CLI.Outs, [](const ISD::OutputArg &Out) {
+          return Out.Flags.isByVal() && Out.Flags.getByValSize() != 0;
+        }))
+      NoTail("WebAssembly does not support tail calling with byval arguments");
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
@@ -1371,14 +1380,15 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool HasSwiftSelfArg = false;
   bool HasSwiftErrorArg = false;
-  bool HasSwiftAsyncArg = false;
+  std::optional<unsigned> SwiftAsyncIdx;
   unsigned NumFixedArgs = 0;
   for (unsigned I = 0; I < Outs.size(); ++I) {
     const ISD::OutputArg &Out = Outs[I];
     SDValue &OutVal = OutVals[I];
     HasSwiftSelfArg |= Out.Flags.isSwiftSelf();
     HasSwiftErrorArg |= Out.Flags.isSwiftError();
-    HasSwiftAsyncArg |= Out.Flags.isSwiftAsync();
+    if (Out.Flags.isSwiftAsync())
+      SwiftAsyncIdx = I;
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
@@ -1410,6 +1420,12 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsVarArg = CLI.IsVarArg;
   auto PtrVT = getPointerTy(Layout);
 
+  // As in computeSignatureVTs, swiftasync comes first.
+  if (SwiftAsyncIdx) {
+    WebAssembly::moveToFront(Outs, *SwiftAsyncIdx);
+    WebAssembly::moveToFront(OutVals, *SwiftAsyncIdx);
+  }
+
   // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
   // (for swifttailcc) swiftasync arguments if there aren't. These additional
   // arguments are also added for callee signature. They are necessary to match
@@ -1434,14 +1450,14 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
     }
-    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
+    if (CallConv == CallingConv::SwiftTail && SwiftAsyncIdx == std::nullopt) {
       NumFixedArgs++;
       ISD::ArgFlagsTy Flags;
       Flags.setSwiftAsync();
       ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
-      CLI.Outs.push_back(Arg);
+      CLI.Outs.insert(CLI.Outs.begin(), Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
-      CLI.OutVals.push_back(ArgVal);
+      CLI.OutVals.insert(CLI.OutVals.begin(), ArgVal);
     }
   }
 
@@ -1633,11 +1649,22 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
 
   bool HasSwiftErrorArg = false;
   bool HasSwiftSelfArg = false;
-  bool HasSwiftAsyncArg = false;
-  for (const ISD::InputArg &In : Ins) {
+  std::optional<unsigned> SwiftAsyncIdx;
+  for (auto [I, In] : enumerate(Ins))
+    if (In.Flags.isSwiftAsync())
+      SwiftAsyncIdx = I;
+  // As in computeSignatureVTs, swiftasync or its padding comes first.
+  bool PadSwiftAsync = CallConv == CallingConv::SwiftTail && !SwiftAsyncIdx;
+  auto GetParamIdx = [&](unsigned InIdx) -> unsigned {
+    if (SwiftAsyncIdx)
+      return InIdx == *SwiftAsyncIdx ? 0 : InIdx + (InIdx < *SwiftAsyncIdx);
+    return InIdx + PadSwiftAsync;
+  };
+
+  SmallVector<MVT, 4> ParamVTs;
+  for (auto [I, In] : enumerate(Ins)) {
     HasSwiftSelfArg |= In.Flags.isSwiftSelf();
     HasSwiftErrorArg |= In.Flags.isSwiftError();
-    HasSwiftAsyncArg |= In.Flags.isSwiftAsync();
     if (In.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (In.Flags.isNest())
@@ -1649,27 +1676,31 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     // Ignore In.getNonZeroOrigAlign() because all our arguments are passed in
     // registers.
     InVals.push_back(In.Used ? DAG.getNode(WebAssemblyISD::ARGUMENT, DL, In.VT,
-                                           DAG.getTargetConstant(InVals.size(),
+                                           DAG.getTargetConstant(GetParamIdx(I),
                                                                  DL, MVT::i32))
                              : DAG.getUNDEF(In.VT));
 
     // Record the number and types of arguments.
-    MFI->addParam(In.VT);
+    ParamVTs.push_back(In.VT);
   }
 
-  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
-  // (for swifttailcc) swiftasync arguments if there aren't. These additional
-  // arguments are also added for callee signature. They are necessary to match
-  // callee and caller signature for indirect call.
+  if (SwiftAsyncIdx)
+    WebAssembly::moveToFront(ParamVTs, *SwiftAsyncIdx);
+  else if (PadSwiftAsync)
+    ParamVTs.insert(ParamVTs.begin(), getPointerTy(MF.getDataLayout()));
+  for (MVT VT : ParamVTs)
+    MFI->addParam(VT);
+
+  // For swiftcc and swifttailcc, emit additional swiftself and swifterror
+  // arguments if there aren't. These additional arguments are also added for
+  // callee signature. They are necessary to match callee and caller signature
+  // for indirect call.
   auto PtrVT = getPointerTy(MF.getDataLayout());
   if (CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail) {
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
     }
     if (!HasSwiftErrorArg) {
-      MFI->addParam(PtrVT);
-    }
-    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
       MFI->addParam(PtrVT);
     }
   }
@@ -1683,7 +1714,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     Chain = DAG.getCopyToReg(
         Chain, DL, VarargVreg,
         DAG.getNode(WebAssemblyISD::ARGUMENT, DL, PtrVT,
-                    DAG.getTargetConstant(Ins.size(), DL, MVT::i32)));
+                    DAG.getTargetConstant(ParamVTs.size(), DL, MVT::i32)));
     MFI->addParam(PtrVT);
   }
 
@@ -1813,7 +1844,11 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTTZ:
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
-    report_fatal_error("llvm.clear_cache is not supported on wasm");
+    // Report this as a diagnostic rather than aborting, like the other
+    // unsupported features in this target. Pass the chain through so that
+    // codegen can reach the point where the diagnostic is emitted.
+    fail(SDLoc(Op), DAG, "llvm.clear_cache is not supported on wasm");
+    return Op.getOperand(0);
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return LowerMUL_LOHI(Op, DAG);
@@ -3406,8 +3441,8 @@ static SDValue performBitcastCombine(SDNode *N,
     SDValue Concat, SetCCVector;
     ISD::CondCode SetCond;
 
-    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat), m_Value(SetCCVector),
-                                         m_CondCode(SetCond)))))
+    if (!sd_match(N, m_BitCast(m_c_SetCC(SetCond, m_Value(Concat),
+                                         m_Value(SetCCVector)))))
       return SDValue();
     if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
       return SDValue();
@@ -3453,17 +3488,22 @@ static SDValue performBitcastCombine(SDNode *N,
       SDValue ExtendedConcatOperandBitmask =
           DAG.getZExtOrTrunc(ConcatOperandBitmask, DL, ReturnVT);
 
-      // Shift the previously reconstructed bits to make room for this chunk.
+      // Shift each chunk's mask to its original lane position before merging it
+      // into the result:
+      //   Result bit index = I * ConcatOperandNumElts + local lane index
+      //
+      // Example: four chunks, each containing 8 mask bits:
+      //   result = M0 | (M1 << 8) | (M2 << 16) | (M3 << 24)
+      //
+      SDValue PositionedChunkBitmask = ExtendedConcatOperandBitmask;
       if (I != 0) {
-        ReconstructedBitmask = DAG.getNode(
-            ISD::SHL, DL, ReturnVT, ReconstructedBitmask,
-            DAG.getShiftAmountConstant(ConcatOperandNumElts, ReturnVT, DL));
+        PositionedChunkBitmask = DAG.getNode(
+            ISD::SHL, DL, ReturnVT, ExtendedConcatOperandBitmask,
+            DAG.getShiftAmountConstant(I * ConcatOperandNumElts, ReturnVT, DL));
       }
 
-      // Merge disjoint partial bitmasks with OR.
-      ReconstructedBitmask =
-          DAG.getNode(ISD::OR, DL, ReturnVT, ReconstructedBitmask,
-                      ExtendedConcatOperandBitmask);
+      ReconstructedBitmask = DAG.getNode(
+          ISD::OR, DL, ReturnVT, ReconstructedBitmask, PositionedChunkBitmask);
     }
 
     return ReconstructedBitmask;
@@ -3481,8 +3521,8 @@ static SDValue performBitmaskCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue LHS;
-  if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                            m_SpecificCondCode(ISD::SETLT))))
+  if (!sd_match(N->getOperand(1),
+                m_c_SpecificSetCC(ISD::SETLT, m_Value(LHS), m_Zero())))
     return SDValue();
 
   SDLoc DL(N);
@@ -3501,8 +3541,7 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue LHS;
   if (N->getNumOperands() < 2 ||
-      !sd_match(N->getOperand(1),
-                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+      !sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero())))
     return SDValue();
   EVT LT = LHS.getValueType();
   if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
@@ -3515,8 +3554,8 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDValue LHS;
-    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                              m_SpecificCondCode(SetType))))
+    if (!sd_match(N->getOperand(1),
+                  m_c_SpecificSetCC(SetType, m_Value(LHS), m_Zero())))
       return SDValue();
 
     SDLoc DL(N);
@@ -3627,7 +3666,7 @@ static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
   if (!C)
     return std::nullopt;
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
 
   // setcc (bitcast mask), 0, ne  -> any_true(mask)
   if (C->isZero() && CC == ISD::SETNE)
@@ -3665,7 +3704,7 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   // We're looking for an oversized integer equality comparison with SIMD
   if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
       !Subtarget->hasSIMD128() || !isIntEqualitySetCC(CC))
@@ -3732,9 +3771,24 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
+                          SelectionDAG &DAG) {
+  SDLoc DL(In);
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT InVT = In.getValueType();
+  unsigned NumElems = InVT.getVectorNumElements() * 2;
+  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
+  if (NumElems < RequiredNumElems) {
+    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
+  }
+  return Concat;
+}
+
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v8i32 && VT != MVT::v16i32)
+  if (VT != MVT::v4i32 && VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
 
   // Mul with extending inputs.
@@ -3774,6 +3828,8 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   //            |             | %low_low = i32x4.ext_low_i16x8_ %low
   //            |             | %low_high = i32x4.ext_high_i16x8_ %low
   //            |             | %res = concat_vector(%low_low, %low_high)
+  // v4i8       | v4i32       | %low = i16x8.extmul_low_i8x16_ %a, %b
+  //                          | %res = i32x4.ext_low_i16x8_ %low
 
   SDLoc DL(N);
   unsigned NumElts = VT.getVectorNumElements();
@@ -3806,14 +3862,21 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
         GetExtendHigh(MVT::v4i32, MulHigh),
     };
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubVectors);
-  } else {
-    assert(NumElts == 8);
+  } else if (NumElts == 8) {
     SDValue LowLHS = DAG.getNode(LHS->getOpcode(), DL, MVT::v8i16, ExtendInLHS);
     SDValue LowRHS = DAG.getNode(RHS->getOpcode(), DL, MVT::v8i16, ExtendInRHS);
     SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
     SDValue Lo = GetExtendLow(MVT::v4i32, MulLow);
     SDValue Hi = GetExtendHigh(MVT::v4i32, MulLow);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  } else {
+    assert(NumElts == 4);
+    SDValue LowLHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInLHS, 16, DAG));
+    SDValue LowRHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInRHS, 16, DAG));
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    return GetExtendLow(MVT::v4i32, MulLow);
   }
   return SDValue();
 }
@@ -3874,21 +3937,6 @@ static SDValue performMulCombine(SDNode *N,
         VT, DL, MulLow, MulHigh,
         {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
   }
-}
-
-SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
-                          SelectionDAG &DAG) {
-  SDLoc DL(In);
-  LLVMContext &Ctx = *DAG.getContext();
-  EVT InVT = In.getValueType();
-  unsigned NumElems = InVT.getVectorNumElements() * 2;
-  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
-  SDValue Concat =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
-  if (NumElems < RequiredNumElems) {
-    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
-  }
-  return Concat;
 }
 
 SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {

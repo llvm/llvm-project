@@ -958,7 +958,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (IsFloat && ReqdAccuracy < 1.0f)
     return false;
 
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
+  IRBuilder<> Builder(std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(DivFMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 
@@ -1068,7 +1068,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
                                                      bool IsSigned) const {
   unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
-  if (DivBits > (IsSigned ? 23 : 22))
+  if (DivBits > (IsSigned ? 23u : 22u))
     return nullptr;
   return expandDivRemToFloatImpl(Builder, I, Num, Den, DivBits, IsDiv,
                                  IsSigned);
@@ -1090,7 +1090,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   // Thus, we conservatively restrict expandDivRemToFloatImpl to
   // [-0x400000,0x3FFFFF] for IsSigned
   // [ 0x000000,0x3FFFFF] for !IsSigned.
-  assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
+  assert(0 < DivBits && DivBits <= (IsSigned ? 23u : 22u) &&
          "abs(Num) must be <= 0x400000 for expandDivRemToFloatImpl to work "
          "correctly");
 
@@ -1340,10 +1340,10 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     return nullptr;
 
   Value *Narrowed = nullptr;
-  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+  if (NumDivBits <= (IsSigned ? 23u : 22u)) {
     Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
                                        IsSigned);
-  } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
+  } else if (NumDivBits <= (IsSigned ? 31u : 32u)) {
     // Do not use 32-bit division if dividend may be -2147483648.
     // Otherwise 32-bit division cannot be used safely.
     // -2147483648/1 and -2147483648/-1 are not equal,
@@ -1881,7 +1881,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption ==
+  if (!BreakLargePHIs || getCGPassBuilderOption(TM).EnableGlobalISelOption ==
                              cl::boolOrDefault::BOU_TRUE)
     return false;
 
@@ -2383,15 +2383,9 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   // On wave32, the upper 32 bits of execution mask are always 0, so
   // mbcnt.hi(mask, val) always returns val unchanged.
   if (ST.isWave32()) {
-    if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
-      // Replace mbcnt.hi(mask, val) with val only when work group size matches
-      // wave size (single wave per work group).
-      if (*MaybeX == Wave) {
-        BasicBlock::iterator BI(&I);
-        ReplaceInstWithValue(BI, I.getArgOperand(1));
-        return true;
-      }
-    }
+    BasicBlock::iterator BI(&I);
+    ReplaceInstWithValue(BI, I.getArgOperand(1));
+    return true;
   }
 
   // Optimize the complete lane ID computation pattern:

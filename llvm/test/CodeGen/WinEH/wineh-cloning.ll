@@ -23,7 +23,7 @@ entry:
 catch.switch:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  %cp = catchpad within %cs []
+  %cp = catchpad within %cs [ptr null, i32 0, ptr null]
   br label %noreturn
 noreturn:
   ; %x use colors: {entry, cleanup}
@@ -41,7 +41,7 @@ noreturn:
 ; CHECK: catch.switch:
 ; CHECK:   %cs = catchswitch within none [label %catch] unwind to caller
 ; CHECK: catch:
-; CHECK:   catchpad within %cs []
+; CHECK:   catchpad within %cs [ptr null, i32 0, ptr null]
 ; CHECK-NEXT: call void @llvm.foo(i32 %x)
 ; CHECK: [[EntryCopy]]:
 ; CHECK:   call void @llvm.foo(i32 %x)
@@ -84,7 +84,7 @@ invoke.cont:
 catch.switch:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  catchpad within %cs []
+  catchpad within %cs [ptr null, i32 0, ptr null]
   br label %shared
 cleanup:
   cleanuppad within none []
@@ -102,7 +102,7 @@ exit:
 ; CHECK:   invoke void @f()
 ; CHECK:     to label %[[exit:[^ ]+]] unwind
 ; CHECK: catch:
-; CHECK:   catchpad within %cs []
+; CHECK:   catchpad within %cs [ptr null, i32 0, ptr null]
 ; CHECK-NEXT: call void @llvm.bar()
 ; CHECK-NEXT: unreachable
 ; CHECK: cleanup:
@@ -120,7 +120,7 @@ entry:
 catch.switch:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  catchpad within %cs []
+  catchpad within %cs [ptr null, i32 0, ptr null]
   br label %shared
 shared:
   %x = call i32 @llvm.qux()
@@ -152,7 +152,7 @@ exit:
 ; CHECK:  entry:
 ; CHECK:    to label %[[shared_E:[^ ]+]] unwind label %catch.switch
 ; CHECK:  catch:
-; CHECK:    catchpad within %cs []
+; CHECK:    catchpad within %cs [ptr null, i32 0, ptr null]
 ; CHECK:    [[x_C:%[^ ]+]] = call i32 @llvm.qux()
 ; CHECK:    [[i_C:%[^ ]+]] = call i32 @llvm.qux()
 ; CHECK:    [[zt_C:%[^ ]+]] = icmp eq i32 [[i_C]], 0
@@ -210,7 +210,7 @@ outer:
 catch.switch:
   %cs = catchswitch within %o [label %inner] unwind to caller
 inner:
-  %i = catchpad within %cs []
+  %i = catchpad within %cs [ptr null]
   catchret from %i to label %outer.post-inner
 outer.post-inner:
   call void @llvm.foo(i32 %x)
@@ -229,7 +229,7 @@ exit:
 ; CHECK-NEXT:   invoke void @f()
 ; CHECK-NEXT:     to label %outer.ret unwind label %catch.switch
 ; CHECK:      inner:
-; CHECK-NEXT:   %i = catchpad within %cs []
+; CHECK-NEXT:   %i = catchpad within %cs [ptr null]
 ; CHECK-NEXT:   catchret from %i to label %outer.post-inner
 ; CHECK:      outer.post-inner:
 ; CHECK-NEXT:   call void @llvm.foo(i32 %x)
@@ -249,7 +249,7 @@ outer:
   %cs = catchswitch within none [label %catch.body] unwind to caller
 
 catch.body:
-  %catch = catchpad within %cs []
+  %catch = catchpad within %cs [ptr null, i32 0, ptr null]
   catchret from %catch to label %exit
 exit:
   ret void
@@ -266,7 +266,7 @@ unreachable:
 ; CHECK:      outer:
 ; CHECK-NEXT:   %cs = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:      catch.body:
-; CHECK-NEXT:   %catch = catchpad within %cs []
+; CHECK-NEXT:   %catch = catchpad within %cs [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:   catchret from %catch to label %exit
 ; CHECK:      exit:
 ; CHECK-NEXT:   ret void

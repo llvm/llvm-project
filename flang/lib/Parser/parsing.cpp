@@ -75,6 +75,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_preprocessingEnabled(options.preprocessingEnabled)
       .set_preprocessingOnly(options.prescanAndReformat)
       .set_expandIncludeLines(!options.prescanAndReformat ||
           options.expandIncludeLinesInPreprocessedOutput)
@@ -302,8 +303,15 @@ void Parsing::Parse(
   // Don't bother managing message buffers when parsing module files.
   parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
-  CHECK(
-      !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());
+  if (options_.isModuleFile && parseState.anyErrorRecovery()) {
+    // Module-file parsing defers messages. Do not expose a recovered tree as
+    // a successful parse when its diagnostics were deferred: module readers
+    // must reject it just as they reject any other failed parse.
+    parseTree_.reset();
+  } else {
+    CHECK(!parseState.anyErrorRecovery() ||
+        parseState.messages().AnyFatalError());
+  }
   consumedWholeFile_ = parseState.IsAtEnd();
   messages_.Annex(std::move(parseState.messages()));
   finalRestingPlace_ = parseState.GetLocation();

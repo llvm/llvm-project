@@ -373,12 +373,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
-    if (F.getFnAttribute("fentry-call").getValueAsString() != "true") {
-      if (F.hasFnAttribute("mnop-mcount"))
-        report_fatal_error("mnop-mcount only supported with fentry-call");
-      if (F.hasFnAttribute("mrecord-mcount"))
-        report_fatal_error("mrecord-mcount only supported with fentry-call");
-    }
     if (F.getParent()->getStackProtectorGuard() != "global") {
       if (F.getParent()->hasStackProtectorGuardRecord())
         report_fatal_error("mstack-protector-guard-record only supported with "
@@ -1804,6 +1798,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::BUILD_VECTOR: {
+    if (!Subtarget->hasVector())
+      break;
     auto *BVN = cast<BuildVectorSDNode>(Node);
     SystemZVectorConstantInfo VCI(BVN);
     if (VCI.isVectorConstantLegal(*Subtarget)) {
@@ -1908,7 +1904,8 @@ bool SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
   if (selectBDXAddr(Form, DispRange, Op, Base, Disp, Index)) {
     const TargetRegisterClass *TRC =
-        Subtarget->getRegisterInfo()->getPointerRegClass();
+        Subtarget->getInstrInfo()->getInlineAsmMemoryOperandRegClass(
+            ConstraintID);
     SDLoc DL(Base);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), DL, MVT::i32);
 

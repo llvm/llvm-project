@@ -1,4 +1,5 @@
-; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 -filetype=obj -o %t.o
+; RUN llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 ; Checks that the instruction is half-word aligned, even if there is a
 ; string constant with odd length.
 

@@ -7,11 +7,11 @@
 # RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+relax b.s -o b.32.o
 # RUN: ld.lld -shared -soname=b.so b.32.o -o b.32.so
 # RUN: ld.lld -T lds a.32.o b.32.so -o 32
-# RUN: llvm-objdump -td --no-show-raw-insn 32 | FileCheck %s --check-prefix=RELAX
+# RUN: llvm-objdump --no-print-imm-hex -td --no-show-raw-insn 32 | FileCheck %s --check-prefix=RELAX
 
 ## --no-relax disables relaxation.
 # RUN: ld.lld -T lds a.32.o b.32.so --no-relax -o 32.norelax
-# RUN: llvm-objdump -td --no-show-raw-insn 32.norelax | FileCheck %s --check-prefix=NORELAX
+# RUN: llvm-objdump --no-print-imm-hex -td --no-show-raw-insn 32.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX:       {{0*}}00010000 g       .text  {{0*}}0000001c _start
 # RELAX:       {{0*}}0001001c g       .text  {{0*}}00000000 _start_end

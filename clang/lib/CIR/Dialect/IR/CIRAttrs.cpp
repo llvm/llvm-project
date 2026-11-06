@@ -15,7 +15,6 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
@@ -222,6 +221,14 @@ static ParseResult parseRecordMembers(mlir::AsmParser &parser,
 // ConstRecordAttr definitions
 //===----------------------------------------------------------------------===//
 
+static bool isValidFlexibleArrayInit(mlir::Type memberType,
+                                     mlir::Type initType) {
+  auto memberArrayType = mlir::dyn_cast<cir::ArrayType>(memberType);
+  auto initArrayType = mlir::dyn_cast<cir::ArrayType>(initType);
+  return memberArrayType && memberArrayType.getSize() == 0 && initArrayType &&
+         memberArrayType.getElementType() == initArrayType.getElementType();
+}
+
 LogicalResult
 ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
@@ -238,7 +245,9 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     auto m = mlir::cast<mlir::TypedAttr>(members[0]);
     // A bit-field variant is initialized as the access unit it owns.
     if (!llvm::any_of(sTy.getMembers(), [&](mlir::Type memberTy) {
-          return cir::memberStorageType(memberTy) == m.getType();
+          mlir::Type storageType = cir::memberStorageType(memberTy);
+          return storageType == m.getType() ||
+                 isValidFlexibleArrayInit(storageType, m.getType());
         }))
       return emitError() << "union element type " << m.getType()
                          << " is not a member of " << sTy;
@@ -411,6 +420,93 @@ static ParseResult parseFloatLiteral(AsmParser &parser,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr definitions
+//===----------------------------------------------------------------------===//
+
+MemoryEffectsAttr MemoryEffectsAttr::none(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::readOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Ref);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Mod);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
+                                                ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
+                                                         ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
+                                                              ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr
+MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
+                                          ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
 FPAttr FPAttr::getZero(Type type) {
   return get(type,
              APFloat::getZero(
@@ -519,6 +615,8 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", constant";
   if (getIsManaged())
     p << ", managed";
+  if (getKind() == CUDADeviceVarKind::Surface)
+    p << ", surface_type = " << getSurfTexType();
   p << ">";
 }
 
@@ -553,6 +651,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isExtern = false;
   bool isConstant = false;
   bool isManaged = false;
+  int32_t surfTexType = 0;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -568,14 +667,17 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else {
+    else if (flag == "surface_type") {
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else {
       parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
       return {};
     }
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged);
+             isManaged, surfTexType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -815,7 +917,10 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   const auto vecType = mlir::cast<cir::VectorType>(type);
 
-  if (vecType.getSize() != elts.size())
+  if (vecType.isScalable())
+    return emitError() << "scalable vector constants are not supported";
+
+  if (vecType.getFixedSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
 
@@ -893,24 +998,24 @@ std::string DynamicCastInfoAttr::getAlias() const {
   return alias;
 }
 
+// TODO: Give type_info a distinct CIR type so we can verify that a
+// FlatSymbolRefAttr actually names a type_info global.
+static bool isRttiPtr(mlir::Type ty) {
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  if (!ptrTy)
+    return false;
+
+  auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+  if (!pointeeIntTy)
+    return false;
+
+  return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+}
+
 LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
     cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
     mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  auto isRttiPtr = [](mlir::Type ty) {
-    // RTTI pointers are !cir.ptr<!u8i>.
-
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
-    if (!ptrTy)
-      return false;
-
-    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
-    if (!pointeeIntTy)
-      return false;
-
-    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
-  };
-
   if (!isRttiPtr(srcRtti.getType()))
     return emitError() << "srcRtti must be an RTTI pointer";
 
@@ -918,6 +1023,105 @@ LogicalResult DynamicCastInfoAttr::verify(
     return emitError() << "destRtti must be an RTTI pointer";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhFilterAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   mlir::ArrayAttr permittedTypes) {
+  for (mlir::Attribute typeAttr : permittedTypes) {
+    auto rtti = mlir::dyn_cast<cir::GlobalViewAttr>(typeAttr);
+    if (!rtti || !isRttiPtr(rtti.getType()))
+      return emitError() << "permitted type list must contain only type info "
+                            "symbols";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RecordLayoutAttr
+//===----------------------------------------------------------------------===//
+
+Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
+  (void)odsType;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseLess() || parser.parseKeyword("arg_passing_kind") ||
+      parser.parseEqual())
+    return {};
+
+  FailureOr<ArgPassingKind> kind = FieldParser<ArgPassingKind>::parse(parser);
+  if (failed(kind))
+    return {};
+
+  if (parser.parseComma() || parser.parseKeyword("has_trivial_dtor") ||
+      parser.parseEqual())
+    return {};
+  FailureOr<bool> hasTrivialDtor = FieldParser<bool>::parse(parser);
+  if (failed(hasTrivialDtor))
+    return {};
+
+  if (parser.parseComma() || parser.parseKeyword("record_align") ||
+      parser.parseEqual())
+    return {};
+  FailureOr<uint64_t> recordAlign = FieldParser<uint64_t>::parse(parser);
+  if (failed(recordAlign))
+    return {};
+
+  // An omitted unadjusted_align stores the record alignment. Either optional
+  // field may follow record_align, in either order.
+  uint64_t unadjustedAlign = *recordAlign;
+  bool transparentUnion = false;
+  while (succeeded(parser.parseOptionalComma())) {
+    if (succeeded(parser.parseOptionalKeyword("unadjusted_align"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<uint64_t> parsed = FieldParser<uint64_t>::parse(parser);
+      if (failed(parsed))
+        return {};
+      unadjustedAlign = *parsed;
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("transparent_union"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<bool> parsed = FieldParser<bool>::parse(parser);
+      if (failed(parsed))
+        return {};
+      transparentUnion = *parsed;
+      continue;
+    }
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected unadjusted_align or transparent_union");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<RecordLayoutAttr>(loc, parser.getContext(), *kind,
+                                             *hasTrivialDtor, *recordAlign,
+                                             unadjustedAlign, transparentUnion);
+}
+
+void RecordLayoutAttr::print(AsmPrinter &printer) const {
+  printer << "<arg_passing_kind = ";
+  printer.printStrippedAttrOrType(getArgPassingKind());
+  printer << ", has_trivial_dtor = ";
+  printer.printStrippedAttrOrType(getHasTrivialDtor());
+  printer << ", record_align = ";
+  printer.printStrippedAttrOrType(getRecordAlign());
+  // Print unadjusted_align only when it differs from record_align.
+  if (getUnadjustedAlign() != getRecordAlign()) {
+    printer << ", unadjusted_align = ";
+    printer.printStrippedAttrOrType(getUnadjustedAlign());
+  }
+  if (getTransparentUnion()) {
+    printer << ", transparent_union = ";
+    printer.printStrippedAttrOrType(getTransparentUnion());
+  }
+  printer << '>';
 }
 
 //===----------------------------------------------------------------------===//

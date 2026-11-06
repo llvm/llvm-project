@@ -5,7 +5,8 @@
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xf16>, %{{.*}}: vector<8x16xf16>) -> vector<8x16xf32> {
 // CHECK:         %[[C16:.*]] = arith.constant 16 : index
 // CHECK:         %[[C32:.*]] = arith.constant 32 : index
-// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<64x64xf16> -> index
+// CHECK:         %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG0]] : memref<64x64xf16>
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:         %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:         %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %[[C32]]], strides : [%[[C32]], 1] : i64
 // CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -33,7 +34,8 @@ gpu.func @no_scf(%arg0: memref<64x64xf16>, %arg1: vector<8x16xf16>) -> vector<8x
 // CHECK-LABEL: gpu.func @no_scf_i8(
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xi8>, %{{.*}}: vector<8x32xi8>) -> vector<8x16xi32> {
 // CHECK:         %[[C16:.*]] = arith.constant 16 : index
-// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<64x64xi8> -> index
+// CHECK:         %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG0]] : memref<64x64xi8>
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<i8> -> index
 // CHECK:         %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:         %[[T1:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %[[C16]]], strides : [%[[C16]], 1] : i64
 // CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -65,7 +67,8 @@ gpu.func @no_scf_i8(%arg0: memref<64x64xi8>, %arg1: vector<8x32xi8>) -> vector<8
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xf16>, %{{.*}}: vector<8x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
 // CHECK:         %[[C16:.*]] = arith.constant 16 : index
 // CHECK:         %[[C32:.*]] = arith.constant 32 : index
-// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<64x64xf16> -> index
+// CHECK:         %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG0]] : memref<64x64xf16>
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:         %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:         %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %[[C32]]], strides : [%[[C32]], 1] : i64
 // CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -102,7 +105,8 @@ gpu.func @no_scf_cri(%arg0: memref<64x64xf16>, %arg1: vector<8x16xf16>, %arg2: m
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C16:.*]] = arith.constant 16 : index
 // CHECK:           %[[C256:.*]] = arith.constant 256 : index
-// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG1]] : memref<256x256xf16> -> index
+// CHECK:           %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
+// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:           %[[T3:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:           %[[T4:.*]] = xegpu.create_nd_tdesc %[[T3]], shape : [256, %[[C128]]], strides : [%c128, 1]
 // CHECK-SAME:        : i64 -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -144,7 +148,8 @@ gpu.func @gemm_b_transpose(%arg0: memref<256x256xf16>, %arg1: memref<256x256xf16
 // CHECK:          %[[C16:.*]] = arith.constant 16 : index
 // CHECK:          %[[C256:.*]] = arith.constant 256 : index
 // CHECK:          scf.for %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK:            %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG1]] : memref<256x256xf16> -> index
+// CHECK:            %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
+// CHECK:            %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:            %[[T3:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:            %[[T4:.*]] = xegpu.create_nd_tdesc %[[T3]], shape : [256, %[[C128]]], strides : [%[[C128]], 1] : i64
 // CHECK-SAME:          -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -187,7 +192,8 @@ gpu.func @nested_scf(%arg0: memref<256x256xf16>, %arg1: memref<256x256xf16>, %ar
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[CST:.*]] = arith.constant dense<0> : vector<32x16xi32>
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG1]] : memref<256x256xf16> -> index
+// CHECK:           %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
+// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:           %[[T2:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:           %[[T3:.*]] = xegpu.create_nd_tdesc %[[T2]], shape : [256, %[[C128]]], strides : [%[[C128]], 1] : i64
 // CHECK-SAME:        -> !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
@@ -254,8 +260,9 @@ gpu.func @large_loads(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg2
 // CHECK:           %[[C128:.*]] = arith.constant 128 : index
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG1]] :
-// CHECK-SAME:        memref<256x256xf16> -> index
+// CHECK:           %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
+// CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] :
+// CHECK-SAME:        memref<f16> -> index
 // CHECK:           %[[T2:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:           %[[T3:.*]] = xegpu.create_nd_tdesc %[[T2]], shape : [256, %[[C128]]],
 // CHECK-SAME:        strides : [%[[C128]], 1] : i64 ->
@@ -532,4 +539,105 @@ gpu.func @transpose_4d(%arg0: memref<?x?x64x64xf16>) -> vector<1x1x16x16xf16> {
   %2 = vector.transpose %1, [0, 1, 3, 2] { layout_result_0 = #bt4 } : vector<1x1x16x16xf16> to vector<1x1x16x16xf16>
   gpu.return %2 : vector<1x1x16x16xf16>
 }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @transpose_dynamic_offset(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xf16, strided<[64, 1], offset: ?>>) -> vector<16x16xf16> {
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[BASE:.*]], %[[OFFSET:.*]], %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG0]]
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
+// CHECK:         %[[OFFBYTES:.*]] = arith.muli %[[OFFSET]], %[[C2]] : index
+// CHECK:         %[[BASEIDX:.*]] = arith.addi %[[PTR]], %[[OFFBYTES]] : index
+// CHECK:         %[[T0:.*]] = arith.index_cast %[[BASEIDX]] : index to i64
+// CHECK:         %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %{{.*}}], strides : [%{{.*}}, 1] : i64
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+#b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
+#bt = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+gpu.module @xevm_module {
+gpu.func @transpose_dynamic_offset(%arg0: memref<64x64xf16, strided<[64, 1], offset: ?>>) -> vector<16x16xf16> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<64x64xf16, strided<[64, 1], offset: ?>> -> !xegpu.tensor_desc<16x16xf16, #b>
+  %1 = xegpu.load_nd %0[%c0, %c32] { result_layout = #b } : !xegpu.tensor_desc<16x16xf16, #b> -> vector<16x16xf16>
+  %2 = vector.transpose %1, [1, 0] { layout_result_0 = #bt } : vector<16x16xf16> to vector<16x16xf16>
+  gpu.return %2 : vector<16x16xf16>
+}
+}
+
+// -----
+// The memref offset of an i4 source counts elements, two per byte.
+#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>
+// CHECK-LABEL: gpu.func @i4_transpose_memref_offset(
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[BASE:.*]], %[[OFFSET:.*]], %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]]
+// CHECK:         %[[BITS:.*]] = arith.muli %[[OFFSET]], %[[C4]] : index
+// CHECK:         %[[BYTES:.*]] = arith.divui %[[BITS]], %[[C8]] : index
+// CHECK:         arith.addi %[[PTR]], %[[BYTES]] : index
+// CHECK:         xegpu.create_nd_tdesc {{.*}} -> !xegpu.tensor_desc<32x8xi32
+gpu.module @xevm_module {
+gpu.func @i4_transpose_memref_offset(%src: memref<512x2048xi4, strided<[2048, 1], offset: ?>>, %i: index, %j: index) -> vector<32x64xi4> {
+  %t = xegpu.create_nd_tdesc %src : memref<512x2048xi4, strided<[2048, 1], offset: ?>> -> !xegpu.tensor_desc<32x64xi4, #l>
+  %v = xegpu.load_nd %t[%i, %j] <{layout = #l}> : !xegpu.tensor_desc<32x64xi4, #l> -> vector<32x64xi4>
+  gpu.return %v : vector<32x64xi4>
+}
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_reduce_2d_fastmath(
+// CHECK:      %[[REDUCE_1:.*]] = vector.multi_reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> [0] : vector<4x16xf32> to vector<16xf32>
+// CHECK:      vector.multi_reduction <maximumf>, %[[REDUCE_1]], %{{.*}} fastmath<nnan,nsz> [0] : vector<16xf32> to f32
+gpu.module @xevm_test {
+  gpu.func @vector_reduce_2d_fastmath(%src: memref<4x16xf32>, %dst: memref<256xf32>) {
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} 1.0 : f32
+    %tdesc = xegpu.create_nd_tdesc %src : memref<4x16xf32>
+      -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0]
+      : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<4x16xf32>
+    %reduce = vector.multi_reduction <maximumf>, %load, %cst fastmath<nnan,nsz>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %reduce_bcast = vector.broadcast %reduce
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+     : f32 to vector<16xf32>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0> : vector<16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1> : vector<16xi1>
+    xegpu.store %reduce_bcast, %dst[%offset], %mask <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+    gpu.return
+  }
+}
+
+// -----
+// The neutral accumulator of the intra-lane reduction must be a value that the
+// flags allow: no NaN under `nnan`, no infinity under `ninf`.
+// CHECK-LABEL: gpu.func @vector_reduce_2d_fastmath_neutral(
+// CHECK-DAG:  %[[MIN_N:.*]] = arith.constant dense<3.40282347E+38> : vector<16xf32>
+// CHECK-DAG:  %[[MAX_N:.*]] = arith.constant dense<0xFF800000> : vector<16xf32>
+// CHECK:      vector.multi_reduction <maxnumf>, %{{.*}}, %[[MAX_N]] fastmath<nnan> [0] : vector<4x16xf32> to vector<16xf32>
+// CHECK:      vector.multi_reduction <minimumf>, %{{.*}}, %[[MIN_N]] fastmath<fast> [0] : vector<4x16xf32> to vector<16xf32>
+gpu.module @xevm_test {
+  gpu.func @vector_reduce_2d_fastmath_neutral(%src: memref<4x16xf32>, %dst: memref<256xf32>) {
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} 1.0 : f32
+    %tdesc = xegpu.create_nd_tdesc %src : memref<4x16xf32>
+      -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0]
+      : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<4x16xf32>
+    %max = vector.multi_reduction <maxnumf>, %load, %cst fastmath<nnan>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %min = vector.multi_reduction <minimumf>, %load, %max fastmath<fast>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %reduce_bcast = vector.broadcast %min
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+     : f32 to vector<16xf32>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0> : vector<16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1> : vector<16xi1>
+    xegpu.store %reduce_bcast, %dst[%offset], %mask <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+    gpu.return
+  }
 }

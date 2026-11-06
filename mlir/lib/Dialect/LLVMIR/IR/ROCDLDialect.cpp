@@ -23,10 +23,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -102,6 +100,15 @@ LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
       return op->emitError() << "'" << kernelAttrName.getName()
                              << "' attribute attached to unexpected op";
     }
+  }
+  // xnack/sramecc describe the whole code object.
+  if (attr.getName() == xnackAttrName.getName() ||
+      attr.getName() == srameccAttrName.getName()) {
+    if (!LLVM::satisfiesLLVMModule(op))
+      return op->emitError()
+             << attr.getName() << " is only supported on modules";
+    if (!isa<BoolAttr>(attr.getValue()))
+      return op->emitError() << attr.getName() << " must be a boolean";
   }
   return success();
 }

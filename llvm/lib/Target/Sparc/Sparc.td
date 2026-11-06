@@ -157,6 +157,7 @@ include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
 include "SparcInstrInfo.td"
+include "SparcSchedLeon.td"
 
 defm : RemapAllTargetPseudoPointerOperands<sparc_ptr_rc>;
 
@@ -263,6 +264,10 @@ def : Processor<"leon4", LEON4Itineraries,
 def : Processor<"gr740", LEON4Itineraries,
                 [FeatureLeon, UMACSMACSupport, LeonCASA, LeonCycleCounter,
                  FeaturePWRPSR]>;
+
+// LEON 5 generic
+def : ProcessorModel<"leon5", NoSchedModel,
+                     [FeatureLeon, LeonCASA, LeonCycleCounter, FeaturePWRPSR]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

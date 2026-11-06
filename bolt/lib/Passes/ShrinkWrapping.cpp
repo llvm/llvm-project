@@ -32,7 +32,7 @@ static cl::opt<unsigned> ShrinkWrappingThreshold(
     cl::desc("Percentage of prologue execution count to use as threshold when"
              " evaluating whether a block is cold enough to be profitable to"
              " move eligible spills there"),
-    cl::init(30), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(30), cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
