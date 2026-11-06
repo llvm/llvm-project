@@ -6,7 +6,6 @@ define i64 @shl(i64 %a, i64 %c, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    and x0, x0, #0x1fffffffffffffff
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
@@ -26,7 +25,6 @@ define i64 @sra(i64 %a, i64 %c, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    and x0, x0, #0xfffffffffffffff8
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    sshl v0.2d, v0.2d, v1.2d
@@ -46,7 +44,6 @@ define i64 @srl(i64 %a, i64 %c, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    and x0, x0, #0xfffffffffffffff8
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
@@ -66,10 +63,10 @@ define i32 @sdiv(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl w8, w0, #4
 ; CHECK-NEXT:    orr w9, w1, #0x1
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    sdiv w8, w8, w9
 ; CHECK-NEXT:    sdiv w9, w2, w3
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    and w0, w8, #0xf
 ; CHECK-NEXT:    mov v0.s[1], w9
 ; CHECK-NEXT:    str d0, [x4]
 ; CHECK-NEXT:    ret
