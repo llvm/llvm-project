@@ -7,12 +7,8 @@
 ; RUN: llc -verify-machineinstrs -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED
 ; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 
-; A constant byte offset from an address space cast of a global becomes
-; G_ADDRSPACE_CAST followed by G_PTR_ADD. Both stay constant expressions in
-; global initializers. A typed cast bitcasts the source to i8* in its own
-; storage class, then changes storage class between those i8 pointers. The
-; byte offset is the Element operand of the access chain, without a leading
-; zero index.
+; Constant GEPs of addrspacecasts in global initializers lower to
+; OpSpecConstantOp access chains with the byte offset as the Element operand.
 
 ; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; TYPED-DAG: %[[#GEN:]] = OpTypePointer Generic %[[#I8]]
