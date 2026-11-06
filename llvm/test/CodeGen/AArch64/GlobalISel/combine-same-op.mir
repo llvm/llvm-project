@@ -10,8 +10,8 @@ body: |
     ; CHECK-LABEL: name: sub_same_op
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY [[C]](i64)
+    ; CHECK-NEXT: %sub:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %sub(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(i64) = COPY $x0
     %sub:_(i64) = G_SUB %x, %x
@@ -28,8 +28,8 @@ body: |
     ; CHECK-LABEL: name: xor_same_op
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY [[C]](i64)
+    ; CHECK-NEXT: %xor:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %xor(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(i64) = COPY $x0
     %xor:_(i64) = G_XOR %x, %x
@@ -46,9 +46,9 @@ body: |
     ; CHECK-LABEL: name: sub_same_op_vec
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[C]](i16), [[C]](i16), [[C]](i16), [[C]](i16)
-    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<4 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %sub:_(<4 x i16>) = G_BITCAST [[C]](i64)
+    ; CHECK-NEXT: $x0 = COPY %sub(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(<4 x i16>) = COPY $x0
     %sub:_(<4 x i16>) = G_SUB %x, %x
@@ -65,13 +65,58 @@ body: |
     ; CHECK-LABEL: name: xor_same_op_vec
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[C]](i16), [[C]](i16), [[C]](i16), [[C]](i16)
-    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<4 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %xor:_(<4 x i16>) = G_BITCAST [[C]](i64)
+    ; CHECK-NEXT: $x0 = COPY %xor(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(<4 x i16>) = COPY $x0
     %xor:_(<4 x i16>) = G_XOR %x, %x
     $x0 = COPY %xor
     RET_ReallyLR implicit $x0
+
+...
+---
+# The bitcast form would need an unlegalizable s24, so this stays a splat.
+name:            xor_same_op_vec_odd_width
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: xor_same_op_vec_odd_width
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %p:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: %xor:_(<3 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK-NEXT: G_STORE %xor(<3 x s8>), %p(p0) :: (store (<3 x s8>), align 4)
+    ; CHECK-NEXT: RET_ReallyLR
+    %p:_(p0) = COPY $x0
+    %x:_(<3 x s8>) = G_LOAD %p(p0) :: (load (<3 x s8>))
+    %xor:_(<3 x s8>) = G_XOR %x, %x
+    G_STORE %xor(<3 x s8>), %p(p0) :: (store (<3 x s8>))
+    RET_ReallyLR
+
+...
+---
+# Likewise for a vector of i1.
+name:            xor_same_op_vec_i1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: xor_same_op_vec_i1
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %xor:_(<16 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1), [[C]](s1)
+    ; CHECK-NEXT: %z:_(<16 x s8>) = G_ZEXT %xor(<16 x s1>)
+    ; CHECK-NEXT: $q0 = COPY %z(<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %v:_(<16 x s8>) = COPY $q0
+    %x:_(<16 x s1>) = G_TRUNC %v(<16 x s8>)
+    %xor:_(<16 x s1>) = G_XOR %x, %x
+    %z:_(<16 x s8>) = G_ZEXT %xor(<16 x s1>)
+    $q0 = COPY %z(<16 x s8>)
+    RET_ReallyLR implicit $q0
 
 ...
