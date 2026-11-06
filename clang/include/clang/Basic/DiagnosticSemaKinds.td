@@ -1858,7 +1858,8 @@ def note_unsatisfied_trait
            "%StandardLayout{standard-layout}|"
            "%Aggregate{aggregate}|"
            "%Final{final}|"
-           "%Abstract{abstract}"
+           "%Abstract{abstract}|"
+           "%Const{const}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1911,7 +1912,9 @@ def note_unsatisfied_trait_reason
            "%ArrayType{is an array type}|"
            "%UnionType{is a union type}|"
            "%NotStructOrClass{is not a struct or class type}|"
-           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"
+           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}|"
+           "%FunctionTypeNotConstQualified{is a function type, which are never const-qualified}|"
+           "%RefTypeNotConstQualified{is a reference type, which are never const-qualified}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
