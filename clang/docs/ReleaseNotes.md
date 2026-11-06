@@ -160,7 +160,9 @@ features cannot lower the translation-unit ABI level;
 - `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
   over-aligned `T`, such as an `int` typedef declared with
   `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
-  affects the layout of structures with such members. (#GH111295)
+  affects the layout of structures with such members. In the Microsoft record
+  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
+  like the typedef itself. (#GH111295)
 
 ### AST Dumping Potentially Breaking Changes
 

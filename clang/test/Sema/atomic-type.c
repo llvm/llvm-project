@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -triple x86_64-pc-windows-msvc
 
 // Basic parsing/Sema tests for _Atomic
 // No operations are actually supported on objects of this type yet.
@@ -58,3 +59,13 @@ _Static_assert(sizeof(_Atomic(struct S3)) == 4 && _Alignof(_Atomic(struct S3)) =
 typedef __attribute__((aligned(1))) int underalignedint;
 _Static_assert(_Alignof(underalignedint) == 1, "");
 _Static_assert(_Alignof(_Atomic(underalignedint)) == _Alignof(_Atomic(int)), "");
+
+// _Atomic(T) keeps T's alignment requirement and resists #pragma pack like T.
+typedef __attribute__((aligned(4))) int alignedint4;
+#pragma pack(1)
+struct PackedPlain { char c; alignedint4 b; alignedint a; };
+struct PackedAtomic { char c; _Atomic(alignedint4) b; _Atomic(alignedint) a; };
+#pragma pack()
+_Static_assert(__builtin_offsetof(struct PackedAtomic, b) == __builtin_offsetof(struct PackedPlain, b), "");
+_Static_assert(__builtin_offsetof(struct PackedAtomic, a) == __builtin_offsetof(struct PackedPlain, a), "");
+_Static_assert(sizeof(struct PackedAtomic) == sizeof(struct PackedPlain), "");
