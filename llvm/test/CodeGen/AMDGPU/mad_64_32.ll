@@ -428,10 +428,10 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[6:7], v0, v1, 0
 ; GFX1250-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_ashrrev_i32 v16, 31, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_mad_nc_i64_i32 v[14:15], v1, v16, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_ashrrev_i32 v7, 31, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_mad_nc_i64_i32 v[14:15], v1, v16, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[10:11], v16, v1, v[8:9]
 ; GFX1250-NEXT:    v_dual_mov_b32 v8, v11 :: v_dual_mov_b32 v11, v9
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
@@ -2318,9 +2318,9 @@ define <2 x i64> @lshr_mad_i64_vec(<2 x i64> %arg0) #0 {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[4:5], v1, 0xffff1c18, v[0:1]
 ; GFX1250-NEXT:    v_mad_nc_u64_u32 v[6:7], v3, 0xffff1118, v[2:3]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_dual_sub_nc_u32 v1, v5, v1 :: v_dual_sub_nc_u32 v3, v7, v3
-; GFX1250-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v2, v6
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_sub_nc_u32 v1, v5, v1
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v6 :: v_dual_sub_nc_u32 v3, v7, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %lsh = lshr <2 x i64> %arg0, <i64 32, i64 32>
   %mul = mul <2 x i64> %lsh, <i64 s0xffffffffffff1c18, i64 s0xffffffffffff1118>

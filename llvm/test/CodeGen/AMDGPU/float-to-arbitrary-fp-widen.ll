@@ -2823,7 +2823,7 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b64 v[8:9], 24, v[8:9]
 ; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v3
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v1 :: v_dual_mov_b32 v3, v8
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v3, v8 :: v_dual_lshrrev_b32 v1, 8, v1
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1310-LABEL: to_fp8_v7f16:
