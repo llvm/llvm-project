@@ -38,7 +38,6 @@
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
@@ -3514,16 +3513,15 @@ protected:
 
       case 'F': {
         std::string flags;
-        if (ObjectFile *objfile = module->GetObjectFile())
-          if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false)) {
-            const lldb::SymtabState state = symtab->GetState();
-            if (state & eSymtabStateLoadedFromCache)
-              flags += 'C';
-            if (state & eSymtabStateParsedFromObjectFile)
-              flags += 'F';
-            if (state & eSymtabStateSavedToCache)
-              flags += 'S';
-          }
+        const lldb::SymtabState state = module->GetSymtabState();
+        if (state & eSymtabStateLoadedFromCache)
+          flags += 'C';
+        if (state & eSymtabStateParsedFromObjectFile)
+          flags += 'F';
+        if (state & eSymtabStateSavedToCache)
+          flags += 'W';
+        if (state & eSymtabStateSymbolFileAddedSymbols)
+          flags += 'S';
         if (flags.empty())
           flags = "-";
         strm.Format("{0}",

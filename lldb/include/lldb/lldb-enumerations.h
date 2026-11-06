@@ -1642,6 +1642,8 @@ FLAGS_ENUM(SymtabState){
     eSymtabStateParsedFromObjectFile = (1u << 1),
     /// Symbols were encoded and saved to the DataFileCache.
     eSymtabStateSavedToCache = (1u << 2),
+    /// A SymbolFile added symbols to the ObjectFile's symbols.
+    eSymtabStateSymbolFileAddedSymbols = (1u << 3),
 };
 LLDB_MARK_AS_BITMASK_ENUM(SymtabState)
 

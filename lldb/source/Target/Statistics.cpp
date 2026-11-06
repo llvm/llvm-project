@@ -12,7 +12,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
@@ -63,6 +62,8 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("symbolTableParsedFromObjectFile",
                      symtab_parsed_from_object_file);
   module.try_emplace("symbolTableSavedToCache", symtab_saved_to_cache);
+  module.try_emplace("symbolTableSymbolFileAddedSymbols",
+                     symtab_symbol_file_added_symbols);
   module.try_emplace("debugInfoParseTime", debug_parse_time);
   module.try_emplace("debugInfoIndexTime", debug_index_time);
   module.try_emplace("debugInfoByteSize", (int64_t)debug_info_size);
@@ -325,6 +326,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t symtabs_loaded_from_cache = 0;
   uint32_t symtabs_parsed_from_object_file = 0;
   uint32_t symtabs_saved_to_cache = 0;
+  uint32_t symtabs_symbol_file_added_symbols = 0;
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
@@ -350,23 +352,27 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     module_stat.symbol_locator_time = module->GetSymbolLocatorStatistics();
     symbol_locator_total_time.merge(module_stat.symbol_locator_time);
-    ObjectFile *objfile = module->GetObjectFile();
-    Symtab *symtab =
-        objfile ? objfile->GetSymtab(/*can_create=*/false) : nullptr;
+    Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
       module_stat.symtab_symbol_count = symtab->GetNumSymbols();
       symtab_symbol_count += module_stat.symtab_symbol_count;
       ++symtabs_loaded;
-      module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
+      const SymtabState state = symtab->GetState();
+      module_stat.symtab_loaded_from_cache =
+          state & eSymtabStateLoadedFromCache;
       if (module_stat.symtab_loaded_from_cache)
         ++symtabs_loaded_from_cache;
       module_stat.symtab_parsed_from_object_file =
-          symtab->GetWasParsedFromObjectFile();
+          state & eSymtabStateParsedFromObjectFile;
       if (module_stat.symtab_parsed_from_object_file)
         ++symtabs_parsed_from_object_file;
-      module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
+      module_stat.symtab_saved_to_cache = state & eSymtabStateSavedToCache;
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved_to_cache;
+      module_stat.symtab_symbol_file_added_symbols =
+          state & eSymtabStateSymbolFileAddedSymbols;
+      if (module_stat.symtab_symbol_file_added_symbols)
+        ++symtabs_symbol_file_added_symbols;
     }
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
@@ -447,6 +453,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTablesParsedFromObjectFile",
        symtabs_parsed_from_object_file},
       {"totalSymbolTablesSavedToCache", symtabs_saved_to_cache},
+      {"totalSymbolTablesSymbolFileAddedSymbols",
+       symtabs_symbol_file_added_symbols},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
       {"totalDebugInfoIndexLoadedFromCache", debug_index_loaded},

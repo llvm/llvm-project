@@ -179,7 +179,7 @@ class DebugIndexCacheTestcase(TestBase):
             module.GetSymtabState(),
             lldb.eSymtabStateParsedFromObjectFile | lldb.eSymtabStateSavedToCache,
         )
-        self.expect("image list -F -b", patterns=[r"\] FS main\.o"])
+        self.expect("image list -F -b", patterns=[r"\] FW main\.o"])
 
         # Release the module so the next target creates a new one that loads
         # its symbol table from the cache.

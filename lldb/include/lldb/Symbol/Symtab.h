@@ -225,13 +225,7 @@ public:
   /// index is saved to the cache, debug sessions can be slower. These accessors
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
-  bool GetWasLoadedFromCache() const {
-    return GetState() & lldb::eSymtabStateLoadedFromCache;
-  }
   void SetWasLoadedFromCache() { SetState(lldb::eSymtabStateLoadedFromCache); }
-  bool GetWasSavedToCache() const {
-    return GetState() & lldb::eSymtabStateSavedToCache;
-  }
   void SetWasSavedToCache() { SetState(lldb::eSymtabStateSavedToCache); }
   /// \}
 
@@ -240,11 +234,11 @@ public:
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_state;
   }
-  bool GetWasParsedFromObjectFile() const {
-    return GetState() & lldb::eSymtabStateParsedFromObjectFile;
-  }
   void SetWasParsedFromObjectFile() {
     SetState(lldb::eSymtabStateParsedFromObjectFile);
+  }
+  void SetSymbolFileAddedSymbols() {
+    SetState(lldb::eSymtabStateSymbolFileAddedSymbols);
   }
 
 protected:

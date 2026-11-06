@@ -629,6 +629,12 @@ public:
   /// lifetime.
   LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
 
+  /// Get flags describing the object file's symbol table state.
+  ///
+  /// This does not cause the symbol table to be created. If it hasn't been
+  /// created yet, lldb::eSymtabStateNone is returned.
+  lldb::SymtabState GetSymtabState();
+
   /// Get a reference to the UUID value contained in this object.
   ///
   /// If the executable image file doesn't not have a UUID value built into
