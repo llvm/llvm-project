@@ -14,9 +14,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
-#include "Mips16ISelDAGToDAG.h"
 #include "MipsMachineFunction.h"
-#include "MipsSEISelDAGToDAG.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetObjectFile.h"
 #include "MipsTargetTransformInfo.h"
@@ -62,7 +60,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsAsmPrinterPass(*PR);
   initializeMipsDelaySlotFillerLegacyPass(*PR);
   initializeMipsBranchExpansionLegacyPass(*PR);
-  initializeMipsMicroSizeReduceLegacyPass(*PR);
+  initializeMicroMipsSizeReduceLegacyPass(*PR);
   initializeMipsPreLegalizerCombinerPass(*PR);
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixLegacyPass(*PR);
@@ -252,7 +250,7 @@ void MipsPassConfig::addPreEmitPass() {
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
-  addPass(createMipsMicroSizeReduceLegacyPass());
+  addPass(createMicroMipsSizeReduceLegacyPass());
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.

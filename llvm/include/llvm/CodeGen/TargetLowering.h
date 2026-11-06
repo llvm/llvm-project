@@ -1347,12 +1347,6 @@ public:
     return true;
   }
 
-  /// Returns true if the operation can trap for the value type.
-  ///
-  /// VT must be a legal type. By default, we optimistically assume most
-  /// operations don't trap except for integer divide and remainder.
-  virtual bool canOpTrap(unsigned Op, EVT VT) const;
-
   /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
   /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
   /// constant pool entry.
@@ -4366,6 +4360,14 @@ public:
                           unsigned OpNo) const {
     return false;
   }
+
+  /// Return true if a function used as an inline asm address operand (e.g.
+  /// "p", or a call target that isInlineAsmTargetBranch() recognizes) can be
+  /// the bare function symbol, in an operand of kind InlineAsm::Kind::Func.
+  /// The target then has to select the symbol as an address and print it with
+  /// AsmPrinter::PrintAsmOperand(). Otherwise the function's address is
+  /// computed like that of any other global.
+  virtual bool supportsInlineAsmFuncOperands() const { return false; }
 
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
