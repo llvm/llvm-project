@@ -370,10 +370,12 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 //===----------------------------------------------------------------------===//
 
 def SingleOp : OpenMP_Op<"single", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause,
-    OpenMP_PrivateClause
+    OpenMP_AllocateClause,
+    OpenMP_CopyprivateClauseSkip<boundedRecipeEffects = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "single directive";
   let description = [{
@@ -390,7 +392,7 @@ def SingleOp : OpenMP_Op<"single", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier) attr-dict
+        $private_syms, $private_needs_barrier) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;

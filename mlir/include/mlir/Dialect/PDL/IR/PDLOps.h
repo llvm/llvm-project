@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_PDL_IR_PDLOPS_H_
 #define MLIR_DIALECT_PDL_IR_PDLOPS_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"

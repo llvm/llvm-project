@@ -16,25 +16,17 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Compiler.h"
-#include <tuple>
 
 namespace llvm {
 
-class DIScope;
-class DILocalVariable;
 class Function;
-class DILocation;
 class DebugLoc;
 class StringRef;
 
-/// A unique key that represents a debug variable.
-/// First const DIScope *: Represents the scope of the debug variable.
-/// Second const DIScope *: Represents the InlinedAt scope of the debug
-/// variable. const DILocalVariable *: It is a pointer to the debug variable
-/// itself.
-using VarID =
-    std::tuple<const DIScope *, const DIScope *, const DILocalVariable *>;
+/// A unique key that represents one instance of a debug variable.
+using VarID = DebugVariableAggregate;
 
 /// A base class to collect and print dropped debug information variable
 /// statistics.
@@ -70,49 +62,35 @@ protected:
 
   /// A DenseSet tracking whether a scope was visited before.
   DenseSet<const DIScope *> VisitedScope;
-  /// A stack of DenseMaps, which map the name of an llvm::Function to a
-  /// DenseMap of VarIDs and their inlinedAt locations before an optimization
-  /// pass has run.
-  SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
   /// Calculate the number of dropped variables in an llvm::Function or
   /// llvm::MachineFunction and print the relevant information to stdout.
-  LLVM_ABI void calculateDroppedStatsAndPrint(
-      DebugVariables &DbgVariables, StringRef FuncName, StringRef PassID,
-      StringRef FuncOrModName, StringRef PassLevel, const Function *Func);
+  LLVM_ABI void calculateDroppedStatsAndPrint(DebugVariables &DbgVariables,
+                                              StringRef PassID,
+                                              StringRef FuncOrModName,
+                                              StringRef PassLevel,
+                                              const Function *Func);
 
   /// Check if a \p Var has been dropped or is a false positive. Also update the
   /// \p DroppedCount if a debug variable is dropped.
   LLVM_ABI bool updateDroppedCount(DILocation *DbgLoc, const DIScope *Scope,
-                                   const DIScope *DbgValScope,
-                                   DenseMap<VarID, DILocation *> &InlinedAtsMap,
                                    VarID Var, unsigned &DroppedCount);
 
   /// Run code to populate relevant data structures over an llvm::Function or
   /// llvm::MachineFunction.
-  LLVM_ABI void run(DebugVariables &DbgVariables, StringRef FuncName,
-                    bool Before);
+  LLVM_ABI void run(DebugVariables &DbgVariables, bool Before);
 
-  /// Populate the VarIDSet and InlinedAtMap with the relevant information
-  /// needed for before and after pass analysis to determine dropped variable
-  /// status.
-  LLVM_ABI void populateVarIDSetAndInlinedMap(
-      const DILocalVariable *DbgVar, DebugLoc DbgLoc, DenseSet<VarID> &VarIDSet,
-      DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before);
+  /// Add the VarID of the debug record of \p DbgVar at \p DbgLoc to
+  /// \p VarIDSet.
+  LLVM_ABI void populateVarIDSet(const DILocalVariable *DbgVar, DebugLoc DbgLoc,
+                                 DenseSet<VarID> &VarIDSet);
 
   /// Visit every llvm::Instruction or llvm::MachineInstruction and check if the
   /// debug variable denoted by its ID \p Var may have been dropped by an
   /// optimization pass.
-  virtual void
-  visitEveryInstruction(unsigned &DroppedCount,
-                        DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                        VarID Var) = 0;
+  virtual void visitEveryInstruction(unsigned &DroppedCount, VarID Var) = 0;
   /// Visit every debug record in an llvm::Function or llvm::MachineFunction
-  /// and call populateVarIDSetAndInlinedMap on it.
-  virtual void visitEveryDebugRecord(
-      DenseSet<VarID> &VarIDSet,
-      DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before) = 0;
+  /// and call populateVarIDSet on it.
+  virtual void visitEveryDebugRecord(DenseSet<VarID> &VarIDSet) = 0;
 
 private:
   /// Remove a dropped debug variable's VarID from all Sets in the

@@ -171,6 +171,10 @@ page](https://llvm.org/releases/).
   equal the array's declared leading extent, so that the common case has a
   constant trip count.
 
+- Added `-fplt` and `-fno-plt`. `-fno-plt` makes external function
+  calls use GOT indirection instead of the PLT. The driver forwards
+  it for ELF x86 and AArch64. The default remains PLT.
+  
 - Added `-b <arg>` on AIX, which passes `-b <arg>` to the linker.
 
 ## Windows Support
