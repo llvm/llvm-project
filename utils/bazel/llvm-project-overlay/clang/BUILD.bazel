@@ -878,6 +878,7 @@ cc_library(
     name = "config",
     hdrs = [
         "include/clang/Basic/Version.inc",
+        "include/clang/Config/clang-config.h",
         "include/clang/Config/config.h",
     ],
     defines = select({
@@ -2326,6 +2327,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":config",
         "//llvm:Support",
     ],
 )

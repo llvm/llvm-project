@@ -3,7 +3,14 @@ import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
+write_cmake_config("clang-config") {
+  input = "clang-config.h.cmake"
+  output = "$target_gen_dir/clang-config.h"
+  values = [ "CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS=" ]
+}
+
 write_cmake_config("Config") {
+  public_deps = [ ":clang-config" ]
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [

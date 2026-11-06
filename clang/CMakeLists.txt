@@ -388,6 +388,17 @@ if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
                       "LLVM_LINK_LLVM_DYLIB=OFF")
 endif()
 
+# Whether CLANG_ABI and related macros annotate clang's public interface.
+# Work to support this configuration is ongoing.
+# See https://github.com/llvm/llvm-project/issues/238871
+if((WIN32 AND NOT MINGW) AND CLANG_LINK_CLANG_DYLIB)
+  set(CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS ON)
+  set(CLANG_COMPONENT_LIB_DEFINITIONS CLANG_EXPORTS)
+else()
+  set(CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS OFF)
+  set(CLANG_COMPONENT_LIB_DEFINITIONS "")
+endif()
+
 # The libdir suffix must exactly match whatever LLVM's configuration used.
 set(CLANG_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}")
 
@@ -1045,3 +1056,6 @@ set(CLANG_INSTALL_LIBDIR_BASENAME "lib${CLANG_LIBDIR_SUFFIX}")
 configure_file(
   ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake
   ${CLANG_BINARY_DIR}/include/clang/Config/config.h)
+configure_file(
+  ${CLANG_SOURCE_DIR}/include/clang/Config/clang-config.h.cmake
+  ${CLANG_BINARY_DIR}/include/clang/Config/clang-config.h)
