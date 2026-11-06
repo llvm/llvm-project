@@ -533,6 +533,9 @@ Makes programs 10x faster by doing Special New Thing.
   debug sections were compressed. They are now compressed using the input
   format by default.
 
+* llvm-ml now supports `-showIncludes` to report files read via `INCLUDE` in a
+format compatible with Ninja's `deps = msvc` mode.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
