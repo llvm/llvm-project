@@ -9420,6 +9420,27 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       auto *OldType = dyn_cast<IntegerType>(LHS->getType());
       if (!OldType)
         break;
+      // If RHS < MAX on entry to the loop, RHS + 1 does not wrap.
+      bool IsSigned = ICmpInst::isSigned(Pred);
+      APInt Max = IsSigned ? APInt::getSignedMaxValue(OldType->getBitWidth())
+                           : APInt::getMaxValue(OldType->getBitWidth());
+      auto IsLessThanMax = [&] {
+        const SCEV *GuardedRHS = applyLoopGuards(RHS, L);
+        return IsSigned ? getSignedRangeMax(GuardedRHS).slt(Max)
+                        : getUnsignedRangeMax(GuardedRHS).ult(Max);
+      };
+      if (isLoopInvariant(RHS, L) && IsLessThanMax()) {
+        // The guard only holds at loop entry, so record the no-wrap fact on
+        // this use of the add instead of the shared expression.
+        SCEVUse Next = getAddExpr(
+            getOne(OldType), RHS,
+            {SCEV::FlagNone, IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW});
+        ExitLimit EL = howManyLessThans(LHS, Next, L, IsSigned,
+                                        /*Invert=*/false, ControlsOnlyExit,
+                                        AllowPredicates);
+        if (EL.hasFullInfo())
+          return EL;
+      }
       // Prefer doubling the bitwidth over adding a single bit to make it more
       // likely that we use a legal type.
       auto *NewType =
@@ -13289,8 +13310,8 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
 }
 
 ScalarEvolution::ExitLimit
-ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
-                                  const Loop *L, bool IsSigned, bool Invert,
+ScalarEvolution::howManyLessThans(const SCEV *LHS, SCEVUse RHS, const Loop *L,
+                                  bool IsSigned, bool Invert,
                                   bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
