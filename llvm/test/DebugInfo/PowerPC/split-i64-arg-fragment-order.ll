@@ -1,18 +1,21 @@
 ; RUN: llc -O1 -mtriple=powerpc-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -O1 -mtriple=powerpcle-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
 
 ; An i64 argument split across two registers is described by two
 ; fragments, and a fragment's offset counts from the variable's
-; lowest-addressed byte. On a big-endian target that is the HIGH word,
-; which the PPC32 ABI passes in r3: r3 must be fragment 0, r4 fragment 32.
+; lowest-addressed byte. The PPC32 ABI passes the half at the lower
+; address in r3 on both byte orders: the high word on big-endian, the
+; low word on little-endian. So r3 must be fragment 0 and r4 fragment 32
+; for both triples.
 ; getUnderlyingArgRegs used to walk BUILD_PAIR's operands in (low, high)
-; order regardless of byte order and swapped the two halves, so a debugger
-; showed `x` with its words exchanged. MIPS, SPARC and ARMEB had the same
-; defect; little-endian targets are unaffected.
+; order regardless of byte order and swapped the two halves on big-endian
+; targets, so a debugger showed `x` with its words exchanged. MIPS, SPARC
+; and ARMEB had the same defect; little-endian targets are unaffected.
 
-; CHECK-DAG: [[HI:%[0-9]+]]:gprc = COPY $r3
-; CHECK-DAG: [[LO:%[0-9]+]]:gprc = COPY $r4
-; CHECK-DAG: DBG_VALUE [[HI]], $noreg, ![[X:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-DAG: DBG_VALUE [[LO]], $noreg, ![[X]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK-DAG: [[R3:%[0-9]+]]:gprc = COPY $r3
+; CHECK-DAG: [[R4:%[0-9]+]]:gprc = COPY $r4
+; CHECK-DAG: DBG_VALUE [[R3]], $noreg, ![[X:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-DAG: DBG_VALUE [[R4]], $noreg, ![[X]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 
 define i64 @f(i64 %x) !dbg !9 {
 entry:
