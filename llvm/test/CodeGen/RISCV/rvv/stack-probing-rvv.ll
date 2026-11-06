@@ -793,4 +793,104 @@ entry:
   ret void
 }
 
+; Call frames are not reserved with +v and a frame pointer, also without an RVV
+; area. The SP adjustment counts the realignment padding and the call frame as
+; what follows it: on RV64 the frame, the padding and the call frame come to
+; 1024 bytes and nothing is probed; on RV32 the larger call frame makes the SP
+; adjustment probe.
+define void @f1_realign_small_call(ptr %out) #0 {
+; RV64IV-LABEL: f1_realign_small_call:
+; RV64IV:       # %bb.0: # %entry
+; RV64IV-NEXT:    addi sp, sp, -960
+; RV64IV-NEXT:    .cfi_def_cfa_offset 960
+; RV64IV-NEXT:    sd ra, 952(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd s0, 944(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd s1, 936(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    .cfi_offset ra, -8
+; RV64IV-NEXT:    .cfi_offset s0, -16
+; RV64IV-NEXT:    .cfi_offset s1, -24
+; RV64IV-NEXT:    addi s0, sp, 960
+; RV64IV-NEXT:    .cfi_def_cfa s0, 0
+; RV64IV-NEXT:    andi sp, sp, -64
+; RV64IV-NEXT:    mv s1, sp
+; RV64IV-NEXT:    addi sp, sp, -16
+; RV64IV-NEXT:    li a2, 0
+; RV64IV-NEXT:    li t0, 7
+; RV64IV-NEXT:    li t1, 6
+; RV64IV-NEXT:    addi a0, s1, 912
+; RV64IV-NEXT:    mv a1, s1
+; RV64IV-NEXT:    li a3, 1
+; RV64IV-NEXT:    li a4, 2
+; RV64IV-NEXT:    li a5, 3
+; RV64IV-NEXT:    li a6, 4
+; RV64IV-NEXT:    li a7, 5
+; RV64IV-NEXT:    sd t1, 0(sp)
+; RV64IV-NEXT:    sd t0, 8(sp)
+; RV64IV-NEXT:    call g
+; RV64IV-NEXT:    addi sp, sp, 16
+; RV64IV-NEXT:    addi sp, s0, -960
+; RV64IV-NEXT:    .cfi_def_cfa sp, 960
+; RV64IV-NEXT:    ld ra, 952(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld s0, 944(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld s1, 936(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    .cfi_restore ra
+; RV64IV-NEXT:    .cfi_restore s0
+; RV64IV-NEXT:    .cfi_restore s1
+; RV64IV-NEXT:    addi sp, sp, 960
+; RV64IV-NEXT:    .cfi_def_cfa_offset 0
+; RV64IV-NEXT:    ret
+;
+; RV32IV-LABEL: f1_realign_small_call:
+; RV32IV:       # %bb.0: # %entry
+; RV32IV-NEXT:    addi sp, sp, -960
+; RV32IV-NEXT:    .cfi_def_cfa_offset 960
+; RV32IV-NEXT:    sw zero, 0(sp)
+; RV32IV-NEXT:    sw ra, 956(sp) # 4-byte Folded Spill
+; RV32IV-NEXT:    sw s0, 952(sp) # 4-byte Folded Spill
+; RV32IV-NEXT:    sw s1, 948(sp) # 4-byte Folded Spill
+; RV32IV-NEXT:    .cfi_offset ra, -4
+; RV32IV-NEXT:    .cfi_offset s0, -8
+; RV32IV-NEXT:    .cfi_offset s1, -12
+; RV32IV-NEXT:    addi s0, sp, 960
+; RV32IV-NEXT:    .cfi_def_cfa s0, 0
+; RV32IV-NEXT:    andi sp, sp, -64
+; RV32IV-NEXT:    mv s1, sp
+; RV32IV-NEXT:    addi sp, sp, -48
+; RV32IV-NEXT:    li a2, 0
+; RV32IV-NEXT:    li a3, 0
+; RV32IV-NEXT:    li a5, 0
+; RV32IV-NEXT:    li a7, 0
+; RV32IV-NEXT:    lui a0, %hi(.LCPI9_0)
+; RV32IV-NEXT:    addi a0, a0, %lo(.LCPI9_0)
+; RV32IV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32IV-NEXT:    vle8.v v10, (a0)
+; RV32IV-NEXT:    vsext.vf4 v8, v10
+; RV32IV-NEXT:    li t0, 7
+; RV32IV-NEXT:    addi a0, s1, 928
+; RV32IV-NEXT:    mv a1, s1
+; RV32IV-NEXT:    li a4, 1
+; RV32IV-NEXT:    li a6, 2
+; RV32IV-NEXT:    sw t0, 32(sp)
+; RV32IV-NEXT:    sw zero, 36(sp)
+; RV32IV-NEXT:    vse32.v v8, (sp)
+; RV32IV-NEXT:    call g
+; RV32IV-NEXT:    addi sp, sp, 48
+; RV32IV-NEXT:    addi sp, s0, -960
+; RV32IV-NEXT:    .cfi_def_cfa sp, 960
+; RV32IV-NEXT:    lw ra, 956(sp) # 4-byte Folded Reload
+; RV32IV-NEXT:    lw s0, 952(sp) # 4-byte Folded Reload
+; RV32IV-NEXT:    lw s1, 948(sp) # 4-byte Folded Reload
+; RV32IV-NEXT:    .cfi_restore ra
+; RV32IV-NEXT:    .cfi_restore s0
+; RV32IV-NEXT:    .cfi_restore s1
+; RV32IV-NEXT:    addi sp, sp, 960
+; RV32IV-NEXT:    .cfi_def_cfa_offset 0
+; RV32IV-NEXT:    ret
+entry:
+  %buf = alloca i8, i64 16, align 16
+  %arr = alloca i8, i64 880, align 64
+  call void @g(ptr %buf, ptr %arr, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7)
+  ret void
+}
+
 attributes #0 = { uwtable(async) "probe-stack"="inline-asm" "frame-pointer"="none" }

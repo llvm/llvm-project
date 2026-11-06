@@ -85,11 +85,11 @@ public:
     return StackId != TargetStackID::ScalableVector;
   }
 
-  uint64_t allocateStack(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, MachineFunction &MF,
-                         uint64_t Offset, uint64_t RealStackSize, bool EmitCFI,
-                         bool NeedProbe, uint64_t ProbeSize,
-                         uint64_t MaxUnprobed, MachineInstr::MIFlag Flag) const;
+  void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineFunction &MF, uint64_t Offset,
+                     uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
+                     uint64_t ProbeSize, uint64_t FollowupSize, bool SpillsToSP,
+                     MachineInstr::MIFlag Flag) const;
 
   uint64_t getStackThreshold() const override;
 
