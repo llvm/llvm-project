@@ -1515,14 +1515,41 @@ struct TargetNVPTX : public GenericTarget<TargetNVPTX> {
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    TODO(loc, "handle complex argument types");
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // Pass COMPLEX(KIND=4) as a type that will be translated into
+      // LLVM as:
+      // { float, float }, byval, align 4
+      marshal.emplace_back(fir::ReferenceType::get(structTy),
+                           AT{/*alignment=*/4, /*byval=*/true});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // Pass COMPLEX(KIND=8) as a type that will be translated into
+      // LLVM as:
+      // { double, double }, byval, align 8
+      marshal.emplace_back(fir::ReferenceType::get(structTy),
+                           AT{/*alignment=*/8, /*byval=*/true});
+    } else {
+      typeTodo(sem, loc, "argument");
+    }
     return marshal;
   }
 
   CodeGenSpecifics::Marshalling
   complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    TODO(loc, "handle complex return types");
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // Return COMPLEX(KIND=4) and COMPLEX(KIND=8) as structs with
+      // two elements: { t, t }
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
+                           AT{});
+    } else {
+      typeTodo(sem, loc, "return");
+    }
     return marshal;
   }
 };
