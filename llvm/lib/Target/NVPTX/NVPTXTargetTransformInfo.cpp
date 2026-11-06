@@ -480,6 +480,115 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return std::nullopt;
 }
 
+bool NVPTXTTIImpl::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  auto IsDoubleIntegerExtend = [](Use *U) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I)
+      return false;
+
+    if (!isa<ZExtInst>(I) && !isa<SExtInst>(I))
+      return false;
+
+    // Require integers, disallow vectors.
+    Type *SrcTy = I->getOperand(0)->getType();
+    Type *DstTy = I->getType();
+    if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+      return false;
+
+    // Only support 2x extensions for i16 and i32 types.
+    unsigned SrcSize = SrcTy->getScalarSizeInBits();
+    unsigned DstSize = DstTy->getScalarSizeInBits();
+    return (SrcSize * 2 == DstSize && (SrcSize == 16 || SrcSize == 32));
+  };
+
+  // For *ext casts, if the output size (O) is twice the input size (I), all
+  // users are multiplications, and all inputs to these multiplications are
+  // demotable to size I (either *ext or a constant), then PTX can generate=
+  // a wide multiplication of I * I = O. Sink the *ext instruction to each
+  // multiplication block as ISel cannot currently optimize cross-block.
+
+  // Check if casts can be sinked for mul instruction.
+  if (I->getOpcode() == Instruction::Mul) {
+    auto *Op0 = &I->getOperandUse(0);
+    auto *Op1 = &I->getOperandUse(1);
+    bool IsOp0DIE = IsDoubleIntegerExtend(Op0);
+    bool IsOp1DIE = IsDoubleIntegerExtend(Op1);
+
+    // Non-profitable case.
+    if (!IsOp0DIE && !IsOp1DIE)
+      return false;
+
+    if (IsOp0DIE && IsOp1DIE) {
+      // If both operands are profitable to sink, ensure that sign matches for
+      // the extensions.
+      bool SameOpcode = cast<Instruction>(Op0)->getOpcode() ==
+                        cast<Instruction>(Op1)->getOpcode();
+      if (SameOpcode) {
+        Ops.push_back(Op0);
+        Ops.push_back(Op1);
+      }
+
+      return SameOpcode;
+    }
+
+    Value *NonDIEOp = I->getOperand(IsOp0DIE);
+    Use *DIEOp = &I->getOperandUse(IsOp1DIE);
+    bool IsSigned = isa<SExtInst>(DIEOp);
+    // Input size will be half of mul's type size.
+    unsigned OptSize = (I->getOperand(0)->getType()->getScalarSizeInBits()) / 2;
+
+    // Multiplication by constant is safe if the value doesn't exceed
+    // signed/unsigned size.
+    if (auto *CI = dyn_cast<ConstantInt>(NonDIEOp)) {
+      const APInt &Val = CI->getValue();
+      bool IsValidConst =
+          IsSigned ? Val.isSignedIntN(OptSize) : Val.isIntN(OptSize);
+      if (IsValidConst)
+        Ops.push_back(DIEOp);
+
+      return IsValidConst;
+    }
+
+    // All checks failed for wide mul profitability.
+    return false;
+  }
+
+  // GEP gets lowered as shl in NVPTX, so check for wide mul profitability by
+  // inspecting indices.
+  if (I->getOpcode() == Instruction::GetElementPtr) {
+    for (Use &IdxOp : cast<GetElementPtrInst>(I)->indices()) {
+      if (IsDoubleIntegerExtend(&IdxOp)) {
+        Ops.push_back(&IdxOp);
+      }
+    }
+
+    return !Ops.empty();
+  }
+
+  // Check if casts can be sinked for shl instruction.
+  if (I->getOpcode() == Instruction::Shl) {
+    Use *Op0 = &I->getOperandUse(0);
+    if (!IsDoubleIntegerExtend(Op0))
+      return false;
+
+    // Require that shift amount is a constant >= 0 and less than bit width.
+    if (auto *C = dyn_cast<ConstantInt>(I->getOperand(1))) {
+      APInt ShiftAmt = C->getValue();
+      unsigned BitWidth = I->getType()->getScalarSizeInBits();
+      if (ShiftAmt.sge(0) && ShiftAmt.slt(BitWidth)) {
+        Ops.push_back(Op0);
+        return true;
+      }
+    }
+
+    // Checks failed for shl.
+    return false;
+  }
+
+  return !Ops.empty();
+}
+
 InstructionCost
 NVPTXTTIImpl::getInstructionCost(const User *U,
                                  ArrayRef<const Value *> Operands,
