@@ -76,6 +76,13 @@ spirv.func @cl_binary_float(%arg0: f32, %arg1: f32) "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @cl_ldexp
+spirv.func @cl_ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // Ternary FP OpenCL ops
 //===----------------------------------------------------------------------===//
