@@ -374,7 +374,8 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
     Option<"stackArrays", "stack-arrays", "bool",
            /*default=*/"fir::AllocationPolicy::stackArraysDefault",
            "Place all array allocations on the stack (-fstack-arrays); "
-           "otherwise use the size-based placement policy.">,
+           "otherwise use the size-based placement policy, or behave like "
+           "the memory-allocation-opt pass in legacy mode.">,
     Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
            /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
            "Constant-size arrays up to this many bytes are considered small.">,
@@ -387,7 +388,8 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
     Option<"dynamicArrayOnHeap", "dynamic-array-on-heap", "bool",
            /*default=*/"false",
            "In legacy mode without stack-arrays, move all allocations with a "
-           "runtime size to the heap (-fdynamic-heap-array).">
+           "runtime size to the heap (-fdynamic-heap-array). Ignored "
+           "otherwise.">
   ];
 }
 

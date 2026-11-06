@@ -168,8 +168,9 @@ void AllocationPlacementPass::runOnOperation() {
                                smallArrayThresholdBytes);
   fir::overrideIfExplicitlySet(basePolicy.totalStackLimitBytes,
                                totalStackLimitBytes);
-  // Like the stack-arrays pass, legacy mode honors a function that opted out
-  // of -fstack-arrays in its own policy (device code, where the stack is tiny).
+  // In legacy mode, a function that opted out of -fstack-arrays in its own
+  // policy (device code, where the stack is tiny) is handled as if
+  // -fstack-arrays was not set, so -fdynamic-heap-array applies to it.
   if (legacy)
     if (std::optional<fir::AllocationPolicy> localPolicy =
             fir::getLocalAllocationPolicy(func))
