@@ -420,7 +420,6 @@ define float @select_two_copysigns_const_mag(i1 %c, float %v, float %x) {
   ret float %r
 }
 
-
 define float @select_two_copysigns_two_const_mags(i1 %c, float %x) {
 ; CHECK-LABEL: @select_two_copysigns_two_const_mags(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 1.000000e+00
