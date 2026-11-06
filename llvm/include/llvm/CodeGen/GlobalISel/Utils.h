@@ -323,6 +323,12 @@ LLVM_ABI SmallVector<APInt>
 ConstantFoldVectorBinop(unsigned Opcode, const Register Op1, const Register Op2,
                         const MachineRegisterInfo &MRI);
 
+/// Tries to constant fold a vector floating-point binop with sources \p Op1 and
+/// \p Op2. Returns an empty vector on failure.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                          const Register Op2, const MachineRegisterInfo &MRI);
+
 LLVM_ABI std::optional<APInt>
 ConstantFoldCastOp(unsigned Opcode, LLT DstTy, const Register Op0,
                    const MachineRegisterInfo &MRI);
@@ -343,6 +349,12 @@ LLVM_ABI SmallVector<APInt>
 ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
+/// Tries to constant fold a unary floating-point operation on \p Src.
+/// If \p Src is a vector then it tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                      const MachineRegisterInfo &MRI);
+
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
                  unsigned DstScalarSizeInBits, unsigned ExtOp,
@@ -352,11 +364,12 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set. When \p OrNegative is true, the value is also considered a power of two
 /// if its negation is a power of two (i.e. its absolute value is a power of
-/// two).
+/// two). When \p OrZero is true, the value is also considered a power of two if
+/// it may be zero (i.e. it is known to be either zero or a power of two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr,
-                       bool OrNegative = false);
+                       bool OrNegative = false, bool OrZero = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);

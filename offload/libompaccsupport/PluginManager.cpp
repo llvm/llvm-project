@@ -38,8 +38,6 @@ using namespace llvm::omp::target::helpers;
 
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
 } // namespace llvm::offload::tmp
 
 void PluginManager::init() {
@@ -481,14 +479,10 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
               REPORT() << "Failed to query max threads of " << Entry.SymbolName
                        << ": " << Res->Details;
 
-            auto &Image =
-                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-                    Program.getHandle());
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
             LaunchInfo.Name = Entry.SymbolName;
-            LaunchInfo.Image = Image.getMemoryBuffer();
-            LaunchInfo.IRImage = Image.getIRImageMemoryBuffer();
+            LaunchInfo.Program = Program;
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;

@@ -318,3 +318,44 @@ define void @minsize(ptr %p, i64 %len) minsize {
   call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 range(i64 0, 8) %len, i1 false)
   ret void
 }
+
+; In a function with profile data, the branches of the expansion get explicitly
+; unknown weights.
+define void @profiled(ptr %p, i64 %len) !prof !0 {
+; EXPAND-LABEL: define void @profiled(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0:![0-9]+]] {
+; EXPAND-NEXT:    [[LEN_GE2:%.*]] = icmp uge i64 [[LEN]], 2
+; EXPAND-NEXT:    br i1 [[LEN_GE2]], label %[[MEMSET_STORE2:.*]], label %[[MEMSET_LT2:.*]], !prof [[PROF1:![0-9]+]]
+; EXPAND:       [[MEMSET_STORE2]]:
+; EXPAND-NEXT:    store i16 0, ptr [[P]], align 1
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[LEN]], 2
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store i16 0, ptr [[TAIL]], align 1
+; EXPAND-NEXT:    br label %[[MEMSET_DONE:.*]]
+; EXPAND:       [[MEMSET_LT2]]:
+; EXPAND-NEXT:    [[LEN_GE1:%.*]] = icmp uge i64 [[LEN]], 1
+; EXPAND-NEXT:    br i1 [[LEN_GE1]], label %[[MEMSET_STORE1:.*]], label %[[BB1:.*]], !prof [[PROF1]]
+; EXPAND:       [[MEMSET_STORE1]]:
+; EXPAND-NEXT:    store i8 0, ptr [[P]], align 1
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[MEMSET_DONE]]
+; EXPAND:       [[MEMSET_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @profiled(
+; CALL-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 4) [[LEN]], i1 false)
+; CALL-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 range(i64 0, 4) %len, i1 false)
+  ret void
+}
+
+!0 = !{!"function_entry_count", i64 1000}
+;.
+; EXPAND: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; EXPAND: [[PROF1]] = !{!"unknown", !"lower-mem-intrinsics"}
+;.
+; CALL: [[PROF0]] = !{!"function_entry_count", i64 1000}
+;.

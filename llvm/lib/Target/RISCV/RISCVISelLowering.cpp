@@ -44,12 +44,10 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace llvm;
@@ -73,21 +71,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   // Note: Hard-float ABIs that don't match the F/D extensions are already
   // rejected/ by RISCVABI::computeTargetABI() during subtarget construction.
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
+  assert(ABI != RISCVABI::ABI::Unknown && "Improperly initialised target ABI");
 
-  switch (ABI) {
-  default:
+  if (RISCVABI::isPurecap(ABI))
     reportFatalUsageError("Don't know how to lower this ABI");
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64E:
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_LP64F:
-  case RISCVABI::ABI_LP64D:
-    break;
-  }
 
   MVT XLenVT = Subtarget.getXLenVT();
 

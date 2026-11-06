@@ -22,6 +22,7 @@ using namespace RTLIB;
 #define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+#define GET_RUNTIME_LIBCALL_ATTRIBUTES
 #define GET_RUNTIME_LIBCALL_MASKED_VECTOR_LIBCALL_MAPPING
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
@@ -338,8 +339,17 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
   case NXV4I32:
     return ScalableVectorType::get(Type::getInt32Ty(Ctx), 4);
   default:
-    return nullptr;
+    break;
   }
+
+  ArrayRef<FuncArgTypeID> EltIDs = getStructElementTypes(ID);
+  if (EltIDs.empty())
+    return nullptr;
+
+  SmallVector<Type *, 2> EltTys;
+  for (FuncArgTypeID EltID : EltIDs)
+    EltTys.push_back(convertToIRType(EltID, Ctx, TT, DL, LdblFormat));
+  return StructType::get(Ctx, EltTys);
 }
 
 static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
@@ -397,10 +407,6 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   return Attribute::None;
 }
 
-static bool isFPVectorTy(Type *Ty) {
-  return Ty->isVectorTy() && Ty->isFPOrFPVectorTy();
-}
-
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
@@ -411,15 +417,17 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   if (ProtoTypes[0] == NoFuncArgType)
     return {};
 
-  AttributeList Attrs;
-
   FuncArgTypeID LastID = ProtoTypes[0];
   Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
+  AttributeSet RetAttrs;
   if (Attribute::AttrKind AK =
           getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
-    Attrs = Attrs.addRetAttribute(Ctx, AK);
+    RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
+  if (isInRegStruct(LastID))
+    RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
 
   SmallVector<Type *, 4> ArgTys;
+  SmallVector<AttributeSet, 4> ArgAttrs;
   bool IsVarArg = false;
   unsigned Idx = 1;
   for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
@@ -439,19 +447,42 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
 
     Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
+
+    AttributeSet ArgAttrSet;
     if (Attribute::AttrKind AK =
             getIntExtAttr(TyID, ArgTy, TT, /*IsReturn=*/false))
-      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, AK);
+      ArgAttrSet = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
+    ArgAttrs.push_back(ArgAttrSet);
   }
 
-  if (RetTy->isVectorTy() && !ArgTys.empty() && isFPVectorTy(ArgTys[0])) {
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+  for (const LibcallArgAttrs &Static :
+       getLibcallImplArgAttributes(LibcallImpl)) {
+    assert(Static.ArgNo < ArgAttrs.size() &&
+           "attributes for nonexistent argument");
+    AttributeSet StaticAttrs = getLibcallArgAttributeSet(Ctx, Static.AttrSetID);
+    if (Static.PointeeType != NoFuncArgType) {
+      Type *PointeeTy =
+          convertToIRType(Static.PointeeType, Ctx, TT, DL, LongDoubleFmt);
+      Type *AlignTy =
+          Static.AlignToElement ? PointeeTy->getScalarType() : PointeeTy;
+      SmallVector<Attribute, 2> PointeeAttrs = {
+          Attribute::getWithAlignment(Ctx, DL.getABITypeAlign(AlignTy))};
+      TypeSize Size = DL.getTypeStoreSize(PointeeTy);
+      if (!Size.isScalable()) {
+        PointeeAttrs.push_back(
+            Attribute::getWithDereferenceableBytes(Ctx, Size.getFixedValue()));
+      }
+
+      StaticAttrs = StaticAttrs.addSortedAttributes(Ctx, PointeeAttrs);
+    }
+
+    AttributeSet &ArgAttrSet = ArgAttrs[Static.ArgNo];
+    ArgAttrSet = ArgAttrSet.addAttributes(Ctx, StaticAttrs);
   }
 
-  return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
+  return {FunctionType::get(RetTy, ArgTys, IsVarArg),
+          AttributeList::get(Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl),
+                             RetAttrs, ArgAttrs)};
 }
 
 std::pair<FunctionType *, AttributeList>
@@ -578,56 +609,19 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   case RTLIB::impl___rt_sdiv:
   case RTLIB::impl___rt_udiv:
   case RTLIB::impl___rt_sdiv64:
-  case RTLIB::impl___rt_udiv64: {
-    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
-    // return both values modeled as an inreg { iN, iN } struct (quotient,
-    // remainder). The __rt_*div* cases pass the arguments in opposite order,
-    // though this doesn't affect the declaration.
-    bool IsSigned;
-    unsigned Bits;
-    switch (LibcallImpl) {
-    case RTLIB::impl___aeabi_idivmod:
-    case RTLIB::impl___rt_sdiv:
-      IsSigned = true;
-      Bits = 32;
-      break;
-    case RTLIB::impl___aeabi_uidivmod:
-    case RTLIB::impl___rt_udiv:
-      IsSigned = false;
-      Bits = 32;
-      break;
-    case RTLIB::impl___aeabi_ldivmod:
-    case RTLIB::impl___rt_sdiv64:
-      IsSigned = true;
-      Bits = 64;
-      break;
-    case RTLIB::impl___aeabi_uldivmod:
-    case RTLIB::impl___rt_udiv64:
-      IsSigned = false;
-      Bits = 64;
-      break;
-    default:
-      llvm_unreachable("unexpected divmod libcall");
-    }
-
-    Type *IntTy = IntegerType::get(Ctx, Bits);
-    StructType *RetTy = StructType::get(IntTy, IntTy);
-    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
-
+  case RTLIB::impl___rt_udiv64:
+  case RTLIB::impl___divmodqi4:
+  case RTLIB::impl___udivmodqi4:
+  case RTLIB::impl___divmodhi4:
+  case RTLIB::impl___udivmodhi4:
+  case RTLIB::impl_avr___divmodsi4:
+  case RTLIB::impl_avr___udivmodsi4: {
+    auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
     FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
-    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
-    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
-    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
-
-    return {FuncTy, Attrs};
+    return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
   }
   case RTLIB::impl_sqrtf:
   case RTLIB::impl_sqrt: {
@@ -653,46 +647,5 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     break;
   }
 
-  auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
-  if (!FuncTy || FuncTy->getNumParams() == 0 ||
-      !isFPVectorTy(FuncTy->getParamType(0)))
-    return {FuncTy, Attrs};
-
-  Type *VecTy = FuncTy->getParamType(0);
-  Align PtrAlign = DL.getABITypeAlign(VecTy->getScalarType());
-  switch (LibcallImpl) {
-  case RTLIB::impl_amd_vrd2_sincos:
-  case RTLIB::impl_amd_vrd4_sincos:
-  case RTLIB::impl_amd_vrd8_sincos:
-  case RTLIB::impl_amd_vrs4_sincosf:
-  case RTLIB::impl_amd_vrs8_sincosf:
-  case RTLIB::impl_amd_vrs16_sincosf:
-    PtrAlign = DL.getABITypeAlign(VecTy);
-    break;
-  default:
-    break;
-  }
-
-  AttrBuilder ArgAttrBuilder(Ctx);
-  for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-    ArgAttrBuilder.addAttribute(AK);
-  ArgAttrBuilder.addAlignmentAttr(PtrAlign);
-
-  bool HasPtrArg = false;
-  for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {
-    if (ParamTy->isPointerTy()) {
-      Attrs = Attrs.addParamAttributes(Ctx, Idx, ArgAttrBuilder);
-      HasPtrArg = true;
-    }
-  }
-
-  if (HasPtrArg) {
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-  }
-
-  return {FuncTy, Attrs};
+  return getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
 }

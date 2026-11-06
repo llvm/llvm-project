@@ -50,10 +50,13 @@ namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-llvm::omp::target::plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context);
+llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
+                                         ol_device_handle_t Device,
+                                         TargetAllocTy Kind, int64_t Size,
+                                         void *HostPtr);
+llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
+                             ol_device_handle_t Device, void *Ptr,
+                             TargetAllocTy Kind);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -361,11 +364,14 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   ProgramTy Program = std::move(*ProgramOrErr);
 
   OMPT_IF_BUILT_AND_INITIALIZED({
-    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-        Program.getHandle());
+    auto ImageOrErr = Program.getImage();
+    if (!ImageOrErr)
+      return ImageOrErr.takeError();
+    llvm::MemoryBufferRef Image = *ImageOrErr;
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        Image.getBufferSize(),
+                        const_cast<char *>(Image.getBufferStart()),
                         /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
   });
 
@@ -411,10 +417,6 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
-llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
-  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
-}
-
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -423,16 +425,8 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to allocate device memory: device " << DeviceID
-             << " has no context";
-    return nullptr;
-  }
-
-  auto AllocOrErr =
-      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
-                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
+      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -451,16 +445,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
-             << ": device " << DeviceID << " has no context";
-    return OFFLOAD_FAIL;
-  }
-
-  if (auto Err =
-          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
-                                static_cast<TargetAllocTy>(Kind))) {
+  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
+          Context, DeviceHandle, TgtAllocBegin,
+          static_cast<TargetAllocTy>(Kind))) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
              << llvm::toString(std::move(Err));
     return OFFLOAD_FAIL;
@@ -1353,8 +1340,14 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {
-    Kernel = KernelInfoTy(KernelLaunchInfo.Name, KernelLaunchInfo.Image,
-                          KernelLaunchInfo.IRImage);
+    auto ImageOrErr = KernelLaunchInfo.Program.getImage();
+    if (!ImageOrErr) {
+      REPORT() << "Failure to get the image of kernel " << KernelLaunchInfo.Name
+               << ": " << toString(ImageOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    Kernel = KernelInfoTy(KernelLaunchInfo.Name, *ImageOrErr,
+                          KernelLaunchInfo.Program.getIRImage());
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)

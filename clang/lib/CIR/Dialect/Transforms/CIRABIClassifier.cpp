@@ -113,6 +113,18 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
   return llvm::Align(layout.getRecordAlign());
 }
 
+/// A record's unadjusted alignment, the alignment its members give it before
+/// an alignment attribute on the record raises it.  Like the declared
+/// alignment, it comes from the module's record-layout metadata, and the
+/// computed fallback only serves hand-written CIR.
+static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
+                                         const DataLayout &dl) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  if (!layout)
+    return llvm::Align(dl.getTypeABIAlignment(recTy));
+  return llvm::Align(layout.getUnadjustedAlign());
+}
+
 /// The CIR types the bridge handles.  Scalars: an integer up to 128
 /// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
 /// pointer, bool, void, or any floating-point type.  Aggregates: a complete
@@ -384,15 +396,14 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
         llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
+        llvm::Align unadjustedAlign = recordUnadjustedAlign(modOp, recTy, dl);
 
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters, since a target may pass a large empty
         // record in memory whatever its content.
-        // TODO: AArch64 needs the unadjusted alignment. We'll need to add that
-        // to RecordLayoutAttr.
         if (recTy.isEmptyForABI())
           return tb.getRecordType(
-              /*Fields=*/{}, sizeBits, align, /*UnadjustedAlign=*/align,
+              /*Fields=*/{}, sizeBits, align, unadjustedAlign,
               llvm::abi::StructPacking::Default,
               /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
 
@@ -469,8 +480,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             fields.push_back(llvm::abi::FieldInfo(
                 mapCIRType(variantTy, typeMapper, dl, modOp)));
           }
-          return tb.getUnionType(fields, sizeBits, align,
-                                 /*UnadjustedAlign=*/align,
+          return tb.getUnionType(fields, sizeBits, align, unadjustedAlign,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
@@ -504,10 +514,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
               /*IsUnnamedBitField=*/isUnnamed));
         }
 
-        return tb.getRecordType(
-            fields, sizeBits, align, /*UnadjustedAlign=*/align,
-            llvm::abi::StructPacking::Default,
-            /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
+        return tb.getRecordType(fields, sizeBits, align, unadjustedAlign,
+                                llvm::abi::StructPacking::Default,
+                                /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{},
+                                flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
