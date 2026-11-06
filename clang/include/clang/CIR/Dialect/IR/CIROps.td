@@ -172,6 +172,14 @@ class HasAtMostOneOfAttrs<list<string> names> : PredOpTrait<
   HasAtMostOneOfAttrsPred<!foreach(name, names, "$" # name)>
 >;
 
+// The loop_hints lowering requires a loop_id, to identify the branches that get
+// created during flatten. Predicate makes sure the loop_id is available to
+// loop_hints.
+def LoopHintsRequireLoopId : PredOpTrait<
+  "'loop_hints' requires a 'loop_id'",
+  CPred<"!$loop_hints || $loop_id">
+>;
+
 // Like `SameTypeOperands`, but the operands are pointers that are only required
 // to share the same pointee type; they may still differ in address space (e.g.
 // a `cir.copy` that assigns through an address-space-qualified pointer).
@@ -335,7 +343,7 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
     %x = cir.cast array_to_ptrdecay %0 
-       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
+       : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
     %y = cir.cast floating %f : !cir.double -> !cir.float fenv<>
     ```
   }];
@@ -539,8 +547,8 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
     It moves the pointer by `stride * sizeof(element_type)` bytes.
 
     ```
-    %3 = cir.const 0 : i32
-    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
     ```
   }];
 
@@ -680,8 +688,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -774,10 +783,10 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 
     ```
     // int count;
-    %0 = cir.alloca "count" align(4) : !cir.ptr<i32>
+    %0 = cir.alloca "count" align(4) : !cir.ptr<!s32i>
 
     // int *ptr;
-    %1 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<i32>>
+    %1 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<!s32i>>
     ...
     ```
   }];
@@ -862,20 +871,20 @@ def CIR_LoadOp : CIR_Op<"load", [
     ```
 
     // Read from local variable, address in %0.
-    %1 = cir.load %0 : !cir.ptr<i32>, i32
+    %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 
     // Load address from memory at address %0. %3 is used by at least one
     // operation that dereferences a pointer.
-    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<!s32i>>
 
     // Perform a volatile load from address in %0.
-    %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
+    %4 = cir.load volatile %0 : !cir.ptr<!s32i>, !s32i
 
     // Perform an invariant load from address in %0.
-    %5 = cir.load invariant %0 : !cir.ptr<i32>, i32
+    %5 = cir.load invariant %0 : !cir.ptr<!s32i>, !s32i
 
     // Others
-    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<i32>, i32
+    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<!s32i>, !s32i
     ```
   }];
 
@@ -942,7 +951,7 @@ def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
 
     ```
     %v = cir.masked_load align(16) %ptr, %mask, %passthru
-         : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
+         : !cir.ptr<!s32i>, <4xi1>, <4xi32> -> <4xi32>
     ```
   }];
 
@@ -987,13 +996,13 @@ def CIR_StoreOp : CIR_Op<"store", [
 
     ```
     // Store a function argument to local storage, address in %0.
-    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 
     // Perform a volatile store into memory location at the address in %0.
-    cir.store volatile %arg0, %0 : i32, !cir.ptr<i32>
+    cir.store volatile %arg0, %0 : !s32i, !cir.ptr<!s32i>
 
     // Others
-    cir.store align(16) atomic(seq_cst) %x, %addr : i32, !cir.ptr<i32>
+    cir.store align(16) atomic(seq_cst) %x, %addr : !s32i, !cir.ptr<!s32i>
     ```
   }];
 
@@ -1895,7 +1904,7 @@ def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
 
 def CIR_BrOp : CIR_Op<"br",[
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator
+  Pure, Terminator, LoopHintsRequireLoopId
 ]> {
   let summary = "Unconditional branch";
   let description = [{
@@ -1905,8 +1914,9 @@ def CIR_BrOp : CIR_Op<"br",[
     Note that for source level `goto`'s crossing scope boundaries, those are
     usually represented with the "symbolic" `cir.goto` operation.
 
-    When a loop is flattened, the optional `loop_hints` attribute is placed on
-    the branches that form the loop's back edge (see `cir.brcond`).
+    When a loop is flattened, the optional `loop_id` and `loop_hints`
+    attributes are placed on the branches that form the loop's back edge (see
+    `cir.brcond`).
 
     Example:
 
@@ -1927,11 +1937,12 @@ def CIR_BrOp : CIR_Op<"br",[
   ];
 
   let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
-    (`loop_hints` $loop_hints^)? attr-dict
+    (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -2235,7 +2246,7 @@ def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
 
 def CIR_BrCondOp : CIR_Op<"brcond", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator, AttrSizedOperandSegments
+  Pure, Terminator, AttrSizedOperandSegments, LoopHintsRequireLoopId
 ]> {
   let summary = "Conditional branch";
   let description = [{
@@ -2243,9 +2254,12 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
     it branches to 'bb1'.
 
-    The optional `loop_hints` attribute is attached by CFG flattening to
-    branches that target a loop header (i.e. the loop's back edge), carrying
-    the `#cir.loop_hint` of the original loop op.
+    The optional `loop_id` and `loop_hints` attributes are attached to the
+    `cir.br` and `cir.brcond` attributes during CFG flattening, which takes the
+    hints/id from the original loop and applies it to the branch that targets
+    the loop header. `loop_id` is a distinct attribute per-loop, so we can
+    identify which branches come from the same loop. At the moment, the id is
+    only used/generated for `loop_hints`, but is likely independently useful.
 
     Example:
 
@@ -2260,17 +2274,20 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$cond, "mlir::Block *":$destTrue, "mlir::Block *":$destFalse,
+    OpBuilder<(ins "mlir::Value":$cond, "mlir::Block *":$destTrue,
+               "mlir::Block *":$destFalse,
                CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
                CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
       build($_builder, $_state, cond, destOperandsTrue,
-            destOperandsFalse, /*loop_hints=*/nullptr, destTrue, destFalse);
+            destOperandsFalse, /*loop_id=*/nullptr, /*loop_hints=*/nullptr,
+            destTrue, destFalse);
     }]>
   ];
 
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
                        Variadic<CIR_AnyType>:$destOperandsFalse,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
@@ -2278,7 +2295,7 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
-    (`loop_hints` $loop_hints^)? attr-dict
+    (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)? attr-dict
   }];
 }
 
@@ -2336,7 +2353,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
 //===----------------------------------------------------------------------===//
 
 class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
-  LoopOpInterface, NoRegionArguments
+  LoopOpInterface, NoRegionArguments, LoopHintsRequireLoopId
 ]> {
   let extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
@@ -2380,12 +2397,13 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
   let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
     $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)?
-    (`loop_hints` $loop_hints^)? attr-dict
+    (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let description = [{
@@ -2461,10 +2479,12 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
-  let arguments = (ins OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
+  let arguments = (ins OptionalAttr<AnyDistinctAttr>:$loop_id,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
   let assemblyFormat = [{
-    $body `while` $cond (`loop_hints` $loop_hints^)? attr-dict
+    $body `while` $cond (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)?
+    attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2540,6 +2560,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
   }];
 
   let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
@@ -2550,6 +2571,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `body` $body
     `step` $step
     (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_id` $loop_id^)?
     (`loop_hints` $loop_hints^)?
     attr-dict
   }];
@@ -3578,7 +3600,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    void setupRegionInitializedLLVMGlobalOp(
+    mlir::LLVM::GlobalOp setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
@@ -3590,8 +3612,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                                       mlir::OpBuilder &builder) const;
   }];
 
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+      "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3618,11 +3641,11 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 
     Example:
     ```
-    %x = cir.get_global @gv : !cir.ptr<i32>
+    %x = cir.get_global @gv : !cir.ptr<!s32i>
     ...
-    %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
+    %y = cir.get_global thread_local @tls_gv : !cir.ptr<!s32i>
     ...
-    %w = cir.get_global static_local @func_static : !cir.ptr<i32>
+    %w = cir.get_global static_local @func_static : !cir.ptr<!s32i>
     ```
   }];
 
@@ -3678,6 +3701,9 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
     `)`
     `:` qualified(type($addr)) attr-dict
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3863,6 +3889,9 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
   }];
 
   let hasVerifier = 1;
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "const CIRPreConversionTypeMap &":$preConversionTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4330,6 +4359,13 @@ def CIR_FuncOp : CIR_Op<"func", [
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
 
+    The `requires_call_conv_lowering` keyword marks a function whose signature
+    and call sites still have to be rewritten to match the target ABI by
+    CallConvLowering. Every function built in C++ starts out with it, and the
+    pass drops it once the function is lowered. A lowered signature uses
+    ordinary CIR types and cannot be told apart from one that still needs
+    lowering, so the pass works only on functions that carry the keyword.
+
     The `global_ctor` keyword indicates whether a function should execute before
     `main()` function, as specified by `__attribute__((constructor))`. An
     execution priority can also be specified `global_ctor(<priority>)`.
@@ -4368,7 +4404,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     cir.func no_inline @some_method(...)
     
     // Builtin function
-    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+    cir.func builtin @__builtin_coro_end(!cir.ptr<!s8i>, !cir.bool) -> !cir.bool
     // Coroutine
     cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
       ...
@@ -4386,10 +4422,11 @@ def CIR_FuncOp : CIR_Op<"func", [
     >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
-    UnitAttr:$coroutine,
+    OptionalAttr<CIR_CoroutineKindAttr>:$coroutine_kind,
     OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
     UnitAttr:$lambda,
     UnitAttr:$no_proto,
+    UnitAttr:$requires_call_conv_lowering,
     UnitAttr:$dso_local,
     DefaultValuedAttr<
       CIR_GlobalLinkageKindAttr,
@@ -5290,6 +5327,61 @@ def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic SaveOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSaveOp : CIR_CoroIntrinsicOp<"save",
+    (ins CIR_VoidPtrType:$coroaddr),
+    (outs Token:$result), [TokenProducerTrait]> {
+  let summary = "Represents llvm.coro.save";
+  let description = [{
+    `cir.coro.intrinsic.save` represents the `llvm.coro.save` intrinsic.
+
+    It marks the point where a coroutine needs to update its state to
+    prepare for resumption, so that it is considered suspended (and thus
+    eligible for resumption).
+  }];
+  let llvmOp = "CoroSaveOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine CoroExitOP
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroExitOp : CIR_Op<"coro.exit", [
+  Terminator
+]> {
+  let summary = "Branches to the enclosing cir.coroutine's exit region";
+  let description = [{
+    Placeholder emitted while flattening `cir.await`. `cir.coroutine`flattening
+    rewrites it into a `cir.br` to the `exit` block.
+    It must not survive flattening.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine CoroCleanupOP
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroCleanupOp : CIR_Op<"coro.cleanup", [
+  Terminator
+]> {
+  let summary = "Branches through the enclosing cleanups to the coroutine cleanup";
+  let description = [{
+    Placeholder emitted for the destroy case of a flattened `cir.await`.
+    Like `cir.co_return`, it leaves every enclosing `cir.cleanup.scope`
+    through its cleanup, so the destructors of locals in scope run first.
+    `cir.coroutine` flattening then rewrites it into a branch to the
+    `destroy` region, which frees the frame and continues to the `exit`
+    region. It must not survive flattening.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Coroutine intrinsic PromiseOp
 //===----------------------------------------------------------------------===//
 
@@ -5696,6 +5788,33 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
 
   let results = (outs CIR_PointerType:$result);
   let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPUFeaturePredicateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AMDGPUFeaturePredicateOp : CIR_Op<"amdgpu_feature_predicate"> {
+  let summary = "AMDGPU feature predicate resolved at JIT time";
+
+  let description = [{
+    Represents `__builtin_amdgcn_processor_is` and
+    `__builtin_amdgcn_is_invocable` when targeting AMDGCN-flavored SPIR-V.
+    The result is a specialization constant resolved once the concrete
+    processor is known.
+
+    `predicate` is `is.<processor>` or `has.<features>`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.amdgpu_feature_predicate "is.gfx900"
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$predicate);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = "$predicate attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6694,6 +6813,47 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
   let assemblyFormat = [{
     $matrix
     `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixExtractRowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixExtractRowOp : CIR_Op<"matrix.extract_row", [
+  Pure,
+  TypesMatchWith<
+    "type of 'result' matches vector type with same element type of 'matrix' "
+    "and size equals to num columns",
+    "matrix", "result",
+    "cir::VectorType::getFixed("
+      "mlir::cast<cir::MatrixType>($_self).getElementType(),"
+      "mlir::cast<cir::MatrixType>($_self).getNumColumns()"
+    ")">
+]> {
+  let summary = "Extract a row from a matrix object";
+  let description = [{
+    The `cir.matrix.extract_row` operation extracts a row from from a matrix
+    object using a row index.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %row = cir.matrix.extract_row %matrix[%rowIdx : !u64i]
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins 
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx
+  );
+
+  let results = (outs CIR_AnyVectorType:$result);
+
+  let assemblyFormat = [{
+    $matrix
+    `[` $rowIdx `:` type($rowIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];
 }
@@ -8078,9 +8238,9 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     Example:
 
     ```
-    %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
-    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
-    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
+    %size = cir.objsize min %ptr : !cir.ptr<!s32i> -> !u64i
+    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<!s32i> -> !u64i
+    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<!s32i> -> !u64i
     ```
   }];
 
@@ -9943,8 +10103,9 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation
-    is `add`, `sub`, `max`, or `min`, the type of `val` may either be an integer
-    type or a floating-point type. Otherwise, `val` must be an integer.
+    is `add`, `sub`, `max`, or `min`, the type of `val` may be an integer type,
+    a floating-point type, or a vector of floating-point type. Otherwise, `val`
+    must be an integer.
 
     This operation atomically loads the value from `ptr`, performs the binary
     operation as indicated by `binop` on the loaded value and `val`, and stores
@@ -9971,10 +10132,10 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     %res = cir.atomic.fetch add seq_cst %ptr, %val
         : (!cir.ptr<!s32i>, !s32i) -> !s32i
   }];
-  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let results = (outs CIR_AnyIntOrFloatOrVecOfFloatType:$result);
   let arguments = (ins
-    Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
-    CIR_AnyIntOrFloatType:$val,
+    Arg<CIR_PtrToIntOrFloatOrVecOfFloatType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyIntOrFloatOrVecOfFloatType:$val,
     CIR_AtomicFetchKindAttr:$binop,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,

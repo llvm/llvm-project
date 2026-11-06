@@ -468,9 +468,8 @@ public:
 
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
-    // TODO(cir): consider address space here.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType destTy = getVoidPtrTy();
+    auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
     return cir::DynamicCastOp::create(
         *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
@@ -803,7 +802,7 @@ public:
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
     auto resultTy =
-        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
+        cir::VectorType::getFixed(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }
@@ -832,6 +831,12 @@ public:
                                            mlir::Value rowIdx,
                                            mlir::Value columnIdx) {
     return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixExtractRowOp createMatrixExtractRow(mlir::Location loc,
+                                                 mlir::Value matrix,
+                                                 mlir::Value rowIdx) {
+    return cir::MatrixExtractRowOp::create(*this, loc, matrix, rowIdx);
   }
 
   cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,

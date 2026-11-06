@@ -1308,6 +1308,61 @@ entry:
           .empty());
 }
 
+TEST_F(VecUtilsTest, getAlignment) {
+  sandboxir::Context Ctx(C);
+  auto *Int8 = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Int16 = sandboxir::Type::getInt16Ty(Ctx);
+  auto *Int32 = sandboxir::Type::getInt32Ty(Ctx);
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(1)},
+                SmallVector<sandboxir::Type *>{Int8, Int8}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(4), Align(8)},
+                SmallVector<sandboxir::Type *>{Int32, Int32, Int32}),
+            Align(4));
+
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(2)},
+                SmallVector<sandboxir::Type *>{Int8, Int8}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(2)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(2), Align(4)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(2));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(2)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(4));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(4), Align(8)},
+                SmallVector<sandboxir::Type *>{Int8, Int8, Int8}),
+            Align(4));
+
+  EXPECT_EQ(
+      sandboxir::VecUtils::getVecAlignment(
+          SmallVector<Align>{Align(4)}, SmallVector<sandboxir::Type *>{Int8}),
+      Align(4));
+#ifndef NDEBUG
+  EXPECT_DEATH(
+      sandboxir::VecUtils::getVecAlignment(
+          SmallVector<Align>{}, SmallVector<sandboxir::Type *>{Int8, Int8}),
+      ".*empty.*");
+  EXPECT_DEATH(
+      sandboxir::VecUtils::getVecAlignment(SmallVector<Align>{Align(1)},
+                                           SmallVector<sandboxir::Type *>{}),
+      ".*empty.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getVecAlignment(
+                   SmallVector<Align>{Align(1), Align(1)},
+                   SmallVector<sandboxir::Type *>{Int8}),
+               ".*same.*");
+#endif
+}
+
 #ifndef NDEBUG
 TEST_F(VecUtilsTest, BndlRef) {
   parseIR(R"IR(

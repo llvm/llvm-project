@@ -1,7 +1,7 @@
-! RUN: not %flang_fc1 -fsyntax-only -fenumeration-type %s 2>&1 | FileCheck %s
-! With the enumeration-type feature enabled, NEXT and PREVIOUS require an
-! argument of enumeration type.  A non-enumeration argument must produce a
-! proper diagnostic rather than an internal compiler error.
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! NEXT and PREVIOUS require an argument of enumeration type.  A non-enumeration
+! argument must produce a proper diagnostic rather than an internal compiler
+! error.
 
 subroutine test_next_nonenum()
   integer :: i, j

@@ -23,7 +23,7 @@
 using namespace mlir;
 
 using llvm::all_of;
-using llvm::count;
+using llvm::drop_begin;
 
 // Discardable attribute to control vector unroll patterns.
 static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
@@ -39,6 +39,7 @@ struct MLUCandidate {
   VectorType accType;
   VectorType lhsType;
   VectorType rhsType;
+  int64_t contractK;
 
   // Shape of the register-tiled contraction. We'll insert a loop nest to cover
   // the original shape.
@@ -65,8 +66,9 @@ struct MLUCandidate {
   Value accMemIn;
   Value accMemOut;
 
-  // Reconstructed accumulation loop with native-shaped iter_args.
+  // Reconstructed accumulation loop(s) with native-shaped iter_args.
   scf::ForOp slicedAccLoop;
+  scf::ForOp slicedInnerAccLoop;
 
   // Keep track of operations that should be deleted after transformation
   // (depending on which ops could be integrated into the new loop nest).
@@ -90,9 +92,10 @@ using MatchTypesAndShapeFn = std::function<LogicalResult(
 
 static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
                             Value ivM, Value ivN);
-static SmallVector<Value> buildKLoopBody(MLUCandidate &candidate, OpBuilder &b,
-                                         Location loc, Value ivM, Value ivN,
-                                         Value ivK, ValueRange iterArgs);
+static SmallVector<Value> buildKLLoopBody(MLUCandidate &candidate, OpBuilder &b,
+                                          Location loc, Value ivM, Value ivN,
+                                          Value ivK, Value ivL,
+                                          ValueRange iterArgs);
 
 //----------------------------------------------------------------------------//
 // Utilities                                                                  //
@@ -254,7 +257,8 @@ static void setNativeShapeAttr(VectorTransferOpInterface op,
 
 // Establish whether the candidate contraction is a canonical matrix
 // multiplication on flat or VNNI-packed vectors. If successful, the discovered
-// operand and accumulator types are recorded in the candidate struct.
+// operand/accumulator types and the extent of the main reduction dimension are
+// recorded in the candidate struct.
 //
 // Example (flat):
 //   vector.contract {
@@ -329,6 +333,7 @@ static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
   candidate.accType = accType;
   candidate.lhsType = lhsType;
   candidate.rhsType = rhsType;
+  candidate.contractK = lhsType.getShape()[1];
 
   return success();
 }
@@ -379,10 +384,13 @@ matchTypesAndShape(MLUCandidate &candidate,
     return rewriter.notifyMatchFailure(
         contract, "contraction is already in native shape");
 
-  if (!all_of(drop_begin(*maybeTileShapeRatio, 2), isOne) ||
-      !all_of(drop_begin(*maybeUnrollShapeRatio, 2), isOne))
+  if (!all_of(drop_begin(*maybeUnrollShapeRatio, 2), isOne))
     return rewriter.notifyMatchFailure(
-        contract, "cannot tile/unroll on the reduction dimensions");
+        contract, "cannot unroll in the reduction dimensions");
+
+  if (candidate.isInVnniLayout && (maybeTileShapeRatio->back() != 1))
+    return rewriter.notifyMatchFailure(contract,
+                                       "cannot tile in the VNNI dimension");
 
   int64_t regTileM = contractRegTileShape[0];
   int64_t regTileN = contractRegTileShape[1];
@@ -455,7 +463,7 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
                                        "is not in an index-based for-loop");
 
   if (auto step = getConstantIntValue(accLoop.getStep());
-      !step || (*step != 1 && *step != candidate.contractNativeShape[2]))
+      !step || (*step != 1 && *step != candidate.contractK))
     return rewriter.notifyMatchFailure(contract,
                                        "accumulation loop step is not 1 or K");
 
@@ -487,22 +495,59 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return rewriter.notifyMatchFailure(
         contract, "LHS/RHS are not vector.transfer_read ops");
 
-  auto checkTransferOp = [&](vector::TransferReadOp transferOp) {
-    if (!isSimpleTransferOp(transferOp))
-      return rewriter.notifyMatchFailure(contract, [&](Diagnostic &diag) {
-        diag << "transfer op has non-identity permutation, mask, or "
-                "out-of-bounds check: "
-             << *transferOp;
-      });
-
-    if (count(transferOp.getIndices(), accLoop.getInductionVar()) != 1)
+  auto checkOperandRead = [&](vector::TransferReadOp read, unsigned kVecDim) {
+    if (!isSimpleTransferOp(read))
       return rewriter.notifyMatchFailure(
-          contract, "transfer op does not use accumulator index");
+          contract, "operand read has non-identity permutation, mask, or "
+                    "out-of-bounds check");
+
+    auto indices = read.getIndices();
+    if (candidate.isInVnniLayout && !isZeroInteger(indices.back()))
+      return rewriter.notifyMatchFailure(
+          contract, "operand read VNNI dimension offset must be zero");
+
+    auto ivIt =
+        std::find(indices.begin(), indices.end(), accLoop.getInductionVar());
+    if (ivIt == indices.end())
+      return rewriter.notifyMatchFailure(
+          contract, "operand read does not use loop index");
+    if (std::find(ivIt + 1, indices.end(), accLoop.getInductionVar()) !=
+        indices.end())
+      return rewriter.notifyMatchFailure(
+          contract, "operand read uses loop index more than once");
+
+    // The following situation is a limitation in the implementation, so detect
+    // and bail out:
+    //
+    // If the loop index selects a block in a blocked layout, and tiling of the
+    // contraction dimension is required, we have to construct a new innermost
+    // tiling loop over the result vector's K dimension (called "L-loop" in the
+    // transformation later). Now if the operand read has a non-zero offset in
+    // that dimension, we would have to insert an addition into the new loop,
+    // which currently would prevent application of the nanokernel pattern.
+    //
+    // Sketch:
+    //         non-zero offset in the vector's K dimension
+    //        IV used in non-vector dimension,          |
+    //                        selects a block           |
+    //                                     |            |
+    //                                     v            v
+    //  vector.transfer_read %A[%block_M, %IV, %c0, %offset_k] ...
+    //                        : memref<?x?x?x?xi8>, vector<64x64xi8>
+    unsigned firstVecDimPos = read.getLeadingShapedRank();
+    unsigned ivPos = std::distance(indices.begin(), ivIt);
+    if (ivPos < firstVecDimPos &&
+        candidate.contractK > candidate.contractNativeShape[2] &&
+        !isZeroInteger(indices[firstVecDimPos + kVecDim]))
+      return rewriter.notifyMatchFailure(contract,
+                                         "operand read from blocked layout has "
+                                         "offset in vector's K dimension");
 
     return success();
   };
 
-  if (failed(checkTransferOp(lhsRead)) || failed(checkTransferOp(rhsRead)))
+  if (failed(checkOperandRead(lhsRead, /*[m, k] -> kVecDim=*/1)) ||
+      failed(checkOperandRead(rhsRead, /*[k, n] -> kVecDim=*/0)))
     return failure();
 
   candidate.accLoop = accLoop;
@@ -676,8 +721,11 @@ static void buildLoopNestForCandidate(MLUCandidate &candidate,
 //    a zero constant).
 // 2. Split the initial value into accNativeType-shaped slices.
 // 3. Create the K-loop with the initial value slices as loop-carried arguments,
-//    i.e. the iter_args have accNativeType.
-// 4. -> buildKLoopBody
+//    i.e. the iter_args have accNativeType. Tiling along the K-dimension
+//    depends on the step:
+//     K:  Use the same bounds but smaller steps/more iterations.
+//     1:  Nest an additional L-loop to traverse the block in smaller steps.
+// 4. -> buildKLLoopBody
 // 5. Splice the final value slices back into an accRegTileType-shaped value and
 //    write it back to memory.
 //
@@ -713,14 +761,56 @@ static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
 
   SmallVector<Value> accInitSliced =
       slice(b, loc, accInit->getResult(0), candidate.accNativeType);
+
+  // Iteration space for accumulation loop (nest).
+  Value lbK = candidate.accLoop.getLowerBound();
+  Value ubK = candidate.accLoop.getUpperBound();
+  Value stepK = candidate.accLoop.getStep();
+  Value lbL;
+  Value ubL;
+  Value stepL;
+
+  // If we need to tile the K dimension, the simplest way is to adjust the
+  // step to the native K extent. However, if the original accumulation loop
+  // uses unit steps, we have to insert an inner loop to handle the tiling
+  // explicitly.
+  //
+  // Note: Using _native_ shape here as we never unroll along the reduction
+  // dimension, so the K extents of the register-tile and native shapes match.
+  int64_t contractNativeK = candidate.contractNativeShape[2];
+  bool needToTileK = candidate.contractK > contractNativeK;
+  bool needLLoop = false;
+  if (needToTileK) {
+    needLLoop = *getConstantIntValue(stepK) % contractNativeK != 0;
+    Value cContractNativeK =
+        arith::ConstantIndexOp::create(b, loc, contractNativeK);
+    if (needLLoop) {
+      lbL = c0;
+      ubL = arith::ConstantIndexOp::create(b, loc, candidate.contractK);
+      stepL = cContractNativeK;
+    } else {
+      stepK = cContractNativeK;
+    }
+  }
+
   candidate.slicedAccLoop = scf::ForOp::create(
-      b, loc, candidate.accLoop.getLowerBound(),
-      candidate.accLoop.getUpperBound(), candidate.accLoop.getStep(),
-      accInitSliced,
-      [&](OpBuilder &b, Location loc, Value ivK, ValueRange iterArgs) {
-        SmallVector<Value> newIterArgs =
-            buildKLoopBody(candidate, b, loc, ivM, ivN, ivK, iterArgs);
-        scf::YieldOp::create(b, loc, newIterArgs);
+      b, loc, lbK, ubK, stepK, accInitSliced,
+      [&](OpBuilder &b, Location loc, Value ivK, ValueRange iterArgsK) {
+        if (!needLLoop) {
+          SmallVector<Value> newIterArgs = buildKLLoopBody(
+              candidate, b, loc, ivM, ivN, ivK, /*ivL=*/Value{}, iterArgsK);
+          scf::YieldOp::create(b, loc, newIterArgs);
+          return;
+        }
+
+        candidate.slicedInnerAccLoop = scf::ForOp::create(
+            b, loc, lbL, ubL, stepL, iterArgsK,
+            [&](OpBuilder &b, Location loc, Value ivL, ValueRange iterArgsL) {
+              SmallVector<Value> newIterArgs = buildKLLoopBody(
+                  candidate, b, loc, ivM, ivN, ivK, ivL, iterArgsL);
+              scf::YieldOp::create(b, loc, newIterArgs);
+            });
+        scf::YieldOp::create(b, loc, candidate.slicedInnerAccLoop.getResults());
       });
 
   Value accSpliced = splice(b, loc, candidate.slicedAccLoop.getResults(),
@@ -735,29 +825,45 @@ static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
 }
 
 // Rebuild the accumulation loop with [lhs|rhs]RegTileType-shaped operations,
-// taking the offsets from the M-N-loop nests into account. The accumulator
-// iter_args are spliced into a accRegTileType-shaped value, and the contraction
-// result is split into accNativeType-shaped yield operands. Again, the
-// operations are annotated with an attribute for unrolling, after which the
-// splice/split logic will fold away completely.
-static SmallVector<Value> buildKLoopBody(MLUCandidate &candidate, OpBuilder &b,
-                                         Location loc, Value ivM, Value ivN,
-                                         Value ivK, ValueRange iterArgs) {
+// replacing the induction variable and taking the offsets from the
+// M-N-(L)-loop nest into account. The accumulator iter_args are spliced into a
+// accRegTileType-shaped value, and the contraction result is split into
+// accNativeType-shaped yield operands. Again, the operations are annotated with
+// an attribute for unrolling, after which the splice/split logic will fold away
+// completely.
+static SmallVector<Value> buildKLLoopBody(MLUCandidate &candidate, OpBuilder &b,
+                                          Location loc, Value ivM, Value ivN,
+                                          Value ivK, Value ivL,
+                                          ValueRange iterArgs) {
   Value accSpliced = splice(b, loc, iterArgs, candidate.accRegTileType);
 
-  SmallVector<Value, 4> lhsOffsets = candidate.lhsRead.getIndices();
-  SmallVector<Value, 4> rhsOffsets = candidate.rhsRead.getIndices();
+  SmallVector<Value, 4> lhsIndices = candidate.lhsRead.getIndices();
+  SmallVector<Value, 4> rhsIndices = candidate.rhsRead.getIndices();
+
   Value accLoopIV = candidate.accLoop.getInductionVar();
-  replace(lhsOffsets, accLoopIV, ivK);
-  replace(rhsOffsets, accLoopIV, ivK);
-  unsigned mPos = lhsOffsets.size() - 2 - candidate.isInVnniLayout;
-  unsigned nPos = rhsOffsets.size() - 1 - candidate.isInVnniLayout;
-  lhsOffsets[mPos] = arith::AddIOp::create(b, loc, lhsOffsets[mPos], ivM);
-  rhsOffsets[nPos] = arith::AddIOp::create(b, loc, rhsOffsets[nPos], ivN);
+  replace(lhsIndices, accLoopIV, ivK);
+  replace(rhsIndices, accLoopIV, ivK);
+
+  unsigned mPos = lhsIndices.size() - 2 - candidate.isInVnniLayout;
+  unsigned nPos = rhsIndices.size() - 1 - candidate.isInVnniLayout;
+  lhsIndices[mPos] = arith::AddIOp::create(b, loc, lhsIndices[mPos], ivM);
+  rhsIndices[nPos] = arith::AddIOp::create(b, loc, rhsIndices[nPos], ivN);
+
+  if (ivL) {
+    unsigned lPosL = lhsIndices.size() - 1 - candidate.isInVnniLayout;
+    unsigned lPosR = rhsIndices.size() - 2 - candidate.isInVnniLayout;
+    // Checked in matchAccumulationLoop.
+    assert(isZeroInteger(lhsIndices[lPosL]) &&
+           isZeroInteger(rhsIndices[lPosR]) &&
+           "Expected zero offsets for L dimension");
+    lhsIndices[lPosL] = ivL;
+    rhsIndices[lPosR] = ivL;
+  }
+
   Value lhsView = makeRankReducingSubview(b, loc, candidate.lhsRead.getBase(),
-                                          lhsOffsets, candidate.lhsRegTileType);
+                                          lhsIndices, candidate.lhsRegTileType);
   Value rhsView = makeRankReducingSubview(b, loc, candidate.rhsRead.getBase(),
-                                          rhsOffsets, candidate.rhsRegTileType);
+                                          rhsIndices, candidate.rhsRegTileType);
 
   SmallVector<Value, 3> zeroIndices(2 + candidate.isInVnniLayout,
                                     arith::ConstantIndexOp::create(b, loc, 0));
@@ -790,12 +896,12 @@ namespace {
 // Prepares a contraction inside an accumulation loop for the nanokernel
 // lowerings.
 //
-// The pattern determines a register tile size for the contraction that can be
+// The pattern determines a register-tile shape for the contraction that can be
 // fully unrolled to a target-specific native shape without exceeding the
-// target's vector registers or AMX tile registers. It then introduces a
-// M-N-loop nest to iterate over such register tiles, and applies the vector
-// dialect's unroll patterns to produce native-shaped operations that the
-// nanokernel patterns can match.
+// target's vector registers or AMX tile registers. It then introduces a loop
+// nest to iterate over such register tiles, and applies the vector dialect's
+// unroll patterns to produce native-shaped operations that the nanokernel
+// patterns can match.
 //
 // Currently, the match is deliberately strict (see the helpers above):
 // The contraction must be a canonical matrix multiplication, have
@@ -830,6 +936,8 @@ struct VectorContractMultiLevelUnroll
     makeAccInitializationBackedByMemory(candidate, rewriter);
     makeAccResultBackedByMemory(candidate, rewriter);
     buildLoopNestForCandidate(candidate, rewriter);
+    if (candidate.slicedInnerAccLoop)
+      moveLoopInvariantCode(candidate.slicedInnerAccLoop);
     moveLoopInvariantCode(candidate.slicedAccLoop);
     for (auto *op : candidate.opsToDelete)
       rewriter.eraseOp(op);

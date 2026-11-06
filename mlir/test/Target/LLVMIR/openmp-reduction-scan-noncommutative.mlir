@@ -37,7 +37,7 @@ llvm.func @scan_reduction_noncommutative() {
     %37 = llvm.mlir.constant(1 : i64) : i64
     %38 = llvm.alloca %37 x i32 {bindc_name = "k", pinned} : (i64) -> !llvm.ptr
     %39 = llvm.mlir.constant(1 : i64) : i64
-    omp.wsloop reduction(mod: inscan, @sub_reduction_i32 %5 -> %arg0 : !llvm.ptr) {
+    omp.wsloop reduction(inscan @sub_reduction_i32 %5 -> %arg0 : !llvm.ptr) {
       omp.loop_nest (%arg1) : i32 = (%11) to (%10) inclusive step (%11) {
         llvm.store %arg1, %38 : i32, !llvm.ptr
         %40 = llvm.load %arg0 : !llvm.ptr -> i32

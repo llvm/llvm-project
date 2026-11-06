@@ -162,7 +162,7 @@ atomic {
 llvm.func @simd_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.simd operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+  omp.simd reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.scan inclusive(%prv : !llvm.ptr)
       omp.yield
@@ -193,7 +193,7 @@ atomic {
 llvm.func @parallel_task_reduction_modifier_byref(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause task reduction modifier with by-ref reduction in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel reduction(mod: task, byref @add_f32 %x -> %prv : !llvm.ptr) {
+  omp.parallel reduction(task byref @add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -222,7 +222,7 @@ llvm.func @scan_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
   omp.parallel {
     // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-    omp.wsloop reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.wsloop reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
       // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         // expected-error@below {{not yet implemented: Unhandled clause exclusive in omp.scan operation}}
@@ -260,7 +260,7 @@ llvm.func @scan_reduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !llvm.pt
   omp.parallel {
     // expected-error@below {{not yet implemented: Unhandled clause inscan reduction modifier with by-ref reduction in omp.wsloop operation}}
     // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-    omp.wsloop reduction(mod:inscan, byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.wsloop reduction(inscan byref @add_f32 %x -> %prv : !llvm.ptr) {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.scan inclusive(%prv : !llvm.ptr)
         omp.yield
@@ -293,7 +293,7 @@ atomic {
 llvm.func @scan_reduction_orphaned(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause inscan reduction on an orphaned worksharing loop (no enclosing parallel region) in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+  omp.wsloop reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.scan inclusive(%prv : !llvm.ptr)
       omp.yield
@@ -326,7 +326,7 @@ llvm.func @scan_reduction_multidim(%lb : i32, %ub : i32, %step : i32, %x : !llvm
   omp.parallel {
     // expected-error@below {{not yet implemented: Unhandled clause inscan reduction on a collapsed (multi-dimensional) loop nest in omp.wsloop operation}}
     // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-    omp.wsloop reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.wsloop reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
       omp.loop_nest (%iv, %iv2) : i32 = (%lb, %lb) to (%ub, %ub) step (%step, %step) {
         omp.scan inclusive(%prv : !llvm.ptr)
         omp.yield
@@ -362,7 +362,7 @@ llvm.func @scan_reduction_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.p
   omp.parallel {
     // expected-error@below {{not yet implemented: Unhandled clause inscan reduction with linear clause in omp.wsloop operation}}
     // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-    omp.wsloop linear(@lin.i32 %lin -> %larg : !llvm.ptr = %step : i32) linear_var_types([i32]) reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.wsloop linear(@lin.i32 %lin -> %larg : !llvm.ptr = %step : i32) linear_var_types([i32]) reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.scan inclusive(%prv : !llvm.ptr)
         omp.yield
@@ -796,7 +796,7 @@ omp.declare_reduction @add_reduction_modifier_i32 : i32 init {
 llvm.func @taskloop_reduction_modifier(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.taskloop.context operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
-  omp.taskloop.context reduction(mod:inscan, @add_reduction_modifier_i32 %x -> %arg0 : !llvm.ptr) {
+  omp.taskloop.context reduction(inscan @add_reduction_modifier_i32 %x -> %arg0 : !llvm.ptr) {
     omp.taskloop.wrapper {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.yield

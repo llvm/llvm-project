@@ -157,6 +157,7 @@ include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
 include "SparcInstrInfo.td"
+include "SparcSchedLeon.td"
 
 defm : RemapAllTargetPseudoPointerOperands<sparc_ptr_rc>;
 

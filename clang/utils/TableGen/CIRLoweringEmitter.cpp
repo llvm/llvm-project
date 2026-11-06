@@ -239,6 +239,9 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
+      Code << "    if (!resTy)\n";
+      Code << "      return op.emitError() << \"ClangIR lowering NYI: cannot "
+              "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
            << Properties << ");\n";
@@ -342,7 +345,7 @@ void GenerateAttrToValueVisitFunc() {
        << ">(\n"
        << "            [&](auto attrT) { return visitCirAttr(attrT); })\n"
        << "        .Default([this](mlir::Attribute attr) {\n"
-       << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
+       << "          mlir::emitError(parentLoc, \"unsupported CIR "
           "attribute in LLVM constant lowering\")\n"
        << "              << attr;\n"
        << "          return mlir::Value();\n"

@@ -123,6 +123,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     EnableSafeTrampoline = opts.EnableSafeTrampoline;
     Underscoring = opts.Underscoring;
     LoopVersioning = opts.LoopVersioning;
+    LoopTripCountVersioning = opts.LoopTripCountVersioning;
     DebugInfo = opts.getDebugInfo();
     AliasAnalysis = opts.AliasAnalysis;
     FramePointerKind = opts.getFramePointer();
@@ -148,6 +149,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
+    DebugNameTable = opts.getDebugNameTable();
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -157,6 +159,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
+  bool LoopTripCountVersioning = false; ///< Run the trip-count versioning pass.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
@@ -196,6 +199,9 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
   std::string SplitDwarfFile = ""; ///< File name for the split debug info
   std::string DwarfDebugFlags = ""; ///< Debug flags to append to DWARF producer
+  Fortran::frontend::CodeGenOptions::DebugNameTableKind DebugNameTable =
+      Fortran::frontend::CodeGenOptions::DebugNameTableKind::
+          None; ///< Name table to emit in the debug info
   Fortran::common::FPMaxminBehavior fpMaxminBehavior =
       Fortran::common::FPMaxminBehavior::Legacy;
 };
