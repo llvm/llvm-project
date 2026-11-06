@@ -380,7 +380,7 @@ func.func @destination_passing_style(
 // CHECK-SAME:       %[[ARG11:[a-zA-Z0-9_]+]]: f32
 // CHECK-SAME:       %[[ARG12:[a-zA-Z0-9_]+]]: f32
 // CHECK-SAME:       %[[ARG13:[a-zA-Z0-9_]+]]: f32
-// CHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG10]], %[[ARG12]]
+// CHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG10]], %[[ARG13]]
 // CHECK-NEXT:     linalg.yield %[[ARG11]], %[[S2]]
 //      CHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]]#1
 
@@ -403,19 +403,17 @@ func.func @destination_passing_style(
 // CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-NEXT:     %[[S1:.+]] = arith.addf %[[ARG4]], %[[ARG5]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S1]]
-//      CANONICALIZECHECK:   %[[GENERIC2:.+]]:2 = linalg.generic
-// CANONICALIZECHECK-SAME:       indexing_maps = [#[[MAP2]], #[[MAP1]], #[[MAP1]], #[[MAP3]]]
+//      CANONICALIZECHECK:   %[[GENERIC2:.+]] = linalg.generic
+// CANONICALIZECHECK-SAME:       indexing_maps = [#[[MAP2]], #[[MAP3]]]
 // CANONICALIZECHECK-SAME:       iterator_types = ["parallel", "parallel"]
-// CANONICALIZECHECK-SAME:       ins(%[[ARG1]], %[[GENERIC1]] :
-// CANONICALIZECHECK-SAME:       outs(%[[ARG2]], %[[ARG3]] :
+// CANONICALIZECHECK-SAME:       ins(%[[ARG1]] :
+// CANONICALIZECHECK-SAME:       outs(%[[ARG3]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
 // CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG6:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG7:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG6]]
-// CANONICALIZECHECK-NEXT:     linalg.yield %[[ARG5]], %[[S2]]
-//      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]#1
+// CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG5]]
+// CANONICALIZECHECK-NEXT:     linalg.yield %[[S2]]
+//      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]
 
 // -----
 
@@ -452,3 +450,39 @@ func.func @first_statement_no_result(%arg0 : tensor<27xi32>) -> tensor<27xi32> {
 //      CANONICALIZECHECK:   arith.addi
 //      CANONICALIZECHECK:   linalg.yield
 //      CANONICALIZECHECK:   return %[[GENERIC]]
+
+// -----
+
+// The peeled statement produces an index-typed result that is not yielded. The
+// output block arguments of the residual op must still map to the output
+// arguments, not to the newly added operand for the peeled result.
+#map0 = affine_map<(d0) -> (d0)>
+func.func @index_result_not_remapped_to_output_args(%init : tensor<2xi32>)
+    -> (tensor<2xi32>, tensor<2xi32>) {
+  %r:2 = linalg.generic {
+    indexing_maps = [#map0, #map0],
+    iterator_types = ["parallel"]}
+    outs(%init, %init : tensor<2xi32>, tensor<2xi32>) {
+    ^bb0(%o0 : i32, %o1 : i32):
+      %idx = linalg.index 0 : index
+      %a = arith.addi %o0, %o1 : i32
+      linalg.yield %a, %o1 : i32, i32
+    } -> (tensor<2xi32>, tensor<2xi32>)
+  return %r#0, %r#1 : tensor<2xi32>, tensor<2xi32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0) -> (d0)>
+//      CHECK: func.func @index_result_not_remapped_to_output_args(
+// CHECK-SAME:     %[[INIT:.+]]: tensor<2xi32>)
+//  CHECK-DAG:   %[[EMPTY:.+]] = tensor.empty() : tensor<2xindex>
+//      CHECK:   %[[PEELED:.+]]:3 = linalg.generic
+// CHECK-SAME:       outs(%[[INIT]], %[[INIT]], %[[EMPTY]] :
+// CHECK:        ^bb0(%{{[a-zA-Z0-9_]+}}: i32, %{{[a-zA-Z0-9_]+}}: i32, %{{[a-zA-Z0-9_]+}}: index):
+// CHECK:          %[[IDX:.+]] = linalg.index 0 : index
+// CHECK:          linalg.yield %{{[a-zA-Z0-9_]+}}, %{{[a-zA-Z0-9_]+}}, %[[IDX]] : i32, i32, index
+//      CHECK:   %[[RESIDUAL:.+]]:2 = linalg.generic
+// CHECK-SAME:       ins(%[[PEELED]]#2 : tensor<2xindex>)
+// CHECK-SAME:       outs(%[[INIT]], %[[INIT]] :
+// CHECK:        ^bb0(%{{[a-zA-Z0-9_]+}}: index, %[[O0:.+]]: i32, %[[O1:.+]]: i32):
+// CHECK:          %[[A:.+]] = arith.addi %[[O0]], %[[O1]] : i32
+// CHECK:          linalg.yield %[[A]], %[[O1]] : i32, i32
+//      CHECK:   return %[[RESIDUAL]]#0, %[[RESIDUAL]]#1
