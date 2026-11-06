@@ -6,6 +6,7 @@
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
@@ -586,6 +587,7 @@
 ; ZOS-NEXT: declare double @"@@WPOW@B"(double, double)
 ; ZOS-NEXT: declare double @"@@WSNH@B"(double)
 ; ZOS-NEXT: declare double @"@@WSQT@B"(double)
+; ZOS-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; ZOS-NEXT: declare void @_Unwind_Resume(ptr)
 ; ZOS-NEXT: declare double @__adddf3(double, double)
 ; ZOS-NEXT: declare float @__addsf3(float, float)

@@ -7,6 +7,7 @@
 
 ; RV32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; RV32-NEXT: @__stack_chk_guard = external global ptr
+; RV32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; RV32-NEXT: declare void @_Unwind_Resume(ptr)
 ; RV32-NEXT: declare double @__adddf3(double, double)
 ; RV32-NEXT: declare float @__addsf3(float, float)
@@ -477,6 +478,7 @@
 
 ; RV64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; RV64-NEXT: @__stack_chk_guard = external global ptr
+; RV64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; RV64-NEXT: declare void @_Unwind_Resume(ptr)
 ; RV64-NEXT: declare double @__adddf3(double, double)
 ; RV64-NEXT: declare float @__addsf3(float, float)

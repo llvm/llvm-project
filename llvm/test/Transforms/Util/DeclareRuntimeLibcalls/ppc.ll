@@ -7,6 +7,7 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=powerpc64-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=LINUX %s
 
 ; AIX32: @__ssp_canary_word = external global ptr
+; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
 ; AIX32-NEXT: declare void @___bzero(ptr, i32)
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
@@ -559,6 +560,7 @@
 ; AIX32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; AIX64: @__ssp_canary_word = external global ptr
+; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
 ; AIX64-NEXT: declare void @___bzero64(ptr, i64)
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
@@ -1115,6 +1117,7 @@
 ; AIX64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; LINUX: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128)

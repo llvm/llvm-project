@@ -691,6 +691,7 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 
 // Exception handling
 def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
@@ -2017,11 +2018,14 @@ def __bzero : RuntimeLibcallImpl<BZERO>;
 // Exception handling
 defset list<RuntimeLibcallImpl> DefaultExceptionHandlingLibcalls = {
   def _Unwind_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_RaiseException : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def __cxa_end_cleanup : RuntimeLibcallImpl<CXA_END_CLEANUP>;
 }
 
 defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_SjLj_RaiseException
+      : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
@@ -2131,7 +2135,7 @@ def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
 defvar ExceptionModelCalls = (add
   LibcallImpls<(add __cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add _Unwind_Resume),
+  LibcallImpls<(add _Unwind_Resume, _Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add SjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
@@ -2488,7 +2492,7 @@ defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
 defvar ExceptionModelCallsArm64EC = (add
   LibcallImpls<(add arm64ec___cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add arm64ec__Unwind_Resume),
+  LibcallImpls<(add arm64ec__Unwind_Resume, arm64ec__Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>

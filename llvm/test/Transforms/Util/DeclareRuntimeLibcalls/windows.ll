@@ -9,6 +9,7 @@
 
 ; MSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MSVC-NEXT: @__security_cookie = external global ptr
+; MSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MSVC-NEXT: declare void @_Unwind_Resume(ptr)
 ; MSVC-NEXT: declare double @__adddf3(double, double)
 ; MSVC-NEXT: declare float @__addsf3(float, float)
@@ -440,6 +441,7 @@
 
 ; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MINGW-NEXT: @__stack_chk_guard = external global ptr
+; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
 ; MINGW-NEXT: declare void @___chkstk_ms()
 ; MINGW-NEXT: declare double @__adddf3(double, double)
@@ -983,6 +985,7 @@
 
 ; CYGWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; CYGWIN-NEXT: @__stack_chk_guard = external global ptr
+; CYGWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; CYGWIN-NEXT: declare void @_Unwind_Resume(ptr)
 ; CYGWIN-NEXT: declare void @___chkstk_ms()
 ; CYGWIN-NEXT: declare double @__adddf3(double, double)
@@ -1476,6 +1479,7 @@
 
 ; UEFI: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; UEFI-NEXT: @__stack_chk_guard = external global ptr
+; UEFI-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; UEFI-NEXT: declare void @_Unwind_Resume(ptr)
 ; UEFI-NEXT: declare double @__adddf3(double, double)
 ; UEFI-NEXT: declare float @__addsf3(float, float)
