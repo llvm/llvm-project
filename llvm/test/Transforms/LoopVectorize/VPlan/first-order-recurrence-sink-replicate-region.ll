@@ -51,25 +51,6 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:    loop.0:
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP9]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
-; CHECK-NEXT:    Successor(s): pred.srem
-; CHECK-EMPTY:
-; CHECK-NEXT:    <xVFxUF> pred.srem: {
-; CHECK-NEXT:      pred.srem.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
-; CHECK-NEXT:      Successor(s): pred.srem.if, pred.srem.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.srem.if:
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP10]]>, ir<%x> (S->V)
-; CHECK-NEXT:      Successor(s): pred.srem.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.srem.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP11:%[0-9]+]]> = ir<%rem>
-; CHECK-NEXT:      No successors
-; CHECK-NEXT:    }
-; CHECK-NEXT:    Successor(s): loop.1
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.1:
-; CHECK-NEXT:      WIDEN ir<%add> = add ir<%conv>, vp<[[VP11]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
@@ -78,7 +59,9 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP10]]>, ir<%x>
 ; CHECK-NEXT:        REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP8]]>
+; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT:        REPLICATE store ir<%add>, ir<%gep.dst>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:

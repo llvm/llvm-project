@@ -594,16 +594,16 @@ exit:
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
 ; COMMON-SAME: ptr [[DST:%.*]]) {
-; COMMON-NEXT:  [[PRED_STORE_CONTINUE14:.*]]:
-; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; COMMON:       [[MIDDLE_BLOCK]]:
-; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_STORE_CONTINUE14]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK]] ]
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP:.*]]
+; COMMON:       [[LOOP]]:
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; COMMON-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; COMMON-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; COMMON-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
 ; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
-; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[MIDDLE_BLOCK]]
+; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; COMMON:       [[EXIT]]:
 ; COMMON-NEXT:    ret void
 ;

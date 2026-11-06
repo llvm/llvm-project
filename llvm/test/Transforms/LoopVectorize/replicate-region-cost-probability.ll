@@ -6,10 +6,10 @@
 define void @predicated_udiv_p25(ptr %a, i32 %n) {
 ; CHECK-LABEL: 'predicated_udiv_p25'
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6:%[0-9]+]]>
-; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 4611686018427387903 (25%))
+; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6]]>
-; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 4611686018427387903 (25%))
+; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ;
 entry:
@@ -41,10 +41,10 @@ exit:
 define void @predicated_udiv_p12(ptr %a, i32 %n) {
 ; CHECK-LABEL: 'predicated_udiv_p12'
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6:%[0-9]+]]>
-; CHECK:  Cost of 1.25 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 2305843009213693951 (12.5%))
+; CHECK:  Cost of 1.25 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6]]>
-; CHECK:  Cost of 1.25 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 2305843009213693951 (12.5%))
+; CHECK:  Cost of 1.25 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ;
 entry:
@@ -78,10 +78,10 @@ exit:
 define void @predicated_udiv_no_profile(ptr %a, i32 %n) {
 ; CHECK-LABEL: 'predicated_udiv_no_profile'
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6:%[0-9]+]]>
-; CHECK:  Cost of 5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; CHECK:  Cost of 5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6]]>
-; CHECK:  Cost of 5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; CHECK:  Cost of 5 for VF 2: REPLICATE ir<%d> = udiv ir<%val>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%d>, ir<%gep>.1
 ;
 entry:
@@ -158,10 +158,12 @@ exit:
 
 define void @sunk_recipe_uses_region_probability(ptr noalias %a, ptr noalias %b, i32 %n, i32 %x) {
 ; CHECK-LABEL: 'sunk_recipe_uses_region_probability'
-; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP7:%[0-9]+]]>
-; CHECK:  Cost of 0.5 for VF 2: REPLICATE store vp<[[VP6:%[0-9]+]]>, ir<%gep.b>
-; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP7]]>
-; CHECK:  Cost of 0.5 for VF 2: REPLICATE store vp<[[VP6]]>, ir<%gep.b>
+; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%rem> = srem ir<%val>, ir<%x>
+; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP6:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%rem>, ir<%gep.b>
+; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%rem> = srem ir<%val>, ir<%x>
+; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP6]]>
+; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%rem>, ir<%gep.b>
 ;
 entry:
   br label %loop

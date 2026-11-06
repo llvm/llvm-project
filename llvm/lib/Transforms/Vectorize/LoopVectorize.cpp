@@ -3918,16 +3918,21 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
       ScalarCost += getScalarizationOverhead(I, VF);
 
       // If this is an insert, additionally estimate cost of the PHI.
-      if (ScalarCost > 0 && !needsExtract(I, VF))
+      if (!I->getType()->isVoidTy() &&
+          (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
         ScalarCost += VF.getFixedValue() *
                       TTI.getCFInstrCost(Instruction::PHI, Config.CostKind);
     }
 
     // Add the Instruction's operands that can be scalarized to the worklist.
-    for (const Use &U : I->operands())
-      if (auto *J = dyn_cast<Instruction>(U.get()))
+    for (Value *V : I->operands()) {
+      if (auto *J = dyn_cast<Instruction>(V)) {
+        assert(canVectorizeTy(J->getType()) &&
+               "Instruction has non-scalar type");
         if (CanBeScalarized(J))
           Worklist.push_back(J);
+      }
+    }
 
     // Scale the total scalar cost by block probability.
     ScalarCost /= getPredBlockCostDivisor(Config.CostKind, I->getParent());
