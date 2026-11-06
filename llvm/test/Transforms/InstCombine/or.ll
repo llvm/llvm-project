@@ -155,13 +155,9 @@ define i32 @test20(i32 %x) {
   ret i32 %z
 }
 
-; TODO: This should combine to t1 + 2.
 define i32 @test21(i32 %t1) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T1:%.*]], -2
-; CHECK-NEXT:    [[T3:%.*]] = add i32 [[TMP1]], 2
-; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T1]], 1
-; CHECK-NEXT:    [[T6:%.*]] = or disjoint i32 [[T5]], [[T3]]
+; CHECK-NEXT:    [[T6:%.*]] = add i32 [[T1:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
@@ -170,6 +166,140 @@ define i32 @test21(i32 %t1) {
   ;; add tmp.1, 2
   %t6 = or i32 %t5, %t3
   ret i32 %t6
+}
+
+define i8 @test21_i8(i8 %x) {
+; CHECK-LABEL: @test21_i8(
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 4
+  %hi = and i8 %add, -4
+  %lo = and i8 %x, 3
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+define <4 x i8> @test21_vec(<4 x i8> %x) {
+; CHECK-LABEL: @test21_vec(
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i8> [[X:%.*]], splat (i8 8)
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %add = add <4 x i8> %x, <i8 8, i8 8, i8 8, i8 8>
+  %hi = and <4 x i8> %add, <i8 -8, i8 -8, i8 -8, i8 -8>
+  %lo = and <4 x i8> %x, <i8 7, i8 7, i8 7, i8 7>
+  %r = or <4 x i8> %hi, %lo
+  ret <4 x i8> %r
+}
+
+define i8 @test21_multiuse(i8 %x, ptr %p, ptr %q, ptr %r) {
+; CHECK-LABEL: @test21_multiuse(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[HI:%.*]] = and i8 [[ADD]], -2
+; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[HI]], ptr [[Q:%.*]], align 1
+; CHECK-NEXT:    store i8 [[LO]], ptr [[R:%.*]], align 1
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %add = add i8 %x, 2
+  %hi = and i8 %add, -2
+  %lo = and i8 %x, 1
+  store i8 %add, ptr %p
+  store i8 %hi, ptr %q
+  store i8 %lo, ptr %r
+  %res = or i8 %lo, %hi
+  ret i8 %res
+}
+
+; Negative: non-power-of-two addend.
+define i8 @test21_notpow2(i8 %x) {
+; CHECK-LABEL: @test21_notpow2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[HI:%.*]] = and i8 [[ADD]], -3
+; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X]], 2
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 3
+  %hi = and i8 %add, -3
+  %lo = and i8 %x, 2
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+; Negative: masks do not match the addend.
+define i8 @test21_mismatched(i8 %x) {
+; CHECK-LABEL: @test21_mismatched(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[HI:%.*]] = and i8 [[ADD]], -4
+; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 2
+  %hi = and i8 %add, -4
+  %lo = and i8 %x, 1
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+; Negative: the low mask is not disjoint from the high mask.
+define i8 @test21_overlapping(i8 %x) {
+; CHECK-LABEL: @test21_overlapping(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[HI:%.*]] = add i8 [[TMP1]], 2
+; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 2
+  %hi = and i8 %add, -2
+  %lo = and i8 %x, 3
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+; The sign bit (-128) is also a power of two.
+define i8 @test21_signbit(i8 %x) {
+; CHECK-LABEL: @test21_signbit(
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[X:%.*]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, -128
+  %hi = and i8 %add, -128
+  %lo = and i8 %x, 127
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+; Input is already in the canonical form with the add on the masked high bits.
+define i8 @test21_canonical(i8 %x) {
+; CHECK-LABEL: @test21_canonical(
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = and i8 %x, -4
+  %hi = add i8 %m, 4
+  %lo = and i8 %x, 3
+  %r = or i8 %hi, %lo
+  ret i8 %r
+}
+
+; Negative: per-lane constants are not a splat, so this must not fold.
+define <2 x i8> @test21_nonsplat_neg(<2 x i8> %x) {
+; CHECK-LABEL: @test21_nonsplat_neg(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X:%.*]], <i8 2, i8 4>
+; CHECK-NEXT:    [[HI:%.*]] = and <2 x i8> [[ADD]], <i8 -2, i8 -4>
+; CHECK-NEXT:    [[LO:%.*]] = and <2 x i8> [[X]], <i8 1, i8 3>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[HI]], [[LO]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %add = add <2 x i8> %x, <i8 2, i8 4>
+  %hi = and <2 x i8> %add, <i8 -2, i8 -4>
+  %lo = and <2 x i8> %x, <i8 1, i8 3>
+  %r = or <2 x i8> %hi, %lo
+  ret <2 x i8> %r
 }
 
 define i32 @test22(i32 %B) {
