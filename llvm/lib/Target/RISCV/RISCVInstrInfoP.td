@@ -2035,6 +2035,9 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
+// Shift-add.
+def riscv_ssh1sadd : RVSDNode<"SSH1SADD", SDTIntBinOp>;
+
 def SDT_RISCVSameTernary : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisSameAs<0, 3>]>;
@@ -2610,6 +2613,9 @@ let append Predicates = [IsRV32] in {
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (saddsat (saddsat GPR:$rs1, GPR:$rs1), GPR:$rs2)),
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit shift-add pattern
+  def : PatGprGpr<riscv_ssh1sadd, SSH1SADD, i32>;
 
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
@@ -3342,6 +3348,9 @@ let append Predicates = [IsRV64] in {
   def : PatGpr<int_riscv_rev16_64, REV16_RV64>;
 
   def : PatGpr<bitreverse, REV_RV64>;
+
+  // 32-bit shift-add pattern
+  def : PatGprGpr<riscv_ssh1sadd, PSSH1SADD_W>;
 
   // Packed narrowing clip pair.
   def : Pat<(v8i8 (riscv_pnclipp  (v4i16 GPR:$rs1), GPR:$rs2)),

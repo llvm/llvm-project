@@ -1644,3 +1644,15 @@ define i64 @test_usati_u64_w63(i64 %a) {
   %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 63)
   ret i64 %res
 }
+
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define signext i32 @ssh1sadd_intrinsic_i32(i32 signext %a, i32 signext %b) nounwind {
+; CHECK-LABEL: ssh1sadd_intrinsic_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssh1sadd.w a0, a0, a1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
