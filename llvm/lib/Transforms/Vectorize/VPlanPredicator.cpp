@@ -402,6 +402,18 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
 void VPPredicator::run() {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Keep AnyOf header branches: all lanes take the same edge. The merge must
+  // not have phis, as preserved edges have no masks.
+  bool KeepHeaderBranch =
+      Header->getNumSuccessors() == 2 &&
+      match(Header->getTerminator(), m_BranchOnCond(m_AnyOf()));
+  assert((!KeepHeaderBranch ||
+          any_of(Header->getSuccessors(),
+                 [&](VPBlockBase *Succ) {
+                   return VPPDT.dominates(Succ, Header) &&
+                          cast<VPBasicBlock>(Succ)->phis().empty();
+                 })) &&
+         "Kept branch must skip to a merge block without phis");
   // Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
@@ -410,10 +422,9 @@ void VPPredicator::run() {
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
 
   for (VPBasicBlock *VPBB : Blocks) {
-    // Introduce the mask for VPBB, which may introduce needed edge masks, and
-    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
-    // header.
-    if (VPBB != Header)
+    // The header and successors of a kept branch need no block masks.
+    if (VPBB != Header &&
+        !(KeepHeaderBranch && is_contained(Header->getSuccessors(), VPBB)))
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
@@ -433,9 +444,10 @@ void VPPredicator::run() {
     if (VPBB != Header)
       convertPhisToBlends(VPBB);
 
-  // Linearize the blocks of the loop into one serial chain.
+  // Linearize in reverse postorder, preserving a kept header branch. This
+  // places the skipped region before the merge.
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : Blocks) {
+  for (VPBasicBlock *VPBB : drop_begin(Blocks, KeepHeaderBranch ? 1 : 0)) {
     auto Successors = to_vector(VPBB->getSuccessors());
     if (Successors.size() > 1)
       VPBB->getTerminator()->eraseFromParent();
