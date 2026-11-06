@@ -1,5 +1,5 @@
 // REQUIRES: riscv-registered-target
-// RUN: %clang --target=riscv32 -mcpu=veer-eh1 --print-enabled-extensions | FileCheck %s
+// RUN: %clang --target=riscv32 -mcpu=chipsalliance-veer-eh1 --print-enabled-extensions | FileCheck %s
 
 // CHECK: Extensions enabled for the given RISC-V target
 // CHECK-EMPTY:

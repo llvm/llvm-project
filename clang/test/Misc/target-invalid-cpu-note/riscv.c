@@ -8,6 +8,7 @@
 // RISCV32-SAME: {{^}} andes-a25
 // RISCV32-SAME: {{^}}, andes-a45
 // RISCV32-SAME: {{^}}, andes-n45
+// RISCV32-SAME: {{^}}, chipsalliance-veer-eh1
 // RISCV32-SAME: {{^}}, generic-rv32
 // RISCV32-SAME: {{^}}, rocket-rv32
 // RISCV32-SAME: {{^}}, rp2350-hazard3
@@ -23,7 +24,6 @@
 // RISCV32-SAME: {{^}}, syntacore-scr3-rv32
 // RISCV32-SAME: {{^}}, syntacore-scr4-rv32
 // RISCV32-SAME: {{^}}, syntacore-scr5-rv32
-// RISCV32-SAME: {{^}}, veer-eh1
 // RISCV32-SAME: {{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
@@ -74,6 +74,7 @@
 // TUNE-RISCV32-SAME: {{^}} andes-a25
 // TUNE-RISCV32-SAME: {{^}}, andes-a45
 // TUNE-RISCV32-SAME: {{^}}, andes-n45
+// TUNE-RISCV32-SAME: {{^}}, chipsalliance-veer-eh1
 // TUNE-RISCV32-SAME: {{^}}, generic-rv32
 // TUNE-RISCV32-SAME: {{^}}, rocket-rv32
 // TUNE-RISCV32-SAME: {{^}}, rp2350-hazard3
@@ -89,7 +90,6 @@
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr3-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr4-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr5-rv32
-// TUNE-RISCV32-SAME: {{^}}, veer-eh1
 // TUNE-RISCV32-SAME: {{^}}, andes-45-series
 // TUNE-RISCV32-SAME: {{^}}, generic
 // TUNE-RISCV32-SAME: {{^}}, generic-ooo
