@@ -142,6 +142,17 @@ static bool compareData(const ConcatInputSection *ia,
   return bufA == bufB;
 }
 
+static Defined *getDirectCallTarget(const Relocation &r) {
+  if (r.getAddend() || !target->hasAttr(r.type, RelocAttrBits::BRANCH))
+    return nullptr;
+  auto *sym = dyn_cast_if_present<Symbol *>(r.referent);
+  auto *d = dyn_cast_if_present<Defined>(sym);
+  if (!d || d->value || !d->originalIsec || !isCodeSection(d->originalIsec) ||
+      needsBinding(sym))
+    return nullptr;
+  return d;
+}
+
 // Compare "non-moving" parts of two ConcatInputSections, namely everything
 // except references to other ConcatInputSections.
 bool ICF::equalsConstant(const ConcatInputSection *ia,
@@ -204,9 +215,14 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     // relocations to reference identical `keepUnique` functions that will be
     // distinguished later via thunks - so we need to handle this case
     // explicitly.
-    if ((isecA != isecB) && ((isecA->keepUnique && isCodeSection(isecA)) ||
-                             (isecB->keepUnique && isCodeSection(isecB))))
-      return false;
+    if (isecA != isecB && ((isecA->keepUnique && isCodeSection(isecA)) ||
+                           (isecB->keepUnique && isCodeSection(isecB)))) {
+      // In `safe_thunks` mode, we can still fold functions with direct calls to
+      // equivalent functions.
+      if (config->icfLevel != ICFLevel::safe_thunks ||
+          !getDirectCallTarget(ra) || !getDirectCallTarget(rb))
+        return false;
+    }
 
     if (isecA->parent != isecB->parent)
       return false;

@@ -32,9 +32,7 @@
 ; CHECK-ARM64:             mov {{.*}}, #0x21
 ;
 ; CHECK-ARM64:        _func_call_thunked_1_nomerge:
-; CHECK-ARM64-NEXT:        stp	x29
-;
-; CHECK-ARM64:        _func_call_thunked_2_nomerge:
+; CHECK-ARM64-NEXT:   _func_call_thunked_2_nomerge:
 ; CHECK-ARM64-NEXT:   _func_call_thunked_2_merge:
 ; CHECK-ARM64-NEXT:        stp	x29
 ;
@@ -69,9 +67,7 @@
 ; CHECK-LTO:             mov {{.*}}, #0x21
 ;
 ; CHECK-LTO:        _func_call_thunked_1_nomerge:
-; CHECK-LTO-NEXT:        stp	x29
-;
-; CHECK-LTO:        _func_call_thunked_2_nomerge:
+; CHECK-LTO-NEXT:   _func_call_thunked_2_nomerge:
 ; CHECK-LTO-NEXT:   _func_call_thunked_2_merge:
 ; CHECK-LTO-NEXT:        stp	x29
 ;
@@ -96,7 +92,7 @@
 ; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
 ; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
 ; CHECK-LTO-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_1_nomerge
-; CHECK-LTO-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_nomerge
+; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_nomerge
 ; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
 ; CHECK-LTO-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
 ; CHECK-LTO-MAP-NEXT: 0x00000050 [  2] _take_func_addr
@@ -112,7 +108,7 @@
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_1_nomerge
-; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_nomerge
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_nomerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
 ; CHECK-ARM64-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
 ; CHECK-ARM64-MAP-NEXT: 0x00000050 [  2] _take_func_addr
