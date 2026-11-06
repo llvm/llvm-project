@@ -197,16 +197,12 @@ define i1 @wrong_sign_condition(i8 noundef %x, i8 noundef %y) {
 
 define i1 @absolute_divisor(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @absolute_divisor(
-; CHECK-NEXT:    [[NOT_MIN:%.*]] = icmp ne i8 [[Y:%.*]], -128
-; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MIN]])
+; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MINUS_ONE]])
 ; CHECK-NEXT:    ret i1 true
 ;
-  %not_min = icmp ne i8 %y, -128
   %not_minus_one = icmp ne i8 %y, -1
-  %valid = and i1 %not_min, %not_minus_one
-  call void @llvm.assume(i1 %valid)
+  call void @llvm.assume(i1 %not_minus_one)
 
   %y_negative = icmp slt i8 %y, 0
   %neg_y = sub i8 0, %y
@@ -289,27 +285,6 @@ define i1 @absolute_of_different_divisor(i8 noundef %x, i8 noundef %y, i8 nounde
   %rem = srem i8 %x, %y
   %negative = icmp slt i8 %rem, 0
   %adjusted = add i8 %rem, %abs_z
-  %euclid = select i1 %negative, i8 %adjusted, i8 %rem
-  %result = icmp sge i8 %euclid, 0
-  ret i1 %result
-}
-
-define i1 @absolute_divisor_without_min_exclusion(i8 noundef %x, i8 noundef %y) {
-; CHECK-LABEL: @absolute_divisor_without_min_exclusion(
-; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MINUS_ONE]])
-; CHECK-NEXT:    ret i1 true
-;
-  %not_minus_one = icmp ne i8 %y, -1
-  call void @llvm.assume(i1 %not_minus_one)
-
-  %y_negative = icmp slt i8 %y, 0
-  %neg_y = sub i8 0, %y
-  %abs_y = select i1 %y_negative, i8 %neg_y, i8 %y
-
-  %rem = srem i8 %x, %y
-  %negative = icmp slt i8 %rem, 0
-  %adjusted = add i8 %rem, %abs_y
   %euclid = select i1 %negative, i8 %adjusted, i8 %rem
   %result = icmp sge i8 %euclid, 0
   ret i1 %result
