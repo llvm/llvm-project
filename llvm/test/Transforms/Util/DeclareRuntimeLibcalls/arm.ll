@@ -407,8 +407,8 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
+; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr align 4 dereferenceable(4))
+; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr align 4 dereferenceable(4))
 ; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double)
@@ -875,8 +875,8 @@
 ; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float)
 ; DWARF-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
+; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr align 4 dereferenceable(4))
+; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr align 4 dereferenceable(4))
 ; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double)

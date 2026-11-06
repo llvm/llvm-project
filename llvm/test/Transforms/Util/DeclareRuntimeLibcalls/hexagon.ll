@@ -374,8 +374,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double)
 ; CHECK-NEXT: declare float @fmodf(float, float)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr)
-; CHECK-NEXT: declare float @frexpf(float, ptr)
+; CHECK-NEXT: declare double @frexp(double, ptr align 4 dereferenceable(4))
+; CHECK-NEXT: declare float @frexpf(float, ptr align 4 dereferenceable(4))
 ; CHECK-NEXT: declare void @hexagon_memcpy_forward_vp4cp4n2(...)
 ; CHECK-NEXT: declare double @ldexp(double, i32)
 ; CHECK-NEXT: declare float @ldexpf(float, i32)
@@ -809,8 +809,8 @@
 ; LINUX-NEXT: declare double @fmod(double, double)
 ; LINUX-NEXT: declare float @fmodf(float, float)
 ; LINUX-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @frexp(double, ptr)
-; LINUX-NEXT: declare float @frexpf(float, ptr)
+; LINUX-NEXT: declare double @frexp(double, ptr align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @frexpf(float, ptr align 4 dereferenceable(4))
 ; LINUX-NEXT: declare void @hexagon_memcpy_forward_vp4cp4n2(...)
 ; LINUX-NEXT: declare double @ldexp(double, i32)
 ; LINUX-NEXT: declare float @ldexpf(float, i32)

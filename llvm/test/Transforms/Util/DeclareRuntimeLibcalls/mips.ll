@@ -352,8 +352,8 @@
 ; MIPS32-NEXT: declare double @fmod(double, double)
 ; MIPS32-NEXT: declare float @fmodf(float, float)
 ; MIPS32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MIPS32-NEXT: declare double @frexp(double, ptr)
-; MIPS32-NEXT: declare float @frexpf(float, ptr)
+; MIPS32-NEXT: declare double @frexp(double, ptr align 4 dereferenceable(4))
+; MIPS32-NEXT: declare float @frexpf(float, ptr align 4 dereferenceable(4))
 ; MIPS32-NEXT: declare double @ldexp(double, i32 signext)
 ; MIPS32-NEXT: declare float @ldexpf(float, i32 signext)
 ; MIPS32-NEXT: declare i64 @llrint(double)
@@ -799,9 +799,9 @@
 ; MIPS64-NEXT: declare float @fmodf(float, float)
 ; MIPS64-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; MIPS64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MIPS64-NEXT: declare double @frexp(double, ptr)
-; MIPS64-NEXT: declare float @frexpf(float, ptr)
-; MIPS64-NEXT: declare fp128 @frexpl(fp128, ptr)
+; MIPS64-NEXT: declare double @frexp(double, ptr align 4 dereferenceable(4))
+; MIPS64-NEXT: declare float @frexpf(float, ptr align 4 dereferenceable(4))
+; MIPS64-NEXT: declare fp128 @frexpl(fp128, ptr align 4 dereferenceable(4))
 ; MIPS64-NEXT: declare double @ldexp(double, i32 signext)
 ; MIPS64-NEXT: declare float @ldexpf(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @ldexpl(fp128, i32 signext)

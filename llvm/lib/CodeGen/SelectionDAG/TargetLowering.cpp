@@ -14555,10 +14555,14 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   // pointee information and the declared type is used directly.
   // Allocate temporaries, write and read back at the libcall's parameter
   // width, and convert to the declared type when reading the result back.
-  auto [LibcallFTy, LibcallAttrs] =
+  // Plain variables rather than structured bindings: capturing the bindings
+  // in the lambda below is a C++20 extension.
+  std::pair<FunctionType *, AttributeList> LibcallSig =
       DAG.getTargetLoweringInfo().getRuntimeLibcallsInfo().getFunctionTy(
           Ctx, DAG.getTarget().getTargetTriple(), DAG.getDataLayout(),
           LibcallImpl);
+  FunctionType *LibcallFTy = LibcallSig.first;
+  AttributeList LibcallAttrs = LibcallSig.second;
   // The type the libcall actually writes for result ResNo, whose output
   // pointer is signature parameter \p ParamArgNo.
   auto LibcallOutputVT = [&](unsigned ResNo, unsigned ParamArgNo) {
