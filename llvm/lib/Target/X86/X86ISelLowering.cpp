@@ -3911,6 +3911,45 @@ bool X86TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
          (VT.isVector() && VT.getVectorElementCount().isScalar());
 }
 
+// A self-edge lets us recognize the induction and loop-invariant limit without
+// LoopInfo or ScalarEvolution. This deliberately does not cover multi-block
+// loops.
+static bool isSingleBlockLoopExit(const ICmpInst *Bound,
+                                  const Instruction *Data,
+                                  Instruction::BinaryOps Opc) {
+  using namespace llvm::PatternMatch;
+  // The hook receives the comparisons, not the branch. A single use ensures
+  // that the branch matched below is the one being lowered.
+  if (!Bound->hasOneUse())
+    return false;
+  const BasicBlock *BB = Bound->getParent();
+  BasicBlock *Exit;
+  bool IsLoopExit =
+      Opc == Instruction::Or
+          ? match(BB->getTerminator(),
+                  m_Br(m_c_LogicalOr(m_Specific(Bound), m_Specific(Data)),
+                       m_BasicBlock(Exit), m_Specific(BB)))
+          : match(BB->getTerminator(),
+                  m_Br(m_c_LogicalAnd(m_Specific(Bound), m_Specific(Data)),
+                       m_Specific(BB), m_BasicBlock(Exit)));
+  if (!IsLoopExit || Exit == BB)
+    return false;
+
+  auto IsInductionBound = [BB](Value *V, Value *Limit) {
+    if (auto *I = dyn_cast<Instruction>(Limit); I && I->getParent() == BB)
+      return false;
+    PHINode *Phi;
+    if (!match(V,
+               m_CombineOr(m_Phi(Phi), m_c_Add(m_Phi(Phi), m_ConstantInt()))) ||
+        Phi->getParent() != BB)
+      return false;
+    return match(Phi->getIncomingValueForBlock(BB),
+                 m_c_Add(m_Specific(Phi), m_NonZeroInt()));
+  };
+  return IsInductionBound(Bound->getOperand(0), Bound->getOperand(1)) ||
+         IsInductionBound(Bound->getOperand(1), Bound->getOperand(0));
+}
+
 TargetLoweringBase::CondMergingParams
 X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Lhs,
@@ -3935,6 +3974,25 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (BaseCost >= 0 && !Subtarget.hasCCMP() && Opc == Instruction::Or &&
       match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
       match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
+    return {-1, -1, -1};
+
+  // Avoid SETCC+OR/AND on every iteration when one condition is an induction
+  // bound: its branch continues until the bound is reached. Mixed EQ/NE
+  // predicates cannot use the bitwise folds for AND+EQ or OR+NE. CCMP targets
+  // can combine the conditions without materializing both booleans.
+  auto BoundPred =
+      Opc == Instruction::Or ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+  const Instruction *Bound, *Data;
+  auto BoundCmp =
+      m_Instruction(Bound, m_SpecificICmp(BoundPred, m_Value(), m_Value()));
+  auto DataCmp = m_Instruction(
+      Data, m_SpecificICmp(ICmpInst::getInversePredicate(BoundPred), m_Value(),
+                           m_Value()));
+  if (BaseCost >= 0 && !Subtarget.hasCCMP() &&
+      ((match(Lhs, BoundCmp) && match(Rhs, DataCmp)) ||
+       (match(Rhs, BoundCmp) && match(Lhs, DataCmp))) &&
+      Bound->getParent() == Data->getParent() &&
+      isSingleBlockLoopExit(cast<ICmpInst>(Bound), Data, Opc))
     return {-1, -1, -1};
 
   return {BaseCost, CLOpts.br_merging_likely_bias,
