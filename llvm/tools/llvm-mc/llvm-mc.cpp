@@ -552,8 +552,11 @@ int main(int argc, char **argv) {
       const MemoryBuffer *Buf = nullptr;
       if (unsigned ID = Loc.isValid() ? SrcMgr.FindBufferContainingLoc(Loc) : 0)
         Buf = SrcMgr.getMemoryBuffer(ID);
+      // SMDiagnostic columns are 0-based, but printed (and written in
+      // directives) as 1-based.
       if (Verifier->process(errs(), SrcMgr, Diag.getKind(), Loc.isValid(), Buf,
-                            Diag.getLineNo(), Diag.getMessage()) !=
+                            Diag.getLineNo(), Diag.getColumnNo() + 1,
+                            Diag.getMessage()) !=
           SourceMgrDiagnosticVerifier::MatchResult::Unexpected)
         return;
       SourceMgrDiagnosticVerifier::printMessage(
