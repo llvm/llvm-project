@@ -4827,17 +4827,35 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     }
 
   // Merge the types.
+  //
+  // MergeVarDeclTypes returns early if either declaration is invalid, so
+  // merging against an invalid declaration would silently skip the type
+  // check on New. Start from the most recent declaration and walk back to
+  // the most recent one that is valid; if the whole chain is invalid, skip
+  // the type merge entirely and let the redefinition logic below diagnose
+  // New. Merging against the most recent declaration catches conflicts
+  // with the latest type, while the subsequent merge against Old is how an
+  // incomplete array adopts its bound from a preceding same-scope
+  // declaration, so both merges are still needed.
   VarDecl *MostRecent = Old->getMostRecentDecl();
-  if (MostRecent != Old) {
-    MergeVarDeclTypes(New, MostRecent,
-                      mergeTypeWithPrevious(*this, New, MostRecent, Previous));
-    if (New->isInvalidDecl())
-      return;
-  }
+  while (MostRecent->isInvalidDecl() && MostRecent->getPreviousDecl())
+    MostRecent = MostRecent->getPreviousDecl();
 
-  MergeVarDeclTypes(New, Old, mergeTypeWithPrevious(*this, New, Old, Previous));
-  if (New->isInvalidDecl())
-    return;
+  if (!MostRecent->isInvalidDecl()) {
+    if (MostRecent != Old) {
+      MergeVarDeclTypes(
+          New, MostRecent,
+          mergeTypeWithPrevious(*this, New, MostRecent, Previous));
+      if (New->isInvalidDecl())
+        return;
+    }
+    if (!Old->isInvalidDecl()) {
+      MergeVarDeclTypes(New, Old,
+                        mergeTypeWithPrevious(*this, New, Old, Previous));
+      if (New->isInvalidDecl())
+        return;
+    }
+  }
 
   diag::kind PrevDiag;
   SourceLocation OldLocation;
