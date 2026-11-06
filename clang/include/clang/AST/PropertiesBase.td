@@ -153,6 +153,7 @@ def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
 def TemplateName : PropertyType;
 def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
 def TypeOfKind : EnumPropertyType<"TypeOfKind">;
+def TypeSourceInfo : PropertyType<"const TypeSourceInfo *">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnsignedOrNone : PropertyType;
@@ -619,22 +620,20 @@ def ReflectionKind : EnumPropertyType<"ReflectionKind">;
 
 let Class = PropertyTypeCase<APValue, "Reflection"> in {
   def : Property<"reflectionKind", ReflectionKind> {
-    let Read = [{ node.getReflectionOperandKind() }];
+    let Read = [{ node.getReflectionValue().getKind() }];
   }
-  def : Property<"reflectionType", QualType> {
+  def : Property<"reflectionType", TypeSourceInfo> {
     let Conditional = [{ reflectionKind == ReflectionKind::Type }];
-    let Read = [{
-      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
-    }];
+    let Read = [{ node.getReflectionValue().castAsType() }];
   }
   def : Creator<[{
     switch (reflectionKind) {
     // TODO(Reflection): Add support for TypeSourceInfo, NamespaceReference
     // TemplateReference and DeclRefExpr
     case ReflectionKind::Null:
-      return APValue(reflectionKind, nullptr);
+      return APValue(ReflectionValue());
     case ReflectionKind::Type:
-      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+      return APValue(ReflectionValue(*reflectionType));
     }
     llvm_unreachable("unimplemented or unknow reflection entities");
   }]>;
