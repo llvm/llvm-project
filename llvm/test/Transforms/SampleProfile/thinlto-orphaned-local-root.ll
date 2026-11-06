@@ -2,7 +2,7 @@
 ; ThinLTO pre-link still inlines it into its single caller (G) and deletes it.
 ; R's nested decision to inline ext, defined in another module, then has no
 ; owner: its import GUID is attached to R and deleted with it, and in post-link
-; G's profile has no context for R. With -sample-profile-orphaned-local-roots,
+; G's profile has no context for R. With -sample-profile-preserve-deferred-inlines,
 ; pre-link copies R's import GUIDs to G, and post-link resolves frames inlined
 ; from R using R's top-level profile.
 
@@ -10,26 +10,26 @@
 ; RUN: opt pre.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -sample-profile-file=prof.txt -S | FileCheck %s --check-prefix=PRE-OFF
 ; RUN: opt pre.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof.txt -sample-profile-orphaned-local-roots -S \
+; RUN:   -sample-profile-file=prof.txt -sample-profile-preserve-deferred-inlines -S \
 ; RUN:   | FileCheck %s --check-prefix=PRE-ON
 ;; R survives when it is not local, so it keeps its own import GUIDs.
 ; RUN: sed 's/define internal i64 @R(/define dso_local i64 @R(/' pre.ll > pre-extern.ll
 ; RUN: opt pre-extern.ll -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof.txt -sample-profile-orphaned-local-roots -S \
+; RUN:   -sample-profile-file=prof.txt -sample-profile-preserve-deferred-inlines -S \
 ; RUN:   | FileCheck %s --check-prefix=PRE-EXTERN
 
 ; RUN: opt post.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
 ; RUN:   -sample-profile-file=prof.txt -pass-remarks=sample-profile-inline -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ; RUN: opt post.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof.txt -sample-profile-orphaned-local-roots \
+; RUN:   -sample-profile-file=prof.txt -sample-profile-preserve-deferred-inlines \
 ; RUN:   -pass-remarks=sample-profile-inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=POST-ON
 ;; Only a local frame can be orphaned: a non-local function may have an
 ;; out-of-line copy elsewhere that uses its top-level profile.
 ; RUN: sed 's/spFlags: DISPFlagLocalToUnit | DISPFlagDefinition/spFlags: DISPFlagDefinition/' \
 ; RUN:   post.ll > post-nonlocal.ll
 ; RUN: opt post-nonlocal.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof.txt -sample-profile-orphaned-local-roots \
+; RUN:   -sample-profile-file=prof.txt -sample-profile-preserve-deferred-inlines \
 ; RUN:   -pass-remarks=sample-profile-inline -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 
@@ -37,13 +37,13 @@
 ;; inlined copies, so this copy must not get all of R's samples.
 ; RUN: sed 's/^R:4600000:100000$/R:4600000:200000/' prof.txt > prof-multi.txt
 ; RUN: opt post.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof-multi.txt -sample-profile-orphaned-local-roots \
+; RUN:   -sample-profile-file=prof-multi.txt -sample-profile-preserve-deferred-inlines \
 ; RUN:   -pass-remarks=sample-profile-inline -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ;; A top-level profile whose checksum does not match R is not used.
 ; RUN: sed '15s/281479271677951/1/' prof.txt > prof-stale.txt
 ; RUN: opt post.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; RUN:   -sample-profile-file=prof-stale.txt -sample-profile-orphaned-local-roots \
+; RUN:   -sample-profile-file=prof-stale.txt -sample-profile-preserve-deferred-inlines \
 ; RUN:   -pass-remarks=sample-profile-inline -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 
