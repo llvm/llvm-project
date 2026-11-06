@@ -83,6 +83,8 @@ public:
   bool matchFDivSqrtToRsqF16(MachineInstr &MI) const;
   void applyFDivSqrtToRsqF16(MachineInstr &MI, const Register &X) const;
 
+  bool matchCvtPkF8DemandedBits(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   // FIXME: Should be able to have 2 separate matchdatas rather than custom
   // struct boilerplate.
   struct CvtF32UByteMatchInfo {
@@ -276,6 +278,27 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
                      .getReg(0);
   B.buildFMul(Dst, RSQ, Y, Flags);
   MI.eraseFromParent();
+}
+
+// Operands of a packed FP8/BF8 conversion: result, intrinsic ID, src0, src1,
+// vdst_in, word select.
+static constexpr unsigned CvtPkF8VDstInIdx = 4;
+
+bool AMDGPUPostLegalizerCombinerImpl::matchCvtPkF8DemandedBits(
+    MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  // Only the half kept in the result is read from vdst_in.
+  APInt Demanded = MI.getOperand(5).getImm() ? APInt::getLowBitsSet(32, 16)
+                                             : APInt::getHighBitsSet(32, 16);
+  KnownBits Known(32);
+  if (!Helper.simplifyDemandedBits(MI, CvtPkF8VDstInIdx, Demanded, Known,
+                                   /*Depth=*/0, /*DoRewrite=*/false))
+    return false;
+
+  MatchInfo = [this, &MI, Demanded](MachineIRBuilder &) {
+    KnownBits K(32);
+    Helper.simplifyDemandedBits(MI, CvtPkF8VDstInIdx, Demanded, K);
+  };
+  return true;
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(

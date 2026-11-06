@@ -69,6 +69,7 @@ namespace llvm {
 class AssumptionCache;
 class CCState;
 class CCValAssign;
+class CombinerHelper;
 enum class ComplexDeinterleavingOperation;
 enum class ComplexDeinterleavingRotation;
 class Constant;
@@ -4683,6 +4684,19 @@ public:
                                                  KnownBits &Known,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth = 0) const;
+
+  /// GlobalISel version of SimplifyDemandedBitsForTargetNode, called by
+  /// CombinerHelper::simplifyDemandedBits for instructions it does not handle
+  /// itself, such as target intrinsics. Only \p DemandedBits of the result of
+  /// \p MI are used. Translate that into the bits demanded from each operand
+  /// and pass them to \p Helper.simplifyDemandedBits with \p DoRewrite and
+  /// Depth + 1. Return true if an operand was simplified, or would be if
+  /// \p DoRewrite is false, and set \p Known to the known bits of the result.
+  virtual bool simplifyDemandedBitsForTargetInstr(
+      const CombinerHelper &Helper, MachineInstr &MI, const APInt &DemandedBits,
+      KnownBits &Known, unsigned Depth, bool DoRewrite) const {
+    return false;
+  }
 
   /// More limited version of SimplifyDemandedBits that can be used to "look
   /// through" ops that don't contribute to the DemandedBits/DemandedElts -
