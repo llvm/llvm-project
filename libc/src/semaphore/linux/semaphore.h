@@ -1,9 +1,14 @@
-//===-- Linux Semaphore implementation for POSIX semaphores ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of POSIX semaphores.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
@@ -44,7 +49,9 @@ class Semaphore {
   // absolute timeout.
   LIBC_INLINE int wait_until(internal::AbsTimeout timeout) {
     while (trywait() != 0) {
-      auto wait_or = value.wait(/*expected=*/0, timeout, is_shared);
+      // POSIX has a signal handler end the wait with EINTR.
+      auto wait_or =
+          value.wait(/*expected=*/0, timeout, is_shared, FutexSigAction::Exit);
 
       // returned error is not a benign race EAGAIN
       if (!wait_or.has_value() && wait_or.error() != EAGAIN) {
@@ -139,8 +146,8 @@ public:
       // Futex wait re-checks the value atomically,
       // so a racing post() before sleep is not lost.
       // Spurious wakeups just send back to trywait().
-      auto wait_or =
-          value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt, is_shared);
+      auto wait_or = value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt,
+                                is_shared, FutexSigAction::Exit);
 
       // A successful wake or EAGAIN both just send it back to trywait().
       // Any other error is unexpected.
