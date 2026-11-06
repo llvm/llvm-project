@@ -6,27 +6,6 @@
  *
  *===-----------------------------------------------------------------------===
  */
- /*
- * This meta header is vendored in Clang in order to
- * account for compatibility with libstdc++, especially
- * when we use clang and link libstdc++ as the standard library.
- * The meta header in libstdc++ only provides declarations
- * of the metafunctions, and clang decided to pursue
- * having builtins instead. 
- *
- * Right now, in clang driver, it will insert the paths
- * for standard library first before the clang's own headers.
- * So if we put the meta header in the same place as the existing
- * C headers, it will not work because clang will continue to search
- * for the path of the standard library's meta header first.
- * To address this issue, a new directory will be created in clang just
- * for the meta header. Whether any new clang's C++ header will be in
- * this directory as well will be a topic for discussion, no conrete plan
- * has been made on this yet.
- *
- * In coordination with libc++, the clang team will discuss with the libc++ team
- * to ensure the include_next approach will work as expected for each side.
- */
 
 #ifndef __CLANG_META
 #define __CLANG_META
