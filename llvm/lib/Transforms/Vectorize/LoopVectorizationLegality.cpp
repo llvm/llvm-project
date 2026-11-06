@@ -2113,13 +2113,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
     return false;
   }
 
-  // TODO: Handle early exits with side effects without a scalar tail.
-  if (hasUncountableExitWithSideEffects()) {
-    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking. Uncountable exit "
-                         "with side effects requires a scalar epilogue\n");
-    return false;
-  }
-
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
   // The list of pointers that we can safely read and write to remains empty.
