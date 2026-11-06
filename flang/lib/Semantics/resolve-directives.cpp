@@ -270,6 +270,16 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Delete &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccDelete);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::NoCreate &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccNoCreate);
+    return false;
+  }
+
   bool Pre(const parser::AccClause::Present &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccPresent);
     return false;
@@ -356,7 +366,8 @@ private:
 
   Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::AccCreate,
       Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
-      Symbol::Flag::AccDelete, Symbol::Flag::AccPresent};
+      Symbol::Flag::AccDelete, Symbol::Flag::AccNoCreate,
+      Symbol::Flag::AccPresent};
 
   Symbol::Flags accDataMvtFlags{
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
