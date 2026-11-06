@@ -131,7 +131,6 @@ define void @foo_lmul8() nounwind #0 {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-RV32-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
-; CHECK-RV32-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    csrr a0, vlenb
 ; CHECK-RV32-NEXT:    slli a0, a0, 4
 ; CHECK-RV32-NEXT:    sub sp, sp, a0
@@ -142,10 +141,10 @@ define void @foo_lmul8() nounwind #0 {
 ; CHECK-RV32-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi a0, sp, 16
 ; CHECK-RV32-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-RV32-NEXT:    li a0, 32
+; CHECK-RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32-NEXT:    lui a0, %hi(j)
 ; CHECK-RV32-NEXT:    addi a0, a0, %lo(j)
-; CHECK-RV32-NEXT:    li a1, 32
-; CHECK-RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-RV32-NEXT:    vle32.v v8, (a0)
 ; CHECK-RV32-NEXT:    lui a0, %hi(k)
 ; CHECK-RV32-NEXT:    addi a0, a0, %lo(k)
@@ -165,7 +164,6 @@ define void @foo_lmul8() nounwind #0 {
 ; CHECK-RV32-NEXT:    slli a0, a0, 4
 ; CHECK-RV32-NEXT:    add sp, sp, a0
 ; CHECK-RV32-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; CHECK-RV32-NEXT:    lw a1, 24(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 32
 ; CHECK-RV32-NEXT:    mret
   %1 = load <32 x i32>, ptr @j

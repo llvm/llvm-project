@@ -203,10 +203,10 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-
 ; CHECK-NEXT:    beqz s0, .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %left
 ; CHECK-NEXT:    ld a1, 8(sp)
-; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    call consume
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB8_3
 ; CHECK-NEXT:  .LBB8_2: # %right
 ; CHECK-NEXT:    li a0, 1

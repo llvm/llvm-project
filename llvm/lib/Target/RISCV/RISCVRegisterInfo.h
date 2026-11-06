@@ -70,9 +70,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
-    // value of 1 << 14. A value of 5 will choose to spill or split cold
-    // path instead of using a callee-saved register.
-    return 5;
+    // value of 1 << 14. 32768 mean (1 << 14) * 2 instruction.
+    return 32768;
   }
 
   bool enableCSRFirstTimeMinCost(const MachineFunction &MF) const override;

@@ -956,62 +956,64 @@ define i128 @umulh_i128(i128 %x, i128 %y) nounwind {
 ; RV32M-NEXT:    sltu t3, t6, s1
 ; RV32M-NEXT:  .LBB4_2:
 ; RV32M-NEXT:    mulhu t0, a1, t0
-; RV32M-NEXT:    mulhu s4, a3, a6
-; RV32M-NEXT:    mulhu s5, a7, a4
+; RV32M-NEXT:    mulhu s3, a3, a6
+; RV32M-NEXT:    mulhu s4, a7, a4
 ; RV32M-NEXT:    mul s2, a5, a4
-; RV32M-NEXT:    mul s3, a7, a2
+; RV32M-NEXT:    mul s5, a7, a2
 ; RV32M-NEXT:    mul s6, a7, a4
 ; RV32M-NEXT:    mul t5, a1, a6
 ; RV32M-NEXT:    sltu t1, s0, t1
 ; RV32M-NEXT:    sltu s0, s1, t2
+; RV32M-NEXT:    mv s1, s5
 ; RV32M-NEXT:    add t2, t0, t1
-; RV32M-NEXT:    add s0, s4, s0
-; RV32M-NEXT:    add s1, s2, s5
+; RV32M-NEXT:    add s0, s3, s0
+; RV32M-NEXT:    add s3, s2, s4
 ; RV32M-NEXT:    add s0, t2, s0
-; RV32M-NEXT:    add s4, s3, s1
+; RV32M-NEXT:    add s4, s5, s3
 ; RV32M-NEXT:    add t4, s6, t4
 ; RV32M-NEXT:    add t6, s4, t6
 ; RV32M-NEXT:    sltu t1, t4, s6
 ; RV32M-NEXT:    add t4, t5, s0
 ; RV32M-NEXT:    add t6, t6, t1
 ; RV32M-NEXT:    add t0, t4, t3
+; RV32M-NEXT:    mv t3, s4
 ; RV32M-NEXT:    beq t6, s4, .LBB4_4
 ; RV32M-NEXT:  # %bb.3:
-; RV32M-NEXT:    sltu t1, t6, s4
+; RV32M-NEXT:    sltu t1, t6, t3
 ; RV32M-NEXT:  .LBB4_4:
-; RV32M-NEXT:    mulhu t3, a5, a4
+; RV32M-NEXT:    mulhu t6, a5, a4
 ; RV32M-NEXT:    mulhu a7, a7, a2
-; RV32M-NEXT:    sltu t6, s1, s2
-; RV32M-NEXT:    sltu s1, s4, s3
-; RV32M-NEXT:    mul s2, a5, a2
+; RV32M-NEXT:    sltu s2, s3, s2
+; RV32M-NEXT:    sltu t3, t3, s1
+; RV32M-NEXT:    mul s1, a5, a2
 ; RV32M-NEXT:    sltu s3, t0, t4
 ; RV32M-NEXT:    sltu t4, t4, t5
 ; RV32M-NEXT:    sltu t2, s0, t2
 ; RV32M-NEXT:    mulhu t5, a1, a6
 ; RV32M-NEXT:    mulhu a6, a5, a2
 ; RV32M-NEXT:    mulhu s0, a3, a4
-; RV32M-NEXT:    add t3, t3, t6
-; RV32M-NEXT:    add a7, a7, s1
+; RV32M-NEXT:    add t6, t6, s2
+; RV32M-NEXT:    add a7, a7, t3
 ; RV32M-NEXT:    add t2, t2, t4
-; RV32M-NEXT:    add a7, t3, a7
+; RV32M-NEXT:    add a7, t6, a7
 ; RV32M-NEXT:    add t2, t2, s3
-; RV32M-NEXT:    add t4, s2, a7
-; RV32M-NEXT:    sltu a7, a7, t3
+; RV32M-NEXT:    add t3, s1, a7
+; RV32M-NEXT:    sltu a7, a7, t6
 ; RV32M-NEXT:    mul a5, a1, a4
-; RV32M-NEXT:    add t3, t4, t1
+; RV32M-NEXT:    add t4, t3, t1
 ; RV32M-NEXT:    mul t6, a3, a4
-; RV32M-NEXT:    add s1, t0, t3
+; RV32M-NEXT:    add s2, t0, t4
 ; RV32M-NEXT:    mul t1, a3, a2
-; RV32M-NEXT:    sltu s2, t4, s2
+; RV32M-NEXT:    sltu s1, t3, s1
 ; RV32M-NEXT:    add a6, a6, a7
-; RV32M-NEXT:    sltu a7, t3, t4
-; RV32M-NEXT:    add a6, a6, s2
+; RV32M-NEXT:    sltu a7, t4, t3
+; RV32M-NEXT:    add a6, a6, s1
 ; RV32M-NEXT:    add t5, t5, t2
 ; RV32M-NEXT:    add a6, a6, a7
-; RV32M-NEXT:    sltu t0, s1, t0
+; RV32M-NEXT:    sltu t0, s2, t0
 ; RV32M-NEXT:    add a7, t5, a6
 ; RV32M-NEXT:    add t3, a5, s0
-; RV32M-NEXT:    add a6, t6, s1
+; RV32M-NEXT:    add a6, t6, s2
 ; RV32M-NEXT:    add t4, t1, t3
 ; RV32M-NEXT:    sltu t2, a6, t6
 ; RV32M-NEXT:    add t6, a7, t0
@@ -4078,6 +4080,7 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; RV32M-NEXT:  # %bb.5:
 ; RV32M-NEXT:    sltu t5, a4, s4
 ; RV32M-NEXT:  .LBB15_6:
+; RV32M-NEXT:    sw a4, 4(sp) # 4-byte Folded Spill
 ; RV32M-NEXT:    lw t4, 16(a1)
 ; RV32M-NEXT:    lw t2, 20(a1)
 ; RV32M-NEXT:    lw a5, 24(a1)
@@ -4114,7 +4117,7 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; RV32M-NEXT:    mulhu s7, a5, s0
 ; RV32M-NEXT:    mul a7, a1, s0
 ; RV32M-NEXT:    mul t1, a5, t3
-; RV32M-NEXT:    mul s8, a5, s0
+; RV32M-NEXT:    mul s10, a5, s0
 ; RV32M-NEXT:    add s1, a6, s2
 ; RV32M-NEXT:    add s3, s6, s3
 ; RV32M-NEXT:    sltu a6, s3, s6
@@ -4125,80 +4128,82 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; RV32M-NEXT:    sltu s2, s3, s4
 ; RV32M-NEXT:    add s2, s5, s2
 ; RV32M-NEXT:    add s5, a7, s7
-; RV32M-NEXT:    add s6, t1, s5
-; RV32M-NEXT:    add s3, s8, s3
-; RV32M-NEXT:    add s4, s6, s2
-; RV32M-NEXT:    sltu s2, s3, s8
-; RV32M-NEXT:    add s8, s9, t0
+; RV32M-NEXT:    add s8, t1, s5
+; RV32M-NEXT:    add a4, s10, s3
+; RV32M-NEXT:    add s4, s8, s2
+; RV32M-NEXT:    sltu s2, a4, s10
+; RV32M-NEXT:    add s7, s9, t0
 ; RV32M-NEXT:    add s4, s4, s2
-; RV32M-NEXT:    add t0, s8, t6
-; RV32M-NEXT:    sltu t6, s8, s9
-; RV32M-NEXT:    beq s4, s6, .LBB15_10
+; RV32M-NEXT:    add t0, s7, t6
+; RV32M-NEXT:    sltu t6, s7, s9
+; RV32M-NEXT:    beq s4, s8, .LBB15_10
 ; RV32M-NEXT:  # %bb.9:
-; RV32M-NEXT:    sltu s2, s4, s6
+; RV32M-NEXT:    sltu s2, s4, s8
 ; RV32M-NEXT:  .LBB15_10:
 ; RV32M-NEXT:    mulhu s0, a1, s0
-; RV32M-NEXT:    mulhu s10, a5, t3
-; RV32M-NEXT:    mulhu s11, t4, a6
-; RV32M-NEXT:    mul s7, t2, a6
-; RV32M-NEXT:    mul s9, t4, a2
+; RV32M-NEXT:    mulhu s9, a5, t3
+; RV32M-NEXT:    mulhu s10, t4, a6
+; RV32M-NEXT:    mul s6, t2, a6
+; RV32M-NEXT:    mul s11, t4, a2
 ; RV32M-NEXT:    mul ra, t4, a6
 ; RV32M-NEXT:    sltu s5, s5, a7
-; RV32M-NEXT:    sltu a3, s6, t1
-; RV32M-NEXT:    mul s6, a1, t3
+; RV32M-NEXT:    sltu a3, s8, t1
+; RV32M-NEXT:    mul s3, a1, t3
 ; RV32M-NEXT:    add s5, s0, s5
 ; RV32M-NEXT:    add a7, t0, t5
-; RV32M-NEXT:    sltu t1, t0, s8
-; RV32M-NEXT:    add a3, s10, a3
-; RV32M-NEXT:    add s10, s7, s11
-; RV32M-NEXT:    add s8, s5, a3
-; RV32M-NEXT:    add s11, s9, s10
-; RV32M-NEXT:    add s3, ra, s3
-; RV32M-NEXT:    add s4, s11, s4
-; RV32M-NEXT:    sltu s0, s3, ra
-; RV32M-NEXT:    add s3, s6, s8
-; RV32M-NEXT:    add s4, s4, s0
+; RV32M-NEXT:    sltu t1, t0, s7
+; RV32M-NEXT:    mv s8, s11
+; RV32M-NEXT:    add a3, s9, a3
+; RV32M-NEXT:    add s9, s6, s10
+; RV32M-NEXT:    add s7, s5, a3
+; RV32M-NEXT:    add a3, s11, s9
+; RV32M-NEXT:    add a4, ra, a4
+; RV32M-NEXT:    add t5, a3, s4
+; RV32M-NEXT:    sltu s0, a4, ra
+; RV32M-NEXT:    add s4, s3, s7
+; RV32M-NEXT:    add a4, t5, s0
 ; RV32M-NEXT:    add t5, s1, t6
-; RV32M-NEXT:    add t6, s3, s2
-; RV32M-NEXT:    beq s4, s11, .LBB15_12
+; RV32M-NEXT:    mv s1, a3
+; RV32M-NEXT:    add t6, s4, s2
+; RV32M-NEXT:    beq a4, a3, .LBB15_12
 ; RV32M-NEXT:  # %bb.11:
-; RV32M-NEXT:    sltu s0, s4, s11
+; RV32M-NEXT:    sltu s0, a4, s1
 ; RV32M-NEXT:  .LBB15_12:
 ; RV32M-NEXT:    mulhu a3, t2, a6
-; RV32M-NEXT:    mulhu t4, t4, a2
-; RV32M-NEXT:    sltu s1, s10, s7
-; RV32M-NEXT:    sltu s2, s11, s9
-; RV32M-NEXT:    mul s4, t2, a2
-; RV32M-NEXT:    sltu s6, s3, s6
-; RV32M-NEXT:    sltu s3, t6, s3
-; RV32M-NEXT:    sltu s5, s8, s5
+; RV32M-NEXT:    mulhu a4, t4, a2
+; RV32M-NEXT:    sltu t4, s9, s6
+; RV32M-NEXT:    sltu s1, s1, s8
+; RV32M-NEXT:    mul s2, t2, a2
+; RV32M-NEXT:    sltu s3, s4, s3
+; RV32M-NEXT:    sltu s4, t6, s4
+; RV32M-NEXT:    sltu s5, s7, s5
 ; RV32M-NEXT:    mulhu t3, a1, t3
-; RV32M-NEXT:    mulhu s7, t2, a2
-; RV32M-NEXT:    mulhu s8, a5, a6
-; RV32M-NEXT:    add a3, a3, s1
-; RV32M-NEXT:    add t4, t4, s2
-; RV32M-NEXT:    add s5, s5, s6
-; RV32M-NEXT:    add t4, a3, t4
+; RV32M-NEXT:    mulhu s6, t2, a2
+; RV32M-NEXT:    mulhu s7, a5, a6
+; RV32M-NEXT:    add a3, a3, t4
+; RV32M-NEXT:    add a4, a4, s1
 ; RV32M-NEXT:    add s3, s5, s3
-; RV32M-NEXT:    add s1, s4, t4
-; RV32M-NEXT:    sltu a3, t4, a3
+; RV32M-NEXT:    add a4, a3, a4
+; RV32M-NEXT:    add s3, s3, s4
+; RV32M-NEXT:    add t4, s2, a4
+; RV32M-NEXT:    sltu a3, a4, a3
 ; RV32M-NEXT:    mul t2, a1, a6
-; RV32M-NEXT:    add t4, s1, s0
-; RV32M-NEXT:    mul s5, a5, a6
-; RV32M-NEXT:    add s6, t6, t4
+; RV32M-NEXT:    add a4, t4, s0
+; RV32M-NEXT:    mul s1, a5, a6
+; RV32M-NEXT:    add s5, t6, a4
 ; RV32M-NEXT:    mul s0, a5, a2
-; RV32M-NEXT:    sltu s2, s1, s4
-; RV32M-NEXT:    add a3, s7, a3
-; RV32M-NEXT:    sltu t4, t4, s1
+; RV32M-NEXT:    sltu s2, t4, s2
+; RV32M-NEXT:    add a3, s6, a3
+; RV32M-NEXT:    sltu a4, a4, t4
 ; RV32M-NEXT:    add a3, a3, s2
 ; RV32M-NEXT:    add s4, t3, s3
-; RV32M-NEXT:    add a3, a3, t4
-; RV32M-NEXT:    sltu t6, s6, t6
+; RV32M-NEXT:    add a3, a3, a4
+; RV32M-NEXT:    sltu t6, s5, t6
 ; RV32M-NEXT:    add a3, s4, a3
-; RV32M-NEXT:    add s2, t2, s8
-; RV32M-NEXT:    add t3, s5, s6
+; RV32M-NEXT:    add s2, t2, s7
+; RV32M-NEXT:    add t3, s1, s5
 ; RV32M-NEXT:    add s3, s0, s2
-; RV32M-NEXT:    sltu s1, t3, s5
+; RV32M-NEXT:    sltu s1, t3, s1
 ; RV32M-NEXT:    add s5, a3, t6
 ; RV32M-NEXT:    add t4, s3, s1
 ; RV32M-NEXT:    add t4, t4, s5
@@ -4214,22 +4219,22 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; RV32M-NEXT:    sltu t6, s5, s4
 ; RV32M-NEXT:  .LBB15_16:
 ; RV32M-NEXT:    mulhu a3, a1, a6
-; RV32M-NEXT:    mulhu a5, a5, a2
-; RV32M-NEXT:    mul a6, a1, a2
+; RV32M-NEXT:    mulhu a4, a5, a2
+; RV32M-NEXT:    mul a5, a1, a2
 ; RV32M-NEXT:    mulhu a1, a1, a2
 ; RV32M-NEXT:    sltu a2, s2, t2
-; RV32M-NEXT:    sltu t1, s3, s0
+; RV32M-NEXT:    sltu a6, s3, s0
 ; RV32M-NEXT:    add a2, a3, a2
-; RV32M-NEXT:    add a5, a5, t1
-; RV32M-NEXT:    add a5, a2, a5
-; RV32M-NEXT:    add a3, a6, a5
-; RV32M-NEXT:    sltu a2, a5, a2
+; RV32M-NEXT:    add a4, a4, a6
+; RV32M-NEXT:    add a4, a2, a4
+; RV32M-NEXT:    add a3, a5, a4
+; RV32M-NEXT:    sltu a2, a4, a2
 ; RV32M-NEXT:    add t6, a3, t6
-; RV32M-NEXT:    sltu a5, a3, a6
+; RV32M-NEXT:    sltu a4, a3, a5
 ; RV32M-NEXT:    add a1, a1, a2
 ; RV32M-NEXT:    add s1, t6, s1
 ; RV32M-NEXT:    sltu a2, t6, a3
-; RV32M-NEXT:    add a1, a1, a5
+; RV32M-NEXT:    add a1, a1, a4
 ; RV32M-NEXT:    sltu a3, s1, t6
 ; RV32M-NEXT:    add a1, a1, a2
 ; RV32M-NEXT:    add a1, a1, a3
@@ -4239,7 +4244,8 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; RV32M-NEXT:    sw a1, 28(a0)
 ; RV32M-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
 ; RV32M-NEXT:    sw a1, 0(a0)
-; RV32M-NEXT:    sw a4, 4(a0)
+; RV32M-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32M-NEXT:    sw a1, 4(a0)
 ; RV32M-NEXT:    sw a7, 8(a0)
 ; RV32M-NEXT:    sw t0, 12(a0)
 ; RV32M-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
