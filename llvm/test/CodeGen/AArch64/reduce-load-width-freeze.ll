@@ -342,15 +342,13 @@ define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
   ret i16 %trunc
 }
 
-; The narrowed load already exists. Replacing the load under the multi-use
-; freeze makes CSE merge the freeze, and then the AND being combined, into
-; existing nodes. zeroext on %a and the reload through %s are needed to reach
-; the crash.
-define i1 @and_freeze_multi_use_load_cse(ptr %p, ptr %q, i8 zeroext %a) {
+; Narrowing a load under a multi-use freeze can CSE the AND being combined
+; into an existing node (#230899). zeroext on %a and the reload through %s
+; are needed to reproduce.
+define i1 @and_freeze_multi_use_load_cse(ptr %p, ptr %q, i8 zeroext %a) nounwind {
 ; CHECK-LABEL: and_freeze_multi_use_load_cse:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    strb w8, [sp, #15]
