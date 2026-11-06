@@ -7,6 +7,8 @@ define i32 @minimal(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @minimal(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[B]], i32 [[A]]
 ; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
 ;
@@ -27,6 +29,9 @@ define i32 @with_offset(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @with_offset(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[IDX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[B]], i32 [[A]]
 ; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
 ;
@@ -59,7 +64,9 @@ define i64 @with_offset_partial(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[ALLOCA_SROA_4_4_ALLOCA_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA_SROA_4]], i32 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA_SROA_4_4_ALLOCA_4_SROA_IDX]], align 4
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
 ; CHECK-NEXT:    [[GEP_SROA_SEL:%.*]] = select i1 [[GEP_SROA_IDX]], ptr [[ALLOCA_SROA_4]], ptr [[ALLOCA_SROA_1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[GEP_SROA_SEL]], align 4
 ; CHECK-NEXT:    ret i64 [[V]]
 ;
@@ -89,6 +96,8 @@ define i32 @overlapping_slots_promotable(i64 %idx, i64 %a) {
 ; CHECK-NEXT:    [[ALLOCA_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[A]], 56
 ; CHECK-NEXT:    [[ALLOCA_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[ALLOCA_SROA_3_0_EXTRACT_SHIFT]] to i8
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_SHIFT:%.*]] = lshr i56 [[ALLOCA_SROA_0_0_EXTRACT_TRUNC]], 24
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_TRUNC:%.*]] = trunc i56 [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_SHIFT]] to i32
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i56 [[ALLOCA_SROA_0_0_EXTRACT_TRUNC]] to i32
@@ -114,8 +123,10 @@ define i32 @overlapping_slots_not_promotable(i64 %idx, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_4_ALLOCA_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA_SROA_0]], i32 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_SROA_0_4_ALLOCA_1_SROA_IDX2]], align 4
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_3_SLOT1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA_SROA_0]], i32 3
 ; CHECK-NEXT:    [[GEP_SROA_SEL:%.*]] = select i1 [[GEP_SROA_IDX]], ptr [[ALLOCA_SROA_0_3_SLOT1_SROA_IDX1]], ptr [[ALLOCA_SROA_0]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP_SROA_SEL]], align 1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;

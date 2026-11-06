@@ -553,6 +553,8 @@ define i64 @test_phi_idx_mem2reg_const(i1 %arg) {
 ; CHECK-MODIFY-CFG:       end:
 ; CHECK-MODIFY-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
 ; CHECK-MODIFY-CFG-NEXT:    [[GETELEMENTPTR_SROA_IDX:%.*]] = icmp eq i64 [[PHI]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[PHI]], 2
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-MODIFY-CFG-NEXT:    [[LOAD_SROA_SPECULATED:%.*]] = select i1 [[GETELEMENTPTR_SROA_IDX]], i64 3, i64 2
 ; CHECK-MODIFY-CFG-NEXT:    ret i64 [[LOAD_SROA_SPECULATED]]
 ;
@@ -604,6 +606,8 @@ define i64 @test_phi_idx_mem2reg_not_const(i1 %arg, i64 %idx) {
 ; CHECK-MODIFY-CFG:       end:
 ; CHECK-MODIFY-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[IDX:%.*]], [[BB2]] ]
 ; CHECK-MODIFY-CFG-NEXT:    [[GETELEMENTPTR_SROA_IDX:%.*]] = icmp eq i64 [[PHI]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[PHI]], 2
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-MODIFY-CFG-NEXT:    [[LOAD_SROA_SPECULATED:%.*]] = select i1 [[GETELEMENTPTR_SROA_IDX]], i64 3, i64 2
 ; CHECK-MODIFY-CFG-NEXT:    ret i64 [[LOAD_SROA_SPECULATED]]
 ;
@@ -785,6 +789,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 ; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK-MODIFY-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK-MODIFY-CFG: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ;.
 ; CHECK-PRESERVE-CFG: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK-PRESERVE-CFG: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}

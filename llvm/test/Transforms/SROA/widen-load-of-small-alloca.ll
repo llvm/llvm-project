@@ -40,6 +40,8 @@ define void @load_1byte_chunk_of_2byte_alloca(ptr %src, i64 %byteOff, ptr %dst) 
 ; CHECK-MODIFY-CFG-LABEL: @load_1byte_chunk_of_2byte_alloca(
 ; CHECK-MODIFY-CFG-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_OFF_ADDR_SROA_IDX:%.*]] = icmp eq i64 [[BYTEOFF:%.*]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[BYTEOFF]], 2
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP3]])
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_SROA_0_1_VEC_EXTRACT:%.*]] = extractelement <2 x i8> [[INIT]], i64 1
 ; CHECK-MODIFY-CFG-NEXT:    [[TMP1:%.*]] = bitcast i8 [[INTERMEDIATE_SROA_0_1_VEC_EXTRACT]] to <1 x i8>
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x i8> [[INIT]], i64 0

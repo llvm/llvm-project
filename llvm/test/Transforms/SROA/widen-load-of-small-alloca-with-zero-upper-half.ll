@@ -25,8 +25,10 @@ define void @load_1byte_chunk_of_2byte_alloca_with_zero_upper_half(ptr %src, i64
 ; CHECK-MODIFY-CFG-NEXT:    [[INIT:%.*]] = load <1 x i8>, ptr [[SRC:%.*]], align 1
 ; CHECK-MODIFY-CFG-NEXT:    store <1 x i8> [[INIT]], ptr [[INTERMEDIATE_SROA_0]], align 64
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_OFF_ADDR_SROA_IDX:%.*]] = icmp eq i64 [[BYTEOFF:%.*]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[BYTEOFF]], 2
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_SROA_0_1_SLOT1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE_SROA_0]], i64 1
 ; CHECK-MODIFY-CFG-NEXT:    [[INTERMEDIATE_OFF_ADDR_SROA_SEL:%.*]] = select i1 [[INTERMEDIATE_OFF_ADDR_SROA_IDX]], ptr [[INTERMEDIATE_SROA_0_1_SLOT1_SROA_IDX1]], ptr [[INTERMEDIATE_SROA_0]]
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-MODIFY-CFG-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR_SROA_SEL]], align 1
 ; CHECK-MODIFY-CFG-NEXT:    store <1 x i8> [[CHUNK]], ptr [[DST:%.*]], align 1
 ; CHECK-MODIFY-CFG-NEXT:    ret void

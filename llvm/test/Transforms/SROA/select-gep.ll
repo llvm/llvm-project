@@ -209,6 +209,8 @@ define i64 @test_select_like_zext_idx_mem2reg(i1 %c) !prof !0 {
 ; CHECK-MODIFY-CFG-LABEL: @test_select_like_zext_idx_mem2reg(
 ; CHECK-MODIFY-CFG-NEXT:    [[IDX:%.*]] = zext i1 [[C:%.*]] to i64
 ; CHECK-MODIFY-CFG-NEXT:    [[GEP2_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-MODIFY-CFG-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[GEP2_SROA_IDX]], i64 2, i64 1, !prof [[PROF1:![0-9]+]]
 ; CHECK-MODIFY-CFG-NEXT:    ret i64 [[RES_SROA_SPECULATED]]
 ;
@@ -238,6 +240,8 @@ define i64 @test_zext_unlike_select_idx_mem2reg(i8 %c) {
 ; CHECK-MODIFY-CFG-LABEL: @test_zext_unlike_select_idx_mem2reg(
 ; CHECK-MODIFY-CFG-NEXT:    [[IDX:%.*]] = zext i8 [[C:%.*]] to i64
 ; CHECK-MODIFY-CFG-NEXT:    [[GEP2_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDX]], 2
+; CHECK-MODIFY-CFG-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-MODIFY-CFG-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[GEP2_SROA_IDX]], i64 2, i64 1
 ; CHECK-MODIFY-CFG-NEXT:    ret i64 [[RES_SROA_SPECULATED]]
 ;
@@ -367,6 +371,7 @@ define i32 @test_select_idx_not_constant3(i1 %c, ptr %p, i64 %arg) {
 ; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK-MODIFY-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK-MODIFY-CFG: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ;.
 ; CHECK-PRESERVE-CFG: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK-PRESERVE-CFG: [[PROF1]] = !{!"unknown", !"sroa"}
