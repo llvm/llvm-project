@@ -173,6 +173,9 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
   SmallPtrSet<Instruction *, 4> UniqueUsers;
   for (Use &U : I->uses()) {
     Instruction *User = cast<Instruction>(U.getUser());
+    // Ephemeral users do not generate code and must not constrain IV choices.
+    if (EphValues.count(User))
+      continue;
     if (!UniqueUsers.insert(User).second)
       continue;
 
