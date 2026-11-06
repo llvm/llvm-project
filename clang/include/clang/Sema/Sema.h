@@ -5325,7 +5325,8 @@ public:
   NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                  SourceLocation Loc);
 
-  void CheckPragmaWeakAliasRedeclaration(NamedDecl *NewD);
+  void CheckPragmaWeakAliasRedeclaration(NamedDecl *NewD,
+                                         LookupResult &Previous);
 
   /// DeclApplyPragmaWeak - A declaration (maybe definition) needs \#pragma weak
   /// applied to it, possibly with an alias.

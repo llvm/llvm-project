@@ -71,3 +71,15 @@ int __predecl(int i) { return 0; }
 int use_predecl(void) { return predecl(0); }
 int predecl(int);
 int use_predecl_redecl(void) { return predecl(0); }
+
+// Repeating an alias with the same target is fine; a different target is not.
+void dup_target1(void) {}
+void dup_target2(void) {}
+#pragma weak dup_alias = dup_target1 // expected-note {{previous definition is here}}
+#pragma weak dup_alias = dup_target1
+#pragma weak dup_alias = dup_target2 // expected-error {{redefinition of 'dup_alias'}}
+
+#pragma weak fwd_dup_alias = fwd_dup_target1 // expected-note {{previous definition is here}}
+#pragma weak fwd_dup_alias = fwd_dup_target2 // expected-error {{redefinition of 'fwd_dup_alias'}}
+void fwd_dup_target1(void) {}
+void fwd_dup_target2(void) {}
