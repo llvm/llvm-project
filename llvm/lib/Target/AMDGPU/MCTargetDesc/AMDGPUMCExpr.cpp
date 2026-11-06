@@ -70,6 +70,8 @@ unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
   case AGVK_AlignTo:
     return 2;
   case AGVK_ExtraSGPRs:
+  case AGVK_PrefetchCachelines:
+  case AGVK_PrefetchOffset:
     return 3;
   case AGVK_Occupancy:
     return 9;
@@ -109,6 +111,12 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     break;
   case AGVK_InstPrefSize:
     OS << "instprefsize(";
+    break;
+  case AGVK_PrefetchCachelines:
+    OS << "prefetchcachelines(";
+    break;
+  case AGVK_PrefetchOffset:
+    OS << "prefetchoffset(";
     break;
   case AGVK_Lit:
     OS << "lit(";
@@ -245,6 +253,65 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
   return true;
 }
 
+bool AMDGPUMCExpr::evaluatePrefetchCachelines(MCValue &Res,
+                                              const MCAssembler *Asm) const {
+  uint64_t TargetCacheLine = 0, CodeSizeInBytes = 0, InstOffset = 0;
+  if (!evaluateMCExprs(Args, Asm,
+                       {TargetCacheLine, CodeSizeInBytes, InstOffset}))
+    return false;
+
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  constexpr uint64_t MaxCachelinesPerPrefetch = 32;
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
+  uint64_t ICacheLines =
+      AMDGPU::IsaInfo::getInstCacheSize(*STI) / CacheLineSize;
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
+  uint64_t PrefetchEnd = std::min(CodeSizeInLines, ICacheLines);
+
+  // If this target starts beyond the prefetchable region, use the minimum
+  // encoded prefetch size. evaluatePrefetchOffset() targets the instruction's
+  // own cache line for such slots.
+  if (TargetCacheLine >= PrefetchEnd) {
+    Res = MCValue::get(static_cast<int64_t>(0));
+    return true;
+  }
+
+  uint64_t CachelineCount =
+      std::min(PrefetchEnd - TargetCacheLine, MaxCachelinesPerPrefetch);
+
+  // The instruction adds 1 to the encoded sdata, so deduct it here.
+  Res = MCValue::get(static_cast<int64_t>(CachelineCount - 1));
+  return true;
+}
+
+bool AMDGPUMCExpr::evaluatePrefetchOffset(MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  uint64_t TargetCacheLine = 0, CodeSizeInBytes = 0, InstOffset = 0;
+  if (!evaluateMCExprs(Args, Asm,
+                       {TargetCacheLine, CodeSizeInBytes, InstOffset}))
+    return false;
+
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
+  uint64_t ICacheLines =
+      AMDGPU::IsaInfo::getInstCacheSize(*STI) / CacheLineSize;
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
+  if (TargetCacheLine >= std::min(CodeSizeInLines, ICacheLines)) {
+    // Instruction semantics adds one to sdata when calculating the length of
+    // the prefetch. This means that even a prefetch instruction with sdata == 0
+    // still performs a prefetch. Therefore, to make this prefetch neutral, we
+    // let the prefetch instruction "prefetch" its own cache line.
+    // TODO: Check if we can replace this with proper s_nop instead.
+    Res = MCValue::get(static_cast<int64_t>(0));
+    return true;
+  }
+  // Prefetch is relative to this prefetch instruction's PC.
+  int64_t Offset = static_cast<int64_t>(TargetCacheLine * CacheLineSize) -
+                   static_cast<int64_t>(InstOffset);
+  Res = MCValue::get(Offset);
+  return true;
+}
+
 bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym,
                                             const MCExpr *E) {
   switch (E->getKind()) {
@@ -292,6 +359,10 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return evaluateOccupancy(Res, Asm);
   case AGVK_InstPrefSize:
     return evaluateInstPrefSize(Res, Asm);
+  case AGVK_PrefetchCachelines:
+    return evaluatePrefetchCachelines(Res, Asm);
+  case AGVK_PrefetchOffset:
+    return evaluatePrefetchOffset(Res, Asm);
   case AGVK_Lit:
   case AGVK_Lit64:
     return Args[0]->evaluateAsRelocatable(Res, Asm);
@@ -347,6 +418,21 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 const AMDGPUMCExpr *
 AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes, MCContext &Ctx) {
   return create(AGVK_InstPrefSize, {CodeSizeBytes}, Ctx);
+}
+
+const AMDGPUMCExpr *AMDGPUMCExpr::createPrefetchCachelines(
+    const MCExpr *TargetCacheLine, const MCExpr *CodeSizeBytes,
+    const MCExpr *InstOffset, MCContext &Ctx) {
+  return create(AGVK_PrefetchCachelines,
+                {TargetCacheLine, CodeSizeBytes, InstOffset}, Ctx);
+}
+
+const AMDGPUMCExpr *
+AMDGPUMCExpr::createPrefetchOffset(const MCExpr *TargetCacheLine,
+                                   const MCExpr *CodeSizeBytes,
+                                   const MCExpr *InstOffset, MCContext &Ctx) {
+  return create(AGVK_PrefetchOffset,
+                {TargetCacheLine, CodeSizeBytes, InstOffset}, Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,
