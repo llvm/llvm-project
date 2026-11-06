@@ -1299,7 +1299,9 @@ cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
       entry.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
-    assert(!cir::MissingFeatures::openMP());
+
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd && d)
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     if (entry.getSymType() == ty &&
         cir::normalizeDefaultAddressSpace(entryCIRAS) ==
@@ -1372,8 +1374,7 @@ cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
   // Handle things which are present even on external declarations.
   if (d) {
     if (langOpts.OpenMP && !langOpts.OpenMPSimd)
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: OpenMP target global variable");
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
 
