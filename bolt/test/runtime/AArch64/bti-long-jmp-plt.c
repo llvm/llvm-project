@@ -17,6 +17,7 @@
 // RUN: -no-pie %t/bti-plt.c -o %t.exe -Wl,-q -fuse-ld=lld \
 // RUN: -Wl,-T,%t/link.ld  -Wl,-z,force-bti
 // RUN: llvm-bolt %t.exe -o %t.bolt | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.cluster.bolt --relax-exp | FileCheck %s
 // CHECK: BOLT-INFO: binary is using BTI
 
 // Checking PLT entries before running BOLT
@@ -31,6 +32,8 @@
 
 // Checking PLT entries after patching them in BOLT
 // RUN: llvm-objdump -d -j .plt %t.bolt | FileCheck %s \
+// RUN: --check-prefix=CHECK-BOLT
+// RUN: llvm-objdump -d -j .plt %t.cluster.bolt | FileCheck %s \
 // RUN: --check-prefix=CHECK-BOLT
 // CHECK-BOLT: <abort@plt>
 // CHECK-BOLT-NEXT: bti     c

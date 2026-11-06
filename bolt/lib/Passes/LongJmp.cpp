@@ -1058,6 +1058,7 @@ public:
       : BC(BC), OutputFunctions(OutputFunctions) {}
 
   bool run();
+  void applyBTIFixups();
 
 private:
   static constexpr uint64_t ShortThunkSize = 4;
@@ -1148,6 +1149,11 @@ private:
   SmallVector<FragmentCluster, 4> Clusters;
   DenseMap<const BinaryBasicBlock *, Position> BBLayout;
   DenseMap<const MCSymbol *, Position> SymLayout;
+  DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolToBB;
+
+  /// Long thunks whose targets need BTI fixups after installing the output
+  /// function list. Fixups can add instruction patches to that list.
+  SmallVector<std::pair<BinaryBasicBlock *, const MCSymbol *>> PendingBTIFixups;
 
   /// Out-of-range calls and branches grouped for relaxation.
   SmallVector<OutOfRangeRef> OutOfLayoutCalls;
@@ -1304,15 +1310,21 @@ void ClusteredRelaxation::buildLayout() {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
 
     uint64_t BBOffset = FragmentOffset;
-    for (const BinaryBasicBlock *BB : FF) {
+    for (BinaryBasicBlock *BB : FF) {
       BBLayout[BB] = {ClusterNum, BBOffset};
       // Map the local BB label.
-      if (const MCSymbol *Label = BB->getLabel())
+      if (const MCSymbol *Label = BB->getLabel()) {
         SymLayout[Label] = {ClusterNum, BBOffset};
+        if (BC.usesBTI())
+          SymbolToBB[Label] = BB;
+      }
       // Map the secondary entry point, which can differ from the BB label.
       if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
-        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
+        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label)) {
           SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
+          if (BC.usesBTI())
+            SymbolToBB[EntrySymbol] = BB;
+        }
 
       BBOffset += BB->estimateSize();
     }
@@ -1575,7 +1587,10 @@ void ClusteredRelaxation::relaxCalls() {
     Thunk = BC.createThunkBinaryFunction(ThunkName);
     InstructionListType Instructions;
     BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
-    Thunk->addBasicBlock()->addInstructions(Instructions);
+    BinaryBasicBlock *ThunkBB = Thunk->addBasicBlock();
+    ThunkBB->addInstructions(Instructions);
+    if (BC.usesBTI())
+      PendingBTIFixups.emplace_back(ThunkBB, TargetSymbol);
     return Thunk;
   };
 
@@ -1706,6 +1721,13 @@ void ClusteredRelaxation::insertThunks() {
         Insertion.ThunkList->begin(), Insertion.ThunkList->end());
 }
 
+void ClusteredRelaxation::applyBTIFixups() {
+  for (const auto &[ThunkBB, TargetSymbol] : PendingBTIFixups)
+    BC.MIB->applyBTIFixupCommon(
+        TargetSymbol, BC.getFunctionForSymbol(TargetSymbol),
+        SymbolToBB.lookup(TargetSymbol), *ThunkBB->getLastNonPseudoInstr());
+}
+
 bool ClusteredRelaxation::run() {
   buildLayout();
   if (Clusters.empty())
@@ -1743,6 +1765,7 @@ void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
     return;
 
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+  Relaxation.applyBTIFixups();
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
