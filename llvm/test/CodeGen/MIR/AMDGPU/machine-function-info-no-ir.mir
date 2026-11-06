@@ -59,7 +59,6 @@
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
-# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -173,7 +172,6 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
-# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -259,7 +257,6 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
-# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -346,7 +343,6 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
-# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -675,21 +671,6 @@ name: min_num_agprs
 tracksRegLiveness: false
 machineFunctionInfo:
   minNumAGPRs:     8
-body:             |
-  bb.0:
-    SI_RETURN
-
-...
-
----
-# A set hasVGPRAsMemoryAccess parsed from the YAML must round-trip.
-# ALL-LABEL: name: vgpr_as_memory_access
-# FULL: hasVGPRAsMemoryAccess: true
-# SIMPLE: hasVGPRAsMemoryAccess: true
-name: vgpr_as_memory_access
-tracksRegLiveness: false
-machineFunctionInfo:
-  hasVGPRAsMemoryAccess: true
 body:             |
   bb.0:
     SI_RETURN

@@ -2139,7 +2139,88 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
+// Expand a VGPR "as memory" access into one indexed move per dword.
+static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
+  auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const SIRegisterInfo &RI = TII.getRegisterInfo();
+  const bool IsStore = LdSt.mayStore();
+
+  Register Data = LdSt.getDataOp().getReg();
+  unsigned Offset = LdSt.getOffsetOp().getImm();
+  unsigned NumDwords = LdSt.getBitWidth() / 32;
+
+  // A statically out-of-range offset is undefined behavior; mask it into the
+  // addressable range below rather than emit an invalid register.
+  unsigned NumIndexableVGPRs =
+      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*MBB.getParent());
+
+  const bool UseGPRIdxMode = LdSt.isGPRIdx();
+
+  MachineInstr *SetOn = nullptr;
+  if (UseGPRIdxMode) {
+    SetOn = BuildMI(MBB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
+                .add(LdSt.getIdxOp())
+                .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
+                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE)
+                .getInstr();
+    SetOn->getOperand(3).setIsUndef();
+  }
+
+  unsigned Opcode;
+  if (UseGPRIdxMode) {
+    Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
+                     : AMDGPU::V_MOV_B32_indirect_read;
+  } else {
+    Opcode =
+        IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
+  }
+
+  // A move touches its base plus the run-time index, which no operand can name,
+  // so the base is undef and the liveness of those registers is not expressed.
+  const RegState DataFlags = IsStore
+                                 ? getUndefRegState(LdSt.getDataOp().isUndef())
+                                 : RegState::NoFlags;
+  for (unsigned i = 0; i < NumDwords; ++i) {
+    Register Base = AMDGPU::VGPR_32RegClass.getRegister(
+        (Offset + i) & (NumIndexableVGPRs - 1));
+    Register Sub = Data;
+    if (NumDwords != 1)
+      Sub = RI.getSubReg(Data, RI.getSubRegFromChannel(i));
+
+    MachineInstrBuilder Move;
+    if (IsStore) {
+      Move = BuildMI(MBB, MI, DL, TII.get(Opcode))
+                 .addReg(Base, RegState::Undef)
+                 .addReg(Sub, DataFlags);
+    } else {
+      Move = BuildMI(MBB, MI, DL, TII.get(Opcode), Sub)
+                 .addReg(Base, RegState::Undef);
+    }
+    // Each mode switch defines M0, which keeps the index-mode moves in order.
+    // A movrel move only reads M0, so it keeps the access's memory operand.
+    if (!UseGPRIdxMode)
+      Move.cloneMemRefs(MI);
+  }
+
+  // Bundled so the post-RA scheduler keeps everything else out of the mode
+  // switch.
+  if (SetOn) {
+    MachineInstr *SetOff =
+        BuildMI(MBB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
+    finalizeBundle(MBB, SetOn->getIterator(), std::next(SetOff->getIterator()));
+  }
+
+  MI.eraseFromParent();
+}
+
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI)) {
+    expandLoadStoreIdx(*this, MI);
+    return true;
+  }
+
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
@@ -7874,7 +7955,6 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     if (!LdStIdx->isGPRIdx())
       return CreatedBB;
     MachineOperand *Idx = &LdStIdx->getIdxOp();
-    // A physical VGPR index is waterfalled too; isSGPRReg covers both.
     if (!RI.isSGPRReg(MRI, Idx->getReg()))
       CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
@@ -8357,82 +8437,79 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
   }
 }
 
+// M0 holds one value, but the VGPR copied into it holds one per lane. A movrel
+// access adds M0 to its base register, so each one that reads the copy is
+// wrapped in a waterfall loop that puts the value of each group of lanes in M0
+// in turn. Every other reader gets the first lane, as all of them do when no
+// access reads the copy.
+static void lowerVGPRCopyToM0(const SIInstrInfo &TII, MachineInstr &Copy,
+                              ArrayRef<MachineInstr *> Readers,
+                              MachineRegisterInfo &MRI,
+                              MachineDominatorTree *MDT) {
+  auto IsMovrelAccess = [](const MachineInstr *MI) {
+    const auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+    return LdStIdx && !LdStIdx->isGPRIdx();
+  };
+  if (none_of(Readers, IsMovrelAccess)) {
+    TII.createReadFirstLaneFromCopyToPhysReg(MRI, AMDGPU::M0, Copy);
+    return;
+  }
+
+  assert(!Copy.getOperand(1).getSubReg() &&
+         "selection copies a whole register into M0");
+  Register Idx = Copy.getOperand(1).getReg();
+  Register FirstLane;
+  for (MachineInstr *Reader : Readers) {
+    if (IsMovrelAccess(Reader)) {
+      MachineOperand *M0Use =
+          Reader->findRegisterUseOperand(AMDGPU::M0, &TII.getRegisterInfo());
+      M0Use->setReg(Idx);
+      generateWaterFallLoop(TII, *Reader, M0Use, MDT, nullptr, nullptr,
+                            {AMDGPU::M0});
+      continue;
+    }
+
+    if (!FirstLane) {
+      FirstLane = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*Copy.getParent(), Copy, Copy.getDebugLoc(),
+              TII.get(AMDGPU::V_READFIRSTLANE_B32), FirstLane)
+          .addReg(Idx);
+    }
+    BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
+            TII.get(AMDGPU::COPY), AMDGPU::M0)
+        .addReg(FirstLane);
+  }
+}
+
 void SIInstrInfo::handleCopyToPhysHelper(
     SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
     MachineRegisterInfo &MRI, MachineDominatorTree *MDT,
     DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
-  if (DstReg == AMDGPU::M0) {
-    // A movrel access adds M0 to its base register, so a divergent index is
-    // waterfalled into M0 for it. Every other reader takes the first lane.
-    // Selection copies the index into M0 in the block of each access that
-    // reads it, so only the rest of this block can hold one.
-    MachineBasicBlock &MBB = *Inst.getParent();
-    SmallVector<MachineInstr *, 2> Accesses, OtherReaders;
-    bool Redefined = false;
-    for (MachineInstr &MI :
-         make_range(std::next(MachineBasicBlock::iterator(Inst)), MBB.end())) {
-      auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI);
-      if (LdStIdx && !LdStIdx->isGPRIdx())
-        Accesses.push_back(&MI);
-      else if (!MI.isDebugInstr() && MI.readsRegister(AMDGPU::M0, &RI))
-        OtherReaders.push_back(&MI);
-      if (MI.modifiesRegister(AMDGPU::M0, &RI)) {
-        Redefined = true;
-        break;
-      }
-    }
+  // Only search current block since phyreg's def & use cannot cross
+  // blocks when MF.NoPhi = false.
+  SmallVector<MachineInstr *, 4> Readers;
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(std::next(MachineBasicBlock::iterator(Inst)),
+                                Inst.getParent()->end())) {
+    if (MI.readsRegister(DstReg, &RI))
+      Readers.push_back(&MI);
 
-    if (Accesses.empty()) {
-      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    } else {
-      assert(!Inst.getOperand(1).getSubReg() &&
-             "selection copies a whole register into M0");
-      Register Idx = Inst.getOperand(1).getReg();
-      // The loops leave M0 holding the last index they handled, so a successor
-      // reading the copy needs the first lane put back.
-      bool LiveOut =
-          !Redefined && any_of(MBB.successors(), [](MachineBasicBlock *Succ) {
-            return Succ->isLiveIn(AMDGPU::M0);
-          });
-      if (!OtherReaders.empty() || LiveOut) {
-        Register FirstLane =
-            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-        BuildMI(MBB, Inst, Inst.getDebugLoc(), get(AMDGPU::V_READFIRSTLANE_B32),
-                FirstLane)
-            .addReg(Idx);
-        for (MachineInstr *Reader : OtherReaders) {
-          BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
-                  get(AMDGPU::COPY), AMDGPU::M0)
-              .addReg(FirstLane);
-        }
-        // Built before the loops, so splitting the block moves it after them.
-        if (LiveOut) {
-          BuildMI(MBB, MBB.getFirstTerminator(), Inst.getDebugLoc(),
-                  get(AMDGPU::COPY), AMDGPU::M0)
-              .addReg(FirstLane);
-        }
-      }
-      Register M0 = AMDGPU::M0;
-      for (MachineInstr *Access : Accesses) {
-        MachineOperand *M0Use = Access->findRegisterUseOperand(AMDGPU::M0, &RI);
-        M0Use->setReg(Idx);
-        generateWaterFallLoop(*this, *Access, M0Use, MDT, nullptr, nullptr, M0);
-      }
-    }
+    if (MI.definesRegister(DstReg, &RI))
+      break;
+  }
+
+  if (DstReg == AMDGPU::M0) {
+    lowerVGPRCopyToM0(*this, Inst, Readers, MRI, MDT);
     V2SPhyCopiesToErase.try_emplace(&Inst, true);
     return;
   }
+
   Register SrcReg = Inst.getOperand(1).getReg();
-  MachineBasicBlock::iterator I = Inst.getIterator();
-  MachineBasicBlock::iterator E = Inst.getParent()->end();
-  // Only search current block since phyreg's def & use cannot cross
-  // blocks when MF.NoPhi = false.
-  while (++I != E) {
+  for (MachineInstr *UseMI : Readers) {
     // For SI_CALL_ISEL users, replace the phys SGPR with the VGPR source
     // and record the operand for later waterfall loop generation.
-    if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      MachineInstr *UseMI = &*I;
+    if (UseMI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
       for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
         if (UseMI->getOperand(i).isReg() &&
             UseMI->getOperand(i).getReg() == DstReg) {
@@ -8444,17 +8521,15 @@ void SIInstrInfo::handleCopyToPhysHelper(
           V2SPhyCopiesToErase.try_emplace(&Inst, true);
         }
       }
-    } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
-               I->getOperand(0).isReg() &&
-               I->getOperand(0).getReg() == DstReg) {
+    } else if (UseMI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
+               UseMI->getOperand(0).isReg() &&
+               UseMI->getOperand(0).getReg() == DstReg) {
       createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
       V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    } else if (I->readsRegister(DstReg, &RI)) {
+    } else {
       // COPY cannot be erased if other type of inst uses it.
       V2SPhyCopiesToErase[&Inst] = false;
     }
-    if (I->findRegisterDefOperand(DstReg, &RI))
-      break;
   }
 }
 

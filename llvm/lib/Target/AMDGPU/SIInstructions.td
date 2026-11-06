@@ -1071,7 +1071,8 @@ class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
 // _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
 // takes it in an SGPR and clobbers M0. The storage is the whole register
 // file, which no operand can name, so these are memory accesses with an MMO.
-let UseNamedOperandTable = 1, hasSideEffects = 0, Uses = [M0, EXEC] in
+let UseNamedOperandTable = 1, hasSideEffects = 0, Uses = [M0, EXEC],
+    VGPRAsMem = 1 in
 foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
               VReg_512, VReg_1024] in {
@@ -1095,15 +1096,18 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   }
 }
 
-// The moves the pseudos above expand into. A real v_movrel[sd]_b32 must carry
+// The moves the movrel pseudos expand into. A real v_movrel[sd]_b32 must carry
 // implicit operands for the register tuple it indexes, but these index the
 // whole register file, so they have their own opcodes, which
-// AMDGPUMCInstLower encodes as the real movrel. AMDGPULowerVGPREncoding needs
-// their named operand table.
+// AMDGPUMCInstLower encodes as the real movrel. The registers they touch are
+// not operands, so they keep the access's memory operand to stay in order
+// after the expansion. AMDGPULowerVGPREncoding needs their named operand table.
 let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
     UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
+  let mayLoad = 1 in
   def V_MOVRELS_B32_as_mem
       : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
+  let mayStore = 1 in
   def V_MOVRELD_B32_as_mem
       : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
 }

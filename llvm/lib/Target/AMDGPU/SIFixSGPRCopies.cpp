@@ -914,11 +914,8 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   if (!DstReg.isVirtual()) {
-    // If the destination register is a physical register there isn't
-    // really much we can do to fix this.
-    // Some special instructions use M0 as an input. moveToVALU waterfalls a
-    // divergent index into M0 for a movrel access and gives every other reader
-    // the first lane.
+    // moveToVALU lowers a VGPR copied into M0: each movrel access that reads it
+    // gets a waterfall loop, and every other reader the first lane.
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
     if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
       const TargetRegisterClass *OpRC =

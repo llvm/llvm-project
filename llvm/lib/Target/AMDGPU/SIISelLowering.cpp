@@ -13680,9 +13680,6 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  MachineFunction &MF = DAG.getMachineFunction();
-  MF.getInfo<SIMachineFunctionInfo>()->setHasVGPRAsMemoryAccess();
-
   // Each caller replaces the node, so this is diagnosed once.
   auto reportUnsupported = [&]() -> SDValue {
     const Function &F = DAG.getMachineFunction().getFunction();

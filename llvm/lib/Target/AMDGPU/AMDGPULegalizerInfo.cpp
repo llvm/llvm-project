@@ -3539,7 +3539,6 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
   MachineMemOperand &MMO = LdSt.getMMO();
-  B.getMF().getInfo<SIMachineFunctionInfo>()->setHasVGPRAsMemoryAccess();
 
   const bool IsStore = isa<GStore>(LdSt);
   Register ValReg = LdSt.getReg(0);
