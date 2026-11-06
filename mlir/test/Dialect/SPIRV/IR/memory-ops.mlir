@@ -809,6 +809,147 @@ func.func @copy_memory_print_maa() {
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : f32
   "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, source_memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
+  // A source-only mask prints an explicit None target mask so that the source
+  // mask stays in the second position.
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["Volatile"] : f32
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Volatile>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["Volatile|Aligned", 4] : f32
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Volatile|Aligned>, source_alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["None"] : f32
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyMemorySized
+//===----------------------------------------------------------------------===//
+
+func.func @copy_memory_sized(%size: i64) {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<i32, Function>
+  %2 = spirv.Constant 4 : i32
+
+  // Target and Source may point to different types.
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+  spirv.CopyMemorySized %0, %1, %2 : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i64
+  spirv.CopyMemorySized %0, %1, %size : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i64
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+  spirv.CopyMemorySized %0, %1, %2 ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+  spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+  spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4], ["Aligned", 8] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+  spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4], ["Aligned", 8] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_print_maa() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  %2 = spirv.Constant 4 : i32
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {memory_access=#spirv.memory_access<Volatile>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4], ["Aligned", 8] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, source_memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  // A source-only mask prints an explicit None target mask so that the source
+  // mask stays in the second position.
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<Volatile>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["Volatile|Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<Volatile|Aligned>, source_alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["None"] : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_vector_size(%size: vector<2xi32>) {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op operand #2 must be 8/16/32/64-bit integer}}
+  spirv.CopyMemorySized %0, %1, %size : !spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, vector<2xi32>
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_invalid_maa() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  %2 = spirv.Constant 4 : i32
+  // expected-error @+1 {{missing alignment value}}
+  "spirv.CopyMemorySized"(%0, %1, %2) {memory_access=#spirv.memory_access<Aligned>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_invalid_source_maa() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  %2 = spirv.Constant 4 : i32
+  // expected-error @+1 {{invalid alignment specification with non-aligned memory access specification}}
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<Volatile>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_target_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  %2 = spirv.Constant 4 : i32
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  "spirv.CopyMemorySized"(%0, %1, %2) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_sized_source_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  %2 = spirv.Constant 4 : i32
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>, i32) -> ()
+  spirv.Return
+}
+
+// -----
+
+// CHECK-LABEL: func @copy_memory_sized_unsigned_size
+func.func @copy_memory_sized_unsigned_size(%ptr: !spirv.ptr<i32, Function>) {
+  %size = spirv.Constant 4294967295 : ui32
+  // CHECK: spirv.CopyMemorySized
+  spirv.CopyMemorySized %ptr, %ptr, %size : !spirv.ptr<i32, Function>, !spirv.ptr<i32, Function>, ui32
+  %signless = spirv.Constant -1 : i32
+  // CHECK: spirv.CopyMemorySized
+  spirv.CopyMemorySized %ptr, %ptr, %signless : !spirv.ptr<i32, Function>, !spirv.ptr<i32, Function>, i32
   spirv.Return
 }
 
