@@ -9,8 +9,6 @@
 # The test has no zext (ORRW), SUBREG_TO_REG (considered COPY-like) should get safely coalesced.
 # A generic COPY into .sub_32 does NOT encode that upper bits are zeroed and that's fine because
 # the input MIR did not require that.
-#
-# FIXME: Get that COPY coalesced!
 ---
 name:            no_zext_subreg_to_reg
 tracksRegLiveness: true
@@ -23,9 +21,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[LDRSBXui:%[0-9]+]]:gpr64 = LDRSBXui $x1, 0 :: (load (s8))
-    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub_32:gpr64 = COPY [[LDRSBXui]].sub_32
     ; CHECK-NEXT: STRWui [[COPY]], $x1, 0 :: (store (s8))
-    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[LDRSBXui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %1:gpr32 = COPY $w0
     %3:gpr64 = LDRSBXui $x1, 0 :: (load (s8))
