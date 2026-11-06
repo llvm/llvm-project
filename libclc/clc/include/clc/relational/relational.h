@@ -40,8 +40,33 @@
     return _CLC_RELATIONAL_OP(x, y);                                           \
   }
 
+// Define a unary relational builtin from an ordinary expression in terms of x.
+// The scalar version returns 1/0 and the vector versions return -1/0, matching
+// the OpenCL relational convention that ordinary comparison operators already
+// produce, so EXPR should be a plain comparison rather than __builtin_isfpclass
+// (which some targets mislower for subnormals when denormals are supported).
+#define _CLC_DEFINE_RELATIONAL_UNARY(RET_TYPE, VEC_RET_TYPE, __CLC_FUNCTION,   \
+                                     EXPR, ARG_TYPE)                           \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) { return EXPR; }  \
+  _CLC_DEF _CLC_OVERLOAD VEC_RET_TYPE##2 __CLC_FUNCTION(ARG_TYPE##2 x) {       \
+    return EXPR;                                                              \
+  }                                                                           \
+  _CLC_DEF _CLC_OVERLOAD VEC_RET_TYPE##3 __CLC_FUNCTION(ARG_TYPE##3 x) {       \
+    return EXPR;                                                              \
+  }                                                                           \
+  _CLC_DEF _CLC_OVERLOAD VEC_RET_TYPE##4 __CLC_FUNCTION(ARG_TYPE##4 x) {       \
+    return EXPR;                                                              \
+  }                                                                           \
+  _CLC_DEF _CLC_OVERLOAD VEC_RET_TYPE##8 __CLC_FUNCTION(ARG_TYPE##8 x) {       \
+    return EXPR;                                                              \
+  }                                                                           \
+  _CLC_DEF _CLC_OVERLOAD VEC_RET_TYPE##16 __CLC_FUNCTION(ARG_TYPE##16 x) {     \
+    return EXPR;                                                              \
+  }
+
 #define fcNan (__FPCLASS_SNAN | __FPCLASS_QNAN)
 #define fcInf (__FPCLASS_POSINF | __FPCLASS_NEGINF)
+
 #define fcNormal (__FPCLASS_POSNORMAL | __FPCLASS_NEGNORMAL)
 #define fcSubnormal (__FPCLASS_POSSUBNORMAL | __FPCLASS_NEGSUBNORMAL)
 #define fcPosFinite                                                            \
