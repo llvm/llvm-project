@@ -79,6 +79,23 @@ class IOHandlerPickerTest(PExpectTest):
         self.child.send(self.escape_key)
         self.finish("canceled")
 
+    def test_sort_ascending(self):
+        """The first s sorts by the first column, ascending."""
+        self.start_picker("test-picker single 5", "Select an item:")
+        self.child.send("s")
+        self.child.expect_exact("ID ^")
+        self.child.send("j\r")
+        self.finish("selected: 2")
+
+    def test_sort_cycle(self):
+        """Each s advances the sort: ID asc, ID desc, NAME asc, NAME desc."""
+        self.start_picker("test-picker single 5", "Select an item:")
+        self.child.send("ssss")
+        self.child.expect_exact("NAME v")
+        # NAME descending: echo (5), delta (4), ...
+        self.child.send("j\r")
+        self.finish("selected: 4")
+
     def test_small_terminal_scrolls(self):
         """Moving past the viewport scrolls the list."""
         self.start_picker(

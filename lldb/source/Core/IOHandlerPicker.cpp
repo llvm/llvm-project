@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <numeric>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -36,6 +37,11 @@ static constexpr llvm::StringLiteral g_checked_prefix = " [x] ";
 static constexpr llvm::StringLiteral g_unchecked_prefix = " [ ] ";
 static constexpr llvm::StringLiteral g_cursor_prefix = " > ";
 static constexpr llvm::StringLiteral g_no_cursor_prefix = "   ";
+
+static constexpr llvm::StringLiteral g_ascending_indicator = " ^";
+static constexpr llvm::StringLiteral g_descending_indicator = " v";
+static_assert(g_ascending_indicator.size() == g_descending_indicator.size(),
+              "both sort indicators must take the same width");
 
 /// Header, key help, column names, footer, and an empty last line so that
 /// the footer's newline doesn't scroll the screen.
@@ -75,6 +81,8 @@ IOHandlerPicker::IOHandlerPicker(Debugger &debugger, llvm::StringRef header,
     if (item.initially_selected)
       m_checked.set(i);
 
+  UpdateVisibleIndices();
+
   // Without the pipe, resizes and cross-thread cancels wait for a key press.
   if (Status error = m_wakeup_pipe.CreateNew(); error.Fail())
     LLDB_LOG(GetLog(LLDBLog::Host), "IOHandlerPicker: {0}", error);
@@ -90,7 +98,7 @@ size_t IOHandlerPicker::GetPrefixWidth() const {
 void IOHandlerPicker::ComputeColumnWidths() {
   m_column_widths.clear();
   for (size_t i = 0; i < m_columns.size(); ++i) {
-    size_t width = GetColumnWidth(m_columns[i]);
+    size_t width = GetColumnWidth(m_columns[i]) + g_ascending_indicator.size();
     for (const PickerItem &item : m_items)
       width = std::max(width, GetColumnWidth(item.values[i]));
     m_column_widths.push_back(width);
@@ -235,6 +243,9 @@ IOHandlerPicker::Key IOHandlerPicker::DecodeByte(char c) {
     return Key::Up;
   case 'j':
     return Key::Down;
+  case 's':
+  case 'S':
+    return Key::Sort;
   case g_ctrl_c: // Raw mode disables SIGINT, so Ctrl+C arrives as a byte.
     return Key::Escape;
   default:
@@ -275,6 +286,56 @@ void IOHandlerPicker::ScrollToCursor() {
     m_viewport_start = m_cursor_index - viewport + 1;
 }
 
+void IOHandlerPicker::CycleSort() {
+  // unsorted -> col0 asc -> col0 desc -> col1 asc -> ... -> unsorted
+  if (m_columns.empty())
+    return;
+  if (!m_sort_order)
+    m_sort_order = SortOrder{0, /*ascending=*/true};
+  else if (m_sort_order->ascending)
+    m_sort_order->ascending = false;
+  else if (m_sort_order->column + 1 < m_columns.size())
+    m_sort_order = SortOrder{m_sort_order->column + 1, /*ascending=*/true};
+  else
+    m_sort_order.reset();
+  UpdateVisibleIndices();
+}
+
+void IOHandlerPicker::UpdateVisibleIndices() {
+  // Start from the item order, which the stable sort keeps for ties.
+  m_visible_indices.resize(m_items.size());
+  std::iota(m_visible_indices.begin(), m_visible_indices.end(), 0);
+  if (m_sort_order)
+    SortVisibleIndices(*m_sort_order);
+
+  // Jump to the top so the new order is visible.
+  m_cursor_index = 0;
+  m_viewport_start = 0;
+}
+
+void IOHandlerPicker::SortVisibleIndices(SortOrder order) {
+  size_t col = order.column;
+  // Compare as integers if every value in the column is one, so that "9"
+  // sorts before "10".
+  llvm::SmallVector<int64_t, 0> numbers;
+  numbers.reserve(m_items.size());
+  for (const PickerItem &item : m_items) {
+    int64_t number;
+    if (llvm::StringRef(item.values[col]).getAsInteger(10, number))
+      break;
+    numbers.push_back(number);
+  }
+  bool numeric = numbers.size() == m_items.size();
+  auto less = [&](size_t a, size_t b) {
+    if (numeric)
+      return numbers[a] < numbers[b];
+    return m_items[a].values[col] < m_items[b].values[col];
+  };
+  llvm::stable_sort(m_visible_indices, [&](size_t a, size_t b) {
+    return order.ascending ? less(a, b) : less(b, a);
+  });
+}
+
 void IOHandlerPicker::Render() {
   // Build the whole frame first so it reaches the terminal in one write.
   std::string frame = ANSI_CSI_RESET_CURSOR;
@@ -290,22 +351,35 @@ void IOHandlerPicker::Render() {
 
   llvm::StringRef help =
       m_mode == PickerMode::SingleSelect
-          ? "  jk: navigate  Enter: select  ESC: cancel"
-          : "  jk: navigate  Space: toggle  Enter: confirm  ESC: cancel";
+          ? "  jk: navigate  Enter: select  s: sort  ESC: cancel"
+          : "  jk: navigate  Space: toggle  Enter: confirm  s: sort  "
+            "ESC: cancel";
   write_line(ANSI_ESCAPE1(ANSI_CTRL_FAINT), help);
 
   std::string column_names(GetPrefixWidth(), ' ');
   for (size_t i = 0; i < m_columns.size(); ++i) {
-    const std::string &name = m_columns[i];
+    std::string name = m_columns[i];
+    bool is_sort_col = m_sort_order && m_sort_order->column == i;
+    if (is_sort_col) {
+      name += m_sort_order->ascending ? g_ascending_indicator
+                                      : g_descending_indicator;
+      column_names += ANSI_ESCAPE1(ANSI_CTRL_NORMAL)
+          ANSI_ESCAPE1(ANSI_CTRL_BOLD) ANSI_ESCAPE1(ANSI_CTRL_UNDERLINE);
+    }
     column_names += name;
+    if (is_sort_col)
+      column_names +=
+          ANSI_ESCAPE1(ANSI_CTRL_NORMAL) ANSI_ESCAPE1(ANSI_CTRL_FAINT);
     column_names.append(
         m_column_widths[i] - GetColumnWidth(name) + g_column_gap, ' ');
   }
   write_line(ANSI_ESCAPE1(ANSI_CTRL_FAINT), column_names);
 
-  size_t end = std::min(m_viewport_start + GetViewportHeight(), m_items.size());
-  for (size_t item_idx = m_viewport_start; item_idx < end; ++item_idx) {
-    bool is_cursor = item_idx == m_cursor_index;
+  size_t end = std::min(m_viewport_start + GetViewportHeight(),
+                        m_visible_indices.size());
+  for (size_t i = m_viewport_start; i < end; ++i) {
+    size_t item_idx = m_visible_indices[i];
+    bool is_cursor = i == m_cursor_index;
 
     std::string row;
     if (m_mode == PickerMode::MultiSelect)
@@ -328,7 +402,7 @@ void IOHandlerPicker::Render() {
                 .str()
           : llvm::formatv("  {0}/{1}", m_cursor_index + 1, m_items.size())
                 .str();
-  if (end < m_items.size())
+  if (end < m_visible_indices.size())
     footer += "  [more below]";
   if (m_viewport_start > 0)
     footer += "  [more above]";
@@ -381,6 +455,9 @@ void IOHandlerPicker::Run() {
     case Key::End:
       m_cursor_index = m_items.size() - 1;
       break;
+    case Key::Sort:
+      CycleSort();
+      break;
     case Key::Wakeup:
       // Unless Cancel() woke us up, the terminal was resized.
       if (!GetIsDone()) {
@@ -391,11 +468,11 @@ void IOHandlerPicker::Run() {
       break;
     case Key::Space:
       if (m_mode == PickerMode::MultiSelect)
-        m_checked.flip(m_cursor_index);
+        m_checked.flip(m_visible_indices[m_cursor_index]);
       break;
     case Key::Enter:
       if (m_mode == PickerMode::SingleSelect) {
-        m_result.selected_indices.push_back(m_cursor_index);
+        m_result.selected_indices.push_back(m_visible_indices[m_cursor_index]);
       } else {
         for (unsigned i : m_checked.set_bits())
           m_result.selected_indices.push_back(i);
