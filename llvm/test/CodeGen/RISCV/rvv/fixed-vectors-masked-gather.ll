@@ -16249,8 +16249,11 @@ define <4 x i32> @rijndael_gather_and(ptr %table, <4 x i32> %state) {
 ; RV32-NEXT:    li a1, 255
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vand.vx v8, v8, a1
-; RV32-NEXT:    vsll.vi v8, v8, 2
-; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: rijndael_gather_and:
@@ -16258,8 +16261,11 @@ define <4 x i32> @rijndael_gather_and(ptr %table, <4 x i32> %state) {
 ; RV64V-NEXT:    li a1, 255
 ; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64V-NEXT:    vand.vx v8, v8, a1
-; RV64V-NEXT:    vsll.vi v8, v8, 2
-; RV64V-NEXT:    vluxei32.v v8, (a0), v8
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v8, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: rijndael_gather_and:
@@ -16313,8 +16319,11 @@ define <4 x i32> @rijndael_gather_and_shuffle(ptr %table, <4 x i32> %state) {
 ; RV32-NEXT:    vand.vx v8, v8, a1
 ; RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; RV32-NEXT:    vslideup.vi v9, v8, 2
-; RV32-NEXT:    vsll.vi v8, v9, 2
-; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v9, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: rijndael_gather_and_shuffle:
@@ -16324,8 +16333,11 @@ define <4 x i32> @rijndael_gather_and_shuffle(ptr %table, <4 x i32> %state) {
 ; RV64V-NEXT:    vand.vx v8, v8, a1
 ; RV64V-NEXT:    vslidedown.vi v9, v8, 2
 ; RV64V-NEXT:    vslideup.vi v9, v8, 2
-; RV64V-NEXT:    vsll.vi v8, v9, 2
-; RV64V-NEXT:    vluxei32.v v8, (a0), v8
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v9, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: rijndael_gather_and_shuffle:
@@ -16381,8 +16393,11 @@ define <4 x i32> @rijndael_gather_lshr_shuffle(ptr %table, <4 x i32> %state) {
 ; RV32-NEXT:    vsrl.vi v8, v8, 24
 ; RV32-NEXT:    vslidedown.vi v9, v8, 3
 ; RV32-NEXT:    vslideup.vi v9, v8, 1
-; RV32-NEXT:    vsll.vi v8, v9, 2
-; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v9, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: rijndael_gather_lshr_shuffle:
@@ -16391,8 +16406,11 @@ define <4 x i32> @rijndael_gather_lshr_shuffle(ptr %table, <4 x i32> %state) {
 ; RV64V-NEXT:    vsrl.vi v8, v8, 24
 ; RV64V-NEXT:    vslidedown.vi v9, v8, 3
 ; RV64V-NEXT:    vslideup.vi v9, v8, 1
-; RV64V-NEXT:    vsll.vi v8, v9, 2
-; RV64V-NEXT:    vluxei32.v v8, (a0), v8
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v9, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: rijndael_gather_lshr_shuffle:
