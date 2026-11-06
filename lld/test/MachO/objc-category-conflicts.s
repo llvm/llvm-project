@@ -278,14 +278,15 @@ __OBJC_$_INSTANCE_METHODS_Foo:
 
 .include "objc-macros.s"
 
-## swiftc generates some classes without a statically-linked rodata. Not
-## entirely sure what the corresponding Swift inputs are required for this to
-## happen; this test merely checks that we can gracefully handle this case
-## without crashing.
+## Swift classes may lack statically-linked rodata (Foo) or have metadata before
+## their class address point (Bar). The 24-byte space models Swift's three
+## pointer-sized metadata fields before the Objective-C class. Bar references
+## itself so an incorrect zero offset mistakes class bytes for a method list.
 ## FIXME: It would be better if this test used the output of some real Swift
 ## code.
 
 .globl _$s11FooAACfD
+.globl _Bar
 
 .section __DATA,__objc_data
 _$s11FooAACfD:
@@ -295,8 +296,13 @@ _$s11FooAACfD:
   .quad 0
   .quad __objc_empty_cache
 
+_Bar:
+  .space 24
+  .quad 0, _Bar, 0, 0, __objc_empty_cache
+
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __CATEGORY_METAFoo_$_Foo20
+  .quad __CATEGORY_METABar_$_Bar20
 
 .section __DATA,__objc_const
 __CATEGORY_METAFoo_$_Foo20:
@@ -309,6 +315,14 @@ __CATEGORY_METAFoo_$_Foo20:
   .quad 0
   .long 64
   .space 4
+
+__CATEGORY_METABar_$_Bar20:
+  .objc_classname "Bar20"
+  .quad _Bar + 24
+  .quad 0, 0, 0, 0, 0
+  .long 64, 0
+
+.subsections_via_symbols
 
 #--- objc-macros.s
 
