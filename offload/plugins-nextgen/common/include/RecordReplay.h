@@ -29,6 +29,7 @@
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -172,6 +173,10 @@ protected:
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
+    /// The device memory just before the kernel execution. It is kept until
+    /// the epilogue to store the output snapshot as a diff against it.
+    mutable std::unique_ptr<MemoryBuffer> InputSnapshot;
+
     InstanceTy(const KernelInfoTy &Kernel, uint32_t NumTeams,
                uint32_t NumThreads, uint32_t SharedMemorySize,
                KernelReplayOutcomeTy *ReplayOutcome);
@@ -232,7 +237,9 @@ public:
   bool isRecording() const { return Status == StatusTy::Recording; }
   bool isReplaying() const { return Status == StatusTy::Replaying; }
   bool isRecordingOrReplaying() const { return isRecording() || isReplaying(); }
-  bool shouldRecordPrologue() const { return isRecording(); }
+  bool shouldRecordPrologue() const {
+    return isRecording() || shouldRecordEpilogue();
+  }
   bool shouldRecordEpilogue() const {
     return isRecordingOrReplaying() && SaveOutput;
   }
@@ -324,8 +331,15 @@ private:
   /// Get the extension for a recording file type.
   StringRef getExtension(FileTy FileType);
 
+  /// Retrieve the device memory currently in use, or null if there is none.
+  Expected<std::unique_ptr<WritableMemoryBuffer>> retrieveSnapshot();
+
   /// Record a memory snapshot to a file.
-  Error recordSnapshot(StringRef Filename);
+  Error recordSnapshot(StringRef Filename, const MemoryBuffer *Snapshot);
+
+  /// Record the device memory currently in use to a file, as a diff against
+  /// the input snapshot of \p Instance.
+  Error recordSnapshotDiff(StringRef Filename, const InstanceTy &Instance);
 
   /// Record the globals to a file.
   Error recordGlobals(StringRef Filename);

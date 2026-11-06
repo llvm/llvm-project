@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/RecordReplayDiff.h"
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
@@ -23,6 +24,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 
 using namespace llvm;
@@ -44,7 +46,8 @@ static cl::opt<bool> VerifyOpt(
 
 static cl::opt<bool> SaveOutputOpt(
     "save-output",
-    cl::desc("Save the device memory output of the replayed kernel execution."),
+    cl::desc("Save the device memory output of the replayed kernel execution, "
+             "as a diff against the record input."),
     cl::init(false), cl::cat(ReplayOptions));
 
 static cl::opt<uint32_t> NumTeamsOpt("num-teams",
@@ -121,7 +124,21 @@ Error processIntegerArray(const json::Object *Obj, StringRef Key,
   return Error::success();
 }
 
-/// Verify that the replay output is the same as the record output.
+/// Read the header of an output snapshot diff.
+static Error readDiffHeader(StringRef Buffer, StringRef Kind,
+                            RecordReplayDiffHeaderTy &Header) {
+  if (Buffer.size() < sizeof(Header))
+    return createErr("the kernel %s output file is truncated", Kind.data());
+  std::memcpy(&Header, Buffer.data(), sizeof(Header));
+  if (std::memcmp(Header.Magic, RecordReplayDiffMagic, sizeof(Header.Magic)))
+    return createErr("the kernel %s output file is not a memory diff",
+                     Kind.data());
+  return Error::success();
+}
+
+/// Verify that the replay output is the same as the record output. Both are
+/// diffs against the record input, so they match if and only if the device
+/// memory after the kernel execution matches.
 Error verifyReplayOutput(StringRef RecordOutputFilename,
                          StringRef ReplayOutputFilename) {
   // Load the record output file.
@@ -140,10 +157,23 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
   if (!ReplayOutputBufferOrErr)
     return createErr("failed to read the kernel replay output file");
 
-  // Compare record and replay outputs to verify they match. If they are both
-  // empty, the verification is successful.
   StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
   StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
+  RecordReplayDiffHeaderTy RecordHeader, ReplayHeader;
+  if (auto Err = readDiffHeader(RecordOutput, "record", RecordHeader))
+    return Err;
+  if (auto Err = readDiffHeader(ReplayOutput, "replay", ReplayHeader))
+    return Err;
+  if (RecordHeader.InputSize != ReplayHeader.InputSize)
+    return createErr("record and replay outputs have different input sizes "
+                     "(%" PRIu64 " and %" PRIu64 ")",
+                     RecordHeader.InputSize, ReplayHeader.InputSize);
+  if (RecordHeader.OutputSize != ReplayHeader.OutputSize)
+    return createErr("record and replay outputs have different sizes (%" PRIu64
+                     " and %" PRIu64 ")",
+                     RecordHeader.OutputSize, ReplayHeader.OutputSize);
+
+  // Compare record and replay outputs to verify they match.
   if (RecordOutput != ReplayOutput)
     return createErr("replay device memory failed to verify");
 
