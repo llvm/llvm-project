@@ -352,6 +352,54 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   return {Binary(raw), static_cast<enum ConversionResultFlags>(flags)};
 }
 
+// Converts significand * 10.**exponent using exact integer arithmetic followed
+// by a single rounding in ToBinary.  Returns false when |exponent| > 19 (so
+// that 10.**|exponent| fits in 64 bits), when the product needs more than 64
+// bits, or for exponent < 0 on hosts without a native 128-bit integer type,
+// where the emulated division would be slower than the general path.
+template <int PREC>
+static RT_API_ATTRS bool ConvertSmallToBinary(std::uint64_t significand,
+    int exponent, bool isNegative, enum FortranRounding rounding,
+    ConversionToBinaryResult<PREC> &result) {
+  static_assert(PREC <= 53, "quotient must hold PREC + guard bits");
+  static constexpr std::uint64_t pow10[]{1, 10, 100, 1000, 10000, 100000,
+      1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000,
+      1000000000000, 10000000000000, 100000000000000, 1000000000000000,
+      10000000000000000, 100000000000000000, 1000000000000000000,
+      10000000000000000000u};
+  static_assert(pow10[19] == TenToThe(19));
+  if (exponent < -19 || exponent > 19) {
+    return false;
+  }
+  IntermediateFloat<PREC> f;
+  std::uint64_t n;
+  if (exponent >= 0) {
+    common::uint128_t product{common::uint128_t{significand} * pow10[exponent]};
+    if ((product >> 64) != 0) {
+      return false;
+    }
+    n = static_cast<std::uint64_t>(product);
+  } else {
+#if USING_NATIVE_INT128_T
+    // The quotient lies in [2**62, 2**64).  ORing the remainder into its low
+    // bit is a valid sticky bit because SetTo drops at least 63 - PREC bits
+    // (10 for real(8)) below it.
+    std::uint64_t divisor{pow10[-exponent]};
+    int shift{63 + common::BitsNeededFor(divisor) -
+        common::BitsNeededFor(significand)};
+    common::uint128_t dividend{common::uint128_t{significand} << shift};
+    common::uint128_t quotient{dividend / divisor};
+    n = static_cast<std::uint64_t>(quotient) | (dividend != quotient * divisor);
+    f.AdjustExponent(-shift);
+#else
+    return false;
+#endif
+  }
+  f.SetTo(n);
+  result = f.ToBinary(isNegative, rounding);
+  return true;
+}
+
 template <int PREC, int LOG10RADIX>
 ConversionToBinaryResult<PREC>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
@@ -361,6 +409,15 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   Normalize();
   if (digits_ == 0) { // zero value
     return {Real{SignBit()}};
+  }
+  // A successful fast conversion has 1e-19 <= |x| < 2**64, so it can neither
+  // overflow nor underflow real(4) or real(8).
+  if constexpr (PREC == 24 || PREC == 53) {
+    if (ConversionToBinaryResult<PREC> result; digits_ == 1 &&
+        ConvertSmallToBinary<PREC>(
+            digit_[0], exponent_, isNegative_, rounding_, result)) {
+      return result;
+    }
   }
   // The value is not zero:  x = D. * 10.**E
   // Shift our perspective on the radix (& decimal) point so that
