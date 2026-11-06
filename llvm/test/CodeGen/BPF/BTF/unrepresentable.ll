@@ -1,20 +1,21 @@
 ; RUN: not llc -filetype=obj %s -o %t.o 2>&1 | FileCheck %s
 
 ; Source code:
-;   struct entry { _Complex float value; } nested;
+;   struct entry { typeof(nullptr) value; } nested;
 ;   int type_id(void) { return __builtin_btf_type_id(nested.value, 1); }
-;   _Complex float bad_map __attribute__((section(".maps")));
+;   typeof(nullptr) bad_map __attribute__((section(".maps")));
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm entry.c
+;   clang -target bpf -std=c23 -O2 -g -S -emit-llvm entry.c
+; Clang names the C23 nullptr type "decltype(nullptr)" in debug info.
 
-; CHECK-DAG: error: CO-RE relocation has unrepresentable BTF root type 'complex'
-; CHECK-DAG: error: BTF record references unrepresentable type 'complex'
-; CHECK-DAG: error: BTF map 'bad_map' has unrepresentable type 'complex'
+; CHECK-DAG: error: CO-RE relocation has unrepresentable BTF root type 'decltype(nullptr)'
+; CHECK-DAG: error: BTF record references unrepresentable type 'decltype(nullptr)'
+; CHECK-DAG: error: BTF map 'bad_map' has unrepresentable type 'decltype(nullptr)'
 
 target triple = "bpf"
 
-@nested = global { { float, float } } zeroinitializer, !dbg !2
-@bad_map = global { float, float } zeroinitializer, section ".maps", !dbg !12
+@nested = global { ptr } zeroinitializer, !dbg !2
+@bad_map = global ptr null, section ".maps", !dbg !12
 @"llvm.btf_type_id.0$7" = external global i64, !llvm.preserve.access.index !6 #0
 
 define i32 @type_id() !dbg !7 {
@@ -35,7 +36,7 @@ attributes #0 = { "btf_type_id" }
 !3 = distinct !DIGlobalVariable(name: "nested", scope: !0, file: !1, line: 1, type: !4, isLocal: false, isDefinition: true)
 !4 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "entry", size: 64, elements: !{!5})
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !4, baseType: !6, size: 64)
-!6 = !DIBasicType(name: "complex", size: 64, encoding: DW_ATE_complex_float)
+!6 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "decltype(nullptr)")
 !7 = distinct !DISubprogram(name: "type_id", scope: !1, file: !1, line: 2, type: !8, spFlags: DISPFlagDefinition, unit: !0)
 !8 = !DISubroutineType(types: !{!9})
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
