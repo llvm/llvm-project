@@ -168,6 +168,9 @@ struct DeviceTy {
   /// The active record/replay state, or null if neither is enabled.
   RecordReplayTy *getRecordReplay() { return RecordReplay.get(); }
 
+  /// Whether allocations must currently be served by record/replay.
+  bool isRecordingOrReplaying() const;
+
   /// Resolve the device address of the global variable \p Name in \p Program,
   /// recording it for kernel record/replay if recording is currently active.
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
@@ -404,9 +407,6 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
-
-  /// Whether allocations must currently be served by record/replay.
-  bool isRecordingOrReplaying() const;
 
   /// Kernel record/replay state, if enabled.
   std::unique_ptr<RecordReplayTy> RecordReplay;

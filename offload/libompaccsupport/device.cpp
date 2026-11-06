@@ -481,6 +481,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                << toString(AllocOrErr.takeError());
       return nullptr;
     }
+    // Set TargetPtr so the OMPT end callback sees the allocation.
     return TargetPtr = *AllocOrErr;
   }
 
@@ -504,7 +505,8 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  // Free is a noop when recording or replaying.
+  // Record/replay owns the memory: forward the deallocation to its region
+  // instead of the plugin.
   if (isRecordingOrReplaying()) {
     if (auto Err = RecordReplay->deallocate(TgtAllocBegin)) {
       REPORT() << "Failure to free record replay memory: "
