@@ -17,6 +17,7 @@
 #define MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "llvm/Support/Alignment.h"
 
 namespace mlir {
 
@@ -197,6 +198,15 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
 /// Returns true if any stride of `memRefTy` is statically known to be
 /// negative.
 bool hasNegativeStaticStride(MemRefType memRefTy);
+
+/// Returns the alignment of an access to `memRefType` at `indices + offsets`,
+/// given that the access at `indices` is aligned to `alignment`. `offsets` are
+/// in elements, not bytes, and apply to the trailing dimensions of the memref.
+/// Returns an empty alignment when `alignment` is empty, or when the byte
+/// distance between the two accesses is not static or does not fit in 64 bits.
+llvm::MaybeAlign getAlignmentAfterOffset(llvm::MaybeAlign alignment,
+                                         MemRefType memRefType,
+                                         ArrayRef<int64_t> offsets);
 
 /// Return "true" when no other access nested in `scope` can alias `base`.
 ///

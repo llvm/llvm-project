@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -1305,21 +1306,36 @@ public:
     rewriter.setInsertionPoint(loadOp);
     Location loc = loadOp.getLoc();
     ArithIndexingBuilder idxBuilderf(rewriter, loc);
+    SmallVector<int64_t> offsets(indices.size(), 0);
+    bool hasDynamicOffset = false;
     for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
       OpFoldResult pos = extractPos[i - rankOffset];
       if (isZeroInteger(pos))
         continue;
 
+      if (std::optional<int64_t> staticPos = getConstantIntValue(pos))
+        offsets[i] = *staticPos;
+      else
+        hasDynamicOffset = true;
       Value offset = getValueOrCreateConstantIndexOp(rewriter, loc, pos);
       indices[i] = idxBuilderf.add(indices[i], offset);
     }
 
+    // The new load is at an offset from the original one, so its alignment
+    // has to be recomputed, which needs a static offset.
+    llvm::MaybeAlign alignment;
+    if (!hasDynamicOffset)
+      alignment = memref::getAlignmentAfterOffset(loadOp.getMaybeAlign(),
+                                                  memType, offsets);
+
     Value base = loadOp.getBase();
     if (extractVecType) {
-      rewriter.replaceOpWithNewOp<vector::LoadOp>(op, extractVecType, base,
-                                                  indices);
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(
+          op, extractVecType, base, indices, loadOp.getNontemporal(),
+          alignment);
     } else {
-      rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices);
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(
+          op, base, indices, loadOp.getNontemporal(), alignment);
     }
     // We checked for single use so we can safely erase the load op.
     rewriter.eraseOp(loadOp);
