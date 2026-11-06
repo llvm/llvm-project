@@ -4,29 +4,7 @@
 define <8 x i32> @test(ptr %p) {
 ; CHECK-LABEL: define <8 x i32> @test(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 4
-; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 5
-; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 6
-; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[G4]], align 4
-; CHECK-NEXT:    [[L5:%.*]] = load i32, ptr [[G5]], align 4
-; CHECK-NEXT:    [[L6:%.*]] = load i32, ptr [[G6]], align 4
-; CHECK-NEXT:    [[L7:%.*]] = load i32, ptr [[G7]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <8 x i32> poison, i32 [[L0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <8 x i32> [[V0]], i32 [[L1]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <8 x i32> [[V1]], i32 [[L2]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <8 x i32> [[V2]], i32 [[L3]], i64 3
-; CHECK-NEXT:    [[V4:%.*]] = insertelement <8 x i32> [[V3]], i32 [[L4]], i64 4
-; CHECK-NEXT:    [[V5:%.*]] = insertelement <8 x i32> [[V4]], i32 [[L5]], i64 5
-; CHECK-NEXT:    [[V6:%.*]] = insertelement <8 x i32> [[V5]], i32 [[L6]], i64 6
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[V6]], i32 [[L7]], i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %g1 = getelementptr inbounds i32, ptr %p, i64 1
