@@ -1,0 +1,48 @@
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s --implicit-check-not='fatal internal error'
+
+! Every candidate has finite distances for these actuals. There is no
+! corresponding passed-object argument for NOPASS, so its explicit argument
+! score cannot be compared against a PASS object's score. Diagnose the mixture
+! before ranking, independently of the order of the specific bindings.
+module mixed_cuda_bindings
+  type :: t
+  contains
+    procedure :: device_object
+    procedure, pass(this) :: managed_object
+    procedure, nopass :: without_object
+    generic :: choose1 => device_object, managed_object, without_object
+    generic :: choose2 => device_object, without_object, managed_object
+    generic :: choose3 => managed_object, device_object, without_object
+    generic :: choose4 => managed_object, without_object, device_object
+    generic :: choose5 => without_object, device_object, managed_object
+    generic :: choose6 => without_object, managed_object, device_object
+  end type
+contains
+  subroutine device_object(this, x)
+    class(t), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine managed_object(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine without_object(x)
+    integer, unified :: x
+  end subroutine
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    ! CHECK: error: The actual arguments to the generic procedure 'choose1' matched multiple specific procedures
+    call obj%choose1(x)
+    ! CHECK: error: The actual arguments to the generic procedure 'choose2' matched multiple specific procedures
+    call obj%choose2(x=x)
+    ! CHECK: error: The actual arguments to the generic procedure 'choose3' matched multiple specific procedures
+    call obj%choose3(x)
+    ! CHECK: error: The actual arguments to the generic procedure 'choose4' matched multiple specific procedures
+    call obj%choose4(x=x)
+    ! CHECK: error: The actual arguments to the generic procedure 'choose5' matched multiple specific procedures
+    call obj%choose5(x)
+    ! CHECK: error: The actual arguments to the generic procedure 'choose6' matched multiple specific procedures
+    call obj%choose6(x=x)
+  end subroutine
+end module

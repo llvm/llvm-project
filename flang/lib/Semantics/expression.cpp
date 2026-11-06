@@ -2992,15 +2992,16 @@ static bool CheckCompatibleArguments(
 static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
+  // Effective argument positions exclude the implicit passed object
+  // (F2023 15.4.3.4.5p4). NOPASS has no corresponding object distance.
   std::vector<int> perArg;
+  std::optional<int> passedObject;
   bool isInfinite{false};
 };
 
-// Compare CUDA matching distances using lexicographical comparison of
-// per-argument distances. This is needed to differentiate procedures that would
-// have similar total distance when summing the per-argument weights, allowing
-// the compiler to select the best match based on argument-by-argument
-// comparison.
+// Compare the passed object first, then compare effective arguments
+// lexicographically. Mixed PASS/NOPASS matches are diagnosed before comparison;
+// absence of a passed object is not a CUDA matching distance.
 static int CompareCudaMatchingDistance(
     const CudaMatchingDistance &x, const CudaMatchingDistance &y) {
   if (x.isInfinite != y.isInfinite) {
@@ -3008,6 +3009,10 @@ static int CompareCudaMatchingDistance(
   }
   if (x.isInfinite) {
     return 0;
+  }
+  CHECK(x.passedObject.has_value() == y.passedObject.has_value());
+  if (x.passedObject && x.passedObject != y.passedObject) {
+    return *x.passedObject < *y.passedObject ? -1 : 1;
   }
   CHECK(x.perArg.size() == y.perArg.size());
   if (std::lexicographical_compare(
@@ -3229,7 +3234,11 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       distance.isInfinite = true;
       return distance;
     }
-    distance.perArg.push_back(d);
+    if (actual->isPassedObject()) {
+      distance.passedObject = d;
+    } else {
+      distance.perArg.push_back(d);
+    }
   }
   return distance;
 }
@@ -3380,7 +3389,11 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
-    std::optional<CudaMatchingDistance> crtMatchingDistance;
+    struct Match {
+      const Symbol *specific;
+      CudaMatchingDistance distance;
+    };
+    std::vector<Match> elementalMatches, nonElementalMatches;
     bool inHostCode{
         context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
         !GetContextualMessages().at().empty() &&
@@ -3421,42 +3434,61 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                   *procedure, localActuals, foldingContext_)) {
             CudaMatchingDistance d{ComputeCudaMatchingDistance(
                 context_, *procedure, localActuals)};
-            if ((procedure->IsElemental() && elemental) ||
-                (!procedure->IsElemental() && nonElemental)) {
-              if (crtMatchingDistance) {
-                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-                if (cmp > 0) {
-                  continue;
-                }
-                if (cmp == 0) {
-                  // 16.9.144(6): a bare NULL() is not allowed as an actual
-                  // argument to a generic procedure if the specific procedure
-                  // cannot be unambiguously distinguished
-                  // Underspecified external procedure actual arguments can
-                  // also lead to ambiguity.
-                  return {
-                      nullptr, true /* due to ambiguity */, std::move(tried)};
-                }
-                // Matching distance is smaller than the previously matched
-                // specific. Let it go through so the current procedure is
-                // picked.
-              }
-            }
-            if (!procedure->IsElemental()) {
-              // takes priority over elemental match
-              nonElemental = specific;
-            } else {
-              elemental = specific;
-            }
-            crtMatchingDistance = std::move(d);
+            auto &matches{procedure->IsElemental() ? elementalMatches
+                                                   : nonElementalMatches};
+            matches.push_back({specific, std::move(d)});
           }
         }
       }
-      if (!skipDeviceOnly || nonElemental || elemental) {
+      if (!skipDeviceOnly || !nonElementalMatches.empty() ||
+          !elementalMatches.empty()) {
         break;
       }
       skipDeviceOnly = false;
       tried.erase(tried.begin() + triedBefore, tried.end());
+    }
+    // Apply the language's non-elemental preference before distance ranking
+    // (F2023 15.5.6p2). Collect all matches so an early tie cannot hide a
+    // later, better match or make the result depend on specific declaration
+    // order.
+    const auto &matches{
+        nonElementalMatches.empty() ? elementalMatches : nonElementalMatches};
+    bool hasPass{false}, hasNopass{false};
+    for (const Match &match : matches) {
+      if (!match.distance.isInfinite) {
+        if (match.distance.passedObject) {
+          hasPass = true;
+        } else {
+          hasNopass = true;
+        }
+      }
+    }
+    // F2023 C1514(3) distinguishes passed objects when both specifics have
+    // one. Do not invent an object score to rank a remaining NOPASS match.
+    if (hasPass && hasNopass) {
+      return {nullptr, true /* due to ambiguity */, std::move(tried)};
+    }
+    const Match *best{nullptr};
+    bool ambiguous{false};
+    for (const Match &match : matches) {
+      int cmp{best ? CompareCudaMatchingDistance(match.distance, best->distance)
+                   : -1};
+      if (cmp < 0) {
+        best = &match;
+        ambiguous = false;
+      } else if (cmp == 0) {
+        ambiguous = true;
+      }
+    }
+    if (ambiguous) {
+      return {nullptr, true /* due to ambiguity */, std::move(tried)};
+    }
+    if (best) {
+      if (nonElementalMatches.empty()) {
+        elemental = best->specific;
+      } else {
+        nonElemental = best->specific;
+      }
     }
   }
   // Is there a derived type of the same name?

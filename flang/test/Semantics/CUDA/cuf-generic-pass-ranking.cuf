@@ -1,0 +1,95 @@
+! RUN: bbc -fcuda -emit-hlfir %s -o - | FileCheck %s
+
+! Rank the passed object separately, ahead of the effective argument list,
+! regardless of its position in the specific's full dummy argument list.
+module pass_ranking
+  type :: t
+  contains
+    procedure :: device_first, managed_first
+    procedure, pass(this) :: device_last, managed_last
+    procedure, pass(this) :: managed_last_device, managed_last_unified
+    procedure, nopass :: device_argument, managed_argument
+    procedure :: elemental_pass
+    procedure, nopass :: array_nopass
+    generic :: first => device_first, managed_first
+    generic :: first_reversed => managed_first, device_first
+    generic :: last => device_last, managed_last
+    generic :: last_reversed => managed_last, device_last
+    generic :: tied_objects => managed_last_device, managed_last_unified
+    generic :: no_object => device_argument, managed_argument
+    generic :: no_object_reversed => managed_argument, device_argument
+    generic :: elemental_fallback => elemental_pass, array_nopass
+    generic :: elemental_fallback_reversed => array_nopass, elemental_pass
+  end type
+contains
+  subroutine device_first(this, x)
+    class(t), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine managed_first(this, x)
+    class(t), managed :: this
+    integer, device :: x
+  end subroutine
+  subroutine device_last(x, this, omitted)
+    integer, managed :: x
+    class(t), device :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine managed_last(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_device(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_unified(x, this, omitted)
+    integer, unified :: x
+    class(t), managed :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine device_argument(x)
+    integer, device :: x
+  end subroutine
+  subroutine managed_argument(x)
+    integer, managed :: x
+  end subroutine
+  pure elemental subroutine elemental_pass(this, x)
+    class(t), managed, intent(in) :: this
+    integer, device, intent(in) :: x
+  end subroutine
+  subroutine array_nopass(x)
+    integer, managed :: x(:)
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMpass_rankingPcaller(
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    integer, managed :: y(2)
+    ! A better object match wins over a better explicit argument match.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first_reversed(x=x)
+    ! Nonfirst PASS, omitted optionals, and keywords use the same ranking.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last(
+    call obj%last(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last(
+    call obj%last_reversed(x=x)
+    ! Equal object scores are broken by the effective argument distances.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last_unified(
+    call obj%tied_objects(x)
+    ! With NOPASS, only explicit arguments take part in the ranking.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_argument(
+    call obj%no_object(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_argument(
+    call obj%no_object_reversed(x=x)
+    ! Apply the non-elemental preference before checking for a mixture of
+    ! PASS and NOPASS. The elemental PASS candidate is only a fallback here.
+    ! CHECK: fir.call @_QMpass_rankingParray_nopass(
+    call obj%elemental_fallback(y)
+    ! CHECK: fir.call @_QMpass_rankingParray_nopass(
+    call obj%elemental_fallback_reversed(x=y)
+  end subroutine
+end module
