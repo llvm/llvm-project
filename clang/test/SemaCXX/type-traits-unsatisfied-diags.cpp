@@ -895,9 +895,9 @@ static_assert(__is_abstract(U));
 
 namespace is_const_tests {
 
-static_assert(__is_const(const void()));
-// expected-error@-1 {{static assertion failed due to requirement '__is_const(void ())'}} \
-// expected-note@-1 {{'void ()' is not const}} \
+static_assert(__is_const(void () const));
+// expected-error@-1 {{static assertion failed due to requirement '__is_const(void () const)'}} \
+// expected-note@-1 {{'void () const' is not const}} \
 // expected-note@-1 {{because it is a function type, which are never const-qualified}}
 
 static_assert(__is_const(int &));

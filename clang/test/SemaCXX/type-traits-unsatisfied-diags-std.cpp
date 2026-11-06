@@ -399,6 +399,16 @@ static_assert(std::is_abstract_v<int&>);
 
 static_assert(!std::is_const<int>::value);
 
+static_assert(std::is_const<void()>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<void ()>::value'}} \
+// expected-note@-1 {{'void ()' is not const}} \
+// expected-note@-1 {{because it is a function type, which are never const-qualified}}
+
+static_assert(std::is_const_v<void()>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<void ()>'}} \
+// expected-note@-1 {{'void ()' is not const}} \
+// expected-note@-1 {{because it is a function type, which are never const-qualified}}
+
 using ConstVoid = void() const;
 static_assert(std::is_const<ConstVoid>::value);
 // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<void () const>::value'}} \
@@ -414,12 +424,12 @@ using ConstIntRef = const int &;
 static_assert(std::is_const<ConstIntRef>::value);
 // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<const int &>::value'}} \
 // expected-note@-1 {{'ConstIntRef' (aka 'const int &') is not const}} \
-// expected-note@-1 {{because it is a reference type}}
+// expected-note@-1 {{because it is a reference type, which are never const-qualified}}
 
 static_assert(std::is_const_v<ConstIntRef>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<const int &>'}} \
 // expected-note@-1 {{'const int &' is not const}} \
-// expected-note@-1 {{because it is a reference type}}
+// expected-note@-1 {{because it is a reference type, which are never const-qualified}}
 
 static_assert(std::is_const_v<int>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<int>'}} \
