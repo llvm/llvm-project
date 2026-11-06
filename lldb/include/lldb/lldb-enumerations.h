@@ -1632,6 +1632,17 @@ constexpr unsigned BreakpointResolverAllResolversMask =
     eResolverFileAndLine | eResolverAddress | eResolverName |
     eResolverFileRegex | eResolverPython | eResolverException;
 
+/// Describes the state of a module's symbol table.
+FLAGS_ENUM(SymtabState){
+    /// The symbol table hasn't been populated with symbols.
+    eSymtabStateNone = 0u,
+    /// Symbols were decoded from a DataFileCache serialization.
+    eSymtabStateLoadedFromCache = (1u << 0),
+    /// Symbols were parsed from the ObjectFile.
+    eSymtabStateParsedFromObjectFile = (1u << 1),
+};
+LLDB_MARK_AS_BITMASK_ENUM(SymtabState)
+
 /// Modes for evaluating breakpoint conditions.
 enum BreakpointConditionMode {
   /// Use Data Inspection Language (DIL) to evaluate the condition.

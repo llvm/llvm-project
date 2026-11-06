@@ -307,6 +307,12 @@ public:
   /// info files for this module.
   lldb::SBModuleSpecList GetSeparateDebugInfoFiles();
 
+  /// Get flags describing the state of this module's symbol table.
+  ///
+  /// This does not cause the symbol table to be created. If it hasn't been
+  /// created yet, lldb::eSymtabStateNone is returned.
+  lldb::SymtabState GetSymtabState() const;
+
   lldb::SBAddress GetObjectFileHeaderAddress() const;
   lldb::SBAddress GetObjectFileEntryPointAddress() const;
 

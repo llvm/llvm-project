@@ -306,6 +306,15 @@ size_t SBModule::GetNumSymbols() {
   return 0;
 }
 
+lldb::SymtabState SBModule::GetSymtabState() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (ModuleSP module_sp = GetSP())
+    if (Symtab *symtab = module_sp->GetSymtab(/*can_create=*/false))
+      return symtab->GetState();
+  return eSymtabStateNone;
+}
+
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 

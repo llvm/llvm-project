@@ -226,11 +226,9 @@ public:
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
   bool GetWasLoadedFromCache() const {
-    return m_loaded_from_cache;
+    return m_state & lldb::eSymtabStateLoadedFromCache;
   }
-  void SetWasLoadedFromCache() {
-    m_loaded_from_cache = true;
-  }
+  void SetWasLoadedFromCache() { m_state |= lldb::eSymtabStateLoadedFromCache; }
   bool GetWasSavedToCache() const {
     return m_saved_to_cache;
   }
@@ -238,6 +236,15 @@ public:
     m_saved_to_cache = true;
   }
   /// \}
+
+  /// Flags describing how this symbol table was populated.
+  lldb::SymtabState GetState() const { return m_state; }
+  bool GetWasParsedFromObjectFile() const {
+    return m_state & lldb::eSymtabStateParsedFromObjectFile;
+  }
+  void SetWasParsedFromObjectFile() {
+    m_state |= lldb::eSymtabStateParsedFromObjectFile;
+  }
 
 protected:
   typedef std::vector<Symbol> collection;
@@ -282,7 +289,7 @@ protected:
       m_name_to_symbol_indices;
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
-  bool m_loaded_from_cache = false;
+  lldb::SymtabState m_state = lldb::eSymtabStateNone;
   bool m_saved_to_cache = false;
 
 private:

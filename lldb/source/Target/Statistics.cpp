@@ -59,6 +59,8 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("symbolTableParseTime", symtab_parse_time);
   module.try_emplace("symbolTableIndexTime", symtab_index_time);
   module.try_emplace("symbolTableLoadedFromCache", symtab_loaded_from_cache);
+  module.try_emplace("symbolTableParsedFromObjectFile",
+                     symtab_parsed_from_object_file);
   module.try_emplace("symbolTableSavedToCache", symtab_saved_to_cache);
   module.try_emplace("debugInfoParseTime", debug_parse_time);
   module.try_emplace("debugInfoIndexTime", debug_index_time);
@@ -320,6 +322,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   double debug_index_time = 0.0;
   uint32_t symtabs_loaded = 0;
   uint32_t symtabs_loaded_from_cache = 0;
+  uint32_t symtabs_parsed_from_object_file = 0;
   uint32_t symtabs_saved_to_cache = 0;
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
@@ -354,6 +357,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
         ++symtabs_loaded_from_cache;
+      module_stat.symtab_parsed_from_object_file =
+          symtab->GetWasParsedFromObjectFile();
+      if (module_stat.symtab_parsed_from_object_file)
+        ++symtabs_parsed_from_object_file;
       module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved_to_cache;
@@ -434,6 +441,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoaded", symtabs_loaded},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded_from_cache},
+      {"totalSymbolTablesParsedFromObjectFile",
+       symtabs_parsed_from_object_file},
       {"totalSymbolTablesSavedToCache", symtabs_saved_to_cache},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
