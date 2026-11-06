@@ -1213,38 +1213,38 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
   StringRef Name(RegName);
   Name.consume_front("%");
   Register Reg = StringSwitch<Register>(Name)
-                     .Case("i0", SP::I0)
-                     .Case("i1", SP::I1)
-                     .Case("i2", SP::I2)
-                     .Case("i3", SP::I3)
-                     .Case("i4", SP::I4)
-                     .Case("i5", SP::I5)
-                     .Cases({"i6", "fp"}, SP::I6)
-                     .Case("i7", SP::I7)
-                     .Case("o0", SP::O0)
-                     .Case("o1", SP::O1)
-                     .Case("o2", SP::O2)
-                     .Case("o3", SP::O3)
-                     .Case("o4", SP::O4)
-                     .Case("o5", SP::O5)
-                     .Cases({"o6", "sp"}, SP::O6)
-                     .Case("o7", SP::O7)
-                     .Case("l0", SP::L0)
-                     .Case("l1", SP::L1)
-                     .Case("l2", SP::L2)
-                     .Case("l3", SP::L3)
-                     .Case("l4", SP::L4)
-                     .Case("l5", SP::L5)
-                     .Case("l6", SP::L6)
-                     .Case("l7", SP::L7)
-                     .Case("g0", SP::G0)
-                     .Case("g1", SP::G1)
-                     .Case("g2", SP::G2)
-                     .Case("g3", SP::G3)
-                     .Case("g4", SP::G4)
-                     .Case("g5", SP::G5)
-                     .Case("g6", SP::G6)
-                     .Case("g7", SP::G7)
+                     .Cases({"r24", "i0"}, SP::I0)
+                     .Cases({"r25", "i1"}, SP::I1)
+                     .Cases({"r26", "i2"}, SP::I2)
+                     .Cases({"r27", "i3"}, SP::I3)
+                     .Cases({"r28", "i4"}, SP::I4)
+                     .Cases({"r29", "i5"}, SP::I5)
+                     .Cases({"r30", "i6", "fp"}, SP::I6)
+                     .Cases({"r31", "i7"}, SP::I7)
+                     .Cases({"r8", "o0"}, SP::O0)
+                     .Cases({"r9", "o1"}, SP::O1)
+                     .Cases({"r10", "o2"}, SP::O2)
+                     .Cases({"r11", "o3"}, SP::O3)
+                     .Cases({"r12", "o4"}, SP::O4)
+                     .Cases({"r13", "o5"}, SP::O5)
+                     .Cases({"r14", "o6", "sp"}, SP::O6)
+                     .Cases({"r15", "o7"}, SP::O7)
+                     .Cases({"r16", "l0"}, SP::L0)
+                     .Cases({"r17", "l1"}, SP::L1)
+                     .Cases({"r18", "l2"}, SP::L2)
+                     .Cases({"r19", "l3"}, SP::L3)
+                     .Cases({"r20", "l4"}, SP::L4)
+                     .Cases({"r21", "l5"}, SP::L5)
+                     .Cases({"r22", "l6"}, SP::L6)
+                     .Cases({"r23", "l7"}, SP::L7)
+                     .Cases({"r0", "g0"}, SP::G0)
+                     .Cases({"r1", "g1"}, SP::G1)
+                     .Cases({"r2", "g2"}, SP::G2)
+                     .Cases({"r3", "g3"}, SP::G3)
+                     .Cases({"r4", "g4"}, SP::G4)
+                     .Cases({"r5", "g5"}, SP::G5)
+                     .Cases({"r6", "g6"}, SP::G6)
+                     .Cases({"r7", "g7"}, SP::G7)
                      .Default(0);
 
   // If we're directly referencing register names
@@ -2355,9 +2355,11 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue TGA = makeHiLoPair(Op, ELF::R_SPARC_TLS_IE_HI22,
                                ELF::R_SPARC_TLS_IE_LO10, DAG);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base, TGA);
-    SDValue Offset = DAG.getNode(SPISD::TLS_LD,
-                                 DL, PtrVT, Ptr,
-                                 withTargetFlags(Op, ldTF, DAG));
+    SDValue Ops[] = {DAG.getEntryNode(), Ptr, withTargetFlags(Op, ldTF, DAG)};
+    SDValue Offset = DAG.getMemIntrinsicNode(
+        SPISD::TLS_LD, DL, DAG.getVTList(PtrVT, MVT::Other), Ops, PtrVT,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+        /*Alignment=*/std::nullopt, MachineMemOperand::MOLoad);
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT,
                        DAG.getRegister(SP::G7, PtrVT), Offset,
                        withTargetFlags(Op, ELF::R_SPARC_TLS_IE_ADD, DAG));
@@ -2676,7 +2678,7 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
                           const SparcTargetLowering &TLI, bool hasHardQuad,
                           bool isV9, bool is64Bit) {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -2728,7 +2730,7 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
                               bool isV9, bool is64Bit) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   SDLoc dl(Op);
@@ -3547,11 +3549,39 @@ SparcTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'e':
       return C_RegisterClass;
     case 'I': // SIMM13
+    case 'J': // Zero
+    case 'K': // 32-bit constant with the low 10 bits clear (sethi)
+    case 'L': // SIMM11
+    case 'M': // SIMM10
+    case 'N': // Unsigned 32-bit constant with the low 10 bits clear (sethi)
+    case 'O': // The constant 4096
       return C_Immediate;
     }
   }
 
   return TargetLowering::getConstraintType(Constraint);
+}
+
+/// isValidImmForConstraint - Return true if constraint is satisfied
+static bool isValidImmForConstraint(char Constraint, int64_t Val) {
+  switch (Constraint) {
+  case 'I':
+    return isInt<13>(Val);
+  case 'J':
+    return Val == 0;
+  case 'K':
+    return (isInt<32>(Val) || isUInt<32>(Val)) && (Val & 0x3ff) == 0;
+  case 'L':
+    return isInt<11>(Val);
+  case 'M':
+    return isInt<10>(Val);
+  case 'N':
+    return isUInt<32>(Val) && (Val & 0x3ff) == 0;
+  case 'O':
+    return Val == 4096;
+  default:
+    return false;
+  }
 }
 
 TargetLowering::ConstraintWeight SparcTargetLowering::
@@ -3570,8 +3600,14 @@ getSingleConstraintMatchWeight(AsmOperandInfo &info,
     weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
     break;
   case 'I': // SIMM13
+  case 'J':
+  case 'K':
+  case 'L':
+  case 'M':
+  case 'N':
+  case 'O':
     if (ConstantInt *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
-      if (isInt<13>(C->getSExtValue()))
+      if (isValidImmForConstraint(*constraint, C->getSExtValue()))
         weight = CW_Constant;
     }
     break;
@@ -3594,8 +3630,14 @@ void SparcTargetLowering::LowerAsmOperandForConstraint(
   switch (ConstraintLetter) {
   default: break;
   case 'I':
+  case 'J':
+  case 'K':
+  case 'L':
+  case 'M':
+  case 'N':
+  case 'O':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-      if (isInt<13>(C->getSExtValue())) {
+      if (isValidImmForConstraint(ConstraintLetter, C->getSExtValue())) {
         Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
                                              Op.getValueType());
         break;
