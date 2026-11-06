@@ -197,6 +197,9 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
     return eConnectionStatusSuccess;
   }
 
+  // Prevents reads and writes during shutdown.
+  m_shutting_down = true;
+
   // Try to get the ConnectionFileDescriptor's mutex.  If we fail, that is
   // quite likely because somebody is doing a blocking read on our file
   // descriptor.  If that's the case, then send the "q" char to the command
@@ -218,9 +221,6 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
     }
     locker.lock();
   }
-
-  // Prevents reads and writes during shutdown.
-  m_shutting_down = true;
 
   Status error = m_io_sp->Close();
   if (error.Fail())

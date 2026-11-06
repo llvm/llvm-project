@@ -1246,7 +1246,10 @@ def Tosa_MulOp : Tosa_Op<"mul", [
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
 
-    This operation is not pure. Undefined behaviour may occur if the specifed
+    For int32_t input data, shift must be in the range [0, 63]. For all other
+    input data types, shift must be 0.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
     shift is out of range or the result overflows.
   }];
 
