@@ -63,6 +63,9 @@ public:
     } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
+    } else if (auto global = dyn_cast<mlir::LLVM::GlobalOp>(op)) {
+      if (mlir::failed(amendGlobal(global, attribute, moduleTranslation)))
+        return mlir::failure();
     } else if (attribute.getName() == "cir.riscv_nontemporal_domain") {
       if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
                                                    moduleTranslation)))
@@ -219,6 +222,24 @@ private:
       }
     }
 
+    return mlir::success();
+  }
+
+  // Translate CIR global variable attributes to LLVM global variable fields.
+  mlir::LogicalResult
+  amendGlobal(mlir::LLVM::GlobalOp global, mlir::NamedAttribute attribute,
+              mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    if (attribute.getName() ==
+        cir::CIRDialect::getSanitizerMetadataAttrName()) {
+      if (auto attr = mlir::dyn_cast<cir::SanitizerMetadataAttr>(
+              attribute.getValue())) {
+        llvm::GlobalVariable::SanitizerMetadata metadata;
+        metadata.NoAddress = attr.getNoAddress();
+        metadata.NoHWAddress = attr.getNoHwAddress();
+        cast<llvm::GlobalVariable>(moduleTranslation.lookupGlobal(global))
+            ->setSanitizerMetadata(metadata);
+      }
+    }
     return mlir::success();
   }
 };
