@@ -39,7 +39,7 @@ llvm_tablegen(R600GenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(R600GenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUOptions.td)
-tablegen(LLVM AMDGPUOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(AMDGPUOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
