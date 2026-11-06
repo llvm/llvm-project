@@ -5,23 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
+#define _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
 
-#include <__algorithm/max.h>
-#include <__atomic/aliases.h>
-#include <__atomic/atomic.h>
-#include <__atomic/atomic_ref.h>
-#include <__bit/bit_ceil.h>
 #include <__config>
-#include <__mutex/lock_guard.h>
-#include <__mutex/mutex.h>
-#include <__mutex/once_flag.h>
-#include <__mutex/unique_lock.h>
-#include <__new/interference_size.h>
-#include <__pstl/backends/std_thread.h>
-#include <__thread/this_thread.h>
-#include <__thread/thread.h>
-#include <__type_traits/is_trivial.h>
+#include <algorithm>
+#include <atomic>
+#include <bit>
 #include <latch>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <thread>
+#include <type_traits>
 
 // #define WITH_LOGGING 1
 #ifdef WITH_LOGGING
@@ -160,8 +156,7 @@ private:
   std::unique_ptr<QueueID[]> m_queue_ids;
   size_t m_workers_count;
   size_t m_queues_count;
-  std::mutex m_workers_sleep_mutex;
-  std::condition_variable m_workers_sleep_cv;
+  std::atomic_unsigned_lock_free m_epoch{0}; // Wait-wake mechanism
 
   void worker_thread(size_t worker_num) noexcept;
 
@@ -189,10 +184,6 @@ public:
   }
 
   void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
-
-  size_t num_workers() const noexcept { return m_workers_count; }
-
-  void wake_workers() noexcept { m_workers_sleep_cv.notify_all(); }
 
   SPMCQueue* acquire_queue(std::thread::id thread_id) {
     for (size_t i = 0; i < m_queues_count; ++i) {
@@ -253,12 +244,13 @@ inline void process_request(Task* task) noexcept {
   task->requests.count_down();
 }
 
-void Sched::worker_thread(size_t worker_num) noexcept {
+inline void Sched::worker_thread(size_t worker_num) noexcept {
   const size_t queues_count    = m_queues_count;
   constexpr int max_spin_count = 16;
   int spin_count               = 0;
 
   while (true) {
+    auto epoch = m_epoch.load();
     Task* task = nullptr;
 
     // 1st - try to pop from own queue
@@ -278,6 +270,7 @@ void Sched::worker_thread(size_t worker_num) noexcept {
     if (task) {
       // Do the work
       process_request(task);
+      spin_count = 0;
     } else {
       // Wait and sleep
       if (spin_count < max_spin_count) {
@@ -285,8 +278,7 @@ void Sched::worker_thread(size_t worker_num) noexcept {
         std::this_thread::yield();
       } else {
         LOG("Worker %zu is going to sleep\n", worker_num);
-        std::unique_lock lock{m_workers_sleep_mutex};
-        m_workers_sleep_cv.wait(lock);
+        m_epoch.wait(epoch);
         spin_count = 0;
         LOG("Worker %zu woke up\n", worker_num);
       }
@@ -297,7 +289,7 @@ void Sched::worker_thread(size_t worker_num) noexcept {
 // The entrypoint to parallel execution.
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
-void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
+inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
   if (iterations < 2 || m_workers_count == 0) {
     // No worker threads available or not enough iteration requested, fallback to serial execution
     apply_serial(iterations, ctxt, func);
@@ -341,7 +333,8 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
   }
 
   // Potentially wake up the sleeping workers to process the requests in the queue.
-  wake_workers();
+  m_epoch.fetch_add(1);
+  m_epoch.notify_all();
 
   // Process the last request directly in this thread.
   while (num_requests > 0) {
@@ -388,3 +381,5 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
 } // namespace __pstl::__statpart
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
