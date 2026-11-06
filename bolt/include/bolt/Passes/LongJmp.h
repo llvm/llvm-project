@@ -87,12 +87,8 @@ class LongJmpPass : public BinaryFunctionPass {
   /// by RewriteInstance::mapFileSections()
   void tentativeLayout(const BinaryContext &BC,
                        BinaryFunctionListType &SortedFunctions);
-  uint64_t tentativeLayoutRelocMode(const BinaryContext &BC,
-                                    BinaryFunctionListType &SortedFunctions,
-                                    uint64_t DotAddress);
-  uint64_t tentativeLayoutRelocColdPart(const BinaryContext &BC,
-                                        BinaryFunctionListType &SortedFunctions,
-                                        uint64_t DotAddress);
+  void tentativeLayoutRelocMode(const BinaryContext &BC,
+                                BinaryFunctionListType &SortedFunctions);
   void tentativeBBLayout(const BinaryFunction &Func);
 
   /// Update stubs addresses with their exact address after a round of stub
