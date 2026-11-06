@@ -12,27 +12,12 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<TargetMachine> createTargetMachine() {
-  Triple TT("aarch64--");
+std::unique_ptr<TargetMachine>
+createTargetMachine(StringRef TripleStr = "aarch64--",
+                    StringRef Features = "+pauth,+mops,+mte") {
+  Triple TT(TripleStr);
   std::string CPU("generic");
-  std::string FS("+pauth,+mops,+mte");
-
-  LLVMInitializeAArch64TargetInfo();
-  LLVMInitializeAArch64Target();
-  LLVMInitializeAArch64TargetMC();
-
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-
-  return std::unique_ptr<TargetMachine>(
-      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default));
-}
-
-std::unique_ptr<TargetMachine> createLFITargetMachine() {
-  Triple TT("aarch64_lfi--");
-  std::string CPU("generic");
-  std::string FS("+pauth");
+  std::string FS(Features);
 
   LLVMInitializeAArch64TargetInfo();
   LLVMInitializeAArch64Target();
@@ -389,7 +374,9 @@ TEST(InstSizes, MOPSMemoryPseudos) {
 }
 
 TEST(InstSizes, LFIControlFlow) {
-  std::unique_ptr<TargetMachine> TM = createLFITargetMachine();
+  std::unique_ptr<TargetMachine> TM =
+      createTargetMachine("aarch64_lfi--", "+pauth");
+  ASSERT_TRUE(TM);
   auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "", "  BR $x0\n",
@@ -471,5 +458,35 @@ TEST(InstSizes, LFIControlFlow) {
               auto I = MF.begin()->begin();
               // TLSDESC_CALLSEQ (24 + 4)
               EXPECT_EQ(28u, II.getInstSizeInBytes(*I));
+            });
+
+  runChecks(TM.get(), II.get(), "  @var = thread_local global i32 0\n",
+            "  TLSDESC_AUTH_CALLSEQ target-flags(aarch64-tls) @var\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              // TLSDESC_AUTH_CALLSEQ (28 + 4)
+              EXPECT_EQ(32u, II.getInstSizeInBytes(*I));
+            });
+
+  runChecks(TM.get(), II.get(), "", "  RET $x0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // RET (8 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  BRA $x0, 0, 42, $x1, implicit-def $x17\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(24u, II.getInstSizeInBytes(*I)); // BRA (20 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  BLRA $x0, 0, 42, $x1, csr_aarch64_aapcs, implicit-def $x16, "
+            "implicit-def $x17, implicit-def $lr, implicit $sp\n"
+            "  B %bb.0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(24u, II.getInstSizeInBytes(*I)); // BLRA (20 + 4)
             });
 }

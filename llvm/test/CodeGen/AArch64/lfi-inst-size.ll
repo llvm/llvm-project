@@ -62,3 +62,35 @@ define i32 @tls_pic() {
   %v = load i32, ptr %p
   ret i32 %v
 }
+
+define i32 @tls_pic_lr_flush() {
+; CHECK-LABEL: <tls_pic_lr_flush>:
+; CHECK:         mov x30, xzr
+; CHECK-NEXT:    adrp x0,
+; CHECK-NEXT:    add x28, x27, w0, uxtw
+; CHECK-NEXT:    ldr x1, [x28]
+; CHECK-NEXT:    add x0, x0, #0x0
+; CHECK-NEXT:    add x30, x27, w30, uxtw
+; CHECK-NEXT:    add x28, x27, w1, uxtw
+; CHECK-NEXT:    blr x28
+  call void asm sideeffect "mov x30, xzr", "~{lr}"()
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @var)
+  %v = load i32, ptr %p
+  ret i32 %v
+}
+
+define void @blra_blend(ptr %f, ptr %addr) {
+; CHECK-LABEL: <blra_blend>:
+; CHECK:         mov x30, xzr
+; CHECK-NEXT:    mov x17, x1
+; CHECK-NEXT:    movk x17, #0x2a, lsl #48
+; CHECK-NEXT:    add x30, x27, w30, uxtw
+; CHECK-NEXT:    autia x0, x17
+; CHECK-NEXT:    add x28, x27, w0, uxtw
+; CHECK-NEXT:    blr x28
+  call void asm sideeffect "mov x30, xzr", "~{lr}"()
+  %a = ptrtoint ptr %addr to i64
+  %d = call i64 @llvm.ptrauth.blend(i64 %a, i64 42)
+  call void %f() [ "ptrauth"(i32 0, i64 %d) ]
+  ret void
+}

@@ -120,6 +120,12 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Authenticated branches/calls expand to 3 instructions (authenticate +
     // guard + branch).
     return 12;
+  case AArch64::BRA:
+  case AArch64::BLRA:
+    // Up to 2 instructions to materialize the discriminator (mov + movk),
+    // followed by an authenticated branch/call that expands to 3 instructions
+    // (authenticate + guard + branch).
+    return 20;
   case AArch64::TLSDESC_CALLSEQ:
     // adrp + ldr + add + blr, where the ldr and blr each gain a guard.
     return 24;
