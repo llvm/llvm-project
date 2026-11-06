@@ -101,7 +101,7 @@ define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_vector_ptr_alloca(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
