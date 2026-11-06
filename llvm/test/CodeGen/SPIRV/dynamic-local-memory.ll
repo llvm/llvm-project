@@ -10,7 +10,7 @@
 @buf = external addrspace(3) global [0 x i32], align 4
 @other = external addrspace(3) global [0 x i8], align 32
 @unused = external addrspace(3) global [0 x i8]
-@sized = internal addrspace(3) global [4 x i32] undef, align 4
+@sized = internal addrspace(3) global [4 x i32] poison, align 4
 
 ; Only Intel GPUs take the memory as a kernel argument.
 ; UNCHANGED: @buf = external addrspace(3) global [0 x i32]
@@ -20,8 +20,8 @@
 ; IR-NOT: @buf =
 ; IR-NOT: @other =
 ; IR: @unused = external addrspace(3) global [0 x i8]
-; IR: @sized = internal addrspace(3) global [4 x i32] undef
-; IR: @__spirv_dynamic_local_memory = internal unnamed_addr addrspace(3) global ptr addrspace(3) undef, align 8
+; IR: @sized = internal addrspace(3) global [4 x i32] poison
+; IR: @__spirv_dynamic_local_memory = internal unnamed_addr addrspace(3) global ptr addrspace(3) poison, align 8
 
 ; IR-LABEL: define spir_func i32 @load(
 ; IR: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
