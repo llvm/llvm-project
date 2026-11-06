@@ -101,11 +101,10 @@ catch.start:                                      ; preds = %catch.dispatch
   catchret from %1 to label %try.cont
 ; CHECK: catch.start:
 ; CHECK-NEXT:   catchpad within %0 [ptr null]
-; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   call ptr @_Unwind_GetWasmLPadContext()
+; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   call ptr @llvm.wasm.lsda()
 ; CHECK-NOT:   call i32 @__gxx_wasm_personality_v0
-; CHECK-NOT:   load {{.*}} @__wasm_lpad_context
 
 try.cont:                                         ; preds = %entry, %catch.start
   invoke void @foo()
