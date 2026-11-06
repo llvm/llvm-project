@@ -46953,6 +46953,25 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   switch (SrcVT.getSimpleVT().SimpleTy) {
   default:
     return SDValue();
+  case MVT::v3i1:
+    // Legalization widens the compare producing the mask to the next
+    // power-of-2 register width, so widen the mask to v4i1 as well and use
+    // the MOVMSK of the matching width, the extra result bit is truncated
+    // away.
+    if (checkBitcastSrcVectorSize(Src, 192, /*AllowTruncate=*/true,
+                                  /*Depth=*/0)) {
+      if (!Subtarget.hasAVX())
+        return SDValue();
+      SExtVT = MVT::v4i64;
+    } else if (checkBitcastSrcVectorSize(Src, 96, /*AllowTruncate=*/true,
+                                         /*Depth=*/0)) {
+      SExtVT = MVT::v4i32;
+    } else {
+      return SDValue();
+    }
+    Src = widenSubVector(MVT::v4i1, Src, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+    break;
   case MVT::v2i1:
     SExtVT = MVT::v2i64;
     break;
@@ -63884,18 +63903,27 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
     if (!SrcVT.isVector())
       return SDValue();
 
-    assert(!IsStrict && "Strict FP doesn't support BF16");
-    if (VT.getVectorElementType() == MVT::f64) {
+    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+    if (VT.getVectorElementType() != MVT::f32) {
+      assert(VT.getScalarSizeInBits() > 32 && "Unexpected fpext");
       EVT TmpVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+      if (IsStrict) {
+        Src = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {TmpVT, MVT::Other},
+                          {Chain, Src});
+        return DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {VT, MVT::Other},
+                           {Src.getValue(1), Src});
+      }
       return DAG.getNode(ISD::FP_EXTEND, dl, VT,
                          DAG.getNode(ISD::FP_EXTEND, dl, TmpVT, Src));
     }
-    assert(VT.getVectorElementType() == MVT::f32 && "Unexpected fpext");
     EVT NVT = SrcVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     Src = DAG.getBitcast(SrcVT.changeTypeToInteger(), Src);
     Src = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Src);
     Src = DAG.getNode(ISD::SHL, dl, NVT, Src, DAG.getConstant(16, dl, NVT));
-    return DAG.getBitcast(VT, Src);
+    Src = DAG.getBitcast(VT, Src);
+    if (IsStrict)
+      return DAG.getMergeValues({Src, Chain}, dl);
+    return Src;
   }
 
   if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())

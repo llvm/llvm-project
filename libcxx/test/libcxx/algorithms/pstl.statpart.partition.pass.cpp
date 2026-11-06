@@ -9,7 +9,6 @@
 // <algorithm>
 
 // REQUIRES: std-at-least-c++17
-// REQUIRES: libcpp-pstl-backend-statpart
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // template <class Iterator>
@@ -26,6 +25,7 @@
 #include <iterator>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 template <class Container>
