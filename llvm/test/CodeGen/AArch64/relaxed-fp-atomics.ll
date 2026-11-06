@@ -49,6 +49,22 @@ define double @atomic_load_relaxed_f64(ptr %p, i32 %off32, i64 %off64) #0 {
   ret double %tot3
 }
 
+define <2 x float> @atomic_load_relaxed_v2f32(ptr %p) #0 {
+; CHECK-LABEL: atomic_load_relaxed_v2f32:
+; CHECK: ldr x[[LOAD_REG:[0-9]+]], [x0]
+; CHECK-NEXT: fmov d0, x[[LOAD_REG]]
+  %val = load atomic <2 x float>, ptr %p monotonic, align 8
+  ret <2 x float> %val
+}
+
+define void @atomic_store_relaxed_v2f32(ptr %p, <2 x float> %val) #0 {
+; CHECK-LABEL: atomic_store_relaxed_v2f32:
+; CHECK: fmov x[[STORE_REG:[0-9]+]], d0
+; CHECK-NEXT: str x[[STORE_REG]], [x0]
+  store atomic <2 x float> %val, ptr %p monotonic, align 8
+  ret void
+}
+
 define void @atomic_store_relaxed_f32(ptr %p, i32 %off32, i64 %off64, float %val) #0 {
 ; CHECK-LABEL: atomic_store_relaxed_f32:
   %ptr_unsigned = getelementptr float, ptr %p, i32 4095
