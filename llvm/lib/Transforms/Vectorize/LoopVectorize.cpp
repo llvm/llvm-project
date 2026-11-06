@@ -7374,14 +7374,13 @@ static void preparePlanForEpilogueVectorLoop(
       continue;
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      auto *IndR = 
+      PHINode *IndPhi =
           isa<VPWidenInductionRecipe>(&R)
-              ? cast<VPWidenInductionRecipe>(&R)
-              : cast<VPConditionalInductionPHIRecipe>(&R);
-      PHINode *IndPhi = IndR->getPHINode();
+              ? cast<VPWidenInductionRecipe>(&R)->getPHINode()
+              : cast<VPConditionalInductionPHIRecipe>(&R)->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
-      auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IndR);
+      auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
       if (IntOrFpIV && IntOrFpIV->isTruncated()) {
         // The resume value is for the original induction. Preserve any offset
         // folded into the truncated induction's start.
