@@ -26,4 +26,3 @@ TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b, Comp cmp) {
       return false;
   return true;
 }
-
