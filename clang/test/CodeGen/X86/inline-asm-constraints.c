@@ -1,19 +1,26 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu x86-64 -o - | FileCheck %s --check-prefixes=CHECK,SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu x86-64 -o - | FileCheck %s --check-prefixes=CHECK,SSE %}
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake -D AVX -o - | FileCheck %s --check-prefixes AVX,SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake -D AVX -o - | FileCheck %s --check-prefixes AVX,SSE %}
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake-avx512 -D AVX512 -D AVX -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake-avx512 -D AVX512 -D AVX -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE %}
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu knl -D AVX -D AVX512 -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu knl -D AVX -D AVX512 -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE %}
 
 typedef float __m128 __attribute__ ((vector_size (16)));
 typedef float __m256 __attribute__ ((vector_size (32)));
 typedef float __m512 __attribute__ ((vector_size (64)));
 
-// SSE: call <4 x float> asm "vmovhlps $1, $2, $0", "=v,v,v,~{dirflag},~{fpsr},~{flags}"(i64 %0, <4 x float> %1)
+// SSE: [[XMM_L:%.*]] = load i64, ptr
+// SSE: [[XMM_V:%.*]] = load <4 x float>, ptr
+// SSE: call <4 x float> asm "vmovhlps $1, $2, $0", "=v,v,v,~{dirflag},~{fpsr},~{flags}"(i64 [[XMM_L]], <4 x float> [[XMM_V]])
 __m128 testXMM(__m128 _xmm0, long _l) {
   __asm__("vmovhlps %1, %2, %0" :"=v"(_xmm0) : "v"(_l), "v"(_xmm0));
   return _xmm0;
 }
 
-// AVX: call <8 x float> asm "vmovsldup $1, $0", "=v,v,~{dirflag},~{fpsr},~{flags}"(<8 x float> %0)
+// AVX: [[YMM_V:%.*]] = load <8 x float>, ptr
+// AVX: call <8 x float> asm "vmovsldup $1, $0", "=v,v,~{dirflag},~{fpsr},~{flags}"(<8 x float> [[YMM_V]])
 __m256 testYMM(__m256 _ymm0) {
 #ifdef AVX
   __asm__("vmovsldup %1, %0" :"=v"(_ymm0) : "v"(_ymm0));
@@ -21,7 +28,9 @@ __m256 testYMM(__m256 _ymm0) {
   return _ymm0;
 }
 
-// AVX512: call <16 x float> asm "vpternlogd $$0, $1, $2, $0", "=v,v,v,~{dirflag},~{fpsr},~{flags}"(<16 x float> %0, <16 x float> %1)
+// AVX512: [[ZMM_1:%.*]] = load <16 x float>, ptr
+// AVX512: [[ZMM_0:%.*]] = load <16 x float>, ptr
+// AVX512: call <16 x float> asm "vpternlogd $$0, $1, $2, $0", "=v,v,v,~{dirflag},~{fpsr},~{flags}"(<16 x float> [[ZMM_1]], <16 x float> [[ZMM_0]])
 __m512 testZMM(__m512 _zmm0, __m512 _zmm1) {
 #ifdef AVX512
   __asm__("vpternlogd $0, %1, %2, %0" :"=v"(_zmm0) : "v"(_zmm1), "v"(_zmm0));
@@ -55,8 +64,10 @@ __m512 testZMM0(void) {
 }
 
 // CHECK-LABEL: test_a_p(
-// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(ptr %0)
-// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(i32 %add)
+// CHECK: [[PTR:%.*]] = load ptr, ptr
+// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(ptr [[PTR]])
+// CHECK: [[ADD:%.*]] = add nsw i32 5248, {{.*}}
+// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(i32 [[ADD]])
 void test_a_p(int *ptr, int i) {
   asm("lea %a0, %%eax" :: "p"(ptr) : "eax");
   asm("lea %a0, %%eax" :: "p"(0x1480 + i * 8) : "eax");

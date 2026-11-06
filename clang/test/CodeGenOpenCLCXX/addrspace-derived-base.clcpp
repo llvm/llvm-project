@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple spir -emit-llvm -O0 -o - | FileCheck %s %}
 
 struct B {
   int mb;
@@ -12,14 +13,16 @@ public:
 void foo() {
   D d;
   //CHECK-LABEL: foo
-  //CHECK: addrspacecast ptr %d to ptr addrspace(4)
+  //CHECK: [[FOO_D:%.*]] = alloca %class.D,
+  //CHECK: addrspacecast ptr [[FOO_D]] to ptr addrspace(4)
   //CHECK: call spir_func noundef i32 @_ZNU3AS41D5getmbEv(ptr addrspace(4)
   d.getmb();
 }
 
 //Derived and Base are in the same address space.
 
-//CHECK: define linkonce_odr spir_func noundef i32 @_ZNU3AS41D5getmbEv(ptr addrspace(4) {{[^,]*}} %this)
+//CHECK: define linkonce_odr spir_func noundef i32 @_ZNU3AS41D5getmbEv(ptr addrspace(4) {{[^,]*}} [[THIS:%[^)]*]])
+//CHECK: store ptr addrspace(4) [[THIS]], ptr
 
 
 // Calling base method through multiple inheritance.
@@ -55,13 +58,16 @@ void pr43145_3(int n) {
   d.getRef() = n;
 
   // CHECK-LABEL: @_Z9pr43145_3
-  // CHECK: addrspacecast ptr %d to ptr addrspace(4)
+  // CHECK: [[D:%.*]] = alloca %class.Derived,
+  // CHECK: addrspacecast ptr [[D]] to ptr addrspace(4)
   // CHECK: call {{.*}} @_ZNU3AS42B26getRefEv
 
   private Derived *pd = &d;
   pd->getRef() = n;
 
-  // CHECK: addrspacecast ptr %2 to ptr addrspace(4)
+  // CHECK: store ptr [[D]], ptr [[PD_ADDR:%.*]],
+  // CHECK: [[PD:%.*]] = load ptr, ptr [[PD_ADDR]]
+  // CHECK: addrspacecast ptr [[PD]] to ptr addrspace(4)
   // CHECK: call {{.*}} @_ZNU3AS42B26getRefEv
 }
 
