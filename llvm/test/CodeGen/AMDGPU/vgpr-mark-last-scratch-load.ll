@@ -405,14 +405,14 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    v_writelane_b32 v125, s30, 12
 ; CHECK-NEXT:    v_writelane_b32 v125, s31, 13
 ; CHECK-NEXT:    v_dual_mov_b32 v92, v31 :: v_dual_mov_b32 v1, 0
-; CHECK-NEXT:    v_dual_mov_b32 v0, 0x60 :: v_dual_mov_b32 v3, 0
-; CHECK-NEXT:    v_dual_mov_b32 v2, 0x50 :: v_dual_mov_b32 v5, 0
-; CHECK-NEXT:    v_dual_mov_b32 v4, 64 :: v_dual_mov_b32 v7, 0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 0
+; CHECK-NEXT:    v_dual_mov_b32 v2, 16 :: v_dual_mov_b32 v5, 0
+; CHECK-NEXT:    v_dual_mov_b32 v4, 32 :: v_dual_mov_b32 v7, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 48
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[40:43], v[0:1], off
 ; CHECK-NEXT:    global_load_b128 v[44:47], v[2:3], off
-; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0x60 :: v_dual_mov_b32 v3, 0
 ; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x70
 ; CHECK-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v8, 0x80
 ; CHECK-NEXT:    s_clause 0x1
@@ -425,8 +425,8 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    global_load_b128 v[14:17], v[8:9], off
 ; CHECK-NEXT:    global_load_b128 v[18:21], v[8:9], off offset:16
 ; CHECK-NEXT:    global_load_b128 v[22:25], v[8:9], off offset:32
-; CHECK-NEXT:    v_dual_mov_b32 v4, 32 :: v_dual_mov_b32 v7, 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, 16
+; CHECK-NEXT:    v_dual_mov_b32 v4, 64 :: v_dual_mov_b32 v7, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0x50
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[76:79], v[4:5], off
 ; CHECK-NEXT:    global_load_b128 v[88:91], v[6:7], off
@@ -545,20 +545,20 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    scratch_store_b128 off, v[3:6], s32
 ; CHECK-NEXT:    v_dual_mov_b32 v30, v2 :: v_dual_mov_b32 v29, v1
 ; CHECK-NEXT:    v_dual_mov_b32 v28, v0 :: v_dual_mov_b32 v31, v92
-; CHECK-NEXT:    v_dual_mov_b32 v0, v72 :: v_dual_mov_b32 v1, v73
-; CHECK-NEXT:    v_dual_mov_b32 v2, v74 :: v_dual_mov_b32 v3, v75
-; CHECK-NEXT:    v_dual_mov_b32 v4, v88 :: v_dual_mov_b32 v5, v89
-; CHECK-NEXT:    v_dual_mov_b32 v6, v90 :: v_dual_mov_b32 v7, v91
-; CHECK-NEXT:    v_dual_mov_b32 v8, v76 :: v_dual_mov_b32 v9, v77
-; CHECK-NEXT:    v_dual_mov_b32 v10, v78 :: v_dual_mov_b32 v11, v79
+; CHECK-NEXT:    v_dual_mov_b32 v0, v40 :: v_dual_mov_b32 v1, v41
+; CHECK-NEXT:    v_dual_mov_b32 v2, v42 :: v_dual_mov_b32 v3, v43
+; CHECK-NEXT:    v_dual_mov_b32 v4, v44 :: v_dual_mov_b32 v5, v45
+; CHECK-NEXT:    v_dual_mov_b32 v6, v46 :: v_dual_mov_b32 v7, v47
+; CHECK-NEXT:    v_dual_mov_b32 v8, v56 :: v_dual_mov_b32 v9, v57
+; CHECK-NEXT:    v_dual_mov_b32 v10, v58 :: v_dual_mov_b32 v11, v59
 ; CHECK-NEXT:    v_dual_mov_b32 v12, v60 :: v_dual_mov_b32 v13, v61
 ; CHECK-NEXT:    v_dual_mov_b32 v14, v62 :: v_dual_mov_b32 v15, v63
-; CHECK-NEXT:    v_dual_mov_b32 v16, v56 :: v_dual_mov_b32 v17, v57
-; CHECK-NEXT:    v_dual_mov_b32 v18, v58 :: v_dual_mov_b32 v19, v59
-; CHECK-NEXT:    v_dual_mov_b32 v20, v44 :: v_dual_mov_b32 v21, v45
-; CHECK-NEXT:    v_dual_mov_b32 v22, v46 :: v_dual_mov_b32 v23, v47
-; CHECK-NEXT:    v_dual_mov_b32 v24, v40 :: v_dual_mov_b32 v25, v41
-; CHECK-NEXT:    v_dual_mov_b32 v26, v42 :: v_dual_mov_b32 v27, v43
+; CHECK-NEXT:    v_dual_mov_b32 v16, v76 :: v_dual_mov_b32 v17, v77
+; CHECK-NEXT:    v_dual_mov_b32 v18, v78 :: v_dual_mov_b32 v19, v79
+; CHECK-NEXT:    v_dual_mov_b32 v20, v88 :: v_dual_mov_b32 v21, v89
+; CHECK-NEXT:    v_dual_mov_b32 v22, v90 :: v_dual_mov_b32 v23, v91
+; CHECK-NEXT:    v_dual_mov_b32 v24, v72 :: v_dual_mov_b32 v25, v73
+; CHECK-NEXT:    v_dual_mov_b32 v26, v74 :: v_dual_mov_b32 v27, v75
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]

@@ -248,6 +248,7 @@ private:
   SDValue performExponentOnlyScaleCombine(SDNode *N,
                                           DAGCombinerInfo &DCI) const;
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performExtractSubvectorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFrexpSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -416,6 +417,9 @@ public:
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
+
+  unsigned getExtractSubvectorSubReg(EVT ResVT, EVT SrcVT,
+                                     unsigned Index) const override;
 
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;

@@ -258,10 +258,10 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v230, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v229, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v228, 0
-; CHECK-NEXT:    v_mov_b32_e32 v235, 0
-; CHECK-NEXT:    v_mov_b32_e32 v234, 0
-; CHECK-NEXT:    v_mov_b32_e32 v233, 0
-; CHECK-NEXT:    v_mov_b32_e32 v232, 0
+; CHECK-NEXT:    v_mov_b32_e32 v243, 0
+; CHECK-NEXT:    v_mov_b32_e32 v242, 0
+; CHECK-NEXT:    v_mov_b32_e32 v241, 0
+; CHECK-NEXT:    v_mov_b32_e32 v240, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v239, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v238, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v237, 0
@@ -270,10 +270,10 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v246, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v245, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v244, 0
-; CHECK-NEXT:    v_mov_b32_e32 v243, 0
-; CHECK-NEXT:    v_mov_b32_e32 v242, 0
-; CHECK-NEXT:    v_mov_b32_e32 v241, 0
-; CHECK-NEXT:    v_mov_b32_e32 v240, 0
+; CHECK-NEXT:    v_mov_b32_e32 v235, 0
+; CHECK-NEXT:    v_mov_b32_e32 v234, 0
+; CHECK-NEXT:    v_mov_b32_e32 v233, 0
+; CHECK-NEXT:    v_mov_b32_e32 v232, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v251, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v250, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v249, 0
@@ -310,16 +310,16 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_add_f32_e64 v230, v230, v230
 ; CHECK-NEXT:    v_add_f32_e64 v231, v231, v231
 ; CHECK-NEXT:    v_pk_add_f32 v[228:229], v[228:229], v[228:229]
-; CHECK-NEXT:    v_pk_add_f32 v[234:235], v[234:235], v[234:235]
+; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
-; CHECK-NEXT:    v_add_f32_e64 v232, v232, v232
-; CHECK-NEXT:    v_add_f32_e64 v233, v233, v233
+; CHECK-NEXT:    v_add_f32_e64 v240, v240, v240
+; CHECK-NEXT:    v_add_f32_e64 v241, v241, v241
 ; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
 ; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
 ; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
 ; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
-; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
-; CHECK-NEXT:    v_pk_add_f32 v[240:241], v[240:241], v[240:241]
+; CHECK-NEXT:    v_pk_add_f32 v[234:235], v[234:235], v[234:235]
+; CHECK-NEXT:    v_pk_add_f32 v[232:233], v[232:233], v[232:233]
 ; CHECK-NEXT:    v_pk_add_f32 v[250:251], v[250:251], v[250:251]
 ; CHECK-NEXT:    v_pk_add_f32 v[248:249], v[248:249], v[248:249]
 ; CHECK-NEXT:    v_pk_add_f32 v[254:255], v[254:255], v[254:255]
@@ -449,18 +449,18 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[224:227], s[0:1] offset:2032
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[228:231], s[0:1] offset:2016
-; CHECK-NEXT:    global_store_dwordx4 v0, v[232:235], s[0:1] offset:2000
+; CHECK-NEXT:    global_store_dwordx4 v0, v[240:243], s[0:1] offset:2000
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a4, s12
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, s13
-; CHECK-NEXT:    v_mov_b64_e32 v[234:235], s[10:11]
-; CHECK-NEXT:    v_mov_b64_e32 v[232:233], s[8:9]
+; CHECK-NEXT:    v_mov_b64_e32 v[242:243], s[10:11]
+; CHECK-NEXT:    v_mov_b64_e32 v[240:241], s[8:9]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a6, s14
 ; CHECK-NEXT:    v_accvgpr_write_b32 a7, s15
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[236:239], s[0:1] offset:1984
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[232:235], a[4:7], a[0:3]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[240:243], a[4:7], a[0:3]
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mov_b32_e32 v236, 0
 ; CHECK-NEXT:    global_store_dwordx4 v236, v[244:247], s[0:1] offset:1968
@@ -471,15 +471,15 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_accvgpr_read_b32 v224, a0
 ; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[228:231], v[232:235], a[4:7], v[224:227]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[228:231], v[240:243], a[4:7], v[224:227]
 ; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[224:227], a[4:7], v[232:235], v[224:227]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[224:227], a[4:7], v[240:243], v[224:227]
 ; CHECK-NEXT:    s_nop 6
 ; CHECK-NEXT:    v_add_f32_e32 v228, 1.0, v228
 ; CHECK-NEXT:    v_add_f32_e32 v229, 2.0, v224
 ; CHECK-NEXT:    v_mov_b32_e32 v224, 0
 ; CHECK-NEXT:    global_store_dwordx2 v236, v[228:229], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v236, v[240:243], s[0:1] offset:1952
+; CHECK-NEXT:    global_store_dwordx4 v236, v[232:235], s[0:1] offset:1952
 ; CHECK-NEXT:    global_store_dwordx4 v236, v[248:251], s[0:1] offset:1936
 ; CHECK-NEXT:    global_store_dwordx4 v236, v[252:255], s[0:1] offset:1920
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[192:195], s[0:1] offset:368

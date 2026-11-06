@@ -292,30 +292,38 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX942-NEXT:    global_load_dwordx4 a[0:3], v1, s[2:3]
 ; GFX942-NEXT:  .LBB6_2: ; %bb.2
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[34:37], s[6:7] offset:112
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[38:41], s[6:7] offset:96
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[42:45], s[6:7] offset:80
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[46:49], s[6:7] offset:64
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[50:53], s[6:7] offset:48
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[54:57], s[6:7] offset:32
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, v[58:61], s[6:7] offset:16
-; GFX942-NEXT:    s_waitcnt vmcnt(7)
-; GFX942-NEXT:    global_store_dwordx4 v0, a[0:3], s[6:7]
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[6:7] offset:240
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[6:9], s[6:7] offset:224
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[10:13], s[6:7] offset:208
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[14:17], s[6:7] offset:192
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[18:21], s[6:7] offset:176
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[22:25], s[6:7] offset:160
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[26:29], s[6:7] offset:144
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[30:33], s[6:7] offset:128
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[34:37], s[6:7] offset:112
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[38:41], s[6:7] offset:96
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[42:45], s[6:7] offset:80
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[46:49], s[6:7] offset:64
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[50:53], s[6:7] offset:48
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[54:57], s[6:7] offset:32
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, v[58:61], s[6:7] offset:16
+; GFX942-NEXT:    s_waitcnt vmcnt(15)
+; GFX942-NEXT:    global_store_dwordx4 v0, a[0:3], s[6:7]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
