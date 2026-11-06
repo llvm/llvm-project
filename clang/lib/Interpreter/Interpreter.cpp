@@ -27,6 +27,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
@@ -295,7 +296,8 @@ struct PragmaReplHandler : public PragmaHandler {
       return;
     }
 
-    Interp.setOptLevel(Level->first, Level->second);
+    if (llvm::Error Err = Interp.setOptLevel(Level->first, Level->second))
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
   }
 };
 
@@ -439,6 +441,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          std::unique_ptr<clang::ASTConsumer> Consumer)
     : IncrExecutorBuilder(std::move(IEB)) {
   CI = std::move(Instance);
+  InitialCodeGenOpts =
+      std::make_unique<const CodeGenOptions>(CI->getCodeGenOpts());
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
@@ -645,12 +649,42 @@ llvm::Expected<IncrementalExecutor &> Interpreter::getExecutionEngine() {
   return *IncrExecutor.get();
 }
 
-void Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
-  CodeGenOptions &CGO = getCompilerInstance()->getCodeGenOpts();
-  CGO.OptimizationLevel = OptLevel;
-  CGO.OptimizeSize = OptSize;
-  CGO.setInlining(OptLevel ? CodeGenOptions::NormalInlining
-                           : CodeGenOptions::OnlyAlwaysInlining);
+// Obtain the CodeGenOptions generated for a fresh compilation on the
+// CompilerInstance target with the -O flag for Level and Size.
+static llvm::Expected<CodeGenOptions>
+optFlagCodeGenOpts(const CompilerInstance &CI, unsigned Level, unsigned Size) {
+  std::string Flag =
+      Size == 0 ? "-O" + llvm::utostr(Level) : (Size == 1 ? "-Os" : "-Oz");
+  std::string Target = "--target=" + CI.getTargetOpts().Triple;
+  std::unique_ptr<CompilerInvocation> Invocation = createInvocation(
+      {"clang", "-xc++", Flag.c_str(), Target.c_str(), "<<< inputs >>>"});
+  if (!Invocation || Invocation->getCodeGenOpts().OptimizationLevel != Level ||
+      Invocation->getCodeGenOpts().OptimizeSize != Size)
+    return llvm::createStringError(
+        "no -O flag sets optimization level %u with size %u", Level, Size);
+  return Invocation->getCodeGenOpts();
+}
+
+llvm::Error Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
+  const CodeGenOptions &Initial = *InitialCodeGenOpts;
+  auto To = optFlagCodeGenOpts(*CI, OptLevel, OptSize);
+  if (!To)
+    return To.takeError();
+  auto From =
+      optFlagCodeGenOpts(*CI, Initial.OptimizationLevel, Initial.OptimizeSize);
+  if (!From)
+    return From.takeError();
+  // An option that started at the default of the startup flag follows the
+  // level. One the startup arguments set keeps its value.
+  CodeGenOptions &CGO = CI->getCodeGenOpts();
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if (Initial.Name == From->Name)                                              \
+    CGO.Name = To->Name;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if (Initial.get##Name() == From->get##Name())                                \
+    CGO.set##Name(To->get##Name());
+#include "clang/Basic/CodeGenOptions.def"
+  return llvm::Error::success();
 }
 
 ASTContext &Interpreter::getASTContext() {
