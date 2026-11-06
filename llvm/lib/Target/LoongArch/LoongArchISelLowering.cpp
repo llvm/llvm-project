@@ -4392,6 +4392,49 @@ SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
                       MachinePointerInfo(SV));
 }
 
+// Lower an unsigned vXi64 -> vXf32 conversion to the same round-to-odd
+// sequence that the generic legalizer uses for the scalar case:
+//
+//   Odd    = (x >> 1) | (x & 1)
+//   Doubled = (float)(int64_t)Odd + (float)(int64_t)Odd  // exact, no rounding
+//   Signed  = (float)(int64_t)x                          // valid for x < 2^63
+//   Result  = x < 0 ? Doubled : Signed
+//
+// The generic half-word expansion is not usable here: it converts the high and
+// low 32-bit halves separately and adds them, rounding three times, which is
+// not enough to emulate the single rounding required by uitofp.
+SDValue LoongArchTargetLowering::lowerUINT_TO_FPToF32(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  SDValue Shift = DAG.getShiftAmountConstant(1, SrcVT, DL);
+  SDValue Half = DAG.getNode(ISD::SRL, DL, SrcVT, Src, Shift);
+  SDValue Sticky =
+      DAG.getNode(ISD::AND, DL, SrcVT, Src, DAG.getConstant(1, DL, SrcVT));
+  SDValue Odd = DAG.getNode(ISD::OR, DL, SrcVT, Half, Sticky);
+
+  // Doubling a value with at most 24 significant bits is exact.
+  SDValue RoundToOdd = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, Odd);
+  SDValue Doubled = DAG.getNode(ISD::FADD, DL, DstVT, RoundToOdd, RoundToOdd);
+
+  // Values below 2^63 convert directly; above that the signed conversion is
+  // negative, so the round-to-odd path is used instead.
+  SDValue Signed = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, Src);
+
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+  SDValue IsNegative =
+      DAG.getSetCC(DL, SetCCVT, Src, DAG.getConstant(0, DL, SrcVT), ISD::SETLT);
+  // Narrow the mask to the width of the result vector so that it can be used
+  // by the vselect patterns; every lane is either all-ones or all-zeroes.
+  EVT MaskVT = DstVT.changeVectorElementTypeToInteger();
+  SDValue Mask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, IsNegative);
+  return DAG.getSelect(DL, DstVT, Mask, Doubled, Signed);
+}
+
 SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -4400,9 +4443,16 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT Op0VT = Op0.getValueType();
 
   if (VT.isVector()) {
-    if (VT.getScalarSizeInBits() != Op0VT.getScalarSizeInBits())
-      return SDValue();
-    return Op;
+    if (VT.getScalarSizeInBits() == Op0VT.getScalarSizeInBits())
+      return Op;
+
+    // There is no unsigned 64-bit to 32-bit conversion instruction, so
+    // synthesize one with a single rounding.
+    if (Subtarget.hasExtLASX() && Op0VT.getScalarType() == MVT::i64 &&
+        VT.getScalarType() == MVT::f32)
+      return lowerUINT_TO_FPToF32(Op, DAG);
+
+    return SDValue();
   }
 
   if ((DAG.SignBitIsZero(Op0) || Op->getFlags().hasNonNeg()) &&
