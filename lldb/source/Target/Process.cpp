@@ -2834,17 +2834,19 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   return error.takeError();
 }
 
-// Unlike the Symtab.cpp naming convention which encodes the
-// triple, filename, and filepath into hashes in the name
-// and puts the UUID in the file contents (which allows for
-// incremental rebuilding of a file without keeping old versions
-// of the file in the DataFileCache), for memory-read modules we
-// have less information at this point -- a filename and UUID only,
-// so we construct our key based on them.
-// If a developer is reading a binary under active development and
-// rebuilding, this means that the cache will keep all previous
-// caches of the header bytes in the DataFileCache, relying on the
-// DFC expiration policies to remove the previous versions.
+/// Construct a key for headerbyte files in the DataFileCache.
+///
+/// \param[in] file_spec
+///     The base filename is included in the key for ease of 
+///     understanding what files generated headerbyte files in
+///     the DataFileCache.
+///
+/// \param[in] uuid
+///     The UUID of the binary, caller must check that uuid.IsValid()
+///     so the headerbytes key is unique to this build of this file.
+///
+/// \return
+///     The DataFileCache filename to use.
 static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
                                                const UUID &uuid) {
   return llvm::formatv("{0}-{1}-headerbytes", file_spec.GetFilename(),
