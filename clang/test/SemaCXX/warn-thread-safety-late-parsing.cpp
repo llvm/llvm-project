@@ -2,8 +2,9 @@
 // name a parameter declared later in the same prototype. Without it, that
 // forward reference is an error.
 //
-// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both -Wthread-safety -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=both,early -Wthread-safety -std=c++20 %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both,late -Wthread-safety -std=c++23 -fblocks %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both,late,cxx26 -Wthread-safety -std=c++26 -fblocks -fopenmp %s
+// RUN: %clang_cc1 -fsyntax-only -verify=both,early -Wthread-safety -std=c++23 -fblocks %s
 
 #define RELEASE(...)  __attribute__((release_capability(__VA_ARGS__)))
 #define REQUIRES(...) __attribute__((requires_capability(__VA_ARGS__)))
@@ -116,3 +117,93 @@ void use_nested_later(void (*cb)(void (*)(int), Mutex *)) { nested_later<int>(cb
 template <typename T>
 void nested_earlier(Mutex *mu, void (*cb)(void (*release)(T) RELEASE(mu))) {}
 void use_nested_earlier(Mutex *mu) { nested_earlier<int>(mu, nullptr); }
+
+// A block-scope function declaration in a lambda, whose context is not
+// enclosed by the lambda, must not crash.
+void block_scope_decl_in_lambda() {
+  auto l = [] {
+    void f(Mutex *m) RELEASE(m);
+    return 0;
+  };
+  auto g = [](auto) {
+    void f(Mutex *m) RELEASE(m);
+    return 0;
+  };
+}
+int block_scope_decl_in_default_arg(int x = [] {
+  void f(Mutex *m) RELEASE(m);
+  return 0;
+}());
+
+// The same in a variadic generic lambda, an explicit object member function,
+// a block, a block in a lambda and an instantiated lambda.
+void block_scope_decl_in_variadic_lambda() {
+  auto l = [](auto *...ms) {
+    void f(Mutex *m) RELEASE(m);
+    void g(Mutex *m) RELEASE(ms); // both-error{{expression contains unexpanded parameter pack 'ms'}}
+    return 0;
+  };
+}
+struct BlockScopeDeclMember {
+  void member() {
+    auto l = [](this auto self) {
+      void f(Mutex *m) RELEASE(m);
+      return 0;
+    };
+  }
+};
+void block_scope_decl_in_block() {
+  void (^b)(void) = ^{
+    void f(Mutex *m) RELEASE(m);
+  };
+  auto l = [] {
+    void (^b2)(void) = ^{
+      void g(Mutex *m) RELEASE(m);
+    };
+    return 0;
+  };
+}
+template <typename T> void block_scope_decl_in_instantiated_lambda() {
+  auto l = [](auto x) {
+    void f(Mutex *m) RELEASE(m);
+    return x;
+  };
+  l(T());
+}
+template void block_scope_decl_in_instantiated_lambda<int>();
+
+// A block-scope function declaration in the late-parsed attribute of another
+// one, whose lexical context is enclosed by the lambda or block although its
+// semantic context is not, must not crash either.
+Mutex late_global_mu;
+void nested_block_scope_decl_in_lambda() {
+  auto l = [] {
+    void f(Mutex *m) RELEASE(({
+      void inner(Mutex *m2) RELEASE(m2);
+      m;
+    }));
+  };
+}
+#ifdef _OPENMP
+void block_scope_decl_in_block_openmp() {
+  void (^b)(void) = ^{
+    void f(void) RELEASE(late_global_mu);
+  };
+}
+#endif
+#if __cplusplus > 202302L
+struct LatePair {
+  int a, b;
+};
+void binding_pack_in_late_attr_in_lambda() {
+  auto l = [] {
+    void f(Mutex *m) __attribute__((release_capability(({
+      auto [...xs] = LatePair{1, 2}; // cxx26-error {{pack declaration outside of template}}
+      m;
+    }))));
+  };
+}
+#endif
+
+auto generic_lambda_pointee =
+    [](auto x, void (*cb)(Mutex *r) RELEASE(r)) {}; // late-error{{'release_capability' attribute in a template cannot name pointee function parameter 'r'}}
