@@ -5413,12 +5413,6 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*nowait=*/clauses.nowait);
 }
 
-void TaskwaitOp::getEffects(
-    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  getTaskSchedulingPointEffects(effects);
-}
-
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicReadOp
 //===----------------------------------------------------------------------===//

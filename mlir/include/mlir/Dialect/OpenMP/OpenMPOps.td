@@ -1932,7 +1932,7 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 
 def TaskwaitOp
     : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments,
-                DeclareOpInterfaceMethods<MemoryEffectsOpInterface>],
+                MemoryEffects<[MemRead, MemWrite]>],
                 clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
