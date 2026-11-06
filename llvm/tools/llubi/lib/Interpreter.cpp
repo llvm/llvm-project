@@ -85,7 +85,8 @@ static bool violatesNoUndefAttr(const AnyValue &V) {
       return;
     }
     if (Scalar.isByte() && !ContainsPoison) {
-      // For non-byte-sized values, high bits are always zeroed out.
+      // For non-byte-sized values, padding bits are poison if and only if all
+      // non-padding bits in the padding byte are poison.
       ContainsPoison = any_of(Scalar.asByte().bytes(), [](const Byte &V) {
         return V.ConcreteMask != 255;
       });
