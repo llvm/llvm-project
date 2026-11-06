@@ -38,6 +38,7 @@ def SyntacoreSCR5RV64Model : SchedMachineModel;
 def SyntacoreSCR7Model : SchedMachineModel;
 def TTAscalonXGModel : SchedMachineModel;
 def TTAscalonXModel : SchedMachineModel;
+def VeeREH1Model : SchedMachineModel;
 def XiangShanKunMingHuModel : SchedMachineModel;
 def XiangShanNanHuModel : SchedMachineModel;
 
