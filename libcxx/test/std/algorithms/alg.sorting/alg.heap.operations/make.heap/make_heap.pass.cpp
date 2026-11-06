@@ -31,7 +31,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         std::make_heap(Iter(work), Iter(work+n));
         assert(std::is_heap(work, work+n));
         assert(std::is_permutation(work, work+n, orig));
-        assert(satisfies_heap_property(work, work+n, std::less<T>()));
+        assert(satisfies_heap_property(work, work + n, std::less<T>()));
         std::copy(orig, orig+n, work);
     }
 
