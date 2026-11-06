@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatProviders.h"
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
@@ -20,6 +21,19 @@
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+
+/// Find all exact-name code symbols in the main ELF executable's symbol table.
+std::vector<Symbol *>
+FindELFFunctionSymbolsWithName(Target &target, const lldb::ModuleSP &module,
+                               ConstString name);
+
+/// Return the first symbol in name_matches at file_address, or nullptr.
+Symbol *FindSymbolAtFileAddress(llvm::ArrayRef<Symbol *> name_matches,
+                                lldb::addr_t file_address);
+
+/// Return an external or weak symbol when all such symbols with valid file
+/// addresses share one address; otherwise return nullptr.
+Symbol *FindUniqueExternalFunctionSymbol(llvm::ArrayRef<Symbol *> symbols);
 
 /// \class Expression Expression.h "lldb/Expression/Expression.h" Encapsulates
 /// a single expression for use in lldb

@@ -120,6 +120,10 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
+  llvm::Triple::ObjectFormatType GetFileFormat() const override {
+    return llvm::Triple::ELF;
+  }
+
   lldb_private::UUID GetUUID() override;
 
   /// Return the contents of the .gnu_debuglink section, if the object file

@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/Expression.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -17,6 +21,52 @@
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb_private;
+
+std::vector<Symbol *> lldb_private::FindELFFunctionSymbolsWithName(
+    Target &target, const lldb::ModuleSP &module, ConstString name) {
+  if (!module || module != target.GetExecutableModule())
+    return {};
+  ObjectFile *object = module->GetObjectFile();
+  if (!object || object->GetFileFormat() != llvm::Triple::ELF)
+    return {};
+
+  // Query eSymbolTypeCode only; IFUNC resolvers (eSymbolTypeResolver) do not
+  // carry the final target address.
+  SymbolContextList candidates;
+  module->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeCode, candidates);
+  std::vector<Symbol *> matches;
+  // Name lookup also matches C++ basenames; require an exact symbol name.
+  for (const SymbolContext &context : candidates) {
+    Symbol *symbol = context.symbol;
+    if (symbol->GetMangled().GetName(Mangled::ePreferMangled) == name)
+      matches.push_back(symbol);
+  }
+  return matches;
+}
+
+Symbol *
+lldb_private::FindSymbolAtFileAddress(llvm::ArrayRef<Symbol *> name_matches,
+                                      lldb::addr_t file_address) {
+  auto match = llvm::find_if(name_matches, [&](Symbol *symbol) {
+    return symbol->GetFileAddress() == file_address;
+  });
+  return match == name_matches.end() ? nullptr : *match;
+}
+
+Symbol *lldb_private::FindUniqueExternalFunctionSymbol(
+    llvm::ArrayRef<Symbol *> symbols) {
+  Symbol *selected = nullptr;
+  for (Symbol *symbol : symbols) {
+    // ELF weak symbols have IsWeak() set, rather than IsExternal().
+    if ((!symbol->IsExternal() && !symbol->IsWeak()) ||
+        symbol->GetFileAddress() == LLDB_INVALID_ADDRESS)
+      continue;
+    if (selected && selected->GetFileAddress() != symbol->GetFileAddress())
+      return nullptr;
+    selected = symbol;
+  }
+  return selected;
+}
 
 Expression::Expression(Target &target)
     : m_target_wp(target.shared_from_this()),
