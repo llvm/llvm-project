@@ -486,12 +486,19 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
     return;
   }
 
-  StringRef StackChkFailName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(StackChkFailImpl);
+  Module &M = *F.getParent();
+  auto [FTy, Attrs] = Libcalls.getRuntimeLibcallsInfo().getFunctionTy(
+      F.getContext(), M.getTargetTriple(), DL, StackChkFailImpl);
+  assert(FTy && "missing signature for stackprotector check fail");
 
-  FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
-  IRBFail.CreateCall(StackChkFail, {});
+  FunctionCallee StackChkFail = M.getOrInsertFunction(
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(StackChkFailImpl), FTy,
+      Attrs);
+  CallingConv::ID CC = Libcalls.getLibcallImplCallingConv(StackChkFailImpl);
+  cast<Function>(StackChkFail.getCallee())->setCallingConv(CC);
+
+  CallInst *Call = IRBFail.CreateCall(StackChkFail, {});
+  Call->setCallingConv(CC);
 }
 
 /// We explicitly compute and set the unsafe stack layout for all unsafe
@@ -794,13 +801,19 @@ bool SafeStack::run() {
   if (SafeStackUsePointerAddress) {
     // FIXME: A more correct implementation of SafeStackUsePointerAddress would
     // change the libcall availability in RuntimeLibcallsInfo
-    StringRef SafestackPointerAddressName =
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            RTLIB::impl___safestack_pointer_address);
+    RTLIB::LibcallImpl Impl = RTLIB::impl___safestack_pointer_address;
+    auto [FTy, Attrs] = Libcalls.getRuntimeLibcallsInfo().getFunctionTy(
+        F.getContext(), F.getParent()->getTargetTriple(), DL, Impl);
+    assert(FTy && "missing signature for safestack pointer address");
 
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        SafestackPointerAddressName, IRB.getPtrTy(0));
-    UnsafeStackPtr = IRB.CreateCall(Fn);
+        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Impl), FTy, Attrs);
+    CallingConv::ID CC = Libcalls.getLibcallImplCallingConv(Impl);
+    cast<Function>(Fn.getCallee())->setCallingConv(CC);
+
+    CallInst *Call = IRB.CreateCall(Fn);
+    Call->setCallingConv(CC);
+    UnsafeStackPtr = Call;
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
     if (!UnsafeStackPtr) {
