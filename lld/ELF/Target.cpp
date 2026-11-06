@@ -179,3 +179,14 @@ uint64_t TargetInfo::getImageBase() const {
     return *ctx.arg.imageBase;
   return ctx.arg.isPic ? 0 : defaultImageBase;
 }
+
+std::pair<uint64_t, uint64_t> TargetInfo::getOutputSectionVaRange() const {
+  uint64_t minVA = UINT64_MAX, maxVA = 0;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_ALLOC))
+      continue;
+    minVA = std::min(minVA, osec->addr);
+    maxVA = std::max(maxVA, osec->addr + osec->size);
+  }
+  return {minVA, maxVA};
+}
