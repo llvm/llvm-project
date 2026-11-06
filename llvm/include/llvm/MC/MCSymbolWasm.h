@@ -19,6 +19,7 @@ class MCSymbolWasm : public MCSymbol {
   bool IsWeak = false;
   bool IsHidden = false;
   bool IsComdat = false;
+  bool IsMemtag = false;
   bool OmitFromLinkingSection = false;
   mutable bool IsUsedInInitArray = false;
   mutable bool IsUsedInGOT = false;
@@ -72,6 +73,9 @@ public:
   void setTLS() const {
     modifyFlags(wasm::WASM_SYMBOL_TLS, wasm::WASM_SYMBOL_TLS);
   }
+
+  bool isMemtag() const { return IsMemtag; }
+  void setMemtag(bool Value) { IsMemtag = Value; }
 
   bool isWeak() const { return IsWeak; }
   void setWeak(bool isWeak) { IsWeak = isWeak; }

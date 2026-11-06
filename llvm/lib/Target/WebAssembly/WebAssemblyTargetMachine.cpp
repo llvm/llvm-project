@@ -111,6 +111,8 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMCLowerPreLegacyPass(PR);
   initializeWebAssemblyFixBrTableDefaultsLegacyPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
+  initializeWebAssemblyStackTaggingPass(PR);
+  initializeWebAssemblyGlobalsTaggingPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -277,6 +279,9 @@ void WebAssemblyPassConfig::addIRPasses() {
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturnedLegacyPass());
+
+  addPass(createWebAssemblyGlobalsTaggingPass());
+  addPass(createWebAssemblyStackTaggingPass());
 
   // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
   // Without Wasm or Emscripten EH, this also lowers invokes.
