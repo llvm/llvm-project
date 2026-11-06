@@ -176,19 +176,13 @@ struct LoweringPreparePass
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
 
+  /// Init and cleanup functions pass \p isRuntimeFunc false to keep the default
+  /// function attributes.
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       cir::FuncType type,
-      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
-
-  /// Build a compiler-generated init or cleanup function. Like classic
-  /// codegen's CreateGlobalInitOrCleanUpFunction, and unlike a runtime
-  /// function, it gets the default function attributes.
-  cir::FuncOp buildGlobalInitOrCleanUpFunction(mlir::OpBuilder &builder,
-                                               llvm::StringRef name,
-                                               mlir::Location loc,
-                                               cir::FuncType type,
-                                               cir::GlobalLinkageKind linkage);
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
+      bool isRuntimeFunc = true);
 
   cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -665,7 +659,7 @@ cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
 
 cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    cir::FuncType type, cir::GlobalLinkageKind linkage) {
+    cir::FuncType type, cir::GlobalLinkageKind linkage, bool isRuntimeFunc) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
       mlirModule, StringAttr::get(mlirModule->getContext(), name)));
   if (!f) {
@@ -674,19 +668,12 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
-    f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
-               builder.getUnitAttr());
+    if (isRuntimeFunc)
+      f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 builder.getUnitAttr());
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }
-  return f;
-}
-
-cir::FuncOp LoweringPreparePass::buildGlobalInitOrCleanUpFunction(
-    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    cir::FuncType type, cir::GlobalLinkageKind linkage) {
-  cir::FuncOp f = buildRuntimeFunction(builder, name, loc, type, linkage);
-  f->removeAttr(cir::CIRDialect::getRuntimeFuncAttrName());
   return f;
 }
 
@@ -1265,8 +1252,9 @@ LoweringPreparePass::buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
   auto fnType =
       cir::FuncType::get({builder.getVoidPtrTy()}, builder.getVoidTy());
   cir::FuncOp dtorFunc =
-      buildGlobalInitOrCleanUpFunction(builder, fnName, op->getLoc(), fnType,
-                                       cir::GlobalLinkageKind::InternalLinkage);
+      buildRuntimeFunction(builder, fnName, op->getLoc(), fnType,
+                           cir::GlobalLinkageKind::InternalLinkage,
+                           /*isRuntimeFunc=*/false);
 
   SmallVector<mlir::NamedAttribute> paramAttrs;
   paramAttrs.push_back(
@@ -1434,9 +1422,9 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   builder.setInsertionPointAfter(op);
   cir::VoidType voidTy = builder.getVoidTy();
   auto fnType = cir::FuncType::get({}, voidTy);
-  FuncOp f =
-      buildGlobalInitOrCleanUpFunction(builder, fnName, op.getLoc(), fnType,
-                                       cir::GlobalLinkageKind::InternalLinkage);
+  FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
+                                  cir::GlobalLinkageKind::InternalLinkage,
+                                  /*isRuntimeFunc=*/false);
 
   // Forward the constrained floating-point marker recorded on the global by
   // CodeGen onto the generated initializer function. The marker on the global
@@ -1574,9 +1562,9 @@ cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   builder.setInsertionPointToStart(mlirModule.getBody());
   mlir::Location loc = mlirModule.getLoc();
   auto fnType = builder.getVoidFnTy();
-  return buildGlobalInitOrCleanUpFunction(
-      builder, "__tls_init", loc, fnType,
-      cir::GlobalLinkageKind::InternalLinkage);
+  return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
+                              cir::GlobalLinkageKind::InternalLinkage,
+                              /*isRuntimeFunc=*/false);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -2271,8 +2259,9 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp fn = buildGlobalInitOrCleanUpFunction(
-      builder, fnName, mlirModule.getLoc(), fnType, linkage);
+  cir::FuncOp fn =
+      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
+                           linkage, /*isRuntimeFunc=*/false);
   builder.setInsertionPointToStart(fn.addEntryBlock());
   mlir::Location loc = fn.getLoc();
   auto emitCalls = [&] {

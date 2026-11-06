@@ -3385,10 +3385,6 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
                          retAttrs, callingConv,
                          /*attrOnCallSite=*/false, isThunk);
 
-  // A function declared by the source gets the default function attributes,
-  // even if it was first created as a runtime function.
-  func->removeAttr(cir::CIRDialect::getRuntimeFuncAttrName());
-
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
 

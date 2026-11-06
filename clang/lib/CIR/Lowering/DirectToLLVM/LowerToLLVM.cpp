@@ -3277,7 +3277,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
                             ->getAttrOfType<cir::LoweringOptionsAttr>(
                                 CIRDialect::getLoweringOptionsAttrName())) {
-      if (langOpts.getNoTrappingMath())
+      // A strictfp function may use a pragma to observe FP exceptions locally,
+      // so the TU-wide default does not apply to it.
+      if (langOpts.getNoTrappingMath() &&
+          !op->hasAttr(CIRDialect::getStrictFPAttrName()))
         passthrough.push_back(
             rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
       passthrough.push_back(rewriter.getStrArrayAttr(

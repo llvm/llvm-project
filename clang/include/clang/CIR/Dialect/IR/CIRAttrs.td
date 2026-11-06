@@ -2686,7 +2686,8 @@ def CIR_LoweringOptionsAttr
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
     `ClangABI` gains an enumerator every Clang release (see
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain.
+    single toolchain. `no_trapping_math` is true when
+    `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2694,10 +2695,12 @@ def CIR_LoweringOptionsAttr
     argument is `noundef`. `ssp_buffer_size` mirrors
     `CodeGenOptions::SSPBufferSize`.
 
-    `no_trapping_math` is set when `LangOptions::getDefaultExceptionMode()` is
-    `FPE_Ignore`. It and `ssp_buffer_size` are TU-wide, and `LowerToLLVM` emits
-    them as the `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM
-    function attributes on every function not marked `runtime_func`.
+    `LowerToLLVM` turns `no_trapping_math` and `ssp_buffer_size` into the
+    `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM function
+    attributes of every function not marked `runtime_func`. A `strictfp`
+    function does not get `"no-trapping-math"`, since a pragma such as
+    `float_control(except, on)` can make its FP operations observe exceptions
+    even when the TU-wide default ignores them.
 
     Example:
     ```
