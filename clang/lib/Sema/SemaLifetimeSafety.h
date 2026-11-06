@@ -753,6 +753,8 @@ private:
 
   std::string getDiagSubjectDescription(const Expr *E) {
     E = E->IgnoreImpCasts();
+    if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(E))
+      return getDiagSubjectDescription(DAE->getExpr()->IgnoreParenBaseCasts());
     if (isa<MaterializeTemporaryExpr>(E))
       return "temporary object";
     if (isa<CXXNewExpr>(E))

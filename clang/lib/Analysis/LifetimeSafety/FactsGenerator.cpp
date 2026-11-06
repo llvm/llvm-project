@@ -101,11 +101,14 @@ static const Loan *createLoan(FactManager &FactMgr, const ValueDecl &VD,
 
 /// Creates a loan for the storage location of a temporary object.
 /// \param MTE The MaterializeTemporaryExpr that represents the temporary
-/// binding. \return The new Loan.
+/// binding.
+/// \param IssueExpr The expression the loan is reported at, if not \p MTE.
+/// \return The new Loan.
 static const Loan *createLoan(FactManager &FactMgr,
-                              const MaterializeTemporaryExpr *MTE) {
-  AccessPath Path(MTE);
-  return FactMgr.getLoanMgr().createLoan(Path, MTE);
+                              const MaterializeTemporaryExpr *MTE,
+                              const Expr *IssueExpr = nullptr) {
+  return FactMgr.getLoanMgr().createLoan(AccessPath(MTE),
+                                         IssueExpr ? IssueExpr : MTE);
 }
 
 /// Creates a loan for an allocation through 'new'
@@ -231,6 +234,21 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     }
   }
   handleFunctionCall(CCE, /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE) {
+  // The CFG does not visit a default argument's expression (GH13757), but it
+  // does expire the temporaries it materializes.
+  // Issue the loan here, reported at the call.
+  // FIXME: Model temporaries nested deeper in the default argument.
+  const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(
+      DAE->getExpr()->IgnoreParenBaseCasts());
+  OriginList *List = getOriginsList(*DAE);
+  if (!MTE || !List)
+    return;
+  const Loan *L = createLoan(FactMgr, MTE, /*IssueExpr=*/DAE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
 }
 
 void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
