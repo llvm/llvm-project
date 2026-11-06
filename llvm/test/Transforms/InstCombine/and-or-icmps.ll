@@ -2178,6 +2178,33 @@ define i1 @bitwise_and_logical_and_masked_icmp_allones_poison2(i1 %c, i32 %x, i3
   ret i1 %and2
 }
 
+define <2 x i1> @logical_and_icmp_and_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @logical_and_icmp_and_partial_poison(
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i8> [[AND2]], <i8 8, i8 poison>
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
+;
+  %and1 = and <2 x i8> %x, splat (i8 12)
+  %cmp1 = icmp ne <2 x i8> %and1, zeroinitializer
+  %and2 = and <2 x i8> %x, splat (i8 15)
+  %cmp2 = icmp eq <2 x i8> %and2, <i8 8, i8 poison>
+  %or = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @logical_or_trunc_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @logical_or_trunc_partial_poison(
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i3>
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne <2 x i3> [[T]], <i3 poison, i3 -2>
+; CHECK-NEXT:    ret <2 x i1> [[C2]]
+;
+  %c1 = icmp eq <2 x i8> %x, zeroinitializer
+  %t = trunc <2 x i8> %x to <2 x i3>
+  %c2 = icmp ne <2 x i3> %t, <i3 poison, i3 -2>
+  %r = select <2 x i1> %c1, <2 x i1> splat (i1 true), <2 x i1> %c2
+  ret <2 x i1> %r
+}
+
 define i1 @samesign(i32 %x, i32 %y) {
 ; CHECK-LABEL: @samesign(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
