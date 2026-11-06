@@ -176,13 +176,12 @@ struct LoweringPreparePass
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
 
-  /// Init and cleanup functions pass \p isRuntimeFunc false to keep the default
-  /// function attributes.
+  /// Init and cleanup functions pass \p hasDefaultFuncAttrs true.
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
-      bool isRuntimeFunc = true);
+      bool hasDefaultFuncAttrs = false);
 
   cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -659,7 +658,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
 
 cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    cir::FuncType type, cir::GlobalLinkageKind linkage, bool isRuntimeFunc) {
+    cir::FuncType type, cir::GlobalLinkageKind linkage,
+    bool hasDefaultFuncAttrs) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
       mlirModule, StringAttr::get(mlirModule->getContext(), name)));
   if (!f) {
@@ -668,7 +668,7 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
-    if (isRuntimeFunc)
+    if (!hasDefaultFuncAttrs)
       f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
                  builder.getUnitAttr());
 
@@ -1254,7 +1254,7 @@ LoweringPreparePass::buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
   cir::FuncOp dtorFunc =
       buildRuntimeFunction(builder, fnName, op->getLoc(), fnType,
                            cir::GlobalLinkageKind::InternalLinkage,
-                           /*isRuntimeFunc=*/false);
+                           /*hasDefaultFuncAttrs=*/true);
 
   SmallVector<mlir::NamedAttribute> paramAttrs;
   paramAttrs.push_back(
@@ -1424,7 +1424,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   auto fnType = cir::FuncType::get({}, voidTy);
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage,
-                                  /*isRuntimeFunc=*/false);
+                                  /*hasDefaultFuncAttrs=*/true);
 
   // Forward the constrained floating-point marker recorded on the global by
   // CodeGen onto the generated initializer function. The marker on the global
@@ -1564,7 +1564,7 @@ cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   auto fnType = builder.getVoidFnTy();
   return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
                               cir::GlobalLinkageKind::InternalLinkage,
-                              /*isRuntimeFunc=*/false);
+                              /*hasDefaultFuncAttrs=*/true);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -2261,7 +2261,7 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp fn =
       buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
-                           linkage, /*isRuntimeFunc=*/false);
+                           linkage, /*hasDefaultFuncAttrs=*/true);
   builder.setInsertionPointToStart(fn.addEntryBlock());
   mlir::Location loc = fn.getLoc();
   auto emitCalls = [&] {
