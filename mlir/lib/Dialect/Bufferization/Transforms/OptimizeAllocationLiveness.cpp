@@ -33,7 +33,6 @@ namespace bufferization {
 using namespace mlir;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -121,6 +120,9 @@ public:
                                             Operation *lastUser) {
 
     auto *target = lastUser;
+    if (!lastUser) {
+      LDBG() << "We may crash now";
+    }
 
     // Start at the last user of the buffer, then move later if an operand of
     // the dealloc is defined after it. E.g. target starts at %x but moves to
@@ -208,13 +210,16 @@ public:
           }
         }
       }
-      if (lastUser == nullptr) {
-        return WalkResult::advance();
+      if (lastUser) {
+        LDBG() << "Last user found: " << *lastUser;
+        assert(lastUser->getBlock() == allocOp->getBlock());
+        assert(lastUser->getBlock() == deallocOp->getBlock());
+      } else {
+        LDBG() << "Last not user found";
       }
-      LDBG() << "Last user found: " << *lastUser;
-      assert(lastUser->getBlock() == allocOp->getBlock());
-      assert(lastUser->getBlock() == deallocOp->getBlock());
 
+      // If no lastUser we can still try to optimize the position of the
+      // deallocOp
       Operation *target =
           findValidInsertionPoint(&domInfo, allocOp, deallocOp, lastUser);
       if (!target) {
@@ -229,5 +234,4 @@ public:
     });
   }
 };
-
 } // end anonymous namespace
