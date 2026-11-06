@@ -2671,6 +2671,9 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       gv, mlir::SymbolTable::Visibility::Private);
   gv.setInitialValueAttr(constant);
   gv.setAlignment(alignment);
+  // Matches classic codegen's createUnnamedGlobalFrom: only the contents of
+  // the constant matter, not its address.
+  gv.setUnnamedAddr(true);
 
   // Keep the cached symbol table in sync with the new global so subsequent
   // lookups for other base names find it.

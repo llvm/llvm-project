@@ -516,6 +516,9 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   // Set the correct linkage.
   vtable.setLinkage(linkage);
 
+  if (cgm.mayVTableBeDuplicated(linkage))
+    vtable.setUnnamedAddr(true);
+
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
 
@@ -1609,8 +1612,8 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
       cgm.getLoc(rd->getSourceRange()), name, vtableType,
       cir::GlobalLinkageKind::ExternalLinkage,
       cgm.getASTContext().toCharUnitsFromBits(ptrAlign));
-  // LLVM codegen handles unnamedAddr
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  if (!cgm.shouldEmitRTTI())
+    vtable.setUnnamedAddr(true);
 
   // In MS C++ if you have a class with virtual functions in which you are using
   // selective member import/export, then all virtual functions must be exported
