@@ -14,6 +14,7 @@
 #ifndef LLVM_AVR_H
 #define LLVM_AVR_H
 
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Analysis.h"
@@ -44,7 +45,15 @@ public:
 FunctionPass *createAVRISelDagLegacyPass(AVRTargetMachine &TM,
                                          CodeGenOptLevel OptLevel);
 FunctionPass *createAVRExpandPseudoPass();
-FunctionPass *createAVRFrameAnalyzerPass();
+
+class AVRFrameAnalyzerPass
+    : public RequiredPassInfoMixin<AVRFrameAnalyzerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createAVRFrameAnalyzerLegacyPass();
 
 void initializeAVRAsmPrinterPass(PassRegistry &);
 void initializeAVRDAGToDAGISelLegacyPass(PassRegistry &);

@@ -128,7 +128,7 @@ bool AVRPassConfig::addInstSelector() {
   // Install an instruction selector.
   addPass(createAVRISelDagLegacyPass(getAVRTargetMachine(), getOptLevel()));
   // Create the frame analyzer pass used by the PEI pass.
-  addPass(createAVRFrameAnalyzerPass());
+  addPass(createAVRFrameAnalyzerLegacyPass());
 
   return false;
 }

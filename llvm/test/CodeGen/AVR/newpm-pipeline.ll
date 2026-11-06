@@ -37,6 +37,7 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     avr-isel
+; CHECK-NEXT:     avr-frame-analyzer
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
