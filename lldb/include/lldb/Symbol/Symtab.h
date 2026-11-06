@@ -235,7 +235,7 @@ public:
   void SetWasSavedToCache() { SetState(lldb::eSymtabStateSavedToCache); }
   /// \}
 
-  /// Flags describing how this symbol table was populated.
+  /// Flags describing state of this symbol table.
   lldb::SymtabState GetState() const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_state;
