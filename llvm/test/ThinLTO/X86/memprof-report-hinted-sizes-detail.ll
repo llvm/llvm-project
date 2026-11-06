@@ -225,7 +225,7 @@ attributes #0 = { noinline }
 ;; it is only reported as having no references; ThinLTO reports it dead.
 ; LTO-DAG: Cold full allocation context 401 with total size 700 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in dead_alloc_func (no references in IR/summary); unmatched callsite at frame 1/1 (stack id 32)]
 ; THINLTO-DAG: Cold full allocation context 401 with total size 700 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in dead_alloc_func (dead); unmatched callsite at frame 1/1 (stack id 32)]
-; ALL-DAG: Cold full allocation context 501 with total size 9000 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 43); reaches NotCold via callerD -> leafD]
+; ALL-DAG: Cold full allocation context 501 with total size 9000 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 43); reaches NotColdCold via callerD -> leafD]
 ;; addr_taken_alloc is referenced (address taken), so it is not reported as
 ;; unreferenced; ThinLTO may have promoted/renamed the internal function.
 ; ALL-DAG: Cold full allocation context 601 with total size 800 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in addr_taken_alloc{{[^ ]*}} (no matched callers); unmatched callsite at frame 1/1 (stack id 52)]

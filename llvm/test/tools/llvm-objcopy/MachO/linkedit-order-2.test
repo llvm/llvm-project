@@ -60,6 +60,7 @@
 # CHECK: datasize:        [[#CODE_SIGNATURE_FILESIZE:LINKEDIT_FILEOFF + LINKEDIT_FILESIZE - CODE_SIGNATURE_FILEOFF]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

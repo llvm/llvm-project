@@ -9,7 +9,10 @@
 #include "Program.h"
 #include "OffloadError.h"
 
+#include "llvm/BinaryFormat/Magic.h"
+
 #include <cstdint>
+#include <cstring>
 
 using namespace llvm;
 
@@ -25,7 +28,31 @@ Expected<ProgramTy> ProgramTy::create(ol_context_handle_t Context,
                                      "failed to load binary %p: %s", Img,
                                      Res->Details);
 
-  return ProgramTy(Handle);
+  StringRef Input(reinterpret_cast<const char *>(Img->ImageStart), ImageSize);
+  MemoryBufferRef IRImage;
+  if (identify_magic(Input) == file_magic::bitcode)
+    IRImage = MemoryBufferRef(Input, "IRImage");
+  return ProgramTy(Handle, IRImage);
+}
+
+Expected<MemoryBufferRef> ProgramTy::getImage() const {
+  void *Base = nullptr;
+  size_t Size = 0;
+  if (auto Res = olGetProgramInfo(Handle, OL_PROGRAM_INFO_IMAGE_BASE,
+                                  sizeof(Base), &Base))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to get program image address: %s",
+                                     Res->Details);
+  if (auto Res = olGetProgramInfo(Handle, OL_PROGRAM_INFO_IMAGE_SIZE,
+                                  sizeof(Size), &Size))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to get program image size: %s",
+                                     Res->Details);
+  if (!Base || !Size)
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "program has an empty image");
+  return MemoryBufferRef(StringRef(static_cast<const char *>(Base), Size),
+                         "Image");
 }
 
 Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
@@ -54,6 +81,45 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
   }
 
   return Address;
+}
+
+Error ProgramTy::readGlobalFromImage(const char *Name, void *Dst,
+                                     size_t Size) const {
+  ol_symbol_handle_t Symbol;
+  if (auto Res =
+          olGetSymbol(Handle, Name, OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Symbol))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to find global symbol %s: %s",
+                                     Name, Res->Details);
+
+  void *ImageAddress = nullptr;
+  if (auto Res =
+          olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS,
+                          sizeof(ImageAddress), &ImageAddress))
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to get image address of global symbol %s: %s", Name,
+        Res->Details);
+
+  size_t SymbolSize = 0;
+  if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                                 sizeof(SymbolSize), &SymbolSize))
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to get size of global symbol %s: %s", Name, Res->Details);
+  if (SymbolSize != Size)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "global symbol %s has %zu bytes in the image but %zu were requested",
+        Name, SymbolSize, Size);
+
+  if (!ImageAddress)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "global symbol %s has no contents in the program image", Name);
+
+  std::memcpy(Dst, ImageAddress, Size);
+  return Error::success();
 }
 
 Expected<ol_symbol_handle_t>

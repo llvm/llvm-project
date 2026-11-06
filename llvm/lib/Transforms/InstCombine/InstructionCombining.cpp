@@ -1402,17 +1402,17 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   Value *Cond, *True = nullptr, *False = nullptr;
 
-  // If V is a select whose condition is implied by Cond, resolve it to the
-  // appropriate arm for this value of Cond.
-  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
                                            bool CondIsTrue) -> Value * {
     auto *InnerSI = dyn_cast<SelectInst>(V);
     if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
       return V;
 
-    if (std::optional<bool> Implied =
-            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
-      return InnerSI->getOperand(*Implied ? 1 : 2);
+    if (Value *Arm =
+            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
+      return Arm;
     return V;
   };
 
@@ -1451,8 +1451,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
     True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
@@ -1460,8 +1460,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
     True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
@@ -2817,7 +2817,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   auto &DL = IC.getDataLayout();
   Value *Base;
   const APInt *C1;
-  if (!match(Src, m_PtrAdd(m_Value(Base), m_APInt(C1))))
+  if (!match(Src, m_PtrAdd(DL, m_Value(Base), m_APInt(C1))))
     return nullptr;
   Value *VarIndex;
   const APInt *C2;
@@ -2825,8 +2825,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   unsigned IndexSizeInBits = DL.getIndexTypeSizeInBits(PtrTy);
   if (!match(GEP.getOperand(1), m_AddLike(m_Value(VarIndex), m_APInt(C2))))
     return nullptr;
-  if (C1->getBitWidth() != IndexSizeInBits ||
-      C2->getBitWidth() != IndexSizeInBits)
+  if (C2->getBitWidth() != IndexSizeInBits)
     return nullptr;
   Type *BaseType = GEP.getSourceElementType();
   if (isa<ScalableVectorType>(BaseType))
@@ -4763,7 +4762,8 @@ static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
 
   Value *NewSel = Builder.CreateSelectFMF(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
-      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp",
+      ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
   return NewSel;
 }
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
