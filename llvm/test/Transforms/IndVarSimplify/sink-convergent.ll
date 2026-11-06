@@ -52,6 +52,63 @@ exit:
   ret i32 %c
 }
 
+; Same as @no_sink_convergent with explicit convergence control. Sinking would
+; also move the entry intrinsic out of the entry block.
+define i32 @no_sink_convergent_entry_token(i32 %a) convergent {
+; CHECK-LABEL: define i32 @no_sink_convergent_entry_token(
+; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TOK:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[C:%.*]] = call i32 @convergent_op(i32 [[A]]) [ "convergencectrl"(token [[TOK]]) ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[C]]
+;
+entry:
+  %tok = call token @llvm.experimental.convergence.entry()
+  %c = call i32 @convergent_op(i32 %a) [ "convergencectrl"(token %tok) ]
+  br label %loop
+
+loop:
+  %cond = call i1 @cond()
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %c
+}
+
+; Neither the anchor nor the call using it may be sunk out of the preheader.
+define i32 @no_sink_convergent_anchor_token(i32 %a) {
+; CHECK-LABEL: define i32 @no_sink_convergent_anchor_token(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TOK:%.*]] = call token @llvm.experimental.convergence.anchor()
+; CHECK-NEXT:    [[C:%.*]] = call i32 @convergent_op(i32 [[A]]) [ "convergencectrl"(token [[TOK]]) ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[C]]
+;
+entry:
+  %tok = call token @llvm.experimental.convergence.anchor()
+  %c = call i32 @convergent_op(i32 %a) [ "convergencectrl"(token %tok) ]
+  br label %loop
+
+loop:
+  %cond = call i1 @cond()
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %c
+}
+
 declare i1 @cond()
 declare i32 @convergent_op(i32) convergent nounwind willreturn memory(none)
 declare i32 @readnone_op(i32) nounwind willreturn memory(none)
+declare token @llvm.experimental.convergence.entry()
+declare token @llvm.experimental.convergence.anchor()
