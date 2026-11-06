@@ -1,5 +1,10 @@
 // RUN: mlir-opt --llvm-use-default-visibility=visibility=hidden %s | FileCheck %s --check-prefix=HIDDEN
 // RUN: mlir-opt --llvm-use-default-visibility=visibility=protected %s | FileCheck %s --check-prefix=PROTECTED
+// RUN: mlir-opt --pass-pipeline='builtin.module(llvm-use-default-visibility)' %s \
+// RUN:   --dump-pass-pipeline -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DEFAULT
+
+// DEFAULT: llvm-use-default-visibility{visibility=default}
 
 // Ensure the global function definitions and global values are changed to the specified visibility,
 // and only when they have default visibility.
