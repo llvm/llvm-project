@@ -7,9 +7,9 @@ declare void @use(i64)
 define void @umax_start(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'umax_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @umax_start
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1)) + (%x0 umax %x1 umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1)) + (%x0 umax %x1 umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -61,9 +61,9 @@ exit:
 define void @umax_start_3op(i64 %x0, i64 %x1, i64 %x2, i64 %bound) {
 ; CHECK-LABEL: 'umax_start_3op'
 ; CHECK-NEXT:  Determining loop execution counts for: @umax_start_3op
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1 umax %x2)) + (%x0 umax %x1 umax %x2 umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1 umax %x2)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1 umax %x2)) + (%x0 umax %x1 umax %x2 umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1 umax %x2)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -92,9 +92,9 @@ exit:
 define void @umax_start_swapped_guards(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'umax_start_swapped_guards'
 ; CHECK-NEXT:  Determining loop execution counts for: @umax_start_swapped_guards
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1)) + (%x0 umax %x1 umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1)) + (%x0 umax %x1 umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -120,9 +120,9 @@ exit:
 define void @smax_start(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'smax_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_start
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1)) + (%x0 smax %x1 smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1)) + (%x0 smax %x1 smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -174,9 +174,9 @@ exit:
 define void @smax_start_3op(i64 %x0, i64 %x1, i64 %x2, i64 %bound) {
 ; CHECK-LABEL: 'smax_start_3op'
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_start_3op
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1 smax %x2)) + (%x0 smax %x1 smax %x2 smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1 smax %x2)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1 smax %x2)) + (%x0 smax %x1 smax %x2 smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1 smax %x2)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -206,9 +206,9 @@ exit:
 define void @smax_start_swapped_guards(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'smax_start_swapped_guards'
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_start_swapped_guards
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1)) + (%x0 smax %x1 smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1)) + (%x0 smax %x1 smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smax %x1)) + %bound)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -234,9 +234,9 @@ exit:
 define void @umin_limit(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'umin_limit'
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_limit
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1) umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1) umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -288,9 +288,9 @@ exit:
 define void @umin_limit_3op(i64 %x0, i64 %x1, i64 %x2, i64 %bound) {
 ; CHECK-LABEL: 'umin_limit_3op'
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_limit_3op
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1 umin %x2) umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umin %x1 umin %x2))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1 umin %x2) umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umin %x1 umin %x2))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -319,9 +319,9 @@ exit:
 define void @umin_limit_swapped_guards(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'umin_limit_swapped_guards'
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_limit_swapped_guards
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1) umax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 umin %x1) umax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -347,9 +347,9 @@ exit:
 define void @smin_limit(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'smin_limit'
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_limit
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 smin %x1))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 smin %x1))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -401,9 +401,9 @@ exit:
 define void @smin_limit_3op(i64 %x0, i64 %x1, i64 %x2, i64 %bound) {
 ; CHECK-LABEL: 'smin_limit_3op'
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_limit_3op
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1 smin %x2) smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 smin %x1 smin %x2))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1 smin %x2) smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 smin %x1 smin %x2))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -431,9 +431,9 @@ exit:
 define void @smin_limit_swapped_guards(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'smin_limit_swapped_guards'
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_limit_swapped_guards
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 smin %x1))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 smin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 smin %x1))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -578,6 +578,32 @@ exit:
   ret void
 }
 
+define void @smin_start_offset_guard(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'smin_start_offset_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @smin_start_offset_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 smin %x1)) + %bound)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 smin %x1)) + %bound)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %x1.p1 = add nsw i64 %x1, 1
+  %pre = icmp sle i64 %x1.p1, %bound
+  call void @llvm.assume(i1 %pre)
+  %start = call i64 @llvm.smin.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %bound
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 define void @smin_start_pred_mismatch(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-LABEL: 'smin_start_pred_mismatch'
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_start_pred_mismatch
@@ -612,6 +638,214 @@ define void @umax_limit_no_guard(i64 %x0, i64 %x1, i64 %bound) {
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
+  %lim = call i64 @llvm.umax.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %bound, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nuw i64 %iv, 1
+  %cond = icmp ult i64 %iv, %lim
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umax_limit_signed_pred_mismatch(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umax_limit_signed_pred_mismatch'
+; CHECK-NEXT:  Determining loop execution counts for: @umax_limit_signed_pred_mismatch
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + ((%x0 umax %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + ((%x0 umax %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.x0 = icmp sle i64 %bound, %x0
+  call void @llvm.assume(i1 %pre.x0)
+  %lim = call i64 @llvm.umax.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %bound, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %lim
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umin_start_signed_pred_mismatch(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umin_start_signed_pred_mismatch'
+; CHECK-NEXT:  Determining loop execution counts for: @umin_start_signed_pred_mismatch
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umin %x1)) + ((%x0 umin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umin %x1)) + ((%x0 umin %x1) smax %bound))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.x0 = icmp sle i64 %x0, %bound
+  call void @llvm.assume(i1 %pre.x0)
+  %start = call i64 @llvm.umin.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %bound
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umin_start_signed_pred_all_guarded(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umin_start_signed_pred_all_guarded'
+; CHECK-NEXT:  Determining loop execution counts for: @umin_start_signed_pred_all_guarded
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%x0 umin %x1)) + %bound)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%x0 umin %x1)) + %bound)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.x0 = icmp sle i64 %x0, %bound
+  call void @llvm.assume(i1 %pre.x0)
+  %pre.x1 = icmp sle i64 %x1, %bound
+  call void @llvm.assume(i1 %pre.x1)
+  %start = call i64 @llvm.umin.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %bound
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umax_limit_signed_pred_all_guarded(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umax_limit_signed_pred_all_guarded'
+; CHECK-NEXT:  Determining loop execution counts for: @umax_limit_signed_pred_all_guarded
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umax %x1))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umax %x1))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.x0 = icmp sle i64 %bound, %x0
+  call void @llvm.assume(i1 %pre.x0)
+  %pre.x1 = icmp sle i64 %bound, %x1
+  call void @llvm.assume(i1 %pre.x1)
+  %lim = call i64 @llvm.umax.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %bound, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %lim
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umin_start_bounded_rhs(i64 %x, i64 %b) {
+; CHECK-LABEL: 'umin_start_bounded_rhs'
+; CHECK-NEXT:  Determining loop execution counts for: @umin_start_bounded_rhs
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (3 + (zext i8 (trunc i64 %x to i8) to i64) + (-1 * ((zext i8 (trunc i64 %x to i8) to i64) umin %b))<nsw>)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 258
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (3 + (zext i8 (trunc i64 %x to i8) to i64) + (-1 * ((zext i8 (trunc i64 %x to i8) to i64) umin %b))<nsw>)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %a = and i64 %x, 255
+  %m = call i64 @llvm.umin.i64(i64 %a, i64 %b)
+  %rhs = add nuw i64 %a, 4
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %m, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add i64 %iv, 1
+  %cond = icmp ult i64 %iv.next, %rhs
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umin_limit_samesign_guards(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umin_limit_samesign_guards'
+; CHECK-NEXT:  Determining loop execution counts for: @umin_limit_samesign_guards
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umin %x1))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.x0 = icmp samesign ule i64 %bound, %x0
+  call void @llvm.assume(i1 %pre.x0)
+  %pre.x1 = icmp samesign ule i64 %bound, %x1
+  call void @llvm.assume(i1 %pre.x1)
+  %lim = call i64 @llvm.umin.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %bound, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nuw i64 %iv, 1
+  %cond = icmp ult i64 %iv, %lim
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @smax_limit_offset_guard(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'smax_limit_offset_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @smax_limit_offset_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 smax %x1))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 smax %x1))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %x1.m1 = add nsw i64 %x1, -1
+  %pre = icmp sle i64 %bound, %x1.m1
+  call void @llvm.assume(i1 %pre)
+  %lim = call i64 @llvm.smax.i64(i64 %x0, i64 %x1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %bound, %entry ], [ %iv.next, %loop ]
+  call void @use(i64 %iv)
+  %iv.next = add nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv, %lim
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @umax_limit_offset_guard(i64 %x0, i64 %x1, i64 %bound) {
+; CHECK-LABEL: 'umax_limit_offset_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @umax_limit_offset_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %bound) + (%x0 umax %x1))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %bound) + (%x0 umax %x1))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %bound.p1 = add nuw i64 %bound, 1
+  %pre = icmp ule i64 %bound.p1, %x1
+  call void @llvm.assume(i1 %pre)
   %lim = call i64 @llvm.umax.i64(i64 %x0, i64 %x1)
   br label %loop
 
