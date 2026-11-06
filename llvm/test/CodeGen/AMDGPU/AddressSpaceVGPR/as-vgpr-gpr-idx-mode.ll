@@ -157,6 +157,22 @@ define void @two_stores(ptr addrspace(13) inreg %p, i32 %v, i32 %w) {
   ret void
 }
 
+; A stored value with an undefined lane must produce valid code.
+define void @store_v2i32_partly_poison(ptr addrspace(13) inreg %p, i32 %x) {
+; GFX9-LABEL: store_v2i32_partly_poison:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX9-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GFX9-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v1, v1
+; GFX9-NEXT:    s_set_gpr_idx_off
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %v = insertelement <2 x i32> poison, i32 %x, i32 0
+  store <2 x i32> %v, ptr addrspace(13) %p
+  ret void
+}
+
 ; A load and a store need different modes, so each keeps its own switch.
 define void @load_then_store(ptr addrspace(13) inreg %p, i32 %v) {
 ; GFX9-SDAG-LABEL: load_then_store:

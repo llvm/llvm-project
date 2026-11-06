@@ -2116,6 +2116,7 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
   auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
   MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   const SIRegisterInfo &RI = TII.getRegisterInfo();
   const bool IsStore = LdSt.mayStore();
@@ -2127,9 +2128,10 @@ static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
   // A statically out-of-range offset is undefined behavior; mask it into the
   // addressable range below rather than emit an invalid register.
   unsigned NumIndexableVGPRs =
-      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*MBB.getParent());
+      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(MF);
 
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
+  assert(UseGPRIdxMode == TII.getSubtarget().useVGPRIndexMode());
 
   MachineInstr *SetOn = nullptr;
   if (UseGPRIdxMode) {
@@ -2167,14 +2169,21 @@ static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
       Move = BuildMI(MBB, MI, DL, TII.get(Opcode))
                  .addReg(Base, RegState::Undef)
                  .addReg(Sub, DataFlags);
+      // As in copyPhysReg, the implicit use of the whole tuple keeps a partly
+      // undefined value a valid operand.
+      if (NumDwords != 1)
+        Move.addReg(Data, RegState::Implicit | DataFlags);
     } else {
       Move = BuildMI(MBB, MI, DL, TII.get(Opcode), Sub)
                  .addReg(Base, RegState::Undef);
     }
-    // Each mode switch defines M0, which keeps the index-mode moves in order.
-    // A movrel move only reads M0, so it keeps the access's memory operand.
-    if (!UseGPRIdxMode)
-      Move.cloneMemRefs(MI);
+    // Each mode switch defines M0, which keeps the index-mode moves in order. A
+    // movrel move only reads M0, so it is a load or store, ordered by the
+    // memory operand of the dword it moves.
+    if (!UseGPRIdxMode) {
+      for (const MachineMemOperand *MMO : MI.memoperands())
+        Move.addMemOperand(MF.getMachineMemOperand(MMO, 4 * i, 4));
+    }
   }
 
   // Bundled so the post-RA scheduler keeps everything else out of the mode
@@ -8562,8 +8571,8 @@ void SIInstrInfo::handleCopyToPhysHelper(
     MachineRegisterInfo &MRI, MachineDominatorTree *MDT,
     DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
-  // Only search current block since phyreg's def & use cannot cross
-  // blocks when MF.NoPhi = false.
+  // In SSA a copy into a physical register and its readers share a block, so
+  // only the rest of this block is searched.
   SmallVector<MachineInstr *, 4> Readers;
   for (MachineInstr &MI :
        instructionsWithoutDebug(std::next(MachineBasicBlock::iterator(Inst)),
@@ -8571,7 +8580,7 @@ void SIInstrInfo::handleCopyToPhysHelper(
     if (MI.readsRegister(DstReg, &RI))
       Readers.push_back(&MI);
 
-    if (MI.definesRegister(DstReg, &RI))
+    if (MI.modifiesRegister(DstReg, &RI))
       break;
   }
 
