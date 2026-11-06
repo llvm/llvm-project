@@ -92,6 +92,10 @@ static cl::opt<int>
     InstrCost("inline-instr-cost", cl::Hidden, cl::init(5),
               cl::desc("Cost of a single instruction when inlining"));
 
+static cl::opt<bool> InlineOnlyWithinSection(
+    "inline-only-within-section", cl::init(true), cl::Hidden,
+    cl::desc("Only inline functions into call sites within the same section."));
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -3012,6 +3016,19 @@ void InlineCostCallAnalyzer::print(raw_ostream &OS) {
 LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 #endif
 
+/// Test that two functions have matching output sections.
+static bool functionsHaveMatchingOutputSections(Function *F1, Function *F2) {
+  Attribute F1Sec = F1->getFnAttribute("linker_output_section");
+  Attribute F2Sec = F2->getFnAttribute("linker_output_section");
+  if (F1Sec.isValid() != F2Sec.isValid())
+    return false; // Differing output sections.
+
+  if (F1Sec.isValid())
+    return F1Sec.getValueAsString() == F2Sec.getValueAsString();
+
+  return true; // No output sections specified.
+}
+
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
@@ -3155,6 +3172,12 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
       return InlineResult::success();
     return InlineResult::failure(IsViable.getFailureReason());
   }
+
+  // With a linker script, only inline functions into call sites within the same
+  // output section (unless callee has always-inline attribute).
+  if (InlineOnlyWithinSection &&
+      !functionsHaveMatchingOutputSections(Call.getCaller(), Callee))
+    return InlineResult::failure("caller and callee in different sections");
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).

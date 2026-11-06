@@ -234,6 +234,10 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+static cl::opt<bool>
+    IncludeLocalSymbols("include-local-symbols", cl::Hidden,
+                        cl::desc("Expose local symbols to symbol resolution"));
+
 // Specifying a symbol here states that it is a library symbol that had a
 // definition in bitcode, but was not extracted. Such symbols cannot safely
 // be referenced, since they have already lost their opportunity to be defined.
@@ -331,7 +335,10 @@ static int run(int argc, char **argv) {
         Res.VisibleToRegularObj = true;
       else if (C == 'r')
         Res.LinkerRedefined = true;
-      else {
+      else if (C == 'o') {
+        Res.OutputSectionName = Rest.split("o").second;
+        break;
+      } else {
         llvm::errs() << "invalid character " << C << " in resolution: " << R
                      << '\n';
         return 1;
@@ -492,7 +499,7 @@ static int run(int argc, char **argv) {
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
     std::unique_ptr<InputFile> Input =
-        check(InputFile::create(MB->getMemBufferRef()), F);
+        check(InputFile::create(MB->getMemBufferRef(), IncludeLocalSymbols), F);
 
     std::vector<SymbolResolution> Res;
     for (const InputFile::Symbol &Sym : Input->symbols()) {

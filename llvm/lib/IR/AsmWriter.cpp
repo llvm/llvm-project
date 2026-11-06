@@ -3906,6 +3906,11 @@ void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
     }
     Out << ")";
   }
+  if (auto I = TheIndex->sectionInfos().find(VI.getGUID());
+      I != TheIndex->sectionInfos().end()) {
+    Out << ", sectionInfo: (outputSectionName: \""
+        << I->second.OutputSectionName << "\")";
+  }
   Out << ")";
   if (VI.hasName() && !VI.name().empty())
     Out << " ; guid = " << VI.getGUID();

@@ -2306,6 +2306,24 @@ define void @f() "no-sse" { ... }
     optimizations, and furthermore it must not be relied upon for correctness,
     as the function may still be referenced from another module.
 
+`"linker_output_section"`
+:   This attribute is set by the linker during LTO to indicate optimization
+    boundaries. Globals are grouped based on the value of this attribute.
+    Full interprocedural optimizations are allowed across globals with the
+    same value for this attribute.  Optimizations are limited for globals with
+    different values. Operations with side-effects cannot be moved between
+    functions with different values.  Constants with the same value can be
+    merged; constants with different values cannot be merged. This grouping
+    overrides the normal rules for optimizing globals with an explicit section
+    marking.
+
+    The values of this attribute have no inherent meaning; they can only be
+    compared for equality.
+
+    When linking with GNU-style linker scripts, the linker will usually set
+    this based on the output sections specified in the linker script. The name
+    of the attribute comes from this usage.
+
 `memory(...)`
 :   This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (`none`,
